@@ -1,0 +1,75 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./deploy/Dockerfile
+      target: prod
+    image: lcfs:${LCFS_VERSION:-latest}
+    restart: always
+    env_file:
+    - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      LCFS_HOST: 0.0.0.0
+      LCFS_DB_HOST: lcfs-db
+      LCFS_DB_PORT: 5432
+      LCFS_DB_USER: lcfs
+      LCFS_DB_PASS: lcfs
+      LCFS_DB_BASE: lcfs
+      LCFS_REDIS_HOST: lcfs-redis
+
+  db:
+    image: postgres:14.2
+    hostname: lcfs-db
+    environment:
+      POSTGRES_PASSWORD: "lcfs"
+      POSTGRES_USER: "lcfs"
+      POSTGRES_DB: "lcfs"
+    volumes:
+    - lcfs-db-data:/var/lib/postgresql/data
+    ports:
+    - 5432:5432
+    restart: always
+    healthcheck:
+      test: pg_isready -U lcfs
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  migrator:
+    image: lcfs:${LCFS_VERSION:-latest}
+    restart: "no"
+    command: alembic upgrade head
+    environment:
+      LCFS_DB_HOST: lcfs-db
+      LCFS_DB_PORT: 5432
+      LCFS_DB_USER: lcfs
+      LCFS_DB_PASS: lcfs
+      LCFS_DB_BASE: lcfs
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    image: bitnami/redis:6.2.5
+    hostname: "lcfs-redis"
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 50
+
+
+
+volumes:
+  lcfs-db-data:
+    name: lcfs-db-data
