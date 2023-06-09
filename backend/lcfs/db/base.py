@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base, AbstractConcreteBase
-from sqlalchemy import String, Column, DateTime, Integer
+from sqlalchemy import String, Column, DateTime, Integer, Date
 from datetime import datetime
 
 Base = declarative_base()
@@ -47,3 +47,13 @@ class Auditable(AbstractConcreteBase, Base):
     expiry_date = Column(DateTime,
                          comment='The date and time after which the code is no longer valid and '
                                  'should not be used.')
+
+class DisplayOrder(Base):
+    __abstract__ = True
+    display_order = Column(Integer, comment='Relative rank in display sorting order')
+
+class EffectiveDates(Base):
+    __abstract__ = True
+
+    effective_date = Column(Date, nullable=True, comment='The calendar date the value became valid.')
+    expiration_date = Column(Date, nullable=True, comment='The calendar date the value is no longer valid.')
