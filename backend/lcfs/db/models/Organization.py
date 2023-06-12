@@ -1,9 +1,27 @@
-from sqlalchemy import Column, String, Boolean, Integer
-from lcfs.db.base import Auditable
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from lcfs.db.base import BaseModel, Auditable
 
-class Organization(Auditable):
+class Organization(BaseModel,Auditable):
     __tablename__ = 'organization'
-    __table_args__ = {'comment': 'Organizations'}
+    __table_args__ = {'comment': "Contains a list of all of the recognized Part 3 "
+                                 "fuel suppliers, both past and present, as well as "
+                                 "an entry for the government which is also "
+                                 "considered an organization."}
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False, comment="Organization Name")
+    name = Column(String(500), comment="Organization's legal name")
+    status_id = Column(Integer, ForeignKey('organization_status.id'))
+    actions_type_id = Column(Integer, ForeignKey('organization_actions_type.id'))
+    # type_id = Column(Integer, ForeignKey('organization_type.id'), nullable=True)
+
+    status = relationship('OrganizationStatus', back_populates='organizations')
+    actions_type = relationship('OrganizationActionsType', back_populates='organizations')
+    type = relationship('OrganizationType', back_populates='organizations')
+    addresses = relationship('OrganizationAddress', back_populates='organization')
+    history = relationship('OrganizationHistory', back_populates='organization')
+
+    def __repr__(self):
+        return self.name
+
+
