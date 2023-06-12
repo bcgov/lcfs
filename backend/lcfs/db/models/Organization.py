@@ -13,7 +13,7 @@ class Organization(BaseModel,Auditable):
     name = Column(String(500), comment="Organization's legal name")
     status_id = Column(Integer, ForeignKey('organization_status.id'))
     actions_type_id = Column(Integer, ForeignKey('organization_actions_type.id'))
-    # type_id = Column(Integer, ForeignKey('organization_type.id'), nullable=True)
+    type_id = Column(Integer, ForeignKey('organization_type.id'), nullable=True)
 
     status = relationship('OrganizationStatus', back_populates='organizations')
     actions_type = relationship('OrganizationActionsType', back_populates='organizations')
