@@ -1,4 +1,4 @@
-from sqlalchemy import (Column, ForeignKey, Integer, text, UniqueConstraint)
+from sqlalchemy import (Column, ForeignKey, Integer, text, UniqueConstraint, Sequence)
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -11,7 +11,7 @@ class RolePermission(Auditable):
         {'comment': 'Relationship between roles and permissions'}
     )
     # Columns
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    id = Column(Integer, Sequence('role_permission_id_seq'), primary_key=True, autoincrement=True)
     role_id = Column(Integer, ForeignKey('role.id'), nullable=False)
     permission_id = Column(Integer, ForeignKey('permission.id'), nullable=False)
     # Relationships

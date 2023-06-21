@@ -1,11 +1,34 @@
 from importlib import metadata
+import logging
 
+import colorlog
 from fastapi import FastAPI
 from fastapi.responses import UJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from lcfs.web.api.router import api_router
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
+
+# Create a colorized log formatter
+log_formatter = colorlog.ColoredFormatter(
+    "%(log_color)s[%(levelname)s] [%(asctime)s]  %(name)s.%(funcName)s - %(message)s",
+    log_colors={
+        'DEBUG': 'cyan',
+        'INFO': 'green',
+        'WARNING': 'yellow',
+        'ERROR': 'red',
+        'CRITICAL': 'bold_red'
+    }
+)
+
+# Create a colorized console handler with the formatter
+console_handler = colorlog.StreamHandler()
+console_handler.setFormatter(log_formatter)
+
+# Configure the root logger with the console handler
+root_logger = logging.getLogger()
+root_logger.addHandler(console_handler)
+root_logger.setLevel(logging.INFO)
 
 
 def get_app() -> FastAPI:

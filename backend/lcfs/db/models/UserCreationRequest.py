@@ -1,5 +1,5 @@
 from sqlalchemy import (Column, Integer, String, Boolean, ForeignKey, UniqueConstraint,
-                        text)
+                        text, Sequence)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -14,7 +14,7 @@ class UserCreationRequest(Auditable):
     )
 
     # Columns
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    id = Column(Integer, Sequence('user_creation_request_id_seq'), primary_key=True, comment='id of the user creation request', autoincrement=True)
     keycloak_email = Column(String, nullable=False, comment='email used by keycloak')
     external_username = Column(String, nullable=False, comment='external username used by the system')
     user_id = Column(Integer, ForeignKey('user.id'), unique=True, nullable=False, comment='user id of the user that was created')

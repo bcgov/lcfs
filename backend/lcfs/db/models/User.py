@@ -1,6 +1,6 @@
 from lcfs.db.base import Auditable
 from sqlalchemy import (Column, Integer, String, Boolean, ForeignKey, DateTime,
-                        UniqueConstraint, text)
+                        UniqueConstraint, text, Sequence)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -12,7 +12,7 @@ class User(Auditable):
         {'comment': 'Users who may access the application'}
     )
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, Sequence('user_id_seq'), primary_key=True, autoincrement=True)
     username = Column(String(150), unique=True, nullable=False, comment='Login Username')
     keycloak_user_id = Column(String(150), nullable=True, comment='Unique id returned from Keycloak')
     password = Column(String(128), nullable=True, comment='Password hash')
