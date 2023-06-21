@@ -19,7 +19,7 @@ user_stmt = "select id, title, first_name, last_name, email, username, display_n
             "on p.id = rp.permission_id ) as temp_permissions )::json as permissions, " \
             "coalesce( ( select r.is_government_role from role r inner join user_role ur " \
             "on u.id = ur.user_id and r.id = ur.role_id " \
-            "where r.is_government_role = true limit 1 ), false ) from public.user u"
+            "where r.is_government_role = true limit 1 ), false ) from public.user u where 1=1"
 
 
 class UserRepository:
@@ -30,7 +30,7 @@ class UserRepository:
 
     async def get_all_users(self, current_user=None) -> List[UserSchema]:
         logger.info("Getting all users from repository")
-        stmt = f'{user_stmt} where u.is_active = true'
+        stmt = f'{user_stmt} and u.is_active = true'
         user_results = await self.session.execute(text(stmt))
         results = user_results.fetchall()
         if results.__len__() == 0:
@@ -47,7 +47,7 @@ class UserRepository:
 
     async def get_user(self, user_id):
         logger.info("Getting user by id from repository")
-        stmt = f'{user_stmt} where u.is_active = true and u.id = {user_id}'
+        stmt = f'{user_stmt} and u.is_active = true and u.id = {user_id}'
         user_results = await self.session.execute(text(stmt))
         results = user_results.fetchall()
         if results.__len__() == 0:
@@ -62,3 +62,29 @@ class UserRepository:
                                       permissions=results[0][11],
                                       is_government_role=results[0][12])
         return user
+
+    async def search_users(self, username, organization, surname, include_inactive):
+        logger.info("Searching users from repository")
+        stmt = user_stmt
+        if username is not None:
+            stmt += f" and lower(u.username) like lower('%{username}%')"
+        # yet to implement Organization
+        # if organization is not None:
+        #     stmt += f' and lower(u.organization) like lower("%{organization}%")'
+        if surname is not None:
+            stmt += f" and lower(u.surname) like lower('%{surname}%')"
+        if not include_inactive:
+            stmt += ' and u.is_active = true'
+        user_results = await self.session.execute(text(stmt))
+        results = user_results.fetchall()
+        if results.__len__() == 0:
+            return []
+        users: List[UserSchema] = []
+        for user in results:
+            users.append(UserSchema(id=user[0], title=user[1], first_name=user[2],
+                                    last_name=user[3], email=user[4], username=user[5],
+                                    display_name=user[6],
+                                    is_active=user[7], phone=user[8],
+                                    cell_phone=user[9], roles=user[10],
+                                    permissions=user[11], is_government_role=user[12]))
+        return users

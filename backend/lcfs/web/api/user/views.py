@@ -48,7 +48,28 @@ async def get_users(db: AsyncSession = Depends(get_async_db),
                               message="Failed", success=False, data={},
                               error={"message": f"Technical error: {e.args[0]}"})
 
-
+@router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+async def get_user_search(username: str = None, organization: str = None, surname: str = None, include_inactive: bool = False,
+                         db: AsyncSession = Depends(get_async_db),
+                         response: Response = None) -> EntityResponse:
+    try:
+        users = await UserRepository(db).search_users(username, organization, surname, include_inactive)
+        if users.__len__() == 0:
+            logger.error("Error getting users")
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return EntityResponse(status=status.HTTP_404_NOT_FOUND,
+                                  message="Not Found", success=False, data={},
+                                  error={"message": "No users found"})
+        return EntityResponse(status=status.HTTP_200_OK, data=users,
+                              total=len(users), error={},
+                              success=True, message="Success")
+    except Exception as e:
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        logger.error("Error getting users", str(e.args[0]))
+        return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                              message="Failed", success=False, data={},
+                              error={"message": f"Technical error: {e.args[0]}"})
+    
 @router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_async_db),
                          response: Response = None) -> EntityResponse:
