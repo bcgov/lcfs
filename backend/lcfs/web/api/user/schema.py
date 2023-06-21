@@ -23,3 +23,19 @@ class UserSchema(BaseModel):
     is_government_user: Optional[bool] = False
     phone: Optional[str] = None
     cell_phone: Optional[str] = None
+
+class UserCreateSchema(BaseModel):
+    """DTO for creating a user."""
+    title: Optional[str] = None
+    first_name: str
+    last_name: Optional[str] = None
+    email: str
+    username: str
+    display_name: Optional[str] = None
+    is_active: Optional[bool] = True
+    organization: Optional[Organization] = None
+    roles: List[dict] = []
+    permissions: List[dict] = []
+    is_government_user: Optional[bool] = False
+    phone: Optional[str] = None
+    cell_phone: Optional[str] = None

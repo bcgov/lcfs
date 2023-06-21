@@ -29,6 +29,7 @@ class UserRepository:
         self.request = request
 
     async def get_all_users(self, current_user=None) -> List[UserSchema]:
+        # TODO: add pagination, add sorting, limitation based on user role
         logger.info("Getting all users from repository")
         stmt = f'{user_stmt} and u.is_active = true'
         user_results = await self.session.execute(text(stmt))
@@ -64,6 +65,7 @@ class UserRepository:
         return user
 
     async def search_users(self, username, organization, surname, include_inactive):
+        # TODO: add pagination, add sorting, add organization search capability
         logger.info("Searching users from repository")
         stmt = user_stmt
         if username is not None:
