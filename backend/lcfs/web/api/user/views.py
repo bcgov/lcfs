@@ -26,14 +26,22 @@ get_async_db = dependencies.get_async_db_session
 # get_db = dependencies.get_db_session
 app = FastAPI()
 
+user_repo = None  # Define user_repo at the global level
+
+
+@router.on_event("startup")
+async def startup_event():
+    global user_repo
+    async for db in get_async_db():  # Iterate over the async_generator
+        user_repo = UserRepository(db)
+        break  # Break after obtaining the database connection
+
 
 @router.get("", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_users(limit: int = 10, offset: int = 0,
-                    db: AsyncSession = Depends(get_async_db),
                     response: Response = None) -> EntityResponse:
     current_page = math.ceil(offset / limit) + 1
     try:
-        user_repo = UserRepository(db)
         users = await user_repo.get_all_users(limit, offset)
         total_rows = await user_repo.get_users_count()
         if users.__len__() == 0:
@@ -59,11 +67,10 @@ async def get_users(limit: int = 10, offset: int = 0,
 @router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_user_search(username: str = None, organization: str = None,
                           surname: str = None, include_inactive: bool = False,
-                          db: AsyncSession = Depends(get_async_db),
                           response: Response = None) -> EntityResponse:
     # TODO: add sorting and pagination
     try:
-        users = await UserRepository(db).search_users(username, organization,
+        users = await user_repo.search_users(username, organization,
                                                       surname, include_inactive)
         if users.__len__() == 0:
             logger.error("Error getting users")
@@ -83,11 +90,10 @@ async def get_user_search(username: str = None, organization: str = None,
 
 
 @router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-async def get_user_by_id(user_id: int, db: AsyncSession = Depends(get_async_db),
-                         response: Response = None) -> EntityResponse:
+async def get_user_by_id(user_id: int, response: Response = None) -> EntityResponse:
     try:
         print(user_id)
-        user = await UserRepository(db).get_user(user_id=user_id)
+        user = await user_repo.get_user(user_id=user_id)
         if user is None:
             err_msg = f"User {user_id} not found"
             logger.error(err_msg)
