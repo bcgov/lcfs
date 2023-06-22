@@ -1,11 +1,11 @@
 from logging import getLogger
 from typing import List
 
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from lcfs.db.models.Permission import Permission
+from lcfs.web.api.base_schema import row_to_dict
 from lcfs.web.api.permission.schema import PermissionSchema
 
 logger = getLogger("permission")
@@ -25,6 +25,5 @@ class PermissionRepository:
             return []
         permissions: List[PermissionSchema] = []
         for permission in results:
-            permissions.append(PermissionSchema(id=permission[0], code=permission[1], name=permission[2],
-                                                 description=permission[3]))
+            permissions.append(PermissionSchema.parse_obj(row_to_dict(permission, PermissionSchema)))
         return permissions

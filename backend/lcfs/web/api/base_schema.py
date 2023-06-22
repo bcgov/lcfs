@@ -3,6 +3,17 @@ from typing import Generic, Any
 from pydantic import BaseModel
 
 
+def row_to_dict(row, schema):
+    d = {}
+    for field in schema.__fields__.values():
+        d[field.name] = getattr(row, field.name)
+        print(field.type_.__name__)
+        if isinstance(field.type_, BaseModel):
+            d[field.name] = row_to_dict(d[field.name], field.type_)
+            continue
+    return d
+
+
 class EntityResponse(BaseModel):
     status: int
     message: str

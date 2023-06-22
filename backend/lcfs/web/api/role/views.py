@@ -15,10 +15,10 @@ get_async_db = dependencies.get_async_db_session
 app = FastAPI()
 
 
-@router.get("", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-async def get_roles(db: AsyncSession = Depends(get_async_db), response: Response = None) -> EntityResponse:
+@router.get("{government_roles_only=true}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+async def get_roles(government_roles_only: bool = False, db: AsyncSession = Depends(get_async_db), response: Response = None) -> EntityResponse:
     try:
-        roles = await RoleRepository(db).get_all_roles()
+        roles = await RoleRepository(db).get_all_roles(government_roles_only=government_roles_only)
         if len(roles) == 0:
             logger.error("Error getting roles")
             response.status_code = status.HTTP_404_NOT_FOUND

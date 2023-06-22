@@ -17,12 +17,13 @@ class UserSchema(BaseModel):
     username: str
     display_name: Optional[str] = None
     is_active: Optional[bool] = True
-    organization: Optional[Organization] = None
+    organization: Optional[dict] = []
     roles: List[dict] = []
     permissions: List[dict] = []
     is_government_user: Optional[bool] = False
     phone: Optional[str] = None
     cell_phone: Optional[str] = None
+
 
 class UserCreateSchema(BaseModel):
     """DTO for creating a user."""

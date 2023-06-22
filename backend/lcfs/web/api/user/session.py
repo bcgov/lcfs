@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from lcfs.web.api.base_schema import row_to_dict
 from lcfs.web.api.user.schema import UserSchema
 
 logger = getLogger("role")
@@ -19,7 +20,9 @@ user_stmt = "select id, title, first_name, last_name, email, username, display_n
             "on p.id = rp.permission_id ) as temp_permissions )::json as permissions, " \
             "coalesce( ( select r.is_government_role from role r inner join user_role ur " \
             "on u.id = ur.user_id and r.id = ur.role_id " \
-            "where r.is_government_role = true limit 1 ), false ) from public.user u where 1=1"
+            "where r.is_government_role = true limit 1 ), false ) as is_government_user " \
+            ", null as organization " \
+            " from public.user u where 1=1"
 
 
 class UserRepository:
@@ -38,12 +41,7 @@ class UserRepository:
             return []
         users: List[UserSchema] = []
         for user in results:
-            users.append(UserSchema(id=user[0], title=user[1], first_name=user[2],
-                                    last_name=user[3], email=user[4], username=user[5],
-                                    display_name=user[6],
-                                    is_active=user[7], phone=user[8],
-                                    cell_phone=user[9], roles=user[10],
-                                    permissions=user[11], is_government_role=user[12]))
+            users.append(UserSchema.parse_obj(row_to_dict(user, UserSchema)))
         return users
 
     async def get_user(self, user_id):
