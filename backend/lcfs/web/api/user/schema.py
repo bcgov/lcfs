@@ -18,8 +18,8 @@ class UserSchema(BaseModel):
     display_name: Optional[str] = None
     is_active: Optional[bool] = True
     organization: Optional[dict] = []
-    roles: List[dict] = []
-    permissions: List[dict] = []
+    roles: List[RoleSchema] = []
+    permissions: List[PermissionSchema] = []
     is_government_user: Optional[bool] = False
     phone: Optional[str] = None
     cell_phone: Optional[str] = None

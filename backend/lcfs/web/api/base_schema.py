@@ -18,12 +18,10 @@ class EntityResponse(BaseModel):
     message: str
     data: Any = {}
     error: dict = {}
-    page: int = 1
     total: int = 0
-    limit: int = 10
+    limit: int = 1
+    offset: int = 0
     total_pages: int = 1
-    next_page: int = 1
-    prev_page: int = 1
     current_page: int = 1
 
     class Config:

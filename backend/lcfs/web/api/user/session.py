@@ -11,10 +11,10 @@ from lcfs.web.api.user.schema import UserSchema
 logger = getLogger("role")
 user_stmt = "select id, title, first_name, last_name, email, username, display_name, " \
             "is_active, phone, cell_phone, ( select json_agg(row_to_json(temp_roles)) " \
-            "as roles from ( select r.id, r.name, r.description, r.is_government_role " \
+            " from ( select r.id, r.name, r.description, r.is_government_role " \
             "from role r inner join user_role ur on ur.user_id = u.id and ur.role_id = r.id ) " \
             "as temp_roles )::json as roles, ( select json_agg(row_to_json(temp_permissions)) " \
-            "as permissions from ( select p.id, p.code, p.name, p.description from role r " \
+            " from ( select p.id, p.code, p.name, p.description from role r " \
             "inner join user_role ur on ur.user_id = u.id and ur.role_id = r.id " \
             "inner join role_permission rp on rp.role_id = r.id inner join permission p " \
             "on p.id = rp.permission_id ) as temp_permissions )::json as permissions, " \
@@ -24,6 +24,8 @@ user_stmt = "select id, title, first_name, last_name, email, username, display_n
             ", null as organization " \
             " from public.user u where 1=1"
 
+user_stmt_count = "select count(*) from public.user u where 1=1"
+
 
 class UserRepository:
 
@@ -31,28 +33,29 @@ class UserRepository:
         self.session = session
         self.request = request
 
-    async def get_all_users(self, current_user=None) -> List[UserSchema]:
-        # TODO: add pagination, add sorting, limitation based on user role
+    async def get_users_count(self):
+        count_result = await self.session.execute(text(user_stmt_count))
+        return count_result.fetchone()[0]
+
+    async def get_all_users(self, limit, offset, current_user=None) -> List[UserSchema]:
+        # TODO: add sorting, limitation based on user role
         logger.info("Getting all users from repository")
-        stmt = f'{user_stmt} and u.is_active = true'
+        stmt = f'{user_stmt} and u.is_active = true limit {limit} offset {offset}'
         user_results = await self.session.execute(text(stmt))
         results = user_results.fetchall()
         if results.__len__() == 0:
             return []
         users: List[UserSchema] = []
         for user in results:
-            users.append(UserSchema.parse_obj(row_to_dict(user, UserSchema)))
+            users.append(row_to_dict(user, UserSchema))
         return users
 
     async def get_user(self, user_id):
         logger.info("Getting user by id from repository")
         stmt = f'{user_stmt} and u.is_active = true and u.id = {user_id}'
         user_results = await self.session.execute(text(stmt))
-        results = user_results.fetchall()
-        if results.__len__() == 0:
-            return None
-        user: UserSchema = UserSchema.parse_obj(row_to_dict(results[0], UserSchema))
-        return user
+        user = user_results.fetchone()
+        return row_to_dict(user, UserSchema)
 
     async def search_users(self, username, organization, surname, include_inactive):
         # TODO: add pagination, add sorting, add organization search capability
@@ -73,5 +76,5 @@ class UserRepository:
             return []
         users: List[UserSchema] = []
         for user in results:
-            users.append(UserSchema.parse_obj(row_to_dict(user, UserSchema)))
+            users.append(row_to_dict(user, UserSchema))
         return users
