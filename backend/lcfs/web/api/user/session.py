@@ -51,15 +51,7 @@ class UserRepository:
         results = user_results.fetchall()
         if results.__len__() == 0:
             return None
-        user: UserSchema = UserSchema(id=results[0][0], title=results[0][1],
-                                      first_name=results[0][2],
-                                      last_name=results[0][3], email=results[0][4],
-                                      username=results[0][5],
-                                      display_name=results[0][6],
-                                      is_active=results[0][7], phone=results[0][8],
-                                      cell_phone=results[0][9], roles=results[0][10],
-                                      permissions=results[0][11],
-                                      is_government_role=results[0][12])
+        user: UserSchema = UserSchema.parse_obj(row_to_dict(results[0], UserSchema))
         return user
 
     async def search_users(self, username, organization, surname, include_inactive):
@@ -81,10 +73,5 @@ class UserRepository:
             return []
         users: List[UserSchema] = []
         for user in results:
-            users.append(UserSchema(id=user[0], title=user[1], first_name=user[2],
-                                    last_name=user[3], email=user[4], username=user[5],
-                                    display_name=user[6],
-                                    is_active=user[7], phone=user[8],
-                                    cell_phone=user[9], roles=user[10],
-                                    permissions=user[11], is_government_role=user[12]))
+            users.append(UserSchema.parse_obj(row_to_dict(user, UserSchema)))
         return users
