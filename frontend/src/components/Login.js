@@ -9,7 +9,7 @@ const Login = (props) => {
   const { keycloak } = useKeycloak()
   const [hideModal, setHideModal] = useState(false)
   const userAgent = window.navigator.userAgent
-  const redirectUri = window.location.href
+  const redirectUri = window.location.origin
 
   const _closeModal = () => {
     setHideModal(true)
