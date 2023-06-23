@@ -6,10 +6,10 @@ from pydantic import BaseModel
 def row_to_dict(row, schema):
     d = {}
     for field in schema.__fields__.values():
-        d[field.name] = getattr(row, field.name)
         if isinstance(field.type_, BaseModel):
             d[field.name] = row_to_dict(d[field.name], field.type_)
             continue
+        d[field.name] = getattr(row, field.name)
     return d
 
 
