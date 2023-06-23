@@ -23,7 +23,4 @@ class PermissionRepository:
         results = results.fetchall()
         if results.__len__() == 0:
             return []
-        permissions: List[PermissionSchema] = []
-        for permission in results:
-            permissions.append(PermissionSchema.parse_obj(row_to_dict(permission, PermissionSchema)))
-        return permissions
+        return [row_to_dict(permission, PermissionSchema) for permission in results]

@@ -13,8 +13,9 @@ role_stmt = "Select id, name, description, is_government_role, " \
             "(select json_agg(row_to_json(temp_permissions)) from " \
             "(select p.id,p.code,p.name,p.description from role r " \
             "inner join role_permission rp on rp.role_id = r.id " \
-            "inner join permission p on p.id = rp.permission_id) as temp_permissions)::json "\
-            "as permissions from role"
+            "inner join permission p on p.id = rp.permission_id) " \
+            "as temp_permissions)::json as permissions from role"
+
 
 class RoleRepository:
     def __init__(self, session: AsyncSession, request: Request = None):
@@ -28,7 +29,4 @@ class RoleRepository:
         results = results.fetchall()
         if results.__len__() == 0:
             return []
-        roles: List[RoleSchema] = []
-        for role in results:
-            roles.append(RoleSchema.parse_obj(row_to_dict(row=role, schema=RoleSchema)))
-        return roles
+        return [row_to_dict(role, schema=RoleSchema) for role in results]

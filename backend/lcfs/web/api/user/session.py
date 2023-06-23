@@ -45,19 +45,15 @@ class UserRepository:
         results = user_results.fetchall()
         if results.__len__() == 0:
             return []
-        users: List[UserSchema] = []
-        for user in results:
-            users.append(row_to_dict(user, UserSchema))
-        return users
+        return [row_to_dict(user, UserSchema) for user in results]
 
-    async def get_user(self, user_id):
+    async def get_user(self, user_id) -> UserSchema:
         logger.info("Getting user by id from repository")
         stmt = f'{user_stmt} and u.is_active = true and u.id = {user_id}'
         user_results = await self.session.execute(text(stmt))
-        user = user_results.fetchone()
-        return row_to_dict(user, UserSchema)
+        return row_to_dict(user_results.fetchone(), UserSchema)
 
-    async def search_users(self, username, organization, surname, include_inactive):
+    async def search_users(self, username, organization, surname, include_inactive) -> List[UserSchema]:
         # TODO: add pagination, add sorting, add organization search capability
         logger.info("Searching users from repository")
         stmt = user_stmt
@@ -74,7 +70,4 @@ class UserRepository:
         results = user_results.fetchall()
         if results.__len__() == 0:
             return []
-        users: List[UserSchema] = []
-        for user in results:
-            users.append(row_to_dict(user, UserSchema))
-        return users
+        return [row_to_dict(user, UserSchema) for user in results]

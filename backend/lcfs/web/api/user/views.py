@@ -10,10 +10,10 @@ DELETE: /users/<user_id> (Delete only if the user has never logged in/mapped)
 GET: /users/<user_id>/roles {List of Roles with IDs}
 GET: /users/<user_id>/history
 """
-from logging import getLogger
 import math
-from fastapi import APIRouter, status, FastAPI, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from logging import getLogger
+
+from fastapi import APIRouter, status, FastAPI
 from starlette.responses import Response
 
 from lcfs.db import dependencies
