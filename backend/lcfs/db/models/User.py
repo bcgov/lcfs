@@ -23,7 +23,7 @@ class User(Auditable):
     organization_id = Column(Integer, ForeignKey('organization.id'))
     organization = relationship('Organization', back_populates='users')
     display_name = Column('display_name', String(500), nullable=True, comment='Displayed name for user')
-    is_mapped = Column(Boolean, nullable=False, default=False, comment='whether or not the user has been mapped to the system')
+    is_mapped = Column(Boolean, nullable=True, default=False, comment='whether or not the user has been mapped to the system')
 
     # Additional fields from Django's AbstractUser model
     first_name = Column(String(150), nullable=True, comment='First name (retrieved from Siteminder')

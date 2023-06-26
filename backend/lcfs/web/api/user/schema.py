@@ -6,8 +6,14 @@ from lcfs.web.api.organization.schema import Organization
 from lcfs.web.api.permission.schema import PermissionSchema
 from lcfs.web.api.role.schema import RoleSchema
 
-
-class UserSchema(BaseModel):
+"""
+Base - all shared attributes of a resource
+Create - attributes required to create a new resource - used at POST requests
+Update - attributes that can be updated - used at PUT requests
+InDB - attributes present on any resource coming out of the database
+Public - attributes present on public facing resources being returned from GET, POST, and PUT requests
+"""
+class UserBase(BaseModel):
     """DTO for user values."""
     id: Optional[int] = None
     title: Optional[str] = None
@@ -17,7 +23,8 @@ class UserSchema(BaseModel):
     username: str
     display_name: Optional[str] = None
     is_active: Optional[bool] = True
-    organization: Optional[dict] = []
+    organization: dict = {}
+    # organization: Optional[OrganizationSchema] = {}
     roles: List[RoleSchema] = []
     permissions: List[PermissionSchema] = []
     is_government_user: Optional[bool] = False
@@ -25,7 +32,7 @@ class UserSchema(BaseModel):
     cell_phone: Optional[str] = None
 
 
-class UserCreateSchema(BaseModel):
+class UserCreate(BaseModel):
     """DTO for creating a user."""
     title: Optional[str] = None
     first_name: str

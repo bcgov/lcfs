@@ -1,4 +1,4 @@
-from typing import Generic, Any
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -16,13 +16,13 @@ def row_to_dict(row, schema):
 class EntityResponse(BaseModel):
     status: int
     message: str
-    data: Any = {}
     error: dict = {}
     total: int = 0
     limit: int = 1
     offset: int = 0
     total_pages: int = 1
     current_page: int = 1
+    data: Any = {}
 
     class Config:
         orm_mode = True
@@ -35,14 +35,12 @@ class EntityResponse(BaseModel):
             "example": {
                 "status": 200,
                 "message": "Success",
-                "data": [],
                 "error": {},
-                "page": 1,
                 "total": 0,
-                "limit": 10,
+                "limit": 1,
+                "offset": 0,
                 "total_pages": 1,
-                "next_page": 1,
-                "prev_page": 1,
-                "current_page": 1
+                "current_page": 1,
+                "data": []
             }
         }
