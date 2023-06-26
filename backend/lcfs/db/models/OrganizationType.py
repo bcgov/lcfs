@@ -4,7 +4,7 @@
     The Transportation Fuels Reporting System is being designed to streamline compliance reporting for transportation fuel suppliers in accordance with the Renewable & Low Carbon Fuel Requirements Regulation.
 
     OpenAPI spec version: v1
-        
+
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
     limitations under the License.
 """
 
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, Sequence
 from sqlalchemy.orm import relationship
 from lcfs.db.base import Auditable, EffectiveDates, BaseModel, DisplayOrder
 
@@ -27,7 +27,7 @@ from lcfs.db.base import Auditable, EffectiveDates, BaseModel, DisplayOrder
 class OrganizationType(BaseModel, Auditable, EffectiveDates, DisplayOrder):
     __tablename__ = 'organization_type'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, Sequence('organization_type_id_seq'), primary_key=True)
     type = Column(String(25), unique=True, comment='Enumerated value to describe the organization type.')
     description = Column(String(1000), nullable=True, comment='Description of the organization type. This is the displayed name.')
 

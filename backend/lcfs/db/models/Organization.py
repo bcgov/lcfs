@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Sequence
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 
@@ -9,7 +9,7 @@ class Organization(BaseModel,Auditable):
                                  "an entry for the government which is also "
                                  "considered an organization."}
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
     name = Column(String(500), comment="Organization's legal name")
     status_id = Column(Integer, ForeignKey('organization_status.id'))
     actions_type_id = Column(Integer, ForeignKey('organization_actions_type.id'))
