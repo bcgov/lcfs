@@ -1,6 +1,7 @@
-from typing import AsyncGenerator
+from functools import wraps
+from typing import AsyncGenerator, Type, Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -30,6 +31,7 @@ def get_db_session():
         session.commit()
         session.close()
 
+
 async def get_async_db_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Create and get database session.
@@ -42,3 +44,22 @@ async def get_async_db_session() -> AsyncGenerator[AsyncSession, None]:
     finally:
         await session.commit()
         await session.close()
+
+
+def transactional(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        db: AsyncSession = kwargs.get("db")
+        if not db:
+            raise HTTPException(status_code=500,
+                                detail="Database session not available")
+
+        try:
+            result = None
+            async with db.begin():
+                result = await func(*args, **kwargs)
+            return result
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    return wrapper

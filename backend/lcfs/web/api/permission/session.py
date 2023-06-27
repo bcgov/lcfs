@@ -5,11 +5,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from lcfs.web.api.base_schema import row_to_dict
+from lcfs.web.api.base import row_to_dict
 from lcfs.web.api.permission.schema import PermissionSchema
 
 logger = getLogger("permission")
-
+PERMISSION_STMT = "Select id, code, name, description from permission"
 
 class PermissionRepository:
     def __init__(self, session: AsyncSession, request: Request = None):
@@ -18,8 +18,7 @@ class PermissionRepository:
 
     async def get_all_permissions(self) -> List[PermissionSchema]:
         logger.info("Getting all permissions from repository")
-        stmt = "Select id, code, name, description from permission"
-        results = await self.session.execute(text(stmt))
+        results = await self.session.execute(text(PERMISSION_STMT))
         results = results.fetchall()
         if results.__len__() == 0:
             return []

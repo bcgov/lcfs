@@ -28,7 +28,7 @@ from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'organization_address'
     __table_args__ = {'comment': "Represents an organization's address."}
-    
+
     id = Column(Integer, primary_key=True)  # assuming you have an id field
     organization_id = Column(Integer, ForeignKey('organization.id'))  # replace 'organization.id' with your actual organization table's id field name
 
@@ -45,7 +45,7 @@ class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
     attorney_country = Column(String(100), nullable=True)
     attorney_address_other = Column(String(100), nullable=True)
     attorney_street_address = Column(String(500), nullable=True)
-    attorney_representativename = Column(String(500), nullable=True)
+    attorney_representative_name = Column(String(500), nullable=True)
 
     # assuming 'addresses' relationship
     organization = relationship('Organization', back_populates='addresses')

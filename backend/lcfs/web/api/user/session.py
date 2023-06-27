@@ -5,26 +5,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from lcfs.web.api.base_schema import row_to_dict
-from lcfs.web.api.user.schema import UserSchema
+from lcfs.web.api.base import row_to_dict
+from lcfs.web.api.user.schema import UserBase
 
-logger = getLogger("role")
-user_stmt = "select id, title, first_name, last_name, email, username, display_name, " \
-            "is_active, phone, cell_phone, ( select json_agg(row_to_json(temp_roles)) " \
-            " from ( select r.id, r.name, r.description, r.is_government_role " \
-            "from role r inner join user_role ur on ur.user_id = u.id and ur.role_id = r.id ) " \
-            "as temp_roles )::json as roles, ( select json_agg(row_to_json(temp_permissions)) " \
-            " from ( select p.id, p.code, p.name, p.description from role r " \
-            "inner join user_role ur on ur.user_id = u.id and ur.role_id = r.id " \
-            "inner join role_permission rp on rp.role_id = r.id inner join permission p " \
-            "on p.id = rp.permission_id ) as temp_permissions )::json as permissions, " \
-            "coalesce( ( select r.is_government_role from role r inner join user_role ur " \
-            "on u.id = ur.user_id and r.id = ur.role_id " \
-            "where r.is_government_role = true limit 1 ), false ) as is_government_user " \
-            ", null as organization " \
-            " from public.user u where 1=1"
-
-user_stmt_count = "select count(*) from public.user u where 1=1"
+logger = getLogger("user_repo")
+USER_VIEW_STMT = "select * from user_view u where 1=1"
+USER_COUNT_STMT = "select count(*) from user_view u where 1=1"
 
 
 class UserRepository:
@@ -34,29 +20,29 @@ class UserRepository:
         self.request = request
 
     async def get_users_count(self):
-        count_result = await self.session.execute(text(user_stmt_count))
+        count_result = await self.session.execute(text(USER_COUNT_STMT))
         return count_result.fetchone()[0]
 
-    async def get_all_users(self, limit, offset, current_user=None) -> List[UserSchema]:
-        # TODO: add sorting, limitation based on user role
+    async def get_all_users(self, limit, offset, current_user: UserBase=None) -> List[UserBase]:
+        # TODO: add sorting, limitation based on user role, organization schema needs to be defined
         logger.info("Getting all users from repository")
-        stmt = f'{user_stmt} and u.is_active = true limit {limit} offset {offset}'
+        stmt = f'{USER_VIEW_STMT} and u.is_active = true limit {limit} offset {offset}'
         user_results = await self.session.execute(text(stmt))
         results = user_results.fetchall()
         if results.__len__() == 0:
             return []
-        return [row_to_dict(user, UserSchema) for user in results]
+        return [row_to_dict(user, UserBase) for user in results]
 
-    async def get_user(self, user_id) -> UserSchema:
+    async def get_user(self, user_id) -> UserBase:
         logger.info("Getting user by id from repository")
-        stmt = f'{user_stmt} and u.is_active = true and u.id = {user_id}'
+        stmt = f'{USER_VIEW_STMT} and u.is_active = true and u.id = {user_id}'
         user_results = await self.session.execute(text(stmt))
-        return row_to_dict(user_results.fetchone(), UserSchema)
+        return row_to_dict(user_results.fetchone(), UserBase)
 
-    async def search_users(self, username, organization, surname, include_inactive) -> List[UserSchema]:
+    async def search_users(self, username, organization, surname, include_inactive) -> List[UserBase]:
         # TODO: add pagination, add sorting, add organization search capability
         logger.info("Searching users from repository")
-        stmt = user_stmt
+        stmt = USER_VIEW_STMT
         if username is not None:
             stmt += f" and lower(u.username) like lower('%{username}%')"
         # yet to implement Organization
@@ -70,4 +56,4 @@ class UserRepository:
         results = user_results.fetchall()
         if results.__len__() == 0:
             return []
-        return [row_to_dict(user, UserSchema) for user in results]
+        return [row_to_dict(user, UserBase) for user in results]

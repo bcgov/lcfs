@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
 from lcfs.db import dependencies
-from lcfs.web.api.base_schema import EntityResponse
+from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.role.session import RoleRepository
 
 router = APIRouter()

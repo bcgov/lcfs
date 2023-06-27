@@ -2,11 +2,10 @@ from logging import getLogger
 
 from fastapi import APIRouter, status, FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from lcfs.db import dependencies
-from lcfs.web.api.base_schema import EntityResponse
+from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.permission.session import PermissionRepository
 
 router = APIRouter()

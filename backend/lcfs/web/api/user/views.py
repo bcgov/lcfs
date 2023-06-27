@@ -17,13 +17,12 @@ from fastapi import APIRouter, status, FastAPI
 from starlette.responses import Response
 
 from lcfs.db import dependencies
-from lcfs.web.api.base_schema import EntityResponse
+from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.user.session import UserRepository
 
 router = APIRouter()
 logger = getLogger("role")
 get_async_db = dependencies.get_async_db_session
-# get_db = dependencies.get_db_session
 app = FastAPI()
 
 user_repo = None  # Define user_repo at the global level
@@ -92,7 +91,6 @@ async def get_user_search(username: str = None, organization: str = None,
 @router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_user_by_id(user_id: int, response: Response = None) -> EntityResponse:
     try:
-        print(user_id)
         user = await user_repo.get_user(user_id=user_id)
         if user is None:
             err_msg = f"User {user_id} not found"
