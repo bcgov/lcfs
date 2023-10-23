@@ -15,8 +15,8 @@ const CONFIG = {
     CLIENT_ID: getConfig('keycloak.client_id', 'tfrs-on-gold-4308'),
     AUTH_URL: getConfig('keycloak.auth_url', 'https://dev.loginproxy.gov.bc.ca/auth'),
     CALLBACK_URL: getConfig('keycloak.callback_url', 'unconfigured'),
-    POST_LOGOUT_URL: getConfig('keycloak.post_logout_url', 'unconfigured'),
-    SM_LOGOUT_URL: getConfig('keycloak.siteminder_logout_url', 'unconfigured')
+    POST_LOGOUT_URL: getConfig('keycloak.post_logout_url', 'http://localhost:3000/'),
+    SM_LOGOUT_URL: getConfig('keycloak.siteminder_logout_url', 'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl=')
   },
   DEBUG: {
     ENABLED: getConfig('debug.enabled', false)

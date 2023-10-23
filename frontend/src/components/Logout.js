@@ -1,5 +1,6 @@
 import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
+import { logout } from '../keycloak'
 
 const Logout = ({ logoutUri }) => {
   const { keycloak } = useKeycloak();
@@ -11,11 +12,7 @@ const Logout = ({ logoutUri }) => {
         <button
           className="logoutButton"
           onClick={() => {
-            if (logoutUri) {
-              keycloak.logout({ redirectUri: logoutUri });
-            } else {
-              keycloak.logout();
-            }
+            logout()
           }}
         >
           Log out

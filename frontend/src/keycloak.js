@@ -15,3 +15,14 @@ export const keycloakInitOptions = {
 export const getKeycloak = () => {
   return keycloak
 };
+
+export const logout = () => {
+  const keycloakLogoutUrl = keycloak.endpoints.logout() +
+    '?post_logout_redirect_uri=' + CONFIG.KEYCLOAK.POST_LOGOUT_URL +
+    '&client_id=' + keycloak.clientId +
+    '&id_token_hint=' + keycloak.idToken
+
+  const url = CONFIG.KEYCLOAK.SM_LOGOUT_URL + encodeURIComponent(keycloakLogoutUrl)
+  
+  window.location = url
+}
