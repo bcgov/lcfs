@@ -74,8 +74,7 @@
     "plugins:storybook": "cd packages/lcfs-ui-demo && npm run storybook",
     "prettier": "npm run _prettier -- --write",
     "prettier-check": "npm run _prettier -- --check",
-    "prod": "npm run build",
-    "storybook": "cross-env NODE_ENV=development BABEL_ENV=development start-storybook -p 9001"
+    "prod": "npm run build"
   },
   "eslintConfig": {
     "extends": [
