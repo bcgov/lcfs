@@ -361,7 +361,6 @@ Object.entries(packageConfig.dependencies).forEach(([pkg, relativeDir]) => {
 });
 console.log(''); // pure cosmetic new line
 
-// let proxyConfig = getProxyConfig();
 if (isDevMode) {
   config.devServer = {
     historyApiFallback: {
@@ -375,37 +374,6 @@ if (isDevMode) {
     port: devserverPort
   }
 }
-// if (isDevMode) {
-//   config.devtool = 'eval-cheap-module-source-map';
-//   config.devServer = {
-//     onBeforeSetupMiddleware(devServer) {
-//       // load proxy config when manifest updates
-//       const { afterEmit } = getCompilerHooks(devServer.compiler);
-//       afterEmit.tap('ManifestPlugin', manifest => {
-//         proxyConfig = getProxyConfig(manifest);
-//       });
-//     },
-//     historyApiFallback: true,
-//     hot: true,
-//     port: devserverPort,
-//     // Only serves bundled files from webpack-dev-server
-//     // and proxy everything else to LCFS backend
-//     proxy: [
-//       // functions are called for every request
-//       () => proxyConfig,
-//     ],
-//     client: {
-//       overlay: {
-//         errors: true,
-//         warnings: false,
-//         runtimeErrors: error => !/ResizeObserver/.test(error.message),
-//       },
-//       logging: 'error',
-//     },
-//     static: path.join(process.cwd(), '../static/assets'),
-//   };
-// }
-
 // Bundle analyzer is disabled by default
 // Pass flag --analyzeBundle=true to enable
 // e.g. npm run build -- --analyzeBundle=true
