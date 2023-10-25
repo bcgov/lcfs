@@ -39,7 +39,7 @@ const ASSET_BASE_URL = process.env.ASSET_BASE_URL || '';
 
 const output = {
   path: BUILD_DIR,
-  publicPath: `${ASSET_BASE_URL}/public/assets/`,
+  publicPath: '/',
 };
 if (isDevMode) {
   output.filename = '[name].[contenthash:8].entry.js';
@@ -154,11 +154,7 @@ if (isDevMode) {
 const config = {
   mode: isProduction ? 'production' : 'development',
   entry: './src/index.js',
-  output: {
-    path: BUILD_DIR,
-    filename: '[name].js',
-    publicPath: '/'
-  },
+  output,
   stats: 'minimal',
   performance: {
     assetFilter(assetFilename) {
