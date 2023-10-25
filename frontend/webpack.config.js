@@ -35,6 +35,7 @@ const {
   nameChunks = false,
 } = parsedArgs;
 const isDevMode = mode !== 'production';
+const isProduction = mode === 'production';
 const isDevServer = process.argv[1].includes('webpack-dev-server');
 const ASSET_BASE_URL = process.env.ASSET_BASE_URL || '';
 
@@ -111,23 +112,23 @@ const plugins = [
   ),
 
   // static pages
-  new HtmlWebpackPlugin({
-    template: './src/assets/staticPages/404.html',
-    inject: true,
-    chunks: [],
-    filename: '404.html',
-  }),
-  new HtmlWebpackPlugin({
-    template: './src/assets/staticPages/500.html',
-    inject: true,
-    chunks: [],
-    filename: '500.html',
-  }),
+  // new HtmlWebpackPlugin({
+  //   template: './src/assets/staticPages/404.html',
+  //   inject: true,
+  //   chunks: [],
+  //   filename: '404.html',
+  // }),
+  // new HtmlWebpackPlugin({
+  //   template: './src/assets/staticPages/500.html',
+  //   inject: true,
+  //   chunks: [],
+  //   filename: '500.html',
+  // }),
   new HtmlWebpackPlugin({
     title: 'LCFS',
-    chunks: ['bundle', 'vendor'],
+    // chunks: ['bundle', 'vendor'],
     filename: 'index.html',
-    inject: true,
+    inject: 'body',
     favicon: './public/assets/icons/favicon.ico',
     template: './public/index.html'
   }),
@@ -156,47 +157,34 @@ function addPreamble(entry) {
   return PREAMBLE.concat([path.join(APP_DIR, entry)]);
 }
 
-const babelLoader = {
-  loader: 'babel-loader',
-  options: {
-    cacheDirectory: true,
-    // disable gzip compression for cache files
-    // faster when there are millions of small files
-    cacheCompression: false,
-    plugins: ['@emotion'],
-    presets: [
-      [
-        '@emotion/babel-preset-css-prop',
-        {
-          autoLabel: 'dev-only',
-          labelFormat: '[local]',
-        },
-      ],
-    ],
-  },
-};
+// const babelLoader = {
+//   loader: 'babel-loader',
+//   options: {
+//     cacheDirectory: true,
+//     // disable gzip compression for cache files
+//     // faster when there are millions of small files
+//     cacheCompression: false,
+//     plugins: ['@emotion'],
+//     presets: [
+//       [
+//         '@emotion/babel-preset-css-prop',
+//         {
+//           autoLabel: 'dev-only',
+//           labelFormat: '[local]',
+//         },
+//       ],
+//     ],
+//   },
+// };
 
 const config = {
-  entry: {
-    // preamble: PREAMBLE,
-    // theme: path.join(APP_DIR, '/src/theme.ts'),
-    // menu: addPreamble('src/views/menu.tsx'),
-    // spa: addPreamble('/src/views/index.tsx'),
-    // embedded: addPreamble('/src/embedded/index.tsx'),
-    // bundle: (!isDevMode)
-    //   ? ['@babel/polyfill', MAIN_ENTRY]
-    //   : [
-    //     // For hot style updates
-    //     'webpack/hot/dev-server',
-    //     // The script refreshing the browser on none hot updates
-    //     'webpack-dev-server/client/index.js?hot=true&live-reload=true',
-    //     '@babel/polyfill',
-    //     // Our application
-    //     MAIN_ENTRY
-    //   ],
-    main: MAIN_ENTRY,
+  mode: isProduction ? 'production' : 'development',
+  entry: './src/index.js',
+  output: {
+    path: BUILD_DIR,
+    filename: '[name].js',
+    publicPath: '/'
   },
-  output,
   stats: 'minimal',
   performance: {
     assetFilter(assetFilename) {
@@ -262,15 +250,6 @@ const config = {
   resolve: {
     // resolve modules from `/frontend/node_modules` and `/frontend`
     modules: ['node_modules', APP_DIR],
-    // alias: {
-    //   // TODO: remove aliases once React has been upgraded to v. 17 and
-    //   //  AntD version conflict has been resolved
-    //   antd: path.resolve(path.join(APP_DIR, './node_modules/antd')),
-    //   react: path.resolve(path.join(APP_DIR, './node_modules/react')),
-    //   // TODO: remove Handlebars alias once Handlebars NPM package has been updated to
-    //   // correctly support webpack import (https://github.com/handlebars-lang/handlebars.js/issues/953)
-    //   handlebars: 'handlebars/dist/handlebars.js',
-    // },
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.yml'],
     fallback: {
       fs: false,
@@ -282,7 +261,7 @@ const config = {
   module: {
     rules: [
       {
-        test: /\.js(x?)$/,
+        test: /\.(js|jsx)$/,
         // include source code for plugins, but exclude node_modules and test files within them
         exclude: [/lcfs-ui.*\/node_modules\//, /\.test.jsx?$/],
         include: [
@@ -292,7 +271,12 @@ const config = {
           ), // redundant but required for windows
           /@encodable/,
         ],
-        use: [babelLoader],
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env', '@babel/preset-react'],
+          },
+        },
       },
       {
         test: /\.(s?)css$/,
@@ -312,6 +296,10 @@ const config = {
             options: {
               sourceMap: true
             }
+          },
+          {
+            loader: 'style-loader',
+            options: { sourceMap: true }
           }
         ]
       },
