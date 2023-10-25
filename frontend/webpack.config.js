@@ -35,7 +35,6 @@ const {
 const isDevMode = mode !== 'production';
 const isProduction = mode === 'production';
 const isDevServer = process.argv[1].includes('webpack-dev-server');
-const ASSET_BASE_URL = process.env.ASSET_BASE_URL || '';
 
 const output = {
   path: BUILD_DIR,
