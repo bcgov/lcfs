@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@fortawesome/react-fontawesome": "^0.2.0",
+    "@mdx-js/loader": "^3.0.0",
     "@mdx-js/mdx": "^2.3.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.11",
     "@react-keycloak/web": "^3.4.0",

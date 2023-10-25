@@ -12,7 +12,6 @@ const ReactRefreshPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
 const {
   WebpackManifestPlugin,
-  getCompilerHooks,
 } = require('webpack-manifest-plugin');
 // const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const parsedArgs = require('yargs').argv;
@@ -24,7 +23,6 @@ const APP_DIR = path.resolve(__dirname, './');
 // output dir
 const BUILD_DIR = path.resolve(__dirname, 'public', 'build')
 const ROOT_DIR = path.resolve(__dirname, '..');
-const MAIN_ENTRY = path.join(__dirname, 'src', 'index.js')
 
 const {
   mode = 'development',
@@ -112,18 +110,18 @@ const plugins = [
   ),
 
   // static pages
-  // new HtmlWebpackPlugin({
-  //   template: './src/assets/staticPages/404.html',
-  //   inject: true,
-  //   chunks: [],
-  //   filename: '404.html',
-  // }),
-  // new HtmlWebpackPlugin({
-  //   template: './src/assets/staticPages/500.html',
-  //   inject: true,
-  //   chunks: [],
-  //   filename: '500.html',
-  // }),
+  new HtmlWebpackPlugin({
+    template: './src/assets/staticPages/404.html',
+    inject: true,
+    chunks: [],
+    filename: '404.html',
+  }),
+  new HtmlWebpackPlugin({
+    template: './src/assets/staticPages/500.html',
+    inject: true,
+    chunks: [],
+    filename: '500.html',
+  }),
   new HtmlWebpackPlugin({
     title: 'LCFS',
     // chunks: ['bundle', 'vendor'],
@@ -152,30 +150,6 @@ if (isDevMode) {
   plugins.push(new ReactRefreshPlugin())
   plugins.push(new webpack.HotModuleReplacementPlugin())
 }
-
-function addPreamble(entry) {
-  return PREAMBLE.concat([path.join(APP_DIR, entry)]);
-}
-
-// const babelLoader = {
-//   loader: 'babel-loader',
-//   options: {
-//     cacheDirectory: true,
-//     // disable gzip compression for cache files
-//     // faster when there are millions of small files
-//     cacheCompression: false,
-//     plugins: ['@emotion'],
-//     presets: [
-//       [
-//         '@emotion/babel-preset-css-prop',
-//         {
-//           autoLabel: 'dev-only',
-//           labelFormat: '[local]',
-//         },
-//       ],
-//     ],
-//   },
-// };
 
 const config = {
   mode: isProduction ? 'production' : 'development',
@@ -357,24 +331,13 @@ const config = {
         include: ROOT_DIR,
         loader: 'js-yaml-loader',
       },
-      // {
-      //   test: /\.mdx$/,
-      //   use: [
-      //     {
-      //       loader: 'babel-loader',
-      //       // may or may not need this line depending on your app's setup
-      //       options: {
-      //         plugins: ['@babel/plugin-transform-react-jsx'],
-      //       },
-      //     },
-      //     {
-      //       loader: '@mdx-js/loader',
-      //       options: {
-      //         compilers: [createMdxCompiler({})],
-      //       },
-      //     },
-      //   ],
-      // },
+      {
+        test: /.mdx?$/,
+        use: [
+          'babel-loader',
+          '@mdx-js/loader'
+        ]
+      }
     ],
   },
   externals: {
