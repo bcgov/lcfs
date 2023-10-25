@@ -1,0 +1,230 @@
+@import './_mixins.scss';
+@import './_variables.scss';
+@import './App.scss';
+@import './Dashboard.scss';
+@import './Login.scss';
+@import './Navbar.scss';
+// @import '../node_modules/react-redux-toastr/src/styles/index.scss';
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+
+#main {
+  position: relative;
+  padding: 3rem;
+  padding-bottom: 70px;
+
+  @include tablet {
+    padding-top: 30px !important;
+  }
+}
+
+#root,
+[data-reactroot],
+#root > div,
+#root div.App {
+  height: 100%;
+  min-width: 50rem;
+}
+
+#header{
+  color: $white;
+
+  #organization-balance {
+    display: block;
+    font-size: 1.5rem;
+    text-align: right;
+  }
+
+  #organization-name {
+    color: $white;
+    display: block;
+    font-size: 1.6rem;
+    margin: 0.5rem 0;
+    text-align: right;
+  }
+
+  .pull-right {
+    align-items: center;
+    display: flex;
+    height: 100%;
+  }
+}
+
+#header .bcgov-title h1 {
+  font-weight: 400;
+}
+
+#header-main-row {
+  padding: 0 19rem 1.5rem 1.5rem;
+  position: relative;
+
+  #logo {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .navbar-collapse {
+    box-shadow: none;
+    -webkit-box-shadow: none;
+  }
+
+  .navbar-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 0;
+  }
+
+  .bcgov-title {
+    display: inline-block;
+    margin: 13px 0 0 3rem;
+    padding: 0;
+    vertical-align: middle;
+
+    h1 {
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  .pull-right {
+    position: absolute;
+    top: 0;
+    right: 1.5rem;
+  }
+
+  @media (max-width: 930px) {
+    padding-right: 0;
+
+    #logo img {
+      height: 100%;
+      padding-left: 0;
+      width: 100%;
+    }
+
+    .pull-right {
+      display: none;
+    }
+  }
+}
+
+h1 {
+  font-weight: 500;
+}
+
+.btn {
+  margin-right: 0.6em;
+}
+
+.btn-no-style {
+  background: none;
+  border: none;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.btn-container {
+  .btn + .btn, .btn + div, div + div, div + .btn {
+    margin-left: 0.4rem;
+    margin-right: 0.4rem;
+  }
+
+  .btn:last-child, div:last-child, div.overlay-trigger:last-child {
+    margin-right: 0;
+  }
+}
+
+.dropdown-menu {
+  button {
+    background: none;
+    border: none;
+    clear: both;
+    display: block;
+    margin: 0;
+    padding: 5px 20px;
+    text-align: left;
+    white-space: nowrap;
+    width: 100%;
+
+    &:hover {
+      background-color: $background-grey;
+    }
+  }
+}
+
+.not-implemented:hover {
+  position: relative;
+  z-index: 10000;
+
+  &:after {
+    content: 'Not implemented';
+    display: inline-block;
+    background: white;
+    padding: 0.5rem;
+    color: black;
+    position: absolute;
+  }
+}
+
+// Tables
+
+table {
+  margin: 0;
+}
+
+.form-group.form-group-sm.react-bs-table-search-form {
+  padding: 0;
+  display: inline-block;
+
+  @include mobile {
+    width: 100%;
+  }
+}
+
+.table-bordered > thead > tr > td,
+.table-bordered > thead > tr > th {
+  border-bottom-width: 0 !important;
+}
+
+.table-bordered > tbody > tr > td {
+  border-bottom: none;
+}
+
+.modal {
+  .note {
+    width: 100%;
+    resize: none;
+  }
+
+  .alert-success {
+    margin: 1rem 0 0 0;
+  }
+
+  .modal-footer {
+    .btn, .overlay-trigger {
+      margin: 0 0.4rem;
+    }
+
+    .overlay-trigger .btn {
+      margin: 0;
+    }
+  }
+}
+
+.react-bs-table .table-bordered > tbody > tr > td {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.react-bs-table-bordered {
+  margin: 1em 0;
+}
+.tooltip-content {
+  font-size: 14.5px;
+  overflow-y: auto; 
+}

@@ -1,8 +1,8 @@
-import React from 'react';
-import logo from '../styles/images/gov3_bc_logo.png';
-import Logout from './Logout';
+import React from 'react'
+import logo from '../assets/images/gov3_bc_logo.png'
+import Logout from './Logout'
 
-const Header = ({ logoutUri }) => {
+const Header = () => {
   return (
     <div className="page-header">
       <div className="tfrs-banner">
@@ -12,13 +12,13 @@ const Header = ({ logoutUri }) => {
           </a>
         </div>
         <div className="right">
-          <Logout logoutUri={logoutUri} />
+          <Logout/>
         </div>
       </div>
       <div className="title">
         <h1>Low Carbon Fuel Standard</h1>
       </div>
     </div>
-  );
-};
-export default Header;
+  )
+}
+export default Header

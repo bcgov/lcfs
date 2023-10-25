@@ -1,35 +1,35 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-import Login from '../components/Login';
-import NotFound from '../components/NotFound'
-import Dashboard from '../dashboard'
+import * as appRoutes from './constants/routes'
+import Login from './components/Login';
+import NotFound from './components/NotFound'
+import Dashboard from './views/dashboard'
 import { useKeycloak } from '@react-keycloak/web';
-import Layout from '../components/Layout';
+import Layout from './components/Layout';
 
 const RequireAuth = ({ children, redirectTo }) => {
   const { keycloak } = useKeycloak();
   return keycloak.authenticated ? children : <Navigate to={redirectTo} />;
 };
 
-const AppRouter = () => (
+const App = () => (
   <BrowserRouter>
     <Routes>
       <Route
         path="/"
         exact
         element={
-          <RequireAuth redirectTo="/login">
+          <RequireAuth redirectTo={appRoutes.LOGIN}>
             <Layout>
               <Dashboard />
             </Layout>
           </RequireAuth>
         }
       />
-      <Route path="/login" element={<Login />} />
+      <Route path={appRoutes.LOGIN} element={<Login />} />
       <Route element={<NotFound/>} />
     </Routes>
   </BrowserRouter>
 );
 
-export default AppRouter;
+export default App;

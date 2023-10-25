@@ -3,13 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import { getKeycloak, keycloakInitOptions } from './keycloak'
-import AppRouter from './routes'
+import App from './App'
 import Loading from './components/Loading'
-import './index.css'
+import './styles/index.scss'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()
-const root = document.getElementById('root');
+const root = document.getElementById('root')
 
 if (root) {
   createRoot(root).render(
@@ -19,8 +19,8 @@ if (root) {
       LoadingComponent={<Loading />}
     >
       <QueryClientProvider client={queryClient}>
-        <AppRouter />
+        <App />
       </QueryClientProvider>
     </ReactKeycloakProvider>
-  );
+  )
 }
