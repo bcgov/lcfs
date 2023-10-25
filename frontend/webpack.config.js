@@ -265,10 +265,6 @@ const config = {
             options: {
               sourceMap: true
             }
-          },
-          {
-            loader: 'style-loader',
-            options: { sourceMap: true }
           }
         ]
       },
