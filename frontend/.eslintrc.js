@@ -13,16 +13,11 @@ if (process.env.NODE_ENV === 'production') {
 
 module.exports = {
   extends: [
-    'airbnb',
+    'standard',
     'prettier',
     'plugin:react-hooks/recommended',
   ],
   parser: '@babel/eslint-parser',
-  parserOptions: {
-    ecmaFeatures: {
-      experimentalObjectRestSpread: true,
-    },
-  },
   env: {
     browser: true,
     node: true,
@@ -42,8 +37,11 @@ module.exports = {
   },
   plugins: [
     'prettier',
-    'react',
-    'file-progress',
+    'standard',
+    'promise',
+    'import',
+    'node',
+    'prettier',
     // 'theme-colors',
     // 'translation-vars',
   ],
@@ -52,7 +50,7 @@ module.exports = {
       files: ['*.ts', '*.tsx'],
       parser: '@typescript-eslint/parser',
       extends: [
-        'airbnb',
+        'standard',
         'prettier',
       ],
       plugins: ['@typescript-eslint/eslint-plugin', 'prettier', 'react'],

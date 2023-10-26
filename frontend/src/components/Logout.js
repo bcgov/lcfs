@@ -2,7 +2,7 @@ import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { logout } from '../keycloak'
 
-const Logout = ({ logoutUri }) => {
+const Logout = () => {
   const { keycloak } = useKeycloak();
   if (keycloak.authenticated) {
     const kcToken = keycloak.tokenParsed;

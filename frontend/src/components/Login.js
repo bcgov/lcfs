@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-// import FontAwesomeIcon from '@fortawesome/react-fontawesome'
 import { useKeycloak } from '@react-keycloak/web';
 import CallableModal from '../components/CallableModal'
 import * as Lang from '../constants/langEnUs'
@@ -14,7 +13,6 @@ const Login = (props) => {
   const _closeModal = () => {
     setHideModal(true)
   }
-  
   let showModal = false
 
   if (!hideModal && (userAgent.indexOf('MSIE ') >= 0 || userAgent.indexOf('Trident/') >= 0)) {
@@ -36,7 +34,7 @@ const Login = (props) => {
                 onClick={() => {
                   keycloak.login({
                     idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
-                    redirectUri: redirectUri
+                    redirectUri
                   })
                 }}
                 id="link-bceid"
@@ -52,7 +50,7 @@ const Login = (props) => {
                 onClick={() => {
                   keycloak.login({
                     idpHint: IDENTITY_PROVIDERS.IDIR,
-                    redirectUri: redirectUri
+                    redirectUri
                   })
                 }}
                 id="link-idir"

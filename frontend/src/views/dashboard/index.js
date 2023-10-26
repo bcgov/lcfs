@@ -1,7 +1,7 @@
 import React from 'react'
 import { useQuery } from 'react-query'
-import Loading from '../components/Loading'
-import useAxios from '../utils/axiosHook'
+import Loading from '../../components/Loading'
+import useAxios from '../../services/axiosHook'
 
 const testData = async () => {
   const testData = [
