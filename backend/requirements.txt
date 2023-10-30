@@ -21,3 +21,4 @@ tomli==2.0.1
 typing_extensions==4.6.3
 yarl==1.9.2
 colorlog==6.7.0
+uvicorn==0.15.0

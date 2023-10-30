@@ -1,6 +1,6 @@
 // local dev defaults
 
-window.tfrs_config = {
+window.lcfs_config = {
   api_base: 'http://localhost:8000/api',
   'keycloak.realm': 'standard',
   'keycloak.client_id': 'tfrs-on-gold-4308',

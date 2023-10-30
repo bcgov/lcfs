@@ -21,12 +21,12 @@ const Login = (props) => {
 
   return (
     <div id="login">
-      <div id="header" className="login-tfrs-page-header">
-        <div id="header-wrapper" className="login-tfrs-page-header-text">Transportation Fuels Reporting System</div>
+      <div id="header" className="login-lcfs-page-header">
+        <div id="header-wrapper" className="login-lcfs-page-header-text">Transportation Fuels Reporting System</div>
       </div>
-      <div className="login-tfrs-page">
-        <div className="login-tfrs-brand" />
-        <div className="card-tfrs">
+      <div className="login-lcfs-page">
+        <div className="login-lcfs-brand" />
+        <div className="card-lcfs">
           <div className="buttons-section">
             <div className="oidc">
               <button
@@ -80,7 +80,7 @@ const Login = (props) => {
         <div className="content">
           <p>
             Internet Explorer is not fully supported,
-            certain features within TFRS will not work.
+            certain features within LCFS will not work.
           </p>
           <p>Please consider using a different browser such as Chrome, Firefox or Safari.</p>
           <button

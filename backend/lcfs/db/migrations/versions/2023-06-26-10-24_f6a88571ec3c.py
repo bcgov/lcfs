@@ -276,7 +276,7 @@ def upgrade() -> None:
             "keycloak_user_id",
             sa.String(length=150),
             nullable=True,
-            comment="This is the unique id returned from Keycloak and is the main mapping key between the TFRS user and the Keycloak user. The identity provider type will be appended as a suffix after an @ symbol. For ex. asdf1234@bceidbasic or asdf1234@idir",
+            comment="This is the unique id returned from Keycloak and is the main mapping key between the LCFS user and the Keycloak user. The identity provider type will be appended as a suffix after an @ symbol. For ex. asdf1234@bceidbasic or asdf1234@idir",
         ),
         sa.Column(
             "is_login_successful",
@@ -454,7 +454,7 @@ def upgrade() -> None:
             ["organization.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        comment="Represents a fuel supplier organization's credit balance at a given point in time. The government organization does not have an actual credit balance, but rather one was set artificially high to enable the awarding or validating of credits to fuel suppliers within TFRS.",
+        comment="Represents a fuel supplier organization's credit balance at a given point in time. The government organization does not have an actual credit balance, but rather one was set artificially high to enable the awarding or validating of credits to fuel suppliers within LCFS.",
     )
     op.execute(
         """

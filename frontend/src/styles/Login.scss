@@ -133,7 +133,7 @@
   }
 }
 
-.login-tfrs-page {
+.login-lcfs-page {
   background-color: $white;
   background-color: rgba(255, 255, 255, 0.8);
   bottom: 0;
@@ -143,7 +143,7 @@
   position: absolute;
   top: 0;
 
-  .card-tfrs {
+  .card-lcfs {
     align-content: center;
     bottom: 0;
     display: flex;
@@ -154,7 +154,7 @@
     width: 100%;
   }
 
-  .login-tfrs-brand {
+  .login-lcfs-brand {
     background-image: url('../assets/images/BCID_H_rgb_pos.png');
     background-position-x: center;
     background-position-y: center;
@@ -167,14 +167,14 @@
   }
 }
 
-.login-tfrs-page-header {
+.login-lcfs-page-header {
   height: 15%;
   margin: 1rem 0;
   padding: 0 5rem;
   position: fixed;
   width: 100%;
 
-  .login-tfrs-page-header-text {
+  .login-lcfs-page-header-text {
     color: #ffffff;
     font-family: $font-family;
     font-size: 3.5rem;
@@ -214,21 +214,21 @@
 }
 
 @media (min-width: 992px) {
-  .login-tfrs-page {
+  .login-lcfs-page {
     width: 50rem;
   }
 
-  .login-tfrs-page-header {
+  .login-lcfs-page-header {
     padding-left: 55rem;
   }
 }
 
 @media (min-width: 769px) and (max-width: 992px) {
-  .login-tfrs-page {
+  .login-lcfs-page {
     width: 40rem;
   }
 
-  .login-tfrs-page-header {
+  .login-lcfs-page-header {
     padding-left: 45rem;
   }
 }
@@ -243,11 +243,11 @@
       width: 20vw;
   }
 
-  .login-tfrs-page {
+  .login-lcfs-page {
     min-width: 30rem;
     width: 100%;
 
-    .login-tfrs-brand {
+    .login-lcfs-brand {
       background-image: url('../assets/images/BCID_V_rgb_pos.png');
       background-position-x: 3rem;
       background-position-y: center;
@@ -255,10 +255,10 @@
     }
   }
 
-  .login-tfrs-page-header {
+  .login-lcfs-page-header {
     z-index: 999;
 
-    .login-tfrs-page-header-text {
+    .login-lcfs-page-header-text {
       color: #002663;
       font-size: 4.5vw;
       padding-left: 10rem;
