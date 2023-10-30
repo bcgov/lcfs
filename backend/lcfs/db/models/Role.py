@@ -1,9 +1,9 @@
 from sqlalchemy import (Column, Integer, String, Boolean, UniqueConstraint, Sequence)
+from sqlalchemy.orm import relationship
+from lcfs.db.base import Auditable, BaseModel
 
-from lcfs.db.base import Auditable
 
-
-class Role(Auditable):
+class Role(BaseModel, Auditable):
     __tablename__ = 'role'
     __table_args__ = (
         UniqueConstraint('name'),
@@ -18,6 +18,7 @@ class Role(Auditable):
                                 comment="Flag. True if this is a government role (eg. Analyst, Administrator)")
     display_order = Column(Integer, comment="Relative rank in display sorting order")
 
+    user_roles = relationship("UserRole", back_populates='role')
     def __repr__(self):
         return '<Role %r>' % self.name
 

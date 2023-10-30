@@ -2,9 +2,9 @@ from sqlalchemy import Column, ForeignKey, Integer, text, UniqueConstraint, Sequ
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
-from lcfs.db.base import Auditable
+from lcfs.db.base import Auditable, BaseModel
 
-class UserRole(Auditable):
+class UserRole(BaseModel, Auditable):
     __tablename__ = 'user_role'
     __table_args__ = (
         UniqueConstraint('user_id', 'role_id', name='user_role_unique_constraint'),

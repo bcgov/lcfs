@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from lcfs.web.api.organization.schema import Organization
 from lcfs.web.api.permission.schema import PermissionSchema
@@ -15,35 +15,14 @@ Public - attributes present on public facing resources being returned from GET, 
 """
 class UserBase(BaseModel):
     """DTO for user values."""
-    id: Optional[int] = None
-    title: Optional[str] = None
     first_name: str
     last_name: Optional[str] = None
-    email: str
+    email: EmailStr
     username: str
-    display_name: Optional[str] = None
-    is_active: Optional[bool] = True
-    organization: dict = {}
-    # organization: Optional[OrganizationSchema] = {}
-    roles: List[RoleSchema] = []
-    permissions: List[PermissionSchema] = []
-    is_government_user: Optional[bool] = False
+    title: Optional[str] = None
     phone: Optional[str] = None
-    cell_phone: Optional[str] = None
+    mobile_phone: Optional[str] = None
 
 
 class UserCreate(BaseModel):
-    """DTO for creating a user."""
-    title: Optional[str] = None
-    first_name: str
-    last_name: Optional[str] = None
-    email: str
-    username: str
-    display_name: Optional[str] = None
-    is_active: Optional[bool] = True
-    organization: Optional[Organization] = None
-    roles: List[dict] = []
-    permissions: List[dict] = []
-    is_government_user: Optional[bool] = False
-    phone: Optional[str] = None
-    cell_phone: Optional[str] = None
+    pass
