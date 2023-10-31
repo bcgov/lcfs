@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     with environment variables.
     """
 
-    host: str = "127.0.0.1"
+    host: str = "0.0.0.0"
     port: int = 8000
     # quantity of workers for uvicorn
     workers_count: int = 1
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 5432
     db_user: str = "lcfs"
-    db_pass: str = "lcfs"
+    db_pass: str = "development_only"
     db_base: str = "lcfs"
     db_echo: bool = False
 

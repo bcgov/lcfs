@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from 'react-query'
 import { getKeycloak, keycloakInitOptions } from './keycloak'
 import App from './App'
 import Loading from './components/Loading'
+
 import './styles/index.scss'
+import 'bootstrap/dist/css/bootstrap.css';
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()

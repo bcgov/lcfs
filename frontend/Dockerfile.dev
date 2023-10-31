@@ -1,11 +1,15 @@
-FROM node:16 as build
+# Use the official node image as the base image
+FROM node:16
 
+# Set the working directory
 WORKDIR /app
 
-COPY package*.json /app/
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install
 
-RUN npm i
-
+# Copy other source files
 COPY . .
 
+# Expose port 3000 for the app
 EXPOSE 3000
