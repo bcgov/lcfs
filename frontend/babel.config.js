@@ -28,7 +28,6 @@ module.exports = {
     ],
   ],
   plugins: [
-    'lodash',
     '@babel/plugin-syntax-dynamic-import',
     ['@babel/plugin-proposal-class-properties', { loose: true }],
     ['@babel/plugin-proposal-optional-chaining', { loose: true }],
