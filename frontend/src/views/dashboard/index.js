@@ -20,15 +20,15 @@ const testData = async () => {
 }
 
 const Dashboard = () => {
-  const axiosInstance = useAxios()
+  const axios = useAxios()
 
   const queryFn = () =>
-    axiosInstance.current
-      .get(`/api/compliance_reports`)
+    axios.current
+      .get(`/users`)
       .then((response) => response.data)
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['compliance-reports'],
+    queryKey: ['users'],
     queryFn: queryFn,
     refetchOnWindowFocus: false
   })

@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y \
   gcc \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip install poetry==1.4.2
+RUN pip install poetry==1.6.1
 
 # Configuring poetry
 RUN poetry config virtualenvs.create false
