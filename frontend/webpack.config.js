@@ -360,7 +360,6 @@ if (isDevMode) {
         { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
       ]
     },
-    hot: true,
     client: { overlay: false, logging: 'warn' },
     port: devserverPort
   }
