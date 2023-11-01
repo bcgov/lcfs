@@ -13,12 +13,13 @@ GET: /users/<user_id>/history
 import math
 from logging import getLogger
 
-from fastapi import APIRouter, status, FastAPI
+from fastapi import APIRouter, status, FastAPI, Depends,HTTPException
 from starlette.responses import Response
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db import dependencies
 from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.user.session import UserRepository
+from lcfs.web.api.user.schema import UserCreate
 
 router = APIRouter()
 logger = getLogger("role")
@@ -26,7 +27,6 @@ get_async_db = dependencies.get_async_db_session
 app = FastAPI()
 
 user_repo = None  # Define user_repo at the global level
-
 
 @router.on_event("startup")
 async def startup_event():
@@ -36,7 +36,7 @@ async def startup_event():
         break  # Break after obtaining the database connection
 
 
-@router.get("", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+@router.get("/users", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_users(limit: int = 10, offset: int = 0,
                     response: Response = None) -> EntityResponse:
     current_page = math.ceil(offset / limit) + 1
@@ -61,7 +61,6 @@ async def get_users(limit: int = 10, offset: int = 0,
                               message="Failed", success=False, data={},
                               offset=offset, limit=limit, current_page=current_page,
                               error={"message": f"Technical error: {e.args[0]}"})
-
 
 @router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_user_search(username: str = None, organization: str = None,
@@ -108,3 +107,13 @@ async def get_user_by_id(user_id: int, response: Response = None) -> EntityRespo
         return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                               message="Failed", success=False, data={},
                               error={"message": f"Technical error: {e.args[0]}"})
+
+
+@router.post("/users/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> EntityResponse:
+    try:
+        user_repo = UserRepository(db)
+        created_user = await user_repo.create_user(user_data)
+        return EntityResponse(status=status.HTTP_201_CREATED, data=created_user, error={}, success=True, message="User created successfully")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
