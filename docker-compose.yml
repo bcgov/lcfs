@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:14.2
+    environment:
+      POSTGRES_DB: lcfs
+      POSTGRES_USER: lcfs
+      POSTGRES_PASSWORD: development_only
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: bitnami/redis:6.2.5
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/bitnami/redis/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: "Dockerfile"
+      target: dev
+    volumes:
+      - type: bind
+        source: ./backend
+        target: /app
+        consistency: cached
+    environment:
+      LCFS_DB_HOST: db
+      LCFS_DB_PORT: 5432
+      LCFS_DB_USER: lcfs
+      LCFS_DB_PASS: development_only
+      LCFS_DB_BASE: lcfs
+      LCFS_REDIS_HOST: redis
+      LCFS_REDIS_PORT: 6379
+      LCFS_RELOAD: true
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./frontend
+    command: npm run start
+    ports:
+      - 3000:3000
+    volumes:
+      - ./frontend:/app
+
+volumes:
+  node_modules:
+  postgres_data:
+  redis_data:

@@ -2,8 +2,8 @@
  Used to track feature configuration
 */
 const getConfig = (value, def) => {
-  if (global.tfrs_config) {
-    return global.tfrs_config[value] || def
+  if (global.lcfs_config) {
+    return global.lcfs_config[value] || def
   }
   return def
 }

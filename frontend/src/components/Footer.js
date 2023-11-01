@@ -36,7 +36,7 @@ const Footer = props => (
             </ul>
             <div id="footer-about-version" className="inline">
               {/* <a
-                href={`https://github.com/bcgov/tfrs/releases/tag/v${__VERSION__}`}
+                href={`https://github.com/bcgov/lcfs/releases/tag/v${__VERSION__}`}
                 rel="noopener noreferrer"
                 target="_blank"
               >

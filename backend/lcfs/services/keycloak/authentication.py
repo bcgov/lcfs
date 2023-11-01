@@ -161,7 +161,7 @@ class UserAuthentication(AuthenticationBackend):
 
             user_creation_request = creation_request.first()
 
-            # map keycloak user to tfrs user
+            # map keycloak user to lcfs user
             user = user_creation_request.user
             user.keycloak_user_id = user_token['preferred_username']
             if user_token['display_name']:

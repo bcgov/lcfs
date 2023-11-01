@@ -5,7 +5,7 @@ import Logout from './Logout'
 const Header = () => {
   return (
     <div className="page-header">
-      <div className="tfrs-banner">
+      <div className="lcfs-banner">
         <div className="left">
           <a href="http://www.gov.bc.ca" rel="noopener noreferrer">
             <img src={logo} alt="Government of B.C." />

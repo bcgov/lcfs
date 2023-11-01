@@ -78,13 +78,6 @@ For example if you see in your "lcfs/settings.py" a variable named like
 variable to configure the value. This behaviour can be changed by overriding `env_prefix` property
 in `lcfs.settings.Settings.Config`.
 
-An example of .env file:
-```bash
-LCFS_RELOAD="True"
-LCFS_PORT="8000"
-LCFS_ENVIRONMENT="dev"
-```
-
 You can read more about BaseSettings class here: https://pydantic-docs.helpmanual.io/usage/settings/
 
 ## Pre-commit

@@ -1,5 +1,5 @@
 """
-    REST API Documentation for the NRS TFRS Credit Trading Application
+    REST API Documentation for the NRS LCFS Credit Trading Application
 
     The Transportation Fuels Reporting System is being designed to streamline
     compliance reporting for transportation fuel suppliers in accordance with
