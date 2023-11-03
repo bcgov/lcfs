@@ -13,13 +13,13 @@ GET: /users/<user_id>/history
 import math
 from logging import getLogger
 
-from fastapi import APIRouter, status, FastAPI, Depends,HTTPException
+from fastapi import APIRouter, status, FastAPI, Depends, HTTPException, Request
 from starlette.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db import dependencies
 from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.user.session import UserRepository
-from lcfs.web.api.user.schema import UserCreate
+from lcfs.web.api.user.schema import UserCreate, UserBase
 
 router = APIRouter()
 logger = getLogger("role")
@@ -117,3 +117,23 @@ async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_asyn
         return EntityResponse(status=status.HTTP_201_CREATED, data=created_user, error={}, success=True, message="User created successfully")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
+
+
+@router.get("/users/current", response_model=UserBase, status_code=status.HTTP_200_OK)
+async def get_current_user(request: Request, response: Response = None) -> UserBase:
+    try:
+        current_user = request.state.user
+        if not current_user:
+            err_msg = "Current user not found"
+            logger.error(err_msg)
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return UserBase(status=status.HTTP_404_NOT_FOUND,
+                                  message="Not Found", success=False, data={},
+                                  error={"message": err_msg})
+        return UserBase(status=status.HTTP_200_OK, data=current_user)
+    except Exception as e:
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        logger.error("Error getting current user", str(e.args[0]))
+        return UserBase(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                              message="Failed", success=False, data={},
+                              error={"message": f"Technical error: {e.args[0]}"})

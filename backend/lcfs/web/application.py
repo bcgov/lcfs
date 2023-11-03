@@ -5,8 +5,10 @@ import colorlog
 from fastapi import FastAPI
 from fastapi.responses import UJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.middleware.authentication import AuthenticationMiddleware
 
 from lcfs.web.api.router import api_router
+from lcfs.services.keycloak.authentication import UserAuthentication
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
 # Create a colorized log formatter
@@ -47,6 +49,8 @@ def get_app() -> FastAPI:
         openapi_url="/api/openapi.json",
         default_response_class=UJSONResponse,
     )
+
+    app.add_middleware(AuthenticationMiddleware, backend=UserAuthentication())
 
     # Adds prometheus metrics instrumentation.
     Instrumentator().instrument(app).expose(app)
