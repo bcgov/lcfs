@@ -1,25 +1,11 @@
 import enum
 
-from sqlalchemy import Column, Integer, String, Sequence, Enum
+from sqlalchemy import Column, Integer, String, Sequence, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
-
-class StatusEnum(enum.Enum):
-    Active = "Active"
-    Archived = "Archived"
-
-class ActionsTypeEnum(enum.Enum):
-    BuyAndSell = "Buy And Sell"
-    SellOnly = "Sell Only"
-    NA = "None"
-
-class OrganizationTypeEnum(enum.Enum):
-    Government = "Government of British Columbia"
-    Part3FuelSupplier = "Part 3 Fuel Supplier"
-
-class Organization(BaseModel,Auditable):
+class Organization(BaseModel,Auditable, EffectiveDates):
     __tablename__ = 'organization'
     __table_args__ = {'comment': "Contains a list of all of the recognized Part 3 "
                                  "fuel suppliers, both past and present, as well as "
@@ -28,12 +14,16 @@ class Organization(BaseModel,Auditable):
 
     id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
     name = Column(String(500), comment="Organization's legal name")
-    status = Column(Enum(StatusEnum, name="status_enum", create_type=True), default=StatusEnum.Active, comment="Organization's status")
-    actions_type = Column(Enum(ActionsTypeEnum, name="actions_type_enum", create_type=True), default=ActionsTypeEnum.NA, comment="Organization's actions type")
-    type = Column(Enum(OrganizationTypeEnum, name="organization_type_enum", create_type=True), nullable=False, default=OrganizationTypeEnum.Part3FuelSupplier, comment="Organization's type")
+    status = Column(Integer, ForeignKey('organization_status.id'))
+    type = Column(Integer, ForeignKey('organization_type.id'), comment="Organization's type")
+    address = Column(Integer, ForeignKey('organization_address.id'))
+    attorney_address = Column(Integer, ForeignKey('organization_attorney_address.id'))
 
-    addresses = relationship('OrganizationAddress', back_populates='organization')
-    history = relationship('OrganizationHistory', back_populates='organization')
+    org_type = relationship('OrganizationType', back_populates='organization')
+    organization_address = relationship('OrganizationAddress', back_populates='organization')
+    org_attorney_addr = relationship('OrganizationAttorneyAddress', back_populates='organization')
+    org_status = relationship('OrganizationStatus', back_populates='organization')
+    org_type = relationship('OrganizationType', back_populates='organization')
 
     def __repr__(self):
         return self.name
