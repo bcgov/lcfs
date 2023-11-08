@@ -15,5 +15,5 @@ class UserRole(BaseModel, Auditable):
     user_id = Column(Integer, ForeignKey('user.id'))
     role_id = Column(Integer, ForeignKey('role.id'))
     # Relationships
-    user = relationship('User', back_populates='user_roles')
-    role = relationship('Role', back_populates='user_roles')
+    # user = relationship('User', back_populates='user_roles')
+    # role = relationship('Role', back_populates='user_roles')

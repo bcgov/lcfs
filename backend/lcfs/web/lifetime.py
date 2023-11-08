@@ -41,8 +41,14 @@ def register_startup_event(
 
     @app.on_event("startup")
     async def _startup() -> None:  # noqa: WPS430
+        # Set up database connections and session factory
         _setup_db(app)
+
+        # Initialize Redis connection pool
         init_redis(app)
+
+        # Assign settings to app state for global access
+        app.state.settings = settings
         pass  # noqa: WPS420
 
     return _startup

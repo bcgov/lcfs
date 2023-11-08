@@ -1,7 +1,8 @@
 import React from 'react'
 import { useQuery } from 'react-query'
 import Loading from '../../components/Loading'
-import useAxios from '../../services/axiosHook'
+import useApiService from '../../services/useApiService'
+import useUserStore from '../../store/useUserStore'
 
 const testData = async () => {
   const testData = [
@@ -20,10 +21,10 @@ const testData = async () => {
 }
 
 const Dashboard = () => {
-  const axios = useAxios()
-
+  const apiService = useApiService()
+  const user = useUserStore((state) => state.user)
   const queryFn = () =>
-    axios.current
+    apiService.current
       .get(`/users`)
       .then((response) => response.data)
 
@@ -56,7 +57,7 @@ const Dashboard = () => {
   return (
     <div className="Dashboard">
       <header className="Dashboard-header">
-        Dashboard
+        Dashboard {user && <span>Welcome, {user.username}</span>}
       </header>
       {content}
     </div>

@@ -13,6 +13,6 @@ class OrganizationBalance(BaseModel, Auditable, EffectiveDates):
     validated_credits = Column(BigInteger, comment='The actual balance of validated Low Carbon Fuel credits held by a fuel supplier between the effective_date and the expiration_date. If expiration_date is NULL then we assume that it is the current balance.')
     # credit_trade_id = Column(Integer, ForeignKey('metadata.credit_trade.id'), nullable=True)
 
-    organization = relationship('Organization', back_populates='balances')
+    # organization = relationship('Organization', back_populates='balances')
     # credit_trade = relationship('CreditTrade', back_populates='balances')
 

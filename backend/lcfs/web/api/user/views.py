@@ -22,10 +22,8 @@ from lcfs.web.api.user.session import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase
 
 router = APIRouter()
-logger = getLogger("role")
+logger = getLogger("users")
 get_async_db = dependencies.get_async_db_session
-app = FastAPI()
-
 user_repo = None  # Define user_repo at the global level
 
 @router.on_event("startup")
@@ -36,7 +34,7 @@ async def startup_event():
         break  # Break after obtaining the database connection
 
 
-@router.get("/users", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+@router.get("/", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_users(limit: int = 10, offset: int = 0,
                     response: Response = None) -> EntityResponse:
     current_page = math.ceil(offset / limit) + 1
@@ -109,7 +107,7 @@ async def get_user_by_id(user_id: int, response: Response = None) -> EntityRespo
                               error={"message": f"Technical error: {e.args[0]}"})
 
 
-@router.post("/users/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> EntityResponse:
     try:
         user_repo = UserRepository(db)
@@ -119,10 +117,14 @@ async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_asyn
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
 
 
-@router.get("/users/current", response_model=UserBase, status_code=status.HTTP_200_OK)
+@router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
 async def get_current_user(request: Request, response: Response = None) -> UserBase:
     try:
+        print(vars(request))
+        print(vars(request.state))
         current_user = request.state.user
+        print('CURRENT USER')
+        print(current_user)
         if not current_user:
             err_msg = "Current user not found"
             logger.error(err_msg)
@@ -137,3 +139,4 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
         return UserBase(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                               message="Failed", success=False, data={},
                               error={"message": f"Technical error: {e.args[0]}"})
+

@@ -8,8 +8,20 @@ const getConfig = (value, def) => {
   return def
 }
 
+function getApiBaseUrl() {
+  // Split the hostname and current port (if any)
+  const [hostname] = window.location.hostname.split(':');
+
+  // Construct the new base URL with port 8000
+  const baseUrl = `${window.location.protocol}//${hostname}:8000/api`;
+
+  // Use getConfig to get 'api_base' from configuration or fallback to baseUrl
+  return getConfig('api_base', baseUrl);
+}
+
+
 const CONFIG = {
-  API_BASE: getConfig('api_base', `${window.location.protocol}//${window.location.host}:8000/api`),
+  API_BASE: getApiBaseUrl(),
   KEYCLOAK: {
     REALM: getConfig('keycloak.realm', 'standard'),
     CLIENT_ID: getConfig('keycloak.client_id', 'tfrs-on-gold-4308'),
