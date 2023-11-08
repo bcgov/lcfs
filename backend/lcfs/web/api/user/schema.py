@@ -23,7 +23,10 @@ class UserBase(BaseModel):
     mobile_phone: Optional[str] = None
     organization: Optional[object] = None
     user_roles: Optional[List[object]] = None
-
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class UserCreate(UserBase):
     keycloak_user_id: str

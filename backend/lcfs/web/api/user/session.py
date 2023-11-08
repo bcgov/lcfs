@@ -2,7 +2,7 @@ from logging import getLogger
 from typing import List, Optional
 from fastapi import Depends
 
-from sqlalchemy import text, and_, func, select
+from sqlalchemy import text, and_, func, select, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -13,8 +13,11 @@ from lcfs.web.api.user.schema import UserBase
 from lcfs.web.api.dependancies import pagination_query
 
 logger = getLogger("user_repo")
-USER_VIEW_STMT = "select * from user_view u where 1=1"
-USER_COUNT_STMT = "select count(*) from user_view u where 1=1"
+USER_VIEW_STMT = "select * from public.user u where 1=1"
+USER_COUNT_STMT = "select count(*) from public.user u where 1=1"
+# USER_VIEW_STMT = "select * from user_view u where 1=1"
+# USER_COUNT_STMT = "select count(*) from user_view u where 1=1"
+
 
 class UserRepository:
 
@@ -67,20 +70,22 @@ class UserRepository:
             conditions.append(func.lower(User.username).like(f"%{username.lower()}%"))
         if organization:
             conditions.append(func.lower(User.organization.name).like(f"%{organization.lower()}%"))
-        if not include_inactive:
-            conditions.append(User.is_active.is_(True))
+        # if not include_inactive:
+        #     conditions.append(User.is_active.is_(True))
 
         # Sorting direction
-        sort_function = pagination["sort_function"]
+        sort_function = desc if pagination["sort_direction"] == "desc" else asc
         sort_field = pagination["sort_field"]
+        offset = pagination["page"] * pagination["per_page"]
+        limit = pagination["per_page"]
 
         # Applying pagination, sorting, and filters to the query
         query = (
             select(User)
             .where(and_(*conditions))
             .order_by(sort_function(getattr(User, sort_field)))
-            .offset((pagination["page"] - 1) * pagination["per_page"])
-            .limit(pagination["per_page"])
+            .offset(offset)
+            .limit(limit)
         )
 
         # Execute the query

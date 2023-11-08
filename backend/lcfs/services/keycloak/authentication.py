@@ -103,8 +103,10 @@ class UserAuthentication(AuthenticationBackend):
                         select(User).where(User.keycloak_user_id == user_token['preferred_username'])
                     )
                     user = result.scalar_one()
+            
                     await self.create_login_history(user_token, True, None, request.url.path)
-                    return user
+                    return AuthCredentials(["authenticated"]), user
+            
             except NoResultFound:
                 pass
 

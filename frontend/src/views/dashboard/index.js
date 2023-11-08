@@ -23,15 +23,17 @@ const testData = async () => {
 const Dashboard = () => {
   const apiService = useApiService()
   const user = useUserStore((state) => state.user)
+
   const queryFn = () =>
-    apiService.current
+    apiService
       .get(`/users`)
       .then((response) => response.data)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['users'],
     queryFn: queryFn,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    retry: false
   })
 
   let content = <></>
@@ -46,11 +48,14 @@ const Dashboard = () => {
     )
   } else {
     content = (
-      <ul>
-      {data.map(report => (
-        <li key={report.id}>{report.title} : {report.status}</li>
-      ))}
-    </ul>
+      <>
+        <h2>User List</h2>
+        <ul>
+          {data.map(user => (
+            <li key={user.id}>{user.display_name} : {user.title}</li>
+          ))}
+        </ul>
+      </>
     )
   }
 

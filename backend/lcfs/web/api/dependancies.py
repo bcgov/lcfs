@@ -25,5 +25,5 @@ def pagination_query(
         "page": page,
         "per_page": per_page,
         "sort_field": sort_field,
-        "sort_function": sort_function,
+        "sort_function": sort_function
     }
