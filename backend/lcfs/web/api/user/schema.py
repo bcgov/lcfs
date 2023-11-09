@@ -25,7 +25,6 @@ class UserBase(BaseModel):
     user_roles: Optional[List[object]] = None
     
     class Config:
-        orm_mode = True
         from_attributes = True
 
 class UserCreate(UserBase):
