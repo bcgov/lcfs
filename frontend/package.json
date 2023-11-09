@@ -37,7 +37,7 @@
     "format": "npm run _prettier -- --write",
     "lint": "npm run _lint && npm run type",
     "lint-fix": "npm run _lint -- --fix && npm run type",
-    "start": "npx webpack serve --open --config webpack.config.js",
+    "start": "webpack serve --open --config webpack.config.js",
     "plugins:build-storybook": "cd packages/lcfs-ui-demo && npm run build-storybook",
     "plugins:storybook": "cd packages/lcfs-ui-demo && npm run storybook",
     "prettier": "npm run _prettier -- --write",
