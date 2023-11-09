@@ -1,6 +1,3 @@
-Certainly! Here's your comprehensive `README.md` including details about Cypress, Jest, Material-UI, and Webpack, enclosed in a code block for easy copying:
-
-```markdown
 # Low Carbon Fuel Services (LCFS)
 
 An official online application designed for fuel suppliers in British Columbia to manage compliance obligations under the Low Carbon Fuels Act. This tool streamlines the process, ensuring efficiency and adherence to regulations.
