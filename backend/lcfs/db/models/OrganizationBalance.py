@@ -21,4 +21,3 @@ registry = registry()
 
 # Map the class to the view using map_imperatively
 organization_balance_mapper = registry.map_imperatively(OrganizationBalanceView, organization_balance_view)
-

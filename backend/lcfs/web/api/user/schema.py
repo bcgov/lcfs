@@ -15,14 +15,21 @@ Public - attributes present on public facing resources being returned from GET, 
 """
 class UserBase(BaseModel):
     """DTO for user values."""
-    first_name: str
-    last_name: Optional[str] = None
-    email: EmailStr
     username: str
+    email: EmailStr
+    display_name: str
     title: Optional[str] = None
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
+    organization: Optional[object] = None
+    user_roles: Optional[List[object]] = None
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
-
-class UserCreate(BaseModel):
+class UserCreate(UserBase):
+    keycloak_user_id: str
+    keycloak_email: str
+    keycloak_username: str
     pass

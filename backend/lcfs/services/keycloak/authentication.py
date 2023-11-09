@@ -1,206 +1,187 @@
 import json
+import httpx
 import jwt
-import requests
-
+from redis.asyncio import Redis
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_
+from sqlalchemy.future import select
+from sqlalchemy.exc import NoResultFound
+from starlette.requests import Request
 from starlette.authentication import (
-    AuthenticationBackend, AuthenticationError, SimpleUser, UnauthenticatedUser,
-    AuthCredentials
+    AuthenticationBackend, AuthCredentials
 )
-
+from lcfs.settings import Settings
 from lcfs.db.models.User import User
 from lcfs.db.models.UserLoginHistory import UserLoginHistory
-from lcfs.settings import settings
+from lcfs.services.keycloak.dependencies import _parse_external_username
 
 
 class UserAuthentication(AuthenticationBackend):
     """
-    Class to handle authentication when after logging into keycloak
+    Class to handle authentication when calling the lcfs api
     """
+    def __init__(self, redis_pool: Redis, session: AsyncSession, settings: Settings):
+        self.async_session = session
+        self.settings = settings
+        self.redis_pool = redis_pool
+        self.jwks = None
+        self.jwks_uri = None
 
-    def refresh_jwk(self):
-        oidc_response = requests.get(settings.well_known_endpoint)
-        jwks_uri = json.loads(oidc_response.text)['jwks_uri']
-        self.jwks_uri = jwks_uri
-        certs_response = requests.get(jwks_uri)
-        jwks = json.loads(certs_response.text)
-        self.jwks = jwks
+    async def refresh_jwk(self):
+        # Try to get the JWKS data from Redis cache
+        async with Redis(connection_pool=self.redis_pool) as redis:
+            jwks_data = await redis.get('jwks_data')
 
-    def __init__(self):
-        self.unit_testing_enabled = False
-        if not self.unit_testing_enabled:
-            self.refresh_jwk()
-
-    def create_login_history(self, user_token, success = False, error = None, path = ''):
-        # We only want to create a user_login_request when the current user is fetched
-        if path != '/api/users/current':
+        if jwks_data:
+            jwks_data = json.loads(jwks_data)
+            self.jwks = jwks_data.get('jwks')
+            self.jwks_uri = jwks_data.get('jwks_uri')
             return
-            
-        try:
-            email = user_token['email']
-            username = parse_external_username(user_token)
-            id = user_token['preferred_username']
-            print(email, username, id, success, error)
-            UserLoginHistory.objects.create(
-                keycloak_email=email,
-                external_username=username,
-                keycloak_user_id=id,
-                is_login_successful=success,
-                login_error_message=error
-            )
-        except Exception as exc:
-            print('User history object create failed.', exc)
-            pass
+        
+        # If not in cache, retrieve from the well-known endpoint
+        async with httpx.AsyncClient() as client:
+            oidc_response = await client.get(self.settings.well_known_endpoint)
+            jwks_uri = oidc_response.json().get('jwks_uri')
+            certs_response = await client.get(jwks_uri)
+            jwks = certs_response.json()
+        
+        # Composite object containing both JWKS and JWKS URI
+        jwks_data = {
+            'jwks': jwks,
+            'jwks_uri': jwks_uri
+        }
 
-    def authenticate(self, request):
-        """Verify the JWT token and find the correct user in the DB"""
+        # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
+        async with Redis(connection_pool=self.redis_pool) as redis:
+            await redis.set('jwks_data', json.dumps(jwks_data), ex=86400)
 
-        auth = request.META.get('HTTP_AUTHORIZATION', None)
+        self.jwks = jwks
+        self.jwks_uri = jwks_uri
 
+    async def authenticate(self, request):
+        # Extract the authorization header from the request
+        auth = request.headers.get('Authorization')
         if not auth:
-            print('Authorization header required')
-            raise AuthenticationError(
-                'Authorization header required')
+            raise HTTPException(status_code=401, detail='Authorization header is required')
 
-        if self.unit_testing_enabled:
-            try:
-                user = User.objects.get(keycloak_user_id=auth['preferred_username'])
-                return user, None
-            except User.DoesNotExist as exc:
-                print("Testing User does not exist")
-                raise User.DoesNotExist(str(exc))
+        # Split the authorization header into scheme and token
+        parts = auth.split()
+        if parts[0].lower() != 'bearer':
+            raise HTTPException(status_code=401, detail='Authorization header must start with Bearer')
+        elif len(parts) == 1:
+            raise HTTPException(status_code=401, detail='Token not found')
+        elif len(parts) > 2:
+            raise HTTPException(status_code=401, detail='Authorization header must be Bearer token')
 
-        print("auth", auth)
-        try:
-            scheme, token = auth.split()
-        except ValueError:
-            print('Invalid format for authorization header')
-            raise AuthenticationError(
-                'Invalid format for authorization header')
-        if scheme != 'Bearer':
-            print('Authorization header invalid')
-            raise AuthenticationError(
-                'Authorization header invalid'
-            )
+        token = parts[1]
+        # Call the method to refresh the JWKs from the cache or the endpoint
+        await self.refresh_jwk()
 
-        if not token:
-            print('No token found')
-            raise AuthenticationError(
-                'No token found'
-            )
-
-        user_token = None
-        token_validation_errors = []
-
+        # Use PyJWKClient with the JWKS URI to get the signing key
         jwks_client = jwt.PyJWKClient(self.jwks_uri)
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
 
-        try:
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
-        except Exception as exc:
-            print(exc)
-            token_validation_errors.append(exc)
-            raise Exception(str(exc))
-
+        # Decode and validate the JWT token
         try:
             user_token = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
-                audience=settings.keycloak_audience,
+                audience=self.settings.keycloak_audience,
                 options={"verify_exp": True},
             )
+        except jwt.ExpiredSignatureError as exc:
+            raise HTTPException(status_code=401, detail='Token has expired')
         except (jwt.InvalidTokenError, jwt.DecodeError) as exc:
-            print(str(exc))
-            token_validation_errors.append(exc)
-            raise Exception(str(exc))
+            raise HTTPException(status_code=401, detail=str(exc))
 
-        if not user_token:
-            raise AuthenticationError(
-                'No successful decode of user token. Exceptions occurred: {}',
-                '\n'.join([str(error) for error in token_validation_errors])
-            )
-
-        # Check for existing mapped user
         if 'preferred_username' in user_token:
             try:
-                user = User.objects.get(keycloak_user_id=user_token['preferred_username'])
-                if user:
-                    self.create_login_history(user_token, True, None, request.path)
-                return user, None
-            except User.DoesNotExist:
+                async with self.async_session() as session:
+                    result = await session.execute(
+                        select(User).where(User.keycloak_user_id == user_token['preferred_username'])
+                    )
+                    user = result.scalar_one()
+            
+                    await self.create_login_history(user_token, True, None, request.url.path)
+                    return AuthCredentials(["authenticated"]), user
+            
+            except NoResultFound:
                 pass
-        
-        external_username = parse_external_username(user_token)
 
-        # fall through to here if no mapped user is found
+        external_username = _parse_external_username(user_token)
+
         if 'email' in user_token:
-            # we map users by email and external_username
-            creation_request = User.objects.filter(
-                keycloak_email__iexact=user_token['email']
-            ).filter(
-              external_username__iexact=external_username
+            # Construct the query to find the user
+            user_query = select(User).where(
+                and_(
+                    User.keycloak_email == user_token['email'],
+                    User.keycloak_username == external_username
+                )
             )
 
-            # Ensure that idir users can only be mapped to bcgov org
-            # and external users are mapped only to supplier orgs
+            # TODO may need to not use org id == 1 if gov no longer is organization in lcfs
             if user_token['identity_provider'] == 'idir':
-                creation_request.filter(user__organization=1)
+                user_query = user_query.where(User.organization_id == 1)
             elif user_token['identity_provider'] == 'bceidbusiness':
-                creation_request.filter(~Q(user__organization=1))
+                user_query = user_query.where(User.organization_id != 1)
             else:
                 error_text = 'Unknown identity provider.'
-                self.create_login_history(user_token, False, error_text, request.path)
-                return None
+                await self.create_login_history(user_token, False, error_text, request.url.path)
+                raise HTTPException(status_code=401, detail=error_text)
 
-            # filter out if the user has already been mapped
-            creation_request.filter(user__keycloak_user_id=None)
-
-            if not creation_request.exists():
-                error_text = 'No User with that configuration exists.'
-                self.create_login_history(user_token, False, error_text, request.path)
-                return None
-
-            user_creation_request = creation_request.first()
-
-            # map keycloak user to lcfs user
-            user = user_creation_request.user
-            user.keycloak_user_id = user_token['preferred_username']
-            if user_token['display_name']:
-                user._display_name = user_token['display_name']
-            user.save()
-
-            self.create_login_history(user_token, True, None, request.path)
-            user_creation_request.is_mapped = True
-            user_creation_request.save()
+            async with self.async_session() as session:
+                user_result = await session.execute(user_query)
+                user = user_result.scalars().first()
+                if user is None:
+                    error_text = 'No User with that configuration exists.'
+                    await self.create_login_history(user_token, False, error_text, request.url.path)
+                    raise HTTPException(status_code=401, detail=error_text)
         else:
-            error_text = 'preffered_username or email is required in jwt payload.'
-            self.create_login_history(user_token, False, error_text, request.path)
-            return None
-        
-        try:
-            user = User.objects.get(keycloak_user_id=user_token['preferred_username'])
-            if not user.is_active:
-                error_text = 'User is not active.'
-                self.create_login_history(user_token, False, error_text, request.path)
-                return None
-        except User.DoesNotExist:
-            error_text = 'User does not exist.'
-            self.create_login_history(user_token, False, error_text, request.path)
-            return None
+            error_text = 'preferred_username or email is required in JWT payload.'
+            await self.create_login_history(user_token, False, error_text, request.url.path)
+            raise HTTPException(status_code=401, detail=error_text)
+
+        await self.map_user_keycloak_id(user, user_token)
 
         return AuthCredentials(["authenticated"]), user
 
+    async def map_user_keycloak_id(self, user, user_token):
+        """
+        Updates the user's keycloak_user_id and commits the changes to the database.
+        """
+        # Map the keycloak user id to the user for future login caching
+        user.keycloak_user_id = user_token['preferred_username']
+        # TODO may want to map keycloak display name to user as well
+        # user.display_name = user_token['display_name']
 
-def parse_external_username(user_token):
-    try:
-        # Which provider is user logging in with
-        if user_token['identity_provider'] == 'idir':
-            external_username = user_token['idir_username']
-        elif user_token['identity_provider'] == 'bceidbusiness':
-            external_username = user_token['bceid_username']
-        else:
-            raise Exception('Unknown identity provider.')
-    except Exception as exc:
-        raise Exception('Invalid identity provider.')
-    
-    return external_username
+        # The merge method is used to merge the state of the given object into the current session
+        # If the instance does not exist in the session, insert it.
+        # If the instance already exists in the session, update it.
+        async with self.async_session() as session:
+            await session.merge(user)
+            await session.commit()
+
+        return user
+
+    async def create_login_history(self, user_token, success=False, error=None, path=''):
+        """
+        Creates a user login history entry asynchronously.
+        """
+        # We only want to create a user_login_history when the current user is fetched
+        if path == '/api/users/current':
+            email = user_token.get('email', '')
+            username = _parse_external_username(user_token)
+            user_id = user_token.get('preferred_username', '')
+            login_history = UserLoginHistory(
+                keycloak_email=email,
+                external_username=username,
+                keycloak_user_id=user_id,
+                is_login_successful=success,
+                login_error_message=error
+            )
+            async with self.async_session() as session:
+                session.add(login_history)
+                await session.commit()
 

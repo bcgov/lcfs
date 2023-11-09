@@ -1,7 +1,8 @@
 import React from 'react'
 import { useQuery } from 'react-query'
 import Loading from '../../components/Loading'
-import useAxios from '../../services/axiosHook'
+import useApiService from '../../services/useApiService'
+import useUserStore from '../../store/useUserStore'
 
 const testData = async () => {
   const testData = [
@@ -20,17 +21,19 @@ const testData = async () => {
 }
 
 const Dashboard = () => {
-  const axios = useAxios()
+  const apiService = useApiService()
+  const user = useUserStore((state) => state.user)
 
   const queryFn = () =>
-    axios.current
+    apiService
       .get(`/users`)
       .then((response) => response.data)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['users'],
     queryFn: queryFn,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    retry: false
   })
 
   let content = <></>
@@ -45,18 +48,21 @@ const Dashboard = () => {
     )
   } else {
     content = (
-      <ul>
-      {data.map(report => (
-        <li key={report.id}>{report.title} : {report.status}</li>
-      ))}
-    </ul>
+      <>
+        <h2>User List</h2>
+        <ul>
+          {data.map(user => (
+            <li key={user.id}>{user.display_name} : {user.title}</li>
+          ))}
+        </ul>
+      </>
     )
   }
 
   return (
     <div className="Dashboard">
       <header className="Dashboard-header">
-        Dashboard
+        Dashboard {user && <span>Welcome, {user.username}</span>}
       </header>
       {content}
     </div>

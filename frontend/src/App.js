@@ -1,17 +1,11 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Container } from 'react-bootstrap'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import * as appRoutes from './constants/routes'
+import RequireAuth from './components/RequireAuth';
 import Login from './components/Login'
 import NotFound from './components/NotFound'
 import Dashboard from './views/dashboard'
-import { useKeycloak } from '@react-keycloak/web'
 import Layout from './components/Layout'
-
-const RequireAuth = ({ children, redirectTo }) => {
-  const { keycloak } = useKeycloak()
-  return keycloak.authenticated ? children : <Navigate to={redirectTo} />
-}
 
 const App = () => (
   <BrowserRouter>
