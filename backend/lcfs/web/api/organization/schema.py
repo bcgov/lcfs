@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Optional
+from typing import Optional, List
+from pydantic import BaseModel, EmailStr
 
 
 class OrganizationBase(BaseModel):
@@ -49,3 +50,12 @@ class OrganizationAddress(OrganizationAddressBase):
     
 class OrganizationAttorneyAddress(OrganizationAttorneyAddressBase):
     id: int
+
+class OrganizationUser(BaseModel):
+    username: str
+    email: EmailStr
+    display_name: str
+    title: Optional[str] = None
+    phone: Optional[str] = None
+    mobile_phone: Optional[str] = None
+    user_roles: Optional[List[object]] = None

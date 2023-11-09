@@ -6,8 +6,7 @@ from starlette.responses import Response
 
 from lcfs.db.models import User
 from lcfs.db import dependencies
-from schema import Organization, OrganizationCreate, OrganizationUpdate
-from user.schema import UserBase
+from lcfs.web.api.organization.schema import Organization, OrganizationCreate, OrganizationUpdate, OrganizationUser
 
 
 logger = getLogger("organization")
@@ -62,7 +61,7 @@ async def list_organizations(db: AsyncSession = Depends(get_async_db), response:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@router.get("/organizations/{organization_id}/users/", response_model=List[UserBase])
+@router.get("/organizations/{organization_id}/users/", response_model=List[OrganizationUser])
 async def get_users_for_organization(organization_id: int, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():
