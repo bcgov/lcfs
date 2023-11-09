@@ -6,8 +6,9 @@ import { getKeycloak, keycloakInitOptions } from './keycloak'
 import App from './App'
 import Loading from './components/Loading'
 
-import './styles/index.scss'
-import 'bootstrap/dist/css/bootstrap.css';
+// Material UI Custom theme
+import { CssBaseline, ThemeProvider } from "@mui/material";
+import theme from "assets/theme"
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()
@@ -21,7 +22,10 @@ if (root) {
       LoadingComponent={<Loading />}
     >
       <QueryClientProvider client={queryClient}>
-        <App />
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <App />
+        </ThemeProvider>
       </QueryClientProvider>
     </ReactKeycloakProvider>
   )
