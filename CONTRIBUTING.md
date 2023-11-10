@@ -1,6 +1,6 @@
 # Contributing to LCFS
 
-We welcome contributions to the Low Carbon Fuel Services (LCFS) project. By participating in this project, you agree to abide by its terms.
+We welcome contributions to the Low Carbon Fuel Standard (LCFS) project. By participating in this project, you agree to abide by its terms.
 
 ## How to Contribute
 
@@ -64,4 +64,4 @@ By contributing to LCFS, you agree that your contributions will be licensed unde
 
 ## Acknowledgements
 
-Thank you for contributing to LCFS, thereby helping us to improve the management and compliance of low carbon fuel services.
+Thank you for contributing to LCFS, thereby helping us to improve the management and compliance of low carbon fuel standard.
