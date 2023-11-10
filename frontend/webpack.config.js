@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
@@ -9,21 +8,16 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const SpeedMeasurePlugin = require('speed-measure-webpack-plugin');
 const ReactRefreshPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-
-const {
-  WebpackManifestPlugin,
-} = require('webpack-manifest-plugin');
-// const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const parsedArgs = require('yargs').argv;
-// const getProxyConfig = require('./webpack.proxy-config');
-const packageConfig = require('./package');
 
-// input dir
+// Input directory
 const APP_DIR = path.resolve(__dirname, './');
-// output dir
-const BUILD_DIR = path.resolve(__dirname, 'public', 'build')
+// Output directory
+const BUILD_DIR = path.resolve(__dirname, 'public', 'build');
 const ROOT_DIR = path.resolve(__dirname, '..');
 
+// Extract the mode, devserverPort, measure, analyzeBundle, and analyzerPort from the parsed arguments
 const {
   mode = 'development',
   devserverPort = 3000,
@@ -32,10 +26,13 @@ const {
   analyzerPort = 8888,
   nameChunks = false,
 } = parsedArgs;
+
+// Set the environment flags based on the mode
 const isDevMode = mode !== 'production';
 const isProduction = mode === 'production';
 const isDevServer = process.argv[1].includes('webpack-dev-server');
 
+// Initialize the output configuration
 const output = {
   path: BUILD_DIR,
   publicPath: '/',
@@ -55,11 +52,11 @@ if (!isDevMode) {
   output.clean = true;
 }
 
-const plugins = [
+// Extracted plugin configurations
+const basePlugins = [
   new webpack.ProvidePlugin({
     process: 'process/browser.js',
   }),
-
   // creates a manifest.json mapping of name to hashed output used in template files
   new WebpackManifestPlugin({
     publicPath: output.publicPath,
@@ -96,19 +93,18 @@ const plugins = [
     'process.env.REDUX_DEFAULT_MIDDLEWARE':
       process.env.REDUX_DEFAULT_MIDDLEWARE,
   }),
+  new HtmlWebpackPlugin({
+    title: 'LCFS',
+    // chunks: ['bundle', 'vendor'],
+    filename: 'index.html',
+    inject: 'body',
+    favicon: './public/assets/icons/favicon.ico',
+    template: './public/index.html'
+  }),
+];
 
-  new CopyPlugin(
-    (!isDevMode)
-      ? { patterns: [{ from: 'public/assets/', to: 'assets/' }] }
-      : {
-        patterns: [
-          { from: 'public/config/features.js', to: 'static/js/config/' }, // add local dev config
-          { from: 'public/assets/', to: 'assets/' }
-        ]
-      }
-  ),
-
-  // static pages
+// Fallback HTML pages
+const fallbackHtmlPages = [
   new HtmlWebpackPlugin({
     template: './src/assets/staticPages/404.html',
     inject: true,
@@ -121,259 +117,298 @@ const plugins = [
     chunks: [],
     filename: '500.html',
   }),
-  new HtmlWebpackPlugin({
-    title: 'LCFS',
-    // chunks: ['bundle', 'vendor'],
-    filename: 'index.html',
-    inject: 'body',
-    favicon: './public/assets/icons/favicon.ico',
-    template: './public/index.html'
-  }),
 ];
 
-if (!isDevMode) {
-  // text loading (webpack 4+)
-  plugins.push(
-    new MiniCssExtractPlugin({
-      filename: '[name].[chunkhash].entry.css',
-      chunkFilename: '[name].[chunkhash].chunk.css',
-    }),
-  );
-}
-
-const PREAMBLE = [path.join(APP_DIR, '/src/index.js')];
-if (isDevMode) {
-  PREAMBLE.unshift(
-    `webpack-dev-server/client?http://localhost:${devserverPort}`,
-  );
-  plugins.push(new ReactRefreshPlugin())
-  plugins.push(new webpack.HotModuleReplacementPlugin())
-}
-
-const config = {
-  mode: isProduction ? 'production' : 'development',
-  entry: './src/index.js',
-  output,
-  stats: 'minimal',
-  performance: {
-    assetFilter(assetFilename) {
-      // don't throw size limit warning on geojson and font files
-      return !/\.(map|geojson|woff2)$/.test(assetFilename);
-    },
-  },
-  optimization: {
-    sideEffects: true,
-    splitChunks: {
-      chunks: 'all',
-      // increase minSize for devMode to 1000kb because of sourcemap
-      minSize: isDevMode ? 1000000 : 20000,
-      name: nameChunks,
-      automaticNameDelimiter: '-',
-      minChunks: 2,
-      cacheGroups: {
-        automaticNamePrefix: 'chunk',
-        // basic stable dependencies
-        vendors: {
-          priority: 50,
-          name: 'vendors',
-          test: new RegExp(
-            `/node_modules/(${[
-              'abortcontroller-polyfill',
-              'react',
-              'react-dom',
-              'prop-types',
-              'react-prop-types',
-              'prop-types-extra',
-              'redux',
-              'react-redux',
-              'react-select',
-              'react-sortable-hoc',
-              'react-table',
-              'react-ace',
-              '@hot-loader.*',
-              'webpack.*',
-              '@?babel.*',
-              'lodash.*',
-              'antd',
-              '@ant-design.*',
-              '.*bootstrap',
-              'moment',
-              'jquery',
-              'core-js.*',
-              '@emotion.*',
-            ].join('|')})/`,
-          ),
-        },
-        // viz thumbnails are used in `addSlice` and `explore` page
-        thumbnail: {
-          name: 'thumbnail',
-          test: /thumbnail(Large)?\.(png|jpg)/i,
-          priority: 20,
-          enforce: true,
-        },
-      },
-    },
-    usedExports: 'global',
-    minimizer: [new CssMinimizerPlugin(), '...'],
-  },
-  resolve: {
-    // resolve modules from `/frontend/node_modules` and `/frontend`
-    modules: ['node_modules', APP_DIR],
-    extensions: ['.ts', '.tsx', '.js', '.jsx', '.yml'],
-    fallback: {
-      fs: false,
-      vm: require.resolve('vm-browserify'),
-      path: false,
-    },
-  },
-  context: APP_DIR, // to automatically find tsconfig.json
-  module: {
-    rules: [
-      {
-        test: /\.(js|jsx)$/,
-        // include source code for plugins, but exclude node_modules and test files within them
-        exclude: [/lcfs-ui.*\/node_modules\//, /\.test.jsx?$/],
-        include: [
-          new RegExp(`${APP_DIR}/(src|.storybook|plugins|packages)`),
-          ...['./src', './.storybook', './plugins', './packages'].map(p =>
-            path.resolve(__dirname, p),
-          ), // redundant but required for windows
-          /@encodable/,
-        ],
-        use: {
-          loader: 'babel-loader',
-          options: {
-            presets: ['@babel/preset-env', '@babel/preset-react'],
-          },
-        },
-      },
-      {
-        test: /\.(s?)css$/,
-        use: [
-          {
-            loader: MiniCssExtractPlugin.loader,
-            options: {}
-          },
-          {
-            loader: 'css-loader',
-            options: {
-              sourceMap: true
-            }
-          },
-          {
-            loader: 'sass-loader',
-            options: {
-              sourceMap: true
-            }
-          }
-        ]
-      },
-      /* for css linking images (and viz plugin thumbnails) */
-      {
-        test: /\.png$/,
-        issuer: {
-          not: [/\/src\/assets\/staticPages\//],
-        },
-        type: 'asset',
-        generator: {
-          filename: '[name].[contenthash:8].[ext]',
-        },
-      },
-      {
-        test: /\.png$/,
-        issuer: /\/src\/assets\/staticPages\//,
-        type: 'asset',
-      },
-      {
-        test: /\.ico$/,
-        issuer: /\/src\/assets\/staticPages\//,
-        type: 'asset',
-      },
-      {
-        test: /\.svg(\?v=\d+\.\d+\.\d+)?$/,
-        issuer: /\.([jt])sx?$/,
-        use: [
-          {
-            loader: '@svgr/webpack',
-            options: {
-              titleProp: true,
-              ref: true,
-              // this is the default value for the icon. Using other values
-              // here will replace width and height in svg with 1em
-              icon: false,
-            },
-          },
-        ],
-      },
-      {
-        test: /\.(jpg|gif)$/,
-        type: 'asset/resource',
-        generator: {
-          filename: '[name].[contenthash:8].[ext]',
-        },
-      },
-      /* for font-awesome */
-      {
-        test: /\.(woff|woff2|eot|ttf|otf)$/i,
-        type: 'asset/resource',
-      },
-      {
-        test: /\.ya?ml$/,
-        include: ROOT_DIR,
-        loader: 'js-yaml-loader',
-      },
-      {
-        test: /.mdx?$/,
-        use: [
-          'babel-loader',
-          '@mdx-js/loader'
-        ]
-      }
-    ],
-  },
-  externals: {
-    cheerio: 'window',
-    'react/lib/ExecutionEnvironment': true,
-    'react/lib/ReactContext': true,
-  },
-  plugins,
-  devtool: 'source-map',
-};
-
-// find all the symlinked plugins and use their source code for imports
-Object.entries(packageConfig.dependencies).forEach(([pkg, relativeDir]) => {
-  const srcPath = path.join(APP_DIR, `./node_modules/${pkg}/src`);
-  const dir = relativeDir.replace('file:', '');
-
-  if (/^@lcfs-ui/.test(pkg) && fs.existsSync(srcPath)) {
-    console.log(`[LCFS Plugin] Use symlink source for ${pkg} @ ${dir}`);
-    config.resolve.alias[pkg] = path.resolve(APP_DIR, `${dir}/src`);
-  }
-});
-console.log(''); // pure cosmetic new line
-
-if (isDevMode) {
-  config.devServer = {
-    historyApiFallback: {
-      rewrites: [
-        { from: /^\/api\/(.*)/, to: '/src/assets/staticPages/404.html' },
-        { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
-      ]
-    },
-    client: { overlay: false, logging: 'warn' },
-    port: devserverPort
-  }
-}
+// Development-specific plugins
+const devPlugins = [
+  new ReactRefreshPlugin(),
+  new webpack.HotModuleReplacementPlugin(),
+  new CopyPlugin({
+    patterns: [
+      { from: 'public/config/features.js', to: 'static/js/config/' }, // add local dev config
+      { from: 'public/assets/', to: 'assets/' }
+    ]
+  }),
+  // ... (other development plugins)
+];
 // Bundle analyzer is disabled by default
 // Pass flag --analyzeBundle=true to enable
 // e.g. npm run build -- --analyzeBundle=true
 if (analyzeBundle) {
-  config.plugins.push(new BundleAnalyzerPlugin({ analyzerPort }));
+  devPlugins.push(new BundleAnalyzerPlugin({ analyzerPort }));
 }
 
-// Speed measurement is disabled by default
-// Pass flag --measure=true to enable
-// e.g. npm run build -- --measure=true
+// Production-specific plugins
+const prodPlugins = [
+  new CopyPlugin({ patterns: [{ from: 'public/assets/', to: 'assets/' }] }),
+  new MiniCssExtractPlugin({
+    filename: '[name].[chunkhash].entry.css',
+    chunkFilename: '[name].[chunkhash].chunk.css',
+  }),
+  // ... (other production plugins)
+];
+
+// Merge the base plugins with the environment-specific plugins
+const plugins = isDevMode
+  ? [...basePlugins, ...fallbackHtmlPages, ...devPlugins]
+  : [...basePlugins, ...fallbackHtmlPages, ...prodPlugins];
+
+// Extracted optimization configuration
+const optimization = {
+  sideEffects: true,
+  splitChunks: {
+    chunks: 'all',
+    // Increase minSize for devMode to 1000kb because of the sourcemap
+    minSize: isDevMode ? 1000000 : 20000,
+    name: nameChunks,
+    automaticNameDelimiter: '-',
+    minChunks: 2,
+    cacheGroups: {
+      automaticNamePrefix: 'chunk',
+      // Basic stable dependencies
+      vendors: {
+        priority: 50,
+        name: 'vendors',
+        test: new RegExp(
+          `/node_modules/(${[
+            'abortcontroller-polyfill',
+            'react',
+            'react-dom',
+            'prop-types',
+            'react-prop-types',
+            'prop-types-extra',
+            'redux',
+            'react-redux',
+            'react-select',
+            'react-sortable-hoc',
+            'react-table',
+            'react-ace',
+            '@hot-loader.*',
+            'webpack.*',
+            '@?babel.*',
+            'lodash.*',
+            'antd',
+            '@ant-design.*',
+            '.*bootstrap',
+            'moment',
+            'jquery',
+            'core-js.*',
+            '@emotion.*',
+          ].join('|')})/`,
+        ),
+      },
+      // Viz thumbnails are used in `addSlice` and `explore` page
+      thumbnail: {
+        name: 'thumbnail',
+        test: /thumbnail(Large)?\.(png|jpg)/i,
+        priority: 20,
+        enforce: true,
+      },
+    },
+  },
+  usedExports: 'global',
+  minimizer: [new CssMinimizerPlugin(), '...'],
+};
+
+// Development-specific optimization settings
+const devOptimization = {
+  // ... (development optimization settings)
+};
+
+// Production-specific optimization settings
+const prodOptimization = {
+  // ... (production optimization settings)
+};
+
+// Merge the base optimization settings with the environment-specific settings
+const finalOptimization = isDevMode ? { ...optimization, ...devOptimization } : { ...optimization, ...prodOptimization };
+
+// Extracted module rules
+const moduleRules = [
+  {
+    test: /\.(js|jsx|ts|tsx)$/,
+    // Include source code for plugins, but exclude node_modules and test files within them
+    exclude: [/\.test.jsx?$/],
+    include: [
+      new RegExp(`${APP_DIR}/(src|.storybook|plugins|packages)`),
+      ...['./src', './.storybook'].map((p) =>
+        path.resolve(__dirname, p)
+      ), // Redundant but required for Windows
+      /@encodable/,
+    ],
+    use: {
+      loader: 'babel-loader',
+      options: {
+        presets: ['@babel/preset-env', '@babel/preset-react'],
+      },
+    },
+  },
+  {
+    test: /\.(s?)css$/,
+    use: [
+      {
+        loader: MiniCssExtractPlugin.loader,
+        options: {},
+      },
+      {
+        loader: 'css-loader',
+        options: {
+          sourceMap: true,
+        },
+      },
+      {
+        loader: 'sass-loader',
+        options: {
+          sourceMap: true,
+        },
+      },
+    ],
+  },
+  /* for css linking images (and viz plugin thumbnails) */
+  {
+    test: /\.png$/,
+    issuer: {
+      not: [/\/src\/assets\/staticPages\//],
+    },
+    type: 'asset',
+    generator: {
+      filename: '[name].[contenthash:8].[ext]',
+    },
+  },
+  {
+    test: /\.png$/,
+    issuer: /\/src\/assets\/staticPages\//,
+    type: 'asset',
+  },
+  {
+    test: /\.ico$/,
+    test: /\.ico$/,
+    issuer: /\/src\/assets\/staticPages\//,
+    type: 'asset',
+  },
+  {
+    test: /\.svg$/,
+    use: ['@svgr/webpack'],
+  },
+  {
+    test: /\.(jpg|gif)$/,
+    type: 'asset/resource',
+    generator: {
+      filename: '[name].[contenthash:8].[ext]',
+    },
+  },
+  /* for font-awesome */
+  {
+    test: /\.(woff|woff2|eot|ttf|otf)$/i,
+    type: 'asset/resource',
+  },
+  {
+    test: /\.ya?ml$/,
+    include: ROOT_DIR,
+    loader: 'js-yaml-loader',
+  },
+  {
+    test: /.mdx?$/,
+    use: [
+      'babel-loader',
+      '@mdx-js/loader'
+    ]
+  },
+];
+
+// Development-specific module rules
+const devModuleRules = [
+  // ... (development-specific module rules)
+];
+
+// Production-specific module rules
+const prodModuleRules = [
+  // ... (production-specific module rules)
+];
+
+// Merge the base module rules with the environment-specific rules
+const finalModuleRules = isDevMode ? [...moduleRules, ...devModuleRules] : [...moduleRules, ...prodModuleRules];
+
+// Define alias paths for resolution
+const alias = {
+  components: path.resolve(APP_DIR, './src/components'),
+  assets: path.resolve(APP_DIR, './src/assets'),
+  layouts: path.resolve(APP_DIR, './src/layouts'),
+  styles: path.resolve(APP_DIR, './src/styles'),
+  // Add any additional alias paths as needed
+};
+
+// Extracted resolve configuration
+const resolve = {
+  // resolve modules from `/frontend/node_modules` and `/frontend`
+  modules: ['node_modules', APP_DIR],
+  extensions: ['.ts', '.tsx', '.js', '.jsx', '.yml'],
+  fallback: {
+    fs: false,
+    vm: require.resolve('vm-browserify'),
+    path: false,
+  },
+  alias,
+};
+
+// Development-specific resolve settings
+const devResolve = {
+  // ... (development-specific resolve settings)
+};
+
+// Production-specific resolve settings
+const prodResolve = {
+  // ... (production-specific resolve settings)
+};
+
+// Merge the base resolve settings with the environment-specific settings
+const finalResolve = isDevMode ? { ...resolve, ...devResolve } : { ...resolve, ...prodResolve };
+
+// Extracted devServer configuration
+const devServer = isDevMode
+  ? {
+    historyApiFallback: {
+      rewrites: [
+        { from: /^\/api\/(.*)/, to: '/src/assets/staticPages/404.html' },
+        { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
+      ],
+    },
+    client: { overlay: false, logging: 'warn' },
+    port: devserverPort,
+  }
+  : {};
+
+// Extracted configuration object
+const baseConfig = {
+  entry: './src/index.js',
+  stats: 'minimal',
+  context: APP_DIR,
+  devtool: 'source-map',
+  performance: {
+    assetFilter(assetFilename) {
+      // Exclude specific file types from performance warnings
+      return !/\.(map|geojson|woff2)$/.test(assetFilename);
+    },
+  },
+};
+
+// Merge all the environment-specific settings into the base configuration
+const config = {
+  ...baseConfig,
+  mode: isProduction ? 'production' : 'development',
+  output,
+  plugins,
+  optimization: finalOptimization,
+  module: {
+    rules: finalModuleRules,
+  },
+  resolve: finalResolve,
+  devServer,
+};
+
+// ... (remaining configurations)
+
+// Finalize the webpack configuration with optional speed measurement
 const smp = new SpeedMeasurePlugin({
   disable: !measure,
 });

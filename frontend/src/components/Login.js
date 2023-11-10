@@ -3,6 +3,8 @@ import { useKeycloak } from '@react-keycloak/web';
 import CallableModal from '../components/CallableModal'
 import * as Lang from '../constants/langEnUs'
 import { IDENTITY_PROVIDERS } from '../constants/auth'
+import 'styles/index.scss'
+import 'bootstrap/dist/css/bootstrap.css';
 
 const Login = (props) => {
   const { keycloak } = useKeycloak()

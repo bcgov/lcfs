@@ -4,8 +4,9 @@ import * as appRoutes from './constants/routes'
 import RequireAuth from './components/RequireAuth';
 import Login from './components/Login'
 import NotFound from './components/NotFound'
-import Dashboard from './views/dashboard'
-import Layout from './components/Layout'
+// import Dashboard from './views/dashboard'
+// import Layout from './components/Layout'
+import DefaultNavbar from 'components/Navbars/DefaultNavbar';
 
 const App = () => (
   <BrowserRouter>
@@ -15,14 +16,16 @@ const App = () => (
         exact
         element={
           <RequireAuth redirectTo={appRoutes.LOGIN}>
-            <Layout>
+            {/* <Layout>
               <Dashboard />
-            </Layout>
+            </Layout> */}
+            {/* Place the below Navbar later inside the Page Layout */}
+            <DefaultNavbar />
           </RequireAuth>
         }
       />
       <Route path={appRoutes.LOGIN} element={<Login />} />
-      <Route element={<NotFound/>} />
+      <Route element={<NotFound />} />
     </Routes>
   </BrowserRouter>
 )

@@ -14,7 +14,6 @@ class OrganizationType(BaseModel, Auditable, DisplayOrder):
     __tablename__ = 'organization_type'
     __table_args__ = {'comment': "Represents a Organization types"}
 
-    organization_id = Column(Integer, ForeignKey('organization.id'), nullable=False)
     type = Column(Enum(OrgTypeEnum, name="org_type_enum", create_type=True), default=OrgTypeEnum.fuel_supplier, comment="Organization's Types")
     description = Column(String(500), nullable=True, comment="Organization Types")
 
