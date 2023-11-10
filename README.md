@@ -1,6 +1,6 @@
-# Low Carbon Fuel Services (LCFS)
+# Low Carbon Fuel Standard (LCFS)
 
-An official online application designed for fuel suppliers in British Columbia to manage compliance obligations under the Low Carbon Fuels Act. This tool streamlines the process, ensuring efficiency and adherence to regulations.
+An official online application designed for fuel and electricity suppliers in British Columbia to manage compliance obligations under the Low Carbon Fuels Act. This tool streamlines the process, ensuring efficiency and adherence to regulations.
 
 ## Project Components
 
