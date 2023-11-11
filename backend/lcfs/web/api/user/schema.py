@@ -2,8 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, EmailStr
 
-from lcfs.web.api.organization.schema import Organization
-from lcfs.web.api.permission.schema import PermissionSchema
+from lcfs.web.api.organization.schema import OrganizationSummary
 from lcfs.web.api.role.schema import RoleSchema
 
 """
@@ -21,11 +20,12 @@ class UserBase(BaseModel):
     title: Optional[str] = None
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
-    organization: Optional[object] = None
-    user_roles: Optional[List[object]] = None
+    organization: Optional[OrganizationSummary] = None
+    user_roles: Optional[List[RoleSchema]] = None
     
     class Config:
         from_attributes = True
+
 
 class UserCreate(UserBase):
     keycloak_user_id: str

@@ -18,6 +18,8 @@ class Role(BaseModel, Auditable):
                                 comment="Flag. True if this is a government role (eg. Analyst, Administrator)")
     display_order = Column(Integer, comment="Relative rank in display sorting order")
 
+    user_roles = relationship('UserRole', back_populates='role')
+
     # user_roles = relationship("UserRole", back_populates='role')
     def __repr__(self):
         return '<Role %r>' % self.name

@@ -17,4 +17,4 @@ class OrganizationStatus(BaseModel,Auditable,DisplayOrder):
     status = Column(Enum(OrgStatusEnum, name="org_status_enum", create_type=True), default=OrgStatusEnum.Unregistered, comment="Organization's status")
     description = Column(String(500), nullable=True, comment="Organization description")
 
-    organization = relationship('Organization', back_populates='')
+    organizations = relationship('Organization', back_populates='org_status')

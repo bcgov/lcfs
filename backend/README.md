@@ -76,38 +76,59 @@ By default it runs:
 
 You can read more about pre-commit here: https://pre-commit.com/
 
+
 ## Migrations
 
-If you want to migrate your database, you should run following commands:
-```bash
-# To run all migrations until the migration with revision_id.
-alembic upgrade "<revision_id>"
+## Documentation for `migrate.sh`
 
-# To perform all pending migrations.
-alembic upgrade "head"
+### Purpose
+The `migrate.sh` script is a versatile tool for managing database migrations in this fastapi project. It automates various tasks related to Alembic, including generating new migrations, upgrading and downgrading the database, and managing the virtual environment and dependencies.
+
+### Features
+- **Virtual Environment Management**: Automatically creates and manages a virtual environment for migration operations.
+- **Dependency Management**: Installs project dependencies using Poetry.
+- **Migration Generation**: Generates Alembic migration files based on SQLAlchemy model changes.
+- **Database Upgrade**: Upgrades the database schema to a specified revision or the latest version.
+- **Database Downgrade**: Reverts the database schema to a specified revision or to the base state.
+
+### Usage
+1. **Make Script Executable**
+```bash
+chmod +x migrate.sh
 ```
 
-### Reverting migrations
-
-If you want to revert migrations, you should run:
+2. **Generating Migrations**
+Generate a new migration with a descriptive message:
 ```bash
-# revert all migrations up to: revision_id.
-alembic downgrade <revision_id>
-
-# Revert everything.
- alembic downgrade base
+./migrate.sh -g "Description of changes"
 ```
 
-### Migration generation
-
-To generate migrations you should run:
+3. **Upgrading Database**
+Upgrade the database to a specific revision or to the latest version:
 ```bash
-# For automatic change detection.
-alembic revision --autogenerate
-
-# For empty file generation.
-alembic revision
+./migrate.sh -u [revision]
 ```
+Omit `[revision]` to upgrade to the latest version (head).
+
+4. **Downgrading Database**
+Downgrade the database to a specific revision or to the base state:
+```bash
+./migrate.sh -d [revision]
+```
+Omit `[revision]` to revert to the base state.
+
+5. **Help Manual**
+Display the help manual for script usage:
+```bash
+./migrate.sh -h
+```
+
+### Notes
+- Ensure Python 3.9+ and Poetry are installed on your system.
+- The script assumes that it is located in the same directory as `alembic.ini`.
+- Always test migrations in a development environment before applying them to production.
+- The script automatically activates and deactivates the virtual environment as needed.
+
 
 
 ## Running tests

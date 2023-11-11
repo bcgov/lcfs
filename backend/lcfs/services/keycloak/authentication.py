@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_
+from sqlalchemy.orm import joinedload
 from sqlalchemy.future import select
 from sqlalchemy.exc import NoResultFound
 from starlette.requests import Request
@@ -100,10 +101,11 @@ class UserAuthentication(AuthenticationBackend):
             try:
                 async with self.async_session() as session:
                     result = await session.execute(
-                        select(User).where(User.keycloak_user_id == user_token['preferred_username'])
+                        select(User).options(joinedload(User.organization), joinedload(User.user_roles)).where(
+                            User.keycloak_user_id == user_token['preferred_username'])
                     )
-                    user = result.scalar_one()
-            
+                    user = result.unique().scalar_one()
+
                     await self.create_login_history(user_token, True, None, request.url.path)
                     return AuthCredentials(["authenticated"]), user
             
@@ -114,7 +116,7 @@ class UserAuthentication(AuthenticationBackend):
 
         if 'email' in user_token:
             # Construct the query to find the user
-            user_query = select(User).where(
+            user_query = select(User).options(joinedload(User.organization), joinedload(User.user_roles)).where(
                 and_(
                     User.keycloak_email == user_token['email'],
                     User.keycloak_username == external_username
@@ -133,7 +135,7 @@ class UserAuthentication(AuthenticationBackend):
 
             async with self.async_session() as session:
                 user_result = await session.execute(user_query)
-                user = user_result.scalars().first()
+                user = user_result.unique().scalar_one()
                 if user is None:
                     error_text = 'No User with that configuration exists.'
                     await self.create_login_history(user_token, False, error_text, request.url.path)
