@@ -24,6 +24,9 @@ class Organization(BaseModel,Auditable, EffectiveDates):
     org_attorney_addr = relationship('OrganizationAttorneyAddress', back_populates='organization')
     org_status = relationship('OrganizationStatus', back_populates='organization')
     org_type = relationship('OrganizationType', back_populates='organization')
+    transaction = relationship('Transaction', back_populates='organizations')
+    issuance_history = relationship('IssuanceHistory', back_populates='organizations')
+    transfer_history = relationship('TransferHistory', back_populates='organizations')
 
     def __repr__(self):
         return self.name
