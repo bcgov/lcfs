@@ -6,7 +6,7 @@ class ChannelEnum(enum.Enum):
     EMAIL = "Email"
     IN_APP = "In-Application"
 
-class Notificationtype(BaseModel, Auditable):
+class NotificationChannel(BaseModel, Auditable):
     __tablename__ = 'notification_channel'
     __table_args__ = {'comment': "Tracks the state and defaults for communication channels"}
 
@@ -14,4 +14,3 @@ class Notificationtype(BaseModel, Auditable):
     channel_name = Column(Enum(ChannelEnum, name='channel_enum', create_type=True), nullable=False)
     enabled = Column(Boolean, default=False)
     subscribe_by_default = Column(Boolean, default=False)
-    

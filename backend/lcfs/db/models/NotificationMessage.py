@@ -1,7 +1,8 @@
 from lcfs.db.base import BaseModel, Auditable
 from sqlalchemy import Column, Integer, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
 
-class Notificationtype(BaseModel, Auditable):
+class NotificationMessage(BaseModel, Auditable):
     __tablename__ = 'notification_message'
     __table_args__ = {'comment': "Represents a notification message sent to an application user"}
 
@@ -20,3 +21,8 @@ class Notificationtype(BaseModel, Auditable):
     # related_transaction_id = Column(Integer,ForeignKey(''))
     # related_document_id = Column(Integer, ForeignKey('document.id'))
     # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
+
+    origin_user = relationship('User', back_populates='notification_message')
+    orgnaization = relationship('Organization', back_populates='notification_message')
+    related_user = relationship('User', back_populates='notification_message')
+    notification_type = relationship('NotificationType', back_populates='notification_message')
