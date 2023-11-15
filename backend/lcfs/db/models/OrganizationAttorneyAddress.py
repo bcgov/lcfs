@@ -29,7 +29,7 @@ class OrganizationAttorneyAddress(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'organization_attorney_address'
     __table_args__ = {'comment': "Represents an organization attorney's address."}
 
-    id = Column(Integer, primary_key=True)
+    organization_attorney_address_id = Column(Integer, primary_key=True)
     name = Column(String(500), nullable=True, comment="Attorney's Organization name")
     street_address = Column(String(500), nullable=True)
     address_other = Column(String(100), nullable=True)

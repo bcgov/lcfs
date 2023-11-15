@@ -9,7 +9,7 @@ class Role(BaseModel, Auditable):
         UniqueConstraint('name'),
         {'comment': 'To hold all the available roles and  their descriptions.'}
     )
-    id = Column(Integer,  Sequence('role_id_seq'), primary_key=True, autoincrement=True)
+    role_id = Column(Integer,  Sequence('role_id_seq'), primary_key=True, autoincrement=True)
     name = Column(String(200), unique=True, nullable=False,
                   comment="Role code. Natural key. Used internally. eg Admin, GovUser, GovDirector, etc")
     description = Column(String(1000),

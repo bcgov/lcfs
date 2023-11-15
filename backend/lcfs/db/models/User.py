@@ -12,7 +12,7 @@ class User(BaseModel,Auditable):
         {'comment': 'Users who may access the application'}
     )
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key=True, autoincrement=True)
+    user_id = Column(Integer, Sequence('user_id_seq'), primary_key=True, autoincrement=True)
 
     keycloak_user_id = Column(String(150), nullable=True, comment='Unique id returned from Keycloak')
     keycloak_email = Column(String(255), nullable=True, comment='keycloak email address')
