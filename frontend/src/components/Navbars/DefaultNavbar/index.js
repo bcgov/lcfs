@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Logout from '../../Logout'
 
 // react-router components
 import { Link } from "react-router-dom";
@@ -186,6 +187,7 @@ function DefaultNavbar() {
                   <Divider orientation="vertical" variant="middle" flexItem sx={({ palette: { secondary } }) => ({ backgroundColor: secondary.main })} />
                 </>
               ))}
+              <Logout/>
             </BCBox>
             }
           {mobileView && <DefaultNavbarMobile open={mobileNavbar} close={closeMobileNavbar} light={true} links={links} />}

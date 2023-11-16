@@ -24,7 +24,7 @@ const Login = (props) => {
   return (
     <div id="login">
       <div id="header" className="login-lcfs-page-header">
-        <div id="header-wrapper" className="login-lcfs-page-header-text">Transportation Fuels Reporting System</div>
+        <div id="header-wrapper" className="login-lcfs-page-header-text">Low Carbon Fuel Standard</div>
       </div>
       <div className="login-lcfs-page">
         <div className="login-lcfs-brand" />

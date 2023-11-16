@@ -1,6 +1,7 @@
 import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { logout } from '../keycloak'
+import BCButton from 'components/BCButton'
 
 const Logout = () => {
   const { keycloak } = useKeycloak();
@@ -9,14 +10,16 @@ const Logout = () => {
     return (
       <div className="logout">
         <span>{'Logged in as: ' + kcToken.display_name + ' |'}</span>
-        <button
-          className="logoutButton"
+        <BCButton
           onClick={() => {
             logout()
           }}
+          color='light'
+          size='small'
+          variant='outlined'
         >
           Log out
-        </button>
+        </BCButton>
       </div>
     );
   }
