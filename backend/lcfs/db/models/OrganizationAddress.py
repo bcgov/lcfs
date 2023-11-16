@@ -29,7 +29,7 @@ class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'organization_address'
     __table_args__ = {'comment': "Represents an organization's address."}
 
-    id = Column(Integer, primary_key=True)
+    organization_address_id = Column(Integer, primary_key=True)
     name = Column(String(500), nullable=True, comment='Organization name')
     street_address = Column(String(500), nullable=True)
     address_other = Column(String(100), nullable=True)
@@ -38,4 +38,4 @@ class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
     country = Column(String(100), nullable=True)
     postalCode_zipCode = Column(String(10), nullable=True)
     
-    organization = relationship('Organization', back_populates='organization_address')
+    organization = relationship('Organization', back_populates='org_address')

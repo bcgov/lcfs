@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, String, Sequence, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+# from lcfs.db.models import OrganizationType
 
 class Organization(BaseModel,Auditable, EffectiveDates):
     __tablename__ = 'organization'
@@ -15,7 +16,7 @@ class Organization(BaseModel,Auditable, EffectiveDates):
     id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
     name = Column(String(500), comment="Organization's legal name")
     status = Column(Integer, ForeignKey('organization_status.id'))
-    type = Column(Integer, ForeignKey('organization_type.id'), comment="Organization's type")
+    type = Column(Integer, ForeignKey('organization_type.organization_type_id'), comment="Organization's type")
     address = Column(Integer, ForeignKey('organization_address.id'))
     attorney_address = Column(Integer, ForeignKey('organization_attorney_address.id'))
 
@@ -30,4 +31,5 @@ class Organization(BaseModel,Auditable, EffectiveDates):
 
     def __repr__(self):
         return self.name
+
 

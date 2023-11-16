@@ -3,7 +3,8 @@ from sqlalchemy import (Column, Integer, String, Boolean, ForeignKey, DateTime,
                         UniqueConstraint, text, Sequence)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
+from lcfs.db.models import Organization
+from lcfs.db.models import UserRole
 
 class User(BaseModel,Auditable):
     __tablename__ = 'user'
@@ -12,7 +13,7 @@ class User(BaseModel,Auditable):
         {'comment': 'Users who may access the application'}
     )
 
-    id = Column(Integer, Sequence('user_id_seq'), primary_key=True, autoincrement=True)
+    user_id = Column(Integer, Sequence('user_id_seq'), primary_key=True, autoincrement=True)
 
     keycloak_user_id = Column(String(150), nullable=True, comment='Unique id returned from Keycloak')
     keycloak_email = Column(String(255), nullable=True, comment='keycloak email address')
@@ -28,5 +29,5 @@ class User(BaseModel,Auditable):
     mobile_phone = Column(String(50), nullable=True, comment='Mobile phone number')
     organization_id = Column(Integer, ForeignKey('organization.id'))
 
-    # organization = relationship('Organization', back_populates='users')
-    # user_roles = relationship('UserRole', back_populates='user')
+    organization = relationship('Organization', back_populates='users')
+    user_roles = relationship('UserRole', back_populates='user')

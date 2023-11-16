@@ -6,6 +6,8 @@ class OrganizationBase(BaseModel):
     name: str
     status: int
     type: int
+
+
     
 class OrganizationAttorneyAddressBase(BaseModel):
     name: str
@@ -37,6 +39,13 @@ class OrganizationCreate(OrganizationBase):
 
 class Organization(OrganizationBase):
     id: int
+
+class OrganizationSummary(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
 
 class OrganizationUpdate(BaseModel):
     name: Optional[str]
