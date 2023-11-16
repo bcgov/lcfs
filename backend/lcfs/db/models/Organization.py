@@ -15,10 +15,10 @@ class Organization(BaseModel,Auditable, EffectiveDates):
 
     organization_id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
     name = Column(String(500), comment="Organization's legal name")
-    organization_status_id = Column(Integer, ForeignKey('organization_status.id'))
-    organization_type_id = Column(Integer, ForeignKey('organization_type.id'), comment="Organization's type")
-    organization_address_id = Column(Integer, ForeignKey('organization_address.id'))
-    attorney_address_id = Column(Integer, ForeignKey('organization_attorney_address.id'))
+    organization_status_id = Column(Integer, ForeignKey('organization_status.organization_status_id'))
+    organization_type_id = Column(Integer, ForeignKey('organization_type.organization_type_id'), comment="Organization's type")
+    organization_address_id = Column(Integer, ForeignKey('organization_address.organization_address_id'))
+    organization_attorney_address_id = Column(Integer, ForeignKey('organization_attorney_address.organization_attorney_address_id'))
 
     org_type = relationship('OrganizationType', back_populates='organizations')
     org_status = relationship('OrganizationStatus', back_populates='organizations')
