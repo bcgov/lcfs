@@ -1,15 +1,15 @@
-"""transfer migration
+"""transfer model migration
 
-Revision ID: c11dccc64b60
+Revision ID: 2046368b938a
 Revises: 82b674748885
-Create Date: 2023-11-14 19:45:20.786464
+Create Date: 2023-11-16 02:12:55.593825
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "c11dccc64b60"
+revision = "2046368b938a"
 down_revision = "82b674748885"
 branch_labels = None
 depends_on = None
@@ -20,7 +20,7 @@ def upgrade() -> None:
     op.create_table(
         "category",
         sa.Column(
-            "id",
+            "category_id",
             sa.Integer(),
             autoincrement=True,
             nullable=False,
@@ -32,6 +32,7 @@ def upgrade() -> None:
             nullable=True,
             comment="Transfer category",
         ),
+        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -70,13 +71,13 @@ def upgrade() -> None:
             nullable=True,
             comment="The calendar date the value is no longer valid.",
         ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("category_id", "id"),
         comment="Transfer Category",
     )
     op.create_table(
         "comment",
         sa.Column(
-            "id",
+            "comment_id",
             sa.Integer(),
             autoincrement=True,
             nullable=False,
@@ -85,6 +86,7 @@ def upgrade() -> None:
         sa.Column(
             "comment", sa.String(length=500), nullable=True, comment="Transfer category"
         ),
+        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -123,12 +125,199 @@ def upgrade() -> None:
             nullable=True,
             comment="The calendar date the value is no longer valid.",
         ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("comment_id", "id"),
+        sa.UniqueConstraint("comment_id"),
         comment="Comment for transaction",
     )
     op.create_table(
+        "issuance",
+        sa.Column(
+            "issuance_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the issuance",
+        ),
+        sa.Column(
+            "compliance_units",
+            sa.BigInteger(),
+            nullable=True,
+            comment="Compliance Units",
+        ),
+        sa.Column(
+            "transaction_effective_date",
+            sa.DateTime(),
+            nullable=True,
+            comment="Transaction effective date",
+        ),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "effective_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value became valid.",
+        ),
+        sa.Column(
+            "expiration_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value is no longer valid.",
+        ),
+        sa.PrimaryKeyConstraint("issuance_id", "id"),
+        comment="Goverment to organization compliance units issuance",
+    )
+    op.create_table(
+        "issuance_history",
+        sa.Column(
+            "issuance_history_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the issuance",
+        ),
+        sa.Column(
+            "compliance_units",
+            sa.BigInteger(),
+            nullable=True,
+            comment="Issued compliance units record",
+        ),
+        sa.Column(
+            "transaction_effective_date",
+            sa.DateTime(),
+            nullable=True,
+            comment="Transaction Effective date",
+        ),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "effective_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value became valid.",
+        ),
+        sa.Column(
+            "expiration_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value is no longer valid.",
+        ),
+        sa.PrimaryKeyConstraint("issuance_history_id", "id"),
+        comment="History record for issuance from governmnent to Organization",
+    )
+    op.create_table(
+        "transaction",
+        sa.Column(
+            "transaction_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the transactions",
+        ),
+        sa.Column(
+            "compliance_units",
+            sa.BigInteger(),
+            nullable=True,
+            comment="Compliance Units",
+        ),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "effective_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value became valid.",
+        ),
+        sa.Column(
+            "expiration_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value is no longer valid.",
+        ),
+        sa.PrimaryKeyConstraint("transaction_id", "id"),
+        sa.UniqueConstraint("transaction_id"),
+        comment="Contains a list of all of the government to organization and Organization to Organization transaction.",
+    )
+    op.create_table(
         "transaction_type",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column(
+            "transaction_type_id", sa.Integer(), autoincrement=True, nullable=False
+        ),
         sa.Column(
             "type",
             sa.Enum(
@@ -141,6 +330,7 @@ def upgrade() -> None:
             nullable=True,
             comment="Transaction Types",
         ),
+        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -173,12 +363,129 @@ def upgrade() -> None:
             nullable=True,
             comment="Relative rank in display sorting order",
         ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("transaction_type_id", "id"),
         comment="Represents a Transaction types",
     )
     op.create_table(
+        "transfer",
+        sa.Column(
+            "transfer_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the org to org transfer record",
+        ),
+        sa.Column(
+            "transaction_effective_date",
+            sa.DateTime(),
+            nullable=True,
+            comment="transaction effective date",
+        ),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "effective_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value became valid.",
+        ),
+        sa.Column(
+            "expiration_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value is no longer valid.",
+        ),
+        sa.PrimaryKeyConstraint("transfer_id", "id"),
+        sa.UniqueConstraint("transfer_id"),
+        comment="Records of tranfer from Organization to Organization",
+    )
+    op.create_table(
+        "transfer_history",
+        sa.Column(
+            "transfer_history_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the org to org transfer record",
+        ),
+        sa.Column(
+            "transaction_effective_date",
+            sa.DateTime(),
+            nullable=True,
+            comment="Transaction effective date",
+        ),
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "effective_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value became valid.",
+        ),
+        sa.Column(
+            "expiration_date",
+            sa.Date(),
+            nullable=True,
+            comment="The calendar date the value is no longer valid.",
+        ),
+        sa.PrimaryKeyConstraint("transfer_history_id", "id"),
+        comment="Records of tranfer from Organization to Organization",
+    )
+    op.create_table(
         "transfer_status",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column(
+            "transfer_status_id", sa.Integer(), autoincrement=True, nullable=False
+        ),
         sa.Column(
             "status",
             sa.Enum(
@@ -196,6 +503,7 @@ def upgrade() -> None:
             nullable=True,
             comment="Transfer Status",
         ),
+        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -228,340 +536,8 @@ def upgrade() -> None:
             nullable=True,
             comment="Relative rank in display sorting order",
         ),
-        sa.PrimaryKeyConstraint("id"),
+        sa.PrimaryKeyConstraint("transfer_status_id", "id"),
         comment="Represents a Transfer Status",
-    )
-    op.create_table(
-        "issuance",
-        sa.Column(
-            "id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the issuance",
-        ),
-        sa.Column(
-            "compliance_units",
-            sa.BigInteger(),
-            nullable=True,
-            comment="Compliance Units",
-        ),
-        sa.Column("organization_id", sa.Integer(), nullable=True),
-        sa.Column(
-            "transaction_effective_date",
-            sa.DateTime(),
-            nullable=True,
-            comment="Transaction effective date",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.Column(
-            "effective_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value became valid.",
-        ),
-        sa.Column(
-            "expiration_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value is no longer valid.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"],
-            ["organization.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        comment="Goverment to organization compliance units issuance",
-    )
-    op.create_table(
-        "issuance_history",
-        sa.Column(
-            "id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the issuance",
-        ),
-        sa.Column(
-            "compliance_units",
-            sa.BigInteger(),
-            nullable=True,
-            comment="Issued compliance units record",
-        ),
-        sa.Column("organization_id", sa.Integer(), nullable=True),
-        sa.Column(
-            "transaction_effective_date",
-            sa.DateTime(),
-            nullable=True,
-            comment="Transaction Effective date",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.Column(
-            "effective_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value became valid.",
-        ),
-        sa.Column(
-            "expiration_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value is no longer valid.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"],
-            ["organization.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        comment="History record for issuance from governmnent to Organization",
-    )
-    op.create_table(
-        "transaction",
-        sa.Column(
-            "id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the transactions",
-        ),
-        sa.Column(
-            "compliance_units",
-            sa.BigInteger(),
-            nullable=True,
-            comment="Compliance Units",
-        ),
-        sa.Column("organization", sa.Integer(), nullable=True),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.Column(
-            "effective_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value became valid.",
-        ),
-        sa.Column(
-            "expiration_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value is no longer valid.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization"],
-            ["organization.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        comment="Contains a list of all of the government to organization and                       Organization to Organization transaction.",
-    )
-    op.create_table(
-        "transfer",
-        sa.Column(
-            "id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the org to org transfer record",
-        ),
-        sa.Column("from_organization", sa.Integer(), nullable=True),
-        sa.Column("to_organization", sa.Integer(), nullable=True),
-        sa.Column(
-            "transaction_effective_date",
-            sa.DateTime(),
-            nullable=True,
-            comment="Transaction effective date",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.Column(
-            "effective_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value became valid.",
-        ),
-        sa.Column(
-            "expiration_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value is no longer valid.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["from_organization"],
-            ["organization.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["to_organization"],
-            ["organization.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        comment="Records of tranfer from Organization to Organization",
-    )
-    op.create_table(
-        "transfer_history",
-        sa.Column(
-            "id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the org to org transfer record",
-        ),
-        sa.Column("transfer_id", sa.Integer(), nullable=True),
-        sa.Column("from_organization", sa.Integer(), nullable=True),
-        sa.Column("to_organization", sa.Integer(), nullable=True),
-        sa.Column(
-            "transaction_effective_date",
-            sa.DateTime(),
-            nullable=True,
-            comment="Transaction effective date",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.Column(
-            "effective_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value became valid.",
-        ),
-        sa.Column(
-            "expiration_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value is no longer valid.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["from_organization"],
-            ["organization.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["to_organization"],
-            ["organization.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["transfer_id"],
-            ["transfer.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        comment="Records of tranfer from Organization to Organization",
     )
     op.alter_column(
         "organization",
@@ -570,11 +546,39 @@ def upgrade() -> None:
         comment="Organization's type",
         existing_nullable=True,
     )
+    op.add_column(
+        "organization_type",
+        sa.Column(
+            "organization_type_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the organization_type",
+        ),
+    )
+    op.drop_constraint(
+        "organization_type_organization_id_fkey",
+        "organization_type",
+        type_="foreignkey",
+    )
+    op.drop_column("organization_type", "organization_id")
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.add_column(
+        "organization_type",
+        sa.Column("organization_id", sa.INTEGER(), autoincrement=False, nullable=False),
+    )
+    op.create_foreign_key(
+        "organization_type_organization_id_fkey",
+        "organization_type",
+        "organization",
+        ["organization_id"],
+        ["id"],
+    )
+    op.drop_column("organization_type", "organization_type_id")
     op.alter_column(
         "organization",
         "type",
@@ -583,13 +587,13 @@ def downgrade() -> None:
         existing_comment="Organization's type",
         existing_nullable=True,
     )
+    op.drop_table("transfer_status")
     op.drop_table("transfer_history")
     op.drop_table("transfer")
+    op.drop_table("transaction_type")
     op.drop_table("transaction")
     op.drop_table("issuance_history")
     op.drop_table("issuance")
-    op.drop_table("transfer_status")
-    op.drop_table("transaction_type")
     op.drop_table("comment")
     op.drop_table("category")
     # ### end Alembic commands ###
