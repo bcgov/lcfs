@@ -30,7 +30,7 @@ async def create_organization(organization: OrganizationCreate, db: AsyncSession
 async def update_organization(organization_id: int, organization_data: OrganizationUpdate, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():
-            organization = await db.execute(Organization).filter(Organization.id == organization_id).first()
+            organization = await db.execute(Organization).filter(Organization.organization_id == organization_id).first()
 
         if not organization:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")

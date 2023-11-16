@@ -10,7 +10,7 @@ class NotificationChannelSubscription(BaseModel, Auditable):
 
      is_enabled = Column(Boolean, default=False)
 
-     user_id = Column(Integer, ForeignKey('user.id'))
+     user_id = Column(Integer, ForeignKey('user.user_id'))
      channel_id = Column(Integer, ForeignKey('notification_channel.notification_channel_id'))
      notification_type_id = Column(Integer, ForeignKey('notification_type.notification_type_id'))
 
