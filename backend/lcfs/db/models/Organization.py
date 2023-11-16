@@ -12,7 +12,7 @@ class Organization(BaseModel,Auditable, EffectiveDates):
                                  "an entry for the government which is also "
                                  "considered an organization."}
 
-    id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
     name = Column(String(500), comment="Organization's legal name")
     status = Column(Integer, ForeignKey('organization_status.id'))
     type = Column(Integer, ForeignKey('organization_type.id'), comment="Organization's type")
