@@ -1,4 +1,4 @@
-const packageConfig = require('./package');
+// const packageConfig = require('./package');
 
 const importCoreModules = [];
 
@@ -13,9 +13,11 @@ if (process.env.NODE_ENV === 'production') {
 
 module.exports = {
   extends: [
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
+    'plugin:react/jsx-runtime',
     'standard',
     'prettier',
-    'plugin:react-hooks/recommended',
   ],
   parser: '@babel/eslint-parser',
   env: {
@@ -41,6 +43,8 @@ module.exports = {
     'promise',
     'import',
     'node',
+    'jsx-a11y',
+    'react'
     // 'theme-colors',
     // 'translation-vars',
   ],
