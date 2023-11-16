@@ -31,3 +31,4 @@ class User(BaseModel,Auditable):
 
     organization = relationship('Organization', back_populates='users')
     user_roles = relationship('UserRole', back_populates='user')
+    notification_messages = relationship('NotificationMessage', back_populates='related_user')
