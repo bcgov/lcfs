@@ -12,8 +12,8 @@ class UserRole(BaseModel, Auditable):
     )
     # Columns
     user_role_id = Column(Integer, Sequence('user_role_id_seq'), primary_key=True, autoincrement=True, comment='Unique ID for the user role')
-    user_id = Column(Integer, ForeignKey('user.id'))
-    role_id = Column(Integer, ForeignKey('role.id'))
+    user_id = Column(Integer, ForeignKey('user.user_id'))
+    role_id = Column(Integer, ForeignKey('role.role_id'))
     # Relationships
     user = relationship('User', back_populates='user_roles')
     role = relationship('Role', back_populates='user_roles')

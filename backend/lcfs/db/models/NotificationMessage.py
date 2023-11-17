@@ -22,7 +22,7 @@ class NotificationMessage(BaseModel, Auditable):
     # related_document_id = Column(Integer, ForeignKey('document.id'))
     # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
 
-    origin_user = relationship('User', back_populates='notification_message')
-    orgnaization = relationship('Organization', back_populates='notification_message')
-    related_user = relationship('User', back_populates='notification_message')
-    notification_type = relationship('NotificationType', back_populates='notification_message')
+    origin_user = relationship('User')
+    orgnaization = relationship('Organization')
+    related_user = relationship('User', back_populates='notification_messages')
+    notification_type = relationship('NotificationType')

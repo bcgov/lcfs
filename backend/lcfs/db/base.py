@@ -10,7 +10,6 @@ class BaseModel(AbstractConcreteBase, Base):
 
     __table_args__ = {'schema': 'metadata'}
 
-    id = Column(Integer, primary_key=True)
     create_date = Column(
         TIMESTAMP(timezone=True),
         server_default=text('now()'),
