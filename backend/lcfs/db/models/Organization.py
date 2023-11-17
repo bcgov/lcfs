@@ -15,6 +15,7 @@ class Organization(BaseModel,Auditable, EffectiveDates):
 
     organization_id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
     name = Column(String(500), comment="Organization's legal name")
+
     organization_status_id = Column(Integer, ForeignKey('organization_status.organization_status_id'))
     organization_type_id = Column(Integer, ForeignKey('organization_type.organization_type_id'), comment="Organization's type")
     organization_address_id = Column(Integer, ForeignKey('organization_address.organization_address_id'))
@@ -24,4 +25,5 @@ class Organization(BaseModel,Auditable, EffectiveDates):
     org_status = relationship('OrganizationStatus', back_populates='organizations')
     org_address = relationship('OrganizationAddress', back_populates='organization')
     org_attorney_address = relationship('OrganizationAttorneyAddress', back_populates='organization')
+    
     users = relationship('User', back_populates='organization')
