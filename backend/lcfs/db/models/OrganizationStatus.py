@@ -9,7 +9,7 @@ class OrgStatusEnum(enum.Enum):
     Suspended = "Suspended"
     Canceled = "Canceled"
 
-class OrganizationStatus(BaseModel,Auditable,DisplayOrder):
+class OrganizationStatus(BaseModel, Auditable,DisplayOrder):
     __tablename__ = 'organization_status'
     __table_args__ = {'comment': "Contains list of organization type"}
 

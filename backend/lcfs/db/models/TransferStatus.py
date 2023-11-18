@@ -22,6 +22,3 @@ class TransferStatus(BaseModel, Auditable, DisplayOrder):
 
     transfer_status_id = Column(Integer, Sequence('transfer_status_id'), primary_key=True, autoincrement=True)
     status = Column(Enum(TransferStatusEnum, name="transfer_type_enum", create_type=True), comment="Transfer Status")
-
-    transfer = relationship('Transfer', back_populates='transfer_status')
-    transfer_history = relationship('TransferHistory', back_populates="transfer_status")

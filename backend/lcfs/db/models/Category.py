@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
-class Category(BaseModel,Auditable, EffectiveDates):
+class Category(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'category'
     __table_args__ = (UniqueConstraint('category_id'),
                       {'comment': "Transfer Category"}

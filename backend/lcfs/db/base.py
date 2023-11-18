@@ -21,6 +21,11 @@ class BaseModel(AbstractConcreteBase, Base):
                                  ' database. '
                                  'It will be the same as the create_date until the record is first '
                                  'updated after creation.')
+    
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Import the module to ensure SQLAlchemy recognizes it
+        __import__(cls.__module__)
 
 
 class Auditable(AbstractConcreteBase, Base):
