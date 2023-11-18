@@ -20,6 +20,6 @@ from . import OrganizationStatus
 from . import OrganizationBalance
 from . import Organization
 from . import Role
-from . import User
+from . import UserProfile
 from . import UserRole
 from . import UserLoginHistory

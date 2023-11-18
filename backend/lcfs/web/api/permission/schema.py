@@ -6,7 +6,7 @@ class PermissionSchema(BaseModel):
     """
     DTO for permissions
     """
-    id:  int
+    permission_id:  int
     code: str
     name: str
     description: str

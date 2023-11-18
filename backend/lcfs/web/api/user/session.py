@@ -6,7 +6,7 @@ from sqlalchemy import text, and_, func, select, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from lcfs.db.models.User import User
+from lcfs.db.models.UserProfile import UserProfile
 from lcfs.web.api.user.schema import UserCreate
 from lcfs.web.api.base import row_to_dict
 from lcfs.web.api.user.schema import UserBase
@@ -67,11 +67,11 @@ class UserRepository:
         # Build the base query statement
         conditions = []
         if username:
-            conditions.append(func.lower(User.username).like(f"%{username.lower()}%"))
+            conditions.append(func.lower(UserProfile.username).like(f"%{username.lower()}%"))
         if organization:
-            conditions.append(func.lower(User.organization.name).like(f"%{organization.lower()}%"))
+            conditions.append(func.lower(UserProfile.organization.name).like(f"%{organization.lower()}%"))
         # if not include_inactive:
-        #     conditions.append(User.is_active.is_(True))
+        #     conditions.append(UserProfile.is_active.is_(True))
 
         # Sorting direction
         sort_function = desc if pagination["sort_direction"] == "desc" else asc
@@ -81,9 +81,9 @@ class UserRepository:
 
         # Applying pagination, sorting, and filters to the query
         query = (
-            select(User)
+            select(UserProfile)
             .where(and_(*conditions))
-            .order_by(sort_function(getattr(User, sort_field)))
+            .order_by(sort_function(getattr(UserProfile, sort_field)))
             .offset(offset)
             .limit(limit)
         )
@@ -117,7 +117,7 @@ class UserRepository:
         return row_to_dict(user, UserBase) if user else None
 
 
-    async def create_user(self, user_create: UserCreate) -> User:
+    async def create_user(self, user_create: UserCreate) -> UserProfile:
         """
         Creates a new user entity in the database.
 
@@ -136,7 +136,7 @@ class UserRepository:
         if 'organization' in user_data:
             user_data['organization_id'] = user_data.pop('organization').id
 
-        new_user = User(**user_data)
+        new_user = UserProfile(**user_data)
 
         self.session.add(new_user)
         await self.session.commit()

@@ -4,7 +4,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import Response
 
-from lcfs.db.models import User
+from lcfs.db.models import UserProfile
 from lcfs.db import dependencies
 from lcfs.web.api.organization.schema import Organization, OrganizationCreate, OrganizationUpdate, OrganizationUser
 
@@ -65,7 +65,7 @@ async def list_organizations(db: AsyncSession = Depends(get_async_db), response:
 async def get_users_for_organization(organization_id: int, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():
-            users = await db.execute(User).filter(User.organization_id == organization_id).all()
+            users = await db.execute(UserProfile).filter(UserProfile.organization_id == organization_id).all()
         
         if not users:
             raise HTTPException(status_code=404, detail="No users found for the organization")

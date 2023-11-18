@@ -67,7 +67,7 @@ class NotificationTypeEnum(enum.Enum):
           "Exclusion Report Requested Supplemental"
 
 
-class Notificationtype(BaseModel, Auditable):
+class NotificationType(BaseModel, Auditable):
      __tablename__ = 'notification_type'
      __table_args__ = {'comment': "Represents a Notification type"}
 
