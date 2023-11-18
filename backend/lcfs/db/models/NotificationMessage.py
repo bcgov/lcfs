@@ -1,7 +1,8 @@
 from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
-from lcfs.db.models.NotificationType import NotificationType
+# from lcfs.db.models.NotificationType import NotificationType
+from lcfs.db.models.Organization import Organization  # Adjust according to your project structure
 
 class NotificationMessage(BaseModel, Auditable):
     __tablename__ = 'notification_message'
@@ -24,7 +25,7 @@ class NotificationMessage(BaseModel, Auditable):
     # related_document_id = Column(Integer, ForeignKey('document.id'))
     # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
 
-    orgnaization = relationship('Organization')
+    related_organization = relationship('Organization')
     notification_type = relationship('NotificationType')
     origin_user_profile = relationship(
         'UserProfile', 

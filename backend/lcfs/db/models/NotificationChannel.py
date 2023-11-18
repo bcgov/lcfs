@@ -1,6 +1,7 @@
 import enum
 from lcfs.db.base import BaseModel, Auditable
 from sqlalchemy import Column, Integer, Enum, Boolean
+from sqlalchemy.orm import relationship
 
 class ChannelEnum(enum.Enum):
     EMAIL = "Email"
@@ -14,3 +15,5 @@ class NotificationChannel(BaseModel, Auditable):
     channel_name = Column(Enum(ChannelEnum, name='channel_enum', create_type=True), nullable=False)
     enabled = Column(Boolean, default=False)
     subscribe_by_default = Column(Boolean, default=False)
+
+    notification_channel_subscriptions = relationship('NotificationChannelSubscription', back_populates='notification_channel')

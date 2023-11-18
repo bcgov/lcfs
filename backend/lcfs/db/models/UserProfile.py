@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from lcfs.db.models.NotificationMessage import NotificationMessage
 
-class UserProfile(BaseModel,Auditable):
+class UserProfile(BaseModel, Auditable):
     __tablename__ = 'user_profile'
     __table_args__ = (
         UniqueConstraint('username'),
@@ -30,6 +30,8 @@ class UserProfile(BaseModel,Auditable):
 
     organization = relationship('Organization', back_populates='user_profiles')
     user_roles = relationship('UserRole', back_populates='user_profile')
+    
+    notification_channel_subscriptions = relationship('NotificationChannelSubscription', back_populates='user_profile')
 
     originated_notifications = relationship(
         'NotificationMessage', 

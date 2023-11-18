@@ -30,14 +30,14 @@ class TransferBase(BaseModel):
     transfer_category: int
 
 class Transfer(TransferBase):
-    id: int
+    transfer_id: int
 
     class Config:
         orm_mode = True
 
 
 class TransferHistory(TransferBase):
-    id: int
+    transfer_history_id: int
     transfer_id: int
 
     class Config:
@@ -45,7 +45,7 @@ class TransferHistory(TransferBase):
 
 
 class IssuanceSchema(BaseModel):
-    id: int
+    issuance_id: int
     compliance_units: int
     organization_id: int
     transaction_effective_date: datetime
@@ -53,7 +53,7 @@ class IssuanceSchema(BaseModel):
     comment_id: Optional[int]
 
 class IssuanceHistorySchema(BaseModel):
-    id: int
+    issuance_history_id: int
     compliance_units: int
     issuance_id: int
     organization_id: int
@@ -63,7 +63,7 @@ class IssuanceHistorySchema(BaseModel):
 
 
 class TransactionSchema(BaseModel):
-    id: int
+    transaction_id: int
     compliance_units: int
     issuance_id: int
     transfer_id: int
@@ -71,17 +71,17 @@ class TransactionSchema(BaseModel):
     organization: int
 
 class TransactionTypeSchema(BaseModel):
-    id: int
+    transaction_typ_id: int
     type: TransactionTypeEnum
 
 class TransferStatusSchema(BaseModel):
-    id: int
+    transaction_status_id: int
     status: TransferStatusEnum
 
 class CommentSchema(BaseModel):
-    id: int
+    comment_id: int
     comment: str
 
 class CategorySchema(BaseModel):
-    id: int
+    category_id: int
     category: str

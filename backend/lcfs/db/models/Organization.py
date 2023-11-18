@@ -4,9 +4,8 @@ from sqlalchemy import Column, Integer, String, Sequence, Enum, ForeignKey
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
-# from lcfs.db.models import OrganizationType
 
-class Organization(BaseModel,Auditable, EffectiveDates):
+class Organization(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'organization'
     __table_args__ = {'comment': "Contains a list of all of the recognized Part 3 "
                                  "fuel suppliers, both past and present, as well as "
@@ -26,3 +25,5 @@ class Organization(BaseModel,Auditable, EffectiveDates):
     org_address = relationship('OrganizationAddress', back_populates='organization')
     org_attorney_address = relationship('OrganizationAttorneyAddress', back_populates='organization')
     user_profiles = relationship('UserProfile', back_populates='organization')
+    transactions = relationship('Transaction', back_populates='organization')
+    issuances = relationship('Issuance', back_populates='organization')
