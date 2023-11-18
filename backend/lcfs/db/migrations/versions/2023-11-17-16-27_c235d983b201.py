@@ -1,15 +1,15 @@
 """initial migration
 
-Revision ID: dda0e5b3f54e
+Revision ID: c235d983b201
 Revises: 
-Create Date: 2023-11-16 13:36:04.325099
+Create Date: 2023-11-17 16:27:17.041973
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "dda0e5b3f54e"
+revision = "c235d983b201"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -377,7 +377,18 @@ def upgrade() -> None:
         sa.Column("role_id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column(
             "name",
-            sa.String(length=200),
+            sa.Enum(
+                "ADMINISTRATOR",
+                "ANALYST",
+                "COMPLIANCE_MANAGER",
+                "DIRECTOR",
+                "MANAGE_USERS",
+                "TRANSFER",
+                "COMPLIANCE_REPORTING",
+                "SIGNING_AUTHORITY",
+                "READ_ONLY",
+                name="roleenum",
+            ),
             nullable=False,
             comment="Role code. Natural key. Used internally. eg Admin, GovUser, GovDirector, etc",
         ),
@@ -562,8 +573,8 @@ def upgrade() -> None:
         comment="Contains a list of all of the recognized Part 3 fuel suppliers, both past and present, as well as an entry for the government which is also considered an organization.",
     )
     op.create_table(
-        "user",
-        sa.Column("user_id", sa.Integer(), autoincrement=True, nullable=False),
+        "user_profile",
+        sa.Column("user_profile_id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column(
             "keycloak_user_id",
             sa.String(length=150),
@@ -640,7 +651,7 @@ def upgrade() -> None:
             ["organization_id"],
             ["organization.organization_id"],
         ),
-        sa.PrimaryKeyConstraint("user_id"),
+        sa.PrimaryKeyConstraint("user_profile_id"),
         sa.UniqueConstraint("keycloak_username"),
         sa.UniqueConstraint("username"),
         sa.UniqueConstraint("username"),
@@ -655,7 +666,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("is_enabled", sa.Boolean(), nullable=True),
-        sa.Column("user_id", sa.Integer(), nullable=True),
+        sa.Column("user_profile_id", sa.Integer(), nullable=True),
         sa.Column("channel_id", sa.Integer(), nullable=True),
         sa.Column("notification_type_id", sa.Integer(), nullable=True),
         sa.Column(
@@ -693,8 +704,8 @@ def upgrade() -> None:
             ["notification_type.notification_type_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["user.user_id"],
+            ["user_profile_id"],
+            ["user_profile.user_profile_id"],
         ),
         sa.PrimaryKeyConstraint("notification_channel_subscription_id"),
         comment="Represents a user's subscription to notification events",
@@ -708,9 +719,9 @@ def upgrade() -> None:
         sa.Column("is_warning", sa.Boolean(), nullable=True),
         sa.Column("is_error", sa.Boolean(), nullable=True),
         sa.Column("is_archived", sa.Boolean(), nullable=True),
-        sa.Column("origin_user_id", sa.Integer(), nullable=True),
         sa.Column("related_organization_id", sa.Integer(), nullable=True),
-        sa.Column("related_user_id", sa.Integer(), nullable=True),
+        sa.Column("origin_user_profile_id", sa.Integer(), nullable=True),
+        sa.Column("related_user_profile_id", sa.Integer(), nullable=True),
         sa.Column("notification_type_id", sa.Integer(), nullable=True),
         sa.Column(
             "create_date",
@@ -743,16 +754,16 @@ def upgrade() -> None:
             ["notification_type.notification_type_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["origin_user_id"],
-            ["user.user_id"],
+            ["origin_user_profile_id"],
+            ["user_profile.user_profile_id"],
         ),
         sa.ForeignKeyConstraint(
             ["related_organization_id"],
             ["organization.organization_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["related_user_id"],
-            ["user.user_id"],
+            ["related_user_profile_id"],
+            ["user_profile.user_profile_id"],
         ),
         sa.PrimaryKeyConstraint("notification_message_id"),
         comment="Represents a notification message sent to an application user",
@@ -766,8 +777,15 @@ def upgrade() -> None:
             nullable=False,
             comment="Unique ID for the user role",
         ),
-        sa.Column("user_id", sa.Integer(), nullable=True),
-        sa.Column("role_id", sa.Integer(), nullable=True),
+        sa.Column(
+            "user_profile_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Foreign key to user_profile",
+        ),
+        sa.Column(
+            "role_id", sa.Integer(), nullable=True, comment="Foreign key to role"
+        ),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -799,12 +817,14 @@ def upgrade() -> None:
             ["role.role_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["user.user_id"],
+            ["user_profile_id"],
+            ["user_profile.user_profile_id"],
         ),
         sa.PrimaryKeyConstraint("user_role_id"),
-        sa.UniqueConstraint("user_id", "role_id", name="user_role_unique_constraint"),
-        comment="Contains  the user and role relationships",
+        sa.UniqueConstraint(
+            "user_profile_id", "role_id", name="user_role_unique_constraint"
+        ),
+        comment="Contains the user and role relationships",
     )
     # ### end Alembic commands ###
 
@@ -814,7 +834,7 @@ def downgrade() -> None:
     op.drop_table("user_role")
     op.drop_table("notification_message")
     op.drop_table("notification_channel_subscription")
-    op.drop_table("user")
+    op.drop_table("user_profile")
     op.drop_table("organization")
     op.drop_table("user_login_history")
     op.drop_table("role")

@@ -38,10 +38,10 @@ class OrganizationCreate(OrganizationBase):
     attorney_address: OrganizationAttorneyAddressCreate
 
 class Organization(OrganizationBase):
-    id: int
+    organization_id: int
 
 class OrganizationSummary(BaseModel):
-    id: int
+    organization_id: int
     name: str
 
     class Config:
@@ -55,10 +55,10 @@ class OrganizationUpdate(BaseModel):
     attorney_address: Optional[OrganizationAttorneyAddressCreate]
 
 class OrganizationAddress(OrganizationAddressBase):
-    id: int
+    organization_id: int
     
 class OrganizationAttorneyAddress(OrganizationAttorneyAddressBase):
-    id: int
+    organization_id: int
 
 class OrganizationUser(BaseModel):
     username: str

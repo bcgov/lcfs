@@ -13,7 +13,7 @@ from starlette.authentication import (
     AuthenticationBackend, AuthCredentials
 )
 from lcfs.settings import Settings
-from lcfs.db.models.User import User
+from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserLoginHistory import UserLoginHistory
 from lcfs.services.keycloak.dependencies import _parse_external_username
 
@@ -101,8 +101,8 @@ class UserAuthentication(AuthenticationBackend):
             try:
                 async with self.async_session() as session:
                     result = await session.execute(
-                        select(User).options(joinedload(User.organization), joinedload(User.user_roles)).where(
-                            User.keycloak_user_id == user_token['preferred_username'])
+                        select(UserProfile).options(joinedload(UserProfile.organization), joinedload(UserProfile.user_roles)).where(
+                            UserProfile.keycloak_user_id == user_token['preferred_username'])
                     )
                     user = result.unique().scalar_one()
 
@@ -116,18 +116,18 @@ class UserAuthentication(AuthenticationBackend):
 
         if 'email' in user_token:
             # Construct the query to find the user
-            user_query = select(User).options(joinedload(User.organization), joinedload(User.user_roles)).where(
+            user_query = select(UserProfile).options(joinedload(UserProfile.organization), joinedload(UserProfile.user_roles)).where(
                 and_(
-                    User.keycloak_email == user_token['email'],
-                    User.keycloak_username == external_username
+                    UserProfile.keycloak_email == user_token['email'],
+                    UserProfile.keycloak_username == external_username
                 )
             )
 
             # TODO may need to not use org id == 1 if gov no longer is organization in lcfs
             if user_token['identity_provider'] == 'idir':
-                user_query = user_query.where(User.organization_id == 1)
+                user_query = user_query.where(UserProfile.organization_id == 1)
             elif user_token['identity_provider'] == 'bceidbusiness':
-                user_query = user_query.where(User.organization_id != 1)
+                user_query = user_query.where(UserProfile.organization_id != 1)
             else:
                 error_text = 'Unknown identity provider.'
                 await self.create_login_history(user_token, False, error_text, request.url.path)
@@ -149,12 +149,12 @@ class UserAuthentication(AuthenticationBackend):
 
         return AuthCredentials(["authenticated"]), user
 
-    async def map_user_keycloak_id(self, user, user_token):
+    async def map_user_keycloak_id(self, user_profile, user_token):
         """
         Updates the user's keycloak_user_id and commits the changes to the database.
         """
         # Map the keycloak user id to the user for future login caching
-        user.keycloak_user_id = user_token['preferred_username']
+        user_profile.keycloak_user_id = user_token['preferred_username']
         # TODO may want to map keycloak display name to user as well
         # user.display_name = user_token['display_name']
 
@@ -162,10 +162,10 @@ class UserAuthentication(AuthenticationBackend):
         # If the instance does not exist in the session, insert it.
         # If the instance already exists in the session, update it.
         async with self.async_session() as session:
-            await session.merge(user)
+            await session.merge(user_profile)
             await session.commit()
 
-        return user
+        return user_profile
 
     async def create_login_history(self, user_token, success=False, error=None, path=''):
         """
@@ -175,11 +175,11 @@ class UserAuthentication(AuthenticationBackend):
         if path == '/api/users/current':
             email = user_token.get('email', '')
             username = _parse_external_username(user_token)
-            user_id = user_token.get('preferred_username', '')
+            preferred_username = user_token.get('preferred_username', '')
             login_history = UserLoginHistory(
                 keycloak_email=email,
                 external_username=username,
-                keycloak_user_id=user_id,
+                keycloak_user_id=preferred_username,
                 is_login_successful=success,
                 login_error_message=error
             )

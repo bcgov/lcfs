@@ -25,5 +25,4 @@ class Organization(BaseModel,Auditable, EffectiveDates):
     org_status = relationship('OrganizationStatus', back_populates='organizations')
     org_address = relationship('OrganizationAddress', back_populates='organization')
     org_attorney_address = relationship('OrganizationAttorneyAddress', back_populates='organization')
-    
-    users = relationship('User', back_populates='organization')
+    user_profiles = relationship('UserProfile', back_populates='organization')

@@ -1,6 +1,7 @@
-from lcfs.db.base import BaseModel, Auditable
 from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.models.NotificationType import NotificationType
 
 class NotificationMessage(BaseModel, Auditable):
     __tablename__ = 'notification_message'
@@ -13,16 +14,25 @@ class NotificationMessage(BaseModel, Auditable):
     is_error = Column(Boolean, default=False)
     is_archived = Column(Boolean, default=False)
 
-    origin_user_id = Column(Integer,ForeignKey('user.user_id'))
     related_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
-    related_user_id = Column(Integer,ForeignKey('user.user_id'))
+    origin_user_profile_id = Column(Integer, ForeignKey('user_profile.user_profile_id'))
+    related_user_profile_id = Column(Integer, ForeignKey('user_profile.user_profile_id'))
     notification_type_id = Column(Integer, ForeignKey('notification_type.notification_type_id'))
+
     # Models not created yet
     # related_transaction_id = Column(Integer,ForeignKey(''))
     # related_document_id = Column(Integer, ForeignKey('document.id'))
     # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
 
-    origin_user = relationship('User')
     orgnaization = relationship('Organization')
-    related_user = relationship('User', back_populates='notification_messages')
     notification_type = relationship('NotificationType')
+    origin_user_profile = relationship(
+        'UserProfile', 
+        foreign_keys=[origin_user_profile_id], 
+        back_populates='originated_notifications'
+    )
+    related_user_profile = relationship(
+        'UserProfile', 
+        foreign_keys=[related_user_profile_id], 
+        back_populates='notification_messages'
+    )

@@ -7,7 +7,7 @@ from lcfs.web.api.notification.schema import NotificationChannelSubscriptionRequ
 from starlette import status
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.dependencies import get_async_db_session
-from ....db.models import NotificationMessage, User
+from lcfs.db.models import NotificationMessage, UserProfile
 
 from sqlalchemy import select, update
 
