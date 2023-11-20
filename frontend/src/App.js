@@ -1,20 +1,12 @@
 import React from 'react';
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  createBrowserRouter,
-  RouterProvider,
-} from 'react-router-dom';
-import * as appRoutes from './constants/routes';
-import RequireAuth from './components/RequireAuth';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import Login from './components/Login';
-import NotFound from './components/NotFound';
+import RequireAuth from './components/RequireAuth';
+import * as appRoutes from './constants/routes';
 // import Dashboard from './views/dashboard'
-import Layout from './components/Layout';
 import DefaultNavbar from 'components/Navbars/DefaultNavbar';
+import Layout from './layouts/Layout';
 import { ViewUsers } from './views/viewUsers';
-import { Link } from '@mui/material';
 
 const router = createBrowserRouter([
   {

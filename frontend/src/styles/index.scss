@@ -30,11 +30,11 @@ body {
 [data-reactroot],
 #root > div,
 #root div.App {
-  height: 100%;
+  // height: 100%;
   min-width: 50rem;
 }
 
-#header{
+#header {
   color: $white;
 
   #organization-balance {
@@ -133,12 +133,17 @@ h1 {
 }
 
 .btn-container {
-  .btn + .btn, .btn + div, div + div, div + .btn {
+  .btn + .btn,
+  .btn + div,
+  div + div,
+  div + .btn {
     margin-left: 0.4rem;
     margin-right: 0.4rem;
   }
 
-  .btn:last-child, div:last-child, div.overlay-trigger:last-child {
+  .btn:last-child,
+  div:last-child,
+  div.overlay-trigger:last-child {
     margin-right: 0;
   }
 }
@@ -210,7 +215,8 @@ table {
   }
 
   .modal-footer {
-    .btn, .overlay-trigger {
+    .btn,
+    .overlay-trigger {
       margin: 0 0.4rem;
     }
 
@@ -230,5 +236,5 @@ table {
 }
 .tooltip-content {
   font-size: 14.5px;
-  overflow-y: auto; 
+  overflow-y: auto;
 }

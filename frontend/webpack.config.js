@@ -85,7 +85,7 @@ const basePlugins = [
   }),
   new MiniCssExtractPlugin({
     filename: '[name].css',
-    chunkFilename: '[id].css'
+    chunkFilename: '[id].css',
   }),
   // expose mode variable to other modules
   new webpack.DefinePlugin({
@@ -99,7 +99,7 @@ const basePlugins = [
     filename: 'index.html',
     inject: 'body',
     favicon: './public/assets/icons/favicon.ico',
-    template: './public/index.html'
+    template: './public/index.html',
   }),
 ];
 
@@ -126,8 +126,8 @@ const devPlugins = [
   new CopyPlugin({
     patterns: [
       { from: 'public/config/features.js', to: 'static/js/config/' }, // add local dev config
-      { from: 'public/assets/', to: 'assets/' }
-    ]
+      { from: 'public/assets/', to: 'assets/' },
+    ],
   }),
   // ... (other development plugins)
 ];
@@ -221,7 +221,9 @@ const prodOptimization = {
 };
 
 // Merge the base optimization settings with the environment-specific settings
-const finalOptimization = isDevMode ? { ...optimization, ...devOptimization } : { ...optimization, ...prodOptimization };
+const finalOptimization = isDevMode
+  ? { ...optimization, ...devOptimization }
+  : { ...optimization, ...prodOptimization };
 
 // Extracted module rules
 const moduleRules = [
@@ -231,9 +233,7 @@ const moduleRules = [
     exclude: [/\.test.jsx?$/],
     include: [
       new RegExp(`${APP_DIR}/(src|.storybook|plugins|packages)`),
-      ...['./src', './.storybook'].map((p) =>
-        path.resolve(__dirname, p)
-      ), // Redundant but required for Windows
+      ...['./src', './.storybook'].map(p => path.resolve(__dirname, p)), // Redundant but required for Windows
       /@encodable/,
     ],
     use: {
@@ -287,7 +287,7 @@ const moduleRules = [
     type: 'asset',
   },
   {
-    test: /\.svg$/,
+    test: /\.svg$/i,
     use: ['@svgr/webpack'],
   },
   {
@@ -309,10 +309,7 @@ const moduleRules = [
   },
   {
     test: /.mdx?$/,
-    use: [
-      'babel-loader',
-      '@mdx-js/loader'
-    ]
+    use: ['babel-loader', '@mdx-js/loader'],
   },
 ];
 
@@ -327,7 +324,9 @@ const prodModuleRules = [
 ];
 
 // Merge the base module rules with the environment-specific rules
-const finalModuleRules = isDevMode ? [...moduleRules, ...devModuleRules] : [...moduleRules, ...prodModuleRules];
+const finalModuleRules = isDevMode
+  ? [...moduleRules, ...devModuleRules]
+  : [...moduleRules, ...prodModuleRules];
 
 // Define alias paths for resolution
 const alias = {
@@ -335,6 +334,7 @@ const alias = {
   assets: path.resolve(APP_DIR, './src/assets'),
   layouts: path.resolve(APP_DIR, './src/layouts'),
   styles: path.resolve(APP_DIR, './src/styles'),
+  '@': path.resolve(APP_DIR, 'src'),
   // Add any additional alias paths as needed
 };
 
@@ -362,20 +362,22 @@ const prodResolve = {
 };
 
 // Merge the base resolve settings with the environment-specific settings
-const finalResolve = isDevMode ? { ...resolve, ...devResolve } : { ...resolve, ...prodResolve };
+const finalResolve = isDevMode
+  ? { ...resolve, ...devResolve }
+  : { ...resolve, ...prodResolve };
 
 // Extracted devServer configuration
 const devServer = isDevMode
   ? {
-    historyApiFallback: {
-      rewrites: [
-        { from: /^\/api\/(.*)/, to: '/src/assets/staticPages/404.html' },
-        { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
-      ],
-    },
-    client: { overlay: false, logging: 'warn' },
-    port: devserverPort,
-  }
+      historyApiFallback: {
+        rewrites: [
+          { from: /^\/api\/(.*)/, to: '/src/assets/staticPages/404.html' },
+          { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
+        ],
+      },
+      client: { overlay: false, logging: 'warn' },
+      port: devserverPort,
+    }
   : {};
 
 // Extracted configuration object
