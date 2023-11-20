@@ -15,7 +15,7 @@ import {
 } from '@mui/material'
 import 'styles/Organization.css'
 
-const CustomTable = ({ data }) => {
+const UserTable = ({ data }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -107,4 +107,4 @@ const CustomTable = ({ data }) => {
   );
 };
 
-export default CustomTable;
+export default UserTable;
