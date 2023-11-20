@@ -6,6 +6,7 @@ import Login from './components/Login'
 import NotFound from './components/NotFound'
 // import Dashboard from './views/dashboard'
 // import Layout from './components/Layout'
+import UsersTable from './components/Organizations/UsersTable';
 import DefaultNavbar from 'components/Navbars/DefaultNavbar';
 
 const App = () => (
@@ -26,6 +27,7 @@ const App = () => (
       />
       <Route path={appRoutes.LOGIN} element={<Login />} />
       <Route element={<NotFound />} />
+      <Route path={appRoutes.ORGANIZATIONS} element={<UsersTable />} />
     </Routes>
   </BrowserRouter>
 )
