@@ -1,24 +1,16 @@
-import { ReactComponent as Pencil } from '@/assets/icons/pencil.svg';
+import Pencil from '@/assets/icons/pencil.svg';
 import colors from '@/assets/theme/base/colors';
-import {
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from '@mui/material';
+import { Stack, Typography } from '@mui/material';
+import { BCTable } from '@/components/BCTable';
 
-function createData(
+// dummy data creation
+const createData = (
   actionTaken,
   transactionType,
   transactionID,
   timestamp,
   organization,
-) {
+) => {
   return {
     actionTaken,
     transactionType,
@@ -26,24 +18,31 @@ function createData(
     timestamp,
     organization,
   };
-}
+};
 
 const rows = [
-  createData('Frozen yoghurt', 159, 6.0, 24, 4.0),
-  createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
-  createData('Eclair', 262, 56.0, 24, 6.0),
-  createData('Cupcake', 305, 3.7, 67, 4.3),
-  createData('Gingerbread', 356, 16.0, 49, 3.9),
+  createData('Transaction: IN', 159, 6.0, 24, 4.0),
+  createData('Transaction: OUT', 237, 9.0, 37, 4.3),
+  createData('Transaction: OUT', 262, 56.0, 24, 6.0),
+  createData('Transaction: OUT', 305, 3.7, 67, 4.3),
+  createData('Transaction: IN', 356, 16.0, 49, 3.9),
+  createData('Transaction: IN', 305, 3.7, 67, 4.3),
+  createData('Transaction: OUT', 159, 6.0, 24, 4.0),
+  createData('Transaction: OUT', 262, 56.0, 24, 6.0),
+  createData('Transaction: IN', 237, 9.0, 37, 4.3),
+  createData('Transaction: IN', 356, 16.0, 49, 3.9),
 ];
 
 export const ViewUsers = () => {
+  // call to api to fetch user by ID based on url param userID
   // const { userID } = useParams();
   // const apiService = useApiService();
 
   // const { data, isLoading, isError, error } = useQuery({
-  //   queryKey: ['user'],
+  //   queryKey: [`user-${userID}`],
   //   queryFn: async () => {
   //     const { data } = await apiService.get(`/users/${userID}`);
+  //      // manipulate data here to comply with table data props. or do it on the backend.
   //     return data;
   //   },
   //   refetchOnWindowFocus: false,
@@ -87,7 +86,18 @@ export const ViewUsers = () => {
         User Activity
       </Typography>
 
-      <TableContainer component={Paper}>
+      <BCTable
+        data={rows}
+        columns={[
+          { label: 'Action Taken', key: 'actionTaken' },
+          { label: 'Transaction Type', key: 'transactionType' },
+          { label: 'Transaction ID', key: 'transactionID' },
+          { label: 'Timestamp', key: 'timestamp' },
+          { label: 'Organization', key: 'organization' },
+        ]}
+      />
+
+      {/* <TableContainer component={Paper}>
         <Table aria-label="user activity table">
           <TableHead>
             <TableRow>
@@ -110,7 +120,7 @@ export const ViewUsers = () => {
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </TableContainer> */}
     </div>
   );
 };

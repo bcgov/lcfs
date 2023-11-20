@@ -73,7 +73,6 @@ module.exports = {
             '.ts': 'always',
             '.tsx': 'always',
             '.json': 'always',
-            '.svg': 'always',
           },
         ],
         'import/no-named-as-default-member': 0,
