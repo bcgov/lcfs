@@ -1,7 +1,7 @@
 import Pencil from '@/assets/icons/pencil.svg';
 import colors from '@/assets/theme/base/colors';
-import { Stack, Typography } from '@mui/material';
 import { BCTable } from '@/components/BCTable';
+import { Stack, Typography } from '@mui/material';
 
 // dummy data creation
 const createData = (
@@ -96,31 +96,6 @@ export const ViewUsers = () => {
           { label: 'Organization', key: 'organization' },
         ]}
       />
-
-      {/* <TableContainer component={Paper}>
-        <Table aria-label="user activity table">
-          <TableHead>
-            <TableRow>
-              <TableCell align="center">Action Taken</TableCell>
-              <TableCell align="center">Transaction Type</TableCell>
-              <TableCell align="center">Transaction ID</TableCell>
-              <TableCell align="center">Timestamp</TableCell>
-              <TableCell align="center">Organization</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map(row => (
-              <TableRow key={row.transactionID}>
-                <TableCell align="center">{row.actionTaken}</TableCell>
-                <TableCell align="center">{row.transactionType}</TableCell>
-                <TableCell align="center">{row.transactionID}</TableCell>
-                <TableCell align="center">{row.timestamp}</TableCell>
-                <TableCell align="center">{row.organization}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer> */}
     </div>
   );
 };
