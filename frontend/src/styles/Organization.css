@@ -27,7 +27,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
     margin-top: 10px;
+
   }
   
   .pagination-btn {
@@ -35,29 +37,18 @@
   }
   
   .pagination-info {
-    flex: 2;
-    display: flex;
+    flex: 4;
     align-items: center;
-    justify-content: center;
-    margin-left: 200px;
+    gap: 10px;
   }
   
-  .pagination-page {
-    border: 1px solid #000;
-    padding: 5px;
-    margin-left: 5px;
-    border-radius: 5px;
-  }
-  
-  .pagination-dropdown {
-    flex: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
+  .pagination-page-input,
   .pagination-select {
-    border: 1px solid #000;
-    margin-right: 300px;
+    height: 40px;
+    width: 150px; 
+    padding: 8px;
+    border: 1px solid #ced4da; 
+    border-radius: 4px; 
+    text-align: center;
   }
   

@@ -11,6 +11,7 @@ import DefaultNavbar from 'components/Navbars/DefaultNavbar';
 
 const App = () => (
   <BrowserRouter>
+    <DefaultNavbar />
     <Routes>
       <Route
         path="/"
@@ -21,13 +22,12 @@ const App = () => (
               <Dashboard />
             </Layout> */}
             {/* Place the below Navbar later inside the Page Layout */}
-            <DefaultNavbar />
           </RequireAuth>
         }
       />
       <Route path={appRoutes.LOGIN} element={<Login />} />
-      <Route element={<NotFound />} />
       <Route path={appRoutes.ORGANIZATIONS} element={<UsersTable />} />
+      <Route element={<NotFound />} />
     </Routes>
   </BrowserRouter>
 )

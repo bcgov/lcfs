@@ -8,7 +8,7 @@ const generateDummyData = () => {
   const dummyData = [];
   for (let i = 1; i <= 20; i++) {
     dummyData.push({
-      name: `User ${i}`,
+      username: `User ${i}`,
       roles: `Role ${i}`,
       email: `user${i}@example.com`,
       phone: `123-456-${i}000`,
