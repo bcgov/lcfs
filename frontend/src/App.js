@@ -1,33 +1,57 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import * as appRoutes from './constants/routes'
+import React from 'react';
+import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import Login from './components/Login';
 import RequireAuth from './components/RequireAuth';
-import Login from './components/Login'
-import NotFound from './components/NotFound'
+import * as appRoutes from './constants/routes';
 // import Dashboard from './views/dashboard'
-// import Layout from './components/Layout'
 import DefaultNavbar from 'components/Navbars/DefaultNavbar';
+import Layout from './layouts/Layout';
+import { ViewUsers } from './views/viewUsers';
 
-const App = () => (
-  <BrowserRouter>
-    <Routes>
-      <Route
-        path="/"
-        exact
-        element={
-          <RequireAuth redirectTo={appRoutes.LOGIN}>
-            {/* <Layout>
-              <Dashboard />
-            </Layout> */}
-            {/* Place the below Navbar later inside the Page Layout */}
-            <DefaultNavbar />
-          </RequireAuth>
-        }
-      />
-      <Route path={appRoutes.LOGIN} element={<Login />} />
-      <Route element={<NotFound />} />
-    </Routes>
-  </BrowserRouter>
-)
+const router = createBrowserRouter([
+  {
+    path: appRoutes.DASHBOARD,
+    element: (
+      <RequireAuth redirectTo={appRoutes.LOGIN}>
+        {/* <Layout>
+                 <Dashboard />
+               </Layout> */}
+        {/* Place the below Navbar later inside the Page Layout */}
+        <DefaultNavbar />
+      </RequireAuth>
+    ),
+  },
+  {
+    path: appRoutes.LOGIN,
+    element: <Login />,
+  },
+  {
+    element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
+    children: [
+      {
+        path: appRoutes.USERS,
+        handle: {
+          crumb: () => 'Users',
+        },
+        children: [
+          {
+            index: true,
+            element: <></>,
+          },
+          {
+            path: appRoutes.VIEW_USER,
+            element: <ViewUsers />,
+            loader: data => data, // loader will pass data to useMatches
+            handle: {
+              crumb: data => `User: ${data.params.userID}`, // data from loader is passed into our crumb function so we can manipulate the output
+            },
+          },
+        ],
+      },
+    ],
+  },
+]);
 
-export default App
+const App = () => <RouterProvider router={router} />;
+
+export default App;

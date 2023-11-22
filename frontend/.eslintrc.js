@@ -1,21 +1,20 @@
-const packageConfig = require('./package');
+// const packageConfig = require('./package');
 
 const importCoreModules = [];
 
 // ignore files in production mode
 let ignorePatterns = [];
 if (process.env.NODE_ENV === 'production') {
-  ignorePatterns = [
-    '*.test.{js,ts,jsx,tsx}',
-    'packages/**/test/**/*',
-  ];
+  ignorePatterns = ['*.test.{js,ts,jsx,tsx}', 'packages/**/test/**/*'];
 }
 
 module.exports = {
   extends: [
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
+    'plugin:react/jsx-runtime',
     'standard',
     'prettier',
-    'plugin:react-hooks/recommended',
   ],
   parser: '@babel/eslint-parser',
   env: {
@@ -41,6 +40,8 @@ module.exports = {
     'promise',
     'import',
     'node',
+    'jsx-a11y',
+    'react',
     // 'theme-colors',
     // 'translation-vars',
   ],
@@ -48,21 +49,18 @@ module.exports = {
     {
       files: ['*.ts', '*.tsx'],
       parser: '@typescript-eslint/parser',
-      extends: [
-        'standard',
-        'prettier',
-      ],
+      extends: ['standard', 'prettier'],
       plugins: ['@typescript-eslint/eslint-plugin', 'prettier', 'react'],
       rules: {
         '@typescript-eslint/ban-ts-ignore': 0,
-        '@typescript-eslint/ban-ts-comment': 0, 
-        '@typescript-eslint/ban-types': 0, 
+        '@typescript-eslint/ban-ts-comment': 0,
+        '@typescript-eslint/ban-types': 0,
         '@typescript-eslint/no-empty-function': 0,
         '@typescript-eslint/no-explicit-any': 0,
-        '@typescript-eslint/no-use-before-define': 1, 
+        '@typescript-eslint/no-use-before-define': 1,
         '@typescript-eslint/no-non-null-assertion': 0,
         '@typescript-eslint/explicit-function-return-type': 0,
-        '@typescript-eslint/explicit-module-boundary-types': 0, 
+        '@typescript-eslint/explicit-module-boundary-types': 0,
         '@typescript-eslint/prefer-optional-chain': 2,
         camelcase: 0,
         'class-methods-use-this': 0,
@@ -82,7 +80,7 @@ module.exports = {
         indent: 0,
         'jsx-a11y/anchor-is-valid': 1,
         'jsx-a11y/click-events-have-key-events': 0,
-        'jsx-a11y/mouse-events-have-key-events': 0, 
+        'jsx-a11y/mouse-events-have-key-events': 0,
         'max-classes-per-file': 0,
         'new-cap': 0,
         'no-bitwise': 0,
@@ -93,7 +91,7 @@ module.exports = {
         'no-nested-ternary': 0,
         'no-prototype-builtins': 0,
         'no-restricted-properties': 0,
-        'no-shadow': 0, 
+        'no-shadow': 0,
         'no-use-before-define': 0,
         'padded-blocks': 0,
         'prefer-arrow-callback': 0,
@@ -135,9 +133,12 @@ module.exports = {
         'fixtures.*',
       ],
       excludedFiles: 'cypress-base/cypress/**/*',
-      plugins: ['jest', 'jest-dom', 
-      // 'no-only-tests', 
-      'testing-library'],
+      plugins: [
+        'jest',
+        'jest-dom',
+        // 'no-only-tests',
+        'testing-library',
+      ],
       env: {
         'jest/globals': true,
       },
@@ -208,7 +209,7 @@ module.exports = {
     indent: 0,
     'jsx-a11y/anchor-is-valid': 1,
     'jsx-a11y/click-events-have-key-events': 0,
-    'jsx-a11y/mouse-events-have-key-events': 0, 
+    'jsx-a11y/mouse-events-have-key-events': 0,
     'new-cap': 0,
     'no-bitwise': 0,
     'no-continue': 0,
@@ -243,10 +244,13 @@ module.exports = {
     'prefer-destructuring': ['error', { object: true, array: false }],
     'react/destructuring-assignment': 0,
     'react/forbid-prop-types': 0,
-    'react/jsx-filename-extension': [1, { extensions: ['.js', '.jsx', '.tsx'] }],
+    'react/jsx-filename-extension': [
+      1,
+      { extensions: ['.js', '.jsx', '.tsx'] },
+    ],
     'react/jsx-fragments': 1,
     'react/jsx-no-bind': 0,
-    'react/jsx-props-no-spreading': 0, 
+    'react/jsx-props-no-spreading': 0,
     'react/no-array-index-key': 0,
     'react/no-string-refs': 0,
     'react/no-unescaped-entities': 0,
