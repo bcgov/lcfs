@@ -22,7 +22,7 @@ const Login = (props) => {
   }
 
   return (
-    <div id="login">
+    <div id="login" data-test="login-container">
       <div id="header" className="login-lcfs-page-header">
         <div id="header-wrapper" className="login-lcfs-page-header-text">Low Carbon Fuel Standard</div>
       </div>
@@ -41,6 +41,7 @@ const Login = (props) => {
                 }}
                 id="link-bceid"
                 className="button"
+                data-test="link-bceid"
               >
                 <span className="text"> Login with </span>
                 <span className="display-name"> BCeID </span>
@@ -57,6 +58,7 @@ const Login = (props) => {
                 }}
                 id="link-idir"
                 className="button"
+                data-test="link-idir"
               >
                 <span className="text">Login with</span>
                 <span className="display-name"> IDIR </span>

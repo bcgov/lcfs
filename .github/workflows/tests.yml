@@ -77,3 +77,47 @@ jobs:
       env:
         LCFS_HOST: "0.0.0.0"
         LCFS_DB_HOST: localhost
+  cypress:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:14.2
+        env:
+          POSTGRES_DB: lcfs
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
+        ports:
+          - 5432:5432
+      redis:
+        image: bitnami/redis:6.2.5
+        env:
+          ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+          - 6379:6379
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build and Run Backend Service
+      run: |
+        docker build -t backend-service ./backend/Dockerfile
+        docker run -d --name backend -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost -p 8000:8000 backend-service
+    - name: Data Seeding
+      run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
+    - name: Build and Run Frontend Service
+      run: |
+        docker build -t frontend-service ./fontend/Dockerfile.dev
+        docker run -d --name frontend -p 3000:3000 frontend-service
+    - name: Cypress run
+      uses: cypress-io/github-action@v2
+      with:
+        browser: chrome
+        wait-on: 'http://localhost:3000'
+        wait-on-timeout: 60
+      env:
+        CYPRESS_IDIR_TEST_USER: ${{ secrets.CYPRESS_IDIR_TEST_USER }}
+        CYPRESS_IDIR_TEST_PASS: ${{ secrets.CYPRESS_IDIR_TEST_PASS }}
+        CYPRESS_BCEID_TEST_USER: ${{ secrets.CYPRESS_BCEID_TEST_USER }}
+        CYPRESS_BCEID_TEST_PASS: ${{ secrets.CYPRESS_BCEID_TEST_PASS }}
+    - name: Cleanup
+      run: |
+        docker stop backend frontend
+        docker rm backend frontend
