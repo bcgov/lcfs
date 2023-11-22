@@ -1,1 +1,1 @@
-"""Alembic migrations."""
+"""Common seed migrations."""

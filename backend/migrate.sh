@@ -43,13 +43,12 @@ run_seeds() {
         exit 1
     fi
     case $1 in
-        common) ALEMBIC_SCRIPT_LOCATION="lcfs/db/seeds/common" ;;
-        dev) ALEMBIC_SCRIPT_LOCATION="lcfs/db/seeds/dev" ;;
-        prod) ALEMBIC_SCRIPT_LOCATION="lcfs/db/seeds/prod" ;;
+        common) ini="common_seeds" ;;
+        dev) ini="dev_seeds" ;;
+        prod) ini="prod_seeds" ;;
         *) echo "Invalid seed type: $1"; exit 1 ;;
     esac
-    export ALEMBIC_SCRIPT_LOCATION
-    alembic upgrade head
+    alembic -n $ini upgrade head
 }
 
 # Function for displaying help manual

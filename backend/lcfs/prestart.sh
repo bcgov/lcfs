@@ -6,7 +6,6 @@ echo "running prestart.sh from $(pwd)"
 
 # Apply base database migrations
 echo "Applying base migrations."
-export ALEMBIC_SCRIPT_LOCATION=lcfs/db/migrations
 alembic upgrade head
 
 # Check for errors
@@ -17,8 +16,7 @@ fi
 
 # Apply common seed migrations
 echo "Applying common seed migrations."
-export ALEMBIC_SCRIPT_LOCATION=lcfs/db/seeds/common
-alembic upgrade head
+alembic -n common_seeds upgrade head
 
 # Check for errors
 if [ $? -ne 0 ]; then
@@ -30,8 +28,7 @@ fi
 if [ "$APP_ENVIRONMENT" == "dev" ]; then
     # Apply development-specific seed migrations
     echo "Applying development seed migrations."
-    export ALEMBIC_SCRIPT_LOCATION=lcfs/db/seeds/dev
-    alembic upgrade head
+    alembic -n dev_seeds upgrade head
 
     if [ $? -ne 0 ]; then
         echo "Development seed migrations failed."
@@ -44,7 +41,7 @@ if [ "$APP_ENVIRONMENT" == "prod" ]; then
     # Apply development-specific seed migrations
     echo "Applying production seed migrations."
     export ALEMBIC_SCRIPT_LOCATION=lcfs/db/seeds/prod
-    alembic upgrade head
+    alembic -n prod_seeds upgrade head
 
     if [ $? -ne 0 ]; then
         echo "Production seed migrations failed."

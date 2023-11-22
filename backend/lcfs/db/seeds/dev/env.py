@@ -31,6 +31,7 @@ async def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table='alembic_version_seeds_dev'
     )
 
     with context.begin_transaction():
@@ -38,7 +39,11 @@ async def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Run actual sync migrations."""
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection, 
+        target_metadata=target_metadata,
+        version_table='alembic_version_seeds_dev'
+    )
 
     with context.begin_transaction():
         context.run_migrations()

@@ -72,6 +72,6 @@ class NotificationType(BaseModel, Auditable):
      __table_args__ = {'comment': "Represents a Notification type"}
 
      notification_type_id = Column(Integer, primary_key=True, autoincrement=True)
-     name = Column(Enum(NotificationTypeEnum, name='notification_type_enum', create_type=True), nullable=False)
+     name = Column(Enum(NotificationTypeEnum, name="notification_type_enum", create_type=True), nullable=False)
      description = Column(Text, nullable=True)
      email_content = Column(Text)

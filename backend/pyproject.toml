@@ -18,7 +18,7 @@ pydantic = {extras = ["email"], version = "^2.4.2"}
 yarl = "^1.8.2"
 ujson = "^5.7.0"
 SQLAlchemy = {version = "^2.0.0", extras = ["asyncio"]}
-alembic = "^1.9.2"
+alembic = "^1.12.1"
 asyncpg = {version = "^0.27.0", extras = ["sa"]}
 redis = {version = "^4.4.2", extras = ["hiredis"]}
 httptools = "^0.5.0"

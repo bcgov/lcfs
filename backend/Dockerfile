@@ -37,11 +37,11 @@ CMD ["/app/lcfs/start.sh"]
 # Production stage
 FROM base as prod
 # Set the APP_ENVIRONMENT variable to 'production'
-ENV APP_ENVIRONMENT=production
+ENV APP_ENVIRONMENT=prod
 
 # Development stage
 FROM base as dev
 # Set the APP_ENVIRONMENT variable to 'development'
-ENV APP_ENVIRONMENT=development
+ENV APP_ENVIRONMENT=dev
 # Install additional dependencies for development
 RUN poetry install

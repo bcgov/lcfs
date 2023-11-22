@@ -1,15 +1,15 @@
 """initial migration
 
-Revision ID: 1f2d554806ba
+Revision ID: 3f0c83707d4d
 Revises: 
-Create Date: 2023-11-17 18:00:30.221042
+Create Date: 2023-11-21 15:29:15.358644
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "1f2d554806ba"
+revision = "3f0c83707d4d"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -504,7 +504,7 @@ def upgrade() -> None:
                 "COMPLIANCE_REPORTING",
                 "SIGNING_AUTHORITY",
                 "READ_ONLY",
-                name="roleenum",
+                name="role_enum",
             ),
             nullable=False,
             comment="Role code. Natural key. Used internally. eg Admin, GovUser, GovDirector, etc",
@@ -1038,8 +1038,8 @@ def upgrade() -> None:
         ),
         sa.Column("is_enabled", sa.Boolean(), nullable=True),
         sa.Column("user_profile_id", sa.Integer(), nullable=True),
-        sa.Column("channel_id", sa.Integer(), nullable=True),
         sa.Column("notification_type_id", sa.Integer(), nullable=True),
+        sa.Column("notification_channel_id", sa.Integer(), nullable=True),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -1067,7 +1067,7 @@ def upgrade() -> None:
             comment="The user who last updated this record in the database.",
         ),
         sa.ForeignKeyConstraint(
-            ["channel_id"],
+            ["notification_channel_id"],
             ["notification_channel.notification_channel_id"],
         ),
         sa.ForeignKeyConstraint(
@@ -1158,7 +1158,8 @@ def upgrade() -> None:
             comment="transaction effective date",
         ),
         sa.Column("comment_id", sa.Integer(), nullable=True),
-        sa.Column("transfer_category", sa.Integer(), nullable=True),
+        sa.Column("transfer_status_id", sa.Integer(), nullable=True),
+        sa.Column("transfer_category_id", sa.Integer(), nullable=True),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -1214,8 +1215,12 @@ def upgrade() -> None:
             ["transaction.transaction_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["transfer_category"],
+            ["transfer_category_id"],
             ["category.category_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["transfer_status_id"],
+            ["transfer_status.transfer_status_id"],
         ),
         sa.PrimaryKeyConstraint("transfer_id"),
         sa.UniqueConstraint("transfer_id"),
@@ -1471,3 +1476,12 @@ def downgrade() -> None:
     op.drop_table("comment")
     op.drop_table("category")
     # ### end Alembic commands ###
+
+    # Manually drop ENUM types
+    op.execute('DROP TYPE IF EXISTS channel_enum CASCADE;')
+    op.execute('DROP TYPE IF EXISTS notification_type_enum CASCADE;')
+    op.execute('DROP TYPE IF EXISTS org_status_enum CASCADE;')
+    op.execute('DROP TYPE IF EXISTS org_type_enum CASCADE;')
+    op.execute('DROP TYPE IF EXISTS role_enum CASCADE;')
+    op.execute('DROP TYPE IF EXISTS transaction_type_enum CASCADE;')
+    op.execute('DROP TYPE IF EXISTS transfer_type_enum CASCADE;')
