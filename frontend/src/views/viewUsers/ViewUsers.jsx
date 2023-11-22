@@ -31,6 +31,9 @@ const rows = [
   createData('Transaction: OUT', 262, 56.0, 24, 6.0),
   createData('Transaction: IN', 237, 9.0, 37, 4.3),
   createData('Transaction: IN', 356, 16.0, 49, 3.9),
+  createData('Transaction: IN', 356, 16.0, 49, 3.9),
+  createData('Transaction: IN', 356, 16.0, 49, 3.9),
+  createData('Transaction: IN', 356, 16.0, 49, 3.9),
 ];
 
 export const ViewUsers = () => {
@@ -51,6 +54,7 @@ export const ViewUsers = () => {
 
   return (
     <div>
+      BCTable
       <Typography variant="h4" color={colors.primary.main} mb={2}>
         Billy Governance{' '}
         <span>
@@ -89,11 +93,11 @@ export const ViewUsers = () => {
       <BCTable
         data={rows}
         columns={[
-          { label: 'Action Taken', key: 'actionTaken' },
-          { label: 'Transaction Type', key: 'transactionType' },
-          { label: 'Transaction ID', key: 'transactionID' },
-          { label: 'Timestamp', key: 'timestamp' },
-          { label: 'Organization', key: 'organization' },
+          { label: 'Action Taken', field: 'actionTaken' },
+          { label: 'Transaction Type', field: 'transactionType' },
+          { label: 'Transaction ID', field: 'transactionID' },
+          { label: 'Timestamp', field: 'timestamp' },
+          { label: 'Organization', field: 'organization' },
         ]}
       />
     </div>

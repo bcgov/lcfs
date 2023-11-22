@@ -1,132 +1,53 @@
-import React, { useState } from 'react';
-import {
-  Table,
-  TableContainer,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Paper,
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-} from '@mui/material';
-// import '@/styles/Table.scss';
+import React, { useMemo, useEffect, useState } from 'react';
+import { AgGridReact } from '@ag-grid-community/react';
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
+import '@ag-grid-community/styles/ag-grid.css';
+import '@ag-grid-community/styles/ag-theme-alpine.css';
+import { ModuleRegistry } from '@ag-grid-community/core';
 
-export const BCTable = ({ data, columns }) => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+ModuleRegistry.registerModules([ClientSideRowModelModule]);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+export const BCTable = (props) => {
+  const sideBar = useMemo(() => {
+    toolPanels: ['filters', 'columns']
+  }, []);
 
-  const handleChangeRowsPerPage = event => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+  const defaultColDef = useMemo(() => ({
+    resizable: true,
+    sortable: true,
+    filter: true,
+    floatingFilter: true,
+    // filterParams: {
+    //   buttons: ['apply', 'reset'],
+    //   closeOnApply: true,
+    // }
+  }), []);
 
-  const filteredData = data
-    ? data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-    : [];
-  const totalPages = data ? Math.ceil(data.length / rowsPerPage) : 0;
+  const [rowData, setRowData] = useState();
+
+  useEffect(() => {
+    // fetch('https://www.ag-grid.com/example-assets/olympic-winners.json')
+    //   .then(resp => resp.json())
+    //   .then(data => setRowData(data));
+    setRowData([...props.data])
+  }, []);
 
   return (
-    <TableContainer component={Paper} className="table-container">
-      <Table className="table-border">
-        <TableHead>
-          <TableRow>
-            {columns.map(({ label, key }) => (
-              <TableCell className="table-cell" key={key}>
-                <TextField
-                  label={label}
-                  variant="outlined"
-                  style={{ width: '100%', border: '1px solid #000' }}
-                />
-              </TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredData.map((row, index) => (
-            <TableRow key={index} className="table-row">
-              {columns.map(({ key }) => (
-                <TableCell className="table-cell" key={key}>
-                  {row[key]}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: '10px',
-        }}
-      >
-        <div style={{ flex: 1 }}>
-          <Button
-            variant="outlined"
-            disabled={page === 0}
-            onClick={event => handleChangePage(event, page - 1)}
-            style={{ width: '100%' }}
-          >
-            Previous
-          </Button>
-        </div>
-        <div
-          style={{
-            flex: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: '200px',
-          }}
-        >
-          Page
-          <span
-            style={{
-              border: '1px solid #000',
-              padding: '5px',
-              marginLeft: '5px',
-              borderRadius: '5px',
-            }}
-          >
-            {totalPages === 0 ? 0 : page + 1}
-          </span>
-          of {totalPages}
-        </div>
-        <div>
-          <FormControl variant="outlined" style={{ marginLeft: '5px' }}>
-            <Select
-              labelId="rowsPerPage"
-              value={rowsPerPage}
-              onChange={handleChangeRowsPerPage}
-              label="Rows per page"
-              style={{ border: '1px solid #000', marginRight: '300px' }}
-            >
-              <MenuItem value={5}>5 rows</MenuItem>
-              <MenuItem value={10}>10 rows</MenuItem>
-              <MenuItem value={20}>20 rows</MenuItem>
-            </Select>
-          </FormControl>
-        </div>
-        <div style={{ flex: 1 }}>
-          <Button
-            variant="outlined"
-            disabled={data ? rowsPerPage * (page + 1) >= data.length : true}
-            onClick={event => handleChangePage(event, page + 1)}
-            style={{ width: '100%' }}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
-    </TableContainer>
+    <div className="ag-theme-alpine" style={{ width: '100%', height: '100%' }}>
+      <AgGridReact
+        className="ag-theme-alpine"
+        animateRows="true"
+        columnDefs={props.columns}
+        defaultColDef={defaultColDef}
+        enableRangeSelection="true"
+        rowData={rowData}
+        rowSelection="multiple"
+        suppressRowClickSelection="true"
+        pagination
+        paginationPageSize={10}
+        domLayout='autoHeight'
+        sideBar={sideBar}
+      />
+    </div>
   );
 };
