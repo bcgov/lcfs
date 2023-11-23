@@ -1,151 +1,60 @@
-import React, { useState } from 'react'
-import {
-  Table,
-  TableContainer,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Paper,
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-} from '@mui/material'
-import 'styles/Organization.css'
-import PropTypes from 'prop-types'
+import React, { useMemo, useEffect, useState }  from 'react';
+import { AgGridReact } from '@ag-grid-community/react';
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
+import '@ag-grid-community/styles/ag-grid.css';
+import '@ag-grid-community/styles/ag-theme-alpine.css';
 
-const UserTable = ({ data }) => {
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+import { ModuleRegistry } from '@ag-grid-community/core';
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage)
-  }
+ModuleRegistry.registerModules([ClientSideRowModelModule]);
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10))
-    setPage(0)
-  }
 
-  const filteredData = data ? data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) : []
-  const totalPages = data ? Math.ceil(data.length / rowsPerPage) : 0
-  const [inputPage, setInputPage] = useState(page + 1);
+const UserTable = ({rowData = []}) => {
+  const sideBar = useMemo(
+    () => ({
+      toolPanels: ['filters', 'columns']
+    }),
+    []
+  );
 
+  const columnDefs = [
+    { headerName: 'Name', field: 'name' },
+    { headerName: 'Role(s)', field: 'roles' },
+    { headerName: 'Email', field: 'email' },
+    { headerName: 'Phone', field: 'phone' },
+    { headerName: 'Status', field: 'status' },
+  ];
+
+
+  const defaultColDef = useMemo(() => ({
+    resizable: true,
+    sortable: true,
+    filter: true,
+    floatingFilter: true,
+    filterParams: {
+      buttons: ['apply', 'reset'],
+      closeOnApply: true,
+    }
+  }), []);
 
   return (
-    <TableContainer component={Paper} className='table-container'>
-      <Table className='table-border'>
-        <TableHead>
-          <TableRow>
-            <TableCell className='table-cell'>
-              <TextField label="Username" variant="outlined" className='table-text-field' />
-            </TableCell>
-            <TableCell className='table-cell'>
-              <TextField label="Role(s)" variant="outlined" className='table-text-field' />
-            </TableCell>
-            <TableCell className='table-cell'>
-              <TextField label="Email" variant="outlined" className='table-text-field' />
-            </TableCell>
-            <TableCell className='table-cell'>
-              <TextField label="Phone" variant="outlined" className='table-text-field' />
-            </TableCell>
-            <TableCell className='table-cell'>
-              <TextField label="Status" variant="outlined" className='table-text-field' />
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredData.map((row, index) => (
-            <TableRow key={index} className='table-row'>
-              <TableCell className='table-cell'>{row.username}</TableCell>
-              <TableCell className='table-cell'>{row.roles}</TableCell>
-              <TableCell className='table-cell'>{row.email}</TableCell>
-              <TableCell className='table-cell'>{row.phone}</TableCell>
-              <TableCell className='table-cell'>{row.status}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      <div className='pagination-container'>
-        <div className='pagination-btn'>
-        <Button
-          variant="outlined"
-          disabled={page === 0} 
-          onClick={(event) => {
-            const newPage = page - 1;
-            handleChangePage(event, newPage);
-            setPage(newPage); 
-          }}
-          style={{ width: '100%' }}
-        >
-          Previous
-        </Button>
-        </div>
-        <div className='pagination-info'>
-          Page 
-          <input
-            type="number"
-            value={totalPages === 0 ? 0 : page + 1} 
-            min="1"
-            max={totalPages}
-            onChange={(e) => setInputPage(e.target.value)}
-            className='pagination-page-input'
-            onBlur={() => {
-              const pageNumber = parseInt(inputPage, 10);
-              if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= totalPages) {
-                setPage(pageNumber - 1)
-              } else {
-                setInputPage(page + 1)
-              }
-            }}
-          />
-          &nbsp;of&nbsp; {totalPages}
-          <FormControl variant="outlined" style={{ marginLeft: '5px' }}>
-            <Select
-              labelId="rowsPerPage"
-              value={rowsPerPage}
-              onChange={handleChangeRowsPerPage}
-              label="Rows per page"
-              className='pagination-select'
-            >
-              <MenuItem value={5}>5 rows</MenuItem>
-              <MenuItem value={10}>10 rows</MenuItem>
-              <MenuItem value={20}>20 rows</MenuItem>
-            </Select>
-          </FormControl>
-        </div>
-        <div className='pagination-btn'>
-        <Button
-          variant="outlined"
-          disabled={data ? rowsPerPage * (page + 1) >= data.length : true}
-          onClick={(event) => {
-            const newPage = page + 1;
-            handleChangePage(event, newPage);
-            setPage(newPage)
-          }}
-          style={{ width: '100%' }}
-        >
-          Next
-        </Button>
-        </div>
-      </div>
+    <div className="ag-theme-alpine" style={{ width: '100%', height: '100%' }}>
+      <AgGridReact
+        className="ag-theme-alpine"
+        animateRows="true"
+        columnDefs={columnDefs} 
+        defaultColDef={defaultColDef}
+        enableRangeSelection="true"
+        rowData={rowData}
+        rowSelection="multiple"
+        suppressRowClickSelection="true"
+        pagination
+        paginationPageSize={10}
+        domLayout='autoHeight'
+        sideBar={sideBar}
+      />
+    </div>
+  );
+};
 
-    </TableContainer>
-  )
-}
-
-UserTable.propTypes = {
-  data: PropTypes.arrayOf(
-    PropTypes.shape({
-      username: PropTypes.string,
-      roles: PropTypes.string,
-      email: PropTypes.string,
-      phone: PropTypes.string,
-      status: PropTypes.string,
-    })
-  ),
-}
-
-export default UserTable
+export default UserTable;

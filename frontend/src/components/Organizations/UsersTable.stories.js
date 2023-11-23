@@ -1,14 +1,19 @@
-// UsersTable.stories.js
-
 import React from 'react';
-import UsersTable from './UsersTable'; // Import your UsersTable component
+import UserTable from './UsersTable';
 
-// Function to generate dummy data for the table (20 rows)
+export default {
+  title: 'Components/UserTable',
+  component: UserTable,
+  argTypes: {
+    rowData: { control: null }, // Disable the rowData control in Storybook
+  },
+};
+
 const generateDummyData = () => {
   const dummyData = [];
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= 30; i++) {
     dummyData.push({
-      username: `User ${i}`,
+      name: `User ${i}`,
       roles: `Role ${i}`,
       email: `user${i}@example.com`,
       phone: `123-456-${i}000`,
@@ -18,13 +23,8 @@ const generateDummyData = () => {
   return dummyData;
 };
 
-export default {
-  title: 'Components/UsersTable',
-  component: UsersTable,
-};
-
-export const TwentyRows = () => (
-  <div style={{ maxWidth: '1000px' }}>
-    <UsersTable data={generateDummyData()} />
+export const ThirtyRows = () => (
+  <div style={{ width: '100%', height: '500px' }}> {/* Adjust height as needed */}
+    <UserTable rowData={generateDummyData()} />
   </div>
 );
