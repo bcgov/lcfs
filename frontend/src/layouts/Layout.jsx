@@ -17,26 +17,28 @@ const Layout = () => {
   return (
     <>
       <DefaultNavbar />
-      <Box p={4} pb={1}>
-        <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-          {crumbs.map((crumb, index) =>
-            index + 1 !== crumbs.length ? (
-              <Link
-                key={crumb.path}
-                component={RouterLink}
-                to={crumb.path}
-                disabled={true}
-              >
-                {crumb.label}
-              </Link>
-            ) : (
-              <span key={crumb.path}>{crumb.label}</span>
-            ),
-          )}
-        </Breadcrumbs>
-      </Box>
-      <Box p={4}>
-        <Outlet />
+      <Box>
+        <Box p={4} pb={1}>
+          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
+            {crumbs.map((crumb, index) =>
+              index + 1 !== crumbs.length ? (
+                <Link
+                  key={crumb.path}
+                  component={RouterLink}
+                  to={crumb.path}
+                  disabled={true}
+                >
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span key={crumb.path}>{crumb.label}</span>
+              ),
+            )}
+          </Breadcrumbs>
+        </Box>
+        <Box p={4}>
+          <Outlet />
+        </Box>
       </Box>
     </>
   );
