@@ -28,9 +28,8 @@ const config = {
       assets: path.resolve(__dirname, '../src/assets'), // replace '../src/assets' with your desired base URL
       components: path.resolve(__dirname, '../src/components'), // replace '../src/components' with your desired base URL
       context: path.resolve(__dirname, '../src/context'),
-      examples: path.resolve(__dirname, '../src/examples'),
+      styles: path.resolve(__dirname, '../src/styles'),
     };
-
     // Add any necessary webpack rules or configurations here
 
     return config;

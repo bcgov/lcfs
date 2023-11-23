@@ -31,7 +31,7 @@ const links = [
   { icon: "folder", name: "document", route: "/document" },
   { icon: "account_balance", name: "Transactions", route: "/transactions" },
   { icon: "assessment", name: "Compliance Report", route: "/compliance-report" },
-  { icon: "corporate_fare", name: "organization", route: "/authentication/sign-up" },
+  { icon: "corporate_fare", name: "organization", route: "/organizations" },
 ];
 
 function DefaultNavbar() {
