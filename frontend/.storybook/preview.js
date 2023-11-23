@@ -15,12 +15,14 @@ export default preview;
 
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import theme from "../src/assets/theme"
-
+import { BrowserRouter } from "react-router-dom";
 export const withMuiTheme = (Story) => (
-  <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <Story />
-  </ThemeProvider>
+  <BrowserRouter>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Story />
+    </ThemeProvider>
+  </BrowserRouter>
 );
 
 export const decorators = [withMuiTheme];

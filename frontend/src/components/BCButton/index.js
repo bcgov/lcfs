@@ -27,7 +27,6 @@ BCButton.defaultProps = {
   color: "white",
   circular: false,
   iconOnly: false,
-  darkMode: "light",
 };
 
 // Typechecking props for the BCButton
@@ -48,7 +47,6 @@ BCButton.propTypes = {
   circular: PropTypes.bool,
   iconOnly: PropTypes.bool,
   children: PropTypes.node.isRequired,
-  darkMode: PropTypes.oneOf(["light", "dark"]),
 };
 
 export default BCButton;

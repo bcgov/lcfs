@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import Logout from '../../Logout'
+import Logout from 'components/Logout';
 
 // react-router components
 import { Link } from "react-router-dom";
@@ -31,7 +31,8 @@ const links = [
   { icon: "folder", name: "document", route: "/document" },
   { icon: "account_balance", name: "Transactions", route: "/transactions" },
   { icon: "assessment", name: "Compliance Report", route: "/compliance-report" },
-  { icon: "corporate_fare", name: "organization", route: "/authentication/sign-up" },
+  { icon: "corporate_fare", name: "Organization", route: "/organization" },
+  { icon: "admin_panel_settings", name: "Administration", route: "/administration" },
 ];
 
 function DefaultNavbar() {
@@ -86,7 +87,7 @@ function DefaultNavbar() {
 
   return (
     <>
-      <AppBar position="sticky" color={isScrolled ? "transparent" : "inherit"} elevation={0} >
+      <AppBar position="sticky" color={isScrolled ? "transparent" : "inherit"} elevation={isScrolled ? 5 : 0} >
         <BCBox flexDirection="column" display="flex" color="transparent" >
           <BCBox
             py={0}
@@ -95,7 +96,7 @@ function DefaultNavbar() {
             // mx={1}
             width="100%"
             height="80px"
-            borderRadius={mobileView ? "sm" : "lg"}
+            borderRadius={"sm"}
             shadow={"md"}
             display="flex"
             justifyContent="space-between"
@@ -165,7 +166,7 @@ function DefaultNavbar() {
               // mx={1}
               width="100%"
               height="auto"
-              borderRadius={mobileView ? "sm" : "lg"}
+              borderRadius={"sm"}
               shadow={"md"}
               position="relative"
               left={0}
@@ -184,12 +185,12 @@ function DefaultNavbar() {
               {links.map((link) => (
                 <>
                   <DefaultNavbarLink key={link.name} icon={link.icon} name={link.name} route={link.route} light={isScrolled} />
-                  <Divider orientation="vertical" variant="middle" flexItem sx={({ palette: { secondary } }) => ({ backgroundColor: secondary.main })} />
+                  <Divider orientation="vertical" variant="middle" flexItem sx={({ palette: { white } }) => ({ backgroundColor: white.main })} />
                 </>
               ))}
-              <Logout/>
+              <Logout isScrolled={isScrolled} />
             </BCBox>
-            }
+          }
           {mobileView && <DefaultNavbarMobile open={mobileNavbar} close={closeMobileNavbar} light={true} links={links} />}
         </BCBox>
       </AppBar>

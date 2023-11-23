@@ -20,7 +20,7 @@ const BCBox = forwardRef(
 BCBox.defaultProps = {
   variant: "contained",
   bgColor: "transparent",
-  color: "dark",
+  color: "inherit",
   opacity: 1,
   borderRadius: "none",
   shadow: "none",

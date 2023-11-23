@@ -50,7 +50,9 @@ const colors = {
   // Backgrounds
   background: {
     default: "#f2f2f2", // Used for backgrounds
-    nav: "#38598a" // Used for Nav bar
+    nav: "#38598a", // Used for Nav bar
+    opaque: "transparent",
+    paper: '#F3F6F9',
   },
   // Used for headings and paragraphs
   text: {
