@@ -2,15 +2,12 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { AgGridReact } from '@ag-grid-community/react';
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
-import { RangeSelectionModule } from '@ag-grid-enterprise/range-selection';
-import { RowGroupingModule } from '@ag-grid-enterprise/row-grouping';
-import { RichSelectModule } from '@ag-grid-enterprise/rich-select';
 import '@ag-grid-community/styles/ag-grid.css';
 import '@ag-grid-community/styles/ag-theme-alpine.css';
 import { ModuleRegistry } from '@ag-grid-community/core';
 import StatusRenderer from './StatusRenderer';
 
-ModuleRegistry.registerModules([ClientSideRowModelModule, RangeSelectionModule, RowGroupingModule, RichSelectModule]);
+ModuleRegistry.registerModules([ClientSideRowModelModule]);
 
 const UserGrid = (props) => {
   const sideBar = useMemo(() => {
