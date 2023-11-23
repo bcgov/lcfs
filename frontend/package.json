@@ -67,7 +67,6 @@
     "@emotion/babel-preset-css-prop": "^11.11.0",
     "@emotion/react": "^11.11.1",
     "@mdx-js/loader": "^3.0.0",
-    "@mui/x-data-grid-generator": "^6.18.1",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.11",
     "@storybook/addon-docs": "^7.5.1",
     "@storybook/addon-essentials": "^7.5.1",
