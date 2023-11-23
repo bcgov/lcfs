@@ -5,7 +5,6 @@ from alembic import context
 from sqlalchemy.ext.asyncio.engine import create_async_engine
 from sqlalchemy.future import Connection
 
-from lcfs.db.meta import meta
 from lcfs.db.models import load_all_models
 from lcfs.settings import settings
 from lcfs.db.base import Base
@@ -24,6 +23,20 @@ if config.config_file_name is not None:
 # Metadata object for 'autogenerate' support in seed migrations
 target_metadata = Base.metadata
 
+def include_object(object, name, type_, reflected, compare_to):
+    # List of tables to be ignored
+    ignored_tables = {
+        "alembic_version_seeds_dev",
+        "alembic_version_seeds_prod",
+        "alembic_version_seeds_common",
+        "alembic_version"
+    }
+
+    if type_ == "table" and name in ignored_tables:
+        return False
+    else:
+        return True
+
 async def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     context.configure(
@@ -31,7 +44,8 @@ async def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        version_table='alembic_version_seeds_prod'
+        version_table='alembic_version_seeds_prod',
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -42,7 +56,8 @@ def do_run_migrations(connection: Connection) -> None:
     context.configure(
         connection=connection, 
         target_metadata=target_metadata,
-        version_table='alembic_version_seeds_prod'
+        version_table='alembic_version_seeds_prod',
+        include_object=include_object,
     )
 
     with context.begin_transaction():

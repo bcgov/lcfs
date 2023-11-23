@@ -27,13 +27,34 @@ generate_migration() {
 # Function for upgrading the database
 upgrade_database() {
     revision=${1:-head}
-    alembic upgrade $revision
+
+    # Upgrade the base environment first
+    echo "Upgrading base environment..."
+    alembic -n alembic upgrade $revision
+
+    # Then upgrade the common seeds
+    echo "Upgrading common seeds..."
+    alembic -n common_seeds upgrade head
+
+    # Then upgrade the dev seeds
+    echo "Upgrading dev seeds..."
+    alembic -n dev_seeds upgrade head
 }
 
 # Function for downgrading the database
 downgrade_database() {
     revision=${1:-base}
-    alembic downgrade $revision
+
+    # Downgrade seed environments first
+    for seed_env in "prod_seeds" "dev_seeds" "common_seeds"
+    do
+        echo "Downgrading $seed_env..."
+        alembic -n $seed_env downgrade $revision
+    done
+
+    # Then downgrade the base environment
+    echo "Downgrading base environment..."
+    alembic -n alembic downgrade $revision
 }
 
 # Function to run seed migrations

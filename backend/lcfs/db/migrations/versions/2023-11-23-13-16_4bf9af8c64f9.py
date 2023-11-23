@@ -1,15 +1,15 @@
 """initial migration
 
-Revision ID: 3f0c83707d4d
+Revision ID: 4bf9af8c64f9
 Revises: 
-Create Date: 2023-11-21 15:29:15.358644
+Create Date: 2023-11-23 13:16:29.992060
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "3f0c83707d4d"
+revision = "4bf9af8c64f9"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -1476,12 +1476,3 @@ def downgrade() -> None:
     op.drop_table("comment")
     op.drop_table("category")
     # ### end Alembic commands ###
-
-    # Manually drop ENUM types
-    op.execute('DROP TYPE IF EXISTS channel_enum CASCADE;')
-    op.execute('DROP TYPE IF EXISTS notification_type_enum CASCADE;')
-    op.execute('DROP TYPE IF EXISTS org_status_enum CASCADE;')
-    op.execute('DROP TYPE IF EXISTS org_type_enum CASCADE;')
-    op.execute('DROP TYPE IF EXISTS role_enum CASCADE;')
-    op.execute('DROP TYPE IF EXISTS transaction_type_enum CASCADE;')
-    op.execute('DROP TYPE IF EXISTS transfer_type_enum CASCADE;')

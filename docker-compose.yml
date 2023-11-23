@@ -41,6 +41,7 @@ services:
       LCFS_REDIS_HOST: redis
       LCFS_REDIS_PORT: 6379
       LCFS_RELOAD: true
+      APP_ENVIRONMENT: dev
     ports:
       - '8000:8000'
     depends_on:

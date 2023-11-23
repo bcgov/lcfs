@@ -1,6 +1,6 @@
 """adding user roles
 
-Revision ID: f01ebaf2762c
+Revision ID: 002
 Revises: 
 Create Date: 2023-11-21 15:12:04.731880
 
@@ -9,8 +9,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "f01ebaf2762c"
-down_revision = None
+revision = "002"
+down_revision = "001"
 branch_labels = None
 depends_on = None
 
@@ -46,5 +46,6 @@ def upgrade():
     ])
 
 def downgrade():
-    op.execute('TRUNCATE TABLE role;')
+    op.execute('TRUNCATE TABLE role CASCADE;')
+    op.execute('TRUNCATE TABLE user_profile CASCADE;')
     pass
