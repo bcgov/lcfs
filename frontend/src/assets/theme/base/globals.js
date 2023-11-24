@@ -6,7 +6,7 @@ import BCSansItalicTTF from 'assets/fonts/BCSans-Italic_2f.woff2';
 import BCSansLightTTF from 'assets/fonts/BCSans-Light_2f.woff2';
 import BCSansLightItalicTTF from 'assets/fonts/BCSans-LightItalic_2f.woff2';
 
-const { info, link } = colors;
+const { info, link, text } = colors;
 
 const bcSansRegular = {
   fontFamily: "BCSans",
@@ -68,6 +68,17 @@ const globals = {
   "a.link:hover, .link:hover, a.link:focus, .link:focus": {
     color: `${info.main} !important`,
   },
+  '.ag-theme-alpine': {
+    '--ag-foreground-color': `${text.primary}`,
+    // '--ag-background-color': `${background.default}`,
+    // '--ag-header-foreground-color': `${background.nav}`,
+    // '--ag-header-background-color': `${primary.nav}`,
+    '--ag-odd-row-background-color': 'rgb(0, 0, 0, 0.08)',
+    // '--ag-header-column-resize-handle-color': 'rgb(126, 46, 132)',
+
+    '--ag-font-size': '17px',
+    '--ag-font-family': "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
+  }
 };
 
 export default globals;

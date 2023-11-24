@@ -15,7 +15,6 @@ Default.args = {
   size: 'medium',
   circular: false,
   iconOnly: false,
-  darkMode: 'light',
   children: 'Click Me',
   disabled: false,
 };

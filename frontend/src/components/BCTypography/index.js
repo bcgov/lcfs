@@ -33,7 +33,7 @@ const BCTypography = forwardRef(
 
 // Setting default values for the props of BCTypography
 BCTypography.defaultProps = {
-  color: "dark",
+  color: "inherit",
   fontWeight: false,
   textTransform: "none",
   verticalAlign: "unset",
