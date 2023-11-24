@@ -86,10 +86,42 @@ npm test
 
 ### Cypress End-to-End Tests
 
+Cypress is used for end-to-end testing of the application. These tests simulate real user interactions and ensure the integrity of the user flows.
+
+#### Running Cypress Tests
+
+To run Cypress tests interactively:
+
 ```bash
 cd frontend
-npx cypress open
+npm run cypress:open
 ```
+
+This opens the Cypress Test Runner, from which you can execute individual tests or the entire test suite.
+
+#### Running in Headless Mode
+
+For headless execution (useful for CI/CD pipelines):
+
+```bash
+cd frontend
+npm run cypress:run
+```
+
+#### Writing Cypress Tests
+
+When contributing new tests:
+
+1. Add your test files under `frontend/cypress/e2e`.
+2. Use descriptive names for test files and test cases.
+3. Follow established patterns for structuring tests, such as using `beforeEach` and custom commands for routine tasks.
+4. Utilize data attributes like `data-test` for more stable element selection.
+
+#### Configuration and Environmental Variables
+- To update the configuration file for Cypress, please go to `frontend/cypress.config.js`.
+- For viewing Cypress environmental variables, refer to the file located at `frontend/cypress.env.json`.
+
+Refer to the [Cypress Documentation](https://docs.cypress.io) for best practices and detailed guidance.
 
 ### Backend Tests
 

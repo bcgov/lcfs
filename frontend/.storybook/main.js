@@ -30,8 +30,8 @@ const config = {
       layouts: path.resolve(__dirname, '../src/layouts'),
       styles: path.resolve(__dirname, '../src/styles'),
       src: path.resolve(__dirname, '../src'),
+      context: path.resolve(__dirname, '../src/context'),
     };
-
     // Add any necessary webpack rules or configurations here
 
     return config;

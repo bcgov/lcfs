@@ -55,7 +55,11 @@
     "prettier-check": "npm run _prettier -- --check",
     "prod": "npm run build",
     "test": "jest",
-    "storybook": "cross-env NODE_ENV=development BABEL_ENV=development storybook dev -p 6006"
+    "storybook": "cross-env NODE_ENV=development BABEL_ENV=development storybook dev -p 6006",
+    "cypress:verify": "cypress verify",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "cypress:clear": "cypress cache clear"
   },
   "devDependencies": {
     "@babel/core": "^7.23.2",

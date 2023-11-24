@@ -7,6 +7,7 @@ import * as appRoutes from './constants/routes';
 import DefaultNavbar from 'components/Navbars/DefaultNavbar';
 import Layout from './layouts/Layout';
 import { ViewUsers } from './views/viewUsers';
+import UserTable from './components/Organizations/UsersTable';
 
 const router = createBrowserRouter([
   {
@@ -49,6 +50,17 @@ const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  {
+    path: appRoutes.ORGANIZATIONS,
+    element: (
+      <RequireAuth redirectTo={appRoutes.LOGIN}>
+        <Layout>
+          <DefaultNavbar />
+          <UserTable /> 
+        </Layout>
+      </RequireAuth>
+    ),
   },
 ]);
 
