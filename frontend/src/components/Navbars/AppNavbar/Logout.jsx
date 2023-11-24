@@ -1,6 +1,6 @@
 import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
-import { logout } from 'src/keycloak'
+import { logout } from '@/keycloak'
 import BCButton from 'components/BCButton'
 import BCTypography from 'components/BCTypography'
 import BCBox from 'components/BCBox';
