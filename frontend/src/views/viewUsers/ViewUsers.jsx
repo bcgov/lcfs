@@ -54,14 +54,12 @@ export const ViewUsers = () => {
 
   return (
     <div>
-      BCTable
       <Typography variant="h4" color={colors.primary.main} mb={2}>
         Billy Governance{' '}
         <span>
           <Pencil />
         </span>
       </Typography>
-
       <Stack direction="column" spacing={0.5} mb={5}>
         <Typography>
           <strong>Organization:</strong> Government of British Columbia
@@ -85,19 +83,17 @@ export const ViewUsers = () => {
           <strong>Title:</strong> Senior Analyst
         </Typography>
       </Stack>
-
       <Typography variant="h4" color={colors.primary.main} mb={1}>
         User Activity
       </Typography>
-
       <BCTable
-        data={rows}
-        columns={[
-          { label: 'Action Taken', field: 'actionTaken' },
-          { label: 'Transaction Type', field: 'transactionType' },
-          { label: 'Transaction ID', field: 'transactionID' },
-          { label: 'Timestamp', field: 'timestamp' },
-          { label: 'Organization', field: 'organization' },
+        rowData={rows}
+        columnDefs={[
+          { field: 'actionTaken' },
+          { field: 'transactionType' },
+          { field: 'transactionID' },
+          { field: 'timestamp' },
+          { field: 'organization' },
         ]}
       />
     </div>

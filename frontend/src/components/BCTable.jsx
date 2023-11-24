@@ -7,46 +7,49 @@ import { ModuleRegistry } from '@ag-grid-community/core';
 
 ModuleRegistry.registerModules([ClientSideRowModelModule]);
 
-export const BCTable = (props) => {
+export const BCTable = ({ columnDefs, rowData, ...rest }) => {
   const sideBar = useMemo(() => {
-    toolPanels: ['filters', 'columns']
+    toolPanels: ['filters', 'columns'];
   }, []);
 
-  const defaultColDef = useMemo(() => ({
-    resizable: true,
-    sortable: true,
-    filter: true,
-    floatingFilter: true,
-    // filterParams: {
-    //   buttons: ['apply', 'reset'],
-    //   closeOnApply: true,
-    // }
-  }), []);
+  const defaultColDef = useMemo(
+    () => ({
+      resizable: true,
+      sortable: true,
+      filter: true,
+      floatingFilter: true,
+      // filterParams: {
+      //   buttons: ['apply', 'reset'],
+      //   closeOnApply: true,
+      // }
+    }),
+    [],
+  );
 
-  const [rowData, setRowData] = useState();
+  // const [rowData, setRowData] = useState();
 
-  useEffect(() => {
-    // fetch('https://www.ag-grid.com/example-assets/olympic-winners.json')
-    //   .then(resp => resp.json())
-    //   .then(data => setRowData(data));
-    setRowData([...props.data])
-  }, []);
+  // useEffect(() => {
+  //   // fetch('https://www.ag-grid.com/example-assets/olympic-winners.json')
+  //   //   .then(resp => resp.json())
+  //   //   .then(data => setRowData(data));
+  //   setRowData([...props.data]);
+  // }, []);
 
   return (
     <div className="ag-theme-alpine" style={{ width: '100%', height: '100%' }}>
       <AgGridReact
         className="ag-theme-alpine"
         animateRows="true"
-        columnDefs={props.columns}
+        columnDefs={columnDefs}
         defaultColDef={defaultColDef}
-        enableRangeSelection="true"
         rowData={rowData}
         rowSelection="multiple"
         suppressRowClickSelection="true"
         pagination
         paginationPageSize={10}
-        domLayout='autoHeight'
+        domLayout="autoHeight"
         sideBar={sideBar}
+        {...rest}
       />
     </div>
   );
