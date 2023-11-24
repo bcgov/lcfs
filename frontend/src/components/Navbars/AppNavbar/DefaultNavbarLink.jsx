@@ -22,13 +22,20 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       p={1}
       display="flex"
       alignItems="center"
-      sx={{
+      sx={({
+        transitions
+      }) => ({
         cursor: "pointer",
         userSelect: "none",
         "&:hover": {
           backgroundColor: hover ? "rgba(0, 0, 0, 0.1)" : "transparent",
         },
-      }}
+        transform: "translateX(0)",
+        transition: transitions.create("transform", {
+          easing: transitions.easing.sharp,
+          duration: transitions.duration.shorter,
+        }),
+      })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >

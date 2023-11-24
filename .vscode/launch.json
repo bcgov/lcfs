@@ -1,0 +1,41 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI - LCFS",
+      "type": "python",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend",
+      "module": "poetry",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": [
+        "run",
+        "python",
+        "-m",
+        "uvicorn",
+        "lcfs.web.application:get_app",
+        "--port",
+        "8000"
+      ]
+    },
+    {
+      "type": "msedge",
+      "request": "launch",
+      "name": "Launch UI",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMaps": true,
+    },
+    {
+      "type": "msedge",
+      "request": "launch",
+      "name": "Launch storybook",
+      "url": "http://localhost:6006",
+      "webRoot": "${workspaceFolder}/frontend",
+      "sourceMaps": true,
+    }
+  ]
+}
