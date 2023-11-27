@@ -27,49 +27,13 @@ generate_migration() {
 # Function for upgrading the database
 upgrade_database() {
     revision=${1:-head}
-
-    # Upgrade the base environment first
-    echo "Upgrading base environment..."
-    alembic -n alembic upgrade $revision
-
-    # Then upgrade the common seeds
-    echo "Upgrading common seeds..."
-    alembic -n common_seeds upgrade head
-
-    # Then upgrade the dev seeds
-    echo "Upgrading dev seeds..."
-    alembic -n dev_seeds upgrade head
+    alembic upgrade $revision
 }
 
 # Function for downgrading the database
 downgrade_database() {
     revision=${1:-base}
-
-    # Downgrade seed environments first
-    for seed_env in "prod_seeds" "dev_seeds" "common_seeds"
-    do
-        echo "Downgrading $seed_env..."
-        alembic -n $seed_env downgrade $revision
-    done
-
-    # Then downgrade the base environment
-    echo "Downgrading base environment..."
-    alembic -n alembic downgrade $revision
-}
-
-# Function to run seed migrations
-run_seeds() {
-    if [ "$#" -ne 1 ]; then
-        echo "Usage: $0 -s <common|dev|prod>"
-        exit 1
-    fi
-    case $1 in
-        common) ini="common_seeds" ;;
-        dev) ini="dev_seeds" ;;
-        prod) ini="prod_seeds" ;;
-        *) echo "Invalid seed type: $1"; exit 1 ;;
-    esac
-    alembic -n $ini upgrade head
+    alembic downgrade $revision
 }
 
 # Function for displaying help manual
@@ -79,26 +43,21 @@ display_help() {
     echo "  -g <message>  Generate new migration with a description."
     echo "  -u [revision] Upgrade the database to a specific revision or to the latest ('head')."
     echo "  -d [revision] Downgrade the database to a specific revision or to the base."
-    echo "  -s <type>     Run seed migrations for a given type (common, dev, prod)."
     echo "  -h            Display this help manual."
 }
 
 # Command line options
-while getopts ":g:u::d::s::h" opt; do
+while getopts ":g:u::d::h" opt; do
     case $opt in
         g) generate_migration "$OPTARG" ;;
         u) upgrade_database "$OPTARG" ;;
         d) downgrade_database "$OPTARG" ;;
-        s) run_seeds "$OPTARG" ;;
         h) display_help; exit 0 ;;
         \?) echo "Invalid option -$OPTARG" >&2; exit 1 ;;
         :) if [ "$OPTARG" = "u" ]; then
               upgrade_database
            elif [ "$OPTARG" = "d" ]; then
               downgrade_database
-           elif [ "$OPTARG" = "s" ]; then
-              echo "Option -$OPTARG requires an argument." >&2
-              exit 1
            else
               echo "Option -$OPTARG requires an argument." >&2
               exit 1
