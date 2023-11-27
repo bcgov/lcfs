@@ -29,7 +29,7 @@ const config = {
       components: path.resolve(__dirname, '../src/components'), // replace '../src/components' with your desired base URL
       layouts: path.resolve(__dirname, '../src/layouts'),
       styles: path.resolve(__dirname, '../src/styles'),
-      src: path.resolve(__dirname, '../src'),
+      '@': path.resolve(__dirname, '../src'),
       context: path.resolve(__dirname, '../src/context'),
     };
     // Add any necessary webpack rules or configurations here
