@@ -11,7 +11,7 @@ import BCBox from 'components/BCBox';
 
 // Nav Links
 const routes = [
-  { icon: 'home', name: 'Dashboard', route: '/dashboard' },
+  { icon: 'home', name: 'Dashboard', route: '/' },
   { icon: 'folder', name: 'document', route: '/document' },
   { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
   { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
