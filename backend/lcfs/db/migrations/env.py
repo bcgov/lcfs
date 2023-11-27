@@ -31,20 +31,6 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-def include_object(object, name, type_, reflected, compare_to):
-    # List of tables to be ignored
-    ignored_tables = {
-        "alembic_version_seeds_dev",
-        "alembic_version_seeds_prod",
-        "alembic_version_seeds_common"
-    }
-
-    if type_ == "table" and name in ignored_tables:
-        return False
-    else:
-        return True
-
-
 async def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -62,7 +48,6 @@ async def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -75,11 +60,7 @@ def do_run_migrations(connection: Connection) -> None:
 
     :param connection: connection to the database.
     """
-    context.configure(
-        connection=connection, 
-        target_metadata=target_metadata,
-        include_object=include_object,
-    )
+    context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
