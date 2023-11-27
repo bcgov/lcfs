@@ -11,12 +11,12 @@ import BCBox from 'components/BCBox';
 
 // Nav Links
 const routes = [
-  { icon: 'home', name: 'Dashboard', route: '/dashboard' },
+  { icon: 'home', name: 'Dashboard', route: '/' },
   { icon: 'folder', name: 'document', route: '/document' },
   { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
   { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
-  { icon: 'corporate_fare', name: 'Organization', route: '/organization' },
-  { icon: 'admin_panel_settings', name: 'Administration', route: '/administration' },
+  { icon: 'corporate_fare', name: 'Organization', route: '/organization/users/list' },
+  { icon: 'admin_panel_settings', name: 'Administration', route: '/administration/users' },
 ];
 
 function AppNavbar(props) {
