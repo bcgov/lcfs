@@ -3,22 +3,22 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import Login from './components/Login';
 import RequireAuth from './components/RequireAuth';
 import * as appRoutes from './constants/routes';
-// import Dashboard from './views/dashboard'
-import DefaultNavbar from 'components/Navbars/DefaultNavbar';
 import Layout from './layouts/Layout';
 import { ViewUsers } from './views/viewUsers';
-import UserTable from './components/Organizations/UsersTable';
+import { Paper } from '@mui/material';
+import { BCTypography } from 'components/BCTypography';
+import UserTabPanel from 'layouts/admin/UserTabPanel';
 
 const router = createBrowserRouter([
   {
     path: appRoutes.DASHBOARD,
     element: (
       <RequireAuth redirectTo={appRoutes.LOGIN}>
-        {/* <Layout>
-                 <Dashboard />
-               </Layout> */}
-        {/* Place the below Navbar later inside the Page Layout */}
-        <DefaultNavbar />
+        <Layout>
+          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+            Welcome to the Dashboard!
+          </BCTypography>
+        </Layout>
       </RequireAuth>
     ),
   },
@@ -30,9 +30,9 @@ const router = createBrowserRouter([
     element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
     children: [
       {
-        path: appRoutes.USERS,
+        path: appRoutes.ORGANIZATION,
         handle: {
-          crumb: () => 'Users',
+          crumb: () => 'Organization',
         },
         children: [
           {
@@ -52,15 +52,31 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: appRoutes.ORGANIZATIONS,
-    element: (
-      <RequireAuth redirectTo={appRoutes.LOGIN}>
-        <Layout>
-          <DefaultNavbar />
-          <UserTable /> 
-        </Layout>
-      </RequireAuth>
-    ),
+    element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
+    children: [
+      {
+        path: appRoutes.ADMINISTRATION,
+        handle: {
+          crumb: () => 'Administration',
+        },
+        children: [
+          {
+            index: true,
+            element: <></>,
+          },
+          {
+            path: appRoutes.ADMINISTRATION_USERS,
+            element: <Paper elevation={5} sx={{ padding: "1rem", position: 'relative', minHeight: '80vh' }}>
+              <UserTabPanel />
+            </Paper>,
+            // loader: data => data, // loader will pass data to useMatches
+            handle: {
+              crumb: data => `Users`, // data from loader is passed into our crumb function so we can manipulate the output
+            },
+          },
+        ],
+      },
+    ],
   },
 ]);
 
