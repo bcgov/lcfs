@@ -4,7 +4,7 @@ echo "running prestart.sh from $(pwd)"
 
 # Apply base database migrations
 echo "Applying base migrations."
-alembic upgrade head
+poetry run alembic upgrade head
 
 # Check for errors in migrations
 if [ $? -ne 0 ]; then
@@ -12,11 +12,11 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Run Python seed script
+# Run Python seed script using Poetry
 echo "Running Python seed script."
-python /app/db/seeders/seed_manager.py $APP_ENVIRONMENT
+poetry run python /app/lcfs/db/seeders/seed_database.py $APP_ENVIRONMENT
 
-# Check for errors in seed script
+# Check for errors in the seed script
 if [ $? -ne 0 ]; then
     echo "Python seed script failed."
     exit 1

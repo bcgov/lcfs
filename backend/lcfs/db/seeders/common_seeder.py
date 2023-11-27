@@ -11,9 +11,9 @@ from lcfs.db.seeders.common.role_seeder import seed_roles
 
 logger = logging.getLogger(__name__)
 
-async def seed_database():
+async def seed_common():
     """
-    Main function to seed the database.
+    Function to seed the database with common data.
     """
     engine = create_async_engine(str(settings.db_url))
     AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession)
@@ -30,4 +30,4 @@ async def seed_database():
             await session.rollback()
 
 if __name__ == "__main__":
-    asyncio.run(seed_database())
+    asyncio.run(seed_common())

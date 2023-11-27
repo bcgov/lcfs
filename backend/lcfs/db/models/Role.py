@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint, Sequence, Enum
+from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint, Enum
 from sqlalchemy.orm import relationship
 from lcfs.db.base import Auditable, BaseModel
 import enum
@@ -22,7 +22,7 @@ class Role(BaseModel, Auditable):
         UniqueConstraint('name'),
         {'comment': 'To hold all the available roles and  their descriptions.'}
     )
-    role_id = Column(Integer,  Sequence('role_id_seq'), primary_key=True, autoincrement=True)
+    role_id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Enum(RoleEnum, name="role_enum", create_type=True), unique=True, nullable=False,
                   comment="Role code. Natural key. Used internally. eg Admin, GovUser, GovDirector, etc")
     description = Column(String(1000),

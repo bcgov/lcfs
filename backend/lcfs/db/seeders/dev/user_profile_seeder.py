@@ -31,7 +31,7 @@ async def seed_user_profiles(session):
         for user_data in user_profiles_to_seed:
             # Check if the user already exists based on a unique attribute, e.g., username
             exists = await session.execute(
-                select(UserProfile).where(UserProfile.username == user_data["keycloak_email"])
+                select(UserProfile).where(UserProfile.keycloak_email == user_data["keycloak_email"])
             )
             if not exists.scalars().first():
                 user_profile = UserProfile(**user_data)

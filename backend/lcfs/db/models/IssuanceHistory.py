@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Sequence, BigInteger, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -9,7 +9,7 @@ class IssuanceHistory(BaseModel, Auditable, EffectiveDates):
                       {'comment': "History record for issuance from governmnent to Organization"}
     )
 
-    issuance_history_id = Column(Integer, Sequence('issuance_id'), comment="Unique identifier for the issuance", primary_key=True, autoincrement=True)
+    issuance_history_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the issuance")
     compliance_units = Column(BigInteger, comment='Issued compliance units record')
     issuance_id = Column(Integer, ForeignKey('issuance.issuance_id'))
     organization_id = Column(Integer, ForeignKey('organization.organization_id'))

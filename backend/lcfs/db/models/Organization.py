@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Integer, String, Sequence, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -12,7 +12,7 @@ class Organization(BaseModel, Auditable, EffectiveDates):
                                  "an entry for the government which is also "
                                  "considered an organization."}
 
-    organization_id = Column(Integer, Sequence('organization_id_seq'), comment="Unique identifier for the organization", primary_key=True, autoincrement=True)
+    organization_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the organization")
     name = Column(String(500), comment="Organization's legal name")
 
     organization_status_id = Column(Integer, ForeignKey('organization_status.organization_status_id'))
