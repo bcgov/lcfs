@@ -46,28 +46,30 @@ const Layout = ({ crumbs }) => {
         </Grid>
         <Grid item my={12} lg={12}>
           <BCBox>
-            <Paper
-              p={2}
-              elevation={5}
-              sx={{ padding: '1rem', minHeight: '5vh' }}
-            >
-              <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-                {breadcrumbs.map((crumb, index) =>
-                  index + 1 !== breadcrumbs.length ? (
-                    <Link
-                      key={crumb.path}
-                      component={RouterLink}
-                      to={crumb.path}
-                      disabled={true}
-                    >
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span key={crumb.path}>{crumb.label}</span>
-                  ),
-                )}
-              </Breadcrumbs>
-            </Paper>
+            {crumbs && (
+              <Paper
+                p={2}
+                elevation={5}
+                sx={{ padding: '1rem', minHeight: '5vh' }}
+              >
+                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
+                  {breadcrumbs.map((crumb, index) =>
+                    index + 1 !== breadcrumbs.length ? (
+                      <Link
+                        key={crumb.path}
+                        component={RouterLink}
+                        to={crumb.path}
+                        disabled={true}
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span key={crumb.path}>{crumb.label}</span>
+                    ),
+                  )}
+                </Breadcrumbs>
+              </Paper>
+            )}
             <BCBox py={4}>
               <Outlet />
               <Footer/>
