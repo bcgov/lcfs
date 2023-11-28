@@ -28,6 +28,7 @@ const Logout = (props) => {
         color={isScrolled ? 'primary' : 'light'}
         size='small'
         variant={isScrolled ? 'contained' : 'outlined'}
+        data-test="logout-button"
       >
         Log out
       </BCButton>

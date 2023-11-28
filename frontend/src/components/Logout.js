@@ -8,7 +8,7 @@ const Logout = () => {
   if (keycloak.authenticated) {
     const kcToken = keycloak.tokenParsed;
     return (
-      <div className="logout" data-test="logout">
+      <div className="logout">
         <span>{'Logged in as: ' + kcToken.display_name + ' |'}</span>
         <BCButton
           data-test="logout-button"
