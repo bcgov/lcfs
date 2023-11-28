@@ -25,6 +25,28 @@ async def seed_user_profiles(session):
             "mobile_phone": "1234567890",
             "organization_id": 1
         },
+        {
+            "keycloak_email": "hamed.valiollahibayeki@gov.bc.ca",
+            "keycloak_username": "HVALIOLL",
+            "email": "hamed.valiollahibayeki@gov.bc.ca",
+            "username": "hvalioll",
+            "display_name": "Hamed Valiollahi Bayeki",
+            "title": "Developer",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": 1
+        },
+        {
+            "keycloak_email": 'kevin.hashimoto@gov.bc.ca',
+            "keycloak_username": 'KHASHIMO',
+            "email": 'kevin.hashimoto@gov.bc.ca',
+            "username": 'khashimo',
+            "display_name": 'Kevin Hashimoto',
+            "title": 'Developer',
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": 1
+        },
     ]
 
     try:
