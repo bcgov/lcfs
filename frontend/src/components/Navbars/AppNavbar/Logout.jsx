@@ -17,7 +17,7 @@ const Logout = (props) => {
         color={props.isScrolled ? 'primary' : 'light'}
         mx={1}
       >
-        {keycloak.tokenParsed.display_name}
+        {keycloak.tokenParsed.given_name} {keycloak.tokenParsed.family_name}
       </BCTypography>
       <BCButton
         onClick={() => {
