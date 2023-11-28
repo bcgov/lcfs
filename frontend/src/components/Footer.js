@@ -31,7 +31,15 @@ const Footer = props => (
                 <a id="footer-about-copyright" href="http://gov.bc.ca/copyright" rel="noopener noreferrer" target="_blank">Copyright</a>
               </li>
               <li>
-                <a id="footer-about-contact" href="/contact_us" target="_self">Contact Us</a>
+                <Link
+                  id="footer-about-contact"
+                  to="/contact-us"
+                  data-test="contact-us-link"
+                  aria-label="Contact Us Information"
+                  role="link"
+                >
+                  Contact Us
+                </Link>
               </li>
             </ul>
             <div id="footer-about-version" className="inline">

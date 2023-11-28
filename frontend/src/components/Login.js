@@ -1,10 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useKeycloak } from '@react-keycloak/web';
-import CallableModal from '../components/CallableModal'
-import * as Lang from '../constants/langEnUs'
-import { IDENTITY_PROVIDERS } from '../constants/auth'
-import 'styles/index.scss'
+
+// Constants
+import { IDENTITY_PROVIDERS } from '../constants/auth';
+import * as Lang from '../constants/langEnUs';
+
+// Components
+import CallableModal from '../components/CallableModal';
+
+// Styles
 import 'bootstrap/dist/css/bootstrap.css';
+import 'styles/index.scss';
 
 const Login = (props) => {
   const { keycloak } = useKeycloak()
@@ -65,6 +72,16 @@ const Login = (props) => {
               </button>
             </div>
           </div>
+        </div>
+        <div className="login-help">
+          <Link
+            to="/contact-us"
+            data-test="login-help-link"
+            aria-label="Trouble logging in? Get assistance here"
+            role="link"
+          >
+            Trouble logging in?
+          </Link>
         </div>
       </div>
 
