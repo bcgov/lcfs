@@ -1,13 +1,23 @@
 import React from 'react';
+import { Paper } from '@mui/material';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+
+// Constants
+import * as appRoutes from './constants/routes';
+
+// Layouts
+import Layout from './layouts/Layout';
+import PublicLayout from './layouts/PublicLayout';
+import UserTabPanel from 'layouts/admin/UserTabPanel';
+
+// Components
+import { BCTypography } from 'components/BCTypography';
+import ContactUs from 'components/ContactUs';
 import Login from './components/Login';
 import RequireAuth from './components/RequireAuth';
-import * as appRoutes from './constants/routes';
-import Layout from './layouts/Layout';
+
+// Views
 import { ViewUsers } from './views/viewUsers';
-import { Paper } from '@mui/material';
-import { BCTypography } from 'components/BCTypography';
-import UserTabPanel from 'layouts/admin/UserTabPanel';
 
 const router = createBrowserRouter([
   {
@@ -75,6 +85,17 @@ const router = createBrowserRouter([
             },
           },
         ],
+      },
+    ],
+  },
+  // Public Routes Setup
+  // This sets up a shared layout (PublicLayout) for all public-facing pages.
+  {
+    element: <PublicLayout />,
+    children: [
+      {
+        path: appRoutes.CONTACT_US,
+        element: <ContactUs />,
       },
     ],
   },

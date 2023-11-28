@@ -5,12 +5,17 @@
  */
 
 describe('User Login Test Suite', () => {
-    beforeEach(function () {
+    beforeEach(() => {
         cy.visit('/')
     })
 
     it('verifies that the login page loads correctly', () => {
         cy.getByDataTest('login-container').should('exist');
+    });
+
+    it('should display the help link', () => {
+        cy.getByDataTest('login-help-link').should('be.visible')
+            .and('have.attr', 'href', '/contact-us');
     });
 
     describe('IDIR Login Flow', () => {

@@ -2,14 +2,15 @@ import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { logout } from '../keycloak'
 import BCButton from 'components/BCButton'
+import useUserStore from '@/store/useUserStore'
 
 const Logout = () => {
   const { keycloak } = useKeycloak();
+  const user = useUserStore((state) => state.user)
   if (keycloak.authenticated) {
-    const kcToken = keycloak.tokenParsed;
     return (
-      <div className="logout" data-test="logout">
-        <span>{'Logged in as: ' + kcToken.display_name + ' |'}</span>
+      <div className="logout">
+        <span>{`Logged in as: ${user?.display_name} |`}</span>
         <BCButton
           data-test="logout-button"
           onClick={() => {

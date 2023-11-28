@@ -19,7 +19,7 @@ const Logout = (props) => {
         color={props.isScrolled ? 'primary' : 'light'}
         mx={1}
       >
-        {user.display_name}
+        {user?.display_name}
       </BCTypography>
       <BCButton
         onClick={() => {
@@ -28,6 +28,7 @@ const Logout = (props) => {
         color={isScrolled ? 'primary' : 'light'}
         size='small'
         variant={isScrolled ? 'contained' : 'outlined'}
+        data-test="logout-button"
       >
         Log out
       </BCButton>

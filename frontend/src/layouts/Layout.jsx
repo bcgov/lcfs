@@ -3,6 +3,7 @@ import React from 'react';
 import { Outlet, useMatches, Link as RouterLink } from 'react-router-dom';
 import { Paper, Grid, Breadcrumbs, Link } from '@mui/material';
 import BCBox from 'components/BCBox';
+import Footer from 'components/Footer';
 import AppNavbar from 'components/Navbars/AppNavbar';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 
@@ -62,6 +63,7 @@ const Layout = () => {
             </Paper>
             <BCBox py={4}>
               <Outlet />
+              <Footer/>
             </BCBox>
           </BCBox>
         </Grid>

@@ -34,7 +34,7 @@ Cypress.Commands.add('login', (userType, username, password) => {
     cy.origin('https://logontest7.gov.bc.ca', { args: [username, password] }, loginProcess);
 
     // Check to confirm successful login
-    cy.getByDataTest('logout').should('be.visible');
+    cy.getByDataTest('logout-button').should('be.visible');
 });
 
 /**
