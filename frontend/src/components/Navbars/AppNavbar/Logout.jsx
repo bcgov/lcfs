@@ -5,8 +5,10 @@ import BCButton from 'components/BCButton'
 import BCTypography from 'components/BCTypography'
 import BCBox from 'components/BCBox';
 import { PropTypes } from 'prop-types';
+import useUserStore from '@/store/useUserStore'
 
 const Logout = (props) => {
+  const user = useUserStore((state) => state.user)
   const { keycloak } = useKeycloak();
   const { isScrolled } = props;
 
@@ -17,7 +19,7 @@ const Logout = (props) => {
         color={props.isScrolled ? 'primary' : 'light'}
         mx={1}
       >
-        {keycloak.tokenParsed.given_name} {keycloak.tokenParsed.family_name}
+        {user.display_name}
       </BCTypography>
       <BCButton
         onClick={() => {
