@@ -21,7 +21,7 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
     organization: Optional[OrganizationSummary] = None
-    user_roles: Optional[List[RoleSchema]] = None
+    # user_roles: Optional[List[RoleSchema]] = None
     
     class Config:
         from_attributes = True
