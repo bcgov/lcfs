@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Sequence, BigInteger, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -10,7 +10,7 @@ class Transaction(BaseModel,Auditable, EffectiveDates):
     )
 
 
-    transaction_id = Column(Integer, Sequence('transaction_id'), comment="Unique identifier for the transactions", primary_key=True, autoincrement=True)
+    transaction_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the transactions")
     compliance_units = Column(BigInteger, comment="Compliance Units")
     transaction_type_id = Column(Integer, ForeignKey('transaction_type.transaction_type_id'))
     organization_id = Column(Integer, ForeignKey('organization.organization_id'))

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Sequence, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -10,7 +10,7 @@ class Category(BaseModel, Auditable, EffectiveDates):
     )
 
 
-    category_id = Column(Integer, Sequence('issuance_id'), comment="Unique identifier for the transfer category", primary_key=True, autoincrement=True)
+    category_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the transfer category")
     category = Column(String(500), comment="Transfer category")
 
     transfer = relationship('Transfer', back_populates='category')

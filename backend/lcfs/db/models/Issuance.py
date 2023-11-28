@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Sequence, BigInteger, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -10,7 +10,7 @@ class Issuance(BaseModel, Auditable, EffectiveDates):
     )
 
 
-    issuance_id = Column(Integer, Sequence('issuance_id'), comment="Unique identifier for the issuance", primary_key=True, autoincrement=True)
+    issuance_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the issuance")
     compliance_units = Column(BigInteger, comment="Compliance Units")
     transaction_effective_date = Column(DateTime, comment='Transaction effective date')
     # compliance_period = Column(Integer )

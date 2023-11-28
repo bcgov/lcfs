@@ -1,4 +1,5 @@
-FROM python:3.9.6-slim-buster as prod
+# Base stage for common setup
+FROM python:3.9.6-slim-buster as base
 
 RUN apt-get update && apt-get install -y \
   gcc \
@@ -31,10 +32,16 @@ COPY . /app/
 # Make all startup scripts executable
 RUN chmod +x /app/wait-for-it.sh /app/lcfs/prestart.sh /app/lcfs/start.sh
 
-RUN poetry install --only main
-
 CMD ["/app/lcfs/start.sh"]
 
-FROM prod as dev
+# Production stage
+FROM base as prod
+# Set the APP_ENVIRONMENT variable to 'production'
+ENV APP_ENVIRONMENT=prod
 
+# Development stage
+FROM base as dev
+# Set the APP_ENVIRONMENT variable to 'development'
+ENV APP_ENVIRONMENT=dev
+# Install additional dependencies for development
 RUN poetry install

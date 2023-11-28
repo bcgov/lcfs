@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, text, UniqueConstraint, Sequence
+from sqlalchemy import Column, ForeignKey, Integer, text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -11,7 +11,7 @@ class UserRole(BaseModel, Auditable):
         {'comment': 'Contains the user and role relationships'}
     )
     # Columns
-    user_role_id = Column(Integer, Sequence('user_role_id_seq'), primary_key=True, autoincrement=True, comment='Unique ID for the user role')
+    user_role_id = Column(Integer, primary_key=True, autoincrement=True, comment='Unique ID for the user role')
     user_profile_id = Column(Integer, ForeignKey('user_profile.user_profile_id'), comment='Foreign key to user_profile')
     role_id = Column(Integer, ForeignKey('role.role_id'), comment='Foreign key to role')
     # Relationships

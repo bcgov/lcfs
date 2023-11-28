@@ -1,14 +1,6 @@
 #!/bin/bash
 
-VENV_DIR="./venv"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-# Creating or activating the virtual environment
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment with Python 3.9+"
-    python3.9 -m venv $VENV_DIR
-fi
-source $VENV_DIR/bin/activate
 export PYTHONPATH=$SCRIPT_DIR:$PYTHONPATH
 
 # Installing dependencies using Poetry
@@ -21,19 +13,19 @@ generate_migration() {
         echo "Usage: $0 -g <Description of changes>"
         exit 1
     fi
-    alembic revision --autogenerate -m "$1"
+    poetry run alembic revision --autogenerate -m "$1"
 }
 
 # Function for upgrading the database
 upgrade_database() {
     revision=${1:-head}
-    alembic upgrade $revision
+    poetry run alembic upgrade $revision
 }
 
 # Function for downgrading the database
 downgrade_database() {
     revision=${1:-base}
-    alembic downgrade $revision
+    poetry run alembic downgrade $revision
 }
 
 # Function for displaying help manual
@@ -64,6 +56,3 @@ while getopts ":g:u::d::h" opt; do
            fi ;;
     esac
 done
-
-# Deactivating the virtual environment
-deactivate

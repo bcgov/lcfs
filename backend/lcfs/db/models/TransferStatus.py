@@ -1,6 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Sequence
-from sqlalchemy.orm import relationship
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Column, Integer, Enum
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 import enum
 
@@ -20,5 +18,5 @@ class TransferStatus(BaseModel, Auditable, DisplayOrder):
     __tablename__ = 'transfer_status'
     __table_args__ = {'comment': "Represents a Transfer Status"}
 
-    transfer_status_id = Column(Integer, Sequence('transfer_status_id'), primary_key=True, autoincrement=True)
+    transfer_status_id = Column(Integer, primary_key=True, autoincrement=True)
     status = Column(Enum(TransferStatusEnum, name="transfer_type_enum", create_type=True), comment="Transfer Status")

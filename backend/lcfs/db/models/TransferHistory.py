@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, Sequence, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 class TransferHistory(BaseModel, Auditable, EffectiveDates):
@@ -8,7 +7,7 @@ class TransferHistory(BaseModel, Auditable, EffectiveDates):
     __table_args__ = {'comment': "Records of tranfer from Organization to Organization"}
 
 
-    transfer_history_id = Column(Integer, Sequence('issuance_id'), comment="Unique identifier for the org to org transfer record", primary_key=True, autoincrement=True)
+    transfer_history_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the org to org transfer record")
     transfer_id = Column(Integer, ForeignKey('transfer.transfer_id'))
     from_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     to_organization_id = Column(Integer, ForeignKey('organization.organization_id'))

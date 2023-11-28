@@ -1,7 +1,5 @@
 from lcfs.db.base import Auditable, BaseModel
-from sqlalchemy import (Column, Integer, String, Boolean, ForeignKey, DateTime,
-                        UniqueConstraint, text, Sequence)
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.models.NotificationMessage import NotificationMessage
 
@@ -12,7 +10,7 @@ class UserProfile(BaseModel, Auditable):
         {'comment': 'Users who may access the application'}
     )
 
-    user_profile_id = Column(Integer, Sequence('user_profile_id_seq'), primary_key=True, autoincrement=True)
+    user_profile_id = Column(Integer, primary_key=True, autoincrement=True)
 
     keycloak_user_id = Column(String(150), nullable=True, comment='Unique id returned from Keycloak')
     keycloak_email = Column(String(255), nullable=True, comment='keycloak email address')

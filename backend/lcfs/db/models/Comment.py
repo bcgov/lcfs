@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Sequence, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -10,7 +10,7 @@ class Comment(BaseModel, Auditable, EffectiveDates):
     )
 
 
-    comment_id = Column(Integer, Sequence('issuance_id'), comment="Unique identifier for comment", primary_key=True, autoincrement=True)
+    comment_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for comment")
     comment = Column(String(500), comment="Transfer category")
 
     transfer = relationship('Transfer', back_populates='comments')
