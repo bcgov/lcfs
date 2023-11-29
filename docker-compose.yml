@@ -60,6 +60,17 @@ services:
       - ./frontend:/app
       - node_modules:/app/node_modules
 
+  frontend2:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./frontend2
+    command: npm run dev
+    ports:
+      - 8080:5173
+    volumes:
+      - ./frontend2:/app
+      # - node_modules:/app/node_modules
+      - /app/node_modules
 volumes:
   node_modules:
   postgres_data:

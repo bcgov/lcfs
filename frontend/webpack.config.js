@@ -10,7 +10,7 @@ const SpeedMeasurePlugin = require('speed-measure-webpack-plugin');
 const ReactRefreshPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const parsedArgs = require('yargs').argv;
-
+console.log(parsedArgs);
 // Input directory
 const APP_DIR = path.resolve(__dirname, './');
 // Output directory
