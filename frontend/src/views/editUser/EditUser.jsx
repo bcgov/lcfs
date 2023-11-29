@@ -17,7 +17,10 @@ import ArrowRight from '@/assets/icons/arrow-right.svg';
 import Save from '@/assets/icons/save.svg';
 import { useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import * as routes from '@/constants/routes'
+import * as routes from '@/constants/routes';
+import { Label } from './Label';
+import { IDIRSpecificFormFields } from './IDIRSpecificFormFields';
+import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields';
 
 const dummy = {
   errors: {
@@ -35,12 +38,8 @@ const dummy = {
   orgName: 'Fuel Supplier Canada Ltd.',
 };
 
-// Possibly move this out to its own component if it is going to be used elsewhere
-const Label = ({children, ...rest}) => (
-  <Typography fontSize={16} fontWeight={600} component={'label'} {...rest}>{children}</Typography>
-)
-
-export const EditUser = ({userType = 'idir'}) => {
+// switch between 'idir' and 'bceid'
+export const EditUser = ({ userType = 'bceid' }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     userType,
@@ -85,15 +84,25 @@ export const EditUser = ({userType = 'idir'}) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleStatusChange = (e) => {
-    const {value} = e.target
-    if(value === 'active') {
-      setFormData(prev => ({...prev, active: value}))
+  const handleStatusChange = e => {
+    const { value } = e.target;
+    if (value === 'active') {
+      setFormData(prev => ({ ...prev, active: value }));
     }
-    if(value === 'inactive') {
-      setFormData(prev => ({...prev, active: value, readOnly: false, manageUsers: false, transfer: false, complianceReporting: false, signingAuthority: false, administrator: false, govRole: ''}))
+    if (value === 'inactive') {
+      setFormData(prev => ({
+        ...prev,
+        active: value,
+        readOnly: false,
+        manageUsers: false,
+        transfer: false,
+        complianceReporting: false,
+        signingAuthority: false,
+        administrator: false,
+        govRole: '',
+      }));
     }
-  }
+  };
 
   const handleCheckbox = e => {
     const { checked, name } = e.target;
@@ -101,17 +110,24 @@ export const EditUser = ({userType = 'idir'}) => {
   };
 
   const handleBackClick = () => {
-    if(userType === 'idir') {
-      navigate(routes.VIEW_USER)
+    if (userType === 'idir') {
+      navigate(routes.VIEW_USER);
     }
-    if(userType === 'bceid') {
-      navigate(routes.ORGANIZATION_USER)
+    if (userType === 'bceid') {
+      navigate(routes.ORGANIZATION_USER);
     }
-  }
+  };
 
   const handleReadOnlyClick = () => {
-    setFormData(prev => ({...prev, manageUsers: false, transfer: false, complianceReporting: false, signingAuthority: false, readOnly: true}))
-  }
+    setFormData(prev => ({
+      ...prev,
+      manageUsers: false,
+      transfer: false,
+      complianceReporting: false,
+      signingAuthority: false,
+      readOnly: true,
+    }));
+  };
 
   return (
     <div>
@@ -122,7 +138,7 @@ export const EditUser = ({userType = 'idir'}) => {
         <Grid2 xs={12} md={5} lg={4}>
           <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
             <div>
-              <Label htmlFor='firstName'>First Name</Label>
+              <Label htmlFor="firstName">First Name</Label>
               <TextField
                 fullWidth
                 required
@@ -137,7 +153,7 @@ export const EditUser = ({userType = 'idir'}) => {
               )}
             </div>
             <div>
-              <Label htmlFor='lastName'>Last Name</Label>
+              <Label htmlFor="lastName">Last Name</Label>
               <TextField
                 fullWidth
                 required
@@ -152,7 +168,7 @@ export const EditUser = ({userType = 'idir'}) => {
               )}
             </div>
             <div>
-              <Label htmlFor='jobTitle'>Job Title</Label>
+              <Label htmlFor="jobTitle">Job Title</Label>
               <TextField
                 fullWidth
                 required
@@ -160,108 +176,30 @@ export const EditUser = ({userType = 'idir'}) => {
                 name="jobTitle"
                 onChange={handleChange}
                 value={formData.jobTitle}
-                id='jobTitle'
+                id="jobTitle"
               />
               {dummy.errors.jobTitle && (
                 <FormHelperText error>{dummy.errors.jobTitle}</FormHelperText>
               )}
             </div>
             {userType === 'idir' ? (
-              <>
-                <div>
-                  <Label htmlFor='IDIRUserName'>IDIR User Name</Label>
-                  <TextField
-                    fullWidth
-                    required
-                    error={!!dummy.errors.IDIRUserName}
-                    name="IDIRUserName"
-                    onChange={handleChange}
-                    value={formData.IDIRUserName}
-                    id='IDIRUserName'
-                  />
-                  {dummy.errors.IDIRUserName && (
-                    <FormHelperText error>
-                      {dummy.errors.IDIRUserName}
-                    </FormHelperText>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor='email'>Email address</Label>
-                  <TextField
-                    fullWidth
-                    required
-                    error={!!dummy.errors.email}
-                    name="email"
-                    onChange={handleChange}
-                    value={formData.email}
-                    id="email"
-                  />
-                  {dummy.errors.email && (
-                    <FormHelperText error>{dummy.errors.email}</FormHelperText>
-                  )}
-                </div>
-              </>
+              <IDIRSpecificFormFields
+                formData={formData}
+                handleChange={handleChange}
+                errors={dummy.errors}
+              />
             ) : (
-              <>
-                <div>
-                  <Label htmlFor='BCeIDUserID'>BCeID Userid</Label>
-                  <TextField
-                    fullWidth
-                    required
-                    error={!!dummy.errors.BCeIDUserID}
-                    name="BCeIDUserID"
-                    onChange={handleChange}
-                    value={formData.BCeIDUserID}
-                    id="BCeIDUserID"
-                  />
-                  {dummy.errors.BCeIDUserID && (
-                    <FormHelperText error>
-                      {dummy.errors.BCeIDUserID}
-                    </FormHelperText>
-                  )}
-                </div>
-
-                <div>
-                  <Label htmlFor='email'>
-                    Email address associated with the BCeID user account
-                  </Label>
-                  <TextField
-                    fullWidth
-                    required
-                    error={!!dummy.errors.email}
-                    name="email"
-                    onChange={handleChange}
-                    value={formData.email}
-                    id="email"
-                  />
-                  {dummy.errors.email && (
-                    <FormHelperText error>{dummy.errors.email}</FormHelperText>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor='altEmail'>
-                    Alternate email for notifications <span style={{fontWeight: 'normal'}}>(optional)</span>
-                  </Label>
-                  <TextField
-                    fullWidth
-                    required
-                    error={!!dummy.errors.altEmail}
-                    name="altEmail"
-                    onChange={handleChange}
-                    value={formData.altEmail}
-                    id="altEmail"
-                  />
-                  {dummy.errors.altEmail && (
-                    <FormHelperText error>
-                      {dummy.errors.altEmail}
-                    </FormHelperText>
-                  )}
-                </div>
-              </>
+              <BCeIDSpecificFormFields
+                formData={formData}
+                handleChange={handleChange}
+                errors={dummy.errors}
+              />
             )}
 
             <div>
-              <Label htmlFor='phone'>Phone <span style={{fontWeight: 'normal'}}>(optional)</span></Label>
+              <Label htmlFor="phone">
+                Phone <span style={{ fontWeight: 'normal' }}>(optional)</span>
+              </Label>
               <TextField
                 fullWidth
                 error={!!dummy.errors.phone}
@@ -275,7 +213,10 @@ export const EditUser = ({userType = 'idir'}) => {
               )}
             </div>
             <div>
-              <Label htmlFor='mobile'>Mobile Phone <span style={{fontWeight: 'normal'}}>(optional)</span></Label>
+              <Label htmlFor="mobile">
+                Mobile Phone{' '}
+                <span style={{ fontWeight: 'normal' }}>(optional)</span>
+              </Label>
               <TextField
                 fullWidth
                 error={!!dummy.errors.mobile}
