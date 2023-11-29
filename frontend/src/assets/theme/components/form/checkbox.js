@@ -29,8 +29,10 @@ const checkbox = {
         border: `${borderWidth[2]} solid ${info.main} !important`,
       },
       '& .MuiSvgIcon-fontSizeMedium': {
-        background: 'white',
         borderColor: colors.grey[700],
+      },
+      '&.Mui-disabled .MuiSvgIcon-fontSizeMedium': {
+        borderColor: colors.grey[500],
       },
     },
 

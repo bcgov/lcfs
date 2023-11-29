@@ -17,6 +17,7 @@ import ArrowRight from '@/assets/icons/arrow-right.svg';
 import Save from '@/assets/icons/save.svg';
 import { useMutation } from 'react-query';
 import { useNavigate } from 'react-router-dom';
+import * as routes from '@/constants/routes'
 
 const dummy = {
   errors: {
@@ -30,14 +31,19 @@ const dummy = {
     phone: '',
     mobile: '',
   },
-  gov: false,
+  gov: true,
   orgName: 'Fuel Supplier Canada Ltd.',
 };
 
-export const EditUser = () => {
+// Possibly move this out to its own component if it is going to be used elsewhere
+const Label = ({children, ...rest}) => (
+  <Typography fontSize={16} fontWeight={600} component={'label'} {...rest}>{children}</Typography>
+)
+
+export const EditUser = ({userType = 'idir'}) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    isGov: dummy.gov,
+    userType,
     active: 'active',
     administrator: false,
     govRole: '',
@@ -79,21 +85,44 @@ export const EditUser = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleStatusChange = (e) => {
+    const {value} = e.target
+    if(value === 'active') {
+      setFormData(prev => ({...prev, active: value}))
+    }
+    if(value === 'inactive') {
+      setFormData(prev => ({...prev, active: value, readOnly: false, manageUsers: false, transfer: false, complianceReporting: false, signingAuthority: false, administrator: false, govRole: ''}))
+    }
+  }
+
   const handleCheckbox = e => {
     const { checked, name } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked }));
+    setFormData(prev => ({ ...prev, [name]: checked, readOnly: false }));
   };
+
+  const handleBackClick = () => {
+    if(userType === 'idir') {
+      navigate(routes.VIEW_USER)
+    }
+    if(userType === 'bceid') {
+      navigate(routes.ORGANIZATION_USER)
+    }
+  }
+
+  const handleReadOnlyClick = () => {
+    setFormData(prev => ({...prev, manageUsers: false, transfer: false, complianceReporting: false, signingAuthority: false, readOnly: true}))
+  }
 
   return (
     <div>
       <Typography variant="h4" color={colors.primary.main} mb={2}>
-        Add/Edit User {!dummy.gov && `to ${dummy.orgName}`}
+        Add/Edit User {userType === 'bceid' && `to ${dummy.orgName}`}
       </Typography>
       <Grid2 container columnSpacing={2.5} rowSpacing={3.5}>
         <Grid2 xs={12} md={5} lg={4}>
           <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
             <div>
-              <Typography fontSize={16}>First Name</Typography>
+              <Label htmlFor='firstName'>First Name</Label>
               <TextField
                 fullWidth
                 required
@@ -101,13 +130,14 @@ export const EditUser = () => {
                 name="firstName"
                 onChange={handleChange}
                 value={formData.firstName}
+                id="firstName"
               />
               {dummy.errors.firstName && (
                 <FormHelperText error>{dummy.errors.firstName}</FormHelperText>
               )}
             </div>
             <div>
-              <Typography fontSize={16}>Last Name</Typography>
+              <Label htmlFor='lastName'>Last Name</Label>
               <TextField
                 fullWidth
                 required
@@ -115,13 +145,14 @@ export const EditUser = () => {
                 name="lastName"
                 onChange={handleChange}
                 value={formData.lastName}
+                id="lastName"
               />
               {dummy.errors.lastName && (
                 <FormHelperText error>{dummy.errors.lastName}</FormHelperText>
               )}
             </div>
             <div>
-              <Typography fontSize={16}>Job Title</Typography>
+              <Label htmlFor='jobTitle'>Job Title</Label>
               <TextField
                 fullWidth
                 required
@@ -129,15 +160,16 @@ export const EditUser = () => {
                 name="jobTitle"
                 onChange={handleChange}
                 value={formData.jobTitle}
+                id='jobTitle'
               />
               {dummy.errors.jobTitle && (
                 <FormHelperText error>{dummy.errors.jobTitle}</FormHelperText>
               )}
             </div>
-            {dummy.gov ? (
+            {userType === 'idir' ? (
               <>
                 <div>
-                  <Typography fontSize={16}>IDIR User Name</Typography>
+                  <Label htmlFor='IDIRUserName'>IDIR User Name</Label>
                   <TextField
                     fullWidth
                     required
@@ -145,6 +177,7 @@ export const EditUser = () => {
                     name="IDIRUserName"
                     onChange={handleChange}
                     value={formData.IDIRUserName}
+                    id='IDIRUserName'
                   />
                   {dummy.errors.IDIRUserName && (
                     <FormHelperText error>
@@ -153,7 +186,7 @@ export const EditUser = () => {
                   )}
                 </div>
                 <div>
-                  <Typography fontSize={16}>Email address</Typography>
+                  <Label htmlFor='email'>Email address</Label>
                   <TextField
                     fullWidth
                     required
@@ -161,6 +194,7 @@ export const EditUser = () => {
                     name="email"
                     onChange={handleChange}
                     value={formData.email}
+                    id="email"
                   />
                   {dummy.errors.email && (
                     <FormHelperText error>{dummy.errors.email}</FormHelperText>
@@ -170,7 +204,7 @@ export const EditUser = () => {
             ) : (
               <>
                 <div>
-                  <Typography fontSize={16}>BCeID Userid</Typography>
+                  <Label htmlFor='BCeIDUserID'>BCeID Userid</Label>
                   <TextField
                     fullWidth
                     required
@@ -178,6 +212,7 @@ export const EditUser = () => {
                     name="BCeIDUserID"
                     onChange={handleChange}
                     value={formData.BCeIDUserID}
+                    id="BCeIDUserID"
                   />
                   {dummy.errors.BCeIDUserID && (
                     <FormHelperText error>
@@ -187,9 +222,9 @@ export const EditUser = () => {
                 </div>
 
                 <div>
-                  <Typography fontSize={16}>
+                  <Label htmlFor='email'>
                     Email address associated with the BCeID user account
-                  </Typography>
+                  </Label>
                   <TextField
                     fullWidth
                     required
@@ -197,15 +232,16 @@ export const EditUser = () => {
                     name="email"
                     onChange={handleChange}
                     value={formData.email}
+                    id="email"
                   />
                   {dummy.errors.email && (
                     <FormHelperText error>{dummy.errors.email}</FormHelperText>
                   )}
                 </div>
                 <div>
-                  <Typography fontSize={16}>
-                    Alternate email for notifications (optional)
-                  </Typography>
+                  <Label htmlFor='altEmail'>
+                    Alternate email for notifications <span style={{fontWeight: 'normal'}}>(optional)</span>
+                  </Label>
                   <TextField
                     fullWidth
                     required
@@ -213,6 +249,7 @@ export const EditUser = () => {
                     name="altEmail"
                     onChange={handleChange}
                     value={formData.altEmail}
+                    id="altEmail"
                   />
                   {dummy.errors.altEmail && (
                     <FormHelperText error>
@@ -224,26 +261,28 @@ export const EditUser = () => {
             )}
 
             <div>
-              <Typography fontSize={16}>Phone (optional)</Typography>
+              <Label htmlFor='phone'>Phone <span style={{fontWeight: 'normal'}}>(optional)</span></Label>
               <TextField
                 fullWidth
                 error={!!dummy.errors.phone}
                 name="phone"
                 onChange={handleChange}
                 value={formData.phone}
+                id="phone"
               />
               {dummy.errors.phone && (
                 <FormHelperText error>{dummy.errors.phone}</FormHelperText>
               )}
             </div>
             <div>
-              <Typography fontSize={16}>Mobile Phone (optional)</Typography>
+              <Label htmlFor='mobile'>Mobile Phone <span style={{fontWeight: 'normal'}}>(optional)</span></Label>
               <TextField
                 fullWidth
                 error={!!dummy.errors.mobile}
                 name="mobile"
                 onChange={handleChange}
                 value={formData.mobile}
+                id="mobile"
               />
               {dummy.errors.mobile && (
                 <FormHelperText error>{dummy.errors.mobile}</FormHelperText>
@@ -265,7 +304,7 @@ export const EditUser = () => {
                 justifyContent: 'space-between',
                 gap: 8,
               }}
-              onClick={() => navigate(-1)}
+              onClick={handleBackClick}
             >
               <ArrowRight />
               Back
@@ -297,7 +336,7 @@ export const EditUser = () => {
                 }}
                 value={formData.active}
                 name="active"
-                onChange={handleChange}
+                onChange={handleStatusChange}
               >
                 <FormControlLabel
                   value="active"
@@ -313,7 +352,7 @@ export const EditUser = () => {
             </Box>
             <Box>
               <Typography mb={1.5}>Roles</Typography>
-              {dummy.gov ? (
+              {userType === 'idir' ? (
                 <>
                   <FormControlLabel
                     control={<Checkbox />}
@@ -321,6 +360,7 @@ export const EditUser = () => {
                     onChange={handleCheckbox}
                     name="administrator"
                     checked={formData.administrator}
+                    disabled={formData.active === 'inactive'}
                   />
                   <RadioGroup
                     defaultValue="active"
@@ -341,16 +381,19 @@ export const EditUser = () => {
                         },
                       }}
                       label="Analyst — can make recommendations on transfers, transactions and compliance reports, manage file submissions and add/edit fuel codes"
+                      disabled={formData.active === 'inactive'}
                     />
                     <FormControlLabel
                       value="compliance_manager"
                       control={<Radio />}
                       label="Compliance Manager — can make recommendations on compliance reports"
+                      disabled={formData.active === 'inactive'}
                     />
                     <FormControlLabel
                       value="director"
                       control={<Radio />}
                       label="Director — can assess compliance reports and approve transactions"
+                      disabled={formData.active === 'inactive'}
                     />
                   </RadioGroup>
                 </>
@@ -362,6 +405,7 @@ export const EditUser = () => {
                     onChange={handleCheckbox}
                     name="manageUsers"
                     checked={formData.manageUsers}
+                    disabled={formData.active === 'inactive'}
                   />
                   <FormControlLabel
                     control={<Checkbox />}
@@ -369,6 +413,7 @@ export const EditUser = () => {
                     onChange={handleCheckbox}
                     name="transfer"
                     checked={formData.transfer}
+                    disabled={formData.active === 'inactive'}
                   />
                   <FormControlLabel
                     control={<Checkbox />}
@@ -376,6 +421,7 @@ export const EditUser = () => {
                     onChange={handleCheckbox}
                     name="complianceReporting"
                     checked={formData.complianceReporting}
+                    disabled={formData.active === 'inactive'}
                   />
                   <FormControlLabel
                     control={<Checkbox />}
@@ -383,13 +429,15 @@ export const EditUser = () => {
                     onChange={handleCheckbox}
                     name="signingAuthority"
                     checked={formData.signingAuthority}
+                    disabled={formData.active === 'inactive'}
                   />
                   <FormControlLabel
-                    control={<Checkbox />}
+                    control={<Radio />}
                     label="Read Only — can view transactions, compliance reports and files"
-                    onChange={handleCheckbox}
+                    onChange={handleReadOnlyClick}
                     name="readOnly"
                     checked={formData.readOnly}
+                    disabled={formData.active === 'inactive'}
                   />
                 </Stack>
               )}
