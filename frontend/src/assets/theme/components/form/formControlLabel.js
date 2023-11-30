@@ -20,9 +20,8 @@ const formControlLabel = {
     label: {
       display: 'inline-block',
       fontSize: size.md,
-      fontWeight: fontWeightBold,
       color: dark.main,
-      lineHeight: '20px',
+      lineHeight: '22px',
       transform: `translateY(${pxToRem(1)})`,
       marginLeft: pxToRem(4),
 

@@ -21,6 +21,8 @@ import * as routes from '@/constants/routes';
 import { Label } from './Label';
 import { IDIRSpecificFormFields } from './IDIRSpecificFormFields';
 import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields';
+import { IDIRSpecificRoleFields } from './IDIRSpecificRoleFields';
+import { BCeIDSpecificRoleFields } from './BCeIDSpecificRoleFields';
 
 const dummy = {
   errors: {
@@ -294,93 +296,17 @@ export const EditUser = ({ userType = 'bceid' }) => {
             <Box>
               <Typography mb={1.5}>Roles</Typography>
               {userType === 'idir' ? (
-                <>
-                  <FormControlLabel
-                    control={<Checkbox />}
-                    label="Administrator — can add/edit IDIR users and assign roles and add/edit organizations, BCeID users and assign roles"
-                    onChange={handleCheckbox}
-                    name="administrator"
-                    checked={formData.administrator}
-                    disabled={formData.active === 'inactive'}
-                  />
-                  <RadioGroup
-                    defaultValue="active"
-                    name="govRole"
-                    style={{
-                      gap: 8,
-                      marginTop: 8,
-                    }}
-                    onChange={handleChange}
-                    value={formData.govRole}
-                  >
-                    <FormControlLabel
-                      value="analyst"
-                      control={<Radio />}
-                      style={{
-                        '.MuiFormControlLabel-label': {
-                          fontSize: 16,
-                        },
-                      }}
-                      label="Analyst — can make recommendations on transfers, transactions and compliance reports, manage file submissions and add/edit fuel codes"
-                      disabled={formData.active === 'inactive'}
-                    />
-                    <FormControlLabel
-                      value="compliance_manager"
-                      control={<Radio />}
-                      label="Compliance Manager — can make recommendations on compliance reports"
-                      disabled={formData.active === 'inactive'}
-                    />
-                    <FormControlLabel
-                      value="director"
-                      control={<Radio />}
-                      label="Director — can assess compliance reports and approve transactions"
-                      disabled={formData.active === 'inactive'}
-                    />
-                  </RadioGroup>
-                </>
+                <IDIRSpecificRoleFields
+                  formData={formData}
+                  handleCheckbox={handleCheckbox}
+                  handleChange={handleChange}
+                />
               ) : (
-                <Stack spacing={1}>
-                  <FormControlLabel
-                    control={<Checkbox />}
-                    label="Manage Users — can add/edit BCeID users and assign roles"
-                    onChange={handleCheckbox}
-                    name="manageUsers"
-                    checked={formData.manageUsers}
-                    disabled={formData.active === 'inactive'}
-                  />
-                  <FormControlLabel
-                    control={<Checkbox />}
-                    label="Transfer — can create/save transfers and submit files"
-                    onChange={handleCheckbox}
-                    name="transfer"
-                    checked={formData.transfer}
-                    disabled={formData.active === 'inactive'}
-                  />
-                  <FormControlLabel
-                    control={<Checkbox />}
-                    label="Compliance Reporting — can create/save compliance reports and submit files"
-                    onChange={handleCheckbox}
-                    name="complianceReporting"
-                    checked={formData.complianceReporting}
-                    disabled={formData.active === 'inactive'}
-                  />
-                  <FormControlLabel
-                    control={<Checkbox />}
-                    label="Signing Authority — can sign and submit compliance reports to government and transfers to trade partners/government"
-                    onChange={handleCheckbox}
-                    name="signingAuthority"
-                    checked={formData.signingAuthority}
-                    disabled={formData.active === 'inactive'}
-                  />
-                  <FormControlLabel
-                    control={<Radio />}
-                    label="Read Only — can view transactions, compliance reports and files"
-                    onChange={handleReadOnlyClick}
-                    name="readOnly"
-                    checked={formData.readOnly}
-                    disabled={formData.active === 'inactive'}
-                  />
-                </Stack>
+                <BCeIDSpecificRoleFields
+                  formData={formData}
+                  handleCheckbox={handleCheckbox}
+                  handleReadOnlyClick={handleReadOnlyClick}
+                />
               )}
             </Box>
           </Stack>
