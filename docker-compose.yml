@@ -43,7 +43,8 @@ services:
       LCFS_RELOAD: true
       APP_ENVIRONMENT: dev
     ports:
-      - '8000:8000'
+      - "8000:8000" # Application port
+      - "5678:5678" # Debugger port
     depends_on:
       - db
       - redis
