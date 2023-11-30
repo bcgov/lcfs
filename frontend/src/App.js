@@ -9,28 +9,38 @@ import * as appRoutes from './constants/routes';
 import Layout from './layouts/Layout';
 import PublicLayout from './layouts/PublicLayout';
 import UserTabPanel from 'layouts/admin/UserTabPanel';
+import BCTypography from 'components/BCTypography';
 
 // Components
-import { BCTypography } from 'components/BCTypography';
 import ContactUs from 'components/ContactUs';
 import Login from './components/Login';
-import RequireAuth from './components/RequireAuth';
 
 // Views
 import { ViewUsers } from './views/viewUsers';
+import ApiDocs from './components/ApiDocs';
 
 const router = createBrowserRouter([
   {
     path: appRoutes.DASHBOARD,
     element: (
-      <RequireAuth redirectTo={appRoutes.LOGIN}>
-        <Layout>
-          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
-            Welcome to the Dashboard!
-          </BCTypography>
-        </Layout>
-      </RequireAuth>
+      <Layout>
+        <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+          Welcome to the Dashboard!
+        </BCTypography>
+      </Layout>
     ),
+    handle: {
+      crumb: () => 'Dashboard',
+    },
+  },
+  {
+    path: appRoutes.DOCS,
+    element: (
+      <ApiDocs />
+    ),
+    handle: {
+      crumb: () => 'Docs',
+    },
   },
   {
     path: appRoutes.LOGIN,

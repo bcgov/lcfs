@@ -36,6 +36,7 @@
     "react-table": "^7.8.0",
     "resolve": "^1.20.0",
     "semver": "^7.3.5",
+    "swagger-ui-react": "^5.10.3",
     "web-vitals": "^2.1.4",
     "yargs": "^17.7.2",
     "zustand": "^4.4.6"
