@@ -49,7 +49,7 @@ async def seed_user_profiles(session):
         },
         {
             "keycloak_email": 'protonater@live.com',
-            "keycloak_username": 'pvenkate',
+            "keycloak_username": 'PVENKATE',
             "email": 'protonater@live.com',
             "username": 'pvenkate',
             "display_name": 'Prashanth V',
