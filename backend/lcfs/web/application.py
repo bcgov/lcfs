@@ -64,7 +64,7 @@ def get_app() -> FastAPI:
     :return: application.
     """
     app = FastAPI(
-        title="lcfs",
+        title="LCFS Backend API Development",
         version=metadata.version("lcfs"),
         docs_url="/api/docs",
         redoc_url="/api/redoc",

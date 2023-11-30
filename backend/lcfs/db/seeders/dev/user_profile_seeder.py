@@ -47,6 +47,17 @@ async def seed_user_profiles(session):
             "mobile_phone": "1234567890",
             "organization_id": 1
         },
+        {
+            "keycloak_email": 'protonater@live.com',
+            "keycloak_username": 'pvenkate',
+            "email": 'protonater@live.com',
+            "username": 'pvenkate',
+            "display_name": 'Prashanth V',
+            "title": 'Developer',
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": 1
+        },
     ]
 
     try:
