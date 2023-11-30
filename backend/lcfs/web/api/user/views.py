@@ -62,9 +62,9 @@ async def get_users(limit: int = 10, offset: int = 0, response: Response = None)
     try:
         users = await user_repo.query_users(
             pagination={
-                "per_page": limit, 
-                "page": offset, 
-                "sort_field": "username", 
+                "per_page": limit,
+                "page": offset,
+                "sort_field": "username",
                 "sort_direction": "asc"
             }
         )
@@ -72,7 +72,7 @@ async def get_users(limit: int = 10, offset: int = 0, response: Response = None)
             logger.error("Error getting users")
             response.status_code = status.HTTP_404_NOT_FOUND
             return []
-        
+
         # Convert the users to a list of UserBase objects
         user_bases = [UserBase.from_orm(user) for user in users]
         return user_bases  # Return the list of UserBase objects
@@ -80,7 +80,7 @@ async def get_users(limit: int = 10, offset: int = 0, response: Response = None)
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         logger.error("Error getting users", str(e.args[0]))
         return []  # Return an empty list if there's an error
-    
+
 
 @router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_user_search(username: str = None, organization: str = None,
@@ -132,8 +132,15 @@ async def get_user_by_id(user_id: int, response: Response = None) -> EntityRespo
 @router.post("/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> EntityResponse:
     try:
+        user_data_dict = user_data.dict()
+        user_data_dict['keycloak_username'] = user_data_dict['username']
+        user_data_dict['keycloak_user_id'] = f"prefix_{user_data_dict['username']}"
+        user_data_dict['keycloak_email'] = user_data_dict['email']
+        user_data_dict['display_name'] = user_data_dict['first_name'] + " " +  user_data_dict['last_name']
+        userdata= UserCreate(**user_data_dict)
         user_repo = UserRepository(db)
-        created_user = await user_repo.create_user(user_data)
+        created_user = await user_repo.create_user(userdata)
+        logger.info(f"User created successfully: {created_user}")
         return EntityResponse(status=status.HTTP_201_CREATED, data=created_user, error={}, success=True, message="User created successfully")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")

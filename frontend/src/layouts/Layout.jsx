@@ -13,10 +13,9 @@ const Layout = () => {
     .map(match => ({
       label: match.handle.crumb(match.data),
       path: match.pathname,
-    }));
-
+    })); 
   return (
-    <>
+    <> 
       <Grid container
         rowSpacing={2}
         sx={{

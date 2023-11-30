@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTheme } from '@mui/material/styles';
-import { AppBar, Tabs, Tab, Icon } from '@mui/material';
-
+import { AppBar, Tabs, Tab, Icon, Button} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import BCTypography from 'components/BCTypography';
 import BCBox from 'components/BCBox';
 import UserGrid from 'components/Table/DataGrid/UserGrid';
 import breakpoints from "assets/theme/base/breakpoints";
+import { CREATE_USER } from '../../constants/routes';
+import AddIcon from '@mui/icons-material/Add';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -55,6 +57,10 @@ export default function UserTabPanel() {
     { name: 'Isabel', role: 'Employee', email: 'isabel@example.com', phone: '555-8901', status: 'Active' },
     { name: 'Jack', role: 'Employee', email: 'jack@example.com', phone: '555-2346', status: 'Active' },
   ];
+  const navigate = useNavigate();
+  const handleNewUserClick = () => {
+    navigate('/users/create'); // Navigate to the 'New User' route
+  };
 
   const [tabsOrientation, setTabsOrientation] = useState("horizontal");
   const [tabValue, setTabValue] = useState(0);
@@ -111,6 +117,11 @@ export default function UserTabPanel() {
     // </BCBox>
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" >
+        <BCBox sx={{ p: 2 }}>
+          <Button variant="contained" onClick={handleNewUserClick}>
+            <AddIcon contained/> New User
+          </Button>
+        </BCBox>
         <Tabs
           sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
           orientation={tabsOrientation}

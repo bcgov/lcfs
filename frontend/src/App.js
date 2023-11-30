@@ -8,6 +8,7 @@ import { ViewUsers } from './views/viewUsers';
 import { Paper } from '@mui/material';
 import { BCTypography } from 'components/BCTypography';
 import UserTabPanel from 'layouts/admin/UserTabPanel';
+import NewUser from './components/Adminstrator/NewUser';
 
 const router = createBrowserRouter([
   {
@@ -76,6 +77,29 @@ const router = createBrowserRouter([
           },
         ],
       },
+      {
+        path: appRoutes.USERS,
+        handle: {
+          crumb: () => 'Users',
+        },
+        children: [
+          {
+            index: true,
+            element: <></>,
+          },
+          {
+            path: appRoutes.CREATE_USER,
+            element:<Paper elevation={5} sx={{ padding: '1rem', position: 'relative', minHeight: '80vh' }}>
+                   <NewUser />
+                 </Paper>
+            , 
+            handle: {
+               enter: ({ params }) => console.log('Matched route:', '/users/create', 'with params:', params),
+              crumb: data => `NewUser`, // data from loader is passed into our crumb function so we can manipulate the output
+            },
+          },
+        ],
+      }, 
     ],
   },
 ]);
