@@ -6,6 +6,8 @@ import BCBox from 'components/BCBox';
 import Footer from 'components/Footer';
 import AppNavbar from 'components/Navbars/AppNavbar';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import RequireAuth from 'components/RequireAuth';
+import * as appRoutes from 'constants/routes';
 
 const Layout = ({ crumbs }) => {
   const matches = useMatches();
@@ -17,9 +19,8 @@ const Layout = ({ crumbs }) => {
     }));
 
   return (
-    <>
-      <Grid
-        container
+    <RequireAuth redirectTo={appRoutes.LOGIN}>
+      <Grid container
         rowSpacing={2}
         sx={{
           margin: '0',
@@ -77,7 +78,7 @@ const Layout = ({ crumbs }) => {
           </BCBox>
         </Grid>
       </Grid>
-    </>
+    </RequireAuth>
   );
 };
 export default Layout;

@@ -333,6 +333,7 @@ const alias = {
   components: path.resolve(APP_DIR, './src/components'),
   assets: path.resolve(APP_DIR, './src/assets'),
   layouts: path.resolve(APP_DIR, './src/layouts'),
+  constants: path.resolve(APP_DIR, './src/constants'),
   styles: path.resolve(APP_DIR, './src/styles'),
   '@': path.resolve(APP_DIR, 'src'),
   // Add any additional alias paths as needed

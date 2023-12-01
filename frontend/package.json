@@ -129,6 +129,7 @@
     "speed-measure-webpack-plugin": "^1.5.0",
     "storybook": "^7.5.1",
     "style-loader": "^3.3.3",
+    "swagger-ui-react": "^5.10.3",
     "terser-webpack-plugin": "^5.2.5",
     "vm-browserify": "^1.1.2",
     "webpack": "^5.89.0",
