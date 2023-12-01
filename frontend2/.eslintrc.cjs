@@ -1,6 +1,6 @@
 module.exports = {
   root: true,
-  env: { browser: true, es2020: true },
+  env: { browser: true, es2020: true, jest: true },
   extends: [
     'standard',
     'eslint:recommended',
@@ -18,6 +18,7 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
-    "import/no-absolute-path": 0
+    "import/no-absolute-path": 0,
+    'react/prop-types': 0,
   },
 };
