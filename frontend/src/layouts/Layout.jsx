@@ -9,9 +9,9 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import RequireAuth from 'components/RequireAuth';
 import * as appRoutes from 'constants/routes';
 
-const Layout = () => {
+const Layout = ({ crumbs }) => {
   const matches = useMatches();
-  const crumbs = matches
+  const breadcrumbs = matches
     .filter(match => Boolean(match.handle?.crumb))
     .map(match => ({
       label: match.handle.crumb(match.data),
@@ -23,16 +23,18 @@ const Layout = () => {
       <Grid container
         rowSpacing={2}
         sx={{
-          margin: "0",
-          padding: "1rem",
-          background: "background.paper",
+          margin: '0',
+          padding: '1rem',
+          background: 'background.paper',
         }}
         columnSpacing={{ xs: 1, sm: 1, md: 1 }}
       >
-        <Grid item xs={12}
+        <Grid
+          item
+          xs={12}
           sx={{
-            maxHeight: "20vh",
-            position: "relative",
+            maxHeight: '20vh',
+            position: 'relative',
             top: 0,
             zIndex: 10, // Adjust the z-index if needed
           }}
@@ -45,24 +47,30 @@ const Layout = () => {
         </Grid>
         <Grid item my={12} lg={12}>
           <BCBox>
-            <Paper p={2} elevation={5} sx={{ padding: "1rem", minHeight: '5vh' }}>
-              <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-                {crumbs.map((crumb, index) =>
-                  index + 1 !== crumbs.length ? (
-                    <Link
-                      key={crumb.path}
-                      component={RouterLink}
-                      to={crumb.path}
-                      disabled={true}
-                    >
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span key={crumb.path}>{crumb.label}</span>
-                  ),
-                )}
-              </Breadcrumbs>
-            </Paper>
+            {crumbs && (
+              <Paper
+                p={2}
+                elevation={5}
+                sx={{ padding: '1rem', minHeight: '5vh' }}
+              >
+                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
+                  {breadcrumbs.map((crumb, index) =>
+                    index + 1 !== breadcrumbs.length ? (
+                      <Link
+                        key={crumb.path}
+                        component={RouterLink}
+                        to={crumb.path}
+                        disabled={true}
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span key={crumb.path}>{crumb.label}</span>
+                    ),
+                  )}
+                </Breadcrumbs>
+              </Paper>
+            )}
             <BCBox py={4}>
               <Outlet />
               <Footer/>

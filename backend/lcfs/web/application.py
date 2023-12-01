@@ -1,6 +1,8 @@
 from importlib import metadata
 import logging
 
+import os
+import debugpy
 import colorlog
 from fastapi import FastAPI
 from fastapi.responses import UJSONResponse
@@ -63,6 +65,14 @@ def get_app() -> FastAPI:
 
     :return: application.
     """
+    # Check if the application is running in development environment
+    # This allows for debug attachment from outside our docker container
+    if os.getenv('APP_ENVIRONMENT') == 'dev':
+        debugpy.listen(('0.0.0.0', 5678))
+        print("⏳ Waiting for debugger attach on port 5678...")
+        debugpy.wait_for_client()
+
+    # Create the fastapi instance
     app = FastAPI(
         title="LCFS Backend API Development",
         version=metadata.version("lcfs"),

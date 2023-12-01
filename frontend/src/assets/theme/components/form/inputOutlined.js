@@ -1,10 +1,10 @@
-import colors from "assets/theme/base/colors";
-import borders from "assets/theme/base/borders";
-import typography from "assets/theme/base/typography";
+import colors from 'assets/theme/base/colors';
+import borders from 'assets/theme/base/borders';
+import typography from 'assets/theme/base/typography';
 
-import { pxToRem } from "assets/theme/utils";
+import { pxToRem } from 'assets/theme/utils';
 
-const { inputBorderColor, info, grey, transparent } = colors;
+const { inputBorderColor, info, grey, transparent, background } = colors;
 const { borderRadius } = borders;
 const { size } = typography;
 
@@ -14,13 +14,14 @@ const inputOutlined = {
       backgroundColor: transparent.main,
       fontSize: size.sm,
       borderRadius: borderRadius.md,
+      overflow: 'hidden',
 
-      "&:hover .MuiOutlinedInput-notchedOutline": {
+      '&:hover .MuiOutlinedInput-notchedOutline': {
         borderColor: inputBorderColor,
       },
 
-      "&.Mui-focused": {
-        "& .MuiOutlinedInput-notchedOutline": {
+      '&.Mui-focused': {
+        '& .MuiOutlinedInput-notchedOutline': {
           borderColor: info.main,
         },
       },
@@ -33,7 +34,7 @@ const inputOutlined = {
     input: {
       color: grey[700],
       padding: pxToRem(12),
-      backgroundColor: transparent.main,
+      backgroundColor: background.default,
     },
 
     inputSizeSmall: {
