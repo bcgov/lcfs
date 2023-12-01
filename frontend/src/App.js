@@ -1,14 +1,14 @@
-import React from 'react';
 import { Paper } from '@mui/material';
+import React from 'react';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 
 // Constants
 import * as appRoutes from './constants/routes';
 
 // Layouts
+import UserTabPanel from 'layouts/admin/UserTabPanel';
 import Layout from './layouts/Layout';
 import PublicLayout from './layouts/PublicLayout';
-import UserTabPanel from 'layouts/admin/UserTabPanel';
 
 // Components
 import { BCTypography } from 'components/BCTypography';
@@ -17,6 +17,7 @@ import Login from './components/Login';
 import RequireAuth from './components/RequireAuth';
 
 // Views
+import { EditUser } from './views/editUser';
 import { ViewUsers } from './views/viewUsers';
 
 const router = createBrowserRouter([
@@ -37,7 +38,7 @@ const router = createBrowserRouter([
     element: <Login />,
   },
   {
-    element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
+    element: <Layout crumbs />, // wraps all routes listed in children. add in auth check here for convienience.
     children: [
       {
         path: appRoutes.ORGANIZATION,
@@ -50,7 +51,7 @@ const router = createBrowserRouter([
             element: <></>,
           },
           {
-            path: appRoutes.VIEW_USER,
+            path: appRoutes.ORGANIZATION_USER,
             element: <ViewUsers />,
             loader: data => data, // loader will pass data to useMatches
             handle: {
@@ -59,11 +60,6 @@ const router = createBrowserRouter([
           },
         ],
       },
-    ],
-  },
-  {
-    element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
-    children: [
       {
         path: appRoutes.ADMINISTRATION,
         handle: {
@@ -76,12 +72,21 @@ const router = createBrowserRouter([
           },
           {
             path: appRoutes.ADMINISTRATION_USERS,
-            element: <Paper elevation={5} sx={{ padding: "1rem", position: 'relative', minHeight: '80vh' }}>
-              <UserTabPanel />
-            </Paper>,
+            element: (
+              <Paper
+                elevation={5}
+                sx={{
+                  padding: '1rem',
+                  position: 'relative',
+                  minHeight: '80vh',
+                }}
+              >
+                <UserTabPanel />
+              </Paper>
+            ),
             // loader: data => data, // loader will pass data to useMatches
             handle: {
-              crumb: data => `Users`, // data from loader is passed into our crumb function so we can manipulate the output
+              crumb: () => `Users`, // data from loader is passed into our crumb function so we can manipulate the output
             },
           },
         ],
@@ -96,6 +101,15 @@ const router = createBrowserRouter([
       {
         path: appRoutes.CONTACT_US,
         element: <ContactUs />,
+      },
+    ],
+  },
+  {
+    element: <Layout />,
+    children: [
+      {
+        path: appRoutes.EDIT_USER,
+        element: <EditUser />,
       },
     ],
   },
