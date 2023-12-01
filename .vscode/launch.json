@@ -22,6 +22,21 @@
       ]
     },
     {
+      "name": "LCFS FastAPI: Remote Attach",
+      "type": "python",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/backend",
+          "remoteRoot": "/app"
+        }
+      ]
+    },
+    {
       "type": "msedge",
       "request": "launch",
       "name": "Launch UI",
