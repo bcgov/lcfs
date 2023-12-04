@@ -95,7 +95,7 @@ const colors = {
     focus: '#2c3c58',
   },
   coloredShadows: {
-    primary: '#e91e62',
+    primary: '#fcba19',
     secondary: '#110e0e',
     info: '#00bbd4',
     success: '#4caf4f',
@@ -133,8 +133,8 @@ const colors = {
   },
   gradients: {
     primary: {
-      main: '#EC407A',
-      state: '#D81B60',
+      main: '#003366',
+      state: '#036',
     },
 
     secondary: {

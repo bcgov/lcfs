@@ -10,8 +10,8 @@ import * as Lang from '../constants/langEnUs';
 import CallableModal from '../components/CallableModal';
 
 // Styles
-import 'bootstrap/dist/css/bootstrap.css';
-import 'styles/index.scss';
+// import 'bootstrap/dist/css/bootstrap.css';
+// import 'styles/index.scss';
 
 const Login = (props) => {
   const { keycloak } = useKeycloak()

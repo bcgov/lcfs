@@ -1,16 +1,19 @@
 import React from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { logout } from '@/keycloak'
+// @mui components
 import BCButton from 'components/BCButton'
 import BCTypography from 'components/BCTypography'
 import BCBox from 'components/BCBox';
+import { useScrollTrigger } from '@mui/material';
+
 import { PropTypes } from 'prop-types';
 import useUserStore from '@/store/useUserStore'
 
 const Logout = (props) => {
   const user = useUserStore((state) => state.user)
   const { keycloak } = useKeycloak();
-  const { isScrolled } = props;
+  const isScrolled = useScrollTrigger();
 
   return (keycloak.authenticated &&
     <BCBox display="flex" alignItems="right" justifyContent="space-around">

@@ -2,7 +2,7 @@ import React from 'react';
 import FullWidthTabs from './UserTabPanel';
 
 export default {
-  title: 'Layouts/FullWidthTabs',
+  title: 'Layouts/UsersAdmin',
   component: FullWidthTabs,
 } ;
 const Template = (args) =>  <FullWidthTabs />;

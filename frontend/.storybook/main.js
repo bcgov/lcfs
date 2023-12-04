@@ -10,6 +10,7 @@ const config = {
     '@storybook/addon-onboarding',
     '@storybook/addon-interactions',
     '@storybook/addon-a11y',
+    '@storybook/addon-docs',
   ],
   staticDirs: ['../public'],
   framework: {
@@ -32,6 +33,7 @@ const config = {
       constants: path.resolve(__dirname, '../src/constants'),
       '@': path.resolve(__dirname, '../src'),
       context: path.resolve(__dirname, '../src/context'),
+      utils: path.resolve(__dirname, '../src/utils'),
     };
     // Add any necessary webpack rules or configurations here
 

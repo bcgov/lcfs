@@ -8,7 +8,7 @@ import Menu from "@mui/material/Menu";
 // Custom React components
 import BCBox from "components/BCBox";
 
-import DefaultNavbarLink from "components/Navbars/DefaultNavbar/DefaultNavbarLink";
+import DefaultNavbarLink from "components/BCNavbar/components/DefaultNavbarLink";
 
 function DefaultNavbarMobile({ open, close, links, light }) {
   const { width } = open && open.getBoundingClientRect();

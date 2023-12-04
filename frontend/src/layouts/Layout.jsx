@@ -1,10 +1,10 @@
 import React from 'react';
 
 import { Outlet, useMatches, Link as RouterLink } from 'react-router-dom';
-import { Paper, Grid, Breadcrumbs, Link } from '@mui/material';
+import { Paper, Grid, Breadcrumbs, Link, Container } from '@mui/material';
 import BCBox from 'components/BCBox';
 import Footer from 'components/Footer';
-import AppNavbar from 'components/Navbars/AppNavbar';
+import Navbar from 'layouts/navbar/Navbar';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import RequireAuth from 'components/RequireAuth';
 import * as appRoutes from 'constants/routes';
@@ -20,14 +20,15 @@ const Layout = ({ crumbs }) => {
 
   return (
     <RequireAuth redirectTo={appRoutes.LOGIN}>
-      <Grid container
-        rowSpacing={2}
-        sx={{
-          margin: '0',
+      <Container maxWidth='lg'
+        sx={({ palette: { background } }) => ({
           padding: '1rem',
-          background: 'background.paper',
-        }}
-        columnSpacing={{ xs: 1, sm: 1, md: 1 }}
+          background: background.paper,
+          '@media (max-width: 920px)': {
+            marginTop: '-2rem',
+          }
+        })}
+        disableGutters={true}
       >
         <Grid
           item
@@ -39,11 +40,7 @@ const Layout = ({ crumbs }) => {
             zIndex: 10, // Adjust the z-index if needed
           }}
         >
-          <AppNavbar
-            title="Low Carbon Fuel Standard"
-            balance="50,000"
-            organizationName="BC Government"
-          />
+          <Navbar />
         </Grid>
         <Grid item my={12} lg={12}>
           <BCBox>
@@ -53,7 +50,7 @@ const Layout = ({ crumbs }) => {
                 elevation={5}
                 sx={{ padding: '1rem', minHeight: '5vh' }}
               >
-                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
+                <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />}>
                   {breadcrumbs.map((crumb, index) =>
                     index + 1 !== breadcrumbs.length ? (
                       <Link
@@ -73,11 +70,11 @@ const Layout = ({ crumbs }) => {
             )}
             <BCBox py={4}>
               <Outlet />
-              <Footer/>
+              <Footer />
             </BCBox>
           </BCBox>
         </Grid>
-      </Grid>
+      </Container>
     </RequireAuth>
   );
 };

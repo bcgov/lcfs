@@ -1,19 +1,20 @@
-import { Paper } from '@mui/material';
 import React from 'react';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 
 // Constants
-import * as appRoutes from './constants/routes';
+import * as appRoutes from 'constants/routes';
 
 // Layouts
 import UserTabPanel from 'layouts/admin/UserTabPanel';
-import Layout from './layouts/Layout';
-import PublicLayout from './layouts/PublicLayout';
-import BCTypography from 'components/BCTypography';
-
+import Layout from 'layouts/Layout';
+import PublicLayout from 'layouts/PublicLayout';
+import OrganizationLayout from 'layouts/organization/OrganizationLayout';
 // Components
 import ContactUs from 'components/ContactUs';
-import Login from './components/Login';
+import BCTypography from 'components/BCTypography';
+import { Paper } from '@mui/material';
+// import Login from './components/Login';
+import LCFSLogin from 'layouts/authentication/components/LCFSLogin';
 
 // Views
 import { EditUser } from './views/editUser';
@@ -45,7 +46,7 @@ const router = createBrowserRouter([
   },
   {
     path: appRoutes.LOGIN,
-    element: <Login />,
+    element: <LCFSLogin />,
   },
   {
     element: <Layout crumbs />, // wraps all routes listed in children. add in auth check here for convienience.
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
         handle: {
           crumb: () => 'Organization',
         },
+        element: <OrganizationLayout />,
         children: [
           {
             index: true,

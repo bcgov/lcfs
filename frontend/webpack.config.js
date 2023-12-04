@@ -335,6 +335,7 @@ const alias = {
   layouts: path.resolve(APP_DIR, './src/layouts'),
   constants: path.resolve(APP_DIR, './src/constants'),
   styles: path.resolve(APP_DIR, './src/styles'),
+  utils: path.resolve(APP_DIR, './src/utils'),
   '@': path.resolve(APP_DIR, 'src'),
   // Add any additional alias paths as needed
 };
@@ -370,15 +371,15 @@ const finalResolve = isDevMode
 // Extracted devServer configuration
 const devServer = isDevMode
   ? {
-      historyApiFallback: {
-        rewrites: [
-          { from: /^\/api\/(.*)/, to: '/src/assets/staticPages/404.html' },
-          { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
-        ],
-      },
-      client: { overlay: false, logging: 'warn' },
-      port: devserverPort,
-    }
+    historyApiFallback: {
+      rewrites: [
+        { from: /^\/api\/(.*)/, to: '/src/assets/staticPages/404.html' },
+        { from: /^\/static\/(.*)/, to: '/src/assets/staticPages/404.html' },
+      ],
+    },
+    client: { overlay: false, logging: 'warn' },
+    port: devserverPort,
+  }
   : {};
 
 // Extracted configuration object

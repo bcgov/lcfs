@@ -3,11 +3,10 @@ import PropTypes from 'prop-types'
 
 import { Divider, Toolbar } from '@mui/material';
 import BCBox from 'components/BCBox';
-import DefaultNavbarLink from 'components/Navbars/AppNavbar/DefaultNavbarLink';
-import Logout from 'components/Navbars/AppNavbar/Logout';
+import DefaultNavbarLink from 'components/BCNavbar/components/DefaultNavbarLink';
 
 const MenuBar = props => {
-  const { isScrolled, routes } = props
+  const { isScrolled, routes, data } = props
   return (
     <Toolbar
       sx={({
@@ -42,7 +41,7 @@ const MenuBar = props => {
         ))}
       </BCBox >
       <BCBox display={{ xs: 'none', lg: 'flex' }} m={0} py={1} flexDirection='row'>
-        <Logout isScrolled={isScrolled} />
+        {data.menuRightPart && React.cloneElement(data.menuRightPart, { data })}
       </BCBox>
     </Toolbar>
   )
