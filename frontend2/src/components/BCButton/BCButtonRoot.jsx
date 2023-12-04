@@ -5,7 +5,7 @@ import { styled } from '@mui/material/styles'
 export default styled(Button)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme
   const { color, variant, size, circular, iconOnly } = ownerState
-
+console.log(functions)
   const { white, text, transparent, gradients } = palette
   const { boxShadow, linearGradient, pxToRem, rgba } = functions
   const { borderRadius } = borders

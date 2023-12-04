@@ -1,6 +1,6 @@
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-alpine.css'
-import { AgGridReact } from 'ag-grid-react'
+import '@ag-grid-community/styles/ag-grid.css'
+import '@ag-grid-community/styles/ag-theme-alpine.css'
+import { AgGridReact } from '@ag-grid-community/react'
 import UserGrid from './UserGrid'
 
 export default {
