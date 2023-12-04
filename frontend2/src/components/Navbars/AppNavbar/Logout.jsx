@@ -11,27 +11,29 @@ const Logout = (props) => {
   const { keycloak } = useKeycloak()
   const { isScrolled } = props
 
-  return (keycloak.authenticated &&
-    <BCBox display="flex" alignItems="right" justifyContent="space-around">
-      <BCTypography
-        variant="subtitle1"
-        color={props.isScrolled ? 'primary' : 'light'}
-        mx={1}
-      >
-        {user?.display_name ?? 'user'}
-      </BCTypography>
-      <BCButton
-        onClick={() => {
-          logout()
-        }}
-        color={isScrolled ? 'primary' : 'light'}
-        size='small'
-        variant={isScrolled ? 'contained' : 'outlined'}
-        data-test="logout-button"
-      >
-        Log out
-      </BCButton>
-    </BCBox>
+  return (
+    keycloak.authenticated && (
+      <BCBox display="flex" alignItems="right" justifyContent="space-around">
+        <BCTypography
+          variant="subtitle1"
+          color={props.isScrolled ? 'primary' : 'light'}
+          mx={1}
+        >
+          {user?.display_name ?? 'user'}
+        </BCTypography>
+        <BCButton
+          onClick={() => {
+            logout()
+          }}
+          color={isScrolled ? 'primary' : 'light'}
+          size="small"
+          variant={isScrolled ? 'contained' : 'outlined'}
+          data-test="logout-button"
+        >
+          Log out
+        </BCButton>
+      </BCBox>
+    )
   )
 }
 

@@ -2,12 +2,13 @@ module.exports = {
   root: true,
   env: { browser: true, es2020: true, jest: true },
   extends: [
-    'standard', 
+    'standard',
     'eslint:recommended',
-    'plugin:react/recommended', 
-    'plugin:react/jsx-runtime', 
-    'plugin:react-hooks/recommended', 
+    'plugin:react/recommended',
+    'plugin:react/jsx-runtime',
+    'plugin:react-hooks/recommended',
     'plugin:storybook/recommended'
+    'prettier',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
   parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
@@ -16,9 +17,9 @@ module.exports = {
   rules: {
     'react-refresh/only-export-components': [
       'warn',
-      { allowConstantExport: true },
+      { allowConstantExport: true }
     ],
-    "import/no-absolute-path": 0,
-    'react/prop-types': 0,
-  },
-};
+    'import/no-absolute-path': 0,
+    'react/prop-types': 0
+  }
+}

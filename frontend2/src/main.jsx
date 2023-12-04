@@ -14,17 +14,17 @@ const keycloak = getKeycloak()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   // <React.StrictMode>
-    <ReactKeycloakProvider
-      authClient={keycloak}
-      initOptions={keycloakInitOptions}
-      LoadingComponent={<Loading />}
-    >
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-      <App />
-    </ThemeProvider>
-      </QueryClientProvider>
-    </ReactKeycloakProvider>
+  <ReactKeycloakProvider
+    authClient={keycloak}
+    initOptions={keycloakInitOptions}
+    LoadingComponent={<Loading />}
+  >
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <App />
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ReactKeycloakProvider>
   // </React.StrictMode>
 )

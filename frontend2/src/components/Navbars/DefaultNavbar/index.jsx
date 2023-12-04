@@ -29,12 +29,20 @@ const links = [
   { icon: 'home', name: 'Dashboard', route: '/dashboard' },
   { icon: 'folder', name: 'document', route: '/document' },
   { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
-  { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
+  {
+    icon: 'assessment',
+    name: 'Compliance Report',
+    route: '/compliance-report'
+  },
   { icon: 'corporate_fare', name: 'Organization', route: '/organization' },
-  { icon: 'admin_panel_settings', name: 'Administration', route: '/administration' }
+  {
+    icon: 'admin_panel_settings',
+    name: 'Administration',
+    route: '/administration'
+  }
 ]
 
-function DefaultNavbar () {
+function DefaultNavbar() {
   const [showBalance, setShowBalance] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -45,12 +53,13 @@ function DefaultNavbar () {
   const [mobileNavbar, setMobileNavbar] = useState(false)
   const [mobileView, setMobileView] = useState(false)
 
-  const openMobileNavbar = ({ currentTarget }) => setMobileNavbar(currentTarget.parentNode)
+  const openMobileNavbar = ({ currentTarget }) =>
+    setMobileNavbar(currentTarget.parentNode)
   const closeMobileNavbar = () => setMobileNavbar(false)
 
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
-    function displayMobileNavbar () {
+    function displayMobileNavbar() {
       if (window.innerWidth < breakpoints.values.lg) {
         setMobileView(true)
         setMobileNavbar(false)
@@ -86,8 +95,12 @@ function DefaultNavbar () {
 
   return (
     <>
-      <AppBar position="sticky" color={isScrolled ? 'transparent' : 'inherit'} elevation={isScrolled ? 5 : 0} >
-        <BCBox flexDirection="column" display="flex" color="transparent" >
+      <AppBar
+        position="sticky"
+        color={isScrolled ? 'transparent' : 'inherit'}
+        elevation={isScrolled ? 5 : 0}
+      >
+        <BCBox flexDirection="column" display="flex" color="transparent">
           <BCBox
             py={0}
             px={{ xs: 4, sm: 3, lg: 2 }}
@@ -104,14 +117,21 @@ function DefaultNavbar () {
             left={0}
             zIndex={3}
             sx={({
-              palette: { transparent: transparentColor, white, background, primary },
+              palette: {
+                transparent: transparentColor,
+                white,
+                background,
+                primary
+              },
               functions: { rgba }
             }) => ({
-              backgroundColor: (isScrolled
+              backgroundColor: isScrolled
                 ? transparentColor.main
-                : (isScrolled ? white.main : rgba(primary.nav, 1))),
+                : isScrolled
+                  ? white.main
+                  : rgba(primary.nav, 1),
               backdropFilter: 'saturate(200%) blur(30px)',
-              color: (isScrolled ? primary.main : white.main)
+              color: isScrolled ? primary.main : white.main
             })}
           >
             <BCBox
@@ -123,20 +143,44 @@ function DefaultNavbar () {
               display={'flex'}
               alignItems={'center'}
             >
-              <img src={isScrolled ? logoLight : logoDark} alt="BC Government" style={{ width: '160px', marginRight: '10px', height: 'auto' }} />
-              {!mobileView && <BCTypography variant="h3" fontWeight="bold" color={isScrolled ? 'primary' : 'white'}>
-                Low Carbon Fuel Standard
-              </BCTypography>}
+              <img
+                src={isScrolled ? logoLight : logoDark}
+                alt="BC Government"
+                style={{ width: '160px', marginRight: '10px', height: 'auto' }}
+              />
+              {!mobileView && (
+                <BCTypography
+                  variant="h3"
+                  fontWeight="bold"
+                  color={isScrolled ? 'primary' : 'white'}
+                >
+                  Low Carbon Fuel Standard
+                </BCTypography>
+              )}
             </BCBox>
-            <BCBox color="inherit" display={{ xs: 'none', lg: 'flex' }} m={0} py={1} flexDirection="column">
-              <BCTypography className="organization_name" variant="body1" color="inherit" align="right">
+            <BCBox
+              color="inherit"
+              display={{ xs: 'none', lg: 'flex' }}
+              m={0}
+              py={1}
+              flexDirection="column"
+            >
+              <BCTypography
+                className="organization_name"
+                variant="body1"
+                color="inherit"
+                align="right"
+              >
                 Organization Name
               </BCTypography>
               <div className="organization_balance">
                 Balance:{' '}
                 <div style={{ display: 'inline-flex', alignItems: 'center' }}>
                   {showBalance && <div className="balance">1000</div>}
-                  <Icon style={{ fontSize: 20, cursor: 'pointer', margin: '5px' }} onClick={toggleBalanceVisibility}>
+                  <Icon
+                    style={{ fontSize: 20, cursor: 'pointer', margin: '5px' }}
+                    onClick={toggleBalanceVisibility}
+                  >
                     {showBalance ? 'visibility' : 'visibility_off'}
                   </Icon>
                 </div>
@@ -154,9 +198,17 @@ function DefaultNavbar () {
               <Icon fontSize="default">{mobileNavbar ? 'close' : 'menu'}</Icon>
             </BCBox>
           </BCBox>
-          <Divider orientation="vertical" flexItem sx={({ palette: { secondary } }) => ({ backgroundColor: secondary.main, padding: '1px' })} />
-          {!mobileView &&
-            <BCBox display="flex"
+          <Divider
+            orientation="vertical"
+            flexItem
+            sx={({ palette: { secondary } }) => ({
+              backgroundColor: secondary.main,
+              padding: '1px'
+            })}
+          />
+          {!mobileView && (
+            <BCBox
+              display="flex"
               flexDirection="row"
               alignItems="center"
               py={0}
@@ -171,26 +223,54 @@ function DefaultNavbar () {
               left={0}
               zIndex={3}
               sx={({
-                palette: { transparent: transparentColor, white, background, primary, secondary },
+                palette: {
+                  transparent: transparentColor,
+                  white,
+                  background,
+                  primary,
+                  secondary
+                },
                 functions: { rgba }
               }) => ({
-                backgroundColor: (isScrolled
+                backgroundColor: isScrolled
                   ? transparentColor.main
-                  : (isScrolled ? white.main : rgba(secondary.nav, 1))),
+                  : isScrolled
+                    ? white.main
+                    : rgba(secondary.nav, 1),
                 backdropFilter: 'saturate(200%) blur(30px)',
-                color: (isScrolled ? secondary.main : white.main)
+                color: isScrolled ? secondary.main : white.main
               })}
             >
               {links.map((link) => (
                 <>
-                  <DefaultNavbarLink key={link.name} icon={link.icon} name={link.name} route={link.route} light={isScrolled} />
-                  <Divider orientation="vertical" variant="middle" flexItem sx={({ palette: { white } }) => ({ backgroundColor: white.main })} />
+                  <DefaultNavbarLink
+                    key={link.name}
+                    icon={link.icon}
+                    name={link.name}
+                    route={link.route}
+                    light={isScrolled}
+                  />
+                  <Divider
+                    orientation="vertical"
+                    variant="middle"
+                    flexItem
+                    sx={({ palette: { white } }) => ({
+                      backgroundColor: white.main
+                    })}
+                  />
                 </>
               ))}
               <Logout isScrolled={isScrolled} />
             </BCBox>
-          }
-          {mobileView && <DefaultNavbarMobile open={mobileNavbar} close={closeMobileNavbar} light={true} links={links} />}
+          )}
+          {mobileView && (
+            <DefaultNavbarMobile
+              open={mobileNavbar}
+              close={closeMobileNavbar}
+              light={true}
+              links={links}
+            />
+          )}
         </BCBox>
       </AppBar>
     </>

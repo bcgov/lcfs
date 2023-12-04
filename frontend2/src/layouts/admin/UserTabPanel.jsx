@@ -7,7 +7,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import UserGrid from '@/components/Table/DataGrid/UserGrid'
 
-function TabPanel (props) {
+function TabPanel(props) {
   const { children, value, index, ...other } = props
 
   return (
@@ -33,26 +33,92 @@ TabPanel.propTypes = {
   value: PropTypes.number.isRequired
 }
 
-function a11yProps (index) {
+function a11yProps(index) {
   return {
     id: `full-width-tab-${index}`,
     'aria-controls': `full-width-tabpanel-${index}`
   }
 }
 
-export default function UserTabPanel () {
+export default function UserTabPanel() {
   const demoData = [
-    { name: 'John', role: 'Admin', email: 'john@example.com', phone: '555-1234', status: 'Active' },
-    { name: 'Jane', role: 'Manager', email: 'jane@example.com', phone: '555-5678', status: 'Inactive' },
-    { name: 'Bob', role: 'Employee', email: 'bob@example.com', phone: '555-9012', status: 'Active' },
-    { name: 'Alice', role: 'Employee', email: 'alice@example.com', phone: '555-3456', status: 'Active' },
-    { name: 'David', role: 'Employee', email: 'david@example.com', phone: '555-7890', status: 'Inactive' },
-    { name: 'Emily', role: 'Employee', email: 'emily@example.com', phone: '555-2345', status: 'Active' },
-    { name: 'Frank', role: 'Employee', email: 'frank@example.com', phone: '555-6789', status: 'Active' },
-    { name: 'Grace', role: 'Employee', email: 'grace@example.com', phone: '555-0123', status: 'Inactive' },
-    { name: 'Henry', role: 'Employee', email: 'henry@example.com', phone: '555-4567', status: 'Active' },
-    { name: 'Isabel', role: 'Employee', email: 'isabel@example.com', phone: '555-8901', status: 'Active' },
-    { name: 'Jack', role: 'Employee', email: 'jack@example.com', phone: '555-2346', status: 'Active' }
+    {
+      name: 'John',
+      role: 'Admin',
+      email: 'john@example.com',
+      phone: '555-1234',
+      status: 'Active'
+    },
+    {
+      name: 'Jane',
+      role: 'Manager',
+      email: 'jane@example.com',
+      phone: '555-5678',
+      status: 'Inactive'
+    },
+    {
+      name: 'Bob',
+      role: 'Employee',
+      email: 'bob@example.com',
+      phone: '555-9012',
+      status: 'Active'
+    },
+    {
+      name: 'Alice',
+      role: 'Employee',
+      email: 'alice@example.com',
+      phone: '555-3456',
+      status: 'Active'
+    },
+    {
+      name: 'David',
+      role: 'Employee',
+      email: 'david@example.com',
+      phone: '555-7890',
+      status: 'Inactive'
+    },
+    {
+      name: 'Emily',
+      role: 'Employee',
+      email: 'emily@example.com',
+      phone: '555-2345',
+      status: 'Active'
+    },
+    {
+      name: 'Frank',
+      role: 'Employee',
+      email: 'frank@example.com',
+      phone: '555-6789',
+      status: 'Active'
+    },
+    {
+      name: 'Grace',
+      role: 'Employee',
+      email: 'grace@example.com',
+      phone: '555-0123',
+      status: 'Inactive'
+    },
+    {
+      name: 'Henry',
+      role: 'Employee',
+      email: 'henry@example.com',
+      phone: '555-4567',
+      status: 'Active'
+    },
+    {
+      name: 'Isabel',
+      role: 'Employee',
+      email: 'isabel@example.com',
+      phone: '555-8901',
+      status: 'Active'
+    },
+    {
+      name: 'Jack',
+      role: 'Employee',
+      email: 'jack@example.com',
+      phone: '555-2346',
+      status: 'Active'
+    }
   ]
 
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
@@ -60,7 +126,7 @@ export default function UserTabPanel () {
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
-    function handleTabsOrientation () {
+    function handleTabsOrientation() {
       return window.innerWidth < breakpoints.values.sm
         ? setTabsOrientation('vertical')
         : setTabsOrientation('horizontal')
@@ -109,12 +175,13 @@ export default function UserTabPanel () {
     //   </TabPanel>
     // </BCBox>
     <BCBox sx={{ bgcolor: 'background.paper' }}>
-      <AppBar position="static" >
+      <AppBar position="static">
         <Tabs
           sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
           orientation={tabsOrientation}
           value={tabValue}
-          onChange={handleSetTabValue}>
+          onChange={handleSetTabValue}
+        >
           <Tab
             label="Users"
             icon={
@@ -146,7 +213,10 @@ export default function UserTabPanel () {
       </AppBar>
       <TabPanel value={tabValue} index={0}>
         <BCTypography variant="h3">Users</BCTypography>
-        <div className="ag-theme-alpine" style={{ height: '100%', width: '100%' }}>
+        <div
+          className="ag-theme-alpine"
+          style={{ height: '100%', width: '100%' }}
+        >
           <UserGrid rows={demoData} />
         </div>
       </TabPanel>

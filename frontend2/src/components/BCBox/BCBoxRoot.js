@@ -4,7 +4,15 @@ import { styled } from '@mui/material/styles'
 
 export default styled(Box)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme
-  const { variant, bgColor, color, opacity, borderRadius, shadow, coloredShadow } = ownerState
+  const {
+    variant,
+    bgColor,
+    color,
+    opacity,
+    borderRadius,
+    shadow,
+    coloredShadow
+  } = ownerState
 
   const { alerts, gradients, grey, white } = palette
   const { linearGradient } = functions
@@ -100,7 +108,9 @@ export default styled(Box)(({ theme, ownerState }) => {
       boxShadow: boxShadowValue
     }
   } else if (validColors.find((el) => el === bgColor)) {
-    backgroundValue = palette[bgColor] ? palette[bgColor].main : greyColors[bgColor]
+    backgroundValue = palette[bgColor]
+      ? palette[bgColor].main
+      : greyColors[bgColor]
   } else {
     backgroundValue = bgColor
   }

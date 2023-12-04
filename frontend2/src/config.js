@@ -8,7 +8,7 @@ const getConfig = (value, def) => {
   return def
 }
 
-function getApiBaseUrl () {
+function getApiBaseUrl() {
   // Split the hostname and current port (if any)
   const [hostname] = window.location.hostname.split(':')
 
@@ -24,10 +24,19 @@ const CONFIG = {
   KEYCLOAK: {
     REALM: getConfig('keycloak.realm', 'standard'),
     CLIENT_ID: getConfig('keycloak.client_id', 'tfrs-on-gold-4308'),
-    AUTH_URL: getConfig('keycloak.auth_url', 'https://dev.loginproxy.gov.bc.ca/auth'),
+    AUTH_URL: getConfig(
+      'keycloak.auth_url',
+      'https://dev.loginproxy.gov.bc.ca/auth'
+    ),
     CALLBACK_URL: getConfig('keycloak.callback_url', 'unconfigured'),
-    POST_LOGOUT_URL: getConfig('keycloak.post_logout_url', 'http://localhost:3000/'),
-    SM_LOGOUT_URL: getConfig('keycloak.siteminder_logout_url', 'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl=')
+    POST_LOGOUT_URL: getConfig(
+      'keycloak.post_logout_url',
+      'http://localhost:3000/'
+    ),
+    SM_LOGOUT_URL: getConfig(
+      'keycloak.siteminder_logout_url',
+      'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
+    )
   },
   DEBUG: {
     ENABLED: getConfig('debug.enabled', false)
@@ -44,14 +53,20 @@ const CONFIG = {
   },
   COMPLIANCE_REPORTING: {
     ENABLED: getConfig('compliance_reporting.enabled', false),
-    CREATE_EFFECTIVE_DATE: getConfig('compliance_reporting.create_effective_date', '2013-07-01')
+    CREATE_EFFECTIVE_DATE: getConfig(
+      'compliance_reporting.create_effective_date',
+      '2013-07-01'
+    )
   },
   CREDIT_CALCULATION_API: {
     ENABLED: getConfig('credit_calculation_api.enabled', false)
   },
   EXCLUSION_REPORTS: {
     ENABLED: getConfig('exclusion_reports.enabled', false),
-    CREATE_EFFECTIVE_DATE: getConfig('exclusion_reports.create_effective_date', '2013-07-01')
+    CREATE_EFFECTIVE_DATE: getConfig(
+      'exclusion_reports.create_effective_date',
+      '2013-07-01'
+    )
   }
 }
 

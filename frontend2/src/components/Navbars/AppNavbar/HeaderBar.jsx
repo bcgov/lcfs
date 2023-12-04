@@ -7,8 +7,16 @@ import { Icon, Toolbar } from '@mui/material'
 import logoLight from '@/assets/images/BCID_H_rgb_pos.png'
 import logoDark from '@/assets/images/gov3_bc_logo.png'
 
-const HeaderBar = props => {
-  const { isScrolled, org, showBalance, mobileNavbar, mobileView, toggleBalanceVisibility, openMobileNavbar } = props
+const HeaderBar = (props) => {
+  const {
+    isScrolled,
+    org,
+    showBalance,
+    mobileNavbar,
+    mobileView,
+    toggleBalanceVisibility,
+    openMobileNavbar
+  } = props
 
   return (
     <Toolbar
@@ -16,28 +24,54 @@ const HeaderBar = props => {
         palette: { transparent: transparentColor, white, primary },
         functions: { rgba }
       }) => ({
-        backgroundColor: (isScrolled
+        backgroundColor: isScrolled
           ? transparentColor.main
-          : rgba(primary.nav, 1)),
+          : rgba(primary.nav, 1),
         backdropFilter: 'saturate(200%) blur(30px)',
-        color: (isScrolled ? primary.main : white.main),
+        color: isScrolled ? primary.main : white.main,
         width: '100%'
-      })}>
-      <BCBox sx={{ flexGrow: 1 }} component='div'>
-        <BCBox sx={{ display: 'flex', alignItems: 'center' }} className='logo'>
-          <img src={isScrolled ? logoLight : logoDark} alt='BC Government' style={{ width: '160px', marginRight: '10px', height: 'auto' }} />
-          <BCTypography variant={mobileView ? 'h6' : 'h3'} component='div' className='application_title'>{org.title}</BCTypography>
+      })}
+    >
+      <BCBox sx={{ flexGrow: 1 }} component="div">
+        <BCBox sx={{ display: 'flex', alignItems: 'center' }} className="logo">
+          <img
+            src={isScrolled ? logoLight : logoDark}
+            alt="BC Government"
+            style={{ width: '160px', marginRight: '10px', height: 'auto' }}
+          />
+          <BCTypography
+            variant={mobileView ? 'h6' : 'h3'}
+            component="div"
+            className="application_title"
+          >
+            {org.title}
+          </BCTypography>
         </BCBox>
       </BCBox>
-      <BCBox display={{ xs: 'none', lg: 'flex' }} m={0} py={1} flexDirection='column'>
-        <BCTypography className='organization_name' variant='body1' align='right'>
+      <BCBox
+        display={{ xs: 'none', lg: 'flex' }}
+        m={0}
+        py={1}
+        flexDirection="column"
+      >
+        <BCTypography
+          className="organization_name"
+          variant="body1"
+          align="right"
+        >
           {org.organizationName}
         </BCTypography>
-        <BCBox component='div' className='organization_balance'>
+        <BCBox component="div" className="organization_balance">
           Balance:{' '}
-          <BCBox component='div' sx={{ display: 'inline-flex', alignItems: 'center' }}>
-            {showBalance && <div className='balance'>{org.balance}</div>}
-            <Icon style={{ fontSize: 20, cursor: 'pointer', margin: '5px' }} onClick={toggleBalanceVisibility}>
+          <BCBox
+            component="div"
+            sx={{ display: 'inline-flex', alignItems: 'center' }}
+          >
+            {showBalance && <div className="balance">{org.balance}</div>}
+            <Icon
+              style={{ fontSize: 20, cursor: 'pointer', margin: '5px' }}
+              onClick={toggleBalanceVisibility}
+            >
               {showBalance ? 'visibility' : 'visibility_off'}
             </Icon>
           </BCBox>
@@ -48,11 +82,11 @@ const HeaderBar = props => {
         lineHeight={0}
         py={1.5}
         pl={1.5}
-        color='inherit'
+        color="inherit"
         sx={{ cursor: 'pointer' }}
         onClick={openMobileNavbar}
       >
-        <Icon fontSize='default'>{mobileNavbar ? 'close' : 'menu'}</Icon>
+        <Icon fontSize="default">{mobileNavbar ? 'close' : 'menu'}</Icon>
       </BCBox>
     </Toolbar>
   )

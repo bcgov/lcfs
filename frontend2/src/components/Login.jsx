@@ -24,14 +24,19 @@ const Login = (props) => {
   }
   let showModal = false
 
-  if (!hideModal && (userAgent.indexOf('MSIE ') >= 0 || userAgent.indexOf('Trident/') >= 0)) {
+  if (
+    !hideModal &&
+    (userAgent.indexOf('MSIE ') >= 0 || userAgent.indexOf('Trident/') >= 0)
+  ) {
     showModal = true
   }
 
   return (
     <div id="login" data-test="login-container">
       <div id="header" className="login-lcfs-page-header">
-        <div id="header-wrapper" className="login-lcfs-page-header-text">Low Carbon Fuel Standard</div>
+        <div id="header-wrapper" className="login-lcfs-page-header-text">
+          Low Carbon Fuel Standard
+        </div>
       </div>
       <div className="login-lcfs-page">
         <div className="login-lcfs-brand" />
@@ -100,10 +105,13 @@ const Login = (props) => {
         </span>
         <div className="content">
           <p>
-            Internet Explorer is not fully supported,
-            certain features within LCFS will not work.
+            Internet Explorer is not fully supported, certain features within
+            LCFS will not work.
           </p>
-          <p>Please consider using a different browser such as Chrome, Firefox or Safari.</p>
+          <p>
+            Please consider using a different browser such as Chrome, Firefox or
+            Safari.
+          </p>
           <button
             onClick={() => {
               _closeModal()

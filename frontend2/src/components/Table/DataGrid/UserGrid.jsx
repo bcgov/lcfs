@@ -10,44 +10,48 @@ import StatusRenderer from './StatusRenderer'
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const UserGrid = (props) => {
-  const sideBar = useMemo(() =>
-    ['filters', 'columns']
-  , [])
+  const sideBar = useMemo(() => ['filters', 'columns'], [])
 
-  const columnDefs = useMemo(() => [
-    { field: 'name', editable: true },
-    { field: 'role', headerName: 'Role(s)' },
-    { field: 'email' },
-    { field: 'phone' },
-    {
-      field: 'status',
-      filter: 'agSetColumnFilter',
-      filterParams: {
-        values: ['Active', 'Inactive'],
-        buttons: ['apply', 'reset'],
-        filterOptions: ['equals'],
-        defaultOption: 'equals',
-        closeOnApply: true,
-        suppressAndOrCondition: true,
-        applyMiniFilterWhileTyping: true
-      },
-      // filter: true,
-      cellRenderer: StatusRenderer
-    }
-  ], [])
+  const columnDefs = useMemo(
+    () => [
+      { field: 'name', editable: true },
+      { field: 'role', headerName: 'Role(s)' },
+      { field: 'email' },
+      { field: 'phone' },
+      {
+        field: 'status',
+        filter: 'agSetColumnFilter',
+        filterParams: {
+          values: ['Active', 'Inactive'],
+          buttons: ['apply', 'reset'],
+          filterOptions: ['equals'],
+          defaultOption: 'equals',
+          closeOnApply: true,
+          suppressAndOrCondition: true,
+          applyMiniFilterWhileTyping: true
+        },
+        // filter: true,
+        cellRenderer: StatusRenderer
+      }
+    ],
+    []
+  )
 
   // never changes, so we can use useMemo
-  const defaultColDef = useMemo(() => ({
-    // flex: 1,
-    resizable: true,
-    sortable: true,
-    filter: true,
-    floatingFilter: true
-    // filterParams: {
-    //   buttons: ['apply', 'reset'],
-    //   closeOnApply: true,
-    // }
-  }), [])
+  const defaultColDef = useMemo(
+    () => ({
+      // flex: 1,
+      resizable: true,
+      sortable: true,
+      filter: true,
+      floatingFilter: true
+      // filterParams: {
+      //   buttons: ['apply', 'reset'],
+      //   closeOnApply: true,
+      // }
+    }),
+    []
+  )
 
   const [rowData, setRowData] = useState()
 
@@ -71,7 +75,7 @@ const UserGrid = (props) => {
         suppressRowClickSelection="true"
         pagination
         paginationPageSize={10}
-        domLayout='autoHeight'
+        domLayout="autoHeight"
         sideBar={sideBar}
       />
     </div>

@@ -24,9 +24,7 @@ const Dashboard = () => {
   const user = useUserStore((state) => state.user)
 
   const queryFn = () =>
-    apiService
-      .get('/users')
-      .then((response) => response.data)
+    apiService.get('/users').then((response) => response.data)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -40,18 +38,16 @@ const Dashboard = () => {
   if (isLoading) {
     content = <Loading />
   } else if (error) {
-    content = (
-      <div>
-        An error has occurred: {error.message}
-      </div>
-    )
+    content = <div>An error has occurred: {error.message}</div>
   } else {
     content = (
       <>
         <h2>User List</h2>
         <ul>
-          {data.map(user => (
-            <li key={user.id}>{user.display_name} : {user.title}</li>
+          {data.map((user) => (
+            <li key={user.id}>
+              {user.display_name} : {user.title}
+            </li>
           ))}
         </ul>
       </>

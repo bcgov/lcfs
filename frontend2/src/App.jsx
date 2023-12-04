@@ -51,9 +51,9 @@ const router = createBrowserRouter([
           {
             path: appRoutes.VIEW_USER,
             element: <ViewUsers />,
-            loader: data => data, // loader will pass data to useMatches
+            loader: (data) => data, // loader will pass data to useMatches
             handle: {
-              crumb: data => `User: ${data.params.userID}` // data from loader is passed into our crumb function so we can manipulate the output
+              crumb: (data) => `User: ${data.params.userID}` // data from loader is passed into our crumb function so we can manipulate the output
             }
           }
         ]
@@ -75,12 +75,21 @@ const router = createBrowserRouter([
           },
           {
             path: appRoutes.ADMINISTRATION_USERS,
-            element: <Paper elevation={5} sx={{ padding: '1rem', position: 'relative', minHeight: '80vh' }}>
-              <UserTabPanel />
-            </Paper>,
+            element: (
+              <Paper
+                elevation={5}
+                sx={{
+                  padding: '1rem',
+                  position: 'relative',
+                  minHeight: '80vh'
+                }}
+              >
+                <UserTabPanel />
+              </Paper>
+            ),
             // loader: data => data, // loader will pass data to useMatches
             handle: {
-              crumb: data => 'Users' // data from loader is passed into our crumb function so we can manipulate the output
+              crumb: (data) => 'Users' // data from loader is passed into our crumb function so we can manipulate the output
             }
           }
         ]

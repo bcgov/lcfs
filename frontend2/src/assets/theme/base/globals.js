@@ -46,7 +46,8 @@ const bcSansLightItalic = {
 }
 
 const globals = {
-  html: [{ scrollBehavior: 'smooth' },
+  html: [
+    { scrollBehavior: 'smooth' },
     { '@font-face': bcSansRegular },
     { '@font-face': bcSansBold },
     { '@font-face': bcSansBoldItalic },
@@ -77,7 +78,8 @@ const globals = {
     // '--ag-header-column-resize-handle-color': 'rgb(126, 46, 132)',
 
     '--ag-font-size': '17px',
-    '--ag-font-family': "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'"
+    '--ag-font-family':
+      "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'"
   }
 }
 

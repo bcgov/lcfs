@@ -11,7 +11,7 @@ const Header = () => {
           </a>
         </div>
         <div className="right">
-          <Logout/>
+          <Logout />
         </div>
       </div>
       <div className="title">

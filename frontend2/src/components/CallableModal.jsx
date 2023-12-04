@@ -3,12 +3,8 @@ import { Modal } from 'react-bootstrap'
 
 import * as Lang from '../constants/langEnUs'
 
-const CallableModal = props => (
-  <Modal
-    className={props.className}
-    show={props.show}
-    id={props.id}
-  >
+const CallableModal = (props) => (
+  <Modal className={props.className} show={props.show} id={props.id}>
     <Modal.Header className="modal-header">
       <button
         type="button"
@@ -18,13 +14,9 @@ const CallableModal = props => (
       >
         <span aria-hidden="true">&times;</span>
       </button>
-      <Modal.Title className="modal-title">
-        {props.title}
-      </Modal.Title>
+      <Modal.Title className="modal-title">{props.title}</Modal.Title>
     </Modal.Header>
-    <Modal.Body className="modal-body">
-      {props.children}
-    </Modal.Body>
+    <Modal.Body className="modal-body">{props.children}</Modal.Body>
     <Modal.Footer className="modal-footer">
       <button
         className="btn btn-default"
@@ -34,17 +26,17 @@ const CallableModal = props => (
       >
         {props.cancelLabel}
       </button>
-      {props.handleSubmit &&
-      <button
-        className="btn btn-primary"
-        data-dismiss="modal"
-        id="modal-yes"
-        onClick={props.handleSubmit}
-        type="button"
-      >
-        {props.confirmLabel}
-      </button>
-      }
+      {props.handleSubmit && (
+        <button
+          className="btn btn-primary"
+          data-dismiss="modal"
+          id="modal-yes"
+          onClick={props.handleSubmit}
+          type="button"
+        >
+          {props.confirmLabel}
+        </button>
+      )}
     </Modal.Footer>
   </Modal>
 )

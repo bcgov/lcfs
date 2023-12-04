@@ -19,10 +19,11 @@ const menuItem = {
       color: text.main,
       transition: 'background-color 300ms ease, color 300ms ease',
 
-      '&:hover, &:focus, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected:focus': {
-        backgroundColor: light.main,
-        color: dark.main
-      }
+      '&:hover, &:focus, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected:focus':
+        {
+          backgroundColor: light.main,
+          color: dark.main
+        }
     }
   }
 }

@@ -15,9 +15,9 @@ const Logout = () => {
           onClick={() => {
             logout()
           }}
-          color='light'
-          size='small'
-          variant='outlined'
+          color="light"
+          size="small"
+          variant="outlined"
         >
           Log out
         </BCButton>

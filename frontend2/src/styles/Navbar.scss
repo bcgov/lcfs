@@ -1,4 +1,4 @@
-@import "./_variables.scss";
+@import './_variables.scss';
 
 .level2Navigation .container,
 .level2Navigation .container-fluid {
@@ -24,7 +24,7 @@
     top: 0;
 
     > *:not(:first-child):after {
-      content: "";
+      content: '';
       background: $navbar-separator;
       position: absolute;
       bottom: 25%;

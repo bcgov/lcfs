@@ -10,14 +10,20 @@ export const hexToRgb = (color) => chroma(color).rgb().join(', ')
 export const rgba = (color, opacity) => `rgba(${hexToRgb(color)}, ${opacity})`
 
 // Linear Gradient function helps to create a linear gradient color background
-export const linearGradient = (color, colorState, angle = 195) => `linear-gradient(${angle}deg, ${color}, ${colorState})`
+export const linearGradient = (color, colorState, angle = 195) =>
+  `linear-gradient(${angle}deg, ${color}, ${colorState})`
 
-export const boxShadow = (offset = [], radius = [], color, opacity, inset = '') => {
+export const boxShadow = (
+  offset = [],
+  radius = [],
+  color,
+  opacity,
+  inset = ''
+) => {
   const [x, y] = offset
   const [blur, spread] = radius
 
-  return `${inset} ${pxToRem(x)} ${pxToRem(y)} ${pxToRem(blur)} ${pxToRem(spread)} ${rgba(
-    color,
-    opacity
-  )}`
+  return `${inset} ${pxToRem(x)} ${pxToRem(y)} ${pxToRem(blur)} ${pxToRem(
+    spread
+  )} ${rgba(color, opacity)}`
 }

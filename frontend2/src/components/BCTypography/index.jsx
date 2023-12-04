@@ -8,7 +8,16 @@ import BCTypographyRoot from '@/components/BCTypography/BCTypographyRoot'
 
 const BCTypography = forwardRef(
   (
-    { color, fontWeight, textTransform, verticalAlign, textGradient, opacity, children, ...rest },
+    {
+      color,
+      fontWeight,
+      textTransform,
+      verticalAlign,
+      textGradient,
+      opacity,
+      children,
+      ...rest
+    },
     ref
   ) => {
     return (
@@ -57,7 +66,12 @@ BCTypography.propTypes = {
     'white'
   ]),
   fontWeight: PropTypes.oneOf([false, 'light', 'regular', 'medium', 'bold']),
-  textTransform: PropTypes.oneOf(['none', 'capitalize', 'uppercase', 'lowercase']),
+  textTransform: PropTypes.oneOf([
+    'none',
+    'capitalize',
+    'uppercase',
+    'lowercase'
+  ]),
   verticalAlign: PropTypes.oneOf([
     'unset',
     'baseline',

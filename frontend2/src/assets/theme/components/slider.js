@@ -55,7 +55,9 @@ const slider = {
         transform: 'translate(-50%, -50%) scale(1.4)'
       },
 
-      '&.Mui-active': { boxShadow: boxShadow([0, 0], [0, 14], info.main, 0.16) }
+      '&.Mui-active': {
+        boxShadow: boxShadow([0, 0], [0, 14], info.main, 0.16)
+      }
     }
   }
 }

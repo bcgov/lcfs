@@ -23,7 +23,9 @@ const generateDummyData = () => {
 }
 
 export const ThirtyRows = () => (
-  <div style={{ width: '100%', height: '500px' }}> {/* Adjust height as needed */}
+  <div style={{ width: '100%', height: '500px' }}>
+    {' '}
+    {/* Adjust height as needed */}
     <UserTable rowData={generateDummyData()} />
   </div>
 )

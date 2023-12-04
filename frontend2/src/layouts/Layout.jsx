@@ -8,15 +8,16 @@ import { Outlet, Link as RouterLink, useMatches } from 'react-router-dom'
 const Layout = () => {
   const matches = useMatches()
   const crumbs = matches
-    .filter(match => Boolean(match.handle?.crumb))
-    .map(match => ({
+    .filter((match) => Boolean(match.handle?.crumb))
+    .map((match) => ({
       label: match.handle.crumb(match.data),
       path: match.pathname
     }))
 
   return (
     <>
-      <Grid container
+      <Grid
+        container
         rowSpacing={2}
         sx={{
           margin: '0',
@@ -25,7 +26,9 @@ const Layout = () => {
         }}
         columnSpacing={{ xs: 1, sm: 1, md: 1 }}
       >
-        <Grid item xs={12}
+        <Grid
+          item
+          xs={12}
           sx={{
             maxHeight: '20vh',
             position: 'relative',
@@ -41,11 +44,14 @@ const Layout = () => {
         </Grid>
         <Grid item my={12} lg={12}>
           <BCBox>
-            <Paper p={2} elevation={5} sx={{ padding: '1rem', minHeight: '5vh' }}>
+            <Paper
+              p={2}
+              elevation={5}
+              sx={{ padding: '1rem', minHeight: '5vh' }}
+            >
               <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
                 {crumbs.map((crumb, index) =>
-                  index + 1 !== crumbs.length
-                    ? (
+                  index + 1 !== crumbs.length ? (
                     <Link
                       key={crumb.path}
                       component={RouterLink}
@@ -54,16 +60,15 @@ const Layout = () => {
                     >
                       {crumb.label}
                     </Link>
-                      )
-                    : (
+                  ) : (
                     <span key={crumb.path}>{crumb.label}</span>
-                      )
+                  )
                 )}
               </Breadcrumbs>
             </Paper>
             <BCBox py={4}>
               <Outlet />
-              <Footer/>
+              <Footer />
             </BCBox>
           </BCBox>
         </Grid>

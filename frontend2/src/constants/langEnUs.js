@@ -56,27 +56,34 @@ export const BTN_EDIT_COMMENT = 'Edit Comment'
 export const BTN_LINK_CREDIT_TRANSACTION = 'Link Credit Transaction'
 export const BTN_CANCEL_LINK_CREDIT_TRANSACTION = 'Cancel'
 
-export const TEXT_COMMENT_PLACEHOLDER = 'Use this field to communicate relevant details'
-export const TEXT_COMMENT_PLACEHOLDER_PRIVILEGED = 'Use this field to provide background for ' +
-                                                   'recommendations or decisions'
-export const TEXT_COMMENT_DISCLOSURE = 'Information entered in this comment field will be ' +
-                                       'visible to both parties of the transaction and ' +
-                                       'government.'
-export const TEXT_COMMENT_DISCLOSURE_PRIVILEGED = 'Information entered in this comment field ' +
-                                                  'will be visible only to government users and ' +
-                                                  'not shared with fuel suppliers'
+export const TEXT_COMMENT_PLACEHOLDER =
+  'Use this field to communicate relevant details'
+export const TEXT_COMMENT_PLACEHOLDER_PRIVILEGED =
+  'Use this field to provide background for ' + 'recommendations or decisions'
+export const TEXT_COMMENT_DISCLOSURE =
+  'Information entered in this comment field will be ' +
+  'visible to both parties of the transaction and ' +
+  'government.'
+export const TEXT_COMMENT_DISCLOSURE_PRIVILEGED =
+  'Information entered in this comment field ' +
+  'will be visible only to government users and ' +
+  'not shared with fuel suppliers'
 export const TEXT_ADD_COMMENT_HEADING = 'Add Comment Form'
 export const TEXT_EDIT_COMMENT_HEADING = 'Editing Comment'
 export const TEXT_ADD_INITIAL_COMMENT = 'Add Comment'
-export const TEXT_ADD_INTERNAL_COMMENT_HEADING = 'Adding Government-Internal Comment'
+export const TEXT_ADD_INTERNAL_COMMENT_HEADING =
+  'Adding Government-Internal Comment'
 export const TEXT_VISIBLE_TO_GOV = 'Visible to government'
-export const TEXT_VISIBLE_TO_ALL = 'Visible to both fuel suppliers and government'
-export const TEXT_COMMENT_DIRTY = 'You are currently editing a comment. Save or Cancel before ' +
-                                  'performing other actions'
-export const TEXT_COMMENT_REQUIRED = 'Comment is required before a credit transaction can ' +
-                                     'be recommended'
+export const TEXT_VISIBLE_TO_ALL =
+  'Visible to both fuel suppliers and government'
+export const TEXT_COMMENT_DIRTY =
+  'You are currently editing a comment. Save or Cancel before ' +
+  'performing other actions'
+export const TEXT_COMMENT_REQUIRED =
+  'Comment is required before a credit transaction can ' + 'be recommended'
 
-export const TEXT_ERROR_INVALID_CHARACTER = 'Non-numeric characters are not allowed.'
+export const TEXT_ERROR_INVALID_CHARACTER =
+  'Non-numeric characters are not allowed.'
 export const TEXT_ERROR_MAX_DECIMALS = 'Cannot add more decimals.'
 export const TEXT_ERROR_MAX_VALUE = 'Cannot be more than :number.'
 export const TEXT_ERROR_MULTIPLE_DOTS = 'Multiple dots are not allowed.'

@@ -15,7 +15,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import BCBox from '@/components/BCBox'
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 
-function BCAlert ({ severity, dismissible, children, ...rest }) {
+function BCAlert({ severity, dismissible, children, ...rest }) {
   const [alertStatus, setAlertStatus] = useState('mount')
   const color = severity
   const handleAlertStatus = () => setAlertStatus('fadeOut')
@@ -24,18 +24,21 @@ function BCAlert ({ severity, dismissible, children, ...rest }) {
   const alertTemplate = (mount = true) => (
     <Fade in={mount} timeout={300}>
       <BCAlertRoot ownerState={{ color }} {...rest}>
-        <BCBox display="flex" alignItems="center" variant={severity} >
-          {severity === 'info' && (<InfoIcon style={{ margin: '5px' }} />)}
-          {severity === 'warning' && (<WarningIcon style={{ margin: '5px' }} />)}
-          {severity === 'error' && (<ErrorIcon style={{ margin: '5px' }} />)}
-          {severity === 'success' && (<CheckCircleIcon style={{ margin: '5px' }} />)}
+        <BCBox display="flex" alignItems="center" variant={severity}>
+          {severity === 'info' && <InfoIcon style={{ margin: '5px' }} />}
+          {severity === 'warning' && <WarningIcon style={{ margin: '5px' }} />}
+          {severity === 'error' && <ErrorIcon style={{ margin: '5px' }} />}
+          {severity === 'success' && (
+            <CheckCircleIcon style={{ margin: '5px' }} />
+          )}
           {children}
         </BCBox>
-        {dismissible
-          ? (
-          <CloseIcon onClick={mount ? handleAlertStatus : null} sx={{ cursor: 'pointer' }} />
-            )
-          : null}
+        {dismissible ? (
+          <CloseIcon
+            onClick={mount ? handleAlertStatus : null}
+            sx={{ cursor: 'pointer' }}
+          />
+        ) : null}
       </BCAlertRoot>
     </Fade>
   )
@@ -62,12 +65,7 @@ BCAlert.defaultProps = {
 
 // Typechecking props of the BCAlert
 BCAlert.propTypes = {
-  severity: PropTypes.oneOf([
-    'info',
-    'success',
-    'warning',
-    'error'
-  ]),
+  severity: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
   dismissible: PropTypes.bool,
   children: PropTypes.node.isRequired
 }

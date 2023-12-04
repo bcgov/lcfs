@@ -33,18 +33,21 @@ export default defineConfig({
     baseUrl: 'http://localhost:3000',
 
     // Node events and plugin configuration
-    setupNodeEvents (on, config) {
+    setupNodeEvents(on, config) {
       // Task for logging
       on('task', {
-        log (message) {
+        log(message) {
           console.log(message)
           return null
         }
       })
-      on('file:preprocessor', vitePreprocessor({
-        configFile: path.resolve(__dirname, './vite.config.js'),
-        mode: 'development'
-      }))
+      on(
+        'file:preprocessor',
+        vitePreprocessor({
+          configFile: path.resolve(__dirname, './vite.config.js'),
+          mode: 'development'
+        })
+      )
 
       return config
     }

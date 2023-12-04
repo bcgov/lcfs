@@ -7,11 +7,31 @@ import PropTypes from 'prop-types'
 import BCBoxRoot from '@/components/BCBox/BCBoxRoot'
 
 const BCBox = forwardRef(
-  ({ variant, bgColor, color, opacity, borderRadius, shadow, coloredShadow, ...rest }, ref) => (
+  (
+    {
+      variant,
+      bgColor,
+      color,
+      opacity,
+      borderRadius,
+      shadow,
+      coloredShadow,
+      ...rest
+    },
+    ref
+  ) => (
     <BCBoxRoot
       {...rest}
       ref={ref}
-      ownerState={{ variant, bgColor, color, opacity, borderRadius, shadow, coloredShadow }}
+      ownerState={{
+        variant,
+        bgColor,
+        color,
+        opacity,
+        borderRadius,
+        shadow,
+        coloredShadow
+      }}
     />
   )
 )
@@ -31,7 +51,14 @@ BCBox.defaultProps = {
 
 // Typechecking props for the BCBox
 BCBox.propTypes = {
-  variant: PropTypes.oneOf(['contained', 'gradient', 'success', 'warning', 'info', 'error']),
+  variant: PropTypes.oneOf([
+    'contained',
+    'gradient',
+    'success',
+    'warning',
+    'info',
+    'error'
+  ]),
   bgColor: PropTypes.string,
   color: PropTypes.string,
   opacity: PropTypes.number,

@@ -5,7 +5,7 @@ import { CURRENT_USER } from '../constants/routes'
 import useApiService from '../services/useApiService'
 import useUserStore from '../store/useUserStore'
 
-const fetchCurrentUser = async apiService => {
+const fetchCurrentUser = async (apiService) => {
   try {
     const response = await apiService.get(CURRENT_USER)
     console.log('User Response: ', response)
@@ -18,7 +18,7 @@ const fetchCurrentUser = async apiService => {
 
 const RequireAuth = ({ children, redirectTo }) => {
   const { keycloak, initialized } = useKeycloak()
-  const setUser = useUserStore(state => state.setUser)
+  const setUser = useUserStore((state) => state.setUser)
   const apiService = useApiService()
 
   const { isLoading, isError, error } = useQuery(
@@ -26,10 +26,10 @@ const RequireAuth = ({ children, redirectTo }) => {
     () => fetchCurrentUser(apiService),
     {
       enabled: !!keycloak.authenticated,
-      onSuccess: data => {
+      onSuccess: (data) => {
         setUser(data)
       },
-      onError: error => {
+      onError: (error) => {
         console.error('Query error:', error)
       },
       retry: false

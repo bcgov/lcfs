@@ -7,10 +7,32 @@ import PropTypes from 'prop-types'
 import BCBadgeRoot from '@/components/BCBadge/BCBadgeRoot'
 
 const BCBadge = forwardRef(
-  ({ color, variant, size, circular, indicator, border, container, children, ...rest }, ref) => (
+  (
+    {
+      color,
+      variant,
+      size,
+      circular,
+      indicator,
+      border,
+      container,
+      children,
+      ...rest
+    },
+    ref
+  ) => (
     <BCBadgeRoot
       {...rest}
-      ownerState={{ color, variant, size, circular, indicator, border, container, children }}
+      ownerState={{
+        color,
+        variant,
+        size,
+        circular,
+        indicator,
+        border,
+        container,
+        children
+      }}
       ref={ref}
       color="default"
     >

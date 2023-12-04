@@ -5,7 +5,7 @@ export default {
   component: BCAlert
 }
 
-const Template = (args) => <BCAlert {...args}/>
+const Template = (args) => <BCAlert {...args} />
 
 export const Default = Template.bind({})
 Default.args = {
@@ -32,7 +32,12 @@ export const WarningAlert = Template.bind({})
 WarningAlert.args = {
   ...Default.args,
   severity: 'warning',
-  children: <p>The <a>eligibility requirements</a> for this service have changed. Review the changes before continuing.</p>
+  children: (
+    <p>
+      The <a>eligibility requirements</a> for this service have changed. Review
+      the changes before continuing.
+    </p>
+  )
 }
 
 export const DismissableInfo = Template.bind({})

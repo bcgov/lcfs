@@ -14,12 +14,24 @@ const routes = [
   { icon: 'home', name: 'Dashboard', route: '/' },
   { icon: 'folder', name: 'document', route: '/document' },
   { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
-  { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
-  { icon: 'corporate_fare', name: 'Organization', route: '/organization/users/list' },
-  { icon: 'admin_panel_settings', name: 'Administration', route: '/administration/users' }
+  {
+    icon: 'assessment',
+    name: 'Compliance Report',
+    route: '/compliance-report'
+  },
+  {
+    icon: 'corporate_fare',
+    name: 'Organization',
+    route: '/organization/users/list'
+  },
+  {
+    icon: 'admin_panel_settings',
+    name: 'Administration',
+    route: '/administration/users'
+  }
 ]
 
-function AppNavbar (props) {
+function AppNavbar(props) {
   const [showBalance, setShowBalance] = useState(false)
   const isScrolled = useScrollTrigger()
   const toggleBalanceVisibility = () => {
@@ -27,12 +39,13 @@ function AppNavbar (props) {
   }
   const [mobileNavbar, setMobileNavbar] = useState(false)
   const [mobileView, setMobileView] = useState(false)
-  const openMobileNavbar = ({ currentTarget }) => setMobileNavbar(currentTarget.parentNode)
+  const openMobileNavbar = ({ currentTarget }) =>
+    setMobileNavbar(currentTarget.parentNode)
   const closeMobileNavbar = () => setMobileNavbar(false)
 
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
-    function displayMobileNavbar () {
+    function displayMobileNavbar() {
       if (window.innerWidth < breakpoints.values.lg) {
         setMobileView(true)
         setMobileNavbar(false)
@@ -58,8 +71,9 @@ function AppNavbar (props) {
 
   return (
     <BCBox py={0}>
-      <AppBar postition='sticky'
-        component='nav'
+      <AppBar
+        postition="sticky"
+        component="nav"
         color={isScrolled ? 'transparent' : 'inherit'}
         elevation={isScrolled ? 5 : 0}
       >
@@ -70,24 +84,28 @@ function AppNavbar (props) {
           mobileView={mobileView}
           toggleBalanceVisibility={toggleBalanceVisibility}
           openMobileNavbar={openMobileNavbar}
-          mobileNavbar={mobileNavbar} />
+          mobileNavbar={mobileNavbar}
+        />
         <Divider
-          orientation='vertical'
+          orientation="vertical"
           flexItem
           sx={({ palette: { secondary } }) => ({
-            backgroundColor: secondary.main, padding: '1px'
+            backgroundColor: secondary.main,
+            padding: '1px'
           })}
         />
-        {mobileView
-          ? <DefaultNavbarMobile
+        {mobileView ? (
+          <DefaultNavbarMobile
             open={mobileNavbar}
             close={closeMobileNavbar}
             light={true}
-            links={routes} />
-          : <MenuBar isScrolled={isScrolled} routes={routes} />
-        }
+            links={routes}
+          />
+        ) : (
+          <MenuBar isScrolled={isScrolled} routes={routes} />
+        )}
       </AppBar>
-    </BCBox >
+    </BCBox>
   )
 }
 

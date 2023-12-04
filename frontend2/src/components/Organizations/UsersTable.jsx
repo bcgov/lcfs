@@ -24,16 +24,19 @@ const UserTable = ({ rowData = [] }) => {
     { headerName: 'Status', field: 'status' }
   ]
 
-  const defaultColDef = useMemo(() => ({
-    resizable: true,
-    sortable: true,
-    filter: true,
-    floatingFilter: true,
-    filterParams: {
-      buttons: ['apply', 'reset'],
-      closeOnApply: true
-    }
-  }), [])
+  const defaultColDef = useMemo(
+    () => ({
+      resizable: true,
+      sortable: true,
+      filter: true,
+      floatingFilter: true,
+      filterParams: {
+        buttons: ['apply', 'reset'],
+        closeOnApply: true
+      }
+    }),
+    []
+  )
 
   return (
     <div className="ag-theme-alpine" style={{ width: '100%', height: '100%' }}>
@@ -48,7 +51,7 @@ const UserTable = ({ rowData = [] }) => {
         suppressRowClickSelection="true"
         pagination
         paginationPageSize={10}
-        domLayout='autoHeight'
+        domLayout="autoHeight"
         sideBar={sideBar}
       />
     </div>

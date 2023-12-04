@@ -12,7 +12,7 @@ import Icon from '@mui/material/Icon'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-function DefaultNavbarLink ({ icon, name, route, light }) {
+function DefaultNavbarLink({ icon, name, route, light }) {
   const [hover, setHover] = useState(false)
   return (
     <BCBox
@@ -22,9 +22,7 @@ function DefaultNavbarLink ({ icon, name, route, light }) {
       p={1}
       display="flex"
       alignItems="center"
-      sx={({
-        transitions
-      }) => ({
+      sx={({ transitions }) => ({
         cursor: 'pointer',
         userSelect: 'none',
         '&:hover': {
@@ -41,7 +39,8 @@ function DefaultNavbarLink ({ icon, name, route, light }) {
     >
       <Icon
         sx={{
-          color: ({ palette: { secondary, primary } }) => (light ? primary.main : secondary.main),
+          color: ({ palette: { secondary, primary } }) =>
+            light ? primary.main : secondary.main,
           verticalAlign: 'middle'
         }}
       >
