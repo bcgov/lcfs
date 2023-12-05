@@ -126,7 +126,7 @@ context('Network Requests', () => {
   it('cy.intercept() - route responses to matching requests', () => {
     // https://on.cypress.io/intercept
 
-    let message = 'whoa, this comment does not exist'
+    const message = 'whoa, this comment does not exist'
 
     // Listen to GET to comments/1
     cy.intercept('GET', '**/comments/*').as('getComment')

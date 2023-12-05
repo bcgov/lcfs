@@ -2,7 +2,7 @@
 import Button from '@mui/material/Button'
 import { styled } from '@mui/material/styles'
 
-export default styled(Button)(({ theme, ownerState }) => {
+const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme
   const { color, variant, size, circular, iconOnly } = ownerState
   console.log(functions)
@@ -276,3 +276,5 @@ export default styled(Button)(({ theme, ownerState }) => {
     ...(iconOnly && iconOnlyStyles())
   }
 })
+
+export default BCButtonRoot
