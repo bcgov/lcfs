@@ -32,10 +32,14 @@ const LCFSLogin = () => {
   const currentDate = new Date()
 
   return (
-    <LoginLayout season={getSeason(currentDate)}>
-      <Card
+    <LoginLayout season={'winter'}>
+      <Card 
+        className="login"
         sx={{
-          background: 'rgba(255, 255, 255, 0.8)',
+          background: 'rgba(255, 255, 255, 0.2)',
+          backdropFilter: 'blur(10px)',
+          bordeRadius: '15px',
+          border: '1px solid rgba(43, 43, 43, 0.568)',
         }}
       >
         <BCBox
@@ -75,8 +79,8 @@ const LCFSLogin = () => {
               </BCButton>
             </BCBox>
             <BCBox mt={4} mb={1}>
-              <BCButton variant="outlined"
-                color="primary"
+              <BCButton variant="contained"
+                color="light"
                 onClick={() => {
                   keycloak.login({
                     idpHint: IDENTITY_PROVIDERS.IDIR,
@@ -87,7 +91,6 @@ const LCFSLogin = () => {
                 className="button"
                 data-test="link-idir"
                 size='large'
-                sx={{ textAlign: 'right' }}
                 fullWidth>
                 <BCTypography variant="h5" color="text" sx={{ fontWeight: '400' }}>
                   Login with&nbsp;
@@ -96,7 +99,7 @@ const LCFSLogin = () => {
               </BCButton>
             </BCBox>
             <BCBox mt={3} mb={1} textAlign="center">
-              <BCTypography variant="button" color="text">
+              <BCButton variant="contained" color="dark" size="small">
                 {" "}
                 <Link
                   component="button"
@@ -104,16 +107,16 @@ const LCFSLogin = () => {
                   to="/contact-us"
                   fontWeight="medium"
                 >
-                  <BCTypography variant="button" color="info" fontSize='1.15rem'>
+                  <BCTypography variant="button" color="light" fontSize='1.15rem'>
                     Trouble logging in?
                   </BCTypography>
                 </Link>
-              </BCTypography>
+              </BCButton>
             </BCBox>
           </BCBox>
         </BCBox>
       </Card>
-    </LoginLayout>
+    </LoginLayout >
   )
 }
 

@@ -7,7 +7,7 @@ import BCSansLightTTF from 'assets/fonts/BCSans-Light_2f.woff2';
 import BCSansLightItalicTTF from 'assets/fonts/BCSans-LightItalic_2f.woff2';
 import bceidImg from 'assets/images/bceid.png';
 
-const { info, link, text, background } = colors;
+const { info, link, text, background, primary, light } = colors;
 
 const bcSansRegular = {
   fontFamily: "BCSans",
@@ -90,6 +90,13 @@ const globals = {
     backgroundSize: 'contain',
     height: '1.15rem',
     width: '6rem',
+  },
+  '#link-idir': {
+    textAlign: 'right',
+    color: `${primary.main}`,
+    '&:hover': {
+      color: `${light.main}`
+    }
   },
 };
 

@@ -7,7 +7,7 @@ import MenuBarComponent from './components/MenuBarComponent';
 // Nav Links
 const routes = [
   { icon: 'home', name: 'Dashboard', route: '/' },
-  { icon: 'folder', name: 'document', route: '/document' },
+  { icon: 'folder', name: 'Document', route: '/document' },
   { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
   { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
   { icon: 'corporate_fare', name: 'Organization', route: '/organization' },
@@ -21,6 +21,7 @@ const Navbar = () => {
       balance="50,000"
       organizationName="BC Government"
       routes={routes}
+      beta={false}
       headerRightPart={<HeaderComponent key='headerRight' />}
       menuRightPart={<MenuBarComponent key='menRight' />}
     />
