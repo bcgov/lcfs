@@ -9,6 +9,7 @@ const { transparent, info } = colors
 const checkbox = {
   styleOverrides: {
     root: {
+      padding: 0,
       '& .MuiSvgIcon-root': {
         backgroundPosition: 'center',
         backgroundSize: 'contain',
@@ -26,6 +27,12 @@ const checkbox = {
 
       '&.Mui-focusVisible': {
         border: `${borderWidth[2]} solid ${info.main} !important`
+      },
+      '& .MuiSvgIcon-fontSizeMedium': {
+        borderColor: colors.grey[700]
+      },
+      '&.Mui-disabled .MuiSvgIcon-fontSizeMedium': {
+        borderColor: colors.grey[500]
       }
     },
 

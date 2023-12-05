@@ -49,7 +49,8 @@ const colors = {
   },
   // Backgrounds
   background: {
-    default: '#f2f2f2', // Used for backgrounds
+    default: '#ffffff', // Used for backgrounds
+    grey: '#f2f2f2',
     nav: '#38598a', // Used for Nav bar
     opaque: 'transparent',
     paper: '#F3F6F9'

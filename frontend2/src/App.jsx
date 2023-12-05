@@ -13,30 +13,39 @@ import UserTabPanel from '@/layouts/admin/UserTabPanel'
 import BCTypography from '@/components/BCTypography'
 import ContactUs from '@/components/ContactUs'
 import Login from '@/components/Login'
-import RequireAuth from '@/components/RequireAuth'
 
 // Views
+import { EditUser } from '@/views/editUser'
+import ApiDocs from '@/components/ApiDocs'
 import { ViewUsers } from '@/views/viewUsers'
 
 const router = createBrowserRouter([
   {
     path: appRoutes.DASHBOARD,
     element: (
-      <RequireAuth redirectTo={appRoutes.LOGIN}>
-        <Layout>
-          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
-            Welcome to the Dashboard!
-          </BCTypography>
-        </Layout>
-      </RequireAuth>
-    )
+      <Layout>
+        <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+          Welcome to the Dashboard!
+        </BCTypography>
+      </Layout>
+    ),
+    handle: {
+      crumb: () => 'Dashboard'
+    }
+  },
+  {
+    path: appRoutes.DOCS,
+    element: <ApiDocs />,
+    handle: {
+      crumb: () => 'Docs'
+    }
   },
   {
     path: appRoutes.LOGIN,
     element: <Login />
   },
   {
-    element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
+    element: <Layout crumbs />, // wraps all routes listed in children. add in auth check here for convienience.
     children: [
       {
         path: appRoutes.ORGANIZATION,
@@ -49,7 +58,7 @@ const router = createBrowserRouter([
             element: <></>
           },
           {
-            path: appRoutes.VIEW_USER,
+            path: appRoutes.ORGANIZATION_USER,
             element: <ViewUsers />,
             loader: (data) => data, // loader will pass data to useMatches
             handle: {
@@ -57,12 +66,7 @@ const router = createBrowserRouter([
             }
           }
         ]
-      }
-    ]
-  },
-  {
-    element: <Layout />, // wraps all routes listed in children. add in auth check here for convienience.
-    children: [
+      },
       {
         path: appRoutes.ADMINISTRATION,
         handle: {
@@ -96,14 +100,23 @@ const router = createBrowserRouter([
       }
     ]
   },
-  // // Public Routes Setup
-  // // This sets up a shared layout (PublicLayout) for all public-facing pages.
+  // Public Routes Setup
+  // This sets up a shared layout (PublicLayout) for all public-facing pages.
   {
     element: <PublicLayout />,
     children: [
       {
         path: appRoutes.CONTACT_US,
         element: <ContactUs />
+      }
+    ]
+  },
+  {
+    element: <Layout />,
+    children: [
+      {
+        path: appRoutes.EDIT_USER,
+        element: <EditUser />
       }
     ]
   }

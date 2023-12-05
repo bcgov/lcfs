@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 import { Modal } from 'react-bootstrap'
 
-import * as Lang from '../constants/langEnUs'
+import * as Lang from '@/constants/langEnUs'
 
 const CallableModal = (props) => (
   <Modal className={props.className} show={props.show} id={props.id}>

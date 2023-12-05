@@ -2,7 +2,7 @@
 import Badge from '@mui/material/Badge'
 import { styled } from '@mui/material/styles'
 
-export default styled(Badge)(({ theme, ownerState }) => {
+const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
   const { palette, typography, borders, functions } = theme
   const {
     color,
@@ -128,3 +128,5 @@ export default styled(Badge)(({ theme, ownerState }) => {
     }
   }
 })
+
+export default BCBadgeRoot

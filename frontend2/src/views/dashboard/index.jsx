@@ -1,7 +1,7 @@
 import { useQuery } from 'react-query'
-import Loading from '../../components/Loading'
-import useApiService from '../../services/useApiService'
-import useUserStore from '../../store/useUserStore'
+import Loading from '@/components/Loading'
+import useApiService from '@/services/useApiService'
+import useUserStore from '@/store/useUserStore'
 
 // const testData = async () => {
 //   const testData = [

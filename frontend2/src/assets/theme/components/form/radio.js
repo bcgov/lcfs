@@ -8,6 +8,7 @@ const { transparent, info } = colors
 const radio = {
   styleOverrides: {
     root: {
+      padding: 0,
       '& .MuiSvgIcon-root': {
         width: pxToRem(20),
         height: pxToRem(20),
@@ -38,6 +39,12 @@ const radio = {
 
       '&.Mui-focusVisible': {
         border: `${borderWidth[2]} solid ${info.main} !important`
+      },
+      '& .MuiSvgIcon-fontSizeMedium': {
+        borderColor: colors.grey[700]
+      },
+      '&.Mui-disabled .MuiSvgIcon-fontSizeMedium': {
+        borderColor: colors.grey[500]
       }
     },
 

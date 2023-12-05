@@ -3,22 +3,25 @@ import typography from '@/assets/theme/base/typography'
 import { pxToRem } from '@/assets/theme/utils'
 
 const { dark } = colors
-const { size, fontWeightBold } = typography
+const { size } = typography
 
 const formControlLabel = {
   styleOverrides: {
     root: {
-      display: 'block',
+      display: 'flex',
+      alignItems: 'start',
+      gap: 8,
       minHeight: pxToRem(24),
-      marginBottom: pxToRem(2)
+      marginBottom: pxToRem(2),
+      marginLeft: 0,
+      marginRight: 0
     },
 
     label: {
       display: 'inline-block',
-      fontSize: size.sm,
-      fontWeight: fontWeightBold,
+      fontSize: size.md,
       color: dark.main,
-      lineHeight: 1,
+      lineHeight: '22px',
       transform: `translateY(${pxToRem(1)})`,
       marginLeft: pxToRem(4),
 

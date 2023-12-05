@@ -2,7 +2,7 @@
 import Box from '@mui/material/Box'
 import { styled } from '@mui/material/styles'
 
-export default styled(Box)(({ theme, ownerState }) => {
+const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme
   const {
     variant,
@@ -123,3 +123,4 @@ export default styled(Box)(({ theme, ownerState }) => {
     boxShadow: boxShadowValue
   }
 })
+export default BCBoxRoot

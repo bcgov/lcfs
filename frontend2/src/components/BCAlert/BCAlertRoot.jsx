@@ -2,7 +2,7 @@
 import Box from '@mui/material/Box'
 import { styled } from '@mui/material/styles'
 
-export default styled(Box)(({ theme, ownerState }) => {
+const BCAlertRoot = styled(Box)(({ theme, ownerState }) => {
   const { palette, typography, borders, functions } = theme
   const { color } = ownerState
 
@@ -31,3 +31,5 @@ export default styled(Box)(({ theme, ownerState }) => {
     fontWeight: fontWeightMedium
   }
 })
+
+export default BCAlertRoot

@@ -1,13 +1,15 @@
 import BCBox from '@/components/BCBox'
 import Footer from '@/components/Footer'
 import AppNavbar from '@/components/Navbars/AppNavbar'
-import NavigateNextIcon from '@mui/icons-material/NavigateNext'
+import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
 import { Breadcrumbs, Grid, Link, Paper } from '@mui/material'
 import { Outlet, Link as RouterLink, useMatches } from 'react-router-dom'
+import RequireAuth from '@/components/RequireAuth'
+import * as appRoutes from '@/constants/routes'
 
-const Layout = () => {
+const Layout = ({ crumbs }) => {
   const matches = useMatches()
-  const crumbs = matches
+  const breadcrumbs = matches
     .filter((match) => Boolean(match.handle?.crumb))
     .map((match) => ({
       label: match.handle.crumb(match.data),
@@ -15,7 +17,7 @@ const Layout = () => {
     }))
 
   return (
-    <>
+    <RequireAuth redirectTo={appRoutes.LOGIN}>
       <Grid
         container
         rowSpacing={2}
@@ -44,28 +46,30 @@ const Layout = () => {
         </Grid>
         <Grid item my={12} lg={12}>
           <BCBox>
-            <Paper
-              p={2}
-              elevation={5}
-              sx={{ padding: '1rem', minHeight: '5vh' }}
-            >
-              <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-                {crumbs.map((crumb, index) =>
-                  index + 1 !== crumbs.length ? (
-                    <Link
-                      key={crumb.path}
-                      component={RouterLink}
-                      to={crumb.path}
-                      disabled={true}
-                    >
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span key={crumb.path}>{crumb.label}</span>
-                  )
-                )}
-              </Breadcrumbs>
-            </Paper>
+            {crumbs && (
+              <Paper
+                p={2}
+                elevation={5}
+                sx={{ padding: '1rem', minHeight: '5vh' }}
+              >
+                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
+                  {breadcrumbs.map((crumb, index) =>
+                    index + 1 !== breadcrumbs.length ? (
+                      <Link
+                        key={crumb.path}
+                        component={RouterLink}
+                        to={crumb.path}
+                        disabled={true}
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span key={crumb.path}>{crumb.label}</span>
+                    )
+                  )}
+                </Breadcrumbs>
+              </Paper>
+            )}
             <BCBox py={4}>
               <Outlet />
               <Footer />
@@ -73,7 +77,7 @@ const Layout = () => {
           </BCBox>
         </Grid>
       </Grid>
-    </>
+    </RequireAuth>
   )
 }
 export default Layout

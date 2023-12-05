@@ -15,13 +15,13 @@
   &:hover {
     background-color: #38598a;
   }
-  
+
   .text {
     display: inline-block;
     font-family: $font-family;
     vertical-align: middle;
   }
-  
+
   .display-name {
     background-image: url('../assets/images/bceid.png');
     background-position-x: left;
@@ -128,7 +128,7 @@
         z-index: 1000;
       }
 
-      &.fa-internet-explorer  {
+      &.fa-internet-explorer {
         position: absolute;
         color: $ie-blue;
         bottom: 0;
@@ -192,9 +192,9 @@
     top: 50%;
     transform: translateY(-50%);
     -webkit-transform: translateY(-50%);
-       -moz-transform: translateY(-50%);
-        -ms-transform: translateY(-50%);
-         -o-transform: translateY(-50%);
+    -moz-transform: translateY(-50%);
+    -ms-transform: translateY(-50%);
+    -o-transform: translateY(-50%);
   }
 }
 
@@ -243,13 +243,14 @@
 }
 
 @media (max-width: 768px) {
-  #link-bceid, #link-idir {
+  #link-bceid,
+  #link-idir {
     font-size: 4vw;
   }
 
   #link-bceid .display-name {
-      height: 100%;
-      width: 20vw;
+    height: 100%;
+    width: 20vw;
   }
 
   .login-lcfs-page {

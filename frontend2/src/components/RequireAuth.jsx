@@ -1,9 +1,9 @@
 import { useKeycloak } from '@react-keycloak/web'
 import { useQuery } from 'react-query'
 import { Navigate } from 'react-router-dom'
-import { CURRENT_USER } from '../constants/routes'
-import useApiService from '../services/useApiService'
-import useUserStore from '../store/useUserStore'
+import { CURRENT_USER } from '@/constants/routes'
+import useApiService from '@/services/useApiService'
+import useUserStore from '@/store/useUserStore'
 
 const fetchCurrentUser = async (apiService) => {
   try {

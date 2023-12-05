@@ -4,7 +4,7 @@ import typography from '@/assets/theme/base/typography'
 
 import { pxToRem } from '@/assets/theme/utils'
 
-const { inputBorderColor, info, grey, transparent } = colors
+const { inputBorderColor, info, grey, transparent, background } = colors
 const { borderRadius } = borders
 const { size } = typography
 
@@ -14,6 +14,7 @@ const inputOutlined = {
       backgroundColor: transparent.main,
       fontSize: size.sm,
       borderRadius: borderRadius.md,
+      overflow: 'hidden',
 
       '&:hover .MuiOutlinedInput-notchedOutline': {
         borderColor: inputBorderColor
@@ -33,7 +34,7 @@ const inputOutlined = {
     input: {
       color: grey[700],
       padding: pxToRem(12),
-      backgroundColor: transparent.main
+      backgroundColor: background.default
     },
 
     inputSizeSmall: {
