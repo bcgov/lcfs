@@ -35,8 +35,18 @@ const MenuBar = props => {
       >
         {routes.map((route) => (
           <React.Fragment key={route.name}>
-            <DefaultNavbarLink icon={route.icon} name={route.name} route={route.route} light={isScrolled} />
-            <Divider orientation='vertical' variant='middle' flexItem sx={({ palette: { white } }) => ({ backgroundColor: white.main })} />
+            <DefaultNavbarLink
+              icon={route.icon}
+              name={route.name}
+              route={route.route}
+              light={isScrolled}
+            />
+            <Divider
+              orientation='vertical'
+              variant='middle'
+              flexItem
+              sx={({ palette: { secondary } }) => ({ backgroundColor: secondary.main })}
+            />
           </React.Fragment>
         ))}
       </BCBox >

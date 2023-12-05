@@ -31,12 +31,22 @@ export default function OrganizationLayout() {
       }}
     >
       <BCTypography variant='h3'>Organizations</BCTypography>
-      <BCBox sx={{ display: 'flex', alignItems: 'flex-start', textTransform: 'none' }} my={2}>
+      <BCBox
+        sx={{
+          display: 'flex',
+          flexDirection: 'row', // default layout is row
+          flexWrap: 'wrap', // allow items to wrap to the next row
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start',
+          textTransform: 'none',
+        }}
+        my={2}
+      >
         <BCButton
           variant='contained'
           size='large'
           color='primary'
-          sx={{ textTransform: 'none' }}
+          sx={{ textTransform: 'none', marginRight: '8px', marginBottom: '8px' }}
           startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
           onClick={() => { }}
         >
@@ -46,7 +56,7 @@ export default function OrganizationLayout() {
           variant='outlined'
           size='large'
           color='primary'
-          sx={{ textTransform: 'none', marginLeft: '16px' }}
+          sx={{ textTransform: 'none', marginRight: '8px', marginBottom: '8px', whiteSpace: 'nowrap' }}
           startIcon={<FontAwesomeIcon icon={faFileExcel} />}
           onClick={() => { }}
         >
@@ -56,7 +66,7 @@ export default function OrganizationLayout() {
           variant='outlined'
           size='large'
           color='primary'
-          sx={{ textTransform: 'none', marginLeft: '16px' }}
+          sx={{ textTransform: 'none', marginRight: '8px', marginBottom: '8px' }}
           startIcon={<FontAwesomeIcon icon={faFileExcel} />}
           onClick={() => { }}
         >

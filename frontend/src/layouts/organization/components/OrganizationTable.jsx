@@ -28,7 +28,6 @@ const OrganizationTable = (props) => {
         animateRows="true"
         columnDefs={columnDefs}
         defaultColDef={defaultColDef}
-        enableRangeSelection="true"
         rowData={rowData}
         rowSelection="multiple"
         suppressRowClickSelection="true"

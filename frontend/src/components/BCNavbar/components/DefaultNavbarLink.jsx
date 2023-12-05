@@ -3,7 +3,7 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 
 // react-router-dom components
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 // @mui material components
 import Icon from "@mui/material/Icon";
@@ -16,19 +16,28 @@ function DefaultNavbarLink({ icon, name, route, light }) {
   const [hover, setHover] = useState(false);
   return (
     <BCBox
-      component={Link}
+      component={NavLink}
+      className='NavLink'
+      activeClassName="active"
       to={route}
       mx={1}
       p={1}
       display="flex"
       alignItems="center"
       sx={({
-        transitions
+        transitions,
+        palette: { secondary, primary },
       }) => ({
         cursor: "pointer",
         userSelect: "none",
+        minHeight: "2.5rem",
+        paddingBottom: "14px",
         "&:hover": {
-          backgroundColor: hover ? "rgba(0, 0, 0, 0.1)" : "transparent",
+          backgroundColor: hover ? "rgba(0, 0, 0, 0.3)" : "transparent",
+        },
+        "&.active": {
+          borderBottom: "3px solid #fcc219",
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
         },
         transform: "translateX(0)",
         transition: transitions.create("transform", {
@@ -39,20 +48,26 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <Icon
+      {icon && <Icon
         sx={{
           color: ({ palette: { secondary, primary } }) => (light ? primary.main : secondary.main),
           verticalAlign: "middle",
         }}
       >
         {icon}
-      </Icon>
+      </Icon>}
       <BCTypography
         variant="body2"
         fontWeight="light"
         color={light ? "primary" : "white"}
         textTransform="capitalize"
-        sx={{ width: "100%", lineHeight: 0 }}
+        sx={{
+          width: "100%",
+          lineHeight: 0,
+          "&:hover": {
+            textDecoration: "underline",
+          }
+        }}
       >
         &nbsp;{name}
       </BCTypography>

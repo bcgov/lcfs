@@ -282,7 +282,6 @@ const moduleRules = [
   },
   {
     test: /\.ico$/,
-    test: /\.ico$/,
     issuer: /\/src\/assets\/staticPages\//,
     type: 'asset',
   },

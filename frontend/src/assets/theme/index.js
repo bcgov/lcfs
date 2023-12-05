@@ -89,7 +89,6 @@ export default createTheme({
     MuiCard: { ...card },
     MuiCardMedia: { ...cardMedia },
     MuiCardContent: { ...cardContent },
-    MuiButton: { ...button },
     MuiIconButton: { ...iconButton },
     MuiInput: { ...input },
     MuiInputLabel: { ...inputLabel },

@@ -4,6 +4,8 @@ import { Outlet, useMatches, Link as RouterLink } from 'react-router-dom';
 import { Paper, Grid, Breadcrumbs, Link, Container } from '@mui/material';
 import BCBox from 'components/BCBox';
 import Footer from 'components/Footer';
+import BCTypography from 'components/BCTypography';
+
 import Navbar from 'layouts/navbar/Navbar';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import RequireAuth from 'components/RequireAuth';
@@ -48,21 +50,21 @@ const Layout = ({ crumbs }) => {
               <Paper
                 p={2}
                 elevation={5}
-                sx={{ padding: '1rem', minHeight: '5vh' }}
+                sx={{ padding: '8px', height: '50px' }}
               >
                 <Breadcrumbs separator={<NavigateNextIcon fontSize='small' />}>
                   {breadcrumbs.map((crumb, index) =>
                     index + 1 !== breadcrumbs.length ? (
-                      <Link
+                      <BCTypography
                         key={crumb.path}
                         component={RouterLink}
                         to={crumb.path}
                         disabled={true}
                       >
                         {crumb.label}
-                      </Link>
+                      </BCTypography>
                     ) : (
-                      <span key={crumb.path}>{crumb.label}</span>
+                      <BCTypography key={crumb.path}>{crumb.label}</BCTypography>
                     ),
                   )}
                 </Breadcrumbs>

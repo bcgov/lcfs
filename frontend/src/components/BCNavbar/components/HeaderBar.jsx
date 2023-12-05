@@ -56,7 +56,7 @@ const HeaderBar = props => {
       >
         <Icon fontSize='default'>{mobileNavbar ? 'close' : 'menu'}</Icon>
       </BCBox>
-    </Toolbar >
+    </Toolbar>
   )
 }
 

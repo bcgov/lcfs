@@ -31,7 +31,6 @@ const UserGrid = (props) => {
         suppressAndOrCondition: true,
         applyMiniFilterWhileTyping: true,
       },
-      filter: true,
       cellRenderer: StatusRenderer,
     },
   ], []);

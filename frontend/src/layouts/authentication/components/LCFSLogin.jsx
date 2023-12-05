@@ -20,23 +20,10 @@ function getSeason(date) {
   const month = date.getMonth() + 1; // Months are zero-indexed
   const day = date.getDate();
 
-  if ((month === 3 && day >= 20) || (month > 3 && month < 6) || (month === 6 && day <= 20)) {
-    return 'spring';
-  } else if (
-    (month === 6 && day >= 21) ||
-    (month > 6 && month < 9) ||
-    (month === 9 && day <= 21)
-  ) {
-    return 'summer';
-  } else if (
-    (month === 9 && day >= 22) ||
-    (month > 9 && month < 12) ||
-    (month === 12 && day <= 20)
-  ) {
-    return 'autumn';
-  } else {
-    return 'winter';
-  }
+  return (month === 3 && day >= 20) || (month > 3 && month < 6) || (month === 6 && day <= 20) ? 'spring'
+    : (month === 6 && day >= 21) || (month > 6 && month < 9) || (month === 9 && day <= 21) ? 'summer'
+      : (month === 9 && day >= 22) || (month > 9 && month < 12) || (month === 12 && day <= 20) ? 'autumn'
+        : 'winter';
 }
 
 const LCFSLogin = () => {

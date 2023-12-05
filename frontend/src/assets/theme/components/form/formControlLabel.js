@@ -3,7 +3,7 @@ import typography from 'assets/theme/base/typography';
 import { pxToRem } from 'assets/theme/utils';
 
 const { dark } = colors;
-const { size, fontWeightBold } = typography;
+const { size } = typography;
 
 const formControlLabel = {
   styleOverrides: {

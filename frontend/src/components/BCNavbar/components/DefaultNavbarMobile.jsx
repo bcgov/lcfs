@@ -12,6 +12,11 @@ import DefaultNavbarLink from "components/BCNavbar/components/DefaultNavbarLink"
 
 function DefaultNavbarMobile({ open, close, links, light }) {
   const { width } = open && open.getBoundingClientRect();
+  const handleMenuItemClick = (e) => {
+    // Close the menu when a menu item is clicked
+    console.log(e.target.getAttribute("href"));
+    close();
+  };
 
   return (
     <Menu
@@ -31,7 +36,14 @@ function DefaultNavbarMobile({ open, close, links, light }) {
     >
       <BCBox px={0.5}>
         {links.map((link) => (
-          <DefaultNavbarLink key={link.name} icon={link.icon} name={link.name} route={link.route} light={light} />
+          <DefaultNavbarLink
+            key={link.name}
+            onClick={handleMenuItemClick}
+            icon={link.icon}
+            name={link.name}
+            route={link.route}
+            light={light}
+          />
         ))}
       </BCBox>
     </Menu>
