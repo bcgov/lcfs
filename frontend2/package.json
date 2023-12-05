@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "prepare": "cd .. && husky install front/.husky",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier . --check",
@@ -19,6 +20,12 @@
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
     "cypress:clear": "cypress cache clear"
+  },
+  "lint-staged": {
+    "*.{js,jsx}": [
+      "eslint",
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@ag-grid-community/client-side-row-model": "^31.0.0",
@@ -70,7 +77,9 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "eslint-plugin-storybook": "^0.6.15",
+    "husky": "^8.0.3",
     "jsdom": "^23.0.1",
+    "lint-staged": "^15.2.0",
     "prettier": "3.1.0",
     "prop-types": "^15.8.1",
     "sass": "^1.69.5",
