@@ -1,7 +1,7 @@
 import FullWidthTabs from './UserTabPanel'
 
 export default {
-  title: 'Layouts/FullWidthTabs',
+  title: '@/layouts/UsersAdmin',
   component: FullWidthTabs
 }
 const Template = (args) => <FullWidthTabs />

@@ -7,12 +7,14 @@ import * as appRoutes from '@/constants/routes'
 // Layouts
 import Layout from '@/layouts/Layout'
 import PublicLayout from '@/layouts/PublicLayout'
+import OrganizationLayout from '@/layouts/organization/OrganizationLayout'
 import UserTabPanel from '@/layouts/admin/UserTabPanel'
 
 // Components
 import BCTypography from '@/components/BCTypography'
 import ContactUs from '@/components/ContactUs'
-import Login from '@/components/Login'
+// import Login from '@/components/Login'
+import LCFSLogin from '@/layouts/authentication/components/LCFSLogin'
 
 // Views
 import { EditUser } from '@/views/editUser'
@@ -42,7 +44,7 @@ const router = createBrowserRouter([
   },
   {
     path: appRoutes.LOGIN,
-    element: <Login />
+    element: <LCFSLogin />
   },
   {
     element: <Layout crumbs />, // wraps all routes listed in children. add in auth check here for convienience.
@@ -52,6 +54,7 @@ const router = createBrowserRouter([
         handle: {
           crumb: () => 'Organization'
         },
+        element: <OrganizationLayout />,
         children: [
           {
             index: true,

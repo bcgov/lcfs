@@ -10,7 +10,9 @@ const config = {
     '@storybook/addon-essentials',
     '@storybook/addon-onboarding',
     '@storybook/addon-interactions',
-    '@storybook/addon-themes'
+    '@storybook/addon-themes',
+    '@storybook/addon-a11y',
+    '@storybook/addon-docs'
     // "@storybook/themes"
   ],
   framework: {

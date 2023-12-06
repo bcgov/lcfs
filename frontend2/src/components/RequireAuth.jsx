@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom'
 import { CURRENT_USER } from '@/constants/routes'
 import useApiService from '@/services/useApiService'
 import useUserStore from '@/store/useUserStore'
+import 'swagger-ui-react/swagger-ui.css'
 
 const fetchCurrentUser = async (apiService) => {
   try {
@@ -36,7 +37,19 @@ const RequireAuth = ({ children, redirectTo }) => {
     }
   )
 
-  if (!initialized || isLoading) return <div>Loading...</div>
+  if (!initialized || isLoading) {
+    return (
+      <div className="swagger-ui">
+        <div className="loading-container">
+          <div className="info">
+            <div className="loading-container">
+              <div className="loading"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (isError) {
     console.error('Query Error:', error)

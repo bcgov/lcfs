@@ -1,11 +1,11 @@
-import { AppBar, Icon, Tab, Tabs } from '@mui/material'
+import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { useEffect, useState } from 'react'
+import { AppBar, Tabs, Tab } from '@mui/material'
 
-import breakpoints from '@/assets/theme/base/breakpoints'
-import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import BCBox from '@/components/BCBox'
 import UserGrid from '@/components/Table/DataGrid/UserGrid'
+import breakpoints from '@/assets/theme/base/breakpoints'
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props
@@ -41,6 +41,7 @@ function a11yProps(index) {
 }
 
 export default function UserTabPanel() {
+  // Data for demo purposes only. Do not use in production.
   const demoData = [
     {
       name: 'John',
@@ -132,7 +133,7 @@ export default function UserTabPanel() {
         : setTabsOrientation('horizontal')
     }
 
-    /**
+    /** 
      The event listener that's calling the handleTabsOrientation function when resizing the window.
     */
     window.addEventListener('resize', handleTabsOrientation)
@@ -146,69 +147,19 @@ export default function UserTabPanel() {
 
   const handleSetTabValue = (event, newValue) => setTabValue(newValue)
 
-  // const [value, setValue] = useState(0)
-  // const handleChange = (event, newValue) => {
-  //   setValue(newValue)
-  // }
-
   return (
-    // <BCBox sx={{ bgcolor: 'background.paper' }}>
-    //   <AppBar position="static">
-    //     <Tabs
-    //       value={value}
-    //       onChange={handleChange}
-    //       indicatorColor="secondary"
-    //       textColor="inherit"
-    //       variant="scrollable"
-    //       aria-label="full width tabs"
-    //     >
-    //       <Tab label="Users" {...a11yProps(0)} />
-    //       <Tab label="Item Two" {...a11yProps(1)} />
-    //       <Tab label="Item Three" {...a11yProps(2)} />
-    //     </Tabs>
-    //   </AppBar>
-    //   <TabPanel value={value} index={0} dir={theme.direction}>
-    //     <BCTypography variant="d6">Users</BCTypography>
-    //     <div className="ag-theme-alpine" style={{ height: '100%', width: '100%' }}>
-    //       <UserGrid rows={demoData} />
-    //     </div>
-    //   </TabPanel>
-    // </BCBox>
     <BCBox sx={{ bgcolor: 'background.paper' }}>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ boxShadow: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '30%' }}
           orientation={tabsOrientation}
           value={tabValue}
+          aria-label="Tabs for selection of administration options"
           onChange={handleSetTabValue}
         >
-          <Tab
-            label="Users"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                people
-              </Icon>
-            }
-            {...a11yProps(0)}
-          />
-          <Tab
-            label="Item 2"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                email
-              </Icon>
-            }
-            {...a11yProps(1)}
-          />
-          <Tab
-            label="Item 3"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                settings
-              </Icon>
-            }
-            {...a11yProps(2)}
-          />
+          <Tab label="Users" wrapped {...a11yProps(0)} />
+          <Tab label="Item 2" {...a11yProps(1)} />
+          <Tab label="Item 3" {...a11yProps(2)} />
         </Tabs>
       </AppBar>
       <TabPanel value={tabValue} index={0}>

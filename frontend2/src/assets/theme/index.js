@@ -26,7 +26,7 @@ import textField from '@/assets/theme/components/form/textField'
 import menu from '@/assets/theme/components/menu'
 import menuItem from '@/assets/theme/components/menu/menuItem'
 import switchButton from '@/assets/theme/components/form/switchButton'
-// import divider from "assets/theme/components/divider";
+// import divider from "@/assets/theme/components/divider";
 import tableContainer from '@/assets/theme/components/table/tableContainer'
 import tableHead from '@/assets/theme/components/table/tableHead'
 import tableCell from '@/assets/theme/components/table/tableCell'
@@ -52,7 +52,7 @@ import autocomplete from '@/assets/theme/components/form/autocomplete'
 import container from '@/assets/theme/components/container'
 import popover from '@/assets/theme/components/popover'
 import buttonBase from '@/assets/theme/components/buttonBase'
-// import icon from "assets/theme/components/icon";
+// import icon from "@/assets/theme/components/icon";
 import svgIcon from '@/assets/theme/components/svgIcon'
 import link from '@/assets/theme/components/link'
 import dialog from '@/assets/theme/components/dialog'

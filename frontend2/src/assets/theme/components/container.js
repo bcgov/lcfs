@@ -12,10 +12,11 @@ const XL = `@media (min-width: ${xl}px)`
 const XXL = `@media (min-width: ${xxl}px)`
 
 const sharedClasses = {
-  paddingRight: `${pxToRem(24)} !important`,
-  paddingLeft: `${pxToRem(24)} !important`,
-  marginRight: 'auto !important',
+  paddingRight: `${pxToRem(12)} !important`,
+  paddingLeft: `${pxToRem(12)} !important`,
   marginLeft: 'auto !important',
+  marginRight: 'auto !important',
+  marginTop: '2rem',
   width: '100% !important',
   position: 'relative'
 }
@@ -42,13 +43,13 @@ const container = {
   [XL]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '1140px !important'
+      maxWidth: '1340 !important'
     }
   },
   [XXL]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '1320px !important'
+      maxWidth: '1620 !important'
     }
   }
 }
