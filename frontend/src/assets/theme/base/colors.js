@@ -148,8 +148,8 @@ const colors = {
     },
 
     success: {
-      main: '#dff0d8',
-      state: '#d6e9c6',
+      main: '#2E8540',
+      state: '#2E8540',
     },
 
     warning: {
