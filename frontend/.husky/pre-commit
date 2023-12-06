@@ -1,4 +1,11 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-cd frontend && npx lint-staged --allow-empty
+# Navigate to your frontend directory
+cd frontend2
+
+# Running lint-staged for linting and formatting
+npx lint-staged --allow-empty
+
+# Run a subset of unit tests
+npm run test:quick
