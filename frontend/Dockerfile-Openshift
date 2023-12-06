@@ -3,7 +3,7 @@ FROM artifacts.developer.gov.bc.ca/docker-remote/node:16 as builder
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
 COPY ./ ./
-RUN npm install -g npm@latest && \
+RUN npm install -g npm@8.19.4 && \
     npm run build && \
     ls -l
 

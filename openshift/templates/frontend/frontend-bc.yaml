@@ -18,7 +18,7 @@ parameters:
     required: true
   - name: GIT_REF
     displayName:
-    description: itvr branch name of the pr
+    description: lcfs branch name of the pr
     required: true
 objects:
 - apiVersion: image.openshift.io/v1
@@ -52,7 +52,7 @@ objects:
             cpu: 1500m
             memory: 1300Mi
         requests:
-            cpu: 750m
+            cpu: 500m
             memory: 650Mi
     source:
       contextDir: frontend
