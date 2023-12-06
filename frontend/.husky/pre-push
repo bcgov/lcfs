@@ -2,7 +2,7 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 # Navigate to your frontend directory
-cd frontend2
+cd frontend
 
 # Run the full test suite
 npm run test

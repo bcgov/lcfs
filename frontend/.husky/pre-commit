@@ -2,10 +2,10 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 # Navigate to your frontend directory
-cd frontend2
+cd frontend
 
 # Running lint-staged for linting and formatting
 npx lint-staged --allow-empty
 
 # Run a subset of unit tests
-npm run test:quick
+# npm run test:quick
