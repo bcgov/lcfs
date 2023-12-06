@@ -91,14 +91,15 @@ const Template = (args) => <><BCNavbar {...args} />
 </>;
 
 // Define the different stories
+// Icons are optional optional
 export const Default = Template.bind({});
 Default.args = {
   routes: [
     { icon: 'home', name: 'Dashboard', route: '/' },
-    { icon: 'folder', name: 'document', route: '/document' },
-    { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
-    { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
-    { icon: 'corporate_fare', name: 'Organization', route: '/organization/users/list' },
-    { icon: 'admin_panel_settings', name: 'Administration', route: '/administration/users' },
+    { name: 'Document', route: '/document' },
+    { name: 'Transactions', route: '/transactions' },
+    { name: 'Compliance Report', route: '/compliance-report' },
+    { name: 'Organization', route: '/organization' },
+    { name: 'Administration', route: '/administration' },
   ],
 };

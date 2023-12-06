@@ -32,8 +32,8 @@ const LCFSLogin = () => {
   const currentDate = new Date()
 
   return (
-    <LoginLayout season={'winter'}>
-      <Card 
+    <LoginLayout season={getSeason(currentDate)}>
+      <Card
         className="login"
         sx={{
           background: 'rgba(255, 255, 255, 0.2)',
@@ -121,3 +121,6 @@ const LCFSLogin = () => {
 }
 
 export default LCFSLogin
+
+
+// remove icons

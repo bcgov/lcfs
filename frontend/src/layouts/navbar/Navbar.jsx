@@ -6,12 +6,12 @@ import MenuBarComponent from './components/MenuBarComponent';
 
 // Nav Links
 const routes = [
-  { icon: 'home', name: 'Dashboard', route: '/' },
-  { icon: 'folder', name: 'Document', route: '/document' },
-  { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
-  { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
-  { icon: 'corporate_fare', name: 'Organization', route: '/organization' },
-  { icon: 'admin_panel_settings', name: 'Administration', route: '/administration/users' },
+  { name: 'Dashboard', route: '/' },
+  { name: 'Document', route: '/document' },
+  { name: 'Transactions', route: '/transactions' },
+  { name: 'Compliance Report', route: '/compliance-report' },
+  { name: 'Organization', route: '/organization' },
+  { name: 'Administration', route: '/administration/users' },
 ];
 
 const Navbar = () => {

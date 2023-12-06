@@ -85,37 +85,22 @@ export default function UserTabPanel() {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '30%' }}
           orientation={tabsOrientation}
           value={tabValue}
           aria-label='Tabs for selection of administration options'
           onChange={handleSetTabValue}>
           <Tab
             label="Users"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                people
-              </Icon>
-            }
             wrapped
             {...a11yProps(0)}
           />
           <Tab
             label="Item 2"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                email
-              </Icon>
-            }
             {...a11yProps(1)}
           />
           <Tab
             label="Item 3"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                settings
-              </Icon>
-            }
             {...a11yProps(2)}
           />
         </Tabs>
