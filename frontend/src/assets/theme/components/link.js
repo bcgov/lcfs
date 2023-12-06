@@ -1,8 +1,8 @@
 const link = {
   defaultProps: {
-    underline: "none",
-    color: "inherit",
-  },
-};
+    underline: 'none',
+    color: 'inherit'
+  }
+}
 
-export default link;
+export default link

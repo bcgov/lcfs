@@ -1,12 +1,12 @@
-import colors from "assets/theme/base/colors";
-import borders from "assets/theme/base/borders";
-import boxShadows from "assets/theme/base/boxShadows";
+import colors from '@/assets/theme/base/colors'
+import borders from '@/assets/theme/base/borders'
+import boxShadows from '@/assets/theme/base/boxShadows'
 
-import { pxToRem, linearGradient } from "assets/theme/utils";
+import { pxToRem, linearGradient } from '@/assets/theme/utils'
 
-const { transparent, gradients } = colors;
-const { borderRadius } = borders;
-const { colored } = boxShadows;
+const { transparent, gradients } = colors
+const { borderRadius } = borders
+const { colored } = boxShadows
 
 const stepper = {
   styleOverrides: {
@@ -16,11 +16,11 @@ const stepper = {
       borderRadius: borderRadius.lg,
       boxShadow: colored.info,
 
-      "&.MuiPaper-root": {
-        backgroundColor: transparent.main,
-      },
-    },
-  },
-};
+      '&.MuiPaper-root': {
+        backgroundColor: transparent.main
+      }
+    }
+  }
+}
 
-export default stepper;
+export default stepper

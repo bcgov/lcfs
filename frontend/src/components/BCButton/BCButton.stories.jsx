@@ -1,5 +1,4 @@
-import React from 'react';
-import BCButton from './index';
+import BCButton from './index'
 
 export default {
   title: 'BCGov/BCButton',
@@ -11,11 +10,11 @@ export default {
       }
     }
   }
-};
+}
 
-const Template = (args) => <BCButton {...args}>Click me</BCButton>;
+const Template = (args) => <BCButton {...args}>Click me</BCButton>
 
-export const Default = Template.bind({});
+export const Default = Template.bind({})
 Default.args = {
   color: 'primary',
   variant: 'contained',
@@ -23,54 +22,54 @@ Default.args = {
   circular: false,
   iconOnly: false,
   children: 'Click Me',
-  disabled: false,
-};
+  disabled: false
+}
 
-export const ContainedVariant = Template.bind({});
+export const ContainedVariant = Template.bind({})
 ContainedVariant.args = {
   ...Default.args,
-  variant: 'contained',
-};
+  variant: 'contained'
+}
 
-export const ContainedDisabledVariant = Template.bind({});
+export const ContainedDisabledVariant = Template.bind({})
 ContainedDisabledVariant.args = {
   ...Default.args,
   variant: 'contained',
-  disabled: true,
-};
+  disabled: true
+}
 
-export const OutlinedVariant = Template.bind({});
+export const OutlinedVariant = Template.bind({})
 OutlinedVariant.args = {
   ...Default.args,
-  variant: 'outlined',
-};
+  variant: 'outlined'
+}
 
-export const OutlinedDisabledVariant = Template.bind({});
+export const OutlinedDisabledVariant = Template.bind({})
 OutlinedDisabledVariant.args = {
   ...Default.args,
   variant: 'outlined',
-  disabled: true,
-};
-export const GradientVariant = Template.bind({});
+  disabled: true
+}
+export const GradientVariant = Template.bind({})
 GradientVariant.args = {
   ...Default.args,
-  variant: 'gradient',
-};
+  variant: 'gradient'
+}
 
-export const TextVariant = Template.bind({});
+export const TextVariant = Template.bind({})
 TextVariant.args = {
   ...Default.args,
-  variant: 'text',
-};
+  variant: 'text'
+}
 
-export const SmallSize = Template.bind({});
+export const SmallSize = Template.bind({})
 SmallSize.args = {
   ...Default.args,
-  size: 'small',
-};
+  size: 'small'
+}
 
-export const LargeSize = Template.bind({});
+export const LargeSize = Template.bind({})
 LargeSize.args = {
   ...Default.args,
-  size: 'large',
-};
+  size: 'large'
+}

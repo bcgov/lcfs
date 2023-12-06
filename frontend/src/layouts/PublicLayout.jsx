@@ -1,5 +1,4 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom'
 
 const PublicLayout = () => {
   return (
@@ -8,7 +7,7 @@ const PublicLayout = () => {
         <Outlet />
       </main>
     </>
-  );
-};
+  )
+}
 
-export default PublicLayout;
+export default PublicLayout

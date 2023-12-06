@@ -1,11 +1,11 @@
-import { pxToRem } from "assets/theme/utils";
+import { pxToRem } from '@/assets/theme/utils'
 
 const dialogActions = {
   styleOverrides: {
     root: {
-      padding: pxToRem(16),
-    },
-  },
-};
+      padding: pxToRem(16)
+    }
+  }
+}
 
-export default dialogActions;
+export default dialogActions

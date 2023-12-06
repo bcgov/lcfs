@@ -1,39 +1,39 @@
-import colors from "assets/theme/base/colors";
-import typography from "assets/theme/base/typography";
-import { pxToRem } from "assets/theme/utils";
+import colors from '@/assets/theme/base/colors'
+import typography from '@/assets/theme/base/typography'
+import { pxToRem } from '@/assets/theme/utils'
 
-const { text, info, secondary, transparent } = colors;
-const { size } = typography;
+const { text, info, secondary, transparent } = colors
+const { size } = typography
 
 const buttonText = {
   base: {
     backgroundColor: transparent.main,
     minHeight: pxToRem(40),
     color: text.main,
-    boxShadow: "none",
+    boxShadow: 'none',
     padding: `${pxToRem(10)} ${pxToRem(24)}`,
 
-    "&:hover": {
+    '&:hover': {
       backgroundColor: transparent.main,
-      boxShadow: "none",
+      boxShadow: 'none'
     },
 
-    "&:focus": {
-      boxShadow: "none",
+    '&:focus': {
+      boxShadow: 'none'
     },
 
-    "&:active, &:active:focus, &:active:hover": {
+    '&:active, &:active:focus, &:active:hover': {
       opacity: 0.85,
-      boxShadow: "none",
+      boxShadow: 'none'
     },
 
-    "&:disabled": {
-      boxShadow: "none",
+    '&:disabled': {
+      boxShadow: 'none'
     },
 
-    "& .material-icon, .material-icons-round, svg": {
-      fontSize: `${pxToRem(16)} !important`,
-    },
+    '& .material-icon, .material-icons-round, svg': {
+      fontSize: `${pxToRem(16)} !important`
+    }
   },
 
   small: {
@@ -41,9 +41,9 @@ const buttonText = {
     padding: `${pxToRem(6)} ${pxToRem(16)}`,
     fontSize: size.xs,
 
-    "& .material-icon, .material-icons-round, svg": {
-      fontSize: `${pxToRem(12)} !important`,
-    },
+    '& .material-icon, .material-icons-round, svg': {
+      fontSize: `${pxToRem(12)} !important`
+    }
   },
 
   large: {
@@ -51,36 +51,36 @@ const buttonText = {
     padding: `${pxToRem(12)} ${pxToRem(28)}`,
     fontSize: size.sm,
 
-    "& .material-icon, .material-icons-round, svg": {
-      fontSize: `${pxToRem(22)} !important`,
-    },
+    '& .material-icon, .material-icons-round, svg': {
+      fontSize: `${pxToRem(22)} !important`
+    }
   },
 
   primary: {
     color: info.main,
 
-    "&:hover": {
-      color: info.main,
+    '&:hover': {
+      color: info.main
     },
 
-    "&:focus:not(:hover)": {
+    '&:focus:not(:hover)': {
       color: info.focus,
-      boxShadow: "none",
-    },
+      boxShadow: 'none'
+    }
   },
 
   secondary: {
     color: secondary.main,
 
-    "&:hover": {
-      color: secondary.main,
+    '&:hover': {
+      color: secondary.main
     },
 
-    "&:focus:not(:hover)": {
+    '&:focus:not(:hover)': {
       color: secondary.focus,
-      boxShadow: "none",
-    },
-  },
-};
+      boxShadow: 'none'
+    }
+  }
+}
 
-export default buttonText;
+export default buttonText

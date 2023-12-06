@@ -1,16 +1,16 @@
-import typography from "assets/theme/base/typography";
-import colors from "assets/theme/base/colors";
+import typography from '@/assets/theme/base/typography'
+import colors from '@/assets/theme/base/colors'
 
-const { size } = typography;
-const { text } = colors;
+const { size } = typography
+const { text } = colors
 
 const dialogContentText = {
   styleOverrides: {
     root: {
       fontSize: size.md,
-      color: text.main,
-    },
-  },
-};
+      color: text.main
+    }
+  }
+}
 
-export default dialogContentText;
+export default dialogContentText

@@ -1,30 +1,28 @@
-import React, { useMemo, useEffect, useState } from 'react';
-import { AgGridReact } from '@ag-grid-community/react';
-import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model';
-import '@ag-grid-community/styles/ag-grid.css';
-import '@ag-grid-community/styles/ag-theme-alpine.css';
-import { ModuleRegistry } from '@ag-grid-community/core';
+import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
+import { ModuleRegistry } from '@ag-grid-community/core'
+import { AgGridReact } from '@ag-grid-community/react'
+import '@ag-grid-community/styles/ag-grid.css'
+import '@ag-grid-community/styles/ag-theme-alpine.css'
+import { useMemo } from 'react'
 
-ModuleRegistry.registerModules([ClientSideRowModelModule]);
+ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 export const BCTable = ({ columnDefs, rowData, ...rest }) => {
-  const sideBar = useMemo(() => {
-    toolPanels: ['filters', 'columns'];
-  }, []);
+  const sideBar = useMemo(() => ['filters', 'columns'], [])
 
   const defaultColDef = useMemo(
     () => ({
       resizable: true,
       sortable: true,
       filter: true,
-      floatingFilter: true,
+      floatingFilter: true
       // filterParams: {
       //   buttons: ['apply', 'reset'],
       //   closeOnApply: true,
       // }
     }),
-    [],
-  );
+    []
+  )
 
   // const [rowData, setRowData] = useState();
 
@@ -52,5 +50,5 @@ export const BCTable = ({ columnDefs, rowData, ...rest }) => {
         {...rest}
       />
     </div>
-  );
-};
+  )
+}

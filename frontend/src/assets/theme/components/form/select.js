@@ -1,31 +1,31 @@
-import colors from "assets/theme/base/colors";
-import { pxToRem } from "assets/theme/utils";
+import colors from '@/assets/theme/base/colors'
+import { pxToRem } from '@/assets/theme/utils'
 
-const { transparent } = colors;
+const { transparent } = colors
 
 const select = {
   styleOverrides: {
     select: {
-      display: "grid",
-      alignItems: "center",
+      display: 'grid',
+      alignItems: 'center',
       padding: `0 ${pxToRem(12)} !important`,
 
-      "& .Mui-selected": {
-        backgroundColor: transparent.main,
-      },
+      '& .Mui-selected': {
+        backgroundColor: transparent.main
+      }
     },
 
     selectMenu: {
-      background: "none",
-      height: "none",
-      minHeight: "none",
-      overflow: "unset",
+      background: 'none',
+      height: 'none',
+      minHeight: 'none',
+      overflow: 'unset'
     },
 
     icon: {
-      display: "none",
-    },
-  },
-};
+      display: 'none'
+    }
+  }
+}
 
-export default select;
+export default select

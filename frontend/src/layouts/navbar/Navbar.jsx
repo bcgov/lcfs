@@ -1,8 +1,7 @@
-import React from 'react';
 // @mui components
-import BCNavbar from 'components/BCNavbar';
-import HeaderComponent from 'layouts/navbar/components/HeaderComponent';
-import MenuBarComponent from './components/MenuBarComponent';
+import BCNavbar from '@/components/BCNavbar'
+import HeaderComponent from '@/layouts/navbar/components/HeaderComponent'
+import MenuBarComponent from './components/MenuBarComponent'
 
 // Nav Links
 const routes = [
@@ -11,8 +10,8 @@ const routes = [
   { name: 'Transactions', route: '/transactions' },
   { name: 'Compliance Report', route: '/compliance-report' },
   { name: 'Organization', route: '/organization' },
-  { name: 'Administration', route: '/administration/users' },
-];
+  { name: 'Administration', route: '/administration/users' }
+]
 
 const Navbar = () => {
   return (
@@ -22,8 +21,8 @@ const Navbar = () => {
       organizationName="BC Government"
       routes={routes}
       beta={true}
-      headerRightPart={<HeaderComponent key='headerRight' />}
-      menuRightPart={<MenuBarComponent key='menRight' />}
+      headerRightPart={<HeaderComponent key="headerRight" />}
+      menuRightPart={<MenuBarComponent key="menRight" />}
     />
   )
 }

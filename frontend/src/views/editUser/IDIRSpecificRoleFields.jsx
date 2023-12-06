@@ -1,10 +1,9 @@
-import React from 'react';
-import { Checkbox, FormControlLabel, Radio, RadioGroup } from '@mui/material';
+import { Checkbox, FormControlLabel, Radio, RadioGroup } from '@mui/material'
 
 export const IDIRSpecificRoleFields = ({
   formData,
   handleCheckbox,
-  handleChange,
+  handleChange
 }) => {
   return (
     <>
@@ -26,7 +25,7 @@ export const IDIRSpecificRoleFields = ({
         name="govRole"
         style={{
           gap: 16,
-          marginTop: 8,
+          marginTop: 8
         }}
         onChange={handleChange}
         value={formData.govRole}
@@ -36,8 +35,8 @@ export const IDIRSpecificRoleFields = ({
           control={<Radio />}
           style={{
             '.MuiFormControlLabel-label': {
-              fontSize: 16,
-            },
+              fontSize: 16
+            }
           }}
           label={
             <span>
@@ -72,5 +71,5 @@ export const IDIRSpecificRoleFields = ({
         />
       </RadioGroup>
     </>
-  );
-};
+  )
+}

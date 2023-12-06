@@ -1,3 +1,4 @@
+/* eslint-disable cypress/unsafe-to-chain-command */
 /// <reference types="cypress" />
 
 context('Local Storage / Session Storage', () => {
@@ -10,7 +11,8 @@ context('Local Storage / Session Storage', () => {
 
   it('cy.clearLocalStorage() - clear all data in localStorage for the current origin', () => {
     // https://on.cypress.io/clearlocalstorage
-    cy.get('.ls-btn').click().should(() => {
+    cy.get('.ls-btn').click()
+    cy.get('.ls-btn').should(() => {
       expect(localStorage.getItem('prop1')).to.eq('red')
       expect(localStorage.getItem('prop2')).to.eq('blue')
       expect(localStorage.getItem('prop3')).to.eq('magenta')
@@ -23,7 +25,8 @@ context('Local Storage / Session Storage', () => {
       expect(ls.getItem('prop3')).to.be.null
     })
 
-    cy.get('.ls-btn').click().should(() => {
+    cy.get('.ls-btn').click()
+    cy.get('.ls-btn').should(() => {
       expect(localStorage.getItem('prop1')).to.eq('red')
       expect(localStorage.getItem('prop2')).to.eq('blue')
       expect(localStorage.getItem('prop3')).to.eq('magenta')
@@ -36,7 +39,8 @@ context('Local Storage / Session Storage', () => {
       expect(ls.getItem('prop3')).to.eq('magenta')
     })
 
-    cy.get('.ls-btn').click().should(() => {
+    cy.get('.ls-btn').click()
+    cy.get('.ls-btn').should(() => {
       expect(localStorage.getItem('prop1')).to.eq('red')
       expect(localStorage.getItem('prop2')).to.eq('blue')
       expect(localStorage.getItem('prop3')).to.eq('magenta')
@@ -59,10 +63,10 @@ context('Local Storage / Session Storage', () => {
       expect(storageMap).to.deep.equal({
         // other origins will also be present if localStorage is set on them
         'https://example.cypress.io': {
-          'prop1': 'red',
-          'prop2': 'blue',
-          'prop3': 'magenta',
-        },
+          prop1: 'red',
+          prop2: 'blue',
+          prop3: 'magenta'
+        }
       })
     })
   })
@@ -88,10 +92,10 @@ context('Local Storage / Session Storage', () => {
       expect(storageMap).to.deep.equal({
         // other origins will also be present if sessionStorage is set on them
         'https://example.cypress.io': {
-          'prop4': 'cyan',
-          'prop5': 'yellow',
-          'prop6': 'black',
-        },
+          prop4: 'cyan',
+          prop5: 'yellow',
+          prop6: 'black'
+        }
       })
     })
   })

@@ -1,7 +1,7 @@
-import colors from "assets/theme/base/colors";
-import { pxToRem } from "assets/theme/utils";
+import colors from '@/assets/theme/base/colors'
+import { pxToRem } from '@/assets/theme/utils'
 
-const { grey } = colors;
+const { grey } = colors
 
 const borders = {
   borderColor: grey[300],
@@ -12,7 +12,7 @@ const borders = {
     2: pxToRem(2),
     3: pxToRem(3),
     4: pxToRem(4),
-    5: pxToRem(5),
+    5: pxToRem(5)
   },
 
   borderRadius: {
@@ -22,8 +22,8 @@ const borders = {
     lg: pxToRem(8),
     xl: pxToRem(12),
     xxl: pxToRem(16),
-    section: pxToRem(160),
-  },
-};
+    section: pxToRem(160)
+  }
+}
 
-export default borders;
+export default borders
