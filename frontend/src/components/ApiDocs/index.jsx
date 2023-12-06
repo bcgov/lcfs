@@ -1,7 +1,7 @@
 import SwaggerUI from 'swagger-ui-react'
 import 'swagger-ui-react/swagger-ui.css'
 import { useKeycloak } from '@react-keycloak/web'
-import LCFSLogin from '@/ayouts/authentication/components/LCFSLogin'
+import LCFSLogin from '@/layouts/authentication/components/LCFSLogin'
 
 const ApiDocs = () => {
   const { keycloak } = useKeycloak()
