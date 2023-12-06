@@ -143,33 +143,33 @@ const colors = {
     },
 
     info: {
-      main: '#49a3f1',
-      state: '#1A73E8',
+      main: '#d9eaf7',
+      state: '#d9eaf7',
     },
 
     success: {
-      main: '#2E8540',
-      state: '#2E8540',
+      main: '#dff0d8',
+      state: '#d6e9c6',
     },
 
     warning: {
-      main: '#FFA726',
-      state: '#FB8C00',
+      main: '#f9f1c6',
+      state: '#faebcc',
     },
 
     error: {
-      main: '#EF5350',
-      state: '#E53935',
+      main: '#d8292f',
+      state: '#d8292f',
     },
 
     light: {
-      main: '#EBEFF4',
-      state: '#CED4DA',
+      main: '#f2f2f2',
+      state: '#f3f6f9',
     },
 
     dark: {
-      main: '#42424a',
-      state: '#191919',
+      main: '#313132',
+      state: '#606060',
     },
   },
 };
