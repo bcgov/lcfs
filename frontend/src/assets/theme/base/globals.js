@@ -5,8 +5,9 @@ import BCSansBoldItalicTTF from 'assets/fonts/BCSans-BoldItalic_2f.woff2';
 import BCSansItalicTTF from 'assets/fonts/BCSans-Italic_2f.woff2';
 import BCSansLightTTF from 'assets/fonts/BCSans-Light_2f.woff2';
 import BCSansLightItalicTTF from 'assets/fonts/BCSans-LightItalic_2f.woff2';
+import bceidImg from 'assets/images/bceid.png';
 
-const { info, link, text } = colors;
+const { info, link, text, background, primary, light, transparent } = colors;
 
 const bcSansRegular = {
   fontFamily: "BCSans",
@@ -58,6 +59,9 @@ const globals = {
     margin: 0,
     padding: 0,
   },
+  '#root': {
+    backgroundColor: background.paper,
+  },
   "a, a:link, a:visited": {
     textDecoration: "none !important",
   },
@@ -78,7 +82,22 @@ const globals = {
 
     '--ag-font-size': '17px',
     '--ag-font-family': "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
-  }
+  },
+  '.bceid-name': {
+    textIndent: '-9999px',
+    backgroundImage: `url(${bceidImg})`,
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'contain',
+    height: '1.15rem',
+    width: '6rem',
+  },
+  '#link-idir': {
+    textAlign: 'right',
+    color: `${primary.main}`,
+    '&:hover': {
+      color: `${light.main}`
+    }
+  },
 };
 
 export default globals;

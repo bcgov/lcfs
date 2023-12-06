@@ -4,6 +4,13 @@ import BCButton from './index';
 export default {
   title: 'BCGov/BCButton',
   component: BCButton,
+  parameters: {
+    docs: {
+      description: {
+        component: 'Buttons for actions in apps and websites.'
+      }
+    }
+  }
 };
 
 const Template = (args) => <BCButton {...args}>Click me</BCButton>;

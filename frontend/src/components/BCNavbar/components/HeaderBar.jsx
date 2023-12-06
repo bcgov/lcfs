@@ -9,7 +9,7 @@ import logoDark from 'assets/images/gov3_bc_logo.png'
 import logoLight from 'assets/images/BCID_H_rgb_pos.png'
 
 const HeaderBar = props => {
-  const { isScrolled, org, showBalance, mobileNavbar, mobileView, toggleBalanceVisibility, openMobileNavbar } = props;
+  const { isScrolled, mobileNavbar, mobileView, openMobileNavbar, data } = props;
 
   return (
     <Toolbar
@@ -27,22 +27,23 @@ const HeaderBar = props => {
       <BCBox sx={{ flexGrow: 1 }} component='div'>
         <BCBox sx={{ display: 'flex', alignItems: 'center' }} className='logo'>
           <img src={isScrolled ? logoLight : logoDark} alt='BC Government' style={{ width: '160px', marginRight: '10px', height: 'auto' }} />
-          <BCTypography variant={mobileView ? 'h6' : 'h3'} component='div' className='application_title'>{org.title}</BCTypography>
+          <BCTypography component='span' variant={mobileView ? 'h6' : 'h3'} className='application_title' sx={{ display: 'flex', alignItems: 'center' }}>
+            {data.title}
+            {/* Remove "Beta" tag once the application is deployed to prod */}
+            {data.beta &&
+              <BCTypography
+                component='span'
+                color="secondary"
+                sx={{ marginTop: '-1em', textTransform: 'uppercase', fontWeight: 600, fontSize: '1.1rem', marginLeft: '0.5em' }}
+              >
+                Beta
+              </BCTypography>}
+          </BCTypography>
         </BCBox>
       </BCBox>
       <BCBox display={{ xs: 'none', lg: 'flex' }} m={0} py={1} flexDirection='column'>
-        <BCTypography className='organization_name' variant='body1' align='right'>
-          {org.organizationName}
-        </BCTypography>
-        <BCBox component='div' className='organization_balance'>
-          Balance:{' '}
-          <BCBox component='div' sx={{ display: 'inline-flex', alignItems: 'center' }}>
-            {showBalance && <div className='balance'>{org.balance}</div>}
-            <Icon style={{ fontSize: 20, cursor: 'pointer', margin: '5px' }} onClick={toggleBalanceVisibility}>
-              {showBalance ? 'visibility' : 'visibility_off'}
-            </Icon>
-          </BCBox>
-        </BCBox>
+        {data.headerRightPart &&
+          React.cloneElement(data.headerRightPart, { data })}
       </BCBox>
       <BCBox
         display={{ xs: 'inline-block', lg: 'none' }}
@@ -66,9 +67,7 @@ HeaderBar.propTypes = {
   mobileView: PropTypes.bool,
   toggleBalanceVisibility: PropTypes.func,
   openMobileNavbar: PropTypes.func,
-  title: PropTypes.string,
-  organizationName: PropTypes.string,
-  balance: PropTypes.string,
+  data: PropTypes.object,
 }
 
 export default HeaderBar

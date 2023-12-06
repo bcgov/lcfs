@@ -1,13 +1,13 @@
 import React from 'react';
-import AppNavbar from 'components/Navbars/AppNavbar';
+import BCNavbar from 'components/BCNavbar';
 
 
 export default {
-  title: 'LCFS/AppNavbar',
-  component: AppNavbar,
+  title: 'BCGov/BCNavbar',
+  component: BCNavbar,
 };
 
-const Template = (args) => <><AppNavbar {...args} />
+const Template = (args) => <><BCNavbar {...args} />
   <h4>This is the heading</h4>
   <p>Ut Lorem aute ullamco proident ipsum est exercitation ea aute consequat. Excepteur dolore ex aliqua cupidatat quis. Cillum fugiat mollit exercitation sunt magna sunt ea ut do dolore labore. Occaecat in laborum deserunt duis aute labore quis aliquip et. Anim do ad ullamco nostrud tempor ad esse adipisicing nostrud fugiat.
 
@@ -91,9 +91,15 @@ const Template = (args) => <><AppNavbar {...args} />
 </>;
 
 // Define the different stories
+// Icons are optional optional
 export const Default = Template.bind({});
 Default.args = {
-  title: 'Low Carbon Fuel Standard',
-  organizationName: 'BC Government',
-  balance: '50,000',
+  routes: [
+    { icon: 'home', name: 'Dashboard', route: '/' },
+    { name: 'Document', route: '/document' },
+    { name: 'Transactions', route: '/transactions' },
+    { name: 'Compliance Report', route: '/compliance-report' },
+    { name: 'Organization', route: '/organization' },
+    { name: 'Administration', route: '/administration' },
+  ],
 };

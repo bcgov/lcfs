@@ -5,7 +5,7 @@ const appBar = {
 
   styleOverrides: {
     root: {
-      boxShadow: "none",
+      // add default styling for appBar component
     },
   },
 };

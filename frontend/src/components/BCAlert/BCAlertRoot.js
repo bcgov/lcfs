@@ -6,7 +6,7 @@ export default styled(Box)(({ theme, ownerState }) => {
   const { palette, typography, borders, functions } = theme;
   const { color } = ownerState;
 
-  const { white, gradients, alerts } = palette;
+  const { gradients, alerts } = palette;
   const { fontSizeRegular, fontWeightMedium } = typography;
   const { borderRadius } = borders;
   const { pxToRem, linearGradient } = functions;

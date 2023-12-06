@@ -6,7 +6,7 @@ export default styled(Button)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme;
   const { color, variant, size, circular, iconOnly } = ownerState;
 
-  const { white, text, transparent, gradients, grey } = palette;
+  const { white, text, transparent, gradients } = palette;
   const { boxShadow, linearGradient, pxToRem, rgba } = functions;
   const { borderRadius } = borders;
   const { colored } = boxShadows;
@@ -31,21 +31,6 @@ export default styled(Button)(({ theme, ownerState }) => {
         )}, ${boxShadow([0, 1], [5, 0], palette[color].main, 0.15)}`
       : 'none';
 
-    // boxShadow value when button is hovered
-    const hoveredBoxShadowValue = colored[color]
-      ? `${boxShadow(
-          [0, 14],
-          [26, -12],
-          palette[color].main,
-          0.4,
-        )}, ${boxShadow(
-          [0, 4],
-          [23, 0],
-          palette[color].main,
-          0.15,
-        )}, ${boxShadow([0, 8], [10, -5], palette[color].main, 0.2)}`
-      : 'none';
-
     // color value
     let colorValue = white.main;
 
@@ -68,8 +53,10 @@ export default styled(Button)(({ theme, ownerState }) => {
       boxShadow: boxShadowValue,
 
       '&:hover': {
-        backgroundColor: backgroundValue,
-        boxShadow: hoveredBoxShadowValue,
+        background: palette.primary.main,
+        color: white.main,
+        borderColor: colorValue,
+        opacity: 0.75,
       },
 
       '&:focus:not(:hover)': {

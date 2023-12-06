@@ -1,4 +1,3 @@
-import React from 'react';
 import BCAlert from 'components/BCAlert';
 
 export default {

@@ -1,31 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { AppBar, Divider, useScrollTrigger } from '@mui/material';
-import DefaultNavbarMobile from 'components/Navbars/AppNavbar/DefaultNavbarMobile';
+import DefaultNavbarMobile from 'components/BCNavbar/components/DefaultNavbarMobile';
 
 // BCGov Dashboard React base styles
 import breakpoints from 'assets/theme/base/breakpoints';
 import { PropTypes } from 'prop-types';
-import MenuBar from 'components/Navbars/AppNavbar/MenuBar';
-import HeaderBar from 'components/Navbars/AppNavbar/HeaderBar';
+import MenuBar from 'components/BCNavbar/components/MenuBar';
+import HeaderBar from 'components/BCNavbar/components/HeaderBar';
 import BCBox from 'components/BCBox';
 
-// Nav Links
-const routes = [
-  { icon: 'home', name: 'Dashboard', route: '/' },
-  { icon: 'folder', name: 'document', route: '/document' },
-  { icon: 'account_balance', name: 'Transactions', route: '/transactions' },
-  { icon: 'assessment', name: 'Compliance Report', route: '/compliance-report' },
-  { icon: 'corporate_fare', name: 'Organization', route: '/organization/users/list' },
-  { icon: 'admin_panel_settings', name: 'Administration', route: '/administration/users' },
-];
-
-function AppNavbar(props) {
-
-  const [showBalance, setShowBalance] = useState(false);
+function BCNavbar(props) {
+  const { routes } = props;
   const isScrolled = useScrollTrigger();
-  const toggleBalanceVisibility = () => {
-    setShowBalance(!showBalance); // Toggles the visibility of the balance
-  };
   const [mobileNavbar, setMobileNavbar] = useState(false);
   const [mobileView, setMobileView] = useState(false);
   const openMobileNavbar = ({ currentTarget }) => setMobileNavbar(currentTarget.parentNode);
@@ -67,10 +53,9 @@ function AppNavbar(props) {
       >
         <HeaderBar
           isScrolled={isScrolled}
-          org={props}
-          showBalance={showBalance}
+          data={props}
+          beta={props.beta}
           mobileView={mobileView}
-          toggleBalanceVisibility={toggleBalanceVisibility}
           openMobileNavbar={openMobileNavbar}
           mobileNavbar={mobileNavbar} />
         <Divider
@@ -87,16 +72,29 @@ function AppNavbar(props) {
             light={true}
             links={routes} />
           :
-          <MenuBar isScrolled={isScrolled} routes={routes} />
+          <MenuBar isScrolled={isScrolled} routes={routes} data={props} />
         }
       </AppBar>
     </BCBox >
   );
-} 
-
-AppNavbar.propTypes = {
-  title: PropTypes.string,
-  organizationName: PropTypes.string,
-  balance: PropTypes.string,
 }
-export default AppNavbar;
+
+BCNavbar.defaultProps = {
+  title: 'Government of British Columbia',
+  routes: [
+    { icon: 'home', name: 'Dashboard', route: '/' },
+    // Add other routes as needed
+  ],
+  beta: true,
+  headerRightPart: null,
+  menuRightPart: null,
+}
+
+BCNavbar.propTypes = {
+  title: PropTypes.string,
+  routes: PropTypes.array.isRequired,
+  beta: PropTypes.bool,
+  headerRightPart: PropTypes.element,
+  menuRightPart: PropTypes.element,
+}
+export default BCNavbar;

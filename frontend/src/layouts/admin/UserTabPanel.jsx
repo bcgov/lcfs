@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { useTheme } from '@mui/material/styles';
 import { AppBar, Tabs, Tab, Icon } from '@mui/material';
 
 import BCTypography from 'components/BCTypography';
@@ -42,6 +41,7 @@ function a11yProps(index) {
 }
 
 export default function UserTabPanel() {
+  // Data for demo purposes only. Do not use in production.
   const demoData = [
     { name: 'John', role: 'Admin', email: 'john@example.com', phone: '555-1234', status: 'Active' },
     { name: 'Jane', role: 'Manager', email: 'jane@example.com', phone: '555-5678', status: 'Inactive' },
@@ -81,66 +81,26 @@ export default function UserTabPanel() {
 
   const handleSetTabValue = (event, newValue) => setTabValue(newValue);
 
-  const [value, setValue] = useState(0);
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
-
   return (
-    // <BCBox sx={{ bgcolor: 'background.paper' }}>
-    //   <AppBar position="static">
-    //     <Tabs
-    //       value={value}
-    //       onChange={handleChange}
-    //       indicatorColor="secondary"
-    //       textColor="inherit"
-    //       variant="scrollable"
-    //       aria-label="full width tabs"
-    //     >
-    //       <Tab label="Users" {...a11yProps(0)} />
-    //       <Tab label="Item Two" {...a11yProps(1)} />
-    //       <Tab label="Item Three" {...a11yProps(2)} />
-    //     </Tabs>
-    //   </AppBar>
-    //   <TabPanel value={value} index={0} dir={theme.direction}>
-    //     <BCTypography variant="d6">Users</BCTypography>
-    //     <div className="ag-theme-alpine" style={{ height: '100%', width: '100%' }}>
-    //       <UserGrid rows={demoData} />
-    //     </div>
-    //   </TabPanel>
-    // </BCBox>
     <BCBox sx={{ bgcolor: 'background.paper' }}>
-      <AppBar position="static" >
+      <AppBar position="static" sx={{ boxShadow: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '30%' }}
           orientation={tabsOrientation}
           value={tabValue}
+          aria-label='Tabs for selection of administration options'
           onChange={handleSetTabValue}>
           <Tab
             label="Users"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                people
-              </Icon>
-            }
+            wrapped
             {...a11yProps(0)}
           />
           <Tab
             label="Item 2"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                email
-              </Icon>
-            }
             {...a11yProps(1)}
           />
           <Tab
             label="Item 3"
-            icon={
-              <Icon fontSize="small" sx={{ mt: -0.25 }}>
-                settings
-              </Icon>
-            }
             {...a11yProps(2)}
           />
         </Tabs>

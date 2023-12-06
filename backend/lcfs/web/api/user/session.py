@@ -13,8 +13,8 @@ from lcfs.web.api.user.schema import UserBase
 from lcfs.web.api.dependancies import pagination_query
 
 logger = getLogger("user_repo")
-USER_VIEW_STMT = "select * from public.user u where 1=1"
-USER_COUNT_STMT = "select count(*) from public.user u where 1=1"
+USER_VIEW_STMT = "select * from public.user_profile u where 1=1"
+USER_COUNT_STMT = "select count(*) from public.user_profile u where 1=1"
 # USER_VIEW_STMT = "select * from user_view u where 1=1"
 # USER_COUNT_STMT = "select count(*) from user_view u where 1=1"
 
@@ -93,7 +93,7 @@ class UserRepository:
         results = user_results.scalars().all()
 
         # Convert the results to UserBase schemas
-        return [UserBase.from_orm(user) for user in results]
+        return [UserBase.model_validate(user) for user in results]
 
 
     async def get_user(self, user_id: int) -> UserBase:
