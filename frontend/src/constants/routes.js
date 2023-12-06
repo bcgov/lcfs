@@ -8,6 +8,7 @@ export const ORGANIZATION_USER = `${ORGANIZATION_USERS}/:userID`;
 
 export const ADMINISTRATION = '/administration';
 export const ADMINISTRATION_USERS = `${ADMINISTRATION}/users`;
+export const ADMINISTRATION_USERS_CREATE = `${ADMINISTRATION}/users/create`;
 
 export const USERS = '/users';
 export const CURRENT_USER = '/users/current';

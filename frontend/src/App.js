@@ -5,7 +5,7 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import * as appRoutes from 'constants/routes';
 
 // Layouts
-import UserTabPanel from 'layouts/admin/UserTabPanel';
+import UserTabPanel from 'layouts/admin/components/UserTabPanel';
 import Layout from 'layouts/Layout';
 import PublicLayout from 'layouts/PublicLayout';
 import OrganizationLayout from 'layouts/organization/OrganizationLayout';
@@ -99,6 +99,18 @@ const router = createBrowserRouter([
             // loader: data => data, // loader will pass data to useMatches
             handle: {
               crumb: () => `Users`, // data from loader is passed into our crumb function so we can manipulate the output
+            },
+          },
+          {
+            path: appRoutes.ADMINISTRATION_USERS_CREATE,
+            element:
+              (<Paper elevation={5} sx={{ padding: '1rem', position: 'relative', minHeight: '80vh' }}>
+                <EditUser userType='idir'/>
+              </Paper>)
+            ,
+            handle: {
+              enter: ({ params }) => console.log('Matched route:', '/administration/users/create', 'with params:', params),
+              crumb: data => `NewUser`, // data from loader is passed into our crumb function so we can manipulate the output
             },
           },
         ],

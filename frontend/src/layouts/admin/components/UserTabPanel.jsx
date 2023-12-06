@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { AppBar, Tabs, Tab, Icon } from '@mui/material';
+import { AppBar, Tabs, Tab } from '@mui/material';
 
 import BCTypography from 'components/BCTypography';
 import BCBox from 'components/BCBox';
+import BCButton from 'components/BCButton';
 import UserGrid from 'components/Table/DataGrid/UserGrid';
 import breakpoints from "assets/theme/base/breakpoints";
+// Icons
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -80,6 +85,11 @@ export default function UserTabPanel() {
   }, [tabsOrientation]);
 
   const handleSetTabValue = (event, newValue) => setTabValue(newValue);
+  const navigate = useNavigate();
+  const handleNewUserClick = () => {
+    // Navigate to the new page (replace '/new-page' with your desired route)
+    navigate('/administration/users/create');
+  };
 
   return (
     <BCBox sx={{ bgcolor: 'background.paper' }}>
@@ -107,6 +117,16 @@ export default function UserTabPanel() {
       </AppBar>
       <TabPanel value={tabValue} index={0}>
         <BCTypography variant="h3">Users</BCTypography>
+        <BCButton
+          variant='contained'
+          size='large'
+          color='primary'
+          sx={{ textTransform: 'none', marginRight: '8px', marginBottom: '8px' }}
+          startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
+          onClick={handleNewUserClick}
+        >
+          <BCTypography variant='subtitle2'>New User</BCTypography>
+        </BCButton>
         <div className="ag-theme-alpine" style={{ height: '100%', width: '100%' }}>
           <UserGrid rows={demoData} />
         </div>

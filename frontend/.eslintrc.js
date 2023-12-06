@@ -181,6 +181,12 @@ module.exports = {
     },
   ],
   rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": ["@mui/*/*/*"]
+      }
+    ],
     // 'theme-colors/no-literal-colors': 'error',
     // 'translation-vars/no-template-vars': ['error', true],
     camelcase: [
