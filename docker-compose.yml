@@ -49,26 +49,15 @@ services:
       - db
       - redis
 
-  # frontend:
-  #   build:
-  #     dockerfile: Dockerfile.dev
-  #     context: ./frontend
-  #   command: npm run start
-  #   ports:
-  #     - 3000:3000
-  #   volumes:
-  #     - ./frontend:/app
-  #     - node_modules:/app/node_modules
-
-  frontend2:
+  frontend:
     build:
       dockerfile: Dockerfile.dev
-      context: ./frontend2
+      context: ./frontend
     command: npm run dev --force
     ports:
       - 3000:3000
     volumes:
-      - ./frontend2:/app
+      - ./frontend:/app
       # - node_modules:/app/node_modules
       - /app/node_modules
 volumes:

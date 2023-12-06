@@ -1,12 +1,12 @@
 {
-  "name": "frontend2",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "prepare": "cd .. && husky install frontend2/.husky",
+    "prepare": "cd .. && husky install frontend/.husky",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier . --check",
