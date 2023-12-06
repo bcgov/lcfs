@@ -138,8 +138,8 @@ const colors = {
     },
 
     secondary: {
-      main: '#747b8a',
-      state: '#495361',
+      main: '#fcba19',
+      state: '#fcba19',
     },
 
     info: {
@@ -148,8 +148,8 @@ const colors = {
     },
 
     success: {
-      main: '#66BB6A',
-      state: '#43A047',
+      main: '#2E8540',
+      state: '#2E8540',
     },
 
     warning: {

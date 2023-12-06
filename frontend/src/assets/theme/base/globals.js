@@ -7,7 +7,7 @@ import BCSansLightTTF from 'assets/fonts/BCSans-Light_2f.woff2';
 import BCSansLightItalicTTF from 'assets/fonts/BCSans-LightItalic_2f.woff2';
 import bceidImg from 'assets/images/bceid.png';
 
-const { info, link, text, background, primary, light } = colors;
+const { info, link, text, background, primary, light, transparent } = colors;
 
 const bcSansRegular = {
   fontFamily: "BCSans",

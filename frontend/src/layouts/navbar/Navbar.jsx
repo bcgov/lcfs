@@ -21,7 +21,7 @@ const Navbar = () => {
       balance="50,000"
       organizationName="BC Government"
       routes={routes}
-      beta={false}
+      beta={true}
       headerRightPart={<HeaderComponent key='headerRight' />}
       menuRightPart={<MenuBarComponent key='menRight' />}
     />

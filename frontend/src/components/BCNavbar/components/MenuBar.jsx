@@ -9,18 +9,16 @@ const MenuBar = props => {
   const { isScrolled, routes, data } = props
   return (
     <Toolbar
-      sx={({
-        palette: { transparent: transparentColor, white, secondary },
-        functions: { rgba },
-      }) => ({
-        backgroundColor: (isScrolled
-          ? transparentColor.main
-          : rgba(secondary.nav, 1)),
-        backdropFilter: `saturate(200%) blur(30px)`,
-        color: (isScrolled ? secondary.main : white.main),
-        maxHeight: '40px',
-        display: { xs: 'none', sm: 'flex' },
-      })}
+      className='nav'
+      sx={
+        ({
+          palette: { secondary, white },
+          functions: { rgba },
+        }) =>
+        ({
+          backgroundColor: (isScrolled ? transparent.main : rgba(secondary.nav, 1)),
+          color: (isScrolled ? secondary.main : white.main)
+        })}
       disableGutters
       variant='dense'
     >
@@ -50,6 +48,7 @@ const MenuBar = props => {
           </React.Fragment>
         ))}
       </BCBox >
+      <div class="animation start-home"></div>
       <BCBox display={{ xs: 'none', lg: 'flex' }} m={0} py={1} flexDirection='row'>
         {data.menuRightPart && React.cloneElement(data.menuRightPart, { data })}
       </BCBox>
