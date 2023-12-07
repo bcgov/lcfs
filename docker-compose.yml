@@ -1,7 +1,8 @@
-version: '3'
+version: '3.2'
 
 services:
   db:
+    restart: 'no'
     image: postgres:14.2
     environment:
       POSTGRES_DB: lcfs
@@ -13,8 +14,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
+    restart: 'no'
     image: bitnami/redis:6.2.5
-    restart: always
     environment:
       ALLOW_EMPTY_PASSWORD: 'yes'
     ports:
@@ -23,6 +24,7 @@ services:
       - redis_data:/bitnami/redis/data
 
   backend:
+    restart: 'no'
     build:
       context: ./backend
       dockerfile: 'Dockerfile'
@@ -50,6 +52,7 @@ services:
       - redis
 
   frontend:
+    restart: 'no'
     build:
       dockerfile: Dockerfile.dev
       context: ./frontend
