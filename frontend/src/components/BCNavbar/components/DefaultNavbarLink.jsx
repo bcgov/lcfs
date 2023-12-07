@@ -18,7 +18,6 @@ function DefaultNavbarLink({ icon, name, route, light }) {
     <BCBox
       component={NavLink}
       className="NavLink"
-      activeClassName="active"
       to={route}
       mx={1}
       p={1}
@@ -77,7 +76,7 @@ function DefaultNavbarLink({ icon, name, route, light }) {
 
 // Typechecking props for the DefaultNavbarLink
 DefaultNavbarLink.propTypes = {
-  icon: PropTypes.string.isRequired,
+  icon: PropTypes.string,
   name: PropTypes.string.isRequired,
   route: PropTypes.string.isRequired,
   light: PropTypes.bool
