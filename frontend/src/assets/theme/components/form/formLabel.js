@@ -1,13 +1,13 @@
-import colors from "assets/theme/base/colors";
+import colors from '@/assets/theme/base/colors'
 
-const { text } = colors;
+const { text } = colors
 
 const formLabel = {
   styleOverrides: {
     root: {
-      color: text.main,
-    },
-  },
-};
+      color: text.main
+    }
+  }
+}
 
-export default formLabel;
+export default formLabel

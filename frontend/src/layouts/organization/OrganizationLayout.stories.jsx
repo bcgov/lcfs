@@ -1,13 +1,12 @@
 // OrganizationLayout.stories.js
-import React from 'react';
-import OrganizationLayout from './OrganizationLayout';
+import OrganizationLayout from './OrganizationLayout'
 
 export default {
-  title: 'Layouts/OrganizationLayout',
-  component: OrganizationLayout,
-};
+  title: '@/layouts/OrganizationLayout',
+  component: OrganizationLayout
+}
 
-const Template = (args) => <OrganizationLayout {...args} />;
+const Template = (args) => <OrganizationLayout {...args} />
 
-export const Default = Template.bind({});
-Default.args = {};
+export const Default = Template.bind({})
+Default.args = {}

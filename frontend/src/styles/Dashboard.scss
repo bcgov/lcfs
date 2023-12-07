@@ -34,7 +34,8 @@
     line-height: 3rem;
   }
 
-  h1, h2 {
+  h1,
+  h2 {
     color: $blue;
     font-size: 1.8rem;
     line-height: 2.5rem;
@@ -93,7 +94,8 @@
     text-align: left;
     text-decoration: underline;
 
-    &:hover, &:focus {
+    &:hover,
+    &:focus {
       color: $link-color-hover-dark;
       text-decoration: underline;
     }
@@ -108,7 +110,7 @@
   }
 
   h1 {
-    background-color: $white; 
+    background-color: $white;
     color: $font;
     font-size: 2.4rem;
     padding: 0 0.5rem;
@@ -128,15 +130,15 @@
   }
 
   &.director {
-    .content{
+    .content {
       margin-left: 4rem;
-      >div {
+      > div {
         margin: 2rem 0 0;
         display: flex;
         align-items: center;
         gap: 15px;
 
-        >span {
+        > span {
           color: #5a7a79;
           font-size: 32px;
         }
@@ -148,7 +150,6 @@
     .content {
       margin-left: 0;
       padding: 1.5rem 0 0;
-
     }
 
     .icon {
@@ -208,8 +209,8 @@
   .content {
     margin-left: 7rem;
     position: relative;
-  //   margin-top: -18px;
-  //  padding: 1.5rem 1rem 1rem;
+    //   margin-top: -18px;
+    //  padding: 1.5rem 1rem 1rem;
 
     > a {
       display: inline-block;
@@ -224,8 +225,8 @@
       vertical-align: middle;
     }
   }
-.btn-text{
-  display: flex;
+  .btn-text {
+    display: flex;
   }
   .value {
     color: $dark-yellow;

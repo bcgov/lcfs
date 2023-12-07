@@ -1,26 +1,24 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Divider, Toolbar } from '@mui/material';
-import BCBox from 'components/BCBox';
-import DefaultNavbarLink from 'components/BCNavbar/components/DefaultNavbarLink';
+import { Divider, Toolbar } from '@mui/material'
+import BCBox from '@/components/BCBox'
+import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
+import colors from '@/assets/theme/base/colors'
 
-const MenuBar = props => {
+const { transparent } = colors
+
+const MenuBar = (props) => {
   const { isScrolled, routes, data } = props
   return (
     <Toolbar
-      className='nav'
-      sx={
-        ({
-          palette: { secondary, white },
-          functions: { rgba },
-        }) =>
-        ({
-          backgroundColor: (isScrolled ? transparent.main : rgba(secondary.nav, 1)),
-          color: (isScrolled ? secondary.main : white.main)
-        })}
+      className="nav"
+      sx={({ palette: { secondary, white }, functions: { rgba } }) => ({
+        backgroundColor: isScrolled ? transparent.main : rgba(secondary.nav, 1),
+        color: isScrolled ? secondary.main : white.main
+      })}
       disableGutters
-      variant='dense'
+      variant="dense"
     >
       <BCBox
         sx={{
@@ -28,7 +26,7 @@ const MenuBar = props => {
           display: { xs: 'none', sm: 'flex' },
           flexDirection: 'row',
           margin: 0,
-          padding: 0,
+          padding: 0
         }}
       >
         {routes.map((route) => (
@@ -40,16 +38,23 @@ const MenuBar = props => {
               light={isScrolled}
             />
             <Divider
-              orientation='vertical'
-              variant='middle'
+              orientation="vertical"
+              variant="middle"
               flexItem
-              sx={({ palette: { secondary } }) => ({ backgroundColor: secondary.main })}
+              sx={({ palette: { secondary } }) => ({
+                backgroundColor: secondary.main
+              })}
             />
           </React.Fragment>
         ))}
-      </BCBox >
-      <div class="animation start-home"></div>
-      <BCBox display={{ xs: 'none', lg: 'flex' }} m={0} py={1} flexDirection='row'>
+      </BCBox>
+      <div className="animation start-home"></div>
+      <BCBox
+        display={{ xs: 'none', lg: 'flex' }}
+        m={0}
+        py={1}
+        flexDirection="row"
+      >
         {data.menuRightPart && React.cloneElement(data.menuRightPart, { data })}
       </BCBox>
     </Toolbar>
@@ -58,7 +63,7 @@ const MenuBar = props => {
 
 MenuBar.propTypes = {
   isScrolled: PropTypes.bool,
-  routes: PropTypes.array,
+  routes: PropTypes.array
 }
 
 export default MenuBar

@@ -1,6 +1,5 @@
-import React from 'react';
-import { FormHelperText, TextField } from '@mui/material';
-import { Label } from './Label';
+import { FormHelperText, TextField } from '@mui/material'
+import { Label } from './Label'
 
 export const BCeIDSpecificFormFields = ({ handleChange, formData, errors }) => {
   return (
@@ -55,5 +54,5 @@ export const BCeIDSpecificFormFields = ({ handleChange, formData, errors }) => {
         )}
       </div>
     </>
-  );
-};
+  )
+}

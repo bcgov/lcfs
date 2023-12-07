@@ -34,7 +34,7 @@ console_handler.setFormatter(log_formatter)
 # Configure the root logger with the console handler
 root_logger = logging.getLogger()
 root_logger.addHandler(console_handler)
-root_logger.setLevel(logging.INFO)
+root_logger.setLevel(logging.DEBUG)
 
 
 class LazyAuthenticationBackend(AuthenticationBackend):
@@ -67,10 +67,10 @@ def get_app() -> FastAPI:
     """
     # Check if the application is running in development environment
     # This allows for debug attachment from outside our docker container
-    if os.getenv('APP_ENVIRONMENT') == 'dev':
-        debugpy.listen(('0.0.0.0', 5678))
-        print("⏳ Waiting for debugger attach on port 5678...")
-        debugpy.wait_for_client()
+    # if os.getenv('APP_ENVIRONMENT') == 'dev':
+    #     debugpy.listen(('0.0.0.0', 5678))
+    #     print("⏳ Waiting for debugger attach on port 5678...")
+    #     debugpy.wait_for_client()
 
     # Create the fastapi instance
     app = FastAPI(

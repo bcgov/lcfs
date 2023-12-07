@@ -1,8 +1,0 @@
-coverage/
-esm/
-lib/
-tmp/
-node_modules/
-tsconfig.json
-CHANGELOG.md
-storybook-static/

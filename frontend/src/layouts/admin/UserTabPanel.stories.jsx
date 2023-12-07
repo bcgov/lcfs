@@ -1,10 +1,9 @@
-import React from 'react';
-import FullWidthTabs from './UserTabPanel';
+import FullWidthTabs from './UserTabPanel'
 
 export default {
-  title: 'Layouts/UsersAdmin',
-  component: FullWidthTabs,
-} ;
-const Template = (args) =>  <FullWidthTabs />;
+  title: '@/layouts/UsersAdmin',
+  component: FullWidthTabs
+}
+const Template = (args) => <FullWidthTabs />
 
-export const Default = Template.bind({});
+export const Default = Template.bind({})

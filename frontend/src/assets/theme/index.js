@@ -1,65 +1,65 @@
 // @mui material components
-import { createTheme } from "@mui/material/styles";
+import { createTheme } from '@mui/material/styles'
 // base styles
-import breakpoints from "assets/theme/base/breakpoints";
-import boxShadows from "assets/theme/base/boxShadows";
-import borders from "assets/theme/base/borders";
-import colors from "assets/theme/base/colors";
-import typography from "assets/theme/base/typography";
-import globals from 'assets/theme/base/globals'
+import breakpoints from '@/assets/theme/base/breakpoints'
+import boxShadows from '@/assets/theme/base/boxShadows'
+import borders from '@/assets/theme/base/borders'
+import colors from '@/assets/theme/base/colors'
+import typography from '@/assets/theme/base/typography'
+import globals from '@/assets/theme/base/globals'
 // helper functions
-import { boxShadow, hexToRgb, linearGradient, pxToRem, rgba } from "./utils";
+import { boxShadow, hexToRgb, linearGradient, pxToRem, rgba } from './utils'
 // components base styles for @mui material components
-import sidenav from "assets/theme/components/sidenav";
-import list from "assets/theme/components/list";
-import listItem from "assets/theme/components/list/listItem";
-import listItemText from "assets/theme/components/list/listItemText";
-import card from "assets/theme/components/card";
-import cardMedia from "assets/theme/components/card/cardMedia";
-import cardContent from "assets/theme/components/card/cardContent";
-import button from "assets/theme/components/button";
-import iconButton from "assets/theme/components/iconButton";
-import input from "assets/theme/components/form/input";
-import inputLabel from "assets/theme/components/form/inputLabel";
-import inputOutlined from "assets/theme/components/form/inputOutlined";
-import textField from "assets/theme/components/form/textField";
-import menu from "assets/theme/components/menu";
-import menuItem from "assets/theme/components/menu/menuItem";
-import switchButton from "assets/theme/components/form/switchButton";
-// import divider from "assets/theme/components/divider";
-import tableContainer from "assets/theme/components/table/tableContainer";
-import tableHead from "assets/theme/components/table/tableHead";
-import tableCell from "assets/theme/components/table/tableCell";
-import linearProgress from "assets/theme/components/linearProgress";
-import breadcrumbs from "assets/theme/components/breadcrumbs";
-import slider from "assets/theme/components/slider";
-import avatar from "assets/theme/components/avatar";
-import tooltip from "assets/theme/components/tooltip";
-import appBar from "assets/theme/components/appBar";
-import tabs from "assets/theme/components/tabs";
-import tab from "assets/theme/components/tabs/tab";
-import stepper from "assets/theme/components/stepper";
-import step from "assets/theme/components/stepper/step";
-import stepConnector from "assets/theme/components/stepper/stepConnector";
-import stepLabel from "assets/theme/components/stepper/stepLabel";
-import stepIcon from "assets/theme/components/stepper/stepIcon";
-import select from "assets/theme/components/form/select";
-import formControlLabel from "assets/theme/components/form/formControlLabel";
-import formLabel from "assets/theme/components/form/formLabel";
-import checkbox from "assets/theme/components/form/checkbox";
-import radio from "assets/theme/components/form/radio";
-import autocomplete from "assets/theme/components/form/autocomplete";
-import container from "assets/theme/components/container";
-import popover from "assets/theme/components/popover";
-import buttonBase from "assets/theme/components/buttonBase";
-// import icon from "assets/theme/components/icon";
-import svgIcon from "assets/theme/components/svgIcon";
-import link from "assets/theme/components/link";
-import dialog from "assets/theme/components/dialog";
-import dialogTitle from "assets/theme/components/dialog/dialogTitle";
-import dialogContent from "assets/theme/components/dialog/dialogContent";
-import dialogContentText from "assets/theme/components/dialog/dialogContentText";
-import dialogActions from "assets/theme/components/dialog/dialogActions";
+import sidenav from '@/assets/theme/components/sidenav'
+import list from '@/assets/theme/components/list'
+import listItem from '@/assets/theme/components/list/listItem'
+import listItemText from '@/assets/theme/components/list/listItemText'
+import card from '@/assets/theme/components/card'
+import cardMedia from '@/assets/theme/components/card/cardMedia'
+import cardContent from '@/assets/theme/components/card/cardContent'
+import button from '@/assets/theme/components/button'
+import iconButton from '@/assets/theme/components/iconButton'
+import input from '@/assets/theme/components/form/input'
+import inputLabel from '@/assets/theme/components/form/inputLabel'
+import inputOutlined from '@/assets/theme/components/form/inputOutlined'
+import textField from '@/assets/theme/components/form/textField'
+import menu from '@/assets/theme/components/menu'
+import menuItem from '@/assets/theme/components/menu/menuItem'
+import switchButton from '@/assets/theme/components/form/switchButton'
+// import divider from "@/assets/theme/components/divider";
+import tableContainer from '@/assets/theme/components/table/tableContainer'
+import tableHead from '@/assets/theme/components/table/tableHead'
+import tableCell from '@/assets/theme/components/table/tableCell'
+import linearProgress from '@/assets/theme/components/linearProgress'
+import breadcrumbs from '@/assets/theme/components/breadcrumbs'
+import slider from '@/assets/theme/components/slider'
+import avatar from '@/assets/theme/components/avatar'
+import tooltip from '@/assets/theme/components/tooltip'
+import appBar from '@/assets/theme/components/appBar'
+import tabs from '@/assets/theme/components/tabs'
+import tab from '@/assets/theme/components/tabs/tab'
+import stepper from '@/assets/theme/components/stepper'
+import step from '@/assets/theme/components/stepper/step'
+import stepConnector from '@/assets/theme/components/stepper/stepConnector'
+import stepLabel from '@/assets/theme/components/stepper/stepLabel'
+import stepIcon from '@/assets/theme/components/stepper/stepIcon'
+import select from '@/assets/theme/components/form/select'
+import formControlLabel from '@/assets/theme/components/form/formControlLabel'
+import formLabel from '@/assets/theme/components/form/formLabel'
+import checkbox from '@/assets/theme/components/form/checkbox'
+import radio from '@/assets/theme/components/form/radio'
+import autocomplete from '@/assets/theme/components/form/autocomplete'
+import container from '@/assets/theme/components/container'
+import popover from '@/assets/theme/components/popover'
+import buttonBase from '@/assets/theme/components/buttonBase'
+// import icon from "@/assets/theme/components/icon";
+import svgIcon from '@/assets/theme/components/svgIcon'
+import link from '@/assets/theme/components/link'
+import dialog from '@/assets/theme/components/dialog'
+import dialogTitle from '@/assets/theme/components/dialog/dialogTitle'
+import dialogContent from '@/assets/theme/components/dialog/dialogContent'
+import dialogContentText from '@/assets/theme/components/dialog/dialogContentText'
+import dialogActions from '@/assets/theme/components/dialog/dialogActions'
 
 export default createTheme({
   breakpoints: { ...breakpoints },
@@ -72,14 +72,14 @@ export default createTheme({
     hexToRgb,
     linearGradient,
     pxToRem,
-    rgba,
+    rgba
   },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         ...globals,
-        ...container,
-      },
+        ...container
+      }
     },
     MuiButton: { ...button },
     MuiDrawer: { ...sidenav },
@@ -129,6 +129,6 @@ export default createTheme({
     MuiDialogTitle: { ...dialogTitle },
     MuiDialogContent: { ...dialogContent },
     MuiDialogContentText: { ...dialogContentText },
-    MuiDialogActions: { ...dialogActions },
-  },
+    MuiDialogActions: { ...dialogActions }
+  }
 })

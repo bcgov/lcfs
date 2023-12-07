@@ -1,6 +1,5 @@
-import React from 'react';
-import { FormHelperText, TextField } from '@mui/material';
-import { Label } from './Label';
+import { FormHelperText, TextField } from '@mui/material'
+import { Label } from './Label'
 
 export const IDIRSpecificFormFields = ({ handleChange, formData, errors }) => {
   return (
@@ -34,5 +33,5 @@ export const IDIRSpecificFormFields = ({ handleChange, formData, errors }) => {
         {errors.email && <FormHelperText error>{errors.email}</FormHelperText>}
       </div>
     </>
-  );
-};
+  )
+}

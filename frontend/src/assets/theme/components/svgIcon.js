@@ -1,23 +1,23 @@
-import { pxToRem } from "assets/theme/utils";
+import { pxToRem } from '@/assets/theme/utils'
 
 const svgIcon = {
   defaultProps: {
-    fontSize: "inherit",
+    fontSize: 'inherit'
   },
 
   styleOverrides: {
     fontSizeInherit: {
-      fontSize: "inherit !important",
+      fontSize: 'inherit !important'
     },
 
     fontSizeSmall: {
-      fontSize: `${pxToRem(20)} !important`,
+      fontSize: `${pxToRem(20)} !important`
     },
 
     fontSizeLarge: {
-      fontSize: `${pxToRem(36)} !important`,
-    },
-  },
-};
+      fontSize: `${pxToRem(36)} !important`
+    }
+  }
+}
 
-export default svgIcon;
+export default svgIcon

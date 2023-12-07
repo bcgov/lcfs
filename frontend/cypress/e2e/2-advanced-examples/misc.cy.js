@@ -12,7 +12,8 @@ context('Misc', () => {
     // and force Cypress to re-query from the root element
     cy.get('.misc-table').within(() => {
       // ends the current chain and yields null
-      cy.contains('Cheryl').click().end()
+      cy.contains('Cheryl').click()
+      cy.contains('Cheryl').end()
 
       // queries the entire table again
       cy.contains('Charles').click()
@@ -33,7 +34,8 @@ context('Misc', () => {
     // on CircleCI Windows build machines we have a failure to run bash shell
     // https://github.com/cypress-io/cypress/issues/5169
     // so skip some of the tests by passing flag "--env circle=true"
-    const isCircleOnWindows = Cypress.platform === 'win32' && Cypress.env('circle')
+    const isCircleOnWindows =
+      Cypress.platform === 'win32' && Cypress.env('circle')
 
     if (isCircleOnWindows) {
       cy.log('Skipping test on CircleCI')
@@ -51,18 +53,18 @@ context('Misc', () => {
       return
     }
 
-    cy.exec('echo Jane Lane')
-      .its('stdout').should('contain', 'Jane Lane')
+    cy.exec('echo Jane Lane').its('stdout').should('contain', 'Jane Lane')
 
     if (Cypress.platform === 'win32') {
       cy.exec(`print ${Cypress.config('configFile')}`)
-        .its('stderr').should('be.empty')
+        .its('stderr')
+        .should('be.empty')
     } else {
       cy.exec(`cat ${Cypress.config('configFile')}`)
-        .its('stderr').should('be.empty')
+        .its('stderr')
+        .should('be.empty')
 
-      cy.exec('pwd')
-        .its('code').should('eq', 0)
+      cy.exec('pwd').its('code').should('eq', 0)
     }
   })
 
@@ -89,16 +91,14 @@ context('Misc', () => {
         scale: false,
         disableTimersAndAnimations: true,
         screenshotOnRunFailure: true,
-        onBeforeScreenshot () { },
-        onAfterScreenshot () { },
+        onBeforeScreenshot() {},
+        onAfterScreenshot() {}
       })
     })
   })
 
   it('cy.wrap() - wrap an object', () => {
     // https://on.cypress.io/wrap
-    cy.wrap({ foo: 'bar' })
-      .should('have.property', 'foo')
-      .and('include', 'bar')
+    cy.wrap({ foo: 'bar' }).should('have.property', 'foo').and('include', 'bar')
   })
 })

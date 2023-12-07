@@ -1,12 +1,12 @@
-import colors from 'assets/theme/base/colors';
-import borders from 'assets/theme/base/borders';
-import typography from 'assets/theme/base/typography';
+import colors from '@/assets/theme/base/colors'
+import borders from '@/assets/theme/base/borders'
+import typography from '@/assets/theme/base/typography'
 
-import { pxToRem } from 'assets/theme/utils';
+import { pxToRem } from '@/assets/theme/utils'
 
-const { inputBorderColor, info, grey, transparent, background } = colors;
-const { borderRadius } = borders;
-const { size } = typography;
+const { inputBorderColor, info, grey, transparent, background } = colors
+const { borderRadius } = borders
+const { size } = typography
 
 const inputOutlined = {
   styleOverrides: {
@@ -17,36 +17,36 @@ const inputOutlined = {
       overflow: 'hidden',
 
       '&:hover .MuiOutlinedInput-notchedOutline': {
-        borderColor: inputBorderColor,
+        borderColor: inputBorderColor
       },
 
       '&.Mui-focused': {
         '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: info.main,
-        },
-      },
+          borderColor: info.main
+        }
+      }
     },
 
     notchedOutline: {
-      borderColor: inputBorderColor,
+      borderColor: inputBorderColor
     },
 
     input: {
       color: grey[700],
       padding: pxToRem(12),
-      backgroundColor: background.default,
+      backgroundColor: background.default
     },
 
     inputSizeSmall: {
       fontSize: size.xs,
-      padding: pxToRem(10),
+      padding: pxToRem(10)
     },
 
     multiline: {
       color: grey[700],
-      padding: 0,
-    },
-  },
-};
+      padding: 0
+    }
+  }
+}
 
-export default inputOutlined;
+export default inputOutlined

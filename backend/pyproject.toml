@@ -12,8 +12,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
-fastapi = "^0.104.0"
-uvicorn = { version = "^0.20.0", extras = ["standard"] }
+fastapi = "^0.104.1"
+uvicorn = { version = "^0.24.0", extras = ["standard"] }
 pydantic = {extras = ["email"], version = "^2.4.2"}
 yarl = "^1.8.2"
 ujson = "^5.7.0"
@@ -28,6 +28,7 @@ distlib = "^0.3.3"
 pydantic-settings = "^2.0.3"
 pyjwt = "^2.8.0"
 debugpy = "^1.8.0"
+cryptography = "^41.0.7"
 
 
 [tool.poetry.dev-dependencies]

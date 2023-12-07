@@ -1,32 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { AppBar, Divider, useScrollTrigger } from '@mui/material';
-import DefaultNavbarMobile from 'components/BCNavbar/components/DefaultNavbarMobile';
+import { useState, useEffect } from 'react'
+import { AppBar, Divider, useScrollTrigger } from '@mui/material'
+import DefaultNavbarMobile from '@/components/BCNavbar/components/DefaultNavbarMobile'
 
 // BCGov Dashboard React base styles
-import breakpoints from 'assets/theme/base/breakpoints';
-import { PropTypes } from 'prop-types';
-import MenuBar from 'components/BCNavbar/components/MenuBar';
-import HeaderBar from 'components/BCNavbar/components/HeaderBar';
-import BCBox from 'components/BCBox';
+import breakpoints from '@/assets/theme/base/breakpoints'
+import { PropTypes } from 'prop-types'
+import MenuBar from '@/components/BCNavbar/components/MenuBar'
+import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
+import BCBox from '@/components/BCBox'
 
 function BCNavbar(props) {
-  const { routes } = props;
-  const isScrolled = useScrollTrigger();
-  const [mobileNavbar, setMobileNavbar] = useState(false);
-  const [mobileView, setMobileView] = useState(false);
-  const openMobileNavbar = ({ currentTarget }) => setMobileNavbar(currentTarget.parentNode);
-  const closeMobileNavbar = () => setMobileNavbar(false);
-
+  const { routes } = props
+  const isScrolled = useScrollTrigger()
+  const [mobileNavbar, setMobileNavbar] = useState(false)
+  const [mobileView, setMobileView] = useState(false)
+  const openMobileNavbar = ({ currentTarget }) =>
+    setMobileNavbar(currentTarget.parentNode)
+  const closeMobileNavbar = () => setMobileNavbar(false)
 
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
     function displayMobileNavbar() {
       if (window.innerWidth < breakpoints.values.lg) {
-        setMobileView(true);
-        setMobileNavbar(false);
+        setMobileView(true)
+        setMobileNavbar(false)
       } else {
-        setMobileView(false);
-        setMobileNavbar(false);
+        setMobileView(false)
+        setMobileNavbar(false)
       }
     }
 
@@ -34,20 +34,21 @@ function BCNavbar(props) {
      The event listener that's calling the displayMobileNavbar function when 
      resizing the window.
     */
-    window.addEventListener("resize", displayMobileNavbar);
+    window.addEventListener('resize', displayMobileNavbar)
     // Call the displayMobileNavbar function to set the state with the initial value.
-    displayMobileNavbar();
+    displayMobileNavbar()
 
     // Remove event listener on cleanup
     return () => {
-      window.removeEventListener("resize", displayMobileNavbar);
-    };
-  }, []);
+      window.removeEventListener('resize', displayMobileNavbar)
+    }
+  }, [])
 
   return (
     <BCBox py={0}>
-      <AppBar postition='sticky'
-        component='nav'
+      <AppBar
+        postition="sticky"
+        component="nav"
         color={isScrolled ? 'transparent' : 'inherit'}
         elevation={isScrolled ? 5 : 0}
       >
@@ -57,37 +58,40 @@ function BCNavbar(props) {
           beta={props.beta}
           mobileView={mobileView}
           openMobileNavbar={openMobileNavbar}
-          mobileNavbar={mobileNavbar} />
+          mobileNavbar={mobileNavbar}
+        />
         <Divider
-          orientation='vertical'
+          orientation="vertical"
           flexItem
           sx={({ palette: { secondary } }) => ({
-            backgroundColor: secondary.main, padding: '1px'
+            backgroundColor: secondary.main,
+            padding: '1px'
           })}
         />
-        {mobileView ?
+        {mobileView ? (
           <DefaultNavbarMobile
             open={mobileNavbar}
             close={closeMobileNavbar}
             light={true}
-            links={routes} />
-          :
+            links={routes}
+          />
+        ) : (
           <MenuBar isScrolled={isScrolled} routes={routes} data={props} />
-        }
+        )}
       </AppBar>
-    </BCBox >
-  );
+    </BCBox>
+  )
 }
 
 BCNavbar.defaultProps = {
   title: 'Government of British Columbia',
   routes: [
-    { icon: 'home', name: 'Dashboard', route: '/' },
+    { icon: 'home', name: 'Dashboard', route: '/' }
     // Add other routes as needed
   ],
   beta: true,
   headerRightPart: null,
-  menuRightPart: null,
+  menuRightPart: null
 }
 
 BCNavbar.propTypes = {
@@ -95,6 +99,6 @@ BCNavbar.propTypes = {
   routes: PropTypes.array.isRequired,
   beta: PropTypes.bool,
   headerRightPart: PropTypes.element,
-  menuRightPart: PropTypes.element,
+  menuRightPart: PropTypes.element
 }
-export default BCNavbar;
+export default BCNavbar
