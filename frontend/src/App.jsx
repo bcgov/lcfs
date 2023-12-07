@@ -20,6 +20,7 @@ import LCFSLogin from '@/layouts/authentication/components/LCFSLogin'
 import { EditUser } from '@/views/editUser'
 import ApiDocs from '@/components/ApiDocs'
 import { ViewUsers } from '@/views/viewUsers'
+import { Organization } from '@/views/organization'
 
 const router = createBrowserRouter([
   {
@@ -117,6 +118,10 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
+      {
+        path: appRoutes.ORGANIZATION_USERS,
+        element: <Organization />
+      },
       {
         path: appRoutes.EDIT_USER,
         element: <EditUser />
