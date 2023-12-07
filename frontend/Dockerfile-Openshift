@@ -1,9 +1,10 @@
 # Stage 1: Use yarn to build the app
 FROM artifacts.developer.gov.bc.ca/docker-remote/node:16 as builder
-ENV NODE_ENV=production
+#  ENV NODE_ENV=production
 WORKDIR /usr/src/app
 COPY ./ ./
-RUN npm install -g npm@8.19.4 cross-env@7.0.3 && \
+#RUN npm install -g npm@8.19.4 cross-env@7.0.3 && \
+RUN npm install && \ 
     npm run build && \
     ls -l
 
