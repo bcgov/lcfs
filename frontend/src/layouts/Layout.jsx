@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import BCTypography from '@/components/BCTypography'
 
 import Navbar from '@/layouts/navbar/Navbar'
-import NavigateNextIcon from '@mui/icons-material/NavigateNext'
+import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
 import RequireAuth from '@/components/RequireAuth'
 import * as appRoutes from '@/constants/routes'
 
