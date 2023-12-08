@@ -1,13 +1,18 @@
-const { defineConfig } = require("cypress");
+import { defineConfig } from 'cypress'
+import vitePreprocessor from 'cypress-vite'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-module.exports = defineConfig({
+export default defineConfig({
   // Global configurations
-  reporter: "mochawesome",
+  reporter: 'mochawesome',
   reporterOptions: {
-    reportDir: "cypress/reports",
+    reportDir: 'cypress/reports',
     overwrite: false,
     html: false,
-    json: true,
+    json: true
   },
   e2e: {
     // Timeouts
@@ -25,19 +30,26 @@ module.exports = defineConfig({
     viewportHeight: 720,
 
     // Base URL for tests
-    baseUrl: "http://localhost:3000",
+    baseUrl: 'http://localhost:3000',
 
     // Node events and plugin configuration
     setupNodeEvents(on, config) {
       // Task for logging
       on('task', {
         log(message) {
-          console.log(message);
-          return null;
-        },
-      });
-      
-      return config;
-    },
-  },
-});
+          console.log(message)
+          return null
+        }
+      })
+      on(
+        'file:preprocessor',
+        vitePreprocessor({
+          configFile: path.resolve(__dirname, './vite.config.js'),
+          mode: 'development'
+        })
+      )
+
+      return config
+    }
+  }
+})

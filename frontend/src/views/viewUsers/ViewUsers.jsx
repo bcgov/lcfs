@@ -1,7 +1,7 @@
-import Pencil from '@/assets/icons/pencil.svg';
-import colors from '@/assets/theme/base/colors';
-import { BCTable } from '@/components/BCTable';
-import { Stack, Typography } from '@mui/material';
+import Pencil from '@/assets/icons/pencil.svg?react'
+import colors from '@/assets/theme/base/colors'
+import { BCTable } from '@/components/BCTable'
+import { Stack, Typography } from '@mui/material'
 
 // dummy data creation
 const createData = (
@@ -9,16 +9,16 @@ const createData = (
   transactionType,
   transactionID,
   timestamp,
-  organization,
+  organization
 ) => {
   return {
     actionTaken,
     transactionType,
     transactionID,
     timestamp,
-    organization,
-  };
-};
+    organization
+  }
+}
 
 const rows = [
   createData('Transaction: IN', 159, 6.0, 24, 4.0),
@@ -33,8 +33,8 @@ const rows = [
   createData('Transaction: IN', 356, 16.0, 49, 3.9),
   createData('Transaction: IN', 356, 16.0, 49, 3.9),
   createData('Transaction: IN', 356, 16.0, 49, 3.9),
-  createData('Transaction: IN', 356, 16.0, 49, 3.9),
-];
+  createData('Transaction: IN', 356, 16.0, 49, 3.9)
+]
 
 export const ViewUsers = () => {
   // call to api to fetch user by ID based on url param userID
@@ -93,9 +93,9 @@ export const ViewUsers = () => {
           { field: 'transactionType' },
           { field: 'transactionID' },
           { field: 'timestamp' },
-          { field: 'organization' },
+          { field: 'organization' }
         ]}
       />
     </div>
-  );
-};
+  )
+}

@@ -1,1 +1,1 @@
-export { ViewUsers } from './ViewUsers';
+export { ViewUsers } from './ViewUsers'

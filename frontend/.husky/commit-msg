@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Regex pattern to validate commit message
+# For example, for Conventional Commits
+COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|chore)\: .{1,}'
+
+# Check if the commit message matches the regex
+if ! grep -qE "$COMMIT_REGEX" "$1"; then
+  echo "ERROR: Your commit message does not match the required format."
+  echo "ERROR: Commit message must start with feat:, fix:, etc."
+  exit 1
+fi

@@ -1,19 +1,19 @@
-import { useState } from "react";
+import { useState } from 'react'
 // prop-types is a library for typechecking of props
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types'
 
 // react-router-dom components
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom'
 
 // @mui material components
-import Icon from "@mui/material/Icon";
+import Icon from '@mui/material/Icon'
 
 // Custom React components
-import BCBox from "components/BCBox";
-import BCTypography from "components/BCTypography";
+import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
 
 function DefaultNavbarLink({ icon, name, route, light }) {
-  const [hover, setHover] = useState(false);
+  const [hover, setHover] = useState(false)
   return (
     <BCBox
       component={Link}
@@ -22,27 +22,26 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       p={1}
       display="flex"
       alignItems="center"
-      sx={({
-        transitions
-      }) => ({
-        cursor: "pointer",
-        userSelect: "none",
-        "&:hover": {
-          backgroundColor: hover ? "rgba(0, 0, 0, 0.1)" : "transparent",
+      sx={({ transitions }) => ({
+        cursor: 'pointer',
+        userSelect: 'none',
+        '&:hover': {
+          backgroundColor: hover ? 'rgba(0, 0, 0, 0.1)' : 'transparent'
         },
-        transform: "translateX(0)",
-        transition: transitions.create("transform", {
+        transform: 'translateX(0)',
+        transition: transitions.create('transform', {
           easing: transitions.easing.sharp,
-          duration: transitions.duration.shorter,
-        }),
+          duration: transitions.duration.shorter
+        })
       })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
       <Icon
         sx={{
-          color: ({ palette: { secondary, primary } }) => (light ? primary.main : secondary.main),
-          verticalAlign: "middle",
+          color: ({ palette: { secondary, primary } }) =>
+            light ? primary.main : secondary.main,
+          verticalAlign: 'middle'
         }}
       >
         {icon}
@@ -50,14 +49,14 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       <BCTypography
         variant="body2"
         fontWeight="light"
-        color={light ? "primary" : "white"}
+        color={light ? 'primary' : 'white'}
         textTransform="capitalize"
-        sx={{ width: "100%", lineHeight: 0 }}
+        sx={{ width: '100%', lineHeight: 0 }}
       >
         &nbsp;{name}
       </BCTypography>
     </BCBox>
-  );
+  )
 }
 
 // Typechecking props for the DefaultNavbarLink
@@ -65,7 +64,7 @@ DefaultNavbarLink.propTypes = {
   icon: PropTypes.string.isRequired,
   name: PropTypes.string.isRequired,
   route: PropTypes.string.isRequired,
-  light: PropTypes.bool,
-};
+  light: PropTypes.bool
+}
 
-export default DefaultNavbarLink;
+export default DefaultNavbarLink

@@ -1,3 +1,12 @@
+import defaultTheme from '@/assets/theme'
+import { ThemeProvider, CssBaseline } from '@mui/material'
+import { withThemeFromJSXProvider } from '@storybook/addon-themes'
+import '@fontsource/roboto/300.css'
+import '@fontsource/roboto/400.css'
+import '@fontsource/roboto/500.css'
+import '@fontsource/roboto/700.css'
+import '@fontsource/material-icons'
+
 /** @type { import('@storybook/react').Preview } */
 const preview = {
   parameters: {
@@ -5,25 +14,23 @@ const preview = {
     controls: {
       matchers: {
         color: /(background|color)$/i,
-        date: /Date$/i,
-      },
+        date: /Date$/i
+      }
+    }
+  }
+}
+
+export default preview
+
+export const decorators = [
+  withThemeFromJSXProvider({
+    GlobalStyles: CssBaseline,
+    Provider: ThemeProvider,
+    themes: {
+      // Provide your custom themes here
+      light: defaultTheme
+      // dark: darkTheme,
     },
-  },
-};
-
-export default preview;
-
-import { CssBaseline, ThemeProvider } from "@mui/material";
-import theme from "../src/assets/theme"
-import { BrowserRouter } from "react-router-dom";
-export const withMuiTheme = (Story) => (
-  <BrowserRouter>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Story />
-    </ThemeProvider>
-  </BrowserRouter>
-);
-
-export const decorators = [withMuiTheme];
-
+    defaultTheme: 'light'
+  })
+]

@@ -1,9 +1,9 @@
-import borders from 'assets/theme/base/borders';
-import colors from 'assets/theme/base/colors';
+import borders from '@/assets/theme/base/borders'
+import colors from '@/assets/theme/base/colors'
 
-import { pxToRem, linearGradient } from 'assets/theme/utils';
-const { borderWidth, borderColor } = borders;
-const { transparent, info } = colors;
+import { pxToRem, linearGradient } from '@/assets/theme/utils'
+const { borderWidth, borderColor } = borders
+const { transparent, info } = colors
 
 const radio = {
   styleOverrides: {
@@ -14,12 +14,12 @@ const radio = {
         height: pxToRem(20),
         color: transparent.main,
         border: `${borderWidth[1]} solid ${borderColor}`,
-        borderRadius: '50%',
+        borderRadius: '50%'
       },
 
       '&:after': {
         transition: 'opacity 250ms ease-in-out',
-        content: `""`,
+        content: '""',
         position: 'absolute',
         width: pxToRem(14),
         height: pxToRem(14),
@@ -30,18 +30,18 @@ const radio = {
         right: 0,
         top: 0,
         bottom: 0,
-        margin: 'auto',
+        margin: 'auto'
       },
 
       '&:hover': {
-        backgroundColor: transparent.main,
+        backgroundColor: transparent.main
       },
 
       '&.Mui-focusVisible': {
-        border: `${borderWidth[2]} solid ${info.main} !important`,
+        border: `${borderWidth[2]} solid ${info.main} !important`
       },
       '& .MuiSvgIcon-fontSizeMedium': {
-        borderColor: colors.grey[700],
+        borderColor: colors.grey[700]
       },
       '&.Mui-disabled .MuiSvgIcon-fontSizeMedium': {
         borderColor: colors.grey[500]
@@ -55,13 +55,13 @@ const radio = {
         color: info.main,
 
         '& .MuiSvgIcon-root': {
-          borderColor: info.main,
+          borderColor: info.main
         },
 
         '&:after': {
-          opacity: 1,
-        },
-      },
+          opacity: 1
+        }
+      }
     },
 
     colorSecondary: {
@@ -71,15 +71,15 @@ const radio = {
         color: info.main,
 
         '& .MuiSvgIcon-root': {
-          borderColor: info.main,
+          borderColor: info.main
         },
 
         '&:after': {
-          opacity: 1,
-        },
-      },
-    },
-  },
-};
+          opacity: 1
+        }
+      }
+    }
+  }
+}
 
-export default radio;
+export default radio

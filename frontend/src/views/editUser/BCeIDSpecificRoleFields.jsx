@@ -1,10 +1,9 @@
-import React from 'react';
-import { Checkbox, FormControlLabel, Radio, Stack } from '@mui/material';
+import { Checkbox, FormControlLabel, Radio, Stack } from '@mui/material'
 
 export const BCeIDSpecificRoleFields = ({
   formData,
   handleCheckbox,
-  handleReadOnlyClick,
+  handleReadOnlyClick
 }) => {
   return (
     <Stack spacing={2}>
@@ -74,5 +73,5 @@ export const BCeIDSpecificRoleFields = ({
         disabled={formData.active === 'inactive'}
       />
     </Stack>
-  );
-};
+  )
+}

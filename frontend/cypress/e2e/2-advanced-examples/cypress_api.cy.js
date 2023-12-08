@@ -1,7 +1,6 @@
 /// <reference types="cypress" />
 
 context('Cypress APIs', () => {
-
   context('Cypress.Commands', () => {
     beforeEach(() => {
       cy.visit('https://example.cypress.io/cypress-api')
@@ -10,27 +9,33 @@ context('Cypress APIs', () => {
     // https://on.cypress.io/custom-commands
 
     it('.add() - create a custom command', () => {
-      Cypress.Commands.add('console', {
-        prevSubject: true,
-      }, (subject, method) => {
-      // the previous subject is automatically received
-      // and the commands arguments are shifted
+      Cypress.Commands.add(
+        'console',
+        {
+          prevSubject: true
+        },
+        (subject, method) => {
+          // the previous subject is automatically received
+          // and the commands arguments are shifted
 
-        // allow us to change the console method used
-        method = method || 'log'
+          // allow us to change the console method used
+          method = method || 'log'
 
-        // log the subject to the console
-        console[method]('The subject is', subject)
+          // log the subject to the console
+          console[method]('The subject is', subject)
 
-        // whatever we return becomes the new subject
-        // we don't want to change the subject so
-        // we return whatever was passed in
-        return subject
-      })
+          // whatever we return becomes the new subject
+          // we don't want to change the subject so
+          // we return whatever was passed in
+          return subject
+        }
+      )
 
-      cy.get('button').console('info').then(($button) => {
-      // subject is still $button
-      })
+      cy.get('button')
+        .console('info')
+        .then(($button) => {
+          // subject is still $button
+        })
     })
   })
 
@@ -59,7 +64,7 @@ context('Cypress APIs', () => {
     })
 
     it('Get CPU architecture name of underlying OS', () => {
-    // https://on.cypress.io/arch
+      // https://on.cypress.io/arch
       expect(Cypress.arch).to.exist
     })
   })
@@ -70,8 +75,8 @@ context('Cypress APIs', () => {
     })
 
     it('Get and set configuration options', () => {
-    // https://on.cypress.io/config
-      let myConfig = Cypress.config()
+      // https://on.cypress.io/config
+      const myConfig = Cypress.config()
 
       expect(myConfig).to.have.property('animationDistanceThreshold', 5)
       expect(myConfig).to.have.property('baseUrl', null)
@@ -101,8 +106,8 @@ context('Cypress APIs', () => {
 
     // https://on.cypress.io/dom
     it('.isHidden() - determine if a DOM element is hidden', () => {
-      let hiddenP = Cypress.$('.dom-p p.hidden').get(0)
-      let visibleP = Cypress.$('.dom-p p.visible').get(0)
+      const hiddenP = Cypress.$('.dom-p p.hidden').get(0)
+      const visibleP = Cypress.$('.dom-p p.visible').get(0)
 
       // our first paragraph has css class 'hidden'
       expect(Cypress.dom.isHidden(hiddenP)).to.be.true
@@ -119,11 +124,11 @@ context('Cypress APIs', () => {
 
     // https://on.cypress.io/environment-variables
     it('Get environment variables', () => {
-    // https://on.cypress.io/env
-    // set multiple environment variables
+      // https://on.cypress.io/env
+      // set multiple environment variables
       Cypress.env({
         host: 'veronica.dev.local',
-        api_server: 'http://localhost:8888/v1/',
+        api_server: 'http://localhost:8888/v1/'
       })
 
       // get environment variable
@@ -135,7 +140,10 @@ context('Cypress APIs', () => {
 
       // get all environment variable
       expect(Cypress.env()).to.have.property('host', 'veronica.dev.local')
-      expect(Cypress.env()).to.have.property('api_server', 'http://localhost:8888/v2/')
+      expect(Cypress.env()).to.have.property(
+        'api_server',
+        'http://localhost:8888/v2/'
+      )
     })
   })
 
@@ -145,7 +153,7 @@ context('Cypress APIs', () => {
     })
 
     it('Control what is printed to the Command Log', () => {
-    // https://on.cypress.io/cypress-log
+      // https://on.cypress.io/cypress-log
     })
   })
 
@@ -155,7 +163,7 @@ context('Cypress APIs', () => {
     })
 
     it('Get underlying OS name', () => {
-    // https://on.cypress.io/platform
+      // https://on.cypress.io/platform
       expect(Cypress.platform).to.be.exist
     })
   })
@@ -166,7 +174,7 @@ context('Cypress APIs', () => {
     })
 
     it('Get current version of Cypress being run', () => {
-    // https://on.cypress.io/version
+      // https://on.cypress.io/version
       expect(Cypress.version).to.be.exist
     })
   })
@@ -177,9 +185,13 @@ context('Cypress APIs', () => {
     })
 
     it('Get current spec information', () => {
-    // https://on.cypress.io/spec
-    // wrap the object so we can inspect it easily by clicking in the command log
-      cy.wrap(Cypress.spec).should('include.keys', ['name', 'relative', 'absolute'])
+      // https://on.cypress.io/spec
+      // wrap the object so we can inspect it easily by clicking in the command log
+      cy.wrap(Cypress.spec).should('include.keys', [
+        'name',
+        'relative',
+        'absolute'
+      ])
     })
   })
 })

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react'
 import {
   TextField,
   Typography,
@@ -7,22 +7,20 @@ import {
   Box,
   RadioGroup,
   FormControlLabel,
-  Radio,
-  Checkbox,
-} from '@mui/material';
-import colors from '@/assets/theme/base/colors';
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2';
-import BCButton from '../../components/BCButton';
-import ArrowRight from '@/assets/icons/arrow-right.svg';
-import Save from '@/assets/icons/save.svg';
-import { useMutation } from 'react-query';
-import { useNavigate } from 'react-router-dom';
-import * as routes from '@/constants/routes';
-import { Label } from './Label';
-import { IDIRSpecificFormFields } from './IDIRSpecificFormFields';
-import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields';
-import { IDIRSpecificRoleFields } from './IDIRSpecificRoleFields';
-import { BCeIDSpecificRoleFields } from './BCeIDSpecificRoleFields';
+  Radio
+} from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2'
+import colors from '@/assets/theme/base/colors'
+import BCButton from '@/components/BCButton'
+import ArrowRight from '@/assets/icons/arrow-right.svg'
+import Save from '@/assets/icons/save.svg'
+import { useNavigate } from 'react-router-dom'
+import * as routes from '@/constants/routes'
+import { Label } from './Label'
+import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
+import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields'
+import { IDIRSpecificRoleFields } from './IDIRSpecificRoleFields'
+import { BCeIDSpecificRoleFields } from './BCeIDSpecificRoleFields'
 
 const dummy = {
   errors: {
@@ -34,15 +32,15 @@ const dummy = {
     email: '',
     altEmail: '',
     phone: '',
-    mobile: '',
+    mobile: ''
   },
   gov: true,
-  orgName: 'Fuel Supplier Canada Ltd.',
-};
+  orgName: 'Fuel Supplier Canada Ltd.'
+}
 
 // switch between 'idir' and 'bceid'
 export const EditUser = ({ userType = 'bceid' }) => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     userType,
     active: 'active',
@@ -61,8 +59,8 @@ export const EditUser = ({ userType = 'bceid' }) => {
     altEmail: '',
     phone: '',
     mobile: '',
-    IDIRUserName: '',
-  });
+    IDIRUserName: ''
+  })
 
   //   const { mutate: save } = useMutation({
   //     mutationsFn: async (data) => await apiService.put(`/users/${userID}`, data),
@@ -75,24 +73,24 @@ export const EditUser = ({ userType = 'bceid' }) => {
   //     },
   //   });
 
-  const handleSave = async e => {
-    e.preventDefault();
+  const handleSave = async (e) => {
+    e.preventDefault()
     // do something with data before saving?
     // save(formData);
-  };
+  }
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
-  const handleStatusChange = e => {
-    const { value } = e.target;
+  const handleStatusChange = (e) => {
+    const { value } = e.target
     if (value === 'active') {
-      setFormData(prev => ({ ...prev, active: value }));
+      setFormData((prev) => ({ ...prev, active: value }))
     }
     if (value === 'inactive') {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         active: value,
         readOnly: false,
@@ -101,35 +99,35 @@ export const EditUser = ({ userType = 'bceid' }) => {
         complianceReporting: false,
         signingAuthority: false,
         administrator: false,
-        govRole: '',
-      }));
+        govRole: ''
+      }))
     }
-  };
+  }
 
-  const handleCheckbox = e => {
-    const { checked, name } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked, readOnly: false }));
-  };
+  const handleCheckbox = (e) => {
+    const { checked, name } = e.target
+    setFormData((prev) => ({ ...prev, [name]: checked, readOnly: false }))
+  }
 
   const handleBackClick = () => {
     if (userType === 'idir') {
-      navigate(routes.VIEW_USER);
+      navigate(routes.VIEW_USER)
     }
     if (userType === 'bceid') {
-      navigate(routes.ORGANIZATION_USER);
+      navigate(routes.ORGANIZATION_USER)
     }
-  };
+  }
 
   const handleReadOnlyClick = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       manageUsers: false,
       transfer: false,
       complianceReporting: false,
       signingAuthority: false,
-      readOnly: true,
-    }));
-  };
+      readOnly: true
+    }))
+  }
 
   return (
     <div>
@@ -245,7 +243,7 @@ export const EditUser = ({ userType = 'bceid' }) => {
                 background: 'white',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: 8,
+                gap: 8
               }}
               onClick={handleBackClick}
             >
@@ -258,7 +256,7 @@ export const EditUser = ({ userType = 'bceid' }) => {
               style={{
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: 8,
+                gap: 8
               }}
               onClick={handleSave}
             >
@@ -275,7 +273,7 @@ export const EditUser = ({ userType = 'bceid' }) => {
                 defaultValue="active"
                 style={{
                   gap: 8,
-                  marginTop: 8,
+                  marginTop: 8
                 }}
                 value={formData.active}
                 name="active"
@@ -313,5 +311,5 @@ export const EditUser = ({ userType = 'bceid' }) => {
         </Grid2>
       </Grid2>
     </div>
-  );
-};
+  )
+}

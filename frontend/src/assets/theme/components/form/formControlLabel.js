@@ -1,9 +1,9 @@
-import colors from 'assets/theme/base/colors';
-import typography from 'assets/theme/base/typography';
-import { pxToRem } from 'assets/theme/utils';
+import colors from '@/assets/theme/base/colors'
+import typography from '@/assets/theme/base/typography'
+import { pxToRem } from '@/assets/theme/utils'
 
-const { dark } = colors;
-const { size, fontWeightBold } = typography;
+const { dark } = colors
+const { size } = typography
 
 const formControlLabel = {
   styleOverrides: {
@@ -14,7 +14,7 @@ const formControlLabel = {
       minHeight: pxToRem(24),
       marginBottom: pxToRem(2),
       marginLeft: 0,
-      marginRight: 0,
+      marginRight: 0
     },
 
     label: {
@@ -26,10 +26,10 @@ const formControlLabel = {
       marginLeft: pxToRem(4),
 
       '&.Mui-disabled': {
-        color: dark.main,
-      },
-    },
-  },
-};
+        color: dark.main
+      }
+    }
+  }
+}
 
-export default formControlLabel;
+export default formControlLabel

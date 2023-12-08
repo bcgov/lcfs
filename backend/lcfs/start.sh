@@ -7,4 +7,4 @@
 ./lcfs/prestart.sh
 
 # Start the FastAPI application
-/usr/local/bin/python -m lcfs
+poetry run python -m lcfs

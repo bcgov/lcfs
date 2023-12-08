@@ -1,24 +1,24 @@
-import { pxToRem } from "assets/theme/utils";
+import { pxToRem } from '@/assets/theme/utils'
 
 const icon = {
   defaultProps: {
-    baseClassName: "material-icons-round",
-    fontSize: "inherit",
+    baseClassName: 'material-icons-round',
+    fontSize: 'inherit'
   },
 
   styleOverrides: {
     fontSizeInherit: {
-      fontSize: "inherit !important",
+      fontSize: 'inherit !important'
     },
 
     fontSizeSmall: {
-      fontSize: `${pxToRem(20)} !important`,
+      fontSize: `${pxToRem(20)} !important`
     },
 
     fontSizeLarge: {
-      fontSize: `${pxToRem(36)} !important`,
-    },
-  },
-};
+      fontSize: `${pxToRem(36)} !important`
+    }
+  }
+}
 
-export default icon;
+export default icon
