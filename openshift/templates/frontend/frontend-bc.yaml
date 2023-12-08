@@ -62,7 +62,7 @@ objects:
       type: Git
     strategy:
       dockerStrategy:
-        dockerfilePath: ./Dockerfile-Openshift
+        dockerfilePath: ./Dockerfile.openshift
         env:
           - name: ARTIFACTORY_USER
             valueFrom:
