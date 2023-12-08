@@ -4,6 +4,7 @@ export const LOGIN = '/login'
 
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_USERS = `${ORGANIZATION}/users`
+export const ORGANIZATION_ADD_NEW_USER = `${ORGANIZATION_USERS}/new`
 export const ORGANIZATION_USER = `${ORGANIZATION_USERS}/:userID`
 
 export const ADMINISTRATION = '/administration'

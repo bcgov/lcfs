@@ -12,8 +12,8 @@ import {
 import Grid2 from '@mui/material/Unstable_Grid2'
 import colors from '@/assets/theme/base/colors'
 import BCButton from '@/components/BCButton'
-import ArrowRight from '@/assets/icons/arrow-right.svg'
-import Save from '@/assets/icons/save.svg'
+import ArrowRight from '@/assets/icons/arrow-right.svg?react'
+import Save from '@/assets/icons/save.svg?react'
 import { useNavigate } from 'react-router-dom'
 import * as routes from '@/constants/routes'
 import { Label } from './Label'
@@ -39,7 +39,7 @@ const dummy = {
 }
 
 // switch between 'idir' and 'bceid'
-export const EditUser = ({ userType = 'bceid' }) => {
+export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     userType,
@@ -76,6 +76,12 @@ export const EditUser = ({ userType = 'bceid' }) => {
   const handleSave = async (e) => {
     e.preventDefault()
     // do something with data before saving?
+    if (edit) {
+      // find user and update
+    } else {
+      // save as new user
+      // get org id from either url or context and save user to the org
+    }
     // save(formData);
   }
 

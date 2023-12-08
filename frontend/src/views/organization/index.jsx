@@ -12,6 +12,8 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry } from '@ag-grid-community/core'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import * as routes from '@/constants/routes'
 
 const dummy = {
   orgData: {
@@ -99,6 +101,7 @@ const OrgDetailType = ({ bold, children }) => {
 
 export const Organization = () => {
   const [showActive, setShowActive] = useState(true)
+  const navigate = useNavigate()
   return (
     <Paper
       elevation={5}
@@ -172,7 +175,7 @@ export const Organization = () => {
                 marginBottom: '8px'
               }}
               startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-              onClick={() => {}}
+              onClick={() => navigate(routes.ORGANIZATION_ADD_NEW_USER)}
             >
               <BCTypography variant="subtitle2">New User</BCTypography>
             </BCButton>

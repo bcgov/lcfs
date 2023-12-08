@@ -17,7 +17,7 @@ import ContactUs from '@/components/ContactUs'
 import LCFSLogin from '@/layouts/authentication/components/LCFSLogin'
 
 // Views
-import { EditUser } from '@/views/editUser'
+import { AddEditUser } from '@/views/addEditUser'
 import ApiDocs from '@/components/ApiDocs'
 import { ViewUsers } from '@/views/viewUsers'
 import { Organization } from '@/views/organization'
@@ -123,8 +123,12 @@ const router = createBrowserRouter([
         element: <Organization />
       },
       {
+        path: appRoutes.ORGANIZATION_ADD_NEW_USER,
+        element: <AddEditUser />
+      },
+      {
         path: appRoutes.EDIT_USER,
-        element: <EditUser />
+        element: <AddEditUser />
       }
     ]
   }
