@@ -2,7 +2,7 @@ FROM artifacts.developer.gov.bc.ca/docker-remote/node:20 as builder
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
 COPY ./ ./
-RUN npm install --production && \ 
+RUN npm install --omit=dev && \ 
     npm run build && \
     ls -l
 
