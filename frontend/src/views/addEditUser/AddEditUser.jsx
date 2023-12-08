@@ -15,7 +15,7 @@ import BCButton from '@/components/BCButton'
 import ArrowRight from '@/assets/icons/arrow-right.svg?react'
 import Save from '@/assets/icons/save.svg?react'
 import { useNavigate } from 'react-router-dom'
-import * as routes from '@/constants/routes'
+// import * as routes from '@/constants/routes'
 import { Label } from './Label'
 import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
 import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields'
@@ -116,12 +116,14 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   }
 
   const handleBackClick = () => {
-    if (userType === 'idir') {
-      navigate(routes.VIEW_USER)
-    }
-    if (userType === 'bceid') {
-      navigate(routes.ORGANIZATION_USER)
-    }
+    // if (userType === 'idir') {
+    //   navigate(routes.VIEW_USER)
+    // }
+    // if (userType === 'bceid') {
+    //   navigate(routes.ORGANIZATION_USER)
+    // }
+    // should probably not be a specific route to navigate to as more than 1 page can lead to this page. instead navigate to previous page
+    navigate(-1)
   }
 
   const handleReadOnlyClick = () => {
