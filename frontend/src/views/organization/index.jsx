@@ -4,13 +4,14 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
-import Pencil from '@/assets/icons/pencil.svg'
+import Pencil from '@/assets/icons/pencil.svg?react'
 import colors from '@/assets/theme/base/colors.js'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-alpine.css'
 import { AgGridReact } from '@ag-grid-community/react'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry } from '@ag-grid-community/core'
+import { useState } from 'react'
 
 const dummy = {
   orgData: {
@@ -22,32 +23,68 @@ const dummy = {
     bcAddress: '1234 Linden Street, Vancouver BC CA, V8V 1V1',
     registered: 'Yes — A registered organization is able to transfer credits.'
   },
-  tableData: [
-    {
-      userName: 'Hank Hill',
-      roles: 'Manage Users, Transfer, Compliance Reporting',
-      email: 'hhill@fscl.ca',
-      phone: '(778) 123-0987'
-    },
-    {
-      userName: 'Dale Bug',
-      roles: 'Signing Authority',
-      email: 'dbug@fscl.ca',
-      phone: '(778) 123-0988'
-    },
-    {
-      userName: 'Gavin MacAuditor',
-      roles: 'Read Only',
-      email: 'gmaca@fscl.ca',
-      phone: '(778) 123-0989'
-    },
-    {
-      userName: 'Beau Lawyerson',
-      roles: 'Read Only',
-      email: 'blaw@fscl.ca',
-      phone: '(778) 123-0980'
-    }
-  ]
+  tableData: {
+    active: [
+      {
+        userName: 'Hank Hill',
+        roles: 'Manage Users, Transfer, Compliance Reporting',
+        email: 'hhill@fscl.ca',
+        phone: '(778) 123-0987',
+        active: true
+      },
+      {
+        userName: 'Dale Bug',
+        roles: 'Signing Authority',
+        email: 'dbug@fscl.ca',
+        phone: '(778) 123-0988',
+        active: true
+      },
+      {
+        userName: 'Gavin MacAuditor',
+        roles: 'Read Only',
+        email: 'gmaca@fscl.ca',
+        phone: '(778) 123-0989',
+        active: true
+      },
+      {
+        userName: 'Beau Lawyerson',
+        roles: 'Read Only',
+        email: 'blaw@fscl.ca',
+        phone: '(778) 123-0980',
+        active: true
+      }
+    ],
+    inactive: [
+      {
+        userName: 'Dale Bug2',
+        roles: 'Signing Authority',
+        email: 'dbug@fscl.ca',
+        phone: '(778) 123-0988',
+        active: false
+      },
+      {
+        userName: 'Hank Hill',
+        roles: 'Manage Users, Transfer, Compliance Reporting',
+        email: 'hhill@fscl.ca',
+        phone: '(778) 123-0987',
+        active: false
+      },
+      {
+        userName: 'Beau Lawyerson',
+        roles: 'Read Only',
+        email: 'blaw@fscl.ca',
+        phone: '(778) 123-0980',
+        active: false
+      },
+      {
+        userName: 'Gavin MacAuditor',
+        roles: 'Read Only',
+        email: 'gmaca@fscl.ca',
+        phone: '(778) 123-0989',
+        active: false
+      }
+    ]
+  }
 }
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
@@ -61,6 +98,7 @@ const OrgDetailType = ({ bold, children }) => {
 }
 
 export const Organization = () => {
+  const [showActive, setShowActive] = useState(true)
   return (
     <Paper
       elevation={5}
@@ -122,36 +160,57 @@ export const Organization = () => {
         }}
         my={2}
       >
-        <BCButton
-          variant="contained"
-          size="large"
-          color="primary"
-          sx={{
-            textTransform: 'none',
-            marginRight: '8px',
-            marginBottom: '8px'
-          }}
-          startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-          onClick={() => {}}
-        >
-          <BCTypography variant="subtitle2">New User</BCTypography>
-        </BCButton>
-        <BCButton
-          variant="outlined"
-          size="large"
-          color="primary"
-          sx={{
-            textTransform: 'none',
-            marginRight: '8px',
-            marginBottom: '8px',
-            whiteSpace: 'nowrap'
-          }}
-          onClick={() => {}}
-        >
-          <BCTypography variant="subtitle2">Show Inactive Users</BCTypography>
-        </BCButton>
+        {showActive ? (
+          <>
+            <BCButton
+              variant="contained"
+              size="large"
+              color="primary"
+              sx={{
+                textTransform: 'none',
+                marginRight: '8px',
+                marginBottom: '8px'
+              }}
+              startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
+              onClick={() => {}}
+            >
+              <BCTypography variant="subtitle2">New User</BCTypography>
+            </BCButton>
+            <BCButton
+              variant="outlined"
+              size="large"
+              color="primary"
+              sx={{
+                textTransform: 'none',
+                marginRight: '8px',
+                marginBottom: '8px',
+                whiteSpace: 'nowrap'
+              }}
+              onClick={() => setShowActive(false)}
+            >
+              <BCTypography variant="subtitle2">
+                Show Inactive Users
+              </BCTypography>
+            </BCButton>
+          </>
+        ) : (
+          <BCButton
+            variant="outlined"
+            size="large"
+            color="primary"
+            sx={{
+              textTransform: 'none',
+              marginRight: '8px',
+              marginBottom: '8px',
+              whiteSpace: 'nowrap'
+            }}
+            onClick={() => setShowActive(true)}
+          >
+            <BCTypography variant="subtitle2">Show Active Users</BCTypography>
+          </BCButton>
+        )}
       </BCBox>
-
+      asd
       <AgGridReact
         className="ag-theme-alpine"
         animateRows="true"
@@ -173,16 +232,13 @@ export const Organization = () => {
           filter: true,
           floatingFilter: true
         }}
-        rowData={dummy.tableData}
+        rowData={dummy.tableData[showActive ? 'active' : 'inactive']}
         rowSelection="multiple"
         suppressRowClickSelection="true"
         pagination
         paginationPageSize={10}
         domLayout="autoHeight"
-        autoSizeStrategy={{
-          type: 'fitGridWidth',
-          defaultMinWidth: 100
-        }}
+        autoSizeStrategy={{ type: 'fitGridWidth' }}
       />
     </Paper>
   )
