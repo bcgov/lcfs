@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "prepare": "cd .. && husky install frontend/.husky",
+    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then husky install frontend/.husky; fi",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier . --check",
