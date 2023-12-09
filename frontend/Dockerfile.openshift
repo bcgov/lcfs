@@ -3,12 +3,9 @@ ENV NODE_ENV=production
 WORKDIR /usr/src/app
 COPY ./ ./
 RUN npm install --omit=dev && \ 
-    npm run build && \
-    ls -l
+    npm run build
 
-# Stage 2: Copy the JS React SPA into the Nginx HTML directory
-# FROM artifacts.developer.gov.bc.ca/docker-remote/bitnami/nginx:1.25.3
-# COPY ./nginx.conf /opt/bitnami/nginx/conf/
-# COPY --from=builder /usr/src/app/public/build /app
-# EXPOSE 3000
-# CMD ["nginx", "-g", "daemon off;"]
+FROM artifacts.developer.gov.bc.ca/docker-remote/bitnami/nginx:1.24.0
+COPY --from=builder /usr/src/app/dist /app
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]
