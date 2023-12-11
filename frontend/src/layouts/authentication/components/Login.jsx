@@ -34,7 +34,7 @@ function getSeason(date) {
         : 'winter'
 }
 
-const LCFSLogin = () => {
+const Login = () => {
   const { keycloak } = useKeycloak()
   const redirectUri = window.location.origin
   const currentDate = new Date()
@@ -159,6 +159,4 @@ const LCFSLogin = () => {
   )
 }
 
-export default LCFSLogin
-
-// remove icons
+export default Login
