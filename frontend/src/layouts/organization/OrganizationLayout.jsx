@@ -52,7 +52,6 @@ export default function OrganizationLayout() {
           variant="contained"
           size="small"
           color="primary"
-          sx={{ marginRight: '8px', marginTop: '8px' }}
           startIcon={
             <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
           }
@@ -64,7 +63,7 @@ export default function OrganizationLayout() {
           variant="outlined"
           size="small"
           color="primary"
-          sx={{ marginRight: '8px', marginTop: '8px', whiteSpace: 'nowrap' }}
+          sx={{ whiteSpace: 'nowrap' }}
           startIcon={
             <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
           }
@@ -78,7 +77,7 @@ export default function OrganizationLayout() {
           variant="outlined"
           size="small"
           color="primary"
-          sx={{ marginRight: '8px', marginTop: '8px', whiteSpace: 'nowrap' }}
+          sx={{ whiteSpace: 'nowrap' }}
           startIcon={
             <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
           }
