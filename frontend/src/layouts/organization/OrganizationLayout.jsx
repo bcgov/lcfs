@@ -7,6 +7,7 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 
 import OrganizationTable from '@/layouts/organization/components/OrganizationTable'
+import { Stack } from '@mui/material'
 
 // Data for demo purposes only. Do not use in production.
 const demoData = [
@@ -40,16 +41,12 @@ export default function OrganizationLayout() {
   return (
     <>
       <BCTypography variant="h3">Organizations</BCTypography>
-      <BCBox
-        sx={{
-          display: 'flex',
-          flexDirection: 'row', // default layout is row
-          flexWrap: 'wrap', // allow items to wrap to the next row
-          justifyContent: 'flex-start',
-          alignItems: 'flex-start',
-          textTransform: 'none'
-        }}
-        my={2}
+      <Stack
+        direction={{ md: 'coloumn', lg: 'row' }}
+        spacing={2}
+        useFlexGap
+        flexWrap="wrap"
+        m={2}
       >
         <BCButton
           variant="contained"
@@ -91,7 +88,7 @@ export default function OrganizationLayout() {
             Download User Information
           </BCTypography>
         </BCButton>
-      </BCBox>
+      </Stack>
       <BCBox
         component="div"
         className="ag-theme-alpine"
