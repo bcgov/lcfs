@@ -51,42 +51,62 @@ export const routes = [
       // Dashboard
       {
         path: appRoutes.dashboard.main,
-        element: (
-          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
-            Welcome to the Dashboard!
-          </BCTypography>
-        ),
-        handle: { crumb: () => 'Dashboard' }
+        handle: { crumb: () => 'Dashboard' },
+        children: [
+          {
+            path: '',
+            element: (
+              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+                Welcome to the Dashboard!
+              </BCTypography>
+            )
+          }
+        ]
       },
       // Document
       {
         path: appRoutes.document.main,
-        element: (
-          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
-            Welcome to the Documents!
-          </BCTypography>
-        ),
-        handle: { crumb: () => 'Document' }
+        handle: { crumb: () => 'Document' },
+        children: [
+          {
+            path: '',
+            element: (
+              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+                Welcome to the Document!
+              </BCTypography>
+            )
+          }
+        ]
       },
       // Transactions
       {
         path: appRoutes.transactions.main,
-        element: (
-          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
-            Welcome to the transactions!
-          </BCTypography>
-        ),
-        handle: { crumb: () => 'Transactions' }
+        handle: { crumb: () => 'Transactions' },
+        children: [
+          {
+            path: '',
+            element: (
+              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+                Welcome to the Transactions!
+              </BCTypography>
+            )
+          }
+        ]
       },
       // Compliance Report
       {
         path: appRoutes.complianceReport.main,
-        element: (
-          <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
-            Welcome to the Compliance Reports!
-          </BCTypography>
-        ),
-        handle: { crumb: () => 'Compliance Report' }
+        handle: { crumb: () => 'Compliance Report' },
+        children: [
+          {
+            path: '',
+            element: (
+              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+                Welcome to the Compliance Report!
+              </BCTypography>
+            )
+          }
+        ]
       },
       // Organization pages for IDIR User
       {
