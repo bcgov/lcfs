@@ -56,7 +56,7 @@ export const routes = [
           {
             path: '',
             element: (
-              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+              <BCTypography variant="h4" sx={{ textAlign: 'center' }}>
                 Welcome to the Dashboard!
               </BCTypography>
             )
@@ -71,7 +71,7 @@ export const routes = [
           {
             path: '',
             element: (
-              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+              <BCTypography variant="h4" sx={{ textAlign: 'center' }}>
                 Welcome to the Document!
               </BCTypography>
             )
@@ -86,7 +86,7 @@ export const routes = [
           {
             path: '',
             element: (
-              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+              <BCTypography variant="h4" sx={{ textAlign: 'center' }}>
                 Welcome to the Transactions!
               </BCTypography>
             )
@@ -101,7 +101,7 @@ export const routes = [
           {
             path: '',
             element: (
-              <BCTypography variant="h2" sx={{ textAlign: 'center' }}>
+              <BCTypography variant="h4" sx={{ textAlign: 'center' }}>
                 Welcome to the Compliance Report!
               </BCTypography>
             )

@@ -40,10 +40,10 @@ const demoData = [
 export default function OrganizationLayout() {
   return (
     <>
-      <BCTypography variant="h3">Organizations</BCTypography>
+      <BCTypography variant="h5">Organizations</BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
-        spacing={2}
+        spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
         m={2}

@@ -181,7 +181,7 @@ export default function UserTabPanel() {
       </AppBar>
       {/* TODO: move the component to a different external component as the complexity increase */}
       <TabPanel value={tabValue} index={0}>
-        <BCTypography variant="h3" my={1}>
+        <BCTypography variant="h5" my={1}>
           Users
         </BCTypography>
         <BCButton

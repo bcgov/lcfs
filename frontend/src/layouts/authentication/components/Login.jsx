@@ -66,7 +66,7 @@ const Login = () => {
             alt="BC Government Logo"
             style={{ width: '160px', marginRight: '10px', height: 'auto' }}
           />
-          <BCTypography variant="h4" fontWeight="medium" color="white" mt={1}>
+          <BCTypography variant="h5" fontWeight="medium" color="white" mt={1}>
             Low Carbon Fuel Standard
           </BCTypography>
         </BCBox>
@@ -89,7 +89,7 @@ const Login = () => {
                 fullWidth
               >
                 <BCTypography
-                  variant="h5"
+                  variant="h6"
                   component="span"
                   color="text"
                   sx={{ fontWeight: '400' }}
@@ -97,7 +97,7 @@ const Login = () => {
                   Login with&nbsp;
                 </BCTypography>
                 <BCTypography
-                  variant="h5"
+                  variant="h6"
                   component="span"
                   className="bceid-name"
                 >
@@ -122,13 +122,13 @@ const Login = () => {
                 fullWidth
               >
                 <BCTypography
-                  variant="h5"
+                  variant="h6"
                   color="text"
                   sx={{ fontWeight: '400' }}
                 >
                   Login with&nbsp;
                 </BCTypography>
-                <BCTypography variant="h5" mr={3} className="idir-name">
+                <BCTypography variant="h6" mr={3} className="idir-name">
                   IDIR
                 </BCTypography>
               </BCButton>
@@ -142,11 +142,7 @@ const Login = () => {
                   to="/contact-us"
                   fontWeight="medium"
                 >
-                  <BCTypography
-                    variant="button"
-                    color="light"
-                    fontSize="1.15rem"
-                  >
+                  <BCTypography variant="body2" color="light">
                     Trouble logging in?
                   </BCTypography>
                 </Link>

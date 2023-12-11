@@ -34,7 +34,7 @@ const HeaderBar = (props) => {
           />
           <BCTypography
             component="span"
-            variant={mobileView ? 'h6' : 'h3'}
+            variant={mobileView ? 'h6' : 'h4'}
             className="application_title"
             sx={{ display: 'flex', alignItems: 'center' }}
           >
