@@ -38,7 +38,7 @@ const Layout = ({ crumbs }) => {
         })}
         disableGutters={true}
       >
-        <Grid item xs={12} mt={12}>
+        <Grid xs={12} mt={12}>
           {crumbs && (
             <Breadcrumbs
               m={2}
@@ -72,7 +72,7 @@ const Layout = ({ crumbs }) => {
             </Breadcrumbs>
           )}
         </Grid>
-        <Grid item lg={12}>
+        <Grid lg={12}>
           <Paper
             elevation={5}
             sx={{

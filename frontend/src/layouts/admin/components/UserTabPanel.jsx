@@ -165,7 +165,7 @@ export default function UserTabPanel() {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '60%' }}
           orientation={tabsOrientation}
           value={tabValue}
           aria-label="Tabs for selection of administration options"

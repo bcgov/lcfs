@@ -22,13 +22,15 @@ const Logout = (props) => {
         justifyContent="space-around"
         mr={2}
       >
-        <BCTypography
-          variant="subtitle1"
-          color={isScrolled ? 'primary' : 'light'}
-          mx={1}
-        >
-          {user?.display_name}
-        </BCTypography>
+        {user?.display_name && (
+          <BCTypography
+            variant="subtitle1"
+            color={isScrolled ? 'primary' : 'light'}
+            mx={1}
+          >
+            {user?.display_name}
+          </BCTypography>
+        )}
         <BCButton
           onClick={() => {
             logout()
