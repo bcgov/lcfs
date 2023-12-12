@@ -55,7 +55,7 @@ objects:
         cpu: 500m
         memory: 1536Mi
     source:
-      contextDir: frontend
+      contextDir: backend
       git:
         uri: ${GIT_URL}
         ref: ${GIT_REF}
