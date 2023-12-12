@@ -1,0 +1,80 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: backend
+parameters:
+  - name: SUFFIX
+    displayName:
+    description: sample is -pr-0
+    required: true
+  - name: VERSION
+    displayName:
+    description:  image tag name for output
+    required: true
+  - name: GIT_URL
+    displayName:
+    description: lcfs repo
+    required: true
+  - name: GIT_REF
+    displayName:
+    description: lcfs branch name of the pr
+    required: true
+objects:
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      description: Keeps track of changes in the client / front end image
+    labels:
+      shared: "true"
+    creationTimestamp: null
+    name: lcfs-backend
+  spec:
+    lookupPolicy:
+      local: false
+  status:
+    dockerImageRepository: ""
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: lcfs-backend${SUFFIX}
+    creationTimestamp:
+    annotations:
+      description: Defines how to build the backend image in docker
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: lcfs-backend:${VERSION}
+    resources:
+      limits:
+        cpu: 1500m
+        memory: 3Gi
+      requests:
+        cpu: 500m
+        memory: 1536Mi
+    source:
+      contextDir: frontend
+      git:
+        uri: ${GIT_URL}
+        ref: ${GIT_REF}
+      type: Git
+    strategy:
+      dockerStrategy:
+        dockerfilePath: ./Dockerfile.openshift
+        env:
+          - name: ARTIFACTORY_USER
+            valueFrom:
+              secretKeyRef:
+                name: artifacts-default-gyszor
+                key: username
+          - name: ARTIFACTORY_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: artifacts-default-gyszor
+                key: password
+      type: Docker
+    triggers:
+    - type: ConfigChange
+    - type: ImageChange
