@@ -1,5 +1,5 @@
 # Base stage for common setup
-FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.9.6-slim-buster as base
+FROM python:3.9.6-slim-buster as base
 
 RUN apt-get update && apt-get install -y \
   gcc \
