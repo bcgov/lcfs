@@ -12,6 +12,7 @@ import Layout from '@/layouts/Layout'
 import AdminUsersLayout from '@/layouts/admin/AdminUsersLayout'
 import PublicLayout from '@/layouts/PublicLayout'
 import ContactUs from '@/components/ContactUs'
+import Dashboard from '@/views/dashboard'
 
 // TODO: error bound component needs to be created
 export const routes = [
@@ -55,11 +56,7 @@ export const routes = [
         children: [
           {
             path: '',
-            element: (
-              <BCTypography variant="h4" sx={{ textAlign: 'center' }}>
-                Welcome to the Dashboard!
-              </BCTypography>
-            )
+            element: <Dashboard />
           }
         ]
       },
