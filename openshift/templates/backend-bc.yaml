@@ -62,6 +62,9 @@ objects:
       type: Git
     strategy:
       dockerStrategy:
+        from:
+          kind: DockerImage
+          name: artifacts.developer.gov.bc.ca/docker-remote/python:3.9.6-slim-buster
         dockerfilePath: ./Dockerfile.openshift
         env:
           - name: ARTIFACTORY_USER
