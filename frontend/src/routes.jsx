@@ -8,13 +8,13 @@ import Login from '@/layouts/authentication/components/Login'
 import OrganizationLayout from '@/layouts/organization/OrganizationLayout'
 import { Organization } from '@/views/organization'
 import { ViewUsers } from '@/views/viewUsers'
-import { EditUser } from '@/views/editUser'
 import { AddEditUser } from '@/views/addEditUser'
 import Layout from '@/layouts/Layout'
 import AdminUsersLayout from '@/layouts/admin/AdminUsersLayout'
 import PublicLayout from '@/layouts/PublicLayout'
 import ContactUs from '@/components/ContactUs'
 import Dashboard from '@/views/dashboard'
+// import AddEditOrganizationForm from './layouts/organization/components/AddEditOrganizationForm'
 
 // TODO: error bound component needs to be created
 export const routes = [
@@ -116,13 +116,19 @@ export const routes = [
             path: '',
             element: <OrganizationLayout /> // redirect to users if no path is provided
           },
+          // {
+          //   path: appRoutes.organization.createOrg,
+          //   element: <AddEditOrganizationForm />,
+          //   handle: { crumb: () => 'Create Organization' }
+          // },
           {
             path: appRoutes.organization.users,
             element: <Organization />
           },
           {
             path: appRoutes.organization.createUser,
-            element: <AddEditUser />
+            element: <AddEditUser />,
+            handle: { crumb: () => 'Create User' }
           },
           {
             path: appRoutes.organization.users,
@@ -132,7 +138,7 @@ export const routes = [
           {
             path: appRoutes.organization.editUser,
             element: <AddEditUser />,
-            handle: { crumb: () => 'Users' }
+            handle: { crumb: () => 'Edit User' }
           }
         ]
       },
@@ -153,8 +159,13 @@ export const routes = [
           },
           {
             path: appRoutes.admin.createUser,
-            element: <EditUser userType="idir" />,
+            element: <AddEditUser userType="idir" />,
             handle: { crumb: () => 'Create User' }
+          },
+          {
+            path: appRoutes.admin.editUser,
+            element: <AddEditUser userType="idir" />,
+            handle: { crumb: () => 'Edit User' }
           }
         ]
       }

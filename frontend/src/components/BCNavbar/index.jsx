@@ -21,7 +21,7 @@ function BCNavbar(props) {
   useEffect(() => {
     // A function that sets the display state for the DefaultNavbarMobile.
     function displayMobileNavbar() {
-      if (window.innerWidth < breakpoints.values.lg) {
+      if (window.innerWidth < breakpoints.values.xl) {
         setMobileView(true)
         setMobileNavbar(false)
       } else {
