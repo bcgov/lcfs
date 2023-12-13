@@ -12,10 +12,9 @@ import {
 import Grid2 from '@mui/material/Unstable_Grid2'
 import colors from '@/assets/theme/base/colors'
 import BCButton from '@/components/BCButton'
-import ArrowRight from '@/assets/icons/arrow-right.svg?react'
-import Save from '@/assets/icons/save.svg?react'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import SaveIcon from '@mui/icons-material/Save'
 import { useNavigate } from 'react-router-dom'
-// import * as routes from '@/constants/routes'
 import { Label } from './Label'
 import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
 import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields'
@@ -255,7 +254,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               }}
               onClick={handleBackClick}
             >
-              <ArrowRight />
+              <ArrowBackIcon />
               Back
             </BCButton>
             <BCButton
@@ -268,7 +267,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               }}
               onClick={handleSave}
             >
-              <Save />
+              <SaveIcon />
               Save
             </BCButton>
           </Box>

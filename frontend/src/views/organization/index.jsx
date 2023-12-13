@@ -13,7 +13,7 @@ import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-mod
 import { ModuleRegistry } from '@ag-grid-community/core'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as routes from '@/constants/routes'
+import { appRoutes } from '@/constants/routes'
 
 const dummy = {
   orgData: {
@@ -175,7 +175,7 @@ export const Organization = () => {
                 marginBottom: '8px'
               }}
               startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-              onClick={() => navigate(routes.ORGANIZATION_ADD_NEW_USER)}
+              onClick={() => navigate(appRoutes.organization.createUser)}
             >
               <BCTypography variant="subtitle2">New User</BCTypography>
             </BCButton>

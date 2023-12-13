@@ -1,18 +1,40 @@
-export const DASHBOARD = '/'
-export const DOCS = '/docs'
-export const LOGIN = '/login'
-
-export const ORGANIZATION = '/organization'
-export const ORGANIZATION_USERS = `${ORGANIZATION}/users`
-export const ORGANIZATION_ADD_NEW_USER = `${ORGANIZATION_USERS}/new`
-export const ORGANIZATION_USER = `${ORGANIZATION_USERS}/:userID`
-
-export const ADMINISTRATION = '/administration'
-export const ADMINISTRATION_USERS = `${ADMINISTRATION}/users`
-
-export const USERS = '/users'
-export const CURRENT_USER = `${USERS}/current`
-
-export const CONTACT_US = '/contact-us'
-export const VIEW_USER = `${USERS}/:userID`
-export const EDIT_USER = `${VIEW_USER}/edit`
+export const appRoutes = {
+  users: {
+    current: 'users/current'
+  },
+  dashboard: {
+    main: 'dashboard'
+  },
+  document: {
+    main: 'document'
+  },
+  transactions: {
+    main: 'transactions'
+  },
+  complianceReport: {
+    main: 'compliance-report'
+  },
+  organization: {
+    main: 'organization',
+    users: '/organization/users',
+    createUser: '/organization/users/create',
+    editUser: '/organization/users/:userID/edit',
+    viewUser: '/organization/users/:userID'
+  },
+  admin: {
+    main: 'admin',
+    users: '/admin/users',
+    createUser: '/admin/users/create',
+    editUser: '/admin/users/:userID/edit',
+    viewUser: '/admin/users/:userID'
+  },
+  contactUs: {
+    main: 'contact-us'
+  },
+  login: {
+    main: 'login'
+  },
+  docs: {
+    main: 'docs'
+  }
+}

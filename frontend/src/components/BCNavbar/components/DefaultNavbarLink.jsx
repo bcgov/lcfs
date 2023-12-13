@@ -23,7 +23,7 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       p={1}
       display="flex"
       alignItems="center"
-      sx={({ transitions, palette: { secondary, primary } }) => ({
+      sx={({ transitions }) => ({
         cursor: 'pointer',
         userSelect: 'none',
         minHeight: '2.5rem',
