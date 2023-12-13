@@ -1,95 +1,66 @@
-import { Link } from 'react-router-dom'
+import { useMemo } from 'react'
+import BCFooter from '@/components/BCFooter'
 
 // /* global __VERSION__ */
 
-const Footer = (props) => (
-  <div id="footer" role="contentinfo">
-    <div id="footerWrapper">
-      <div id="footerAdminSection">
-        <div id="footerAdminLinksContainer" className="container-fluid">
-          <div id="footerAdminLinks" className="row">
-            <ul className="inline">
-              <li>
-                <Link id="collapse-navbar-dashboard" to={'/'}>
-                  Home
-                </Link>
-              </li>
-              <li>
-                <a
-                  id="footer-about-site"
-                  href="https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/transportation-fuels-reporting-system"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  About this site
-                </a>
-              </li>
-              <li>
-                <a
-                  id="footer-about-disclaimer"
-                  href="http://gov.bc.ca/disclaimer/"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Disclaimer
-                </a>
-              </li>
-              <li>
-                <a
-                  id="footer-about-privacy"
-                  href="http://gov.bc.ca/privacy/"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Privacy
-                </a>
-              </li>
-              <li>
-                <a
-                  id="footer-about-accessibility"
-                  href="http://gov.bc.ca/webaccessibility/"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Accessibility
-                </a>
-              </li>
-              <li>
-                <a
-                  id="footer-about-copyright"
-                  href="http://gov.bc.ca/copyright"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Copyright
-                </a>
-              </li>
-              <li>
-                <Link
-                  id="footer-about-contact"
-                  to="/contact-us"
-                  data-test="contact-us-link"
-                  aria-label="Contact Us Information"
-                  role="link"
-                >
-                  Contact Us
-                </Link>
-              </li>
-            </ul>
-            <div id="footer-about-version" className="inline">
-              {/* <a
-                href={`https://github.com/bcgov/lcfs/releases/tag/v${__VERSION__}`}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                v{__VERSION__}
-              </a> */}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)
+const Footer = (props) => {
+  const links = useMemo(
+    () => [
+      {
+        href: '/',
+        name: 'Home',
+        id: 'footer-home',
+        label: 'Home page of LCFS'
+      },
+      {
+        href: 'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/transportation-fuels-reporting-system',
+        name: 'About this site',
+        id: 'footer-about-this-site',
+        label: 'About this site'
+      },
+      {
+        href: 'http://gov.bc.ca/disclaimer/',
+        name: 'Disclaimer',
+        id: 'footer-disclaimer',
+        label: 'BC gov disclaimer information'
+      },
+      {
+        href: 'http://gov.bc.ca/privacy/',
+        name: 'Privacy',
+        id: 'footer-privacy',
+        label: 'BC gov privacy information'
+      },
+      {
+        href: 'http://gov.bc.ca/webaccessibility/',
+        name: 'Accessibility',
+        id: 'footer-accessibility',
+        label: 'BC gov accessibility information'
+      },
+      {
+        href: 'http://gov.bc.ca/copyright',
+        name: 'Copyright',
+        id: 'footer-copyright',
+        label: 'BC gov copyright information'
+      },
+      {
+        href: '/contact-us',
+        name: 'Contact Us',
+        id: 'footer-contact-us',
+        label: 'Contact Us information for LCFS application'
+      }
+    ],
+    []
+  )
+  const repoDetails = useMemo(
+    () => ({
+      href: 'https://github.com/bcgov/lcfs/releases/tag/v0.2.0',
+      name: 'v0.2.0',
+      id: 'footer-about-version',
+      label: 'LCFS repository changelog'
+    }),
+    []
+  )
+  return <BCFooter links={links} repoDetails={repoDetails} />
+}
 
 export default Footer

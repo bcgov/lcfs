@@ -105,7 +105,11 @@ const colors = {
     dark: '#404040'
   },
   inputBorderColor: '#d2d6da',
-
+  borderDivider: {
+    main: '#4b5e7e',
+    focus: '#3b99fc',
+    nav: '#9b9b9b'
+  },
   tabs: {
     indicator: { boxShadow: '#ddd' }
   },

@@ -5,12 +5,12 @@ import MenuBarComponent from './components/MenuBarComponent'
 
 // Nav Links
 const routes = [
-  { name: 'Dashboard', route: '/' },
+  { name: 'Dashboard', route: '/dashboard' },
   { name: 'Document', route: '/document' },
   { name: 'Transactions', route: '/transactions' },
   { name: 'Compliance Report', route: '/compliance-report' },
   { name: 'Organization', route: '/organization' },
-  { name: 'Administration', route: '/administration/users' }
+  { name: 'Administration', route: '/admin' }
 ]
 
 const Navbar = () => {
