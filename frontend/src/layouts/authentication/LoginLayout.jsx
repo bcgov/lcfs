@@ -23,9 +23,9 @@ const seasonImages = {
     image: bgWinterImage
   },
   spring: {
-    count: 100,
-    radius: [0.4, 2],
-    wind: [-0.5, 0],
+    count: 250,
+    radius: [1, 4],
+    wind: [0, 0],
     image: bgSummerImage
   },
   summer: {
@@ -36,7 +36,7 @@ const seasonImages = {
   },
   autumn: {
     count: 5,
-    radius: [12, 24],
+    radius: [24, 48],
     wind: [-0.5, 2.0],
     image: bgAutumnImage
   }
