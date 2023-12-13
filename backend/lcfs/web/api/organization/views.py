@@ -1,33 +1,88 @@
 from logging import getLogger
-from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import Response
 
-from lcfs.db.models import UserProfile
 from lcfs.db import dependencies
-from lcfs.web.api.organization.schema import Organization, OrganizationCreate, OrganizationUpdate, OrganizationUser
-
+from lcfs.db.models import UserProfile
+from lcfs.db.models.Organization import Organization
+from lcfs.db.models.OrganizationAddress import OrganizationAddress
+from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
+from lcfs.web.api.organization.schema import OrganizationSchema, OrganizationCreateSchema, OrganizationUpdateSchema, OrganizationUserSchema, OrganizationSummarySchema
 
 logger = getLogger("organization")
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
-
-@router.post("/createorganization/", response_model=OrganizationCreate, status_code=status.HTTP_201_CREATED)
-async def create_organization(organization: OrganizationCreate, db: AsyncSession = Depends(get_async_db)):
+# TODO: Implement permission check for this route to ensure that
+# only authorized users can access it.
+@router.post("/", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
+async def create_organization(
+    organization_data: OrganizationCreateSchema,
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Endpoint to create a new organization. This includes processing the provided
+    organization details along with associated addresses.
+    """
     try:
-        db.add(organization)
-        await db.commit()
-        await db.refresh(organization)
-        
-        return organization
-    except Exception as e:
-        logger.error(f"Internal Server Error: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        # Create address models from provided data
+        org_address = OrganizationAddress(**organization_data.address.dict())
+        org_attorney_address = OrganizationAttorneyAddress(
+            **organization_data.attorney_address.dict()
+        )
 
-@router.put("/organizations/{organization_id}", response_model=Organization)
-async def update_organization(organization_id: int, organization_data: OrganizationUpdate, db: AsyncSession = Depends(get_async_db)):
+        # Add address models to the database
+        db.add(org_address)
+        db.add(org_attorney_address)
+        await db.commit()
+
+        # Refresh to get the generated IDs
+        await db.refresh(org_address)
+        await db.refresh(org_attorney_address)
+
+        # Prepare organization data dictionary
+        org_data_dict = {
+            "name": organization_data.name,
+            "email": organization_data.email,
+            "phone": organization_data.phone,
+            "edrms_record": organization_data.edrms_record,
+            "organization_status_id": organization_data.organization_status_id,
+            "organization_type_id": organization_data.organization_type_id,
+            "organization_address_id": org_address.organization_address_id,
+            "organization_attorney_address_id":
+                org_attorney_address.organization_attorney_address_id
+        }
+
+        # Create and add organization model to the database
+        org_model = Organization(**org_data_dict)
+        db.add(org_model)
+        await db.commit()
+        await db.refresh(org_model)
+
+        return org_model
+
+    except SQLAlchemyError as sql_ex:
+        await db.rollback()
+        logger.error("Database Error: %s", sql_ex, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database Error"
+        ) from sql_ex
+
+    except Exception as ex:
+        await db.rollback()
+        logger.error("Internal Server Error: %s", ex, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error"
+        ) from ex
+
+@router.put("/organizations/{organization_id}", response_model=OrganizationSchema)
+async def update_organization(organization_id: int, organization_data: OrganizationUpdateSchema, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():
             organization = await db.execute(Organization).filter(Organization.organization_id == organization_id).first()
@@ -46,7 +101,7 @@ async def update_organization(organization_id: int, organization_data: Organizat
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {str(e)}")
 
-@router.get("/organizations/", response_model=list[Organization])
+@router.get("/organizations/", response_model=list[OrganizationSchema])
 async def list_organizations(db: AsyncSession = Depends(get_async_db), response: Response = None):
     try:
         async with db.begin():
@@ -61,7 +116,7 @@ async def list_organizations(db: AsyncSession = Depends(get_async_db), response:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@router.get("/organizations/{organization_id}/users/", response_model=List[OrganizationUser])
+@router.get("/organizations/{organization_id}/users/", response_model=List[OrganizationUserSchema])
 async def get_users_for_organization(organization_id: int, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():

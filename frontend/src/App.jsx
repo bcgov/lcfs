@@ -20,6 +20,7 @@ import LCFSLogin from '@/layouts/authentication/components/LCFSLogin'
 import { EditUser } from '@/views/editUser'
 import ApiDocs from '@/components/ApiDocs'
 import { ViewUsers } from '@/views/viewUsers'
+import AddOrganization from './views/organizations/AddOrganization';
 
 const router = createBrowserRouter([
   {
@@ -120,7 +121,15 @@ const router = createBrowserRouter([
       {
         path: appRoutes.EDIT_USER,
         element: <EditUser />
-      }
+      },
+      // TODO: Modify OrganizationLayout to support child route integration, then use it for the following route.
+      {
+        path: appRoutes.ADD_ORGANIZATION,
+        element: <AddOrganization />,
+        handle: {
+          crumb: () => 'Add Organization',
+        },
+      },
     ]
   }
 ])

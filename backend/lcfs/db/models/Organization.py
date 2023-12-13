@@ -1,5 +1,3 @@
-import enum
-
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -14,6 +12,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
 
     organization_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the organization")
     name = Column(String(500), comment="Organization's legal name")
+    email = Column(String(255), comment="Organization's email address")
+    phone = Column(String(50), comment="Organization's phone number")
+    edrms_record = Column(String(100), comment="Organization's EDRMS record number")
 
     organization_status_id = Column(Integer, ForeignKey('organization_status.organization_status_id'))
     organization_type_id = Column(Integer, ForeignKey('organization_type.organization_type_id'), comment="Organization's type")

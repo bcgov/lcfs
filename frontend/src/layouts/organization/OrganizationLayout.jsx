@@ -8,6 +8,9 @@ import BCButton from '@/components/BCButton'
 import { Paper } from '@mui/material'
 
 import OrganizationTable from '@/layouts/organization/components/OrganizationTable'
+import { useNavigate, useLocation } from 'react-router-dom'
+import * as routes from '@/constants/routes'
+import BCAlert from '@/components/BCAlert'
 
 // Data for demo purposes only. Do not use in production.
 const demoData = [
@@ -38,6 +41,11 @@ const demoData = [
 ]
 
 export default function OrganizationLayout() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const { message, severity } = location.state || {}
+
   return (
     <Paper
       elevation={5}
@@ -48,6 +56,9 @@ export default function OrganizationLayout() {
         bgcolor: 'background.paper'
       }}
     >
+      <div>
+        {message && <BCAlert data-test="alert-box" severity={severity || 'info'}>{message}</BCAlert>}
+      </div>
       <BCTypography variant="h3">Organizations</BCTypography>
       <BCBox
         sx={{
@@ -70,7 +81,7 @@ export default function OrganizationLayout() {
             marginBottom: '8px'
           }}
           startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-          onClick={() => {}}
+          onClick={() => navigate(routes.ADD_ORGANIZATION)}
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>

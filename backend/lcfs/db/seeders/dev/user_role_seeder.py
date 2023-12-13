@@ -17,6 +17,18 @@ async def seed_user_roles(session):
             "user_profile_id": 1,
             "role_id": 1
         },
+         {
+            "user_profile_id": 2,
+            "role_id": 1
+        },
+         {
+            "user_profile_id": 3,
+            "role_id": 1
+        },
+         {
+            "user_profile_id": 4,
+            "role_id": 1
+        },
     ]
 
     try:

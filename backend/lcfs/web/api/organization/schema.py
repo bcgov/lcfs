@@ -1,15 +1,28 @@
+from enum import Enum
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 
+class OrganizationStatusSchema(Enum):
+    UNREGISTERED = 'Unregistered'
+    REGISTERED = 'Registered'
+    SUSPENDED = 'Suspended'
+    CANCELED = 'Canceled'
 
-class OrganizationBase(BaseModel):
+class OrganizationTypeSchema(Enum):
+    FUEL_SUPPLIER = 'fuel_supplier'
+    ELECTRICITY_SUPPLIER = 'electricity_supplier'
+    BROKER = 'broker'
+    UTILITIES = 'utilities'
+
+class OrganizationBaseSchema(BaseModel):
     name: str
-    status: int
-    type: int
+    email: str
+    phone: str
+    edrms_record: str
+    organization_status_id: int
+    organization_type_id: int
 
-
-    
-class OrganizationAttorneyAddressBase(BaseModel):
+class OrganizationAttorneyAddressBaseSchema(BaseModel):
     name: str
     street_address: str
     address_other: str
@@ -18,7 +31,7 @@ class OrganizationAttorneyAddressBase(BaseModel):
     country: str
     postalCode_zipCode: str
 
-class OrganizationAddressBase(BaseModel):
+class OrganizationAddressBaseSchema(BaseModel):
     name: str
     street_address: str
     address_other: str
@@ -27,40 +40,40 @@ class OrganizationAddressBase(BaseModel):
     country: str
     postalCode_zipCode: str
 
-class OrganizationAddressCreate(OrganizationAddressBase):
+class OrganizationAddressCreateSchema(OrganizationAddressBaseSchema):
     pass
 
-class OrganizationAttorneyAddressCreate(OrganizationAttorneyAddressBase):
+class OrganizationAttorneyAddressCreateSchema(OrganizationAttorneyAddressBaseSchema):
     pass
 
-class OrganizationCreate(OrganizationBase):
-    address: OrganizationAddressCreate
-    attorney_address: OrganizationAttorneyAddressCreate
+class OrganizationCreateSchema(OrganizationBaseSchema):
+    address: OrganizationAddressCreateSchema
+    attorney_address: OrganizationAttorneyAddressCreateSchema
 
-class Organization(OrganizationBase):
+class OrganizationSchema(OrganizationBaseSchema):
     organization_id: int
 
-class OrganizationSummary(BaseModel):
+class OrganizationSummarySchema(BaseModel):
     organization_id: int
     name: str
 
     class Config:
         from_attributes = True
 
-class OrganizationUpdate(BaseModel):
+class OrganizationUpdateSchema(BaseModel):
     name: Optional[str]
     status: Optional[int]
     type: Optional[int]
-    address: Optional[OrganizationAddressCreate]
-    attorney_address: Optional[OrganizationAttorneyAddressCreate]
+    address: Optional[OrganizationAddressCreateSchema]
+    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema]
 
-class OrganizationAddress(OrganizationAddressBase):
+class OrganizationAddressSchema(OrganizationAddressBaseSchema):
     organization_id: int
     
-class OrganizationAttorneyAddress(OrganizationAttorneyAddressBase):
+class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBaseSchema):
     organization_id: int
 
-class OrganizationUser(BaseModel):
+class OrganizationUserSchema(BaseModel):
     username: str
     email: EmailStr
     display_name: str
