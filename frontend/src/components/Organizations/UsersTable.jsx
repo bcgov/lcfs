@@ -9,13 +9,6 @@ import { ModuleRegistry } from '@ag-grid-community/core'
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const UserTable = ({ rowData = [] }) => {
-  const sideBar = useMemo(
-    () => ({
-      toolPanels: ['filters', 'columns']
-    }),
-    []
-  )
-
   const columnDefs = [
     { headerName: 'Name', field: 'name' },
     { headerName: 'Role(s)', field: 'roles' },
@@ -52,7 +45,6 @@ const UserTable = ({ rowData = [] }) => {
         pagination
         paginationPageSize={10}
         domLayout="autoHeight"
-        sideBar={sideBar}
       />
     </div>
   )
