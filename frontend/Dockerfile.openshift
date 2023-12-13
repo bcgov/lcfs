@@ -1,0 +1,11 @@
+FROM artifacts.developer.gov.bc.ca/docker-remote/node:20 as builder
+ENV NODE_ENV=production
+WORKDIR /usr/src/app
+COPY ./ ./
+RUN npm install --omit=dev && \ 
+    npm run build
+
+FROM artifacts.developer.gov.bc.ca/docker-remote/bitnami/nginx:1.24.0
+COPY --from=builder /usr/src/app/dist /app
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]

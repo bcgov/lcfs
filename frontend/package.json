@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "prepare": "cd .. && husky install frontend/.husky",
+    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then husky install frontend/.husky; fi",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier . --check",
@@ -55,7 +55,11 @@
     "react-query": "^3.39.3",
     "react-router-dom": "^6.20.1",
     "react-snowfall": "^1.2.1",
-    "zustand": "^4.4.7"
+    "zustand": "^4.4.7",
+    "vite": "^5.0.6",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite-plugin-svgr": "^4.2.0",
+    "swagger-ui-react": "^5.10.3"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^7.6.3",
@@ -71,7 +75,6 @@
     "@testing-library/react": "^14.1.2",
     "@types/react": "^18.2.42",
     "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
     "@vitest/ui": "^1.0.1",
     "cross-env": "^7.0.3",
     "cypress": "^13.6.1",
@@ -93,9 +96,6 @@
     "sass": "^1.69.5",
     "standard": "^17.1.0",
     "storybook": "^7.6.3",
-    "swagger-ui-react": "^5.10.3",
-    "vite": "^5.0.6",
-    "vite-plugin-svgr": "^4.2.0",
     "vitest": "^1.0.1"
   }
 }
