@@ -4,18 +4,23 @@ import PropTypes from 'prop-types'
 import { Divider, Toolbar } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
-import colors from '@/assets/theme/base/colors'
-
-const { transparent } = colors
 
 const MenuBar = (props) => {
   const { isScrolled, routes, data } = props
   return (
     <Toolbar
       className="nav"
-      sx={({ palette: { secondary, white }, functions: { rgba } }) => ({
-        backgroundColor: isScrolled ? transparent.main : rgba(secondary.nav, 1),
-        color: isScrolled ? secondary.main : white.main
+      sx={({
+        palette: { transparent: transparentColor, white, secondary },
+        functions: { rgba }
+      }) => ({
+        backgroundColor: isScrolled
+          ? transparentColor.main
+          : rgba(secondary.nav, 1),
+        backdropFilter: `saturate(200%) blur(30px)`,
+        color: isScrolled ? secondary.main : white.main,
+        maxHeight: '50px',
+        display: { xs: 'none', sm: 'flex' }
       })}
       disableGutters
       variant="dense"

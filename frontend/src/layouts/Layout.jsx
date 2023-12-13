@@ -1,16 +1,21 @@
 import { Outlet, useMatches, Link as RouterLink } from 'react-router-dom'
-import { Paper, Grid, Breadcrumbs, Container } from '@mui/material'
-import BCBox from '@/components/BCBox'
+// constants
+import { appRoutes } from '@/constants/routes'
+// @mui components
+import { Paper, Breadcrumbs, Container } from '@mui/material'
+import Grid from '@mui/material/Unstable_Grid2'
+// @mui custom components
 import Footer from '@/components/Footer'
 import BCTypography from '@/components/BCTypography'
-
 import Navbar from '@/layouts/navbar/Navbar'
-import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
 import RequireAuth from '@/components/RequireAuth'
-import * as appRoutes from '@/constants/routes'
+// icons and typograhpy
+import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
+import typography from '@/assets/theme/base/typography'
 
 const Layout = ({ crumbs }) => {
   const matches = useMatches()
+  const { size } = typography
   const breadcrumbs = matches
     .filter((match) => Boolean(match.handle?.crumb))
     .map((match) => ({
@@ -19,11 +24,13 @@ const Layout = ({ crumbs }) => {
     }))
 
   return (
-    <RequireAuth redirectTo={appRoutes.LOGIN}>
+    <RequireAuth redirectTo={appRoutes.login.main}>
+      <Navbar />
       <Container
         maxWidth="lg"
         sx={({ palette: { background } }) => ({
           padding: '1rem',
+          minHeight: 'calc(100vh - 4.89rem)',
           background: background.paper,
           '@media (max-width: 920px)': {
             marginTop: '-2rem'
@@ -31,53 +38,54 @@ const Layout = ({ crumbs }) => {
         })}
         disableGutters={true}
       >
-        <Grid
-          item
-          xs={12}
-          sx={{
-            maxHeight: '20vh',
-            position: 'relative',
-            top: 0,
-            zIndex: 10 // Adjust the z-index if needed
-          }}
-        >
-          <Navbar />
+        <Grid xs={12} mt={12}>
+          {crumbs && (
+            <Breadcrumbs
+              m={2}
+              separator={
+                <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
+              }
+            >
+              {breadcrumbs.map((crumb, index) =>
+                index + 1 !== breadcrumbs.length ? (
+                  <BCTypography
+                    key={crumb.path}
+                    component={RouterLink}
+                    to={crumb.path}
+                    disabled={true}
+                    variant="button"
+                    fontSize={size.lg}
+                  >
+                    {crumb.label}
+                  </BCTypography>
+                ) : (
+                  <BCTypography
+                    variant="button"
+                    key={crumb.path}
+                    color="text"
+                    fontSize={size.lg}
+                  >
+                    {crumb.label}
+                  </BCTypography>
+                )
+              )}
+            </Breadcrumbs>
+          )}
         </Grid>
-        <Grid item my={12} lg={12}>
-          <BCBox>
-            {crumbs && (
-              <Paper
-                p={2}
-                elevation={5}
-                sx={{ padding: '8px', height: '50px' }}
-              >
-                <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-                  {breadcrumbs.map((crumb, index) =>
-                    index + 1 !== breadcrumbs.length ? (
-                      <BCTypography
-                        key={crumb.path}
-                        component={RouterLink}
-                        to={crumb.path}
-                        disabled={true}
-                      >
-                        {crumb.label}
-                      </BCTypography>
-                    ) : (
-                      <BCTypography key={crumb.path}>
-                        {crumb.label}
-                      </BCTypography>
-                    )
-                  )}
-                </Breadcrumbs>
-              </Paper>
-            )}
-            <BCBox py={4}>
-              <Outlet />
-              <Footer />
-            </BCBox>
-          </BCBox>
+        <Grid lg={12}>
+          <Paper
+            elevation={5}
+            sx={{
+              padding: '1rem',
+              position: 'relative',
+              minHeight: 'calc(100vh - 16rem)'
+            }}
+          >
+            <Outlet />
+          </Paper>
         </Grid>
       </Container>
+      <Footer />
     </RequireAuth>
   )
 }

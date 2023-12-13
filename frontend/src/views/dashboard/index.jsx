@@ -2,6 +2,8 @@ import { useQuery } from 'react-query'
 import Loading from '@/components/Loading'
 import useApiService from '@/services/useApiService'
 import useUserStore from '@/store/useUserStore'
+import BCeIDBalance from '@/views/dashboard/components/BCeIDBalance'
+import IDIRBalance from '@/views/dashboard/components/IDIRBalance'
 
 // const testData = async () => {
 //   const testData = [
@@ -60,6 +62,10 @@ const Dashboard = () => {
         Dashboard {user && <span>Welcome, {user.username}</span>}
       </header>
       {content}
+      <div className="Dashboard-components">
+        <BCeIDBalance />
+        <IDIRBalance />
+      </div>
     </div>
   )
 }

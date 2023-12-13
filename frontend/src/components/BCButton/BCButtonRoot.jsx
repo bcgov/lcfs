@@ -5,7 +5,7 @@ import { styled } from '@mui/material/styles'
 const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme
   const { color, variant, size, circular, iconOnly } = ownerState
-  const { white, text, transparent, gradients } = palette
+  const { white, text, transparent, gradients, primary } = palette
   const { boxShadow, linearGradient, pxToRem, rgba } = functions
   const { borderRadius } = borders
   const { colored } = boxShadows
@@ -67,7 +67,10 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
       boxShadow: boxShadowValue,
 
       '&:hover': {
-        backgroundColor: backgroundValue,
+        backgroundColor: primary.main,
+        color: white.main,
+        borderColor: colorValue,
+        opacity: 0.75,
         boxShadow: hoveredBoxShadowValue
       },
 

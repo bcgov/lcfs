@@ -26,7 +26,6 @@ import textField from '@/assets/theme/components/form/textField'
 import menu from '@/assets/theme/components/menu'
 import menuItem from '@/assets/theme/components/menu/menuItem'
 import switchButton from '@/assets/theme/components/form/switchButton'
-// import divider from "@/assets/theme/components/divider";
 import tableContainer from '@/assets/theme/components/table/tableContainer'
 import tableHead from '@/assets/theme/components/table/tableHead'
 import tableCell from '@/assets/theme/components/table/tableCell'
@@ -97,7 +96,6 @@ export default createTheme({
     MuiMenu: { ...menu },
     MuiMenuItem: { ...menuItem },
     MuiSwitch: { ...switchButton },
-    // MuiDivider: { ...divider },
     MuiTableContainer: { ...tableContainer },
     MuiTableHead: { ...tableHead },
     MuiTableCell: { ...tableCell },
