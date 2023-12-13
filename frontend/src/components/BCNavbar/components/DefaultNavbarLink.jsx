@@ -18,7 +18,6 @@ function DefaultNavbarLink({ icon, name, route, light }) {
     <BCBox
       component={NavLink}
       className="NavLink"
-      activeClassName="active"
       to={route}
       mx={1}
       p={1}

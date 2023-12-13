@@ -6,8 +6,10 @@ import { appRoutes } from '@/constants/routes'
 import ApiDocs from '@/components/ApiDocs'
 import Login from '@/layouts/authentication/components/Login'
 import OrganizationLayout from '@/layouts/organization/OrganizationLayout'
+import { Organization } from '@/views/organization'
 import { ViewUsers } from '@/views/viewUsers'
 import { EditUser } from '@/views/editUser'
+import { AddEditUser } from '@/views/addEditUser'
 import Layout from '@/layouts/Layout'
 import AdminUsersLayout from '@/layouts/admin/AdminUsersLayout'
 import PublicLayout from '@/layouts/PublicLayout'
@@ -116,12 +118,20 @@ export const routes = [
           },
           {
             path: appRoutes.organization.users,
+            element: <Organization />
+          },
+          {
+            path: appRoutes.organization.createUser,
+            element: <AddEditUser />
+          },
+          {
+            path: appRoutes.organization.users,
             element: <ViewUsers />,
             handle: { crumb: () => 'Users' }
           },
           {
-            path: appRoutes.organization.edit,
-            element: <ViewUsers />,
+            path: appRoutes.organization.editUser,
+            element: <AddEditUser />,
             handle: { crumb: () => 'Users' }
           }
         ]

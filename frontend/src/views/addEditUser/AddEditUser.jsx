@@ -15,7 +15,6 @@ import BCButton from '@/components/BCButton'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import { useNavigate } from 'react-router-dom'
-import { appRoutes } from '@/constants/routes'
 import { Label } from './Label'
 import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
 import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields'
@@ -39,7 +38,7 @@ const dummy = {
 }
 
 // switch between 'idir' and 'bceid'
-export const EditUser = ({ userType = 'bceid' }) => {
+export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     userType,
@@ -76,6 +75,12 @@ export const EditUser = ({ userType = 'bceid' }) => {
   const handleSave = async (e) => {
     e.preventDefault()
     // do something with data before saving?
+    if (edit) {
+      // find user and update
+    } else {
+      // save as new user
+      // get org id from either url or context and save user to the org
+    }
     // save(formData);
   }
 
@@ -110,12 +115,14 @@ export const EditUser = ({ userType = 'bceid' }) => {
   }
 
   const handleBackClick = () => {
-    if (userType === 'idir') {
-      navigate(appRoutes.admin.viewUser)
-    }
-    if (userType === 'bceid') {
-      navigate(appRoutes.organization.viewUser)
-    }
+    // if (userType === 'idir') {
+    //   navigate(routes.VIEW_USER)
+    // }
+    // if (userType === 'bceid') {
+    //   navigate(routes.ORGANIZATION_USER)
+    // }
+    // should probably not be a specific route to navigate to as more than 1 page can lead to this page. instead navigate to previous page
+    navigate(-1)
   }
 
   const handleReadOnlyClick = () => {
