@@ -27,7 +27,7 @@ import { useMutation } from 'react-query'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import useApiService from '@/services/useApiService'
-import * as routes from '@/constants/routes'
+import { appRoutes } from '@/constants/routes'
 
 // Schema for form validation
 const schema = Yup.object({
@@ -74,7 +74,7 @@ const schema = Yup.object({
 })
 
 // Component for adding a new organization
-const AddOrganization = () => {
+export const AddOrganization = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
 
@@ -181,7 +181,7 @@ const AddOrganization = () => {
   const { mutate, isLoading, isError } = useMutation(postOrganizaionData, {
     onSuccess: () => {
       // Redirect to Organization route on success
-      navigate(routes.ORGANIZATION, {
+      navigate(appRoutes.organization.main, {
         state: {
           message: 'Organization has been successfully added.',
           severity: 'success'
@@ -712,7 +712,7 @@ const AddOrganization = () => {
                   }
                 }}
                 startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
-                onClick={() => navigate(routes.ORGANIZATION)}
+                onClick={() => navigate(appRoutes.organization.main)}
               >
                 <Typography variant="subtitle2">Back</Typography>
               </Button>
@@ -741,5 +741,3 @@ const AddOrganization = () => {
     </Paper>
   )
 }
-
-export default AddOrganization

@@ -2,7 +2,7 @@ import colors from '@/assets/theme/base/colors'
 import { pxToRem } from '@/assets/theme/utils'
 
 const { text } = colors
-
+// https://developer.gov.bc.ca/Design-System/Typography
 const baseProperties = {
   fontFamily: "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
   fontWeightLighter: 100,
@@ -17,7 +17,13 @@ const baseProperties = {
   fontSizeLG: pxToRem(18),
   fontSizeXL: pxToRem(20),
   fontSize2XL: pxToRem(24),
-  fontSize3XL: pxToRem(30)
+  fontSize3XL: pxToRem(30),
+  headerSizeH1: '2.986rem',
+  headerSizeH2: '2.488rem',
+  headerSizeH3: '2.074rem',
+  headerSizeH4: '1.728rem',
+  headerSizeH5: '1.44rem',
+  headerSizeH6: '1.2rem'
 }
 
 const baseHeadingProperties = {
@@ -42,37 +48,37 @@ const typography = {
   fontWeightBold: baseProperties.fontWeightBold,
 
   h1: {
-    fontSize: pxToRem(48),
+    fontSize: baseProperties.headerSizeH1,
     lineHeight: 1.25,
     ...baseHeadingProperties
   },
 
   h2: {
-    fontSize: pxToRem(36),
+    fontSize: baseProperties.headerSizeH2,
     lineHeight: 1.3,
     ...baseHeadingProperties
   },
 
   h3: {
-    fontSize: pxToRem(30),
+    fontSize: baseProperties.headerSizeH3,
     lineHeight: 1.375,
     ...baseHeadingProperties
   },
 
   h4: {
-    fontSize: pxToRem(24),
+    fontSize: baseProperties.headerSizeH4,
     lineHeight: 1.375,
     ...baseHeadingProperties
   },
 
   h5: {
-    fontSize: pxToRem(20),
+    fontSize: baseProperties.headerSizeH5,
     lineHeight: 1.375,
     ...baseHeadingProperties
   },
 
   h6: {
-    fontSize: pxToRem(16),
+    fontSize: baseProperties.headerSizeH6,
     lineHeight: 1.625,
     ...baseHeadingProperties
   },
@@ -97,7 +103,7 @@ const typography = {
     fontWeight: baseProperties.fontWeightRegular,
     lineHeight: 1.625
   },
-
+  // default paragraph font size is 16px(1em) with a line height of 1.6
   body2: {
     fontFamily: baseProperties.fontFamily,
     fontSize: baseProperties.fontSizeMD,

@@ -1,14 +1,14 @@
 import { useKeycloak } from '@react-keycloak/web'
 import { useQuery } from 'react-query'
 import { Navigate } from 'react-router-dom'
-import { CURRENT_USER } from '@/constants/routes'
+import { appRoutes } from '@/constants/routes'
 import useApiService from '@/services/useApiService'
 import useUserStore from '@/store/useUserStore'
-import 'swagger-ui-react/swagger-ui.css'
+import Loading from '@/components/Loading'
 
 const fetchCurrentUser = async (apiService) => {
   try {
-    const response = await apiService.get(CURRENT_USER)
+    const response = await apiService.get(appRoutes.users.current)
     console.log('User Response: ', response)
     return response.data
   } catch (error) {
@@ -38,17 +38,7 @@ const RequireAuth = ({ children, redirectTo }) => {
   )
 
   if (!initialized || isLoading) {
-    return (
-      <div className="swagger-ui">
-        <div className="loading-container">
-          <div className="info">
-            <div className="loading-container">
-              <div className="loading"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <Loading />
   }
 
   if (isError) {

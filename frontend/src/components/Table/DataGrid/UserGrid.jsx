@@ -10,8 +10,6 @@ import StatusRenderer from './StatusRenderer'
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const UserGrid = (props) => {
-  const sideBar = useMemo(() => ['filters', 'columns'], [])
-
   const columnDefs = useMemo(
     () => [
       { field: 'name', editable: true },
@@ -74,8 +72,8 @@ const UserGrid = (props) => {
         suppressRowClickSelection="true"
         pagination
         paginationPageSize={10}
+        paginationPageSizeSelector={[10, 20, 50, 100]}
         domLayout="autoHeight"
-        sideBar={sideBar}
       />
     </div>
   )

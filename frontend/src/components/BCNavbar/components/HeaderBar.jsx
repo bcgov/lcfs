@@ -34,7 +34,7 @@ const HeaderBar = (props) => {
           />
           <BCTypography
             component="span"
-            variant={mobileView ? 'h6' : 'h3'}
+            variant={mobileView ? 'h6' : 'h4'}
             className="application_title"
             sx={{ display: 'flex', alignItems: 'center' }}
           >
@@ -68,7 +68,7 @@ const HeaderBar = (props) => {
           React.cloneElement(data.headerRightPart, { data })}
       </BCBox>
       <BCBox
-        display={{ xs: 'inline-block', lg: 'none' }}
+        display={{ xs: 'inline-block', xl: 'none' }}
         lineHeight={0}
         py={1.5}
         pl={1.5}

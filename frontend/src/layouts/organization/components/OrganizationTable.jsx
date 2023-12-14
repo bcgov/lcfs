@@ -33,6 +33,7 @@ const OrganizationTable = (props) => {
         suppressRowClickSelection="true"
         pagination
         paginationPageSize={10}
+        paginationPageSizeSelector={[10, 20, 50, 100]}
         domLayout="autoHeight"
       />
     </div>

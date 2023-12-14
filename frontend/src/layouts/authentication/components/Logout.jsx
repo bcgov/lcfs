@@ -16,14 +16,21 @@ const Logout = (props) => {
 
   return (
     keycloak.authenticated && (
-      <BCBox display="flex" alignItems="right" justifyContent="space-around">
-        <BCTypography
-          variant="subtitle1"
-          color={props.isScrolled ? 'primary' : 'light'}
-          mx={1}
-        >
-          {user?.display_name}
-        </BCTypography>
+      <BCBox
+        display="flex"
+        alignItems="right"
+        justifyContent="space-around"
+        mr={2}
+      >
+        {user?.display_name && (
+          <BCTypography
+            variant="subtitle1"
+            color={isScrolled ? 'primary' : 'light'}
+            mx={1}
+          >
+            {user?.display_name}
+          </BCTypography>
+        )}
         <BCButton
           onClick={() => {
             logout()

@@ -25,19 +25,19 @@ const container = {
   [SM]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '540px !important'
+      maxWidth: '720px !important'
     }
   },
   [MD]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '720px !important'
+      maxWidth: '940px !important'
     }
   },
   [LG]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '960px !important'
+      maxWidth: '1640px !important'
     }
   },
   [XL]: {

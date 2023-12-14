@@ -5,12 +5,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { Paper } from '@mui/material'
 
 import OrganizationTable from '@/layouts/organization/components/OrganizationTable'
 import { useNavigate, useLocation } from 'react-router-dom'
-import * as routes from '@/constants/routes'
+import { appRoutes } from '@/constants/routes'
 import BCAlert from '@/components/BCAlert'
+import { Stack } from '@mui/material'
 
 // Data for demo purposes only. Do not use in production.
 const demoData = [
@@ -47,55 +47,41 @@ export default function OrganizationLayout() {
   const { message, severity } = location.state || {}
 
   return (
-    <Paper
-      elevation={5}
-      sx={{
-        padding: '1rem',
-        position: 'relative',
-        minHeight: '80vh',
-        bgcolor: 'background.paper'
-      }}
-    >
+    <>
       <div>
-        {message && <BCAlert data-test="alert-box" severity={severity || 'info'}>{message}</BCAlert>}
+        {message && (
+          <BCAlert data-test="alert-box" severity={severity || 'info'}>
+            {message}
+          </BCAlert>
+        )}
       </div>
-      <BCTypography variant="h3">Organizations</BCTypography>
-      <BCBox
-        sx={{
-          display: 'flex',
-          flexDirection: 'row', // default layout is row
-          flexWrap: 'wrap', // allow items to wrap to the next row
-          justifyContent: 'flex-start',
-          alignItems: 'flex-start',
-          textTransform: 'none'
-        }}
-        my={2}
+      <BCTypography variant="h5">Organizations</BCTypography>
+      <Stack
+        direction={{ md: 'coloumn', lg: 'row' }}
+        spacing={{ xs: 2, sm: 2, md: 3 }}
+        useFlexGap
+        flexWrap="wrap"
+        m={2}
       >
         <BCButton
           variant="contained"
-          size="large"
+          size="small"
           color="primary"
-          sx={{
-            textTransform: 'none',
-            marginRight: '8px',
-            marginBottom: '8px'
-          }}
-          startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-          onClick={() => navigate(routes.ADD_ORGANIZATION)}
+          startIcon={
+            <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+          }
+          onClick={() => navigate(appRoutes.organization.create)}
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>
         <BCButton
           variant="outlined"
-          size="large"
+          size="small"
           color="primary"
-          sx={{
-            textTransform: 'none',
-            marginRight: '8px',
-            marginBottom: '8px',
-            whiteSpace: 'nowrap'
-          }}
-          startIcon={<FontAwesomeIcon icon={faFileExcel} />}
+          sx={{ whiteSpace: 'nowrap' }}
+          startIcon={
+            <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
+          }
           onClick={() => {}}
         >
           <BCTypography variant="subtitle2">
@@ -104,21 +90,19 @@ export default function OrganizationLayout() {
         </BCButton>
         <BCButton
           variant="outlined"
-          size="large"
+          size="small"
           color="primary"
-          sx={{
-            textTransform: 'none',
-            marginRight: '8px',
-            marginBottom: '8px'
-          }}
-          startIcon={<FontAwesomeIcon icon={faFileExcel} />}
+          sx={{ whiteSpace: 'nowrap' }}
+          startIcon={
+            <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
+          }
           onClick={() => {}}
         >
           <BCTypography variant="subtitle2">
             Download User Information
           </BCTypography>
         </BCButton>
-      </BCBox>
+      </Stack>
       <BCBox
         component="div"
         className="ag-theme-alpine"
@@ -126,6 +110,6 @@ export default function OrganizationLayout() {
       >
         <OrganizationTable rows={demoData} />
       </BCBox>
-    </Paper>
+    </>
   )
 }
