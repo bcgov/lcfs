@@ -28,58 +28,38 @@ async def create_organization(
     Endpoint to create a new organization. This includes processing the provided
     organization details along with associated addresses.
     """
-    try:
-        # Create address models from provided data
-        org_address = OrganizationAddress(**organization_data.address.dict())
-        org_attorney_address = OrganizationAttorneyAddress(
-            **organization_data.attorney_address.dict()
-        )
+    async with db.begin():
+        try:
+            # Create and add address models to the database
+            org_address = OrganizationAddress(**organization_data.address.dict())
+            org_attorney_address = OrganizationAttorneyAddress(
+                **organization_data.attorney_address.dict()
+            )
+            db.add_all([org_address, org_attorney_address])
+            await db.flush()
 
-        # Add address models to the database
-        db.add(org_address)
-        db.add(org_attorney_address)
-        await db.commit()
+            # Create and add organization model to the database
+            org_model = Organization(
+                name=organization_data.name,
+                email=organization_data.email,
+                phone=organization_data.phone,
+                edrms_record=organization_data.edrms_record,
+                organization_status_id=organization_data.organization_status_id,
+                organization_type_id=organization_data.organization_type_id,
+                organization_address_id=org_address.organization_address_id,
+                organization_attorney_address_id=
+                    org_attorney_address.organization_attorney_address_id
+            )
+            db.add(org_model)
+            await db.flush()
 
-        # Refresh to get the generated IDs
-        await db.refresh(org_address)
-        await db.refresh(org_attorney_address)
-
-        # Prepare organization data dictionary
-        org_data_dict = {
-            "name": organization_data.name,
-            "email": organization_data.email,
-            "phone": organization_data.phone,
-            "edrms_record": organization_data.edrms_record,
-            "organization_status_id": organization_data.organization_status_id,
-            "organization_type_id": organization_data.organization_type_id,
-            "organization_address_id": org_address.organization_address_id,
-            "organization_attorney_address_id":
-                org_attorney_address.organization_attorney_address_id
-        }
-
-        # Create and add organization model to the database
-        org_model = Organization(**org_data_dict)
-        db.add(org_model)
-        await db.commit()
-        await db.refresh(org_model)
-
-        return org_model
-
-    except SQLAlchemyError as sql_ex:
-        await db.rollback()
-        logger.error("Database Error: %s", sql_ex, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database Error"
-        ) from sql_ex
-
-    except Exception as ex:
-        await db.rollback()
-        logger.error("Internal Server Error: %s", ex, exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
-        ) from ex
+            return OrganizationSchema.from_orm(org_model)
+        except Exception as e:
+            logger.error("Internal Server Error: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error"
+            ) from e
 
 @router.put("/organizations/{organization_id}", response_model=OrganizationSchema)
 async def update_organization(organization_id: int, organization_data: OrganizationUpdateSchema, db: AsyncSession = Depends(get_async_db)):

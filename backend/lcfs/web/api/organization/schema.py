@@ -53,6 +53,9 @@ class OrganizationCreateSchema(OrganizationBaseSchema):
 class OrganizationSchema(OrganizationBaseSchema):
     organization_id: int
 
+    class Config:
+        from_attributes=True
+
 class OrganizationSummarySchema(BaseModel):
     organization_id: int
     name: str
