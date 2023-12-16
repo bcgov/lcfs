@@ -14,7 +14,7 @@ import AdminUsersLayout from '@/layouts/admin/AdminUsersLayout'
 import PublicLayout from '@/layouts/PublicLayout'
 import ContactUs from '@/components/ContactUs'
 import Dashboard from '@/views/dashboard'
-// import AddEditOrganizationForm from './layouts/organization/components/AddEditOrganizationForm'
+import { AddOrganization } from '@/views/organization/AddOrganization'
 
 // TODO: error bound component needs to be created
 export const routes = [
@@ -116,11 +116,11 @@ export const routes = [
             path: '',
             element: <OrganizationLayout /> // redirect to users if no path is provided
           },
-          // {
-          //   path: appRoutes.organization.createOrg,
-          //   element: <AddEditOrganizationForm />,
-          //   handle: { crumb: () => 'Create Organization' }
-          // },
+          {
+            path: appRoutes.organization.create,
+            element: <AddOrganization />,
+            handle: { crumb: () => 'Create Organization' }
+          },
           {
             path: appRoutes.organization.users,
             element: <Organization />

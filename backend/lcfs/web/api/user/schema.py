@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, EmailStr
 
-from lcfs.web.api.organization.schema import OrganizationSummary
+from lcfs.web.api.organization.schema import OrganizationSummarySchema
 from lcfs.web.api.role.schema import RoleSchema
 
 """
@@ -20,7 +20,7 @@ class UserBase(BaseModel):
     title: Optional[str] = None
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
-    organization: Optional[OrganizationSummary] = None
+    organization: Optional[OrganizationSummarySchema] = None
     # user_roles: Optional[List[RoleSchema]] = None
     
     class Config:

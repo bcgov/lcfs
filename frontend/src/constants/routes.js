@@ -15,7 +15,8 @@ export const appRoutes = {
     main: 'compliance-report'
   },
   organization: {
-    main: 'organization',
+    main: '/organization',
+    create: '/organization/create',
     users: '/organization/users',
     createUser: '/organization/users/create',
     editUser: '/organization/users/:userID/edit',

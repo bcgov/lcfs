@@ -71,7 +71,7 @@ const Login = () => {
           </BCTypography>
         </BCBox>
         <BCBox pt={1} pb={3} px={3}>
-          <BCBox component="form" role="form">
+          <BCBox component="form" role="form" data-test="login-container">
             <BCBox mt={4} mb={1}>
               <BCButton
                 variant="contained"

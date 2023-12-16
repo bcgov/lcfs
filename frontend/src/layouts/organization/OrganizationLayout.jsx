@@ -7,6 +7,9 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 
 import OrganizationTable from '@/layouts/organization/components/OrganizationTable'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { appRoutes } from '@/constants/routes'
+import BCAlert from '@/components/BCAlert'
 import { Stack } from '@mui/material'
 
 // Data for demo purposes only. Do not use in production.
@@ -38,8 +41,20 @@ const demoData = [
 ]
 
 export default function OrganizationLayout() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const { message, severity } = location.state || {}
+
   return (
     <>
+      <div>
+        {message && (
+          <BCAlert data-test="alert-box" severity={severity || 'info'}>
+            {message}
+          </BCAlert>
+        )}
+      </div>
       <BCTypography variant="h5">Organizations</BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
@@ -55,7 +70,7 @@ export default function OrganizationLayout() {
           startIcon={
             <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
           }
-          onClick={() => {}}
+          onClick={() => navigate(appRoutes.organization.create)}
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>
