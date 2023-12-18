@@ -106,6 +106,12 @@ class UserAuthentication(AuthenticationBackend):
                     )
                     user = result.unique().scalar_one()
 
+                    # Check if the user is active
+                    if not user.is_active:
+                        error_text = 'User is not active.'
+                        await self.create_login_history(user_token, False, error_text, request.url.path)
+                        raise HTTPException(status_code=401, detail=error_text)
+
                     await self.create_login_history(user_token, True, None, request.url.path)
                     return AuthCredentials(["authenticated"]), user
             
@@ -140,6 +146,12 @@ class UserAuthentication(AuthenticationBackend):
                     error_text = 'No User with that configuration exists.'
                     await self.create_login_history(user_token, False, error_text, request.url.path)
                     raise HTTPException(status_code=401, detail=error_text)
+
+                 # Check if the user is active
+                if not user.is_active:
+                    error_text = 'User is not active.'
+                    await self.create_login_history(user_token, False, error_text, request.url.path)
+                    raise HTTPException(status_code=401, detail=error_text)
         else:
             error_text = 'preferred_username or email is required in JWT payload.'
             await self.create_login_history(user_token, False, error_text, request.url.path)
@@ -147,6 +159,7 @@ class UserAuthentication(AuthenticationBackend):
 
         await self.map_user_keycloak_id(user, user_token)
 
+        await self.create_login_history(user_token, True, None, request.url.path)
         return AuthCredentials(["authenticated"]), user
 
     async def map_user_keycloak_id(self, user_profile, user_token):
