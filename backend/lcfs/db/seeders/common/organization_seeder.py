@@ -14,7 +14,7 @@ async def seed_organizations(session):
 
     organizations_to_seed = [
         {
-            "name": "BC Government",
+            "name": "Government of British Columbia",
             "organization_status_id": 1,
             "organization_type_id": 1
         },
