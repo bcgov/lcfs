@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import { QueryClient, QueryClientProvider } from 'react-query'
-import { getKeycloak, keycloakInitOptions } from '@/keycloak'
+import { getKeycloak, keycloakInitOptions } from '@/utils/keycloak'
 import Loading from '@/components/Loading'
-import theme from '@/assets/theme'
+import theme from '@/themes'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()

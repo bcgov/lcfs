@@ -1,14 +1,14 @@
+import Loading from '@/components/Loading'
+import { apiRoutes } from '@/constants/routes'
+import useApiService from '@/services/useApiService'
+import { useUserStore } from '@/stores/useUserStore'
 import { useKeycloak } from '@react-keycloak/web'
 import { useQuery } from 'react-query'
 import { Navigate } from 'react-router-dom'
-import { appRoutes } from '@/constants/routes'
-import useApiService from '@/services/useApiService'
-import useUserStore from '@/store/useUserStore'
-import Loading from '@/components/Loading'
 
 const fetchCurrentUser = async (apiService) => {
   try {
-    const response = await apiService.get(appRoutes.users.current)
+    const response = await apiService.get(apiRoutes.currentUser)
     console.log('User Response: ', response)
     return response.data
   } catch (error) {
