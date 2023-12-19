@@ -1,19 +1,19 @@
-import BCBox from '@/components/BCBox'
-import { Paper } from '@mui/material'
-import BCTypography from '@/components/BCTypography'
-import BCButton from '@/components/BCButton'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import Pencil from '@/assets/icons/pencil.svg?react'
-import colors from '@/assets/theme/base/colors.js'
-import '@ag-grid-community/styles/ag-grid.css'
-import '@ag-grid-community/styles/ag-theme-alpine.css'
-import { AgGridReact } from '@ag-grid-community/react'
+import colors from '@/themes/base/colors.js'
+import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
+import BCTypography from '@/components/BCTypography'
+import { ROUTES } from '@/constants/routes'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry } from '@ag-grid-community/core'
+import { AgGridReact } from '@ag-grid-community/react'
+import '@ag-grid-community/styles/ag-grid.css'
+import '@ag-grid-community/styles/ag-theme-alpine.css'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Paper } from '@mui/material'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { appRoutes } from '@/constants/routes'
 
 const dummy = {
   orgData: {
@@ -175,7 +175,7 @@ export const ViewOrg = () => {
                 marginBottom: '8px'
               }}
               startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
-              onClick={() => navigate(appRoutes.organization.createUser)}
+              onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
             >
               <BCTypography variant="subtitle2">New User</BCTypography>
             </BCButton>
