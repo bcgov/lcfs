@@ -3,6 +3,7 @@ import BCNavbar from '@/components/BCNavbar'
 import { HeaderComponent } from './HeaderComponent'
 import { Logout } from './Logout'
 import { ROUTES } from '@/constants/routes'
+import { useUserStore } from '@/stores/useUserStore'
 
 // Nav Links
 const routes = [
@@ -13,12 +14,14 @@ const routes = [
   { name: 'Administration', route: ROUTES.ADMIN }
 ]
 
-const Navbar = () => {
+export const Navbar = () => {
+  const user = useUserStore((state) => state.user)
+
   return (
     <BCNavbar
       title="Low Carbon Fuel Standard"
       balance="50,000"
-      organizationName="BC Government"
+      organizationName={user?.organization?.name}
       routes={routes}
       beta={true}
       headerRightPart={<HeaderComponent key="headerRight" />}
@@ -26,5 +29,3 @@ const Navbar = () => {
     />
   )
 }
-
-export default Navbar

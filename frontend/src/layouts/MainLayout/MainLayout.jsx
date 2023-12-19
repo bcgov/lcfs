@@ -8,7 +8,7 @@ import Grid from '@mui/material/Unstable_Grid2'
 import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
 import RequireAuth from '@/components/RequireAuth'
-import Navbar from './components/Navbar'
+import { Navbar } from './components/Navbar'
 // icons and typograhpy
 import typography from '@/themes/base/typography'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
