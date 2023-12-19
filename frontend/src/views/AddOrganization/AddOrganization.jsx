@@ -22,12 +22,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from 'react-query'
-
-// Internal Modules
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
-import useApiService from '@/services/useApiService'
-import { appRoutes } from '@/constants/routes'
+import { useApiService } from '@/services/useApiService'
+import { ROUTES } from '@/constants/routes'
 
 // Schema for form validation
 const schema = Yup.object({
@@ -181,7 +179,7 @@ export const AddOrganization = () => {
   const { mutate, isLoading, isError } = useMutation(postOrganizaionData, {
     onSuccess: () => {
       // Redirect to Organization route on success
-      navigate(appRoutes.organization.main, {
+      navigate(ROUTES.ORGANIZATIONS, {
         state: {
           message: 'Organization has been successfully added.',
           severity: 'success'
@@ -712,7 +710,7 @@ export const AddOrganization = () => {
                   }
                 }}
                 startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
-                onClick={() => navigate(appRoutes.organization.main)}
+                onClick={() => navigate(ROUTES.ORGANIZATIONS)}
               >
                 <Typography variant="subtitle2">Back</Typography>
               </Button>

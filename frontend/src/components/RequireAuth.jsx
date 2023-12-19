@@ -1,6 +1,6 @@
 import Loading from '@/components/Loading'
 import { apiRoutes } from '@/constants/routes'
-import useApiService from '@/services/useApiService'
+import { useApiService } from '@/services/useApiService'
 import { useUserStore } from '@/stores/useUserStore'
 import { useKeycloak } from '@react-keycloak/web'
 import { useQuery } from 'react-query'

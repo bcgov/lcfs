@@ -3,7 +3,7 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { appRoutes } from '@/constants/routes'
+import { ROUTES } from '@/constants/routes'
 import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack } from '@mui/material'
@@ -67,7 +67,7 @@ export const Organizations = () => {
           startIcon={
             <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
           }
-          onClick={() => navigate(appRoutes.organization.create)}
+          onClick={() => navigate(ROUTES.ORGANIZATIONS_ADD)}
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>

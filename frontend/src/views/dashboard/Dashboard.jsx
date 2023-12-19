@@ -1,5 +1,5 @@
 import Loading from '@/components/Loading'
-import useApiService from '@/services/useApiService'
+import { useApiService } from '@/services/useApiService'
 import { useUserStore } from '@/stores/useUserStore'
 import BCeIDBalance from '@/views/dashboard/components/BCeIDBalance'
 import IDIRBalance from '@/views/dashboard/components/IDIRBalance'
