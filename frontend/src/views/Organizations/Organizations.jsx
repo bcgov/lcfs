@@ -1,13 +1,14 @@
 // Icons
-import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-
-import BCTypography from '@/components/BCTypography'
+import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-
-import OrganizationTable from './components/OrganizationTable'
+import BCTypography from '@/components/BCTypography'
+import { appRoutes } from '@/constants/routes'
+import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack } from '@mui/material'
+import { useLocation, useNavigate } from 'react-router-dom'
+import OrganizationTable from './components/OrganizationTable'
 
 // Data for demo purposes only. Do not use in production.
 const demoData = [
@@ -38,8 +39,19 @@ const demoData = [
 ]
 
 export const Organizations = () => {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const { message, severity } = location.state || {}
   return (
     <>
+      <div>
+        {message && (
+          <BCAlert data-test="alert-box" severity={severity || 'info'}>
+            {message}
+          </BCAlert>
+        )}
+      </div>
       <BCTypography variant="h5">Organizations</BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
@@ -55,7 +67,7 @@ export const Organizations = () => {
           startIcon={
             <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
           }
-          onClick={() => {}}
+          onClick={() => navigate(appRoutes.organization.create)}
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>

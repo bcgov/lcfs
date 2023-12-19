@@ -1,6 +1,5 @@
 import colors from '@/themes/base/colors'
 import BCButton from '@/components/BCButton'
-import { ROUTES } from '@/constants/routes'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import {
@@ -16,11 +15,11 @@ import {
 import Grid2 from '@mui/material/Unstable_Grid2'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Label } from './Label'
+import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
 import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields'
 import { BCeIDSpecificRoleFields } from './BCeIDSpecificRoleFields'
-import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
 import { IDIRSpecificRoleFields } from './IDIRSpecificRoleFields'
-import { Label } from './Label'
 
 const dummy = {
   errors: {
@@ -39,7 +38,7 @@ const dummy = {
 }
 
 // switch between 'idir' and 'bceid'
-export const AddEditUser = ({ userType = 'bceid' }) => {
+export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     userType,
@@ -76,6 +75,12 @@ export const AddEditUser = ({ userType = 'bceid' }) => {
   const handleSave = async (e) => {
     e.preventDefault()
     // do something with data before saving?
+    if (edit) {
+      // find user and update
+    } else {
+      // save as new user
+      // get org id from either url or context and save user to the org
+    }
     // save(formData);
   }
 
@@ -110,12 +115,14 @@ export const AddEditUser = ({ userType = 'bceid' }) => {
   }
 
   const handleBackClick = () => {
-    if (userType === 'idir') {
-      navigate(ROUTES.ADMIN_USERS_VIEW)
-    }
-    if (userType === 'bceid') {
-      navigate(ROUTES.ORGANIZATION_VIEWUSER)
-    }
+    // if (userType === 'idir') {
+    //   navigate(routes.VIEW_USER)
+    // }
+    // if (userType === 'bceid') {
+    //   navigate(routes.ORGANIZATION_USER)
+    // }
+    // should probably not be a specific route to navigate to as more than 1 page can lead to this page. instead navigate to previous page
+    navigate(-1)
   }
 
   const handleReadOnlyClick = () => {
