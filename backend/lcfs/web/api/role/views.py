@@ -30,7 +30,7 @@ async def get_roles(government_roles_only: bool = False, db: AsyncSession = Depe
                               success=True, message="Success")
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting roles", str(e.args[0]))
+        logger.error("Error getting roles", str(e))
         return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                               message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+                              error={"message": f"Technical error: {e}"})

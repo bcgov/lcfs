@@ -495,6 +495,8 @@ def upgrade() -> None:
         sa.Column(
             "name",
             sa.Enum(
+                "GOVERNMENT",
+                "SUPPLIER",
                 "ADMINISTRATOR",
                 "ANALYST",
                 "COMPLIANCE_MANAGER",

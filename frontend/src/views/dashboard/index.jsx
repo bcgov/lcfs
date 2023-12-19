@@ -26,7 +26,8 @@ const Dashboard = () => {
   const user = useUserStore((state) => state.user)
 
   const queryFn = () =>
-    apiService.get('/users').then((response) => response.data)
+    // temp test
+    apiService.get('/organizations/list').then((response) => response.data)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['users'],

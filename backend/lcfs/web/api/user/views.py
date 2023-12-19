@@ -21,6 +21,7 @@ from lcfs.db import dependencies
 from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.user.session import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase
+from lcfs.web.core.decorators import roles_required
 
 router = APIRouter()
 logger = getLogger("users")
@@ -49,14 +50,15 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
         return UserBase.from_orm(current_user)
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting current user", str(e.args[0]))
-        return UserBase(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        logger.error("Error getting current user", str(e))
+        return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                               message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+                              error={"message": f"Technical error: {e}"})
 
 
 
 @router.get("/", response_model=List[UserBase], status_code=status.HTTP_200_OK)
+@roles_required("Government")
 async def get_users(limit: int = 10, offset: int = 0, response: Response = None) -> List[UserBase]:
     current_page = math.ceil(offset / limit) + 1
     try:
@@ -78,7 +80,7 @@ async def get_users(limit: int = 10, offset: int = 0, response: Response = None)
         return user_bases  # Return the list of UserBase objects
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e.args[0]))
+        logger.error("Error getting users", str(e))
         return []  # Return an empty list if there's an error
     
 
@@ -101,10 +103,10 @@ async def get_user_search(username: str = None, organization: str = None,
                               success=True, message="Success")
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e.args[0]))
+        logger.error("Error getting users", str(e))
         return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                               message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+                              error={"message": f"Technical error: {e}"})
 
 
 @router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
@@ -123,10 +125,10 @@ async def get_user_by_id(user_id: int, response: Response = None) -> EntityRespo
                               success=True, message="Success")
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error(f"Error finding user {user_id}", str(e.args[0]))
+        logger.error(f"Error finding user {user_id}", str(e))
         return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                               message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+                              error={"message": f"Technical error: {e}"})
 
 
 @router.post("/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
