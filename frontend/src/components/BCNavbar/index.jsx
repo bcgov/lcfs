@@ -3,7 +3,7 @@ import { AppBar, Divider, useScrollTrigger } from '@mui/material'
 import DefaultNavbarMobile from '@/components/BCNavbar/components/DefaultNavbarMobile'
 
 // BCGov Dashboard React base styles
-import breakpoints from '@/assets/theme/base/breakpoints'
+import breakpoints from '@/themes/base/breakpoints'
 import { PropTypes } from 'prop-types'
 import MenuBar from '@/components/BCNavbar/components/MenuBar'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
