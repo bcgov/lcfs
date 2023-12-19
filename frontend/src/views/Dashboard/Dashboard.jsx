@@ -1,8 +1,8 @@
 import Loading from '@/components/Loading'
 import { useApiService } from '@/services/useApiService'
 import { useUserStore } from '@/stores/useUserStore'
-import BCeIDBalance from '@/views/dashboard/components/BCeIDBalance'
-import IDIRBalance from '@/views/dashboard/components/IDIRBalance'
+import BCeIDBalance from './components/BCeIDBalance'
+import IDIRBalance from './components/IDIRBalance'
 import { useQuery } from 'react-query'
 
 // const testData = async () => {

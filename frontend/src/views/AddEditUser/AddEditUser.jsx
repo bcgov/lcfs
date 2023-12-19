@@ -15,11 +15,11 @@ import {
 import Grid2 from '@mui/material/Unstable_Grid2'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Label } from './Label'
-import { IDIRSpecificFormFields } from './IDIRSpecificFormFields'
-import { BCeIDSpecificFormFields } from './BCeIDSpecificFormFields'
-import { BCeIDSpecificRoleFields } from './BCeIDSpecificRoleFields'
-import { IDIRSpecificRoleFields } from './IDIRSpecificRoleFields'
+import { Label } from './components/Label'
+import { IDIRSpecificFormFields } from './components/IDIRSpecificFormFields'
+import { BCeIDSpecificFormFields } from './components/BCeIDSpecificFormFields'
+import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
+import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 
 const dummy = {
   errors: {
