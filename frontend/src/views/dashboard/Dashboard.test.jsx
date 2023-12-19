@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import Dashboard from './Dashboard'
+import { Dashboard } from './Dashboard'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import { test, expect, vi } from 'vitest'
