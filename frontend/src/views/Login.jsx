@@ -45,9 +45,9 @@ const seasonImages = {
     image: bgWinterImage
   },
   spring: {
-    count: 100,
-    radius: [0.4, 2],
-    wind: [-0.5, 0],
+    count: 250,
+    radius: [1, 4],
+    wind: [0, 0],
     image: bgSummerImage
   },
   summer: {
@@ -169,7 +169,7 @@ export const Login = () => {
                 </BCTypography>
               </BCBox>
               <BCBox pt={1} pb={3} px={3}>
-                <BCBox component="form" role="form">
+                <BCBox component="form" role="form" data-test="login-container">
                   <BCBox mt={4} mb={1}>
                     <BCButton
                       variant="contained"

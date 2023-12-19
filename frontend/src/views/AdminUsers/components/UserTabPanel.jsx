@@ -134,7 +134,7 @@ export default function UserTabPanel() {
   const navigate = useNavigate()
   const handleNewUserClick = () => {
     // Navigate to the new page (replace '/new-page' with your desired route)
-    navigate(ROUTES.ADMIN_USERS_NEW)
+    navigate(ROUTES.ADMIN_USERS_ADD)
   }
 
   useEffect(() => {

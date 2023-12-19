@@ -1,19 +1,19 @@
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
-import { ApiDocs } from './views/ApiDocs'
 import { AddEditUser } from './views/AddEditUser'
+import { AddFuelCode } from './views/AddFuelCode'
+import { AddOrganization } from './views/AddOrganization'
+import { AddTransaction } from './views/AddTransaction'
 import { Admin } from './views/Admin'
 import { AdminUsers } from './views/AdminUsers'
+import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
 import { EditOrg } from './views/EditOrg'
-import { FileSubmission } from './views/FileSubmission'
 import { FSE } from './views/FSE'
+import { FileSubmission } from './views/FileSubmission'
 import { FuelCodes } from './views/FuelCodes'
 import { Login } from './views/Login'
-import { NewFuelCode } from './views/NewFuelCode'
-import { NewOrg } from './views/NewOrg'
-import { NewTransaction } from './views/NewTransaction'
 import { NotFound } from './views/NotFound'
 import { NotificationSettings } from './views/NotificationSettings'
 import { Notifications } from './views/Notifications'
@@ -51,8 +51,8 @@ const router = createBrowserRouter([
         element: <Transactions />
       },
       {
-        path: ROUTES.TRANSACTIONS_NEW,
-        element: <NewTransaction />
+        path: ROUTES.TRANSACTIONS_ADD,
+        element: <AddTransaction />
       },
       {
         path: ROUTES.TRANSACTIONS_VIEW,
@@ -63,7 +63,7 @@ const router = createBrowserRouter([
         element: <ViewOrg />
       },
       {
-        path: ROUTES.ORGANIZATION_NEWUSER,
+        path: ROUTES.ORGANIZATION_ADDUSER,
         element: <AddEditUser />
       },
       {
@@ -79,8 +79,8 @@ const router = createBrowserRouter([
         element: <Organizations />
       },
       {
-        path: ROUTES.ORGANIZATIONS_NEW,
-        element: <NewOrg />
+        path: ROUTES.ORGANIZATIONS_ADD,
+        element: <AddOrganization />
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEW,
@@ -91,7 +91,7 @@ const router = createBrowserRouter([
         element: <EditOrg />
       },
       {
-        path: ROUTES.ORGANIZATIONS_NEWUSER,
+        path: ROUTES.ORGANIZATIONS_ADDUSER,
         element: <AddEditUser />
       },
       {
@@ -129,7 +129,7 @@ const router = createBrowserRouter([
         element: <AdminUsers />
       },
       {
-        path: ROUTES.ADMIN_USERS_NEW,
+        path: ROUTES.ADMIN_USERS_ADD,
         element: <AddEditUser userType="idir" />
       },
       {
@@ -149,8 +149,8 @@ const router = createBrowserRouter([
         element: <FuelCodes />
       },
       {
-        path: ROUTES.FUELCODES_NEW,
-        element: <NewFuelCode />
+        path: ROUTES.FUELCODES_ADD,
+        element: <AddFuelCode />
       },
       {
         path: ROUTES.FSE,
