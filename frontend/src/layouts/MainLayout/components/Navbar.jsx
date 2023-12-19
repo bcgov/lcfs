@@ -1,16 +1,16 @@
 // @mui components
 import BCNavbar from '@/components/BCNavbar'
-import HeaderComponent from './HeaderComponent'
-import Logout from './Logout'
+import { HeaderComponent } from './HeaderComponent'
+import { Logout } from './Logout'
+import { ROUTES } from '@/constants/routes'
 
 // Nav Links
 const routes = [
-  { name: 'Dashboard', route: '/dashboard' },
-  { name: 'Document', route: '/document' },
-  { name: 'Transactions', route: '/transactions' },
-  { name: 'Compliance Report', route: '/compliance-report' },
-  { name: 'Organization', route: '/organization' },
-  { name: 'Administration', route: '/admin' }
+  { name: 'Dashboard', route: ROUTES.DASHBOARD },
+  { name: 'Transactions', route: ROUTES.TRANSACTIONS },
+  { name: 'Compliance Report', route: ROUTES.REPORTS },
+  { name: 'Organization', route: ROUTES.ORGANIZATIONS },
+  { name: 'Administration', route: ROUTES.ADMIN }
 ]
 
 const Navbar = () => {

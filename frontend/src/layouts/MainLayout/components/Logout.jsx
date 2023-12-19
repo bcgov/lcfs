@@ -1,15 +1,15 @@
-import { useKeycloak } from '@react-keycloak/web'
 import { logout } from '@/utils/keycloak'
+import { useKeycloak } from '@react-keycloak/web'
 // @mui components
+import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import BCBox from '@/components/BCBox'
 import { useScrollTrigger } from '@mui/material'
 
-import { PropTypes } from 'prop-types'
 import { useUserStore } from '@/stores/useUserStore'
+import { PropTypes } from 'prop-types'
 
-const Logout = (props) => {
+export const Logout = (props) => {
   const user = useUserStore((state) => state.user)
   const { keycloak } = useKeycloak()
   const isScrolled = useScrollTrigger()
@@ -50,5 +50,3 @@ const Logout = (props) => {
 Logout.propTypes = {
   isScrolled: PropTypes.bool
 }
-
-export default Logout

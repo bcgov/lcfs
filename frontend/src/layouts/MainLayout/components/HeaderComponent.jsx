@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
 import Icon from '@mui/material/Icon'
+import { useState } from 'react'
 
-function HeaderComponent(props) {
+export const HeaderComponent = (props) => {
   const [showBalance, setShowBalance] = useState(false)
   const { data } = props
   const toggleBalanceVisibility = () => {
@@ -33,5 +33,3 @@ function HeaderComponent(props) {
     </>
   )
 }
-
-export default HeaderComponent
