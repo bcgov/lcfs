@@ -4,12 +4,15 @@ import logging
 import os
 import debugpy
 import colorlog
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import UJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.authentication import AuthenticationBackend, AuthCredentials, UnauthenticatedUser
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
@@ -36,6 +39,33 @@ root_logger = logging.getLogger()
 root_logger.addHandler(console_handler)
 root_logger.setLevel(logging.DEBUG)
 
+origins = [
+        "http://localhost",
+        "http://localhost:3000",
+    ]
+
+class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
+    """
+    Catches HTTP exceptions from other middlewares, returns JSON responses, and adds CORS headers.
+    """
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except HTTPException as exc:
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "status" : exc.status_code,
+                    "detail": exc.detail
+                }
+            )
+
+            # Check if the request origin is in the allowed origins
+            request_origin = request.headers.get("origin")
+            if request_origin in origins:
+                response.headers["Access-Control-Allow-Origin"] = request_origin
+
+            return response
 
 class LazyAuthenticationBackend(AuthenticationBackend):
     def __init__(self, app):
@@ -82,11 +112,6 @@ def get_app() -> FastAPI:
         default_response_class=UJSONResponse,
     )
 
-    origins = [
-        "http://localhost",
-        "http://localhost:3000",
-    ]
-
     # Set up CORS middleware options
     app.add_middleware(
         CORSMiddleware,
@@ -98,6 +123,7 @@ def get_app() -> FastAPI:
 
     # Apply custom authentication handler for user injection purposes
     app.add_middleware(AuthenticationMiddleware, backend=LazyAuthenticationBackend(app))
+    app.add_middleware(MiddlewareExceptionWrapper)
 
     # Adds prometheus metrics instrumentation.
     Instrumentator().instrument(app).expose(app)

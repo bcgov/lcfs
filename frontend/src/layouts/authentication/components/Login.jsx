@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useKeycloak } from '@react-keycloak/web'
+import { useLocation } from 'react-router-dom'
 
 // Constants
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
@@ -10,7 +11,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
 // @mui material components
-import { Card } from '@mui/material'
+import { Alert, Card } from '@mui/material'
 
 // Images
 import logoDark from '@/assets/images/gov3_bc_logo.png'
@@ -38,6 +39,9 @@ const Login = () => {
   const { keycloak } = useKeycloak()
   const redirectUri = window.location.origin
   const currentDate = new Date()
+  const location = useLocation()
+
+  const { message, severity } = location.state || {};
 
   return (
     <LoginLayout season={getSeason(currentDate)}>
@@ -71,6 +75,11 @@ const Login = () => {
           </BCTypography>
         </BCBox>
         <BCBox pt={1} pb={3} px={3}>
+          {message && (
+            <Alert severity={severity}>
+              {message}
+            </Alert>
+          )}
           <BCBox component="form" role="form" data-test="login-container">
             <BCBox mt={4} mb={1}>
               <BCButton

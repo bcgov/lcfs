@@ -42,8 +42,13 @@ const RequireAuth = ({ children, redirectTo }) => {
   }
 
   if (isError) {
+    const state = {
+      message: error?.response?.data?.detail,
+      severity: 'error'
+    }
+
     console.error('Query Error:', error)
-    return <Navigate to={redirectTo} />
+    return <Navigate to={redirectTo} state={state} />
   }
 
   if (!keycloak.authenticated) {
