@@ -1,7 +1,7 @@
-import useUserStore from '@/store/useUserStore'
+import { useUserStore } from '@/stores/useUserStore'
 import { useKeycloak } from '@react-keycloak/web'
 import BCButton from '@/components/BCButton'
-import { logout } from '@/keycloak'
+import { logout } from '@/utils/keycloak'
 
 const Logout = () => {
   const { keycloak } = useKeycloak()
