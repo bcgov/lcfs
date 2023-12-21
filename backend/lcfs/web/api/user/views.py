@@ -67,6 +67,7 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
 @router.post("", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def get_users(
+    request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
 ) -> List[UserBase]:

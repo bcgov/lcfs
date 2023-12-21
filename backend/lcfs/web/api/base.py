@@ -45,7 +45,6 @@ class EntityResponse(BaseModel):
     size: int = 10
     page: int = 1
     total_pages: int = 1
-    current_page: int = 1
     data: Any = {}
 
     class Config:
@@ -59,10 +58,9 @@ class EntityResponse(BaseModel):
                 "message": "Success",
                 "error": {},
                 "total": 0,
-                "limit": 1,
-                "offset": 0,
+                "page": 1,
+                "size": 10,
                 "total_pages": 1,
-                "current_page": 1,
                 "data": [],
             }
         }
