@@ -19,7 +19,7 @@ from lcfs.web.api.organization.schema import (
     OrganizationCreateSchema,
     OrganizationUpdateSchema,
     OrganizationUserSchema,
-    GetOrganization,
+    GetOrganizationResponse,
 )
 from lcfs.web.core.decorators import roles_required
 
@@ -78,7 +78,7 @@ async def create_organization(
 
 @router.get(
     "/{organization_id}",
-    response_model=GetOrganization,
+    response_model=GetOrganizationResponse,
     status_code=status.HTTP_200_OK,
 )
 async def get_organization(
@@ -89,7 +89,7 @@ async def get_organization(
         org = await db.scalar(
             select(Organization)
             .options(
-                # selectinload(Organization.org_status),
+                selectinload(Organization.org_status),
                 selectinload(Organization.org_address),
                 selectinload(Organization.org_attorney_address),
             )

@@ -1,16 +1,16 @@
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 
-class OrganizationStatusSchema(Enum):
+class OrganizationStatusEnum(str, Enum):
     UNREGISTERED = "Unregistered"
     REGISTERED = "Registered"
     SUSPENDED = "Suspended"
     CANCELED = "Canceled"
 
 
-class OrganizationTypeSchema(Enum):
+class OrganizationTypeEnum(str, Enum):
     FUEL_SUPPLIER = "fuel_supplier"
     ELECTRICITY_SUPPLIER = "electricity_supplier"
     BROKER = "broker"
@@ -100,7 +100,9 @@ class OrganizationUserSchema(BaseModel):
     user_roles: Optional[List[object]] = None
 
 
-class GetOrganizationAttorneyAddress(BaseModel):
+class AddressBaseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     name: str
     street_address: str
     address_other: str
@@ -109,38 +111,20 @@ class GetOrganizationAttorneyAddress(BaseModel):
     country: str
     postalCode_zipCode: str
 
-    class Config:
-        from_attributes = True
+
+class StatusBaseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
+
+    status: OrganizationStatusEnum
 
 
-class GetOrganizationAddress(BaseModel):
-    name: str
-    street_address: str
-    address_other: str
-    city: str
-    province_state: str
-    country: str
-    postalCode_zipCode: str
+class GetOrganizationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
-
-
-class GetOrganizationStatus(BaseModel):
-    status: str
-
-    class Config:
-        from_attributes = True
-
-
-class GetOrganization(BaseModel):
     name: str
     email: EmailStr
     phone: str
     edrms_record: str
-    org_status: Optional[GetOrganizationStatus]
-    org_address: GetOrganizationAddress
-    org_attorney_address: GetOrganizationAttorneyAddress
-
-    class Config:
-        from_attributes = True
+    org_status: StatusBaseSchema
+    org_address: AddressBaseSchema
+    org_attorney_address: AddressBaseSchema

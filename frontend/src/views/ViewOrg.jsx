@@ -16,17 +16,10 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from 'react-query'
 import { useApiService } from '@/services/useApiService'
+import { constructAddress } from '@/utils/constructAddress'
+import Loading from '@/components/Loading'
 
 const dummy = {
-  orgData: {
-    legalName: 'Fuel Supplier Canada Ltd.',
-    operatingName: 'Green Oil',
-    telephone: '(250) 123-4567',
-    email: 'greenoil@fscl.ca',
-    serviceAddress: '4567 Hughes Road, Vancouver BC CA, C8C 1C1',
-    bcAddress: '1234 Linden Street, Vancouver BC CA, V8V 1V1',
-    registered: 'Yes — A registered organization is able to transfer credits.'
-  },
   tableData: {
     active: [
       {
@@ -107,12 +100,14 @@ export const ViewOrg = () => {
   const { orgID } = useParams()
   const client = useApiService()
 
-  const { data: orgData } = useQuery({
+  const { data: orgData, isLoading } = useQuery({
     queryKey: ['organization'],
-    queryFn: async () => await client.get(`/organizations/${orgID}`)
+    queryFn: async () => (await client.get(`/organizations/${orgID}`)).data
   })
 
-  console.log(orgData)
+  if (isLoading) {
+    return <Loading />
+  }
 
   return (
     <Paper
@@ -125,7 +120,7 @@ export const ViewOrg = () => {
       }}
     >
       <BCTypography variant="h3">
-        Organization{' '}
+        {orgData.name}{' '}
         <span>
           <Pencil />
         </span>
@@ -138,13 +133,13 @@ export const ViewOrg = () => {
           alignItems="end"
         >
           <OrgDetailType bold>Legal name of organization:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.legalName}</OrgDetailType>
+          <OrgDetailType>{orgData.name}</OrgDetailType>
           <OrgDetailType bold>Operating name of organization:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.operatingName}</OrgDetailType>
+          <OrgDetailType>{orgData.name}</OrgDetailType>
           <OrgDetailType bold>Telephone:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.telephone}</OrgDetailType>
+          <OrgDetailType>{orgData.phone}</OrgDetailType>
           <OrgDetailType bold>Email:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.email}</OrgDetailType>
+          <OrgDetailType>{orgData.email}</OrgDetailType>
         </BCBox>
         <BCBox
           display="grid"
@@ -155,13 +150,15 @@ export const ViewOrg = () => {
           <OrgDetailType bold>
             Address for service (postal address):
           </OrgDetailType>
-          <OrgDetailType>{dummy.orgData.serviceAddress}</OrgDetailType>
+          <OrgDetailType>{constructAddress(orgData.org_address)}</OrgDetailType>
           <OrgDetailType bold>
             Address in B.C. (at which records are maintained):
           </OrgDetailType>
-          <OrgDetailType>{dummy.orgData.bcAddress}</OrgDetailType>
+          <OrgDetailType>
+            {constructAddress(orgData.org_attorney_address)}
+          </OrgDetailType>
           <OrgDetailType bold>Registered for credit transfers:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.registered}</OrgDetailType>
+          <OrgDetailType>{orgData.org_status.status}</OrgDetailType>
         </BCBox>
       </BCBox>
       <BCBox
