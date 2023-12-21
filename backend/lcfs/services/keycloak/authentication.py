@@ -118,7 +118,7 @@ class UserAuthentication(AuthenticationBackend):
                         pass
                     # Check if the user is active
                     elif not user.is_active:
-                        error_text = 'User is not active.'
+                        error_text = 'The account is currently inactive.'
                         await self.create_login_history(user_token, False, error_text, request.url.path)
                         raise HTTPException(status_code=401, detail=error_text)
                     else:
@@ -159,7 +159,7 @@ class UserAuthentication(AuthenticationBackend):
 
                  # Check if the user is active
                 if not user.is_active:
-                    error_text = 'User is not active.'
+                    error_text = 'The account is currently inactive.'
                     await self.create_login_history(user_token, False, error_text, request.url.path)
                     raise HTTPException(status_code=401, detail=error_text)
         else:

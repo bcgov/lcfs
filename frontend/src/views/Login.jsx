@@ -11,10 +11,10 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
-import { Card } from '@mui/material'
+import { Card, Alert } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Snowfall from 'react-snowfall'
 
 const currentDate = new Date()
@@ -93,7 +93,9 @@ const image = seasonImages[season].image
 
 export const Login = () => {
   const { keycloak } = useKeycloak()
+  const location = useLocation()
   const redirectUri = window.location.origin
+  const { message, severity } = location.state || {}
 
   return (
     <BCBox
@@ -169,6 +171,7 @@ export const Login = () => {
                 </BCTypography>
               </BCBox>
               <BCBox pt={1} pb={3} px={3}>
+                {message && <Alert severity={severity}>{message}</Alert>}
                 <BCBox component="form" role="form" data-test="login-container">
                   <BCBox mt={4} mb={1}>
                     <BCButton
