@@ -1,6 +1,6 @@
 ## For each release, the value of workflow name, branches and PR_NUMBER need to be adjusted accordingly
 
-name: LCFS Dev
+name: LCFS Dev CI
 
 on:
   push:
