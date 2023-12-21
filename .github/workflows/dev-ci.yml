@@ -1,0 +1,56 @@
+## For each release, the value of workflow name, branches and PR_NUMBER need to be adjusted accordingly
+
+name: LCFS Dev CI
+
+on:
+  push:
+    branches: [ release-0.2.0 ]
+    paths:
+      - frontend/**
+      - backend/**
+  workflow_dispatch:
+  workflow_call:
+
+env:
+  ## The pull request number of the Tracking pull request to merge the release branch to main
+  VERSION: 0.2.0
+  GIT_URL: https://github.com/bcgov/lcfs.git 
+  TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
+  DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true  
+
+jobs:
+
+  build:
+
+    name: Build LCFS on Openshift
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.2
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
+
+      - name: Build LCFS Backend
+        run: |
+          cd openshift/templates
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc start-build --wait=true lcfs-backend-${{ env.VERSION }}
+
+      - name: Build LCFS Frontend
+        run: |
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}

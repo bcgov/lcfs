@@ -10,7 +10,7 @@ import BCTypography from '@/components/BCTypography'
 import GitHubIcon from '@mui/icons-material/GitHub'
 
 // BCGov React base styles
-import typography from '@/assets/theme/base/typography'
+import typography from '@/themes/base/typography'
 
 function Footer({ repoDetails, links }) {
   const { size } = typography

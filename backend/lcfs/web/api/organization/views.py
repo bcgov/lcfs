@@ -1,9 +1,10 @@
 from logging import getLogger
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import select
 from starlette.responses import Response
 
 from lcfs.db import dependencies
@@ -12,6 +13,7 @@ from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
 from lcfs.web.api.organization.schema import OrganizationSchema, OrganizationCreateSchema, OrganizationUpdateSchema, OrganizationUserSchema, OrganizationSummarySchema
+from lcfs.web.core.decorators import roles_required
 
 logger = getLogger("organization")
 router = APIRouter()
@@ -20,7 +22,9 @@ get_async_db = dependencies.get_async_db_session
 # TODO: Implement permission check for this route to ensure that
 # only authorized users can access it.
 @router.post("/", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
+@roles_required("Government", "Adminstrator")
 async def create_organization(
+    request: Request,
     organization_data: OrganizationCreateSchema,
     db: AsyncSession = Depends(get_async_db)
 ):
@@ -61,7 +65,7 @@ async def create_organization(
                 detail="Internal Server Error"
             ) from e
 
-@router.put("/organizations/{organization_id}", response_model=OrganizationSchema)
+@router.put("/{organization_id}", response_model=OrganizationSchema)
 async def update_organization(organization_id: int, organization_data: OrganizationUpdateSchema, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():
@@ -81,11 +85,13 @@ async def update_organization(organization_id: int, organization_data: Organizat
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {str(e)}")
 
-@router.get("/organizations/", response_model=list[OrganizationSchema])
-async def list_organizations(db: AsyncSession = Depends(get_async_db), response: Response = None):
+@router.get("/list", response_model=list[OrganizationSchema])
+@roles_required("Government")
+async def list_organizations(request: Request, db: AsyncSession = Depends(get_async_db), response: Response = None):
     try:
-        async with db.begin():
-            organizations = await db.execute(Organization).all()
+        query = select(Organization)
+        result = await db.execute(query)
+        organizations = result.scalars().all()
         if not organizations:
             logger.error("Error getting organizations")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No organizations found")
@@ -96,7 +102,7 @@ async def list_organizations(db: AsyncSession = Depends(get_async_db), response:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@router.get("/organizations/{organization_id}/users/", response_model=List[OrganizationUserSchema])
+@router.get("/{organization_id}/users/", response_model=List[OrganizationUserSchema])
 async def get_users_for_organization(organization_id: int, db: AsyncSession = Depends(get_async_db)):
     try:
         async with db.begin():

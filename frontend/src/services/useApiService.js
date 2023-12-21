@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import axios from 'axios'
 import { useKeycloak } from '@react-keycloak/web'
-import CONFIG from '@/config'
+import { CONFIG } from '@/constants/config'
 
-const useApiService = (opts = {}) => {
+export const useApiService = (opts = {}) => {
   const { keycloak } = useKeycloak()
 
   // useMemo to memoize the apiService instance
@@ -30,5 +30,3 @@ const useApiService = (opts = {}) => {
 
   return apiService
 }
-
-export default useApiService

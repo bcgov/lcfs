@@ -1,10 +1,15 @@
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, List
 
 import pytest
+import subprocess
+import logging
 from fakeredis import FakeServer
-from fakeredis.aioredis import FakeConnection
+from starlette.authentication import SimpleUser, AuthCredentials, AuthenticationBackend
+from starlette.middleware.authentication import AuthenticationMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from httpx import AsyncClient
+from fakeredis.aioredis import FakeConnection
 from redis.asyncio import ConnectionPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -13,11 +18,15 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from lcfs.db.dependencies import get_db_session
-from lcfs.db.utils import create_database, drop_database
+from lcfs.db.dependencies import get_db_session, get_async_db_session
+from lcfs.db.utils import create_test_database, drop_test_database
 from lcfs.services.redis.dependency import get_redis_pool
 from lcfs.settings import settings
 from lcfs.web.application import get_app
+from lcfs.db.seeders.seed_database import seed_database
+from lcfs.db.models.Role import RoleEnum
+
+logging.getLogger('faker').setLevel(logging.INFO)
 
 
 @pytest.fixture(scope="session")
@@ -33,26 +42,27 @@ def anyio_backend() -> str:
 @pytest.fixture(scope="session")
 async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     """
-    Create engine and databases.
+    Create engine and run Alembic migrations.
 
     :yield: new engine.
     """
-    from lcfs.db.meta import meta  # noqa: WPS433
-    from lcfs.db.models import load_all_models  # noqa: WPS433
+    # Create the test database
+    await create_test_database()
 
-    load_all_models()
+    # Run Alembic migrations
+    subprocess.run(["alembic", "upgrade", "head"], check=True)  
 
-    await create_database()
+    # Create AsyncEngine instance
+    engine = create_async_engine(str(settings.db_test_url))
 
-    engine = create_async_engine(str(settings.db_url))
-    async with engine.begin() as conn:
-        await conn.run_sync(meta.create_all)
+    # Seed the database with test data
+    await seed_database('test')
 
     try:
         yield engine
     finally:
         await engine.dispose()
-        await drop_database()
+        await drop_test_database()
 
 
 @pytest.fixture
@@ -105,17 +115,24 @@ async def fake_redis_pool() -> AsyncGenerator[ConnectionPool, None]:
 def fastapi_app(
     dbsession: AsyncSession,
     fake_redis_pool: ConnectionPool,
+    set_mock_user_roles,  # Fixture for setting up mock authentication
+    user_roles: List[str] = ["Administrator"]  # Default role
 ) -> FastAPI:
-    """
-    Fixture for creating FastAPI app.
-
-    :return: fastapi app with mocked dependencies.
-    """
+    # Create the FastAPI application instance
     application = get_app()
-    application.dependency_overrides[get_db_session] = lambda: dbsession
+    application.dependency_overrides[get_async_db_session] = lambda: dbsession
     application.dependency_overrides[get_redis_pool] = lambda: fake_redis_pool
-    return application  # noqa: WPS331
+    
+    # Set up application state for testing
+    application.state.redis_pool = fake_redis_pool
+    # application.state.db_session_factory = test_session_factory
+    application.state.settings = settings
 
+    # Set up mock authentication backend with the specified roles
+    set_mock_user_roles(application, user_roles)
+
+    return application
+  
 
 @pytest.fixture
 async def client(
@@ -130,3 +147,46 @@ async def client(
     """
     async with AsyncClient(app=fastapi_app, base_url="http://test") as ac:
         yield ac
+
+
+def role_enum_member(role_name):
+    for role in RoleEnum:
+        if role.value == role_name:
+            return role
+    raise ValueError(f"Invalid role name: {role_name}")
+
+class MockAuthenticationBackend(AuthenticationBackend):
+    def __init__(self, user_roles: List[str]):
+        # Convert role names to RoleEnum members
+        self.user_roles = [role_enum_member(role) for role in user_roles]
+
+    async def authenticate(self, request):
+        # Simulate a user object based on the role
+        user = SimpleUser(username="testuser")
+        user.email = "test@test.com"
+        user.user_roles = self.user_roles
+        return AuthCredentials(["authenticated"]), user
+
+
+@pytest.fixture
+def set_mock_user_roles():
+    def _set_mock_auth(application: FastAPI, roles: List[str]):
+        # Clear existing middleware
+        application.user_middleware = []
+
+        # Add necessary middleware for testing, excluding LazyAuthenticationBackend
+        application.add_middleware(
+            CORSMiddleware, 
+            allow_origins=["*"], 
+            allow_methods=["*"], 
+            allow_headers=["*"]
+        )
+
+        # Add the Mock Authentication Middleware
+        mock_auth_backend = MockAuthenticationBackend(user_roles=roles)
+        application.add_middleware(
+            AuthenticationMiddleware, 
+            backend=mock_auth_backend
+        )
+
+    return _set_mock_auth
