@@ -4,6 +4,8 @@ import { Stack } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faRedo } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
+import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
 
 const DemoButtons = ({ handleGridKey, gridRef }) => {
   // Reload grid
@@ -30,55 +32,62 @@ const DemoButtons = ({ handleGridKey, gridRef }) => {
   }, [gridRef])
 
   return (
-    <Stack
-      component="div"
+    <BCBox
+      p={1}
+      m={1}
       className="ag-root-wrapper"
-      direction={{ md: 'coloumn', lg: 'row' }}
-      spacing={{ xs: 2, sm: 2, md: 3 }}
-      p={2}
-      useFlexGap
-      flexWrap="wrap"
-      my={2}
+      sx={{ height: '120px', backgroundColor: 'white.main' }}
     >
-      <BCButton
-        id="reloadGridBCButton"
-        onClick={reloadGrid}
-        variant="outlined"
-        color="smoky"
-        size="small"
-        sx={{ borderRadius: '24px' }}
-        startIcon={<FontAwesomeIcon icon={faRedo} className="small-icon" />}
+      <BCTypography variant="body1">Adding for demo purpose only</BCTypography>
+      <Stack
+        component="div"
+        direction={{ md: 'coloumn', lg: 'row' }}
+        spacing={{ xs: 2, sm: 2, md: 3 }}
+        p={2}
+        useFlexGap
+        flexWrap="wrap"
+        my={2}
       >
-        Reset
-      </BCButton>
-      <BCButton
-        id="userNameSort"
-        onClick={sortByUserName}
-        variant="outlined"
-        color="smoky"
-        size="small"
-        sx={{ borderRadius: '24px' }}
-      >
-        Name Descending
-      </BCButton>
-      <BCButton
-        id="userNameSort"
-        onClick={showActiveUsers}
-        variant="outlined"
-        color="smoky"
-        size="small"
-        sx={{ borderRadius: '24px' }}
-      >
-        Active Users
-      </BCButton>
-      <div className="example-header">
-        Selection:&nbsp;
-        <span
-          id="selectedRows"
-          style={{ fontSize: '20px', fontWeight: 'bold' }}
-        ></span>
-      </div>
-    </Stack>
+        <BCButton
+          id="reloadGridBCButton"
+          onClick={reloadGrid}
+          variant="outlined"
+          color="smoky"
+          size="small"
+          sx={{ borderRadius: '24px' }}
+          startIcon={<FontAwesomeIcon icon={faRedo} className="small-icon" />}
+        >
+          Reset
+        </BCButton>
+        <BCButton
+          id="userNameSort"
+          onClick={sortByUserName}
+          variant="outlined"
+          color="smoky"
+          size="small"
+          sx={{ borderRadius: '24px' }}
+        >
+          Name Descending
+        </BCButton>
+        <BCButton
+          id="userNameSort"
+          onClick={showActiveUsers}
+          variant="outlined"
+          color="smoky"
+          size="small"
+          sx={{ borderRadius: '24px' }}
+        >
+          Active Users
+        </BCButton>
+        <div className="example-header">
+          Selection:&nbsp;
+          <span
+            id="selectedRows"
+            style={{ fontSize: '20px', fontWeight: 'bold' }}
+          ></span>
+        </div>
+      </Stack>
+    </BCBox>
   )
 }
 
