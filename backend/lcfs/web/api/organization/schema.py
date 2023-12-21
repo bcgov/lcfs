@@ -2,17 +2,20 @@ from enum import Enum
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 
+
 class OrganizationStatusSchema(Enum):
-    UNREGISTERED = 'Unregistered'
-    REGISTERED = 'Registered'
-    SUSPENDED = 'Suspended'
-    CANCELED = 'Canceled'
+    UNREGISTERED = "Unregistered"
+    REGISTERED = "Registered"
+    SUSPENDED = "Suspended"
+    CANCELED = "Canceled"
+
 
 class OrganizationTypeSchema(Enum):
-    FUEL_SUPPLIER = 'fuel_supplier'
-    ELECTRICITY_SUPPLIER = 'electricity_supplier'
-    BROKER = 'broker'
-    UTILITIES = 'utilities'
+    FUEL_SUPPLIER = "fuel_supplier"
+    ELECTRICITY_SUPPLIER = "electricity_supplier"
+    BROKER = "broker"
+    UTILITIES = "utilities"
+
 
 class OrganizationBaseSchema(BaseModel):
     name: str
@@ -21,6 +24,7 @@ class OrganizationBaseSchema(BaseModel):
     edrms_record: Optional[str]
     organization_status_id: int
     organization_type_id: int
+
 
 class OrganizationAttorneyAddressBaseSchema(BaseModel):
     name: str
@@ -31,6 +35,7 @@ class OrganizationAttorneyAddressBaseSchema(BaseModel):
     country: str
     postalCode_zipCode: str
 
+
 class OrganizationAddressBaseSchema(BaseModel):
     name: str
     street_address: str
@@ -40,21 +45,26 @@ class OrganizationAddressBaseSchema(BaseModel):
     country: str
     postalCode_zipCode: str
 
+
 class OrganizationAddressCreateSchema(OrganizationAddressBaseSchema):
     pass
 
+
 class OrganizationAttorneyAddressCreateSchema(OrganizationAttorneyAddressBaseSchema):
     pass
+
 
 class OrganizationCreateSchema(OrganizationBaseSchema):
     address: OrganizationAddressCreateSchema
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
+
 class OrganizationSchema(OrganizationBaseSchema):
     organization_id: int
 
     class Config:
-        from_attributes=True
+        from_attributes = True
+
 
 class OrganizationSummarySchema(BaseModel):
     organization_id: int
@@ -63,6 +73,7 @@ class OrganizationSummarySchema(BaseModel):
     class Config:
         from_attributes = True
 
+
 class OrganizationUpdateSchema(BaseModel):
     name: Optional[str]
     status: Optional[int]
@@ -70,11 +81,14 @@ class OrganizationUpdateSchema(BaseModel):
     address: Optional[OrganizationAddressCreateSchema]
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema]
 
+
 class OrganizationAddressSchema(OrganizationAddressBaseSchema):
     organization_id: int
-    
+
+
 class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBaseSchema):
     organization_id: int
+
 
 class OrganizationUserSchema(BaseModel):
     username: str
@@ -84,3 +98,49 @@ class OrganizationUserSchema(BaseModel):
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
     user_roles: Optional[List[object]] = None
+
+
+class GetOrganizationAttorneyAddress(BaseModel):
+    name: str
+    street_address: str
+    address_other: str
+    city: str
+    province_state: str
+    country: str
+    postalCode_zipCode: str
+
+    class Config:
+        from_attributes = True
+
+
+class GetOrganizationAddress(BaseModel):
+    name: str
+    street_address: str
+    address_other: str
+    city: str
+    province_state: str
+    country: str
+    postalCode_zipCode: str
+
+    class Config:
+        from_attributes = True
+
+
+class GetOrganizationStatus(BaseModel):
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+class GetOrganization(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    edrms_record: str
+    org_status: Optional[GetOrganizationStatus]
+    org_address: GetOrganizationAddress
+    org_attorney_address: GetOrganizationAttorneyAddress
+
+    class Config:
+        from_attributes = True

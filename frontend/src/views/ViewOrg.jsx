@@ -13,7 +13,9 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Paper } from '@mui/material'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useQuery } from 'react-query'
+import { useApiService } from '@/services/useApiService'
 
 const dummy = {
   orgData: {
@@ -102,6 +104,16 @@ const OrgDetailType = ({ bold, children }) => {
 export const ViewOrg = () => {
   const [showActive, setShowActive] = useState(true)
   const navigate = useNavigate()
+  const { orgID } = useParams()
+  const client = useApiService()
+
+  const { data: orgData } = useQuery({
+    queryKey: ['organization'],
+    queryFn: async () => await client.get(`/organizations/${orgID}`)
+  })
+
+  console.log(orgData)
+
   return (
     <Paper
       elevation={5}
