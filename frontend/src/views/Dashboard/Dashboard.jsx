@@ -26,13 +26,8 @@ export const Dashboard = () => {
   const user = useUserStore((state) => state.user)
 
   const queryFn = () =>
-    apiService({
-      method: 'post',
-      url: 'users',
-      data: { page: 1, size: 100, sortOrders: [], filters: [] }
-    }).then((resp) => {
-      return resp.data
-    })
+    // temp test
+    apiService.get('/organizations/list').then((response) => response.data)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['users'],

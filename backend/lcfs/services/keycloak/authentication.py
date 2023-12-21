@@ -14,6 +14,7 @@ from starlette.authentication import (
 )
 from lcfs.settings import Settings
 from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.UserLoginHistory import UserLoginHistory
 from lcfs.services.keycloak.dependencies import _parse_external_username
 
@@ -101,10 +102,18 @@ class UserAuthentication(AuthenticationBackend):
             try:
                 async with self.async_session() as session:
                     result = await session.execute(
-                        select(UserProfile).options(joinedload(UserProfile.organization), joinedload(UserProfile.user_roles)).where(
+                        select(UserProfile)
+                        .options(joinedload(UserProfile.organization), 
+                                 joinedload(UserProfile.user_roles).joinedload(UserRole.role)).where(
                             UserProfile.keycloak_user_id == user_token['preferred_username'])
                     )
                     user = result.unique().scalar_one()
+
+                    # Check if the user is active
+                    if not user.is_active:
+                        error_text = 'User is not active.'
+                        await self.create_login_history(user_token, False, error_text, request.url.path)
+                        raise HTTPException(status_code=401, detail=error_text)
 
                     await self.create_login_history(user_token, True, None, request.url.path)
                     return AuthCredentials(["authenticated"]), user
@@ -115,14 +124,16 @@ class UserAuthentication(AuthenticationBackend):
         external_username = _parse_external_username(user_token)
 
         if 'email' in user_token:
-            # Construct the query to find the user
-            user_query = select(UserProfile).options(joinedload(UserProfile.organization), joinedload(UserProfile.user_roles)).where(
-                and_(
+            user_query = (
+                select(UserProfile)
+                .options(
+                    joinedload(UserProfile.organization),
+                    joinedload(UserProfile.user_roles).joinedload(UserRole.role))
+                .where(
                     UserProfile.keycloak_email == user_token['email'],
                     UserProfile.keycloak_username == external_username
                 )
             )
-
             # TODO may need to not use org id == 1 if gov no longer is organization in lcfs
             if user_token['identity_provider'] == 'idir':
                 user_query = user_query.where(UserProfile.organization_id == 1)
@@ -140,6 +151,12 @@ class UserAuthentication(AuthenticationBackend):
                     error_text = 'No User with that configuration exists.'
                     await self.create_login_history(user_token, False, error_text, request.url.path)
                     raise HTTPException(status_code=401, detail=error_text)
+
+                 # Check if the user is active
+                if not user.is_active:
+                    error_text = 'User is not active.'
+                    await self.create_login_history(user_token, False, error_text, request.url.path)
+                    raise HTTPException(status_code=401, detail=error_text)
         else:
             error_text = 'preferred_username or email is required in JWT payload.'
             await self.create_login_history(user_token, False, error_text, request.url.path)
@@ -147,6 +164,7 @@ class UserAuthentication(AuthenticationBackend):
 
         await self.map_user_keycloak_id(user, user_token)
 
+        await self.create_login_history(user_token, True, None, request.url.path)
         return AuthCredentials(["authenticated"]), user
 
     async def map_user_keycloak_id(self, user_profile, user_token):

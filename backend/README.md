@@ -130,13 +130,74 @@ Display the help manual for script usage:
 - The script automatically activates and deactivates the virtual environment as needed.
 
 
+## Running Tests
 
-## Running tests
+To ensure the quality and correctness of the code, it's important to run tests regularly. This project uses `pytest` for testing. Follow these steps to run tests on your local machine:
 
-For running tests on your local machine.
-1. you need to start a database, ideally with the docker-compose.
+### Prerequisites
 
-2. Run the pytest.
+Before running the tests, ensure the following prerequisites are met:
+
+1. **PostgreSQL Instance**: A running instance of PostgreSQL is required. Ideally, use the provided `docker-compose` file to start a PostgreSQL container. This ensures consistency in the testing environment.
+
+2. **Python Environment**: Make sure your Python environment is set up with all necessary dependencies. This can be achieved using Poetry:
+
+   ```bash
+   poetry install
+   ```
+
+### Running Tests with Pytest
+
+The project's tests can be executed using the `pytest` command. Our testing framework is configured to handle the setup and teardown of the test environment automatically. Here's what happens when you run the tests:
+
+- **Test Database Setup**: A test database is automatically created. This is separate from your development or production databases to avoid any unintended data modifications.
+
+- **Database Migrations**: Alembic migrations are run against the test database to ensure it has the correct schema.
+
+- **Data Seeding**: The `test_seeder` is used to populate the test database with necessary data for the tests.
+
+- **Test Execution**: All test cases are run against the configured test database.
+
+- **Teardown**: After the tests have completed, the test database is dropped to clean up the environment.
+
+To run the tests, use the following command in your terminal:
+
 ```bash
-pytest -vv .
+poetry run pytest -s -v
 ```
+
+Options:
+- `-s`: Disables per-test capturing of stdout/stderr. This is useful for observing print statements and other console outputs in real time.
+- `-v`: Verbose mode. Provides detailed information about each test being run.
+
+
+## Role-Based Access Control
+
+Our application implements role-based access control (RBAC) using the `roles_required` decorator. This decorator is used to enforce access control on route handlers based on the user's roles.
+
+### `roles_required` Decorator
+
+#### Description
+
+The `roles_required` decorator is a custom decorator used to restrict access to certain endpoints based on the user's roles. It ensures that only authenticated users with the required roles can access specific route handlers.
+
+#### Usage
+
+To use this decorator, import it from its module and apply it to any FastAPI route handler. Specify the required roles as arguments to the decorator.
+
+#### Example
+
+```python
+from fastapi import APIRouter, HTTPException, Request
+from your_module import roles_required
+from .dependencies import get_async_db
+from .schemas import OrganizationSchema
+from sqlalchemy.ext.asyncio import AsyncSession
+
+router = APIRouter()
+
+@router.get("/organizations/", response_model=list[OrganizationSchema])
+@roles_required("Administrator", "Manager")
+async def list_organizations(request: Request, db: AsyncSession = Depends(get_async_db)):
+    # Your endpoint logic here
+    ...

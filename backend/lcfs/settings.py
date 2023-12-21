@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     db_user: str = "lcfs"
     db_pass: str = "development_only"
     db_base: str = "lcfs"
+    db_test: str = "lcfs_test"
     db_echo: bool = False
 
     # Variables for Redis
@@ -74,7 +75,23 @@ class Settings(BaseSettings):
             password=self.db_pass,
             path=f"/{self.db_base}",
         )
+    
+    @property
+    def db_test_url(self) -> URL:
+        """
+        Assemble database URL from settings.
 
+        :return: database URL.
+        """
+        return URL.build(
+            scheme="postgresql+asyncpg",
+            host=self.db_host,
+            port=self.db_port,
+            user=self.db_user,
+            password=self.db_pass,
+            path=f"/{self.db_test}",
+        )
+    
     @property
     def redis_url(self) -> URL:
         """

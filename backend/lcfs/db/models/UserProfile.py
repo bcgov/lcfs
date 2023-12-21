@@ -1,4 +1,5 @@
 from lcfs.db.base import Auditable, BaseModel
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.models.NotificationMessage import NotificationMessage
@@ -12,7 +13,6 @@ class UserProfile(BaseModel, Auditable):
     )
 
     user_profile_id = Column(Integer, primary_key=True, autoincrement=True)
-
     keycloak_user_id = Column(
         String(150), nullable=True, comment="Unique id returned from Keycloak"
     )
@@ -56,3 +56,7 @@ class UserProfile(BaseModel, Auditable):
         foreign_keys=[NotificationMessage.related_user_profile_id],
         back_populates="related_user_profile",
     )
+
+    @property
+    def role_names(self):
+        return [role.role.name for role in self.user_roles]

@@ -21,6 +21,7 @@ from lcfs.db import dependencies
 from lcfs.web.api.base import EntityResponse, PaginationRequestSchema
 from lcfs.web.api.user.session import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase
+from lcfs.web.core.decorators import roles_required
 
 router = APIRouter()
 logger = getLogger("users")
@@ -53,8 +54,7 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
             )
         return UserBase.model_validate(current_user)
     except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting current user", str(e.args[0]))
+        logger.error("Error getting current user", str(e))
         return UserBase(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="Failed",
@@ -65,6 +65,7 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
 
 
 @router.post("", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+@roles_required("Government")
 async def get_users(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
@@ -97,7 +98,7 @@ async def get_users(
         )
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e.args[0]))
+        logger.error("Error getting users", str(e))
         return EntityResponse(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="Failed",
@@ -105,7 +106,6 @@ async def get_users(
             data={},
             error={"message": f"Technical error: {e.args[0]}"},
         )
-
 
 @router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
 async def get_user_search(
@@ -140,7 +140,7 @@ async def get_user_search(
         )
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e.args[0]))
+        logger.error("Error getting users", str(e))
         return EntityResponse(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="Failed",

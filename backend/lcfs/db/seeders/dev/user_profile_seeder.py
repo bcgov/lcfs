@@ -23,7 +23,8 @@ async def seed_user_profiles(session):
             "title": "Developer",
             "phone": "1234567890",
             "mobile_phone": "1234567890",
-            "organization_id": 1
+            "organization_id": 1,
+            "is_active": True
         },
         {
             "keycloak_email": "hamed.valiollahibayeki@gov.bc.ca",
@@ -34,7 +35,8 @@ async def seed_user_profiles(session):
             "title": "Developer",
             "phone": "1234567890",
             "mobile_phone": "1234567890",
-            "organization_id": 1
+            "organization_id": 1,
+            "is_active": True
         },
         {
             "keycloak_email": 'kevin.hashimoto@gov.bc.ca',
@@ -45,7 +47,8 @@ async def seed_user_profiles(session):
             "title": 'Developer',
             "phone": "1234567890",
             "mobile_phone": "1234567890",
-            "organization_id": 1
+            "organization_id": 1,
+            "is_active": True
         },
         {
             "keycloak_email": 'protonater@live.com',
@@ -56,7 +59,8 @@ async def seed_user_profiles(session):
             "title": 'Developer',
             "phone": "1234567890",
             "mobile_phone": "1234567890",
-            "organization_id": 1
+            "organization_id": 1,
+            "is_active": True
         },
     ]
 

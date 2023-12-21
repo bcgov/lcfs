@@ -4,11 +4,13 @@ from lcfs.db.base import Auditable, BaseModel
 import enum
 
 class RoleEnum(enum.Enum):
+    GOVERNMENT = 'Government'
     ADMINISTRATOR = 'Administrator'
     ANALYST = 'Analyst'
     COMPLIANCE_MANAGER = 'Compliance Manager'
     DIRECTOR = 'Director'
 
+    SUPPLIER = 'Supplier'
     MANAGE_USERS = 'Manage Users'
     TRANSFER = 'Transfer'
     COMPLIANCE_REPORTING = 'Compliance Reporting'
