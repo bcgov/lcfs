@@ -22,6 +22,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from 'react-query'
+
+// Internal Modules
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import { useApiService } from '@/services/useApiService'
@@ -253,7 +255,7 @@ export const AddOrganization = () => {
         </BCAlert>
       )}
 
-      <Typography variant="h3">Add Organization</Typography>
+      <Typography variant="h5">Add Organization</Typography>
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}

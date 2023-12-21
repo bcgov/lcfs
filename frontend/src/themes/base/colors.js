@@ -85,7 +85,9 @@ const colors = {
     main: '#606060',
     focus: '#606060'
   },
-
+  smoky: {
+    main: '#6c757d'
+  },
   light: {
     main: '#f0f2f5',
     focus: '#f0f2f5'
@@ -104,7 +106,7 @@ const colors = {
     light: '#adb5bd',
     dark: '#404040'
   },
-  inputBorderColor: '#d2d6da',
+  inputBorderColor: '#036',
   borderDivider: {
     main: '#4b5e7e',
     focus: '#3b99fc',

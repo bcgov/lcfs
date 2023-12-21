@@ -1,5 +1,5 @@
-import UserTabPanel from './components/UserTabPanel'
+import { AdminTabBar } from './components/AdminTabBar'
 
 export const AdminUsers = () => {
-  return <UserTabPanel />
+  return <AdminTabBar />
 }

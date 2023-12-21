@@ -1,15 +1,15 @@
 from logging import getLogger
 from typing import List
 
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from lcfs.web.api.base import row_to_dict
 from lcfs.web.api.role.schema import RoleSchema
+from lcfs.db.models.Role import Role
 
 logger = getLogger("role")
-role_stmt = "Select * from role_view"
 
 
 class RoleRepository:
@@ -19,9 +19,14 @@ class RoleRepository:
 
     async def get_all_roles(self, government_roles_only) -> List[RoleSchema]:
         logger.info("Getting all roles from repository")
-        stmt = f"{role_stmt} where is_government_role = {government_roles_only}"
-        results = await self.session.execute(text(stmt))
-        results = results.fetchall()
-        if results.__len__() == 0:
+        results = await self.session.execute(
+            select(Role).where(Role.is_government_role == government_roles_only)
+        )
+        results = results.scalars().all()
+
+        # Convert Role instances to dictionaries
+        role_dicts = [role.__dict__ for role in results]
+
+        if not role_dicts:
             return []
-        return [row_to_dict(role, schema=RoleSchema) for role in results]
+        return [RoleSchema.model_validate(role) for role in role_dicts]

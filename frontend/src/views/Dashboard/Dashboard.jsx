@@ -26,13 +26,18 @@ export const Dashboard = () => {
   const user = useUserStore((state) => state.user)
 
   const queryFn = () =>
-    apiService.get('/users').then((response) => response.data)
+    apiService({
+      method: 'post',
+      url: 'users',
+      data: { page: 1, size: 100, sortOrders: [], filters: [] }
+    }).then((resp) => {
+      return resp.data
+    })
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn,
-    refetchOnWindowFocus: false,
-    retry: false
+    refetchOnWindowFocus: false
   })
 
   let content = <></>
@@ -46,7 +51,7 @@ export const Dashboard = () => {
       <>
         <h2>User List</h2>
         <ul>
-          {data.map((user) => (
+          {data.data.map((user) => (
             <li key={user.id}>
               {user.display_name} : {user.title}
             </li>

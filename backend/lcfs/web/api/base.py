@@ -1,6 +1,7 @@
-from typing import Any
+from typing import Any, List
+from fastapi import Query
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 def row_to_dict(row, schema):
@@ -13,13 +14,36 @@ def row_to_dict(row, schema):
     return d
 
 
+class SortOrder(BaseModel):
+    field: str
+    direction: str
+
+
+class FilterModel(BaseModel):
+    filter_type: str = Field(Query(default="text", alias="filterType"))
+    type: str = Field(Query(default="contains", alias="type"))
+    filter: Any = Field(Query(default="", alias="filter"))
+    field: str = Field(Query(default="", alias="field"))
+
+
+class PaginationRequestSchema(BaseModel):
+    page: int = Field(Query(default=0, alias="page-number"))
+    size: int = Field(Query(default=20, alias="items-per-page"))
+    sortOrders: List[SortOrder] = Field(Query(default=[], alias="sort-order"))
+    filters: List[FilterModel] = Field(Query(defautl=[], alias="filters"))
+
+    class Config:
+        from_attributes = True
+        arbitrary_types_allowed = True
+
+
 class EntityResponse(BaseModel):
     status: int
     message: str
     error: dict = {}
     total: int = 0
-    limit: int = 1
-    offset: int = 0
+    size: int = 10
+    page: int = 1
     total_pages: int = 1
     current_page: int = 1
     data: Any = {}
@@ -28,9 +52,7 @@ class EntityResponse(BaseModel):
         from_attributes = True
         populate_by_name = True
         arbitrary_types_allowed = True
-        json_encoders = {
-            set: lambda v: list(v)
-        }
+        json_encoders = {set: lambda v: list(v)}
         json_schema_extra = {
             "example": {
                 "status": 200,
@@ -41,6 +63,6 @@ class EntityResponse(BaseModel):
                 "offset": 0,
                 "total_pages": 1,
                 "current_page": 1,
-                "data": []
+                "data": [],
             }
         }

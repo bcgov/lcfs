@@ -1,10 +1,10 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 
-const StatusRenderer = (props) => {
+export const StatusRenderer = (props) => {
   const cellValue = props.valueFormatted ? props.valueFormatted : props.value
 
-  return cellValue === 'Active' ? (
+  return cellValue === 'true' ? (
     <BCBox ml={2}>
       <BCBadge
         badgeContent="active"
@@ -24,5 +24,3 @@ const StatusRenderer = (props) => {
     </BCBox>
   )
 }
-
-export default StatusRenderer

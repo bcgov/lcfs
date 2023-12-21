@@ -1,14 +1,17 @@
-// Icons
+// mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
+import { Stack } from '@mui/material'
+// Icons
 import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack } from '@mui/material'
-import { useLocation, useNavigate } from 'react-router-dom'
-import OrganizationTable from './components/OrganizationTable'
+// Internal components
+import OrganizationTable from '@/views/Organizations/components/OrganizationTable'
+// react components
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ROUTES } from '@/constants/routes'
 
 // Data for demo purposes only. Do not use in production.
 const demoData = [

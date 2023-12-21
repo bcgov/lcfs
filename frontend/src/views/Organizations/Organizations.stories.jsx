@@ -1,5 +1,5 @@
 // Organizations.stories.js
-import Organizations from './Organizations'
+import { Organizations } from './Organizations'
 
 export default {
   title: '@/views/Organizations',
