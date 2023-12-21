@@ -16,9 +16,9 @@ class OrganizationTypeSchema(Enum):
 
 class OrganizationBaseSchema(BaseModel):
     name: str
-    email: str
-    phone: str
-    edrms_record: str
+    email: Optional[str]
+    phone: Optional[str]
+    edrms_record: Optional[str]
     organization_status_id: int
     organization_type_id: int
 

@@ -41,3 +41,7 @@ class UserProfile(BaseModel, Auditable):
         foreign_keys=[NotificationMessage.related_user_profile_id],
         back_populates='related_user_profile'
     )
+
+    @property
+    def role_names(self):
+        return [role.role.name for role in self.user_roles]
