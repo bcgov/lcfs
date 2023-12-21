@@ -81,7 +81,7 @@ async def get_users(
                 status=status.HTTP_404_NOT_FOUND,
                 message="Failed",
                 success=False,
-                data={},
+                data=[],
                 error={"message": "No roles found"},
             )
 
@@ -104,7 +104,7 @@ async def get_users(
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="Failed",
             success=False,
-            data={},
+            data=[],
             error={"message": f"Technical error: {e.args[0]}"},
         )
 

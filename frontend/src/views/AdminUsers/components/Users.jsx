@@ -13,17 +13,17 @@ import { ROUTES } from '@/constants/routes'
 import { columnDefs, defaultColDef } from './schema'
 import BCGridServer from '@/components/BCGrid/BCGridServer'
 import DemoButtons from './DemoButtons'
-// import UserGrid from '@/components/Table/DataGrid/UserGrid'
 
 export const Users = (props) => {
   const [gridKey, setGridKey] = useState(`users-grid-${Math.random()}`)
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
   }, [])
-
+  const gridOptions = {
+    overlayNoRowsTemplate: 'No users found'
+  }
   const navigate = useNavigate()
   const handleNewUserClick = () => {
-    // Navigate to the new page (replace '/new-page' with your desired route)
     navigate(ROUTES.ADMIN_USERS_ADD)
   }
   const getRowId = useCallback((params) => {
@@ -60,6 +60,7 @@ export const Users = (props) => {
           columnDefs={columnDefs}
           gridKey={gridKey}
           getRowId={getRowId}
+          gridOptions={gridOptions}
         />
       </BCBox>
     </BCBox>

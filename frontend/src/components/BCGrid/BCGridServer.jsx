@@ -7,7 +7,7 @@ import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-alpine.css'
 // react components
 import { PropTypes } from 'prop-types'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 // api service
 import { useApiService } from '@/services/useApiService'
 // Internal Components
@@ -20,6 +20,23 @@ import BCBox from '@/components/BCBox'
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 const BCGridServer = (props) => {
+  const defaultGridOptions = {
+    overlayNoRowsTemplate: 'No rows found',
+    autoSizeStrategy: { type: 'fitCellContents' },
+    suppressDragLeaveHidesColumns: true,
+    suppressMovableColumns: false,
+    suppressColumnMoveAnimation: false,
+    rowSelection: 'multiple',
+    animateRows: true,
+    suppressPaginationPanel: true,
+    suppressScrollOnNewData: true,
+    rowHeight: 50
+  }
+  const gridOptions = useMemo(() => ({
+    ...defaultGridOptions,
+    ...props.gridOptions
+  }))
+
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(10)
   const [sortModel, setSortModel] = useState([
@@ -41,7 +58,7 @@ const BCGridServer = (props) => {
       apiService({
         method: 'post',
         url: props.apiEndpoint,
-        data: { page, size, sortOrders: sortModel }
+        data: { page, size, sortOrders: sortModel, filters: filterModel }
       })
         .then((resp) => {
           setTotal(resp.data.total)
@@ -133,7 +150,7 @@ const BCGridServer = (props) => {
             defaultColDef={props.defaultColDef}
             rowData={rowData}
             onGridReady={onGridReady}
-            gridOptions={props.gridOptions}
+            gridOptions={gridOptions}
             onSelectionChanged={onSelectionChanged}
             onSortChanged={onSortChanged}
             onFilterChanged={onFilterChanged}
@@ -157,18 +174,7 @@ const BCGridServer = (props) => {
 BCGridServer.defaultProps = {
   gridRef: null,
   gridKey: `bcgrid-key-${Math.random()}`,
-  gridOptions: {
-    overlayNoRowsTemplate: 'No rows found',
-    autoSizeStrategy: { type: 'fitCellContents' },
-    suppressDragLeaveHidesColumns: true,
-    suppressMovableColumns: false,
-    suppressColumnMoveAnimation: false,
-    rowSelection: 'multiple',
-    animateRows: true,
-    suppressPaginationPanel: true,
-    suppressScrollOnNewData: true,
-    rowHeight: 50
-  },
+  gridOptions: {},
   apiEndpoint: '/',
   className: 'ag-theme-alpine' // ag-theme-alpine ag-theme-material ag-theme-balham ag-theme-balham-dark ag-theme-balham-light ag-theme-balham-extended
 }
