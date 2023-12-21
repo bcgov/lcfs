@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, List
+from typing import Any, AsyncGenerator, List, Callable
 
 import pytest
 import subprocess
@@ -109,6 +109,21 @@ async def fake_redis_pool() -> AsyncGenerator[ConnectionPool, None]:
     yield pool
 
     await pool.disconnect()
+
+
+@pytest.fixture
+async def dbsession_factory(_engine: AsyncEngine) -> Callable[[], AsyncGenerator[AsyncSession, None]]:
+    """
+    Get a factory function for database sessions.
+
+    :param _engine: current engine.
+    :return: A factory function that returns an async session.
+    """
+    session_factory = async_sessionmaker(
+        _engine,
+        expire_on_commit=False,
+    )
+    return session_factory
 
 
 @pytest.fixture
