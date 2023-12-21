@@ -4,10 +4,6 @@ metadata:
   creationTimestamp: null
   name: frontend
 parameters:
-  - name: SUFFIX
-    displayName:
-    description: sample is -pr-0
-    required: true
   - name: VERSION
     displayName:
     description:  image tag name for output
@@ -38,7 +34,7 @@ objects:
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
-    name: lcfs-frontend${SUFFIX}
+    name: lcfs-frontend-${VERSION}
     creationTimestamp:
     annotations:
       description: Defines how to build the frontend image in docker

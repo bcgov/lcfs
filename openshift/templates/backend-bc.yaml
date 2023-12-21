@@ -4,10 +4,6 @@ metadata:
   creationTimestamp: null
   name: backend
 parameters:
-  - name: SUFFIX
-    displayName:
-    description: sample is -pr-0
-    required: true
   - name: VERSION
     displayName:
     description:  image tag name for output
@@ -38,7 +34,7 @@ objects:
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
-    name: lcfs-backend${SUFFIX}
+    name: lcfs-backend-${VERSION}
     creationTimestamp:
     annotations:
       description: Defines how to build the backend image in docker
