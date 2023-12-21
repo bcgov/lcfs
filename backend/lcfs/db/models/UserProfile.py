@@ -1,5 +1,5 @@
 from lcfs.db.base import Auditable, BaseModel
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Boolean, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.models.NotificationMessage import NotificationMessage
 
@@ -25,6 +25,8 @@ class UserProfile(BaseModel, Auditable):
     phone = Column(String(50), nullable=True, comment='Primary phone number')
     mobile_phone = Column(String(50), nullable=True, comment='Mobile phone number')
     organization_id = Column(Integer, ForeignKey('organization.organization_id'))
+    is_active = Column(Boolean, default=True, nullable=False,
+                       comment='Indicate if the user is active')
 
     organization = relationship('Organization', back_populates='user_profiles')
     user_roles = relationship('UserRole', back_populates='user_profile')
