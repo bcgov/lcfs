@@ -48,9 +48,7 @@ jobs:
         id: set-pre-release
         run: |
           export PRE_RELEASE=$(date +'%Y%m%d%H%M%S')
-          echo "::set-output name=date_time::${PRE_RELEASE}"
-          echo "Date and Time stored in variable: ${PRE_RELEASE}"
-          echo "PRE_RELEASE=${PRE_RELEASE}" >> $GITHUB_ENV
+
 
       - name: show pre release
         run: |
