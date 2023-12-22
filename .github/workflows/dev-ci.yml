@@ -17,6 +17,7 @@ env:
   GIT_URL: https://github.com/bcgov/lcfs.git 
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
+  PRE_RELEASE: ''
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,16 +44,29 @@ jobs:
           insecure_skip_tls_verify: true
           namespace: ${{ env.TOOLS_NAMESPACE }}
 
-      - name: Build LCFS Backend
+      - name: Calculate the PRE_RELEASE
+        id: set-pre-release
         run: |
-          cd openshift/templates
-          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          oc start-build --wait=true lcfs-backend-${{ env.VERSION }}
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}
+          export PRE_RELEASE=$(date +'%Y%m%d%H%M%S')
+          echo "::set-output name=date_time::${PRE_RELEASE}"
+          echo "Date and Time stored in variable: ${PRE_RELEASE}"
+          echo "PRE_RELEASE=${PRE_RELEASE}" >> $GITHUB_ENV
 
-      - name: Build LCFS Frontend
+      - name: show pre release
         run: |
-          cd openshift/templates
-          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}
+          echo "PRE_RELEASE: $PRE_RELEASE"
+
+      # - name: Build LCFS Backend
+      #   run: |
+      #     cd openshift/templates
+      #     oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ steps.date-time.outputs.date_time }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+      #     oc start-build --wait=true lcfs-backend-${{ env.VERSION }}
+      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}
+
+      # - name: Build LCFS Frontend
+      #   run: |
+      #     cd openshift/templates
+      #     oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+      #     oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}
+      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}
+
