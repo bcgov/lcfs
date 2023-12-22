@@ -48,7 +48,7 @@ jobs:
         id: set-pre-release
         run: |
           export PRE_RELEASE=$(date +'%Y%m%d%H%M%S')
-
+          echo "PRE_RELEASE=${PRE_RELEASE}" >> $GITHUB_ENV
 
       - name: show pre release
         run: |
