@@ -28,12 +28,10 @@ router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-# TODO: Implement permission check for this route to ensure that
-# only authorized users can access it.
 @router.post(
     "/", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
 )
-@roles_required("Government", "Adminstrator")
+@roles_required("Government", "Administrator")
 async def create_organization(
     request: Request,
     organization_data: OrganizationCreateSchema,
@@ -50,6 +48,7 @@ async def create_organization(
             org_attorney_address = OrganizationAttorneyAddress(
                 **organization_data.attorney_address.dict()
             )
+
             db.add_all([org_address, org_attorney_address])
             await db.flush()
 
