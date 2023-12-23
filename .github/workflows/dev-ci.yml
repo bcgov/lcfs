@@ -82,7 +82,7 @@ jobs:
         with:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
-          token: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
       
       - name: Update tage
         uses: mikefarah/yq@v4.40.5
