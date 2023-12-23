@@ -87,7 +87,7 @@ jobs:
       - name: Update tage
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq '.image.tag = "${{ env.VERSION }}-$PRE_RELEASE"' lcfs/charts/lcfs-frontend/values-dev.yaml
+            cmd: yq '.image.tag = ${{ env.VERSION }}-strenv(PRE_RELEASE)' lcfs/charts/lcfs-frontend/values-dev.yaml
     
       - name: Check Changed value
         run: |
