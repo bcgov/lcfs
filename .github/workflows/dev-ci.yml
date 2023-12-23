@@ -83,6 +83,10 @@ jobs:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+
+      - name: show pre release
+        run: |
+          echo "PRE_RELEASE: $PRE_RELEASE"
       
       - name: Update tage
         uses: mikefarah/yq@v4.40.5
