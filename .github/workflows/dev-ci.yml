@@ -89,12 +89,12 @@ jobs:
 
       - name: show pre release
         run: |
-          echo "PRE_RELEASE: $PRE_RELEASE"
+          echo "PRE_RELEASE: ${{ needs.build.outputs.PRE_RELEASE }}"
       
-      - name: Update tage
+      - name: Update tag
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq '.image.tag = ${{ env.VERSION }}-${{ needs.build.outputs.PRE_RELEASE}}' lcfs/charts/lcfs-frontend/values-dev.yaml
+            cmd: yq '.image.tag = ${{ env.VERSION }}-${{ needs.build.outputs.PRE_RELEASE }}' lcfs/charts/lcfs-frontend/values-dev.yaml
     
       - name: Check Changed value
         run: |
