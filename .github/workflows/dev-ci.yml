@@ -31,6 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
+    outputs:
+      PRE_RELEASE: $${{ steps.set-pre-release.outputs.PRE_RELEASE}}
+
     steps:
 
       - name: Check out repository
@@ -91,7 +94,7 @@ jobs:
       - name: Update tage
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq '.image.tag = ${{ env.VERSION }}-strenv(PRE_RELEASE)' lcfs/charts/lcfs-frontend/values-dev.yaml
+            cmd: yq '.image.tag = ${{ env.VERSION }}-${{ needs.build.outputs.PRE_RELEASE}}' lcfs/charts/lcfs-frontend/values-dev.yaml
     
       - name: Check Changed value
         run: |
