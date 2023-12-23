@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 60
 
     outputs:
-      PRE_RELEASE: $${{ steps.set-pre-release.outputs.PRE_RELEASE}}
+      PRE_RELEASE: ${{ steps.set-pre-release.outputs.PRE_RELEASE}}
 
     steps:
 
