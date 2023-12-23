@@ -27,7 +27,7 @@ jobs:
 
   build:
 
-    name: Build LCFS on Openshift
+    name: Build LCFS
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -57,14 +57,38 @@ jobs:
       # - name: Build LCFS Backend
       #   run: |
       #     cd openshift/templates
-      #     oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ steps.date-time.outputs.date_time }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-      #     oc start-build --wait=true lcfs-backend-${{ env.VERSION }}
-      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}
+      #     oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+      #     oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
+      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
 
       # - name: Build LCFS Frontend
       #   run: |
       #     cd openshift/templates
-      #     oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-      #     oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}
-      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}
+      #     oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+      #     oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
+      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
 
+  Deploy:
+
+    name: Deploy LCFS
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: build
+
+    steps:
+      
+      - name: Checkout Manifest repository
+        uses: actions/checkout@v3
+        with:
+          repository: bcgov-c/tenant-gitops-d2bd59
+          ref: main
+          token: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+      
+      - name: Update tage
+        uses: mikefarah/yq@v4.40.5
+        with:
+            cmd: yq '.image.tag = "${{ env.VERSION }}-$PRE_RELEASE"' lcfs/charts/lcfs-frontend/values-dev.yaml
+    
+      - name: Check Changed value
+        run: |
+          cat lcfs/charts/lcfs-frontend/values-dev.yaml
