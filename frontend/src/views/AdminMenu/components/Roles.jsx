@@ -5,7 +5,7 @@ import BCBox from '@/components/BCBox'
 import { useCallback, useRef } from 'react'
 
 import { rolesColumnDefs, rolesDefaultColDef } from './schema'
-import BCGridClient from '@/components/BCGrid/BCGridClient'
+import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
 
 export const Roles = (props) => {
   const gridRef = useRef()
@@ -30,7 +30,7 @@ export const Roles = (props) => {
         className="ag-theme-alpine"
         style={{ height: '100%', width: '100%' }}
       >
-        <BCGridClient
+        <BCDataGridClient
           gridRef={gridRef}
           apiEndpoint={'roles/list'}
           defaultColDef={rolesDefaultColDef}

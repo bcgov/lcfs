@@ -13,7 +13,7 @@ import { coloumnDefinition, defaultColumnOptions } from './components/columnDef'
 import { useState, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
-import BCGridServer from '@/components/BCGrid/BCGridServer'
+import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 
 export const Organizations = () => {
   const gridRef = useRef()
@@ -95,7 +95,7 @@ export const Organizations = () => {
         style={{ height: '100%', width: '100%' }}
       >
         {/* <OrganizationTable rows={demoData} /> */}
-        <BCGridServer
+        <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'organizations/list'}
           defaultColDef={defaultColumnOptions}

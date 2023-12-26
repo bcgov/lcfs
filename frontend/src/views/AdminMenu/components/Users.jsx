@@ -11,7 +11,7 @@ import { useCallback, useRef, useState } from 'react'
 
 import { ROUTES } from '@/constants/routes'
 import { usersColumnDefs, usersDefaultColDef } from './schema'
-import BCGridServer from '@/components/BCGrid/BCGridServer'
+import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // import DemoButtons from './DemoButtons'
 
 export const Users = (props) => {
@@ -57,7 +57,7 @@ export const Users = (props) => {
         style={{ height: '100%', width: '100%' }}
       >
         {/* <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} /> */}
-        <BCGridServer
+        <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'users/list'}
           apiData={'users'}
