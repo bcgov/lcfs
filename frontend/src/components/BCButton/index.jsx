@@ -43,7 +43,8 @@ BCButton.propTypes = {
     'warning',
     'error',
     'light',
-    'dark'
+    'dark',
+    'smoky'
   ]),
   circular: PropTypes.bool,
   iconOnly: PropTypes.bool,

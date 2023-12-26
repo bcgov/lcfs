@@ -2,7 +2,7 @@ import colors from '@/themes/base/colors'
 import typography from '@/themes/base/typography'
 import borders from '@/themes/base/borders'
 
-const { info, inputBorderColor, dark } = colors
+const { primary, inputBorderColor, dark } = colors
 const { size } = typography
 const { borderWidth } = borders
 
@@ -21,7 +21,7 @@ const input = {
       },
 
       '&:after': {
-        borderColor: info.main
+        borderColor: primary.main
       }
     }
   }

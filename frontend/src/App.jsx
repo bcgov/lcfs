@@ -6,7 +6,7 @@ import { AddFuelCode } from './views/AddFuelCode'
 import { AddOrganization } from './views/AddOrganization'
 import { AddTransaction } from './views/AddTransaction'
 import { Admin } from './views/Admin'
-import { AdminUsers } from './views/AdminUsers'
+import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
 import { EditOrg } from './views/EditOrg'
@@ -126,7 +126,11 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ADMIN_USERS,
-        element: <AdminUsers />
+        element: <AdminMenu tabIndex={0} />
+      },
+      {
+        path: ROUTES.ADMIN_ROLES,
+        element: <AdminMenu tabIndex={1} />
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,

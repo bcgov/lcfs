@@ -30,10 +30,9 @@ export const Dashboard = () => {
     apiService.get('/organizations/list').then((response) => response.data)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['organizations'],
     queryFn,
-    refetchOnWindowFocus: false,
-    retry: false
+    refetchOnWindowFocus: false
   })
 
   let content = <></>
@@ -45,11 +44,11 @@ export const Dashboard = () => {
   } else {
     content = (
       <>
-        <h2>User List</h2>
+        <h2>Organization List</h2>
         <ul>
-          {data.map((user) => (
-            <li key={user.id}>
-              {user.display_name} : {user.title}
+          {data.map((organization) => (
+            <li key={organization.organization_id}>
+              {organization.name} : {organization.edrms_record}
             </li>
           ))}
         </ul>
