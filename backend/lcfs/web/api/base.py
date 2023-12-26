@@ -1,6 +1,6 @@
 from typing import Any, List
+from typing_extensions import deprecated
 from fastapi import Query
-from warnings import deprecated
 
 from pydantic import BaseModel, Field
 

@@ -12,7 +12,7 @@ import { useCallback, useRef, useState } from 'react'
 import { ROUTES } from '@/constants/routes'
 import { usersColumnDefs, usersDefaultColDef } from './schema'
 import BCGridServer from '@/components/BCGrid/BCGridServer'
-import DemoButtons from './DemoButtons'
+// import DemoButtons from './DemoButtons'
 
 export const Users = (props) => {
   const [gridKey, setGridKey] = useState(`users-grid-${Math.random()}`)
@@ -56,7 +56,7 @@ export const Users = (props) => {
         className="ag-theme-alpine"
         style={{ height: '100%', width: '100%' }}
       >
-        <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} />
+        {/* <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} /> */}
         <BCGridServer
           gridRef={gridRef}
           apiEndpoint={'users/list'}
