@@ -41,7 +41,7 @@ export function BCPaginationActions(props) {
   const handlePageNumberChange = (event) => {
     const newPage = parseInt(event.target.value, 10)
     if (newPage >= 0 && newPage < Math.ceil(count / rowsPerPage)) {
-      onPageChange(event, newPage - 1)
+      onPageChange(event, newPage)
     }
   }
 
@@ -73,12 +73,12 @@ export function BCPaginationActions(props) {
             padding: '0.4rem'
           }
         }}
-        value={page + 1}
+        value={page}
         size="small"
         onChange={handlePageNumberChange}
         inputProps={{
-          min: 1,
-          max: Math.ceil(count / rowsPerPage),
+          min: 0,
+          max: Math.ceil(count / rowsPerPage) - 1,
           type: 'number',
           'aria-label': 'page number'
         }}

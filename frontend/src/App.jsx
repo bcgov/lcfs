@@ -1,11 +1,10 @@
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
 import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
 import { AddEditUser } from './views/AddEditUser'
 import { AddFuelCode } from './views/AddFuelCode'
 import { AddOrganization } from './views/AddOrganization'
 import { AddTransaction } from './views/AddTransaction'
-import { Admin } from './views/Admin'
 import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
@@ -122,7 +121,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ADMIN,
-        element: <Admin />
+        element: <Navigate to={ROUTES.ADMIN_USERS} replace />
       },
       {
         path: ROUTES.ADMIN_USERS,
