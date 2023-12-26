@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCallback, useRef, useState } from 'react'
 
 import { ROUTES } from '@/constants/routes'
-import { columnDefs, defaultColDef } from './schema'
+import { usersColumnDefs, usersDefaultColDef } from './schema'
 import BCGridServer from '@/components/BCGrid/BCGridServer'
 import DemoButtons from './DemoButtons'
 
@@ -18,10 +18,14 @@ export const Users = (props) => {
   const [gridKey, setGridKey] = useState(`users-grid-${Math.random()}`)
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
+    if (gridRef.current) {
+      gridRef.current.api.deselectAll()
+    }
   }, [])
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found'
   }
+  const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
   const navigate = useNavigate()
   const handleNewUserClick = () => {
     navigate(ROUTES.ADMIN_USERS_ADD)
@@ -55,12 +59,15 @@ export const Users = (props) => {
         <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} />
         <BCGridServer
           gridRef={gridRef}
-          apiEndpoint={'users'}
-          defaultColDef={defaultColDef}
-          columnDefs={columnDefs}
+          apiEndpoint={'users/list'}
+          apiData={'users'}
+          defaultColDef={usersDefaultColDef}
+          columnDefs={usersColumnDefs}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
+          defaultSortModel={defaultSortModel}
+          handleGridKey={handleGridKey}
         />
       </BCBox>
     </BCBox>

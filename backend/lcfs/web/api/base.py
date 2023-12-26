@@ -1,5 +1,6 @@
 from typing import Any, List
 from fastapi import Query
+from warnings import deprecated
 
 from pydantic import BaseModel, Field
 
@@ -37,6 +38,18 @@ class PaginationRequestSchema(BaseModel):
         arbitrary_types_allowed = True
 
 
+class PaginationResponseScehema(BaseModel):
+    total: int
+    page: int
+    size: int
+    total_pages: int
+
+    class Config:
+        from_attributes = True
+        arbitrary_types_allowed = True
+
+
+@deprecated("Use Pagination Request and Response schemas instead")
 class EntityResponse(BaseModel):
     status: int
     message: str

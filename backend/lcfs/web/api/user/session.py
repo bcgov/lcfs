@@ -67,7 +67,10 @@ class UserRepository:
         # Applying pagination, sorting, and filters to the query
         query = (
             select(UserProfile)
-            .options(joinedload(UserProfile.organization))
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
             .where(and_(*conditions))
         )
 
@@ -86,49 +89,50 @@ class UserRepository:
 
         # Convert the results to UserBase schemas
         return [UserBase.model_validate(user) for user in results], total_count
+
 # TODO: Need to redine search, create and modify endpoints
-    # async def get_user(self, user_id: int) -> UserBase:
-    #     """
-    #     Gets a user by their ID in the database.
+# async def get_user(self, user_id: int) -> UserBase:
+#     """
+#     Gets a user by their ID in the database.
 
-    #     This method queries the database for a user with a given ID and an active status. If found, it
-    #     converts the database row to a dictionary matching the UserBase Pydantic model.
+#     This method queries the database for a user with a given ID and an active status. If found, it
+#     converts the database row to a dictionary matching the UserBase Pydantic model.
 
-    #     Args:
-    #         user_id (int): The unique identifier of the user to be found.
+#     Args:
+#         user_id (int): The unique identifier of the user to be found.
 
-    #     Returns:
-    #         UserBase: The found user's data converted to a UserBase Pydantic model. If no user is found, returns None.
-    #     """
-    #     stmt = f"{USER_VIEW_STMT} and u.is_active = true and u.id = :user_id"
+#     Returns:
+#         UserBase: The found user's data converted to a UserBase Pydantic model. If no user is found, returns None.
+#     """
+#     stmt = f"{USER_VIEW_STMT} and u.is_active = true and u.id = :user_id"
 
-    #     user_results = await self.session.execute(text(stmt), {"user_id": user_id})
+#     user_results = await self.session.execute(text(stmt), {"user_id": user_id})
 
-    #     user = user_results.fetchone()
-    #     return row_to_dict(user, UserBase) if user else None
+#     user = user_results.fetchone()
+#     return row_to_dict(user, UserBase) if user else None
 
-    # async def create_user(self, user_create: UserCreate) -> UserProfile:
-    #     """
-    #     Creates a new user entity in the database.
+# async def create_user(self, user_create: UserCreate) -> UserProfile:
+#     """
+#     Creates a new user entity in the database.
 
-    #     This method takes a UserCreate Pydantic model, converts it into a dictionary, and then creates a new
-    #     UserProfile ORM model instance. If an organization is associated with the user, it ensures that the organization_id
-    #     is set appropriately. The new user is then added to the database session and saved to the database.
+#     This method takes a UserCreate Pydantic model, converts it into a dictionary, and then creates a new
+#     UserProfile ORM model instance. If an organization is associated with the user, it ensures that the organization_id
+#     is set appropriately. The new user is then added to the database session and saved to the database.
 
-    #     Args:
-    #         user_create (UserCreate): The Pydantic model containing the data for the new user.
+#     Args:
+#         user_create (UserCreate): The Pydantic model containing the data for the new user.
 
-    #     Returns:
-    #         UserProfile: The ORM model instance of the newly created user.
-    #     """
-    #     user_data = user_create.dict(exclude_unset=True, exclude_none=True)
+#     Returns:
+#         UserProfile: The ORM model instance of the newly created user.
+#     """
+#     user_data = user_create.dict(exclude_unset=True, exclude_none=True)
 
-    #     if "organization" in user_data:
-    #         user_data["organization_id"] = user_data.pop("organization").id
+#     if "organization" in user_data:
+#         user_data["organization_id"] = user_data.pop("organization").id
 
-    #     new_user = UserProfile(**user_data)
+#     new_user = UserProfile(**user_data)
 
-    #     self.session.add(new_user)
-    #     await self.session.commit()
+#     self.session.add(new_user)
+#     await self.session.commit()
 
-    #     return new_user
+#     return new_user

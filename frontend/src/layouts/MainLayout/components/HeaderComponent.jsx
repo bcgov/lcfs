@@ -16,7 +16,6 @@ export const HeaderComponent = (props) => {
         {data.organizationName}
       </BCTypography>
       <BCBox component="div" className="organization_balance">
-        Balance:{' '}
         <BCBox
           component="div"
           sx={{ display: 'inline-flex', alignItems: 'center' }}
@@ -32,6 +31,7 @@ export const HeaderComponent = (props) => {
           >
             {showBalance ? 'visibility' : 'visibility_off'}
           </Icon>
+          Balance:&nbsp;&nbsp;
           {showBalance && <div className="balance">{data.balance}</div>}
         </BCBox>
       </BCBox>

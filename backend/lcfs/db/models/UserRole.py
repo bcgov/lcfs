@@ -17,3 +17,12 @@ class UserRole(BaseModel, Auditable):
     # Relationships
     user_profile = relationship('UserProfile', back_populates='user_roles')
     role = relationship('Role', back_populates='user_roles')
+
+    def to_dict(self):
+        return {
+            "role_id": self.role.role_id,
+            "name": self.role.name,
+            "description": self.role.description,
+            "display_order": self.role.display_order,
+            "is_government_role": self.role.is_government_role
+        }

@@ -31,6 +31,14 @@ const DemoButtons = ({ handleGridKey, gridRef }) => {
     gridRef.current.api.onFilterChanged()
   }, [gridRef])
 
+  const showLoading = useCallback(() => {
+    gridRef.current.api.showLoadingOverlay()
+  }, [gridRef])
+
+  const hideOverlay = useCallback(() => {
+    gridRef.current.api.hideOverlay()
+  }, [gridRef])
+
   return (
     <BCBox
       p={1}
@@ -57,7 +65,7 @@ const DemoButtons = ({ handleGridKey, gridRef }) => {
           sx={{ borderRadius: '24px' }}
           startIcon={<FontAwesomeIcon icon={faRedo} className="small-icon" />}
         >
-          Reset
+          Reload
         </BCButton>
         <BCButton
           id="userNameSort"
@@ -70,7 +78,7 @@ const DemoButtons = ({ handleGridKey, gridRef }) => {
           Name Descending
         </BCButton>
         <BCButton
-          id="userNameSort"
+          id="activeUsers"
           onClick={showActiveUsers}
           variant="outlined"
           color="smoky"
@@ -78,6 +86,26 @@ const DemoButtons = ({ handleGridKey, gridRef }) => {
           sx={{ borderRadius: '24px' }}
         >
           Active Users
+        </BCButton>
+        <BCButton
+          id="showLoading"
+          onClick={showLoading}
+          variant="outlined"
+          color="smoky"
+          size="small"
+          sx={{ borderRadius: '24px' }}
+        >
+          Show Loading Overlay
+        </BCButton>
+        <BCButton
+          id="hideOverlay"
+          onClick={hideOverlay}
+          variant="outlined"
+          color="smoky"
+          size="small"
+          sx={{ borderRadius: '24px' }}
+        >
+          Hide Overlay
         </BCButton>
         <div className="example-header">
           Selection:&nbsp;

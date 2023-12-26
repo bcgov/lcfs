@@ -1,12 +1,15 @@
+import { PropTypes } from 'prop-types'
 // React components
-import { useState, useEffect } from 'react'
-
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 // mui components
 import { AppBar, Tab, Tabs } from '@mui/material'
 import breakpoints from '@/themes/base/breakpoints'
 import BCBox from '@/components/BCBox'
-import { AdminTabPanel } from './AdminTablPanel'
-import { Users } from './Users'
+import { AdminTabPanel } from './components/AdminTablPanel'
+import { Users } from './components/Users'
+import { Roles } from './components/Roles'
+import { ADMIN_ROLES, ADMIN_USERS } from '@/constants/routes/routes'
 // Internal components
 
 function a11yProps(index) {
@@ -16,9 +19,10 @@ function a11yProps(index) {
   }
 }
 
-export function AdminTabBar() {
+export function AdminMenu({ tabIndex }) {
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
-  const [tabValue, setTabValue] = useState(0)
+  const navigate = useNavigate()
+  const paths = useMemo(() => [ADMIN_USERS, ADMIN_ROLES, '#', '#', '#', '#'])
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
@@ -38,7 +42,9 @@ export function AdminTabBar() {
     return () => window.removeEventListener('resize', handleTabsOrientation)
   }, [tabsOrientation])
 
-  const handleSetTabValue = (event, newValue) => setTabValue(newValue)
+  const handleSetTabValue = (event, newValue) => {
+    navigate(paths[newValue])
+  }
 
   return (
     <BCBox sx={{ bgcolor: 'background.paper' }}>
@@ -46,7 +52,7 @@ export function AdminTabBar() {
         <Tabs
           sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '60%' }}
           orientation={tabsOrientation}
-          value={tabValue}
+          value={tabIndex}
           aria-label="Tabs for selection of administration options"
           onChange={handleSetTabValue}
         >
@@ -58,9 +64,16 @@ export function AdminTabBar() {
           <Tab label="Historical Data Entry" {...a11yProps(5)} />
         </Tabs>
       </AppBar>
-      <AdminTabPanel value={tabValue} index={0} component="div">
+      <AdminTabPanel value={tabIndex} index={0} component="div">
         <Users />
+      </AdminTabPanel>
+      <AdminTabPanel value={tabIndex} index={1} component="div">
+        <Roles />
       </AdminTabPanel>
     </BCBox>
   )
+}
+
+AdminMenu.propTypes = {
+  tabIndex: PropTypes.number.isRequired
 }

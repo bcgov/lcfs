@@ -18,9 +18,9 @@ from fastapi import APIRouter, Body, status, Request
 from starlette.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db import dependencies
-from lcfs.web.api.base import EntityResponse, PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
 from lcfs.web.api.user.session import UserRepository
-from lcfs.web.api.user.schema import UserCreate, UserBase
+from lcfs.web.api.user.schema import UserCreate, UserBase, Users
 from lcfs.web.core.decorators import roles_required
 
 router = APIRouter()
@@ -64,91 +64,86 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
         )
 
 
-@router.post("", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+@router.post("/list", response_model=Users, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def get_users(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
-) -> List[UserBase]:
+) -> Users:
     try:
         users, total_count = await user_repo.query_users(pagination=pagination)
-
         if len(users) == 0:
             logger.error("Error getting users")
             response.status_code = status.HTTP_404_NOT_FOUND
-            return EntityResponse(
-                status=status.HTTP_404_NOT_FOUND,
-                message="Failed",
-                success=False,
-                data=[],
-                error={"message": "No roles found"},
+            return Users(
+                pagination=PaginationResponseScehema(
+                    total=0, page=0, size=0, total_pages=0
+                ),
+                users=users,
             )
-
-        # Return the list of UserBase objects
-        return EntityResponse(
-            status=status.HTTP_200_OK,
-            data=users,
-            total=total_count,
-            size=len(users),
-            page=pagination.page,
-            total_pages=math.ceil(total_count / pagination.size),
-            error={},
-            success=True,
-            message="Success",
+        return Users(
+            pagination=PaginationResponseScehema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            users=users,
         )
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         logger.error("Error getting users", str(e))
-        return EntityResponse(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message="Failed",
-            success=False,
-            data=[],
-            error={"message": f"Technical error: {e.args[0]}"},
+        return Users(
+            pagination=PaginationResponseScehema(
+                total=0, page=0, size=0, total_pages=0
+            ),
+            users=[],
         )
 
-@router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-async def get_user_search(
-    username: str = None,
-    organization: str = None,
-    surname: str = None,
-    include_inactive: bool = False,
-    response: Response = None,
-) -> EntityResponse:
-    # TODO: add sorting and pagination
-    try:
-        users = await user_repo.search_users(
-            username, organization, surname, include_inactive
-        )
-        if users.__len__() == 0:
-            logger.error("Error getting users")
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return EntityResponse(
-                status=status.HTTP_404_NOT_FOUND,
-                message="Not Found",
-                success=False,
-                data={},
-                error={"message": "No users found"},
-            )
-        return EntityResponse(
-            status=status.HTTP_200_OK,
-            data=users,
-            total=len(users),
-            error={},
-            success=True,
-            message="Success",
-        )
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e))
-        return EntityResponse(
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message="Failed",
-            success=False,
-            data={},
-            error={"message": f"Technical error: {e.args[0]}"},
-        )
+
+# @router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
+# async def get_user_search(
+#     username: str = None,
+#     organization: str = None,
+#     surname: str = None,
+#     include_inactive: bool = False,
+#     response: Response = None,
+# ) -> EntityResponse:
+#     # TODO: add sorting and pagination
+#     try:
+#         users = await user_repo.search_users(
+#             username, organization, surname, include_inactive
+#         )
+#         if users.__len__() == 0:
+#             logger.error("Error getting users")
+#             response.status_code = status.HTTP_404_NOT_FOUND
+#             return EntityResponse(
+#                 status=status.HTTP_404_NOT_FOUND,
+#                 message="Not Found",
+#                 success=False,
+#                 data={},
+#                 error={"message": "No users found"},
+#             )
+#         return EntityResponse(
+#             status=status.HTTP_200_OK,
+#             data=users,
+#             total=len(users),
+#             error={},
+#             success=True,
+#             message="Success",
+#         )
+#     except Exception as e:
+#         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+#         logger.error("Error getting users", str(e))
+#         return EntityResponse(
+#             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             message="Failed",
+#             success=False,
+#             data={},
+#             error={"message": f"Technical error: {e.args[0]}"},
+#         )
+
 
 # TODO: yet to redefine and test endpoints for below.
 # @router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)

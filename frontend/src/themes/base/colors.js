@@ -53,7 +53,8 @@ const colors = {
     grey: '#f2f2f2',
     nav: '#38598a', // Used for Nav bar
     opaque: 'transparent',
-    paper: '#F3F6F9'
+    paper: '#F3F6F9',
+    secondary: '#fade81'
   },
   // Used for headings and paragraphs
   text: {
@@ -95,6 +96,48 @@ const colors = {
   dark: {
     main: '#344767',
     focus: '#2c3c58'
+  },
+
+  badgeColors: {
+    primary: {
+      background: '#003366',
+      text: '#fff'
+    },
+
+    secondary: {
+      background: '#fcba19',
+      text: '#000'
+    },
+
+    info: {
+      background: '#d9eaf7',
+      text: '#313132'
+    },
+
+    success: {
+      background: '#dff0d8',
+      text: '#2d4821'
+    },
+
+    warning: {
+      background: '#f9f1c6',
+      text: '#6c4a00'
+    },
+
+    error: {
+      background: '#f2dede',
+      text: '#a12622'
+    },
+
+    light: {
+      background: '#ffffff',
+      text: '#c7d3de'
+    },
+
+    dark: {
+      background: '#8097bf',
+      text: '#1e2e4a'
+    }
   },
   coloredShadows: {
     primary: '#fcba19',
@@ -144,7 +187,7 @@ const colors = {
     },
 
     secondary: {
-      main: '#fcba19',
+      main: '#e3a82b',
       state: '#fcba19'
     },
 

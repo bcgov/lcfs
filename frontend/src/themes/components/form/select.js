@@ -20,10 +20,6 @@ const select = {
       height: 'none',
       minHeight: 'none',
       overflow: 'unset'
-    },
-
-    icon: {
-      display: 'none'
     }
   }
 }
