@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      env-variable: ${{ steps.set-env-variable.outputs.env_variable }}
+      env-variable: ${{ steps.set-env-variable.outputs.env-variable }}
 
     steps:
     - name: Set Environment Variable
       id: set-env-variable
-      run: echo "env-variable=Hello from Job 1" >> $GITHUB_ENV
+      run: echo "env-variable=Hello" >> $GITHUB_ENV
 
   show-variable:
     needs: create-variable
