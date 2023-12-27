@@ -20,4 +20,4 @@ jobs:
     steps:
     - name: Display Environment Variable
       run: |
-        echo "Environment Variable: ${{ jobs.create-variable.steps.set-env-variable.outputs.envvar }}"
+        echo "Environment Variable: ${{ needs.create-variable.steps.set-env-variable.outputs.envvar }}"
