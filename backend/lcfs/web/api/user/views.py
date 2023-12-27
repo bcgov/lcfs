@@ -15,7 +15,6 @@ from typing import List
 
 from fastapi import APIRouter, Body, HTTPException, status, Request
 from starlette.responses import Response
-from lcfs.db.models import UserRole
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema

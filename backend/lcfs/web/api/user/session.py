@@ -6,7 +6,8 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from lcfs.db.models import UserProfile, UserRole, UserLoginHistory
+from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.UserRole import UserRole
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
 from lcfs.web.api.base import PaginationRequestSchema
 from fastapi import HTTPException
