@@ -1,20 +1,15 @@
 from logging import getLogger
 from typing import List, Optional
-from fastapi import Depends
 
-from sqlalchemy import text, and_, func, select, asc, desc
+from sqlalchemy import and_, func, select, asc, desc, delete
 from sqlalchemy.orm import joinedload
-from sqlalchemy.dialects.postgresql import array
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.UserRole import UserRole
-from lcfs.db.models.Role import Role
-from lcfs.web.api.user.schema import UserCreate
-from lcfs.web.api.base import PaginationRequestSchema, row_to_dict
-from lcfs.web.api.user.schema import UserBase
+from lcfs.db.models import UserProfile, UserRole, UserLoginHistory
+from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
+from lcfs.web.api.base import PaginationRequestSchema
+from fastapi import HTTPException
 
 logger = getLogger("user_repo")
 
@@ -47,16 +42,6 @@ class UserRepository:
         """
         # Build the base query statement
         conditions = []
-        if username:
-            conditions.append(
-                func.lower(UserProfile.username).like(f"%{username.lower()}%")
-            )
-        if organization:
-            conditions.append(
-                func.lower(UserProfile.organization.name).like(
-                    f"%{organization.lower()}%"
-                )
-            )
         # if not include_inactive:
         #     conditions.append(UserProfile.is_active.is_(True))
 
@@ -90,49 +75,87 @@ class UserRepository:
         # Convert the results to UserBase schemas
         return [UserBase.model_validate(user) for user in results], total_count
 
-# TODO: Need to redine search, create and modify endpoints
-# async def get_user(self, user_id: int) -> UserBase:
-#     """
-#     Gets a user by their ID in the database.
+    async def get_user(self, user_id: int):
+        query = (
+            select(UserProfile)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
+            .where(UserProfile.user_profile_id == user_id)
+        )
 
-#     This method queries the database for a user with a given ID and an active status. If found, it
-#     converts the database row to a dictionary matching the UserBase Pydantic model.
+        # Execute the query
+        result = await self.session.execute(query)
+        user = result.unique().scalar_one_or_none()
+        return user
 
-#     Args:
-#         user_id (int): The unique identifier of the user to be found.
+    async def create_user(
+        self, user_create: UserCreate, user_id: int = None
+    ) -> UserProfile:
+        user_data = user_create.model_dump()
+        roles = user_data.pop("roles", {})
+        new_user = UserProfile()
+        try:
+            # get the next sequence value for the user_profile_id and begin the async transaction.
+            user_profile_id_seq = func.nextval("user_profile_user_profile_id_seq")
+            user_profile_id = await self.session.execute(select(user_profile_id_seq))
+            user_id = user_profile_id.unique().scalar_one_or_none()
+            new_user.user_profile_id = user_id
+            # convert the UserCreate instance to UserProfile schema object
+            new_user = UserProfile.form_user_profile(new_user, user_data, user_id)
+            self.session.add(new_user)
+            self.session.refresh(new_user)
+            # Update/insert the roles separately
+            user_roles = UserRole.get_user_roles(roles, new_user)
+            self.session.add_all(user_roles)
+            # Commit and close the connection
+            self.session.commit()
 
-#     Returns:
-#         UserBase: The found user's data converted to a UserBase Pydantic model. If no user is found, returns None.
-#     """
-#     stmt = f"{USER_VIEW_STMT} and u.is_active = true and u.id = :user_id"
+        except Exception as e:
+            # in case of any failures rollback the session
+            self.session.rollback()
+            logger.error(f"Error creating user: {e}")
+            raise Exception(f"Error creating user: {e}")
 
-#     user_results = await self.session.execute(text(stmt), {"user_id": user_id})
+        logger.info(f"Created user with id: {user_id}")
+        return UserBase.model_validate(await self.get_user(user_id))
 
-#     user = user_results.fetchone()
-#     return row_to_dict(user, UserBase) if user else None
+    async def update_user(
+        self, user_update: UserCreate, user_profile_id: int = None
+    ) -> UserProfile:
+        user_data = user_update.model_dump()
 
-# async def create_user(self, user_create: UserCreate) -> UserProfile:
-#     """
-#     Creates a new user entity in the database.
+        try:
+            # Get existing record for update.
+            user = await self.session.get(UserProfile, user_profile_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            # convert UserCreate instance to UserProfile and save the data.
+            user_profile = UserProfile.form_user_profile(
+                user, user_data, user_profile_id
+            )
+            # Delete existing roles and update with new roles
+            await self.session.execute(
+                delete(UserRole).where(UserRole.user_profile_id == user.user_profile_id)
+            )
+            user_roles = UserRole.get_user_roles(
+                user_data.pop("roles", {}), user_profile
+            )
+            self.session.add_all(user_roles)
+            # commit and close the connection
+            self.session.commit()
 
-#     This method takes a UserCreate Pydantic model, converts it into a dictionary, and then creates a new
-#     UserProfile ORM model instance. If an organization is associated with the user, it ensures that the organization_id
-#     is set appropriately. The new user is then added to the database session and saved to the database.
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error updating user: {e}")
+            raise Exception(f"Error updating user: {e}")
 
-#     Args:
-#         user_create (UserCreate): The Pydantic model containing the data for the new user.
+        logger.info(f"Updated user_profile_id: {user_profile_id}")
+        return await self.get_user(user_profile_id)
 
-#     Returns:
-#         UserProfile: The ORM model instance of the newly created user.
-#     """
-#     user_data = user_create.dict(exclude_unset=True, exclude_none=True)
-
-#     if "organization" in user_data:
-#         user_data["organization_id"] = user_data.pop("organization").id
-
-#     new_user = UserProfile(**user_data)
-
-#     self.session.add(new_user)
-#     await self.session.commit()
-
-#     return new_user
+    # TODO: User History implementation
+    async def get_user_history(
+        self, pagination: PaginationRequestSchema = {}, user_id: int = None
+    ) -> List[UserHistory]:
+        return []

@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Optional, List
 
 from pydantic import BaseModel, EmailStr
@@ -13,6 +14,26 @@ Update - attributes that can be updated - used at PUT requests
 InDB - attributes present on any resource coming out of the database
 Public - attributes present on public facing resources being returned from GET, POST, and PUT requests
 """
+
+
+class UserCreate(BaseModel):
+    user_profile_id: Optional[int] = None
+    title: str
+    username: str
+    email: EmailStr
+    display_name: str
+    phone: str
+    mobile_phone: str
+    first_name: str
+    last_name: str
+    is_active: bool
+    organization_id: Optional[int] = None
+    organization: OrganizationSummarySchema
+    roles: List[RoleSchema]
+
+    class Config:
+        from_attributes = True
+        fields = {"organization": {"exclude": True}, "roles": {"exclude": True}}
 
 
 class UserBase(BaseModel):
@@ -45,13 +66,16 @@ class Users(BaseModel):
     users: List[UserBase]
 
 
-class UserCreate(UserBase):
-    title: str
-    phone: str
-    mobile_phone: str
-    first_name: str
-    last_name: str
-    is_active: bool
+class UserHistory(BaseModel):
+    user_profile_id: int
+    user_login_history_id: int
     keycloak_email: str
-    keycloak_username: str
-    pass
+    external_username: str
+    keycloak_user_id: str
+    is_login_successful: bool
+    login_error_message: str
+
+
+class UserHistories(BaseModel):
+    pagination: PaginationResponseScehema
+    history: List[UserHistory]

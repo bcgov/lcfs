@@ -2,10 +2,9 @@
 User management endpoints
 GET: /users/current
 GET: /users/<user_id>
-GET: /users
-GET: /users/search?username=...&organization=...&surname=...&include_inactive=false
-POST: /users/create
-PATCH: /users/<user_id>
+POST: /users/list (Includes ability to perform sort, filter and pagination)
+POST: /users (Create a new user)
+PUT: /users/<user_id> (Update the user)
 DELETE: /users/<user_id> (Delete only if the user has never logged in/mapped)
 GET: /users/<user_id>/roles {List of Roles with IDs}
 GET: /users/<user_id>/history
@@ -14,19 +13,20 @@ import math
 from logging import getLogger
 from typing import List
 
-from fastapi import APIRouter, Body, status, Request
+from fastapi import APIRouter, Body, HTTPException, status, Request
 from starlette.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
+from lcfs.db.models import UserRole
+from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
 from lcfs.web.api.user.session import UserRepository
-from lcfs.web.api.user.schema import UserCreate, UserBase, Users
+from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
 from lcfs.web.core.decorators import roles_required
 
 router = APIRouter()
 logger = getLogger("users")
 get_async_db = dependencies.get_async_db_session
-user_repo = None  # Define user_repo at the global level
+user_repo = None
 
 
 @router.on_event("startup")
@@ -64,6 +64,25 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
         )
 
 
+@router.get("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
+@roles_required("Government")
+async def get_user_by_id(
+    request: Request, user_id: int, response: Response = None
+) -> UserBase:
+    try:
+        user = await user_repo.get_user(user_id=user_id)
+        if user is None:
+            err_msg = f"User {user_id} not found"
+            logger.error(err_msg)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=err_msg)
+        return UserBase.model_validate(user)
+    except Exception as e:
+        logger.error(f"Error getting user {user_id}", str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get user {user_id}: {str(e)}"
+        )
+
+
 @router.post("/list", response_model=Users, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def get_users(
@@ -94,110 +113,100 @@ async def get_users(
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         logger.error("Error getting users", str(e))
-        return Users(
-            pagination=PaginationResponseScehema(
-                total=0, page=0, size=0, total_pages=0
-            ),
-            users=[],
+        raise HTTPException(
+            status_code=500, detail=f"Technical Error: Failed to get users: {str(e)}"
         )
 
 
-# @router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-# async def get_user_search(
-#     username: str = None,
-#     organization: str = None,
-#     surname: str = None,
-#     include_inactive: bool = False,
-#     response: Response = None,
-# ) -> EntityResponse:
-#     # TODO: add sorting and pagination
-#     try:
-#         users = await user_repo.search_users(
-#             username, organization, surname, include_inactive
-#         )
-#         if users.__len__() == 0:
-#             logger.error("Error getting users")
-#             response.status_code = status.HTTP_404_NOT_FOUND
-#             return EntityResponse(
-#                 status=status.HTTP_404_NOT_FOUND,
-#                 message="Not Found",
-#                 success=False,
-#                 data={},
-#                 error={"message": "No users found"},
-#             )
-#         return EntityResponse(
-#             status=status.HTTP_200_OK,
-#             data=users,
-#             total=len(users),
-#             error={},
-#             success=True,
-#             message="Success",
-#         )
-#     except Exception as e:
-#         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-#         logger.error("Error getting users", str(e))
-#         return EntityResponse(
-#             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             message="Failed",
-#             success=False,
-#             data={},
-#             error={"message": f"Technical error: {e.args[0]}"},
-#         )
+@router.post("", response_model=UserBase, status_code=status.HTTP_201_CREATED)
+@roles_required("Government")
+async def create_user(
+    request: Request,
+    response: Response = None,
+    user_create: UserCreate = ...,
+) -> UserBase:
+    try:
+        return await user_repo.create_user(user_create)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Technical Error: Failed to create user: {str(e)}"
+        )
 
 
-# TODO: yet to redefine and test endpoints for below.
-# @router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-# async def get_user_by_id(user_id: int, response: Response = None) -> EntityResponse:
-#     try:
-#         user = await user_repo.get_user(user_id=user_id)
-#         if user is None:
-#             err_msg = f"User {user_id} not found"
-#             logger.error(err_msg)
-#             response.status_code = status.HTTP_404_NOT_FOUND
-#             return EntityResponse(
-#                 status=status.HTTP_404_NOT_FOUND,
-#                 message="Not Found",
-#                 success=False,
-#                 data={},
-#                 error={"message": err_msg},
-#             )
-#         return EntityResponse(
-#             status=status.HTTP_200_OK,
-#             data=user,
-#             total=1,
-#             error={},
-#             total_pages=1,
-#             size=10,
-#             success=True,
-#             message="Success",
-#         )
-#     except Exception as e:
-#         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-#         logger.error(f"Error finding user {user_id}", str(e.args[0]))
-#         return EntityResponse(
-#             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             message="Failed",
-#             success=False,
-#             data={},
-#             error={"message": f"Technical error: {e.args[0]}"},
-#         )
+@router.put("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
+@roles_required("Government")
+async def create_user(
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    user_create: UserCreate = ...,
+) -> UserBase:
+    try:
+        return await user_repo.update_user(user_create, user_profile_id=user_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Technical Error: Failed to create user: {str(e)}"
+        )
 
 
-# @router.post(
-#     "/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED
-# )
-# async def create_user(
-#     user_data: UserCreate, db: AsyncSession = Depends(get_async_db)
-# ) -> EntityResponse:
-#     try:
-#         user_repo = UserRepository(db)
-#         created_user = await user_repo.create_user(user_data)
-#         return EntityResponse(
-#             status=status.HTTP_201_CREATED,
-#             data=created_user,
-#             error={},
-#             success=True,
-#             message="User created successfully",
-#         )
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
+@router.get(
+    "/{user_id}/roles", response_model=List[RoleSchema], status_code=status.HTTP_200_OK
+)
+@roles_required("Government")
+async def get_user_roles(
+    request: Request, response: Response = None, user_id: int = None
+) -> List[RoleSchema]:
+    try:
+        user = await user_repo.get_user(user_id=user_id)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+        return [RoleSchema.model_validate(role.to_dict()) for role in user.user_roles]
+        return []
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Technical Error: Failed to get user roles: {str(e)}",
+        )
+
+
+@router.get(
+    "/{user_id}/history", response_model=UserHistories, status_code=status.HTTP_200_OK
+)
+@roles_required("Government")
+async def get_user_history(
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+) -> UserHistories:
+    try:
+        user_histories, total_count = await user_repo.get_user_history(
+            pagination=pagination
+        )
+        if len(user_histories) == 0:
+            logger.error("Error getting user history")
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return UserHistories(
+                pagination=PaginationResponseScehema(
+                    total=0, page=0, size=0, total_pages=0
+                ),
+                users=user_histories,
+            )
+        return UserHistories(
+            pagination=PaginationResponseScehema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            history=user_histories,
+        )
+    except Exception as e:
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        logger.error("Error getting user history", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Technical Error: Failed to get user history: {str(e)}",
+        )

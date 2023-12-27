@@ -1,3 +1,5 @@
+from lcfs.web.api.organization.schema import OrganizationSummarySchema
+from lcfs.db.models import UserRole
 from lcfs.db.base import Auditable, BaseModel
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
@@ -56,6 +58,25 @@ class UserProfile(BaseModel, Auditable):
         foreign_keys=[NotificationMessage.related_user_profile_id],
         back_populates="related_user_profile",
     )
+
+    @classmethod
+    def form_user_profile(cls, user_profile, user_data, user_profile_id):
+        """
+        Copy UserProfile instance with data from UserCreate instance.
+        """
+
+        organization_data = OrganizationSummarySchema(
+            **user_data.pop("organization", {})
+        )
+        user_data["user_profile_id"] = user_profile_id
+        user_data["organization_id"] = organization_data.organization_id
+        # Iterate over each field in UserCreate and update UserProfile
+        for field in user_data:
+            setattr(user_profile, field, user_data[field])
+        setattr(user_profile, "keycloak_email", user_data["email"])
+        setattr(user_profile, "keycloak_username", user_data["username"])
+
+        return user_profile
 
     @property
     def role_names(self):
