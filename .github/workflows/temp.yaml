@@ -14,7 +14,7 @@ jobs:
     steps:
     - name: Set Environment Variable
       id: set-env-variable
-      run: echo "env_variable=Hello from Job 1" >> $GITHUB_ENV
+      run: echo "env-variable=Hello from Job 1" >> $GITHUB_ENV
 
   show-variable:
     needs: create-variable
