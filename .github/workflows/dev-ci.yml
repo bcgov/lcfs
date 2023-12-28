@@ -110,7 +110,7 @@ jobs:
       - name: Update tag
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq -i '.image.tag = "${{ env.VERSION }}-20231228194204"' lcfs/charts/lcfs-frontend/values-dev.yaml
+            cmd: yq -i '.image.tag = "${{ env.VERSION }}-$PRE_RELEASE"' lcfs/charts/lcfs-frontend/values-dev.yaml
     
       - name: Check Changed value
         run: |
