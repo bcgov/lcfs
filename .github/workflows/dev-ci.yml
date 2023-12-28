@@ -76,6 +76,7 @@ jobs:
         run: |
           cd openshift/templates
           oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc cancel-build bc/lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
           oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
 
@@ -83,34 +84,34 @@ jobs:
         run: |
           cd openshift/templates
           oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc cancel-build bc/lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
           oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
 
-  # Deploy:
+  deploy:
 
-  #   name: Deploy LCFS
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 60
-  #   needs: build
+    name: Deploy LCFS
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [set-pre-release, build]
 
-  #   steps:
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
+
+    steps:
       
-  #     - name: Checkout Manifest repository
-  #       uses: actions/checkout@v3
-  #       with:
-  #         repository: bcgov-c/tenant-gitops-d2bd59
-  #         ref: main
-  #         ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
-
-  #     - name: show pre release
-  #       run: |
-  #         echo "PRE_RELEASE: ${{ needs.build.outputs.PRE_RELEASE }}"
+      - name: Checkout Manifest repository
+        uses: actions/checkout@v3
+        with:
+          repository: bcgov-c/tenant-gitops-d2bd59
+          ref: main
+          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
       
-  #     - name: Update tag
-  #       uses: mikefarah/yq@v4.40.5
-  #       with:
-  #           cmd: yq '.image.tag = ${{ env.VERSION }}-${{ needs.build.outputs.PRE_RELEASE }}' lcfs/charts/lcfs-frontend/values-dev.yaml
+      - name: Update tag
+        uses: mikefarah/yq@v4.40.5
+        with:
+            cmd: yq '.image.tag = ${{ env.VERSION }}-$PRE_RELEASE' lcfs/charts/lcfs-frontend/values-dev.yaml
     
-  #     - name: Check Changed value
-  #       run: |
-  #         cat lcfs/charts/lcfs-frontend/values-dev.yaml
+      - name: Check Changed value
+        run: |
+          cat lcfs/charts/lcfs-frontend/values-dev.yaml
