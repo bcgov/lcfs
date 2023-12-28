@@ -110,8 +110,19 @@ jobs:
       - name: Update tag
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml
+            cmd: yq -i '.image.tag = "${{ env.VERSION }}-20231228194204"' lcfs/charts/lcfs-frontend/values-dev.yaml
+  # yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml
     
       - name: Check Changed value
         run: |
           cat lcfs/charts/lcfs-frontend/values-dev.yaml
+
+      - name: GitHub Commit & Push
+        run: |
+          cd lcfs
+          pwd
+          ls -l
+          git add charts/lcfs-frontend/values-dev.yaml
+          git commit -m "update the version with pre-release number"
+          git push
+      
