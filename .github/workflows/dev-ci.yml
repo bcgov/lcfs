@@ -121,6 +121,7 @@ jobs:
         run: |
           pwd
           ls -l
-          git status
-
+          git add lcfs/charts/lcfs-frontend/values-dev.yaml
+          git commit -m "update the version with pre-release number"
+          git push
       
