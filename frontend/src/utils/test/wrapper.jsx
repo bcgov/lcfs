@@ -1,7 +1,7 @@
 import theme from '@/themes'
 import { ThemeProvider } from '@mui/material'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
-import { QueryClient, QueryClientProvider } from 'react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi } from 'vitest'
 
 const testQueryClient = new QueryClient({

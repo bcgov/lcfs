@@ -1,7 +1,6 @@
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/hooks/useOrganization'
-import { useUserStore } from '@/stores/useUserStore'
 import colors from '@/themes/base/colors'
 import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -9,10 +8,7 @@ import { Box, Typography } from '@mui/material'
 import { Link } from 'react-router-dom'
 
 export const OrganizationDetails = () => {
-  const user = useUserStore((state) => state.user)
-  const { data: orgData, isLoading: orgLoading } = useOrganization(
-    user.organization.organization_id
-  )
+  const { data: orgData, isLoading: orgLoading } = useOrganization()
   return (
     <Box p={2.5} bgcolor="background.default">
       <Typography variant="h2" fontSize={24} mb={1} color={colors.primary.main}>

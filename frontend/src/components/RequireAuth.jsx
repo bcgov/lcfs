@@ -1,41 +1,11 @@
 import Loading from '@/components/Loading'
-import { apiRoutes } from '@/constants/routes'
-import { useApiService } from '@/services/useApiService'
-import { useUserStore } from '@/stores/useUserStore'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useKeycloak } from '@react-keycloak/web'
-import { useQuery } from 'react-query'
 import { Navigate } from 'react-router-dom'
-
-const fetchCurrentUser = async (apiService) => {
-  try {
-    const response = await apiService.get(apiRoutes.currentUser)
-    console.log('User Response: ', response)
-    return response.data
-  } catch (error) {
-    console.error('Error fetching current user:', error)
-    throw error // Re-throwing the error to be caught by react-query's error handling
-  }
-}
 
 const RequireAuth = ({ children, redirectTo }) => {
   const { keycloak, initialized } = useKeycloak()
-  const setUser = useUserStore((state) => state.setUser)
-  const apiService = useApiService()
-
-  const { isLoading, isError, error } = useQuery(
-    'currentUser',
-    () => fetchCurrentUser(apiService),
-    {
-      enabled: !!keycloak.authenticated,
-      onSuccess: (data) => {
-        setUser(data)
-      },
-      onError: (error) => {
-        console.error('Query error:', error)
-      },
-      retry: false
-    }
-  )
+  const { isLoading, isError, error } = useCurrentUser()
 
   if (!initialized || isLoading) {
     return <Loading />
