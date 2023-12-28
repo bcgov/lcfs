@@ -34,7 +34,6 @@ jobs:
     steps:
       - id: set-pre-release
         run: echo "PRE_RELEASE=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
-        # run: echo "::set-output name=PRE_RELEASE::$(date +'%Y%m%d%H%M%S')"
 
   show-pre-release:
     name: Show pre-release number
