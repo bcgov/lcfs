@@ -39,10 +39,12 @@ jobs:
     name: Show pre-release number
     runs-on: ubuntu-latest
     needs: set-pre-release
+
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
+
     steps:
       - id: show-pre-release-step1
-        env:
-          PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
         run: echo "$PRE_RELEASE"
 
 
