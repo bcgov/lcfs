@@ -1,7 +1,6 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
-import { BrowserRouter as Router } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { wrapper } from '@/utils/test/wrapper'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AddOrganization } from './AddOrganization'
 
 // Mock Keycloak
@@ -12,20 +11,9 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-const renderComponent = () => {
-  const queryClient = new QueryClient()
-  render(
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AddOrganization />
-      </Router>
-    </QueryClientProvider>
-  )
-}
-
 describe('AddOrganization Component Tests', () => {
   beforeEach(() => {
-    renderComponent()
+    render(<AddOrganization />, { wrapper })
   })
 
   afterEach(() => {

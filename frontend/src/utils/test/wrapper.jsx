@@ -1,8 +1,8 @@
 import theme from '@/themes'
-import { ThemeProvider } from '@mui/material'
-import { ReactKeycloakProvider } from '@react-keycloak/web'
+import { CssBaseline, ThemeProvider } from '@mui/material'
+// import { ReactKeycloakProvider } from '@react-keycloak/web'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { vi } from 'vitest'
+import { BrowserRouter as Router } from 'react-router-dom'
 
 const testQueryClient = new QueryClient({
   defaultOptions: {
@@ -17,15 +17,13 @@ const testQueryClient = new QueryClient({
   }
 })
 
-// need to mock keycloak user
-const keycloakMock = {
-  init: vi.fn().mockResolvedValue(true)
-}
-
 export const wrapper = ({ children }) => (
-  <ReactKeycloakProvider authClient={keycloakMock}>
-    <QueryClientProvider client={testQueryClient}>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
-    </QueryClientProvider>
-  </ReactKeycloakProvider>
+  // <ReactKeycloakProvider authClient={keycloakMock}>
+  <QueryClientProvider client={testQueryClient}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Router>{children}</Router>
+    </ThemeProvider>
+  </QueryClientProvider>
+  // </ReactKeycloakProvider>
 )
