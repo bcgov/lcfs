@@ -72,21 +72,21 @@ jobs:
           insecure_skip_tls_verify: true
           namespace: ${{ env.TOOLS_NAMESPACE }}
 
-      - name: Build LCFS Backend
-        run: |
-          cd openshift/templates
-          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          oc cancel-build bc/lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
-          oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
+      # - name: Build LCFS Backend
+      #   run: |
+      #     cd openshift/templates
+      #     oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+      #     oc cancel-build bc/lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
+      #     oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
+      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
 
-      - name: Build LCFS Frontend
-        run: |
-          cd openshift/templates
-          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          oc cancel-build bc/lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
-          oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
+      # - name: Build LCFS Frontend
+      #   run: |
+      #     cd openshift/templates
+      #     oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+      #     oc cancel-build bc/lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
+      #     oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
+      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
 
   deploy:
 
@@ -110,7 +110,7 @@ jobs:
       - name: Update tag
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq '.image.tag = ${{ env.VERSION }}-$PRE_RELEASE' lcfs/charts/lcfs-frontend/values-dev.yaml
+            cmd: yq '.image.tag = ${{ env.VERSION }}-20231228194204' lcfs/charts/lcfs-frontend/values-dev.yaml
     
       - name: Check Changed value
         run: |
