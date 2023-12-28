@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom'
 
 export const OrganizationDetails = () => {
   const { data: orgData, isLoading: orgLoading } = useOrganization()
+
   return (
     <Box p={2.5} bgcolor="background.default">
       <Typography variant="h2" fontSize={24} mb={1} color={colors.primary.main}>
@@ -24,27 +25,27 @@ export const OrganizationDetails = () => {
               fontSize={16}
               color={colors.primary.main}
             >
-              {orgData.name}
+              {orgData?.name}
             </Typography>
             <Typography fontSize={16} color={colors.primary.main}>
-              {orgData.org_address.street_address}
+              {orgData?.org_address.street_address}
             </Typography>
             <Typography fontSize={16} color={colors.primary.main}>
-              {orgData.org_address.city} {orgData.org_address.province_state}
+              {orgData?.org_address.city} {orgData?.org_address.province_state}
             </Typography>
             <Typography fontSize={16} color={colors.primary.main}>
-              {orgData.org_address.country}
+              {orgData?.org_address.country}
             </Typography>
             <Typography fontSize={16} color={colors.primary.main}>
-              {orgData.org_address.postalCode_zipCode}
+              {orgData?.org_address.postalCode_zipCode}
             </Typography>
           </Box>
           <Box mb={2}>
             <Typography fontSize={16} color={colors.primary.main}>
-              {orgData.phone}
+              {orgData?.phone}
             </Typography>
             <Typography fontSize={16} color={colors.primary.main}>
-              {orgData.email}
+              {orgData?.email}
             </Typography>
           </Box>
           <Box>
