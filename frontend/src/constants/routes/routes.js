@@ -40,3 +40,4 @@ export const FSE = '/fse' // might not need
 export const FILESUBMISSION = '/file-submission' // might not need
 
 export const APIDOCS = '/docs'
+export const CONTACT_US = '/contact-us'
