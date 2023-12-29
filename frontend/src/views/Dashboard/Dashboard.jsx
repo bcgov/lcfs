@@ -1,71 +1,27 @@
-import Loading from '@/components/Loading'
-import { useApiService } from '@/services/useApiService'
-import { useUserStore } from '@/stores/useUserStore'
-import BCeIDBalance from './components/BCeIDBalance'
-import IDIRBalance from './components/IDIRBalance'
-import { useQuery } from 'react-query'
-
-// const testData = async () => {
-//   const testData = [
-//     {
-//       id: 1,
-//       title: 'Compliance Report 1',
-//       status: 'Complete'
-//     },
-//     {
-//       id: 2,
-//       title: 'Compliance Report 2',
-//       status: 'In Progress'
-//     }
-//   ]
-//   return testData
-// }
+import { Box } from '@mui/material'
+import { OrganizationDetails } from './components/OrganizationDetails'
+// import { Role } from '@/components/Role'
 
 export const Dashboard = () => {
-  const apiService = useApiService()
-  const user = useUserStore((state) => state.user)
-
-  const queryFn = () =>
-    // temp test
-    apiService.get('/organizations/list').then((response) => response.data)
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['organizations'],
-    queryFn,
-    refetchOnWindowFocus: false
-  })
-
-  let content = <></>
-
-  if (isLoading) {
-    content = <Loading />
-  } else if (error) {
-    content = <div>An error has occurred: {error.message}</div>
-  } else {
-    content = (
-      <>
-        <h2>Organization List</h2>
-        <ul>
-          {data.map((organization) => (
-            <li key={organization.organization_id}>
-              {organization.name} : {organization.edrms_record}
-            </li>
-          ))}
-        </ul>
-      </>
-    )
-  }
-
   return (
-    <div className="Dashboard">
-      <header className="Dashboard-header">
-        Dashboard {user && <span>Welcome, {user.username}</span>}
-      </header>
-      {content}
-      <div className="Dashboard-components">
-        <BCeIDBalance />
-        <IDIRBalance />
-      </div>
-    </div>
+    <Box display="grid" gridTemplateColumns="1fr 3fr" gap={3}>
+      <Box p={2.5} bgcolor="background.grey">
+        placeholder
+      </Box>
+      <Box
+        display="grid"
+        gridTemplateColumns="2fr 1fr"
+        bgcolor="background.grey"
+        p={3}
+        gap={3}
+      >
+        <Box p={2.5} bgcolor="background.default">
+          placeholder
+        </Box>
+        {/* <Role roles={['Government']}> */}
+        <OrganizationDetails />
+        {/* </Role> */}
+      </Box>
+    </Box>
   )
 }

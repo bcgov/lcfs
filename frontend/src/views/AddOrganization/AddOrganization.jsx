@@ -21,7 +21,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
-import { useMutation } from 'react-query'
+import { useMutation } from '@tanstack/react-query'
 
 // Internal Modules
 import BCAlert from '@/components/BCAlert'
@@ -172,13 +172,10 @@ export const AddOrganization = () => {
     mutate(payload)
   }
 
-  // Function to perform the POST request
-  const postOrganizaionData = async (userData) => {
-    await apiService.post('/organizations/', userData)
-  }
-
   // useMutation hook from React Query for handling API request
-  const { mutate, isLoading, isError } = useMutation(postOrganizaionData, {
+  const { mutate, isLoading, isError } = useMutation({
+    mutationFn: async (userData) =>
+      await apiService.post('/organizations/', userData),
     onSuccess: () => {
       // Redirect to Organization route on success
       navigate(ROUTES.ORGANIZATIONS, {
