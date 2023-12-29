@@ -41,10 +41,3 @@ class Role(BaseModel, Auditable):
     def __str__(self):
         return self.name
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'isGovernmentRole': self.is_government_role
-        }
