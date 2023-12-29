@@ -15,7 +15,6 @@ async def seed_organizations(session):
 
     organizations_to_seed = [
         {
-            "organization_id": 2,
             "name": "QuantumNova Fuels",
             "email": "info@quantumnova.com",
             "phone": "000-555-1234",
@@ -26,7 +25,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 1,
         },
         {
-            "organization_id": 3,
             "name": "NebulaWings Dynamics",
             "email": "contact@nebulawings.org",
             "phone": "000-555-5678",
@@ -37,7 +35,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 2,
         },
         {
-            "organization_id": 4,
             "name": "SolarFlare Innovations",
             "email": "admin@solarflare.net",
             "phone": "000-555-9101",
@@ -48,7 +45,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 3,
         },
         {
-            "organization_id": 5,
             "name": "SkySail Industries",
             "email": "info@skysail.com",
             "phone": "000-555-1122",
@@ -59,7 +55,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 4,
         },
         {
-            "organization_id": 6,
             "name": "BioVista Fuels",
             "email": "contact@biovista.org",
             "phone": "000-555-1313",
@@ -70,7 +65,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 5,
         },
         {
-            "organization_id": 7,
             "name": "ElectraSphere Innovations",
             "email": "admin@electrasphere.net",
             "phone": "000-555-1414",
@@ -81,7 +75,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 6,
         },
         {
-            "organization_id": 8,
             "name": "GasVortex Enterprises",
             "email": "info@gasvortex.com",
             "phone": "000-555-1515",
@@ -92,7 +85,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 7,
         },
         {
-            "organization_id": 9,
             "name": "EcoPulse Solutions",
             "email": "contact@ecopulse.org",
             "phone": "000-555-1616",
@@ -103,7 +95,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 8,
         },
         {
-            "organization_id": 10,
             "name": "FusionGalaxy Dynamics",
             "email": "admin@fusiongalaxy.net",
             "phone": "000-555-1717",
@@ -114,7 +105,6 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 9,
         },
         {
-            "organization_id": 11,
             "name": "TurboDrive Dynamics",
             "email": "info@turbodrive.com",
             "phone": "000-555-1818",
@@ -131,8 +121,7 @@ async def seed_organizations(session):
             # Check if the Organization already exists based on organization_id
             exists = await session.execute(
                 select(Organization).where(
-                    Organization.organization_id
-                    == organization_data["organization_id"],
+                    Organization.name == organization_data["name"],
                 )
             )
             if not exists.scalars().first():

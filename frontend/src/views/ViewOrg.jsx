@@ -13,17 +13,15 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Paper } from '@mui/material'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useQuery } from 'react-query'
+import { useApiService } from '@/services/useApiService'
+import { constructAddress } from '@/utils/constructAddress'
+import Loading from '@/components/Loading'
 
 const dummy = {
-  orgData: {
-    legalName: 'Fuel Supplier Canada Ltd.',
-    operatingName: 'Green Oil',
-    telephone: '(250) 123-4567',
-    email: 'greenoil@fscl.ca',
-    serviceAddress: '4567 Hughes Road, Vancouver BC CA, C8C 1C1',
-    bcAddress: '1234 Linden Street, Vancouver BC CA, V8V 1V1',
-    registered: 'Yes — A registered organization is able to transfer credits.'
+  user: {
+    isGov: false
   },
   tableData: {
     active: [
@@ -91,9 +89,9 @@ const dummy = {
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
-const OrgDetailType = ({ bold, children }) => {
+const OrgDetailTypography = ({ bold, children, ...rest }) => {
   return (
-    <BCTypography fontSize={16} fontWeight={bold && 'bold'}>
+    <BCTypography fontSize={16} fontWeight={bold && 'bold'} {...rest}>
       {children}
     </BCTypography>
   )
@@ -102,6 +100,18 @@ const OrgDetailType = ({ bold, children }) => {
 export const ViewOrg = () => {
   const [showActive, setShowActive] = useState(true)
   const navigate = useNavigate()
+  const { orgID } = useParams()
+  const client = useApiService()
+
+  const { data: orgData, isLoading } = useQuery({
+    queryKey: ['organization'],
+    queryFn: async () => (await client.get(`/organizations/${orgID}`)).data
+  })
+
+  if (isLoading) {
+    return <Loading />
+  }
+
   return (
     <Paper
       elevation={5}
@@ -113,44 +123,64 @@ export const ViewOrg = () => {
       }}
     >
       <BCTypography variant="h3">
-        Organization{' '}
+        {orgData.name}{' '}
         <span>
           <Pencil />
         </span>
       </BCTypography>
-      <BCBox p={3} bgColor={colors.background.grey} display="flex" gap={10}>
-        <BCBox
-          display="grid"
-          gridTemplateColumns="auto auto"
-          gap={1}
-          alignItems="end"
-        >
-          <OrgDetailType bold>Legal name of organization:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.legalName}</OrgDetailType>
-          <OrgDetailType bold>Operating name of organization:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.operatingName}</OrgDetailType>
-          <OrgDetailType bold>Telephone:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.telephone}</OrgDetailType>
-          <OrgDetailType bold>Email:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.email}</OrgDetailType>
+      <BCBox p={3} bgColor={colors.background.grey}>
+        <BCBox display="flex" gap={10}>
+          <BCBox
+            display="grid"
+            gridTemplateColumns="auto auto"
+            gap={1}
+            alignItems="end"
+          >
+            <OrgDetailTypography bold>
+              Legal name of organization:
+            </OrgDetailTypography>
+            <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
+            <OrgDetailTypography bold>
+              Operating name of organization:
+            </OrgDetailTypography>
+            <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
+            <OrgDetailTypography bold>Telephone:</OrgDetailTypography>
+            <OrgDetailTypography>{orgData.phone}</OrgDetailTypography>
+            <OrgDetailTypography bold>Email:</OrgDetailTypography>
+            <OrgDetailTypography>{orgData.email}</OrgDetailTypography>
+          </BCBox>
+          <BCBox
+            display="grid"
+            gridTemplateColumns="auto auto"
+            gap={1}
+            alignItems="end"
+          >
+            <OrgDetailTypography bold>
+              Address for service (postal address):
+            </OrgDetailTypography>
+            <OrgDetailTypography>
+              {constructAddress(orgData.org_address)}
+            </OrgDetailTypography>
+            <OrgDetailTypography bold>
+              Address in B.C. (at which records are maintained):
+            </OrgDetailTypography>
+            <OrgDetailTypography>
+              {constructAddress(orgData.org_attorney_address)}
+            </OrgDetailTypography>
+            <OrgDetailTypography bold>
+              Registered for credit transfers:
+            </OrgDetailTypography>
+            <OrgDetailTypography>
+              {orgData.org_status.status}
+            </OrgDetailTypography>
+          </BCBox>
         </BCBox>
-        <BCBox
-          display="grid"
-          gridTemplateColumns="auto auto"
-          gap={1}
-          alignItems="end"
-        >
-          <OrgDetailType bold>
-            Address for service (postal address):
-          </OrgDetailType>
-          <OrgDetailType>{dummy.orgData.serviceAddress}</OrgDetailType>
-          <OrgDetailType bold>
-            Address in B.C. (at which records are maintained):
-          </OrgDetailType>
-          <OrgDetailType>{dummy.orgData.bcAddress}</OrgDetailType>
-          <OrgDetailType bold>Registered for credit transfers:</OrgDetailType>
-          <OrgDetailType>{dummy.orgData.registered}</OrgDetailType>
-        </BCBox>
+        {!dummy.user.isGov && (
+          <OrgDetailTypography mt={1}>
+            Email <a href="mailto:lcfs@gov.bc.ca">lcfs@gov.bc.ca</a> to update
+            address information.
+          </OrgDetailTypography>
+        )}
       </BCBox>
       <BCBox
         sx={{
@@ -213,7 +243,6 @@ export const ViewOrg = () => {
           </BCButton>
         )}
       </BCBox>
-      asd
       <AgGridReact
         className="ag-theme-alpine"
         animateRows="true"
