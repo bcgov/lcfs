@@ -1,23 +1,26 @@
 import colors from '@/themes/base/colors'
 import typography from '@/themes/base/typography'
 
-const { text, info } = colors
+const { text, primary } = colors
 const { size } = typography
 
 const inputLabel = {
   styleOverrides: {
     root: {
-      fontSize: size.sm,
+      fontSize: size.md,
       color: text.main,
-      lineHeight: 0.9,
+      lineHeight: 1.2,
 
       '&.Mui-focused': {
-        color: info.main
+        color: primary.main,
+        transform: 'translate(12px, -32px) scale(1)',
+        lineHeight: '1.5'
       },
 
       '&.MuiInputLabel-shrink': {
         lineHeight: 1.5,
-        fontSize: size.md,
+        fontWeight: 600,
+        transform: 'translate(12px, -32px) scale(1)',
 
         '~ .MuiInputBase-root .MuiOutlinedInput-notchedOutline legend': {
           fontSize: '0.85em'

@@ -10,15 +10,16 @@
       "request": "launch",
       "cwd": "${workspaceFolder}/backend",
       "module": "poetry",
-      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "python": "${workspaceFolder}/backend/venv/bin/python3",
       "args": [
         "run",
-        "python",
+        "python3",
         "-m",
         "uvicorn",
         "lcfs.web.application:get_app",
         "--port",
-        "8000"
+        "8000",
+        "--reload"
       ]
     },
     {

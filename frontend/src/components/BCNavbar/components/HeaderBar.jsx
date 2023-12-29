@@ -5,7 +5,7 @@ import { Icon, Toolbar } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 // Images & Icons
-import logoDark from '@/assets/images/gov3_bc_logo.png'
+import logoDark from '@/assets/images/logo-banner.svg'
 import logoLight from '@/assets/images/BCID_H_rgb_pos.png'
 
 const HeaderBar = (props) => {

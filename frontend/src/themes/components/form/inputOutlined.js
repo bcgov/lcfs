@@ -4,7 +4,8 @@ import typography from '@/themes/base/typography'
 
 import { pxToRem } from '@/themes/utils'
 
-const { inputBorderColor, info, grey, transparent, background } = colors
+const { inputBorderColor, primary, error, grey, transparent, background } =
+  colors
 const { borderRadius } = borders
 const { size } = typography
 
@@ -12,7 +13,7 @@ const inputOutlined = {
   styleOverrides: {
     root: {
       backgroundColor: transparent.main,
-      fontSize: size.sm,
+      fontSize: size.lg,
       borderRadius: borderRadius.md,
       overflow: 'hidden',
 
@@ -22,7 +23,13 @@ const inputOutlined = {
 
       '&.Mui-focused': {
         '& .MuiOutlinedInput-notchedOutline': {
-          borderColor: info.main
+          borderColor: primary.main
+        }
+      },
+
+      '&.Mui-error': {
+        '& .MuiOutlinedInput-notchedOutline': {
+          borderColor: error.main
         }
       }
     },
