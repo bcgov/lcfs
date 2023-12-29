@@ -1,12 +1,17 @@
+import io
 from logging import getLogger
 from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from starlette.responses import Response
 
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.db import dependencies
 from lcfs.db.models import UserProfile
 from lcfs.db.models.Organization import Organization
@@ -114,3 +119,62 @@ async def get_users_for_organization(organization_id: int, db: AsyncSession = De
         return users
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@router.get("/export", response_class=StreamingResponse)
+@roles_required("Government")
+async def export(request: Request, db: AsyncSession = Depends(get_async_db)):
+    """
+    Endpoint to export information of all organization
+    """
+    # The export_format can be 'xls', 'xlsx', or 'csv'
+    export_format="xls"
+    media_type = 'application/vnd.ms-excel'
+
+    try:
+        # Fetch all organizations from the database
+        result = await db.execute(
+            select(Organization).options(
+                    joinedload(Organization.org_status)
+                )
+            .order_by(Organization.organization_id)
+        )
+        organizations = result.scalars().all()
+
+        # Prepare data for the spreadsheet
+        data = [
+            [
+                organization.organization_id,
+                organization.name,
+                # TODO: Update this section with actual data retrieval
+                # once the Compliance Units models are implemented.
+                123456,
+                organization.org_status.status.value,
+            ] for organization in organizations
+        ]
+
+        # Create a spreadsheet
+        builder = SpreadsheetBuilder(file_format = export_format)
+
+        builder.add_sheet(
+            sheet_name="Organizations",
+            columns=["ID", "Organization Name", "Compliance Units", "Registered"],
+            rows=data,
+            styles={'bold_headers': True, 'column_widths': [10, 35, 20, 15]}
+        )
+
+        file_content = builder.build_spreadsheet()
+
+        # Get the current date in YYYY-MM-DD format
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
+
+    except Exception as e:
+        logger.error("Internal Server Error: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error"
+        ) from e

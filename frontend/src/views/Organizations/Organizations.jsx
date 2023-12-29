@@ -1,14 +1,25 @@
-// Icons
+import React, { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+
+// Material UI
+import { Stack, CircularProgress } from '@mui/material'
+
+// FontAwesome Icons
+import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
+// Services
+import { useApiService } from '@/services/useApiService'
+
+// Components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
-import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack } from '@mui/material'
-import { useLocation, useNavigate } from 'react-router-dom'
 import OrganizationTable from './components/OrganizationTable'
+
+// Constants
+import { ROUTES } from '@/constants/routes'
 
 // Data for demo purposes only. Do not use in production.
 const demoData = [
@@ -38,11 +49,53 @@ const demoData = [
   }
 ]
 
+const DownloadButton = ({
+  onDownload,
+  isDownloading,
+  label,
+  downloadLabel,
+  dataTest
+}) => (
+  <BCButton
+    data-test={dataTest}
+    variant="outlined"
+    size="small"
+    color="primary"
+    sx={{ whiteSpace: 'nowrap' }}
+    startIcon={
+      isDownloading ? (
+        <CircularProgress size={24} />
+      ) : (
+        <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
+      )
+    }
+    onClick={onDownload}
+    disabled={isDownloading}
+  >
+    <BCTypography variant="subtitle2">
+      {isDownloading ? downloadLabel : label}
+    </BCTypography>
+  </BCButton>
+)
+
 export const Organizations = () => {
+  const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-
+  const apiService = useApiService()
   const { message, severity } = location.state || {}
+
+  const handleDownloadOrgs = async () => {
+    setIsDownloadingOrgs(true)
+    try {
+      await apiService.download('/organizations/export/')
+      setIsDownloadingOrgs(false)
+    } catch (error) {
+      console.error('Error downloading organization information:', error)
+      setIsDownloadingOrgs(false)
+    }
+  }
+
   return (
     <>
       <div>
@@ -71,20 +124,13 @@ export const Organizations = () => {
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>
-        <BCButton
-          variant="outlined"
-          size="small"
-          color="primary"
-          sx={{ whiteSpace: 'nowrap' }}
-          startIcon={
-            <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
-          }
-          onClick={() => {}}
-        >
-          <BCTypography variant="subtitle2">
-            Download Organization Information
-          </BCTypography>
-        </BCButton>
+        <DownloadButton
+          onDownload={handleDownloadOrgs}
+          isDownloading={isDownloadingOrgs}
+          label="Download Organization Information"
+          downloadLabel="Downloading Organization Information..."
+          dataTest="download-org-button"
+        />
         <BCButton
           variant="outlined"
           size="small"
