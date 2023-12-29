@@ -24,6 +24,7 @@ import { ViewOrg } from './views/ViewOrg'
 import { ViewReport } from './views/ViewReport'
 import { ViewTransaction } from './views/ViewTransaction'
 import { ViewUser } from './views/ViewUser'
+import ContactUs from './components/ContactUs'
 
 const router = createBrowserRouter([
   {
@@ -169,6 +170,11 @@ const router = createBrowserRouter([
     path: ROUTES.APIDOCS,
     element: <ApiDocs />,
     handle: { crumb: () => 'API Docs' }
+  },
+  {
+    path: ROUTES.CONTACT_US,
+    element: <ContactUs />,
+    handle: { crumb: () => 'Contact Us' }
   },
   {
     path: '*',
