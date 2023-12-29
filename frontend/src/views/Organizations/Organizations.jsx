@@ -68,7 +68,7 @@ export const Organizations = () => {
   const handleDownloadOrgs = async () => {
     setIsDownloadingOrgs(true)
     try {
-      await apiService.download('/organizations/export/')
+      await apiService.download('/organizations/export')
       setIsDownloadingOrgs(false)
     } catch (error) {
       console.error('Error downloading organization information:', error)
