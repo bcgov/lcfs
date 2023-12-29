@@ -62,8 +62,6 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@v3
-        with:
-          ref: workflow-0.2.0
 
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.2
@@ -76,7 +74,8 @@ jobs:
       - name: Build LCFS Backend
         run: |
           cd openshift/templates
-          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          cat backend/lcfs/start.sh
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=workflow-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
           oc cancel-build bc/lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
           oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
@@ -84,7 +83,7 @@ jobs:
       - name: Build LCFS Frontend
         run: |
           cd openshift/templates
-          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=workflow-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
           oc cancel-build bc/lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
           oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
