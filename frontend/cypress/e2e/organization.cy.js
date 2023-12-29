@@ -24,7 +24,7 @@ describe('Organization Information Download', () => {
     })
 
     // Intercept the download request and respond with the mock blob
-    cy.intercept('GET', '/api/organizations/export/', mockBlob).as(
+    cy.intercept('GET', '/api/organizations/export', mockBlob).as(
       'fileDownload'
     )
 
