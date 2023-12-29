@@ -6,11 +6,11 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { useScrollTrigger } from '@mui/material'
 
-import { useUserStore } from '@/stores/useUserStore'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PropTypes } from 'prop-types'
 
 export const Logout = (props) => {
-  const user = useUserStore((state) => state.user)
+  const { data: currentUser } = useCurrentUser()
   const { keycloak } = useKeycloak()
   const isScrolled = useScrollTrigger()
 
@@ -22,13 +22,13 @@ export const Logout = (props) => {
         justifyContent="space-around"
         mr={2}
       >
-        {user?.display_name && (
+        {currentUser?.display_name && (
           <BCTypography
             variant="subtitle1"
             color={isScrolled ? 'primary' : 'light'}
             mx={1}
           >
-            {user?.display_name}
+            {currentUser?.display_name}
           </BCTypography>
         )}
         <BCButton

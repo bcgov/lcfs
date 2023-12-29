@@ -1,4 +1,5 @@
 import colors from './colors'
+import { rgba, pxToRem } from '../utils'
 import BCSansRegularTTF from '@/assets/fonts/BCSans-Regular_2f.woff2'
 import BCSansBoldTTF from '@/assets/fonts/BCSans-Bold_2f.woff2'
 import BCSansBoldItalicTTF from '@/assets/fonts/BCSans-BoldItalic_2f.woff2'
@@ -6,8 +7,9 @@ import BCSansItalicTTF from '@/assets/fonts/BCSans-Italic_2f.woff2'
 import BCSansLightTTF from '@/assets/fonts/BCSans-Light_2f.woff2'
 import BCSansLightItalicTTF from '@/assets/fonts/BCSans-LightItalic_2f.woff2'
 import bceidImg from '@/assets/images/bceid.png'
+import loadingImg from '@/assets/images/logo_loading.svg'
 
-const { info, link, text, background, primary, light } = colors
+const { info, link, background, primary, light, dark } = colors
 
 const bcSansRegular = {
   fontFamily: 'BCSans',
@@ -74,16 +76,21 @@ const globals = {
     color: `${info.main} !important`
   },
   '.ag-theme-alpine': {
-    '--ag-foreground-color': `${text.primary}`,
-    // '--ag-background-color': `${background.default}`,
-    // '--ag-header-foreground-color': `${background.nav}`,
-    // '--ag-header-background-color': `${primary.nav}`,
-    '--ag-odd-row-background-color': 'rgb(0, 0, 0, 0.08)',
-    // '--ag-header-column-resize-handle-color': 'rgb(126, 46, 132)',
-
-    '--ag-font-size': '17px',
+    '--ag-odd-row-background-color': rgba(dark.main, 0.1),
+    '--ag-font-size': pxToRem(16),
+    '--ag-color': rgba(dark.main, 0.9),
     '--ag-font-family':
-      "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'"
+      "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
+    '--ag-row-hover-color': rgba(background.secondary, 1)
+  },
+  '.ag-row-hover': {
+    cursor: 'pointer'
+  },
+  '.ag-overlay-loading-center-box': {
+    height: 100,
+    width: 150,
+    background: `url(${loadingImg}) center / contain no-repeat`,
+    margin: '0 auto'
   },
   '.bceid-name': {
     textIndent: '-9999px',

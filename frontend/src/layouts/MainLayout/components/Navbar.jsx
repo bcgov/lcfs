@@ -3,7 +3,7 @@ import BCNavbar from '@/components/BCNavbar'
 import { HeaderComponent } from './HeaderComponent'
 import { Logout } from './Logout'
 import { ROUTES } from '@/constants/routes'
-import { useUserStore } from '@/stores/useUserStore'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // Nav Links
 const routes = [
@@ -15,13 +15,13 @@ const routes = [
 ]
 
 export const Navbar = () => {
-  const user = useUserStore((state) => state.user)
+  const { data: currentUser } = useCurrentUser()
 
   return (
     <BCNavbar
       title="Low Carbon Fuel Standard"
       balance="50,000"
-      organizationName={user?.organization?.name}
+      organizationName={currentUser?.organization?.name}
       routes={routes}
       beta={true}
       headerRightPart={<HeaderComponent key="headerRight" />}

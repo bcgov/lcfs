@@ -4,3 +4,15 @@ export const numberFormatter = (params) => {
   }
   return params.value
 }
+
+export const phoneNumberFormatter = (params) => {
+  const phoneNumber = params.value
+  if (!phoneNumber) {
+    return '' // Return empty string if the value is null or undefined
+  }
+  // Format the phone number as needed (e.g., (123) 456-7890)
+  return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
+    3,
+    6
+  )}-${phoneNumber.slice(6)}`
+}

@@ -1,53 +1,21 @@
-import React, { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-
-// Material UI
-import { Stack, CircularProgress } from '@mui/material'
-
-// FontAwesome Icons
-import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-
-// Services
-import { useApiService } from '@/services/useApiService'
-
-// Components
+// mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import OrganizationTable from './components/OrganizationTable'
-
-// Constants
+import { Stack, CircularProgress } from '@mui/material'
+// Icons
+import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+// Internal components
+import { coloumnDefinition, defaultColumnOptions } from './components/columnDef'
+// react components
+import { useState, useCallback, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
-
-// Data for demo purposes only. Do not use in production.
-const demoData = [
-  {
-    organizationName: 'TFRS Biz Test',
-    complianceUnits: 10000,
-    reserve: 800,
-    registered: true
-  },
-  {
-    organizationName: 'Fuel Supplier Canada Ltd.',
-    complianceUnits: 100800,
-    reserve: 1100,
-    registered: true
-  },
-  {
-    organizationName: 'Strata Vis 555',
-    complianceUnits: 17,
-    reserve: 0,
-    registered: false
-  },
-  {
-    organizationName: 'School District 99',
-    complianceUnits: 100,
-    reserve: 50,
-    registered: true
-  }
-]
+import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+// Services
+import { useApiService } from '@/services/useApiService'
 
 const DownloadButton = ({
   onDownload,
@@ -79,11 +47,23 @@ const DownloadButton = ({
 )
 
 export const Organizations = () => {
-  const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
+  const gridRef = useRef()
+  const [gridKey, setGridKey] = useState(`organizations-grid-${Math.random()}`)
+  const handleGridKey = useCallback(() => {
+    setGridKey(`users-grid-${Math.random()}`)
+  }, [])
+  const gridOptions = {
+    overlayNoRowsTemplate: 'No users found'
+  }
+  const getRowId = useCallback((params) => {
+    return params.data.organization_id
+  }, [])
+
   const navigate = useNavigate()
   const location = useLocation()
   const apiService = useApiService()
   const { message, severity } = location.state || {}
+  const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
 
   const handleDownloadOrgs = async () => {
     setIsDownloadingOrgs(true)
@@ -151,7 +131,17 @@ export const Organizations = () => {
         className="ag-theme-alpine"
         style={{ height: '100%', width: '100%' }}
       >
-        <OrganizationTable rows={demoData} />
+        {/* <OrganizationTable rows={demoData} /> */}
+        <BCDataGridServer
+          gridRef={gridRef}
+          apiEndpoint={'organizations/list'}
+          defaultColDef={defaultColumnOptions}
+          columnDefs={coloumnDefinition}
+          gridKey={gridKey}
+          getRowId={getRowId}
+          gridOptions={gridOptions}
+          handleGridKey={handleGridKey}
+        />
       </BCBox>
     </>
   )

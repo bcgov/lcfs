@@ -1,12 +1,11 @@
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
 import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
 import { AddEditUser } from './views/AddEditUser'
 import { AddFuelCode } from './views/AddFuelCode'
 import { AddOrganization } from './views/AddOrganization'
 import { AddTransaction } from './views/AddTransaction'
-import { Admin } from './views/Admin'
-import { AdminUsers } from './views/AdminUsers'
+import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
 import { EditOrg } from './views/EditOrg'
@@ -25,6 +24,7 @@ import { ViewOrg } from './views/ViewOrg'
 import { ViewReport } from './views/ViewReport'
 import { ViewTransaction } from './views/ViewTransaction'
 import { ViewUser } from './views/ViewUser'
+import ContactUs from './components/ContactUs'
 
 const router = createBrowserRouter([
   {
@@ -122,11 +122,15 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ADMIN,
-        element: <Admin />
+        element: <Navigate to={ROUTES.ADMIN_USERS} replace />
       },
       {
         path: ROUTES.ADMIN_USERS,
-        element: <AdminUsers />
+        element: <AdminMenu tabIndex={0} />
+      },
+      {
+        path: ROUTES.ADMIN_ROLES,
+        element: <AdminMenu tabIndex={1} />
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,
@@ -166,6 +170,11 @@ const router = createBrowserRouter([
     path: ROUTES.APIDOCS,
     element: <ApiDocs />,
     handle: { crumb: () => 'API Docs' }
+  },
+  {
+    path: ROUTES.CONTACT_US,
+    element: <ContactUs />,
+    handle: { crumb: () => 'Contact Us' }
   },
   {
     path: '*',

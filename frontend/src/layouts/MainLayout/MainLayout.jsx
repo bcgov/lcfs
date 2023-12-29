@@ -78,7 +78,7 @@ export const MainLayout = () => {
             sx={{
               padding: '1rem',
               position: 'relative',
-              minHeight: 'calc(100vh - 16rem)'
+              minHeight: 'calc(100vh - 13rem)'
             }}
           >
             <Outlet />
