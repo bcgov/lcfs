@@ -17,13 +17,13 @@ export default defineConfig({
   e2e: {
     // Timeouts
     defaultCommandTimeout: 20000, // Time in milliseconds
-    pageLoadTimeout: 40000, // Time in milliseconds
+    pageLoadTimeout: 20000, // Time in milliseconds
 
     // Screenshots for failed tests
     screenshotOnRunFailure: true,
 
     // Video recording
-    video: true,
+    video: false,
 
     // Viewport dimensions
     viewportWidth: 1280,

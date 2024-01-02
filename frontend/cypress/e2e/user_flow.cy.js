@@ -39,11 +39,19 @@ describe('User Login Test Suite', () => {
   })
 
   describe('BCeID Login Flow', () => {
+    it('failes login with wrong BCeID user credentials', () => {
+      cy.login('bceid', 'wrong_username', 'wrong_password')
+      cy.getByDataTest('logout-button').should('not.be.visible')
+    })
+
     it('completes login with BCeID user credentials', () => {
       cy.login(
         'bceid',
         Cypress.env('BCEID_TEST_USER'),
         Cypress.env('BCEID_TEST_PASS')
+      )
+      cy.contains('No User with that configuration exists.').should(
+        'be.visible'
       )
     })
 
