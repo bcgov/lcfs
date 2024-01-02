@@ -3,7 +3,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 export const withRole = (WrappedComponent, allowedRoles) => {
   const WithRole = (props) => {
     const { data: currentUser } = useCurrentUser()
-    const userRoles = currentUser?.user_roles?.map((role) => role.name) || []
+    const userRoles = currentUser?.roles?.map((role) => role.name) || []
 
     const isAuthorized = allowedRoles.some((role) => userRoles.includes(role))
 
