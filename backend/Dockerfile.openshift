@@ -15,7 +15,7 @@ COPY pyproject.toml poetry.lock /app/
 WORKDIR /app
 
 # Set PYTHONPATH to include the lcfs directory
-ENV PYTHONPATH="${PYTHONPATH}:/app"
+ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
 
 # Installing requirements
 RUN poetry install --only main
