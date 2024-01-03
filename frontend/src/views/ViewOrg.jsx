@@ -1,9 +1,12 @@
 import Pencil from '@/assets/icons/pencil.svg?react'
-import colors from '@/themes/base/colors.js'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
+import Loading from '@/components/Loading'
 import { ROUTES } from '@/constants/routes'
+import { useApiService } from '@/services/useApiService'
+import colors from '@/themes/base/colors.js'
+import { constructAddress } from '@/utils/constructAddress'
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
 import { ModuleRegistry } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
@@ -12,79 +15,117 @@ import '@ag-grid-community/styles/ag-theme-alpine.css'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Paper } from '@mui/material'
+import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { useApiService } from '@/services/useApiService'
-import { constructAddress } from '@/utils/constructAddress'
-import Loading from '@/components/Loading'
 
 const dummy = {
   user: {
     isGov: false
   },
-  tableData: {
-    active: [
-      {
-        userName: 'Hank Hill',
-        roles: 'Manage Users, Transfer, Compliance Reporting',
-        email: 'hhill@fscl.ca',
-        phone: '(778) 123-0987',
-        active: true
-      },
-      {
-        userName: 'Dale Bug',
-        roles: 'Signing Authority',
-        email: 'dbug@fscl.ca',
-        phone: '(778) 123-0988',
-        active: true
-      },
-      {
-        userName: 'Gavin MacAuditor',
-        roles: 'Read Only',
-        email: 'gmaca@fscl.ca',
-        phone: '(778) 123-0989',
-        active: true
-      },
-      {
-        userName: 'Beau Lawyerson',
-        roles: 'Read Only',
-        email: 'blaw@fscl.ca',
-        phone: '(778) 123-0980',
-        active: true
-      }
-    ],
-    inactive: [
-      {
-        userName: 'Dale Bug2',
-        roles: 'Signing Authority',
-        email: 'dbug@fscl.ca',
-        phone: '(778) 123-0988',
-        active: false
-      },
-      {
-        userName: 'Hank Hill',
-        roles: 'Manage Users, Transfer, Compliance Reporting',
-        email: 'hhill@fscl.ca',
-        phone: '(778) 123-0987',
-        active: false
-      },
-      {
-        userName: 'Beau Lawyerson',
-        roles: 'Read Only',
-        email: 'blaw@fscl.ca',
-        phone: '(778) 123-0980',
-        active: false
-      },
-      {
-        userName: 'Gavin MacAuditor',
-        roles: 'Read Only',
-        email: 'gmaca@fscl.ca',
-        phone: '(778) 123-0989',
-        active: false
-      }
-    ]
-  }
+
+  users: [
+    {
+      display_name: 'Hank Hill',
+      roles: [
+        {
+          name: 'Manage Users'
+        },
+        {
+          name: 'Transfers'
+        },
+        {
+          name: 'Compliance Reporting'
+        }
+      ],
+      email: 'hhill@fscl.ca',
+      phone: '(778) 123-0987',
+      is_active: true
+    },
+    {
+      display_name: 'Dale Bug',
+      roles: [
+        {
+          name: 'Signing Authority'
+        }
+      ],
+      email: 'dbug@fscl.ca',
+      phone: '(778) 123-0988',
+      is_active: true
+    },
+    {
+      display_name: 'Gavin MacAuditor',
+      roles: [
+        {
+          name: 'Read Only'
+        }
+      ],
+      email: 'gmaca@fscl.ca',
+      phone: '(778) 123-0989',
+      is_active: true
+    },
+    {
+      display_name: 'Beau Lawyerson',
+      roles: [
+        {
+          name: 'Read Only'
+        }
+      ],
+      email: 'blaw@fscl.ca',
+      phone: '(778) 123-0980',
+      is_active: true
+    },
+    {
+      display_name: 'Dale Bug2',
+      roles: [
+        {
+          name: 'Signing Authority'
+        }
+      ],
+      email: 'dbug@fscl.ca',
+      phone: '(778) 123-0988',
+      is_active: false
+    },
+    {
+      display_name: 'Hank Hill',
+      roles: [
+        {
+          name: 'Manage Users'
+        },
+        {
+          name: 'Transfers'
+        },
+        {
+          name: 'Compliance Reporting'
+        }
+      ],
+      email: 'hhill@fscl.ca',
+      phone: '(778) 123-0987',
+      is_active: false
+    },
+    {
+      display_name: 'Beau Lawyerson',
+      roles: [
+        {
+          name: 'Read Only'
+        }
+      ],
+      email: 'blaw@fscl.ca',
+      phone: '(778) 123-0980',
+      is_active: false
+    },
+    {
+      display_name: 'Gavin MacAuditor',
+      roles: [
+        {
+          name: 'Read Only'
+        }
+      ],
+      email: 'gmaca@fscl.ca',
+      phone: '(778) 123-0989',
+      is_active: false
+    }
+  ]
 }
 
 ModuleRegistry.registerModules([ClientSideRowModelModule])
@@ -247,10 +288,12 @@ export const ViewOrg = () => {
         className="ag-theme-alpine"
         animateRows="true"
         columnDefs={[
-          { field: 'userName', headerName: 'User Name' },
+          { field: 'display_name', headerName: 'User Name' },
           {
-            field: 'roles',
-            headerName: 'Roles'
+            valueFormatter: (params) =>
+              params.data?.roles.map((role) => role.name).join(', '),
+            headerName: 'Roles',
+            hide: !showActive
           },
           {
             field: 'email',
@@ -264,7 +307,7 @@ export const ViewOrg = () => {
           filter: true,
           floatingFilter: true
         }}
-        rowData={dummy.tableData[showActive ? 'active' : 'inactive']}
+        rowData={dummy.users.filter((user) => user.is_active === showActive)}
         rowSelection="multiple"
         suppressRowClickSelection="true"
         pagination
