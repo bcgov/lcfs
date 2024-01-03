@@ -30,7 +30,7 @@ pyjwt = "^2.8.0"
 debugpy = "^1.8.0"
 cryptography = "^41.0.7"
 faker = "^21.0.0"
-
+httpx = "^0.23.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.1"
@@ -45,7 +45,6 @@ pytest-cov = "^4.0.0"
 anyio = "^3.6.2"
 pytest-env = "^0.8.1"
 fakeredis = "^2.5.0"
-httpx = "^0.23.3"
 
 [tool.isort]
 profile = "black"
