@@ -8,7 +8,7 @@ import { Stack } from '@mui/material'
 import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
-import { coloumnDefinition, defaultColumnOptions } from './components/columnDef'
+import { organizationsColDefs } from './components/schema'
 // react components
 import { useState, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -22,11 +22,17 @@ export const Organizations = () => {
     setGridKey(`users-grid-${Math.random()}`)
   }, [])
   const gridOptions = {
-    overlayNoRowsTemplate: 'No users found'
+    overlayNoRowsTemplate: 'No organizations found'
   }
   const getRowId = useCallback((params) => {
     return params.data.organization_id
   }, [])
+
+  const defaultSortModel = [{ field: 'name', direction: 'asc' }]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleRowClicked = useCallback((event, params) => {
+    console.log(params.data)
+  })
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -98,12 +104,14 @@ export const Organizations = () => {
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'organizations/list'}
-          defaultColDef={defaultColumnOptions}
-          columnDefs={coloumnDefinition}
+          apiData={'organizations'}
+          columnDefs={organizationsColDefs}
           gridKey={gridKey}
           getRowId={getRowId}
+          defaultSortModel={defaultSortModel}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
+          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </>

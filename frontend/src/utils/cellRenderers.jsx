@@ -3,47 +3,71 @@ import BCBox from '@/components/BCBox'
 import { Stack } from '@mui/material'
 
 export const StatusRenderer = (props) => {
-  const cellValue = props.valueFormatted ? props.valueFormatted : props.value
-
-  return cellValue === 'true' ? (
-    <BCBox ml={2}>
+  return props.data.is_active ? (
+    <BCBox mt={1}>
       <BCBadge
         badgeContent="active"
         color="success"
         variant="gradient"
         size="md"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          '& .MuiBadge-badge': { fontSize: '0.625rem' }
+        }}
       />
     </BCBox>
   ) : (
-    <BCBox ml={1.5}>
+    <BCBox mt={1}>
       <BCBadge
         badgeContent="inactive"
-        color="dark"
+        color="smoky"
         variant="gradient"
         size="md"
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          '& .MuiBadge-badge': { fontSize: '0.625rem' }
+        }}
       />
     </BCBox>
   )
 }
 
 export const GovernmentRoleRenderer = (props) => {
-  const cellValue = props.valueFormatted ? props.valueFormatted : props.value
-  return cellValue === 'true' ? (
+  return (
     <BCBox ml={2}>
       <BCBadge
-        badgeContent="Government"
-        color="primary"
+        badgeContent={
+          props.data.is_government_role ? 'Government' : 'Fuel Supplier'
+        }
+        color={props.data.is_government_role ? 'primary' : 'secondary'}
         variant="contained"
         size="md"
+        sx={{ '& .MuiBadge-badge': { fontSize: '0.625rem' } }}
       />
     </BCBox>
-  ) : (
-    <BCBox ml={2}>
+  )
+}
+
+export const OrgStatusRenderer = (props) => {
+  const statusArr = ['Registered', 'Unregistered', 'Suspended', 'Canceled']
+  const statusColorArr = ['success', 'smoky', 'warning', 'error']
+  const statusIndex = statusArr.indexOf(props.data.org_status.status)
+  return (
+    <BCBox
+      m={1}
+      sx={{
+        display: 'flex',
+        justifyContent: 'center'
+      }}
+    >
       <BCBadge
-        badgeContent="Fuel Supplier"
-        color="secondary"
+        badgeContent={statusArr[statusIndex]}
+        color={statusColorArr[statusIndex]}
         variant="contained"
-        size="md"
+        size="lg"
+        sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
       />
     </BCBox>
   )
@@ -63,7 +87,7 @@ export const RoleRenderer = (props) => {
       {props.data.roles.map((role) => (
         <BCBadge
           key={role.role_id}
-          sx={{ '& .MuiBadge-badge': { fontSize: '0.625rem' } }}
+          sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
           badgeContent={role.name}
           color={role.is_government_role ? 'primary' : 'secondary'}
           variant="outlined"

@@ -1,11 +1,12 @@
 from copy import copy
-from typing import Optional, List
+from typing import Optional, List, Union
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, root_validator
 
 from lcfs.web.api.organization.schema import OrganizationSummarySchema
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.base import PaginationResponseScehema
+from pydantic import root_validator
 
 """
 Base - all shared attributes of a resource
@@ -28,12 +29,11 @@ class UserCreate(BaseModel):
     last_name: str
     is_active: bool
     organization_id: Optional[int] = None
-    organization: OrganizationSummarySchema
-    roles: List[RoleSchema]
+    organization: OrganizationSummarySchema = Field(exclude=True)
+    roles: List[RoleSchema] = Field(exclude=True)
 
     class Config:
         from_attributes = True
-        fields = {"organization": {"exclude": True}, "roles": {"exclude": True}}
 
 
 class UserBase(BaseModel):
@@ -47,7 +47,7 @@ class UserBase(BaseModel):
     phone: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    is_active: bool = True
+    is_active: Union[bool, str]
     mobile_phone: Optional[str] = None
     organization: Optional[OrganizationSummarySchema] = None
     roles: Optional[List[RoleSchema]] = []
@@ -59,7 +59,7 @@ class UserBase(BaseModel):
     def model_validate(cls, user_profile):
         roles = [role.to_dict() for role in user_profile.user_roles]
         return cls(roles=roles, **user_profile.__dict__)
-
+    
 
 class Users(BaseModel):
     pagination: PaginationResponseScehema

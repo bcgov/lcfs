@@ -65,7 +65,8 @@ BCBadge.propTypes = {
     'warning',
     'error',
     'light',
-    'dark'
+    'dark',
+    'smoky'
   ]),
   variant: PropTypes.oneOf(['gradient', 'contained', 'outlined']),
   size: PropTypes.oneOf(['xs', 'sm', 'md', 'lg']),

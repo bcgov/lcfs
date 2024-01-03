@@ -1,7 +1,8 @@
 from logging import getLogger
+import math
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
@@ -12,19 +13,34 @@ from starlette.responses import Response
 from lcfs.db import dependencies
 from lcfs.db.models import UserProfile
 from lcfs.db.models.Organization import Organization
+from lcfs.db.models.OrganizationStatus import OrganizationStatus
+from lcfs.db.models.OrganizationType import OrganizationType
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
+from lcfs.web.api.organization.session import OrganizationRepository
 from lcfs.web.api.organization.schema import (
     OrganizationSchema,
     OrganizationCreateSchema,
+    OrganizationStatusBaseSchema,
+    OrganizationTypeBaseSchema,
     OrganizationUpdateSchema,
     OrganizationUserSchema,
     GetOrganizationResponse,
+    Organizations,
 )
 from lcfs.web.core.decorators import roles_required
 
+
+async def startup():
+    global organization_repo
+    async for db in get_async_db():
+        organization_repo = OrganizationRepository(db)
+        break
+
+
 logger = getLogger("organization")
-router = APIRouter()
+router = APIRouter(on_startup=[startup])
 get_async_db = dependencies.get_async_db_session
 
 
@@ -138,30 +154,76 @@ async def update_organization(
         )
 
 
-@router.get("/list", response_model=list[OrganizationSchema])
+@router.post("/list", response_model=Organizations, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def list_organizations(
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
 ):
     try:
-        query = select(Organization)
-        result = await db.execute(query)
-        organizations = result.scalars().all()
+        organizations, total_count = await organization_repo.get_organizations(
+            pagination
+        )
         if not organizations:
             logger.error("Error getting organizations")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="No organizations found"
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return Organizations(
+                organizations=[],
+                pagination=PaginationResponseScehema(
+                    total=0, page=0, size=0, total_pages=0
+                ),
             )
-
-        return organizations
-    except Exception as e:
-        logger.error(f"Internal Server Error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
+        return Organizations(
+            organizations=organizations,
+            pagination=PaginationResponseScehema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
         )
+    except Exception as e:
+        logger.error(f"Error getting organizations: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Technical Error: Failed to get organizations: {str(e)}",
+        )
+
+
+@router.get(
+    "/statuses/list",
+    response_model=List[OrganizationStatusBaseSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_organization_statuses() -> List[OrganizationStatusBaseSchema]:
+    try:
+        statuses = await organization_repo.get_statuses()
+        if len(statuses) == 0:
+            raise HTTPException(
+                status_code=404, detail="No organization statuses found"
+            )
+        return statuses
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@router.get(
+    "/types/list",
+    response_model=List[OrganizationTypeBaseSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_organization_types() -> List[OrganizationStatusBaseSchema]:
+    try:
+        types = await organization_repo.get_types()
+        if len(types) == 0:
+            raise HTTPException(
+                status_code=404, detail="No organization types found"
+            )
+        return types
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.get("/{organization_id}/users/", response_model=List[OrganizationUserSchema])

@@ -1,38 +1,38 @@
 // @mui material components
-import Fade from '@mui/material/Fade'
+import Zoom from '@mui/material/Zoom'
 
 // base styles
 import colors from '../base/colors'
 import typography from '../base/typography'
 import borders from '../base/borders'
 
-import { pxToRem } from '../utils'
+import { pxToRem, rgba } from '../utils'
 
-const { black, light } = colors
+const { light, background } = colors
 const { size, fontWeightRegular } = typography
 const { borderRadius } = borders
 
 const tooltip = {
   defaultProps: {
     arrow: true,
-    TransitionComponent: Fade
+    TransitionComponent: Zoom
   },
 
   styleOverrides: {
     tooltip: {
-      maxWidth: pxToRem(200),
-      backgroundColor: black.main,
+      maxWidth: pxToRem(500),
+      backgroundColor: rgba(background.primary, 0.9),
       color: light.main,
       fontSize: size.sm,
       fontWeight: fontWeightRegular,
       textAlign: 'center',
       borderRadius: borderRadius.md,
-      opacity: 0.7,
-      padding: `${pxToRem(5)} ${pxToRem(8)} ${pxToRem(4)}`
+      padding: `${pxToRem(5)} ${pxToRem(8)} ${pxToRem(4)}`,
+      textOverflow: 'ellipsis'
     },
 
     arrow: {
-      color: black.main
+      color: background.primary
     }
   }
 }

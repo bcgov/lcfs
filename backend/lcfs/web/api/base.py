@@ -1,6 +1,8 @@
 from typing import Any, List
 from typing_extensions import deprecated
-from fastapi import Query
+from sqlalchemy import or_, and_, func, inspect, literal_column
+from sqlalchemy.orm.attributes import InstrumentedAttribute
+from fastapi import HTTPException, Query
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +15,86 @@ def row_to_dict(row, schema):
             continue
         d[field.name] = getattr(row, field.name)
     return d
+
+
+def get_field_for_filter(model, field):
+    if hasattr(model, field):
+        field = getattr(model, field)
+        if isinstance(field, InstrumentedAttribute):
+            return field.property.columns[0]
+        else:
+            return field
+    return model[field]
+
+
+def apply_text_filter_conditions(field, filter_value, filter_option):
+    text_filter_mapping = {
+        "true": field.is_(True),
+        "false": field.is_(False),
+        "contains": field.like(f"%{filter_value}%"),
+        "notContains": field.notlike(f"%{filter_value}%"),
+        "equals": field == filter_value,
+        "notEqual": field != filter_value,
+        "startsWith": field.like(f"{filter_value}%"),
+        "endsWith": field.like(f"%{filter_value}%"),
+    }
+
+    return text_filter_mapping.get(filter_option)
+
+
+def apply_number_filter_conditions(field, filter_value, filter_option):
+    number_filter_mapping = {
+        "equals": field == filter_value,
+        "notEqual": field != filter_value,
+        "greaterThan": field > filter_value,
+        "greaterThanOrEqual": field >= filter_value,
+        "lessThan": field < filter_value,
+        "lessThanOrEqual": field <= filter_value,
+        "inRange": and_(field >= filter_value[0], field <= filter_value[1]),
+    }
+
+    return number_filter_mapping.get(filter_option)
+
+
+def apply_date_filter_conditions(field, filter_value, filter_option):
+    date_filter_mapping = {
+        "equals": field == filter_value,
+        "notEqual": field != filter_value,
+        "greaterThan": field > filter_value,
+        "lessThan": field < filter_value,
+        "inRange": and_(field >= filter_value[0], field <= filter_value[1]),
+    }
+
+    return date_filter_mapping.get(filter_option)
+
+
+def apply_generic_filter_conditions(field, filter_value, filter_option):
+    generic_filter_mapping = {
+        "blank": field.is_(None),
+        "notBlank": field.isnot(None),
+        "empty": field == "",
+    }
+
+    return generic_filter_mapping.get(filter_option)
+
+
+def apply_filter_conditions(field, filter_value, filter_option, filter_type):
+    if filter_option in ["blank", "notBlank", "empty"]:
+        return apply_generic_filter_conditions(field, filter_value, filter_option)
+
+    # Handle various filter types
+    match filter_type:
+        case "text":
+            return apply_text_filter_conditions(field, filter_value, filter_option)
+        case "number":
+            return apply_number_filter_conditions(field, filter_value, filter_option)
+        case "date":
+            return apply_date_filter_conditions(field, filter_value, filter_option)
+        case _:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid filter type: {filter_type}",
+            )
 
 
 class SortOrder(BaseModel):

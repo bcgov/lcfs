@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // ag-grid components
 import { ClientSideRowModelModule } from '@ag-grid-community/client-side-row-model'
+import { CsvExportModule } from '@ag-grid-community/csv-export'
 import { ModuleRegistry } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
@@ -18,7 +19,7 @@ import DataGridLoading from '@/components/DataGridLoading'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import { BCPaginationActions } from './BCPaginationActions'
 // Register the required feature modules with the Grid
-ModuleRegistry.registerModules([ClientSideRowModelModule])
+ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
 
 const BCDataGridServer = ({
   gridOptions,
@@ -32,22 +33,9 @@ const BCDataGridServer = ({
   defaultColDef,
   getRowId,
   handleGridKey,
+  handleRowClicked,
   ...others
 }) => {
-  const defaultGridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: 'No rows found',
-    autoSizeStrategy: { type: 'fitCellContents' },
-    suppressDragLeaveHidesColumns: true,
-    suppressMovableColumns: false,
-    suppressColumnMoveAnimation: false,
-    rowSelection: 'multiple',
-    animateRows: true,
-    suppressPaginationPanel: true,
-    suppressScrollOnNewData: true,
-    // enableCellTextSelection: true, // enables the ability to copy the text from cell
-    ensureDomOrder: true
-  }))
-
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(10)
   const [sortModel, setSortModel] = useState(defaultSortModel)
@@ -72,6 +60,7 @@ const BCDataGridServer = ({
           setIsError(false)
         })
         .catch((err) => {
+          setRowData([])
           setIsError(true)
           setError(err.message)
         }),
@@ -79,17 +68,24 @@ const BCDataGridServer = ({
   )
 
   const handleChangePage = useCallback((event, newPage) => {
+    gridRef.current.api.showLoadingOverlay()
     setPage(newPage + 1)
   })
 
   const handleChangeRowsPerPage = useCallback((event) => {
+    gridRef.current.api.showLoadingOverlay()
     setSize(parseInt(event.target.value, 10))
     setPage(1)
   })
 
   const handleResetState = useCallback(() => {
+    // Resets the column filter and sorts
+    const filterInstance = gridRef.current.api.getFilterInstance('role')
+    console.log(filterInstance)
     gridRef.current.api.resetColumnState()
+    gridRef.current.api.setFilterModel(null)
   })
+
   useEffect(() => {
     fetchData()
   }, [page, size, sortModel, filterModel])
@@ -97,9 +93,7 @@ const BCDataGridServer = ({
   const loadingOverlayComponent = useMemo(() => DataGridLoading)
 
   const onGridReady = useCallback((params) => {
-    params.api.sizeColumnsToFit()
-    params.api.rowSelection = 'single'
-    gridRef?.current?.api.applyColumnState(() => {
+    params.api.applyColumnState(() => {
       let state = []
       if (defaultSortModel && defaultSortModel.length > 0) {
         state = defaultSortModel.map((col) => ({
@@ -113,6 +107,11 @@ const BCDataGridServer = ({
       }
     })
   })
+
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.hideOverlay()
+  })
+
   const onSelectionChanged = useCallback(() => {
     const selectedRows = gridRef?.current?.api.getSelectedRows()
     document.querySelector('#selectedRows').innerHTML =
@@ -120,12 +119,16 @@ const BCDataGridServer = ({
   }, [])
 
   const onFilterChanged = useCallback(() => {
+    gridRef.current.api.showLoadingOverlay()
     const filterModel = gridRef?.current?.api.getFilterModel()
-    setFilterModel([])
-    console.log('Filter model', filterModel)
+    const filterArr = Object.entries(filterModel).map(([field, value]) => {
+      return { field, ...value }
+    })
+    setFilterModel(filterArr)
   }, [])
 
   const onSortChanged = useCallback(() => {
+    gridRef.current.api.showLoadingOverlay()
     const sortTemp = gridRef?.current?.api
       .getColumnState()
       .filter((col) => col.sort)
@@ -139,7 +142,36 @@ const BCDataGridServer = ({
     setSortModel(sortTemp)
   }, [])
 
-  return isError ? (
+  const defaultGridOptions = useMemo(() => ({
+    overlayNoRowsTemplate: 'No rows found',
+    autoSizeStrategy: { type: 'fitGridWidth' },
+    suppressDragLeaveHidesColumns: true,
+    suppressMovableColumns: true,
+    suppressColumnMoveAnimation: false,
+    rowSelection: 'multiple',
+    animateRows: true,
+    suppressPaginationPanel: true,
+    suppressScrollOnNewData: true,
+    suppressCsvExport: false,
+    // enableCellTextSelection: true, // enables text selection on the grid
+    ensureDomOrder: true,
+    onRowClicked: handleRowClicked
+  }))
+
+  const defaultColDefParams = useMemo(() => ({
+    resizable: true,
+    sortable: true,
+    filter: true,
+    filterParams: {
+      maxNumConditions: 1 // maximum allowed conditions is 1, if more then one needs to be implemented, then backenc should also be ready to cater
+    },
+    floatingFilter: true, // enables the filter boxes under the header label
+    floatingFilterComponentParams: {
+      browserAutoComplete: false
+    }
+  }))
+
+  return isError && !error.includes('404') ? (
     <div className="error-container">
       <div className="error-message">
         <BCAlert severity="error">
@@ -160,13 +192,14 @@ const BCDataGridServer = ({
         ref={gridRef} // Ref for accessing Grid's API
         className={className}
         columnDefs={columnDefs}
-        defaultColDef={defaultColDef}
+        defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
         rowData={rowData}
         onGridReady={onGridReady}
         gridOptions={{ ...defaultGridOptions, ...gridOptions }}
         onSelectionChanged={onSelectionChanged}
         onSortChanged={onSortChanged}
         onFilterChanged={onFilterChanged}
+        onFirstDataRendered={onFirstDataRendered}
         getRowId={getRowId}
         loadingOverlayComponent={loadingOverlayComponent}
         {...others}
@@ -193,6 +226,7 @@ const BCDataGridServer = ({
           <BCPaginationActions
             {...subProps}
             handleResetState={handleResetState}
+            gridRef={gridRef}
           />
         )}
         slots={{
@@ -224,28 +258,33 @@ BCDataGridServer.defaultProps = {
   headerHeight: 40,
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   apiEndpoint: '/',
-  className: 'ag-theme-alpine' // ag-theme-alpine ag-theme-material ag-theme-balham ag-theme-balham-dark ag-theme-balham-light ag-theme-balham-extended
+  defaultColDef: {},
+  className: 'ag-theme-alpine'
 }
 
 BCDataGridServer.propTypes = {
   gridRef: PropTypes.oneOfType([
-    PropTypes.shape({ current: PropTypes.instanceOf(Element) }),
+    PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
     PropTypes.func
-  ]).isRequired,
+  ]),
   columnDefs: PropTypes.array.isRequired,
-  defaultColDef: PropTypes.object.isRequired,
-  defaultSortModel: PropTypes.array.isRequired,
+  defaultColDef: PropTypes.object,
+  defaultSortModel: PropTypes.array,
   apiEndpoint: PropTypes.string.isRequired,
   apiData: PropTypes.string.isRequired,
   gridKey: PropTypes.string,
   gridOptions: PropTypes.object,
   className: PropTypes.oneOf([
     'ag-theme-alpine',
+    'ag-theme-alpine-dark',
+    'ag-theme-alpine-auto-dark',
     'ag-theme-material',
+    'ag-theme-quartz',
+    'ag-theme-quartz-dark',
+    'ag-theme-quartz-auto-dark',
     'ag-theme-balham',
     'ag-theme-balham-dark',
-    'ag-theme-balham-light',
-    'ag-theme-balham-extended'
+    'ag-theme-balham-auto-dark'
   ])
 }
 

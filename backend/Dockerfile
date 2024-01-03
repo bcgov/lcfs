@@ -1,5 +1,5 @@
 # Base stage for common setup
-FROM python:3.9.6-slim-buster as base
+FROM python:3.10.13-slim-bullseye as base
 
 RUN apt-get update && apt-get install -y \
   gcc \

@@ -1,15 +1,21 @@
 from logging import getLogger
 from typing import List, Optional
 
-from sqlalchemy import and_, func, select, asc, desc, delete
+from sqlalchemy import and_, func, select, asc, desc, delete, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
+from lcfs.db.models.Role import Role, RoleEnum
+from lcfs.db.models.Organization import Organization
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    apply_filter_conditions,
+    get_field_for_filter,
+)
 from fastapi import HTTPException
 
 logger = getLogger("user_repo")
@@ -22,9 +28,6 @@ class UserRepository:
 
     async def query_users(
         self,
-        username: Optional[str] = None,
-        organization: Optional[str] = None,
-        include_inactive: bool = False,
         pagination: PaginationRequestSchema = {},
     ) -> List[UserBase]:
         """
@@ -43,8 +46,38 @@ class UserRepository:
         """
         # Build the base query statement
         conditions = []
-        # if not include_inactive:
-        #     conditions.append(UserProfile.is_active.is_(True))
+        if pagination.filters and len(pagination.filters) > 0:
+            for filter in pagination.filters:
+                filter_value = filter.filter
+                filter_option = filter.type
+                filter_type = filter.filter_type.default
+
+                if filter.field == "role":
+                    field = get_field_for_filter(Role, "name")
+                    conditions.append(
+                        Role.name.in_(
+                            [RoleEnum(role.strip()) for role in filter_value.split(",")]
+                        )
+                    )
+                elif filter.field == "is_active":
+                    filter_value = True if filter_value == "Active" else False
+                    filter_option = "true" if filter_value else "false"
+                    field = get_field_for_filter(UserProfile, "is_active")
+                    conditions.append(
+                        apply_filter_conditions(
+                            field,
+                            filter_value,
+                            filter_option,
+                            filter_type,
+                        )
+                    )
+                else:
+                    field = get_field_for_filter(UserProfile, filter.field)
+                    conditions.append(
+                        apply_filter_conditions(
+                            field, filter_value, filter_option, filter_type
+                        )
+                    )
 
         # Apply pagination and sorting parameters
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
@@ -53,6 +86,8 @@ class UserRepository:
         # Applying pagination, sorting, and filters to the query
         query = (
             select(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
             .options(
                 joinedload(UserProfile.organization),
                 joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
@@ -60,9 +95,14 @@ class UserRepository:
             .where(and_(*conditions))
         )
 
-        total_count = await self.session.scalar(
-            select(func.count(UserProfile.user_profile_id)).where(and_(*conditions))
+        count_query = await self.session.execute(
+            select(func.count(distinct(UserProfile.user_profile_id)))
+            .select_from(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
+            .where(and_(*conditions))
         )
+        total_count = count_query.unique().scalar_one_or_none()
         # Sort the query results
         for order in pagination.sortOrders:
             sort_method = asc if order.direction == "asc" else desc
@@ -70,7 +110,6 @@ class UserRepository:
 
         # Execute the query
         user_results = await self.session.execute(query.offset(offset).limit(limit))
-        # total_count = query.count()
         results = user_results.scalars().unique().all()
 
         # Convert the results to UserBase schemas

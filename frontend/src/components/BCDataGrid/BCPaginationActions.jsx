@@ -1,22 +1,48 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import PropTypes from 'prop-types'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 // icons
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faRedo } from '@fortawesome/free-solid-svg-icons'
+import { Replay, ContentCopy } from '@mui/icons-material'
 // mui components
 import BCBox from '@/components/BCBox'
-import { Pagination } from '@mui/material'
-import BCButton from '../BCButton'
+import { Pagination, IconButton, Tooltip } from '@mui/material'
 
-export function BCPaginationActions(props) {
-  const { count, page, rowsPerPage, onPageChange, handleResetState } = props
+export function BCPaginationActions({
+  count,
+  page,
+  rowsPerPage,
+  onPageChange,
+  handleResetState,
+  gridRef
+}) {
+  const [currentPage, setCurrentPage] = useState(page + 1)
   // Reload grid
   const reloadGrid = useCallback(() => {
     // Trigger re-load by assigning a new key to the Grid React component
     handleResetState()
+    // clear custom filters
+    // const inputElements = document.querySelectorAll('#bc-column-set-filter')
+
+    // inputElements.forEach((inputElement) => {
+    //   inputElement.value = ''
+    // })
   }, [handleResetState])
 
+  const handleCopyData = useCallback(() => {
+    const selectedRows = gridRef.current.api.getDataAsCsv({
+      allColumns: true,
+      onlySelected: true,
+      skipColumnHeaders: true
+    })
+    navigator.clipboard.writeText(selectedRows)
+  })
+
   const handlePageChange = useCallback((event, newPage) => {
+    if (currentPage === newPage) {
+      return
+    }
+    setCurrentPage(newPage)
+    gridRef.current.api.showLoadingOverlay()
     onPageChange(event, newPage - 1)
   })
 
@@ -32,17 +58,28 @@ export function BCPaginationActions(props) {
         onChange={handlePageChange}
       />
       {handleResetState && (
-        <BCButton
-          id="reloadGridBCButton"
-          onClick={reloadGrid}
-          variant="outlined"
-          color="smoky"
-          size="small"
-          sx={{ borderRadius: '24px', marginLeft: '1rem' }}
-          startIcon={<FontAwesomeIcon icon={faRedo} className="small-icon" />}
-        >
-          Reset
-        </BCButton>
+        <>
+          <Tooltip title="Reset sort and filters" placement="top-start">
+            <IconButton
+              id="reloadGridBCButton"
+              aria-label="delete"
+              onClick={reloadGrid}
+              color="primary"
+            >
+              <Replay />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Copy selected rows" placement="top-start">
+            <IconButton
+              id="reloadGridBCButton"
+              aria-label="delete"
+              onClick={handleCopyData}
+              color="primary"
+            >
+              <ContentCopy />
+            </IconButton>
+          </Tooltip>
+        </>
       )}
     </BCBox>
   )

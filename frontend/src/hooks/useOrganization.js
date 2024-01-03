@@ -13,3 +13,14 @@ export const useOrganization = (orgID, options) => {
     ...options
   })
 }
+
+export const useOrganizationStatuses = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['organization-statuses'],
+    queryFn: async () =>
+      (await client.get('/organizations/statuses/list')).data,
+    ...options
+  })
+}
