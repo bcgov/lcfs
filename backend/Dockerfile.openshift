@@ -14,6 +14,9 @@ RUN poetry config virtualenvs.create false
 COPY pyproject.toml poetry.lock /app/
 WORKDIR /app
 
+# Set PYTHONPATH to include the lcfs directory
+ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
+
 # Installing requirements
 RUN poetry install --only main
 
@@ -38,4 +41,3 @@ CMD ["/app/lcfs/start.sh"]
 FROM base as prod
 # Set the APP_ENVIRONMENT variable to 'production'
 ENV APP_ENVIRONMENT=prod
-
