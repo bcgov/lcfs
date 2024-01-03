@@ -1,6 +1,8 @@
+import { Role } from '@/components/Role'
+import { govRoles, nonGovRoles } from '@/constants/roles'
 import { Box } from '@mui/material'
-import { OrganizationDetails } from './components/OrganizationDetails'
-// import { Role } from '@/components/Role'
+import { BCeIDRightColWidget } from './components/BCeIDRightColWidget'
+import { IDIRRightColWIdget } from './components/IDIRRightColWIdget'
 
 export const Dashboard = () => {
   return (
@@ -14,13 +16,17 @@ export const Dashboard = () => {
         bgcolor="background.grey"
         p={3}
         gap={3}
+        alignItems={'flex-start'}
       >
         <Box p={2.5} bgcolor="background.default">
           placeholder
         </Box>
-        {/* <Role roles={['Government']}> */}
-        <OrganizationDetails />
-        {/* </Role> */}
+        <Role roles={nonGovRoles}>
+          <BCeIDRightColWidget />
+        </Role>
+        <Role roles={govRoles}>
+          <IDIRRightColWIdget />
+        </Role>
       </Box>
     </Box>
   )
