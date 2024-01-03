@@ -17,6 +17,8 @@ WORKDIR /app
 # Set PYTHONPATH to include the lcfs directory
 ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
 
+ENV POETRY_CACHE_DIR=/.cache/pypoetry
+
 # Installing requirements
 RUN poetry install --only main
 
@@ -32,8 +34,6 @@ COPY . /app/
 # by running the following command on your host machine from the root of this project:
 # chmod +x ./backend/wait-for-it.sh ./backend/lcfs/prestart.sh ./backend/lcfs/start.sh ./backend/lcfs/start-reload.sh
 
-# create /.cache for pypoetry
-RUN mkdir /.cache
 # Update the group ownership and grant the read/write permission for /app
 RUN chgrp -R root /app && \
     chmod -R g+rw /app && \
