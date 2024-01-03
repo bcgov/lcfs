@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install poetry==1.6.1
 
 # Configuring poetry
-RUN poetry config virtualenvs.create false
+RUN poetry config virtualenvs.create true
 
 # Copying requirements of a project
 COPY pyproject.toml poetry.lock /app/
@@ -42,9 +42,7 @@ RUN chgrp -R root /app && \
 # Make all startup scripts executable
 RUN chmod +x /app/wait-for-it.sh /app/lcfs/prestart.sh /app/lcfs/start.sh
 
-CMD ["/app/lcfs/start.sh"]
-
-# Production stage
-FROM base as prod
 # Set the APP_ENVIRONMENT variable to 'production'
 ENV APP_ENVIRONMENT=prod
+
+CMD ["/app/lcfs/start.sh"]
