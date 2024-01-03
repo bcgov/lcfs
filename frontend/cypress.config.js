@@ -2,6 +2,7 @@ import { defineConfig } from 'cypress'
 import vitePreprocessor from 'cypress-vite'
 import path from 'path'
 import { fileURLToPath } from 'url'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -48,7 +49,13 @@ export default defineConfig({
           mode: 'development'
         })
       )
-
+      on('before:browser:launch', (browser = {}, launchOptions) => {
+        if (browser.family === 'chromium' && browser.name !== 'electron') {
+          launchOptions.args.push('--incognito')
+        }
+        // Return the launchOptions with the '--incognito' flag
+        return launchOptions
+      })
       return config
     }
   }
