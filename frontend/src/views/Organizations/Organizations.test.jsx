@@ -87,4 +87,61 @@ describe('Organizations Component Tests', () => {
       })
     })
   })
+
+  describe('Download user information', () => {
+    beforeEach(() => {
+      // Mock the download function to always resolve successfully
+      vi.mock('@/services/useApiService', () => ({
+        useApiService: () => ({
+          download: vi.fn().mockResolvedValueOnce()
+        })
+      }))
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('initially shows the download user button with correct text and enabled', () => {
+      const downloadButton = getByDataTest('download-user-button')
+      expect(downloadButton).toBeInTheDocument()
+      expect(downloadButton).toBeEnabled()
+    })
+
+    it('shows downloading text and disables the download user button during download', async () => {
+      const downloadButton = getByDataTest('download-user-button')
+      fireEvent.click(downloadButton)
+
+      // Wait for the download operation to complete and the component state to update
+      await waitFor(() => {
+        expect(downloadButton).toHaveTextContent(
+          /Downloading User Information.../i
+        )
+        expect(downloadButton).toBeDisabled()
+      })
+    })
+
+    it('shows an error message if the download user fails', async () => {
+      // Update the mock to simulate a failure
+      vi.mock('@/services/useApiService', () => ({
+        useApiService: () => ({
+          download: vi.fn().mockRejectedValueOnce(new Error('Download failed'))
+        })
+      }))
+
+      cleanup()
+      renderComponent()
+
+      const downloadButton = getByDataTest('download-user-button')
+      fireEvent.click(downloadButton)
+
+      // Wait for the component to react to the error
+      await waitFor(() => {
+        const errorMessage = screen.getByText(
+          /Failed to download user information./i
+        )
+        expect(errorMessage).toBeInTheDocument()
+      })
+    })
+  })
 })

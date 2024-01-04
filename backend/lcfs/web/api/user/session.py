@@ -20,6 +20,40 @@ class UserRepository:
         self.session = session
         self.request = request
 
+    async def export_users(
+        self,
+        sort_field: Optional[str] = "last_name",
+        sort_direction: str = "asc",
+    ) -> List:
+        """
+        Retrieves all users from the database, optionally sorted by a specified field.
+
+        Args:
+            sort_field (Optional[str]): The field by which to sort the users. 
+                                        Defaults to 'last_name'. Set to None for no sorting.
+            sort_direction (str): The direction of sorting, either 'asc' for ascending or 
+                                'desc' for descending. Defaults to 'asc'.
+
+        Returns:
+            List: A list of user profiles, optionally sorted.
+        """
+        # Build the base query statement
+        query = select(UserProfile).options(
+            joinedload(UserProfile.organization),
+            joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+        )
+
+        # Apply sorting if sort_field is provided
+        if sort_field:
+            sort_method = asc if sort_direction == "asc" else desc
+            query = query.order_by(sort_method(getattr(UserProfile, sort_field)))
+
+        # Execute the query
+        user_results = await self.session.execute(query)
+        results = user_results.scalars().unique().all()
+
+        return results
+
     async def query_users(
         self,
         username: Optional[str] = None,
