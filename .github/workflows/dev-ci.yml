@@ -1,17 +1,16 @@
-## For each release, the value of workflow name, branches and PR_NUMBER need to be adjusted accordingly
+## For each release, the value of workflow name, branches and VERSION need to be adjusted accordingly
 
-name: LCFS Dev CI
+name: LCFS 0.2.0 Dev CI
 
 on:
   push:
-    branches: [ workflow-0.2.0 ]
+    branches: [ release-0.2.0 ]
     paths:
       - frontend/**
       - backend/**
   workflow_dispatch:
 
 env:
-  ## The pull request number of the Tracking pull request to merge the release branch to main
   VERSION: 0.2.0
   GIT_URL: https://github.com/bcgov/lcfs.git 
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
@@ -34,19 +33,6 @@ jobs:
     steps:
       - id: set-pre-release
         run: echo "PRE_RELEASE=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
-
-  ## this is the sample showing how to use output from a job
-  # show-pre-release:
-  #   name: Show pre-release number
-  #   runs-on: ubuntu-latest
-  #   needs: set-pre-release
-
-  #   env:
-  #     PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
-
-  #   steps:
-  #     - id: show-pre-release-step1
-  #       run: echo "$PRE_RELEASE"
 
   build:
 
@@ -75,16 +61,12 @@ jobs:
         run: |
           cd openshift/templates
           oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=workflow-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          oc cancel-build bc/lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
-          oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
 
       - name: Build LCFS Frontend
         run: |
           cd openshift/templates
           oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=workflow-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          oc cancel-build bc/lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
-          oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
 
   deploy:
@@ -116,15 +98,8 @@ jobs:
         with:
             cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-dev.yaml
 
-      - name: Check Changed value
-        run: |
-          cat lcfs/charts/lcfs-frontend/values-dev.yaml
-          cat lcfs/charts/lcfs-backend/values-dev.yaml
-
       - name: GitHub Commit & Push
         run: |
-          pwd
-          ls -l
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
           git add lcfs/charts/lcfs-frontend/values-dev.yaml
