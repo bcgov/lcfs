@@ -78,6 +78,8 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
       isOptionEqualToValue={(option, value) => option.name === value.name}
       limitTags={1}
       id="bc-column-set-filter"
+      className="ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
+      role="list-box"
       sx={{ width: columnWidth }}
       options={options}
       loading={optionsIsLoading}
@@ -88,13 +90,20 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
         <Box
           component="li"
           key={option}
-          className={selected ? 'selected' : ''}
+          className={
+            selected
+              ? 'ag-list-item ag-select-list-item selected'
+              : 'ag-list-item ag-select-list-item'
+          }
+          role="option"
           sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
           {...propsIn}
         >
           {props.multiple && (
             <Checkbox
               color="primary"
+              className="ag-set-filter-item-checkbox ag-labeled ag-label-align-right ag-checkbox ag-input-field"
+              role="presentation"
               sx={{ border: '2px solid primary' }}
               icon={icon}
               checkedIcon={checkedIcon}
@@ -107,11 +116,12 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
       )}
       renderInput={(params) => (
         <TextField
+          className="ag-text-field ag-input-field auto-select-filter"
+          role="presentation"
           {...params}
           label=""
           value={currentValue}
           variant="outlined"
-          className="auto-select-filter"
           size="small"
           inputProps={{
             ...params.inputProps,
