@@ -25,6 +25,7 @@ const BCDataGridServer = ({
   gridOptions,
   gridKey,
   defaultSortModel,
+  defaultFilterModel,
   apiEndpoint,
   apiData,
   gridRef,
@@ -39,7 +40,7 @@ const BCDataGridServer = ({
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(10)
   const [sortModel, setSortModel] = useState(defaultSortModel)
-  const [filterModel, setFilterModel] = useState([])
+  const [filterModel, setFilterModel] = useState(defaultFilterModel)
   const [total, setTotal] = useState(0)
   const [rowData, setRowData] = useState()
   const [isError, setIsError] = useState(false)
@@ -253,6 +254,7 @@ BCDataGridServer.defaultProps = {
   gridRef: null,
   gridKey: `bcgrid-key-${Math.random()}`,
   defaultSortModel: [],
+  defaultFilterModel: [],
   gridOptions: {},
   rowHeight: 45,
   headerHeight: 40,
@@ -270,6 +272,7 @@ BCDataGridServer.propTypes = {
   columnDefs: PropTypes.array.isRequired,
   defaultColDef: PropTypes.object,
   defaultSortModel: PropTypes.array,
+  defaultFilterModel: PropTypes.array,
   apiEndpoint: PropTypes.string.isRequired,
   apiData: PropTypes.string.isRequired,
   gridKey: PropTypes.string,

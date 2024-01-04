@@ -30,7 +30,7 @@ export const Organizations = () => {
 
   const defaultSortModel = [{ field: 'name', direction: 'asc' }]
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback((event, params) => {
+  const handleRowClicked = useCallback((params) => {
     console.log(params.data)
   })
 

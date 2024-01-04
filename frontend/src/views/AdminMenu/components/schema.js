@@ -68,7 +68,8 @@ export const usersColumnDefs = [
         data: [
           { id: 1, name: 'Active' },
           { id: 0, name: 'Inactive' }
-        ]
+        ],
+        isLoading: false
       }),
       disableCloseOnSelect: false,
       multiple: false

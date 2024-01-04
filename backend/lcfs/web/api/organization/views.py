@@ -4,7 +4,6 @@ from typing import List
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from starlette import status
 from sqlalchemy.orm import selectinload
@@ -13,8 +12,6 @@ from starlette.responses import Response
 from lcfs.db import dependencies
 from lcfs.db.models import UserProfile
 from lcfs.db.models.Organization import Organization
-from lcfs.db.models.OrganizationStatus import OrganizationStatus
-from lcfs.db.models.OrganizationType import OrganizationType
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
@@ -22,8 +19,8 @@ from lcfs.web.api.organization.session import OrganizationRepository
 from lcfs.web.api.organization.schema import (
     OrganizationSchema,
     OrganizationCreateSchema,
-    OrganizationStatusBaseSchema,
-    OrganizationTypeBaseSchema,
+    OrganizationStatusBase,
+    OrganizationTypeBase,
     OrganizationUpdateSchema,
     OrganizationUserSchema,
     GetOrganizationResponse,
@@ -193,10 +190,10 @@ async def list_organizations(
 
 @router.get(
     "/statuses/list",
-    response_model=List[OrganizationStatusBaseSchema],
+    response_model=List[OrganizationStatusBase],
     status_code=status.HTTP_200_OK,
 )
-async def get_organization_statuses() -> List[OrganizationStatusBaseSchema]:
+async def get_organization_statuses() -> List[OrganizationStatusBase]:
     try:
         statuses = await organization_repo.get_statuses()
         if len(statuses) == 0:
@@ -210,10 +207,10 @@ async def get_organization_statuses() -> List[OrganizationStatusBaseSchema]:
 
 @router.get(
     "/types/list",
-    response_model=List[OrganizationTypeBaseSchema],
+    response_model=List[OrganizationTypeBase],
     status_code=status.HTTP_200_OK,
 )
-async def get_organization_types() -> List[OrganizationStatusBaseSchema]:
+async def get_organization_types() -> List[OrganizationTypeBase]:
     try:
         types = await organization_repo.get_types()
         if len(types) == 0:

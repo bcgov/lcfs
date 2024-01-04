@@ -52,7 +52,7 @@ export const GovernmentRoleRenderer = (props) => {
 
 export const OrgStatusRenderer = (props) => {
   const statusArr = ['Registered', 'Unregistered', 'Suspended', 'Canceled']
-  const statusColorArr = ['success', 'smoky', 'warning', 'error']
+  const statusColorArr = ['success', 'info', 'warning', 'error']
   const statusIndex = statusArr.indexOf(props.data.org_status.status)
   return (
     <BCBox

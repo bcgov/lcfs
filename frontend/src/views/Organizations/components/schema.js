@@ -10,14 +10,22 @@ export const organizationsColDefs = [
     field: 'complianceUnits',
     headerName: 'Compliance Units',
     valueFormatter: numberFormatter,
-    valueGetter: () => 0
+    valueGetter: () => 100000,
+    // Temporary measures
+    // filter: 'agNumberColumnFilter',
+    filter: false,
+    sortable: false
   },
   {
     colId: 'reserve',
     field: 'reserve',
     headerName: 'In Reserve',
     valueFormatter: numberFormatter,
-    valueGetter: () => 0
+    valueGetter: () => 100000,
+    // Temporary measures
+    // filter: 'agNumberColumnFilter',
+    filter: false,
+    sortable: false
   },
   {
     colId: 'status',

@@ -63,7 +63,10 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
     const optionsDataCopy = optionsData.map((option) => ({
       name: option[props.apiOptionField ? props.apiOptionField : 'name']
     }))
+    // if already loaded then disable re-load
+    if (options.length > 0) return
     setOptions(optionsDataCopy)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionsData, props.apiOptionField])
 
   return (
@@ -81,22 +84,24 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
       autoHighlight
       size="small"
       getOptionLabel={(option) => option.name}
-      renderOption={(props, option, { selected }) => (
+      renderOption={(propsIn, option, { selected }) => (
         <Box
           component="li"
           key={option}
           className={selected ? 'selected' : ''}
           sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
-          {...props}
+          {...propsIn}
         >
-          <Checkbox
-            color="primary"
-            sx={{ border: '2px solid primary' }}
-            icon={icon}
-            checkedIcon={checkedIcon}
-            style={{ marginRight: 8 }}
-            checked={selected}
-          />
+          {props.multiple && (
+            <Checkbox
+              color="primary"
+              sx={{ border: '2px solid primary' }}
+              icon={icon}
+              checkedIcon={checkedIcon}
+              style={{ marginRight: 8 }}
+              checked={selected}
+            />
+          )}
           {option.name}
         </Box>
       )}

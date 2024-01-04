@@ -1,12 +1,10 @@
-from copy import copy
 from typing import Optional, List, Union
 
-from pydantic import BaseModel, EmailStr, Field, root_validator
+from pydantic import BaseModel, EmailStr, Field
 
 from lcfs.web.api.organization.schema import OrganizationSummarySchema
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.base import PaginationResponseScehema
-from pydantic import root_validator
 
 """
 Base - all shared attributes of a resource
