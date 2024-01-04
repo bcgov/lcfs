@@ -20,12 +20,7 @@ export function BCPaginationActions({
   const reloadGrid = useCallback(() => {
     // Trigger re-load by assigning a new key to the Grid React component
     handleResetState()
-    // clear custom filters
-    // const inputElements = document.querySelectorAll('#bc-column-set-filter')
-
-    // inputElements.forEach((inputElement) => {
-    //   inputElement.value = ''
-    // })
+    // TODO: clear custom filters
   }, [handleResetState])
 
   const handleCopyData = useCallback(() => {

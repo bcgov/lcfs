@@ -164,7 +164,7 @@ const BCDataGridServer = ({
     sortable: true,
     filter: true,
     filterParams: {
-      maxNumConditions: 1 // maximum allowed conditions is 1, if more then one needs to be implemented, then backenc should also be ready to cater
+      maxNumConditions: 1 // maximum allowed conditions is 1, if more then one needs to be implemented, then backend should also be ready to cater
     },
     floatingFilter: true, // enables the filter boxes under the header label
     floatingFilterComponentParams: {
