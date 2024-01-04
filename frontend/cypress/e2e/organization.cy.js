@@ -35,4 +35,25 @@ describe('Organization Information Download', () => {
       expect(interception.response.statusCode).to.eq(200)
     })
   })
+
+  it('shows an error message if the download fails', () => {
+    // Intercept the download request and simulate a failure
+    cy.intercept('GET', '/api/organizations/export', {
+      statusCode: 500,
+      body: 'Download failed'
+    }).as('fileDownloadFail')
+
+    cy.getByDataTest('download-org-button').click()
+
+    // Wait for the failed file download request
+    cy.wait('@fileDownloadFail').then((interception) => {
+      expect(interception.response.statusCode).to.eq(500)
+    })
+
+    // Check for the presence of the error message
+    cy.getByDataTest('alert-box').should(
+      'contain',
+      'Failed to download organization information'
+    )
+  })
 })

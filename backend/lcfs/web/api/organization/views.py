@@ -32,15 +32,29 @@ router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-@router.get("/export", response_class=StreamingResponse)
+@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Government")
-async def export(request: Request, db: AsyncSession = Depends(get_async_db)):
+async def export_organizations(request: Request, db: AsyncSession = Depends(get_async_db)):
     """
-    Endpoint to export information of all organization
+    Endpoint to export information of all organizations
+
+    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
+    as specified by the 'export_format' and 'media_type' variables.
+    - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
+    - 'media_type' sets the appropriate MIME type based on 'export_format':
+        'application/vnd.ms-excel' for 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
+        'text/csv' for 'csv'.
+
+    The SpreadsheetBuilder class is used for building the spreadsheet.
+    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
+    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+
+    Note: Only the first sheet data is used for the CSV format,
+        as CSV files do not support multiple sheets.
     """
-    # The export_format can be 'xls', 'xlsx', or 'csv'
     export_format="xls"
-    media_type = 'application/vnd.ms-excel'
+    media_type="application/vnd.ms-excel"
 
     try:
         # Fetch all organizations from the database
@@ -60,6 +74,7 @@ async def export(request: Request, db: AsyncSession = Depends(get_async_db)):
                 # TODO: Update this section with actual data retrieval
                 # once the Compliance Units models are implemented.
                 123456,
+                123456,
                 organization.org_status.status.value,
             ] for organization in organizations
         ]
@@ -69,9 +84,15 @@ async def export(request: Request, db: AsyncSession = Depends(get_async_db)):
 
         builder.add_sheet(
             sheet_name="Organizations",
-            columns=["ID", "Organization Name", "Compliance Units", "Registered"],
+            columns=[
+                "ID",
+                "Organization Name",
+                "Compliance Units",
+                "In Reserve",
+                "Registered"
+            ],
             rows=data,
-            styles={'bold_headers': True, 'column_widths': [10, 35, 20, 15]}
+            styles={"bold_headers": True}
         )
 
         file_content = builder.build_spreadsheet()
@@ -80,7 +101,7 @@ async def export(request: Request, db: AsyncSession = Depends(get_async_db)):
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
-        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
         return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
 

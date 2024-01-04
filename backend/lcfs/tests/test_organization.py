@@ -6,7 +6,7 @@ from starlette import status
 @pytest.mark.anyio
 async def test_export_success(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles) -> None:
     set_mock_user_roles(fastapi_app, ["Government"])
-    url = fastapi_app.url_path_for("export")
+    url = fastapi_app.url_path_for("export_organizations")
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
@@ -15,7 +15,7 @@ async def test_export_success(client: AsyncClient, fastapi_app: FastAPI, set_moc
 @pytest.mark.anyio
 async def test_export_unauthorized_access(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles) -> None:
     set_mock_user_roles(fastapi_app, ["Analyst"])
-    url = fastapi_app.url_path_for("export")
+    url = fastapi_app.url_path_for("export_organizations")
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN

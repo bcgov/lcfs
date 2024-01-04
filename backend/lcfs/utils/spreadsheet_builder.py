@@ -2,12 +2,16 @@ from io import BytesIO
 import logging
 import pandas as pd
 from openpyxl import styles
+from openpyxl.utils import get_column_letter
 import xlwt
 
 class SpreadsheetBuilder:
     """
     A class to build spreadsheets in xlsx, xls, or csv format.
     Allows adding multiple sheets with custom styling and exporting them as a byte stream.
+
+    Note: Only the first sheet data is used for the CSV format, 
+          as CSV files do not support multiple sheets.
 
     Example:
     --------
@@ -18,7 +22,7 @@ class SpreadsheetBuilder:
         'Employees', 
         ['Name', 'Dept'], # Columns
         [['Alex', 'HR'], ['Mike', 'IT']], # Rows
-        styles={'bold_headers': True, 'column_widths': [10, 20]}
+        styles={'bold_headers': True}
     )
 
     # Second sheet
@@ -27,6 +31,9 @@ class SpreadsheetBuilder:
     file_content = builder.build_spreadsheet()
     """
     def __init__(self, file_format: str = "xls"):
+        if file_format not in ["xlsx", "xls", "csv"]:
+            raise ValueError(f"Unsupported file format: {file_format}")
+
         self.file_format = file_format
         self.sheets_data = []
 
@@ -47,9 +54,8 @@ class SpreadsheetBuilder:
                 self._write_xls(output)
             elif self.file_format == "csv":
                 self._write_csv(output)
-            else:
-                raise ValueError(f"Unsupported file format: {self.file_format}")
 
+            output.seek(0)
             return output.getvalue()
 
         except Exception as e:
@@ -60,6 +66,9 @@ class SpreadsheetBuilder:
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             for sheet in self.sheets_data:
                 self._write_sheet_to_excel(writer, sheet)
+
+                # Auto-adjusting column widths
+                self._auto_adjust_column_width_xlsx(writer, sheet)
 
     def _write_sheet_to_excel(self, writer, sheet):
         df = pd.DataFrame(sheet["rows"], columns=sheet["columns"])
@@ -95,8 +104,22 @@ class SpreadsheetBuilder:
             for cell in worksheet[1]:
                 cell.font = styles.Font(bold=True)
 
-        for i, width in enumerate(sheet["styles"].get("column_widths", []), start=1):
-            worksheet.column_dimensions[chr(64 + i)].width = width
+    def _auto_adjust_column_width_xlsx(self, writer, sheet_data):
+        worksheet = writer.sheets[sheet_data["sheet_name"]]
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+
+            for cell in column:
+                try:
+                    cell_length = len(str(cell.value))
+                    if cell_length > max_length:
+                        max_length = cell_length
+                except:
+                    pass
+
+            adjusted_width = max_length + 2  # Adding 2 for a little extra space
+            worksheet.column_dimensions[column_letter].width = adjusted_width
 
     def _write_xls(self, output):
         book = xlwt.Workbook()
@@ -127,15 +150,20 @@ class SpreadsheetBuilder:
 
         for col_index, column in enumerate(sheet_data["columns"]):
             sheet.write(0, col_index, column, header_style)
-            if "column_widths" in sheet_data["styles"] and len(sheet_data["styles"]["column_widths"]) > col_index:
-                width = sheet_data["styles"]["column_widths"][col_index]
-                sheet.col(col_index).width = 256 * width
+
+        # Auto-adjusting column widths
+        self._auto_adjust_column_width_xls(sheet, sheet_data)
 
         for row_index, row in enumerate(sheet_data["rows"], start=1):
             for col_index, value in enumerate(row):
                 # Apply left-aligned style for numbers, default style for others
                 cell_style = left_aligned_num_style if isinstance(value, (int, float)) else xlwt.XFStyle()
                 sheet.write(row_index, col_index, value, cell_style)
+
+    def _auto_adjust_column_width_xls(self, sheet, sheet_data):
+        column_widths = [max(len(str(cell)) for cell in column) + 2 for column in zip(*sheet_data["rows"], sheet_data["columns"])]
+        for i, width in enumerate(column_widths):
+            sheet.col(i).width = 256 * width
 
     def _write_csv(self, output):
         if self.sheets_data:

@@ -1,50 +1,90 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { Organizations } from './Organizations';
-
-vi.mock('@/services/useApiService', () => ({
-  useApiService: () => ({
-    download: vi.fn().mockResolvedValueOnce()
-  })
-}));
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  waitFor
+} from '@testing-library/react'
+import { BrowserRouter as Router } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Organizations } from './Organizations'
+import { getByDataTest } from '@/utils/test/testHelpers'
 
 const renderComponent = () => {
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient()
   render(
     <QueryClientProvider client={queryClient}>
       <Router>
         <Organizations />
       </Router>
     </QueryClientProvider>
-  );
-};
+  )
+}
 
 describe('Organizations Component Tests', () => {
   beforeEach(() => {
-    renderComponent();
-  });
+    renderComponent()
+  })
 
   afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-  });
+    cleanup()
+  })
 
-  it('initially shows the download button with correct text and enabled', () => {
-    const downloadButton = screen.getByRole('button', { name: /Download Organization Information/i });
-    expect(downloadButton).toBeInTheDocument();
-    expect(downloadButton).toBeEnabled();
-  });
+  describe('Download organization information', () => {
+    beforeEach(() => {
+      // Mock the download function to always resolve successfully
+      vi.mock('@/services/useApiService', () => ({
+        useApiService: () => ({
+          download: vi.fn().mockResolvedValueOnce()
+        })
+      }))
+    })
 
-  it('shows downloading text and disables the button during download', async () => {
-    const downloadButton = screen.getByRole('button', { name: /Download Organization Information/i });
-    fireEvent.click(downloadButton);
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
 
-    // Wait for the download operation to complete and the component state to update
-    await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(/Downloading Organization Information.../i);
-        expect(downloadButton).toBeDisabled();
-    });
-  });
-});
+    it('initially shows the download organization button with correct text and enabled', () => {
+      const downloadButton = getByDataTest('download-org-button')
+      expect(downloadButton).toBeInTheDocument()
+      expect(downloadButton).toBeEnabled()
+    })
+
+    it('shows downloading text and disables the download organization button during download', async () => {
+      const downloadButton = getByDataTest('download-org-button')
+      fireEvent.click(downloadButton)
+
+      // Wait for the download operation to complete and the component state to update
+      await waitFor(() => {
+        expect(downloadButton).toHaveTextContent(
+          /Downloading Organization Information.../i
+        )
+        expect(downloadButton).toBeDisabled()
+      })
+    })
+
+    it('shows an error message if the download organization fails', async () => {
+      // Update the mock to simulate a failure
+      vi.mock('@/services/useApiService', () => ({
+        useApiService: () => ({
+          download: vi.fn().mockRejectedValueOnce(new Error('Download failed'))
+        })
+      }))
+
+      cleanup()
+      renderComponent()
+
+      const downloadButton = getByDataTest('download-org-button')
+      fireEvent.click(downloadButton)
+
+      // Wait for the component to react to the error
+      await waitFor(() => {
+        const errorMessage = screen.getByText(
+          /Failed to download organization information./i
+        )
+        expect(errorMessage).toBeInTheDocument()
+      })
+    })
+  })
+})
