@@ -76,6 +76,7 @@ export const Users = (props) => {
           defaultSortModel={defaultSortModel}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
+          enableCopyButton={false}
         />
       </BCBox>
     </BCBox>

@@ -112,6 +112,7 @@ export const Organizations = () => {
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
+          enableCopyButton={false}
         />
       </BCBox>
     </>
