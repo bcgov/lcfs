@@ -28,14 +28,14 @@ export const Organizations = () => {
     return params.data.organization_id
   }, [])
 
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const defaultSortModel = [{ field: 'name', direction: 'asc' }]
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
-    console.log(params.data)
+    navigate(`/organizations/${params.data.organization_id}`)
   })
-
-  const navigate = useNavigate()
-  const location = useLocation()
 
   const { message, severity } = location.state || {}
   return (

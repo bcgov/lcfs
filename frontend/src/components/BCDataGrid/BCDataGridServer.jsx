@@ -114,9 +114,7 @@ const BCDataGridServer = ({
   })
 
   const onSelectionChanged = useCallback(() => {
-    const selectedRows = gridRef?.current?.api.getSelectedRows()
-    document.querySelector('#selectedRows').innerHTML =
-      selectedRows.length === 1 ? selectedRows[0].display_name : ''
+    console.log('onSelectionChanged')
   }, [])
 
   const onFilterChanged = useCallback(() => {
