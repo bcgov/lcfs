@@ -23,7 +23,7 @@ import { UserActivity } from './views/UserActivity'
 import { ViewOrg } from './views/ViewOrg'
 import { ViewReport } from './views/ViewReport'
 import { ViewTransaction } from './views/ViewTransaction'
-import { ViewUser } from './views/ViewUser'
+import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
 import ContactUs from './components/ContactUs'
 
 const router = createBrowserRouter([

@@ -36,8 +36,8 @@ export const Users = (props) => {
     return params.data.user_profile_id
   }, [])
 
-  const handleRowClicked = useCallback((event, params) => {
-    console.log(params.data)
+  const handleRowClicked = useCallback((params) => {
+    navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
   })
 
   const gridRef = useRef()

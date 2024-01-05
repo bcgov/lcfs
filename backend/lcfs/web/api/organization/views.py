@@ -42,7 +42,7 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.post(
-    "/", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
+    "", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
 )
 @roles_required("Government", "Administrator")
 async def create_organization(
