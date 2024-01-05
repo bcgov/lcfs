@@ -33,6 +33,8 @@ const BCDataGridServer = ({
   columnDefs,
   defaultColDef,
   getRowId,
+  enableCopyButton,
+  enableResetButton,
   handleGridKey,
   handleRowClicked,
   ...others
@@ -77,14 +79,6 @@ const BCDataGridServer = ({
     gridRef.current.api.showLoadingOverlay()
     setSize(parseInt(event.target.value, 10))
     setPage(1)
-  })
-
-  const handleResetState = useCallback(() => {
-    // Resets the column filter and sorts
-    const filterInstance = gridRef.current.api.getFilterInstance('role')
-    console.log(filterInstance)
-    gridRef.current.api.resetColumnState()
-    gridRef.current.api.setFilterModel(null)
   })
 
   useEffect(() => {
@@ -224,7 +218,8 @@ const BCDataGridServer = ({
         ActionsComponent={(subProps) => (
           <BCPaginationActions
             {...subProps}
-            handleResetState={handleResetState}
+            enableResetButton={enableResetButton}
+            enableCopyButton={enableCopyButton}
             gridRef={gridRef}
           />
         )}
@@ -259,6 +254,8 @@ BCDataGridServer.defaultProps = {
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   apiEndpoint: '/',
   defaultColDef: {},
+  enableResetButton: true,
+  enableCopyButton: true,
   className: 'ag-theme-alpine'
 }
 
@@ -274,6 +271,8 @@ BCDataGridServer.propTypes = {
   apiEndpoint: PropTypes.string.isRequired,
   apiData: PropTypes.string.isRequired,
   gridKey: PropTypes.string,
+  enableResetButton: PropTypes.bool,
+  enableCopyButton: PropTypes.bool,
   gridOptions: PropTypes.object,
   className: PropTypes.oneOf([
     'ag-theme-alpine',

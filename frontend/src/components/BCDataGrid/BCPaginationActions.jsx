@@ -12,16 +12,17 @@ export function BCPaginationActions({
   page,
   rowsPerPage,
   onPageChange,
-  handleResetState,
+  enableResetButton,
+  enableCopyButton,
   gridRef
 }) {
   const [currentPage, setCurrentPage] = useState(page + 1)
   // Reload grid
   const reloadGrid = useCallback(() => {
-    // Trigger re-load by assigning a new key to the Grid React component
-    handleResetState()
+    gridRef.current.api.resetColumnState()
+    gridRef.current.api.setFilterModel(null)
     // TODO: clear custom filters
-  }, [handleResetState])
+  }, [gridRef])
 
   const handleCopyData = useCallback(() => {
     const selectedRows = gridRef.current.api.getDataAsCsv({
@@ -52,8 +53,8 @@ export function BCPaginationActions({
         page={page + 1}
         onChange={handlePageChange}
       />
-      {handleResetState && (
-        <>
+      <>
+        {enableResetButton && (
           <Tooltip title="Reset sort and filters" placement="top-start">
             <IconButton
               id="reloadGridBCButton"
@@ -64,6 +65,8 @@ export function BCPaginationActions({
               <Replay />
             </IconButton>
           </Tooltip>
+        )}
+        {enableCopyButton && (
           <Tooltip title="Copy selected rows" placement="top-start">
             <IconButton
               id="reloadGridBCButton"
@@ -74,8 +77,8 @@ export function BCPaginationActions({
               <ContentCopy />
             </IconButton>
           </Tooltip>
-        </>
-      )}
+        )}
+      </>
     </BCBox>
   )
 }
