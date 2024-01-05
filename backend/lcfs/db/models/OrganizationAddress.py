@@ -25,17 +25,18 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
-class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
-    __tablename__ = 'organization_address'
-    __table_args__ = {'comment': "Represents an organization's address."}
 
-    organization_address_id = Column(Integer, primary_key=True)
-    name = Column(String(500), nullable=True, comment='Organization name')
+class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
+    __tablename__ = "organization_address"
+    __table_args__ = {"comment": "Represents an organization's address."}
+
+    organization_address_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(500), nullable=True, comment="Organization name")
     street_address = Column(String(500), nullable=True)
     address_other = Column(String(100), nullable=True)
     city = Column(String(100), nullable=True)
     province_state = Column(String(50), nullable=True)
     country = Column(String(100), nullable=True)
     postalCode_zipCode = Column(String(10), nullable=True)
-    
-    organization = relationship('Organization', back_populates='org_address')
+
+    organization = relationship("Organization", back_populates="org_address")

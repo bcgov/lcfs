@@ -1,54 +1,31 @@
 from logging import getLogger
 from typing import List, Optional
-from fastapi import Depends
 
-from sqlalchemy import text, and_, func, select, asc, desc
+from sqlalchemy import and_, func, select, asc, desc, delete
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from lcfs.db.models.UserProfile import UserProfile
-from lcfs.web.api.user.schema import UserCreate
-from lcfs.web.api.base import row_to_dict
-from lcfs.web.api.user.schema import UserBase
-from lcfs.web.api.dependancies import pagination_query
+from lcfs.db.models.UserRole import UserRole
+from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
+from lcfs.web.api.base import PaginationRequestSchema
+from fastapi import HTTPException
 
 logger = getLogger("user_repo")
-USER_VIEW_STMT = "select * from public.user_profile u where 1=1"
-USER_COUNT_STMT = "select count(*) from public.user_profile u where 1=1"
-# USER_VIEW_STMT = "select * from user_view u where 1=1"
-# USER_COUNT_STMT = "select count(*) from user_view u where 1=1"
 
 
 class UserRepository:
-
     def __init__(self, session: AsyncSession, request: Request = None):
         self.session = session
         self.request = request
 
-    async def get_users_count(self) -> int:
-        """
-        Retrieves the count of all active users in the database.
-
-        Returns:
-            int: The number of active users.
-        """
-        count_query = text(USER_COUNT_STMT)
-        count_result = await self.session.execute(count_query)
-        count = count_result.fetchone()
-
-        # Extract the count from the first column of the first row.
-        # The [0] index accesses the first column in the row.
-        user_count = count[0]
-
-        return user_count
-
-
     async def query_users(
-        self, 
+        self,
         username: Optional[str] = None,
         organization: Optional[str] = None,
         include_inactive: bool = False,
-        pagination: dict = Depends(pagination_query)
+        pagination: PaginationRequestSchema = {},
     ) -> List[UserBase]:
         """
         Queries users from the database with optional filters for username, surname,
@@ -66,79 +43,120 @@ class UserRepository:
         """
         # Build the base query statement
         conditions = []
-        if username:
-            conditions.append(func.lower(UserProfile.username).like(f"%{username.lower()}%"))
-        if organization:
-            conditions.append(func.lower(UserProfile.organization.name).like(f"%{organization.lower()}%"))
         # if not include_inactive:
         #     conditions.append(UserProfile.is_active.is_(True))
 
-        # Sorting direction
-        sort_function = desc if pagination["sort_direction"] == "desc" else asc
-        sort_field = pagination["sort_field"]
-        offset = pagination["page"] * pagination["per_page"]
-        limit = pagination["per_page"]
+        # Apply pagination and sorting parameters
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        limit = pagination.size
 
         # Applying pagination, sorting, and filters to the query
         query = (
             select(UserProfile)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
             .where(and_(*conditions))
-            .order_by(sort_function(getattr(UserProfile, sort_field)))
-            .offset(offset)
-            .limit(limit)
+        )
+
+        total_count = await self.session.scalar(
+            select(func.count(UserProfile.user_profile_id)).where(and_(*conditions))
+        )
+        # Sort the query results
+        for order in pagination.sortOrders:
+            sort_method = asc if order.direction == "asc" else desc
+            query = query.order_by(sort_method(order.field))
+
+        # Execute the query
+        user_results = await self.session.execute(query.offset(offset).limit(limit))
+        # total_count = query.count()
+        results = user_results.scalars().unique().all()
+
+        # Convert the results to UserBase schemas
+        return [UserBase.model_validate(user) for user in results], total_count
+
+    async def get_user(self, user_id: int):
+        query = (
+            select(UserProfile)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+            )
+            .where(UserProfile.user_profile_id == user_id)
         )
 
         # Execute the query
-        user_results = await self.session.execute(query)
-        results = user_results.scalars().all()
+        result = await self.session.execute(query)
+        user = result.unique().scalar_one_or_none()
+        return user
 
-        # Convert the results to UserBase schemas
-        return [UserBase.model_validate(user) for user in results]
+    async def create_user(
+        self, user_create: UserCreate, user_id: int = None
+    ) -> UserProfile:
+        user_data = user_create.model_dump()
+        roles = user_data.pop("roles", {})
+        new_user = UserProfile()
+        try:
+            # get the next sequence value for the user_profile_id and begin the async transaction.
+            user_profile_id_seq = func.nextval("user_profile_user_profile_id_seq")
+            user_profile_id = await self.session.execute(select(user_profile_id_seq))
+            user_id = user_profile_id.unique().scalar_one_or_none()
+            new_user.user_profile_id = user_id
+            # convert the UserCreate instance to UserProfile schema object
+            new_user = UserProfile.form_user_profile(new_user, user_data, user_id)
+            self.session.add(new_user)
+            self.session.refresh(new_user)
+            # Update/insert the roles separately
+            user_roles = UserRole.get_user_roles(roles, new_user)
+            self.session.add_all(user_roles)
+            # Commit and close the connection
+            self.session.commit()
 
+        except Exception as e:
+            # in case of any failures rollback the session
+            self.session.rollback()
+            logger.error(f"Error creating user: {e}")
+            raise Exception(f"Error creating user: {e}")
 
-    async def get_user(self, user_id: int) -> UserBase:
-        """
-        Gets a user by their ID in the database.
+        logger.info(f"Created user with id: {user_id}")
+        return UserBase.model_validate(await self.get_user(user_id))
 
-        This method queries the database for a user with a given ID and an active status. If found, it
-        converts the database row to a dictionary matching the UserBase Pydantic model.
+    async def update_user(
+        self, user_update: UserCreate, user_profile_id: int = None
+    ) -> UserProfile:
+        user_data = user_update.model_dump()
 
-        Args:
-            user_id (int): The unique identifier of the user to be found.
+        try:
+            # Get existing record for update.
+            user = await self.session.get(UserProfile, user_profile_id)
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            # convert UserCreate instance to UserProfile and save the data.
+            user_profile = UserProfile.form_user_profile(
+                user, user_data, user_profile_id
+            )
+            # Delete existing roles and update with new roles
+            await self.session.execute(
+                delete(UserRole).where(UserRole.user_profile_id == user.user_profile_id)
+            )
+            user_roles = UserRole.get_user_roles(
+                user_data.pop("roles", {}), user_profile
+            )
+            self.session.add_all(user_roles)
+            # commit and close the connection
+            self.session.commit()
 
-        Returns:
-            UserBase: The found user's data converted to a UserBase Pydantic model. If no user is found, returns None.
-        """
-        stmt = f'{USER_VIEW_STMT} and u.is_active = true and u.id = :user_id'
-        
-        user_results = await self.session.execute(text(stmt), {'user_id': user_id})
-        
-        user = user_results.fetchone()
-        return row_to_dict(user, UserBase) if user else None
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Error updating user: {e}")
+            raise Exception(f"Error updating user: {e}")
 
+        logger.info(f"Updated user_profile_id: {user_profile_id}")
+        return await self.get_user(user_profile_id)
 
-    async def create_user(self, user_create: UserCreate) -> UserProfile:
-        """
-        Creates a new user entity in the database.
-
-        This method takes a UserCreate Pydantic model, converts it into a dictionary, and then creates a new
-        User ORM model instance. If an organization is associated with the user, it ensures that the organization_id
-        is set appropriately. The new user is then added to the database session and saved to the database.
-
-        Args:
-            user_create (UserCreate): The Pydantic model containing the data for the new user.
-
-        Returns:
-            User: The ORM model instance of the newly created user.
-        """
-        user_data = user_create.dict(exclude_unset=True, exclude_none=True)
-
-        if 'organization' in user_data:
-            user_data['organization_id'] = user_data.pop('organization').id
-
-        new_user = UserProfile(**user_data)
-
-        self.session.add(new_user)
-        await self.session.commit()
-
-        return new_user
+    # TODO: User History implementation
+    async def get_user_history(
+        self, pagination: PaginationRequestSchema = {}, user_id: int = None
+    ) -> List[UserHistory]:
+        return []

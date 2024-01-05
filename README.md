@@ -88,6 +88,30 @@ npm test
 
 Cypress is used for end-to-end testing of the application. These tests simulate real user interactions and ensure the integrity of the user flows.
 
+#### Cypress Environment Setup
+
+To run Cypress tests, you need to set up environment variables which include sensitive information like test user credentials. Follow these steps to set up your environment:
+
+1. Copy the `cypress.env.example.json` file located in the `frontend` directory and rename the copy to `cypress.env.json`.
+   
+   ```bash
+   cd frontend
+   cp cypress.env.example.json cypress.env.json
+   ```
+
+2. Edit the `cypress.env.json` file to include your specific `idir` and `bceid` test credentials. The file should look something like this:
+
+   ```json
+   {
+     "IDIR_TEST_USER": "your_idir_test_username",
+     "IDIR_TEST_PASS": "your_idir_test_password",
+     "BCEID_TEST_USER": "your_bceid_test_username",
+     "BCEID_TEST_PASS": "your_bceid_test_password"
+   }
+   ```
+
+3. **Do not commit** `cypress.env.json` to version control. It has been added to `.gitignore` to prevent exposing sensitive information.
+
 #### Running Cypress Tests
 
 To run Cypress tests interactively:
