@@ -119,6 +119,7 @@ def get_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],  # Allows all methods
         allow_headers=["*"],  # Allows all headers
+        expose_headers=["Content-Disposition"],  # Expose Content-Disposition header to the frontend
     )
 
     # Apply custom authentication handler for user injection purposes

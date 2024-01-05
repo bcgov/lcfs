@@ -1,14 +1,18 @@
+import io
 from logging import getLogger
 from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from starlette import status
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from starlette.responses import Response
 
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.db import dependencies
 from lcfs.db.models import UserProfile
 from lcfs.db.models.Organization import Organization
@@ -27,6 +31,86 @@ logger = getLogger("organization")
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
+
+@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@roles_required("Government")
+async def export_organizations(request: Request, db: AsyncSession = Depends(get_async_db)):
+    """
+    Endpoint to export information of all organizations
+
+    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
+    as specified by the 'export_format' and 'media_type' variables.
+    - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
+    - 'media_type' sets the appropriate MIME type based on 'export_format':
+        'application/vnd.ms-excel' for 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
+        'text/csv' for 'csv'.
+
+    The SpreadsheetBuilder class is used for building the spreadsheet.
+    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
+    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+
+    Note: Only the first sheet data is used for the CSV format,
+        as CSV files do not support multiple sheets.
+    """
+    export_format="xls"
+    media_type="application/vnd.ms-excel"
+
+    try:
+        # Fetch all organizations from the database
+        result = await db.execute(
+            select(Organization).options(
+                    joinedload(Organization.org_status)
+                )
+            .order_by(Organization.organization_id)
+        )
+        organizations = result.scalars().all()
+
+        # Prepare data for the spreadsheet
+        data = [
+            [
+                organization.organization_id,
+                organization.name,
+                # TODO: Update this section with actual data retrieval
+                # once the Compliance Units models are implemented.
+                123456,
+                123456,
+                organization.org_status.status.value,
+            ] for organization in organizations
+        ]
+
+        # Create a spreadsheet
+        builder = SpreadsheetBuilder(file_format = export_format)
+
+        builder.add_sheet(
+            sheet_name="Organizations",
+            columns=[
+                "ID",
+                "Organization Name",
+                "Compliance Units",
+                "In Reserve",
+                "Registered"
+            ],
+            rows=data,
+            styles={"bold_headers": True}
+        )
+
+        file_content = builder.build_spreadsheet()
+
+        # Get the current date in YYYY-MM-DD format
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
+
+    except Exception as e:
+        logger.error("Internal Server Error: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error"
+        ) from e
 
 @router.post(
     "/", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
