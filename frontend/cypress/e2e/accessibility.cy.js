@@ -1,7 +1,7 @@
-import 'cypress-axe'
+// npm run cypress:run -- --spec cypress/e2e/accessibility.cy.js
 
 describe('Accessibility Tests for LCFS', () => {
-  // Test for Home Page Accessibility
+  // Test for Login Page Accessibility
   describe('Login page accessibility', () => {
     beforeEach(() => {
       cy.visit('/')
@@ -15,7 +15,7 @@ describe('Accessibility Tests for LCFS', () => {
 
   // Test for Navigation Accessibility
   describe('Navigation Accessibility', () => {
-    beforeEach(() => {
+    it('Should have no accessibility violations in the navigation bar', () => {
       cy.visit('/')
       cy.injectAxe()
       cy.login(
@@ -23,10 +23,8 @@ describe('Accessibility Tests for LCFS', () => {
         Cypress.env('IDIR_TEST_USER'),
         Cypress.env('IDIR_TEST_PASS')
       )
-    })
-
-    it('Should have no accessibility violations in the navigation bar', () => {
-      cy.get('nav').within(() => {
+      cy.getByDataTest('bc-navbar').should('exist')
+      cy.getByDataTest('bc-navbar').within(() => {
         cy.checkA11y()
       })
     })
