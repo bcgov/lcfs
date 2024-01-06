@@ -4,7 +4,7 @@ describe('Accessibility Tests for LCFS', () => {
   // Test for Login Page Accessibility
   describe('Login page accessibility', () => {
     beforeEach(() => {
-      cy.visit('/')
+      cy.visit('/login')
       cy.injectAxe() // Injects the axe-core library
     })
 
