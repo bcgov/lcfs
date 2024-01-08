@@ -29,9 +29,13 @@ export const MainLayout = () => {
       label: match.handle.crumb(match.data),
       path: match.pathname
     }))
+  const pageTitle = matches[matches.length - 1]?.handle?.title || 'LCFS'
 
   return (
     <RequireAuth redirectTo={ROUTES.LOGIN}>
+      <BCTypography variant="h1" className="visually-hidden">
+        {pageTitle}
+      </BCTypography>
       <Navbar />
       <Container
         maxWidth="lg"

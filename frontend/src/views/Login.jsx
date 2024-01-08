@@ -125,6 +125,9 @@ export const Login = () => {
         radius={seasonImages[season].radius}
         images={droplets()}
       />
+      <BCTypography variant="h1" className="visually-hidden">
+        Login
+      </BCTypography>
       <BCBox px={1} width="100%" height="100vh" mx="auto">
         <Grid
           container
