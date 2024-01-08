@@ -105,7 +105,7 @@ def get_app() -> FastAPI:
     # Create the fastapi instance
     app = FastAPI(
         title="LCFS Backend API Development",
-        version=metadata.version("lcfs"),
+        version="0.1.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
