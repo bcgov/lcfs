@@ -61,12 +61,14 @@ jobs:
         run: |
           cd openshift/templates
           oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete build/lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
       - name: Build LCFS Frontend
         run: |
           cd openshift/templates
           oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete build/lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
   deploy:
