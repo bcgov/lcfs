@@ -48,6 +48,7 @@ function BCNavbar(props) {
     <BCBox py={0}>
       <AppBar
         postition="sticky"
+        data-test="bc-navbar"
         component="nav"
         color={isScrolled ? 'transparent' : 'inherit'}
         elevation={isScrolled ? 5 : 0}
