@@ -1,100 +1,78 @@
-import Pencil from '@/assets/icons/pencil.svg?react'
-import colors from '@/themes/base/colors'
-import { BCTable } from '@/components/BCTable'
-import { Stack, Typography } from '@mui/material'
-
-// dummy data creation
-const createData = (
-  actionTaken,
-  transactionType,
-  transactionID,
-  timestamp,
-  organization
-) => {
-  return {
-    actionTaken,
-    transactionType,
-    transactionID,
-    timestamp,
-    organization
-  }
-}
-
-const rows = [
-  createData('Transaction: IN', 159, 6.0, 24, 4.0),
-  createData('Transaction: OUT', 237, 9.0, 37, 4.3),
-  createData('Transaction: OUT', 262, 56.0, 24, 6.0),
-  createData('Transaction: OUT', 305, 3.7, 67, 4.3),
-  createData('Transaction: IN', 356, 16.0, 49, 3.9),
-  createData('Transaction: IN', 305, 3.7, 67, 4.3),
-  createData('Transaction: OUT', 159, 6.0, 24, 4.0),
-  createData('Transaction: OUT', 262, 56.0, 24, 6.0),
-  createData('Transaction: IN', 237, 9.0, 37, 4.3),
-  createData('Transaction: IN', 356, 16.0, 49, 3.9),
-  createData('Transaction: IN', 356, 16.0, 49, 3.9),
-  createData('Transaction: IN', 356, 16.0, 49, 3.9),
-  createData('Transaction: IN', 356, 16.0, 49, 3.9)
-]
+import { Stack, IconButton } from '@mui/material'
+import EditIcon from '@mui/icons-material/Edit'
+import BCTypography from '@/components/BCTypography'
+// react components
+import { useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useUser } from '@/hooks/useUser'
+import Loading from '@/components/Loading'
+import { phoneNumberFormatter } from '@/utils/formatters'
+import { RoleSpanRenderer, StatusRenderer } from '@/utils/cellRenderers'
+import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
+import { userActivityColDefs } from '@/views/AdminMenu/components/schema'
 
 export const ViewUser = () => {
-  // call to api to fetch user by ID based on url param userID
-  // const { userID } = useParams();
-  // const apiService = useApiService();
+  const gridRef = useRef()
+  const gridOptions = {
+    overlayNoRowsTemplate: 'No previous user activities found',
+    suppressMenuHide: false,
+    paginationPageSize: 20
+  }
 
-  // const { data, isLoading, isError, error } = useQuery({
-  //   queryKey: [`user-${userID}`],
-  //   queryFn: async () => {
-  //     const { data } = await apiService.get(`/users/${userID}`);
-  //      // manipulate data here to comply with table data props. or do it on the backend.
-  //     return data;
-  //   },
-  //   refetchOnWindowFocus: false,
-  //   retry: false,
-  // });
+  const { userID } = useParams()
+  const navigate = useNavigate()
+  const { data, isLoading } = useUser(userID)
+
+  const handleEditClick = () => {
+    navigate(`/admin/users/${userID}/edit-user`)
+  }
+  if (isLoading) return <Loading />
 
   return (
     <div>
-      <Typography variant="h4" color={colors.primary.main} mb={2}>
-        Billy Governance{' '}
-        <span>
-          <Pencil />
-        </span>
-      </Typography>
+      <BCTypography variant="h5" color="primary" mb={1}>
+        {data.display_name}&nbsp;
+        <IconButton aria-label="edit" color="primary" onClick={handleEditClick}>
+          <EditIcon />
+        </IconButton>
+      </BCTypography>
       <Stack direction="column" spacing={0.5} mb={5}>
-        <Typography>
-          <strong>Organization:</strong> Government of British Columbia
-        </Typography>
-        <Typography>
-          <strong>Email:</strong> Billy.Biodesel@bio.com
-        </Typography>
-        <Typography>
-          <strong>Work Phone:</strong> (778) 342-2312
-        </Typography>
-        <Typography>
-          <strong>Mobile Phone:</strong> (250) 213-1232
-        </Typography>
-        <Typography>
-          <strong>Status:</strong> Active
-        </Typography>
-        <Typography>
-          <strong>Roles:</strong> Government Analyst
-        </Typography>
-        <Typography>
-          <strong>Title:</strong> Senior Analyst
-        </Typography>
+        <BCTypography variant="body4">
+          <strong>Organization:</strong>&nbsp;{data.organization.name}
+        </BCTypography>
+        <BCTypography variant="body4">
+          <strong>Email:</strong>&nbsp;{data.email}
+        </BCTypography>
+        <BCTypography variant="body4">
+          <strong>Work Phone:</strong>&nbsp;
+          {phoneNumberFormatter({ value: data.phone })}
+        </BCTypography>
+        <BCTypography variant="body4">
+          <strong>Mobile Phone:</strong>&nbsp;
+          {phoneNumberFormatter({ value: data.mobile_phone })}
+        </BCTypography>
+        <BCTypography variant="body4">
+          <strong>Status:</strong>&nbsp;{StatusRenderer({ data, isView: true })}
+        </BCTypography>
+        <BCTypography variant="body4">
+          <strong>Roles:</strong>&nbsp;
+          {RoleSpanRenderer({ data })}
+        </BCTypography>
+        <BCTypography variant="body4">
+          <strong>Title:</strong>&nbsp;{data.title}
+        </BCTypography>
       </Stack>
-      <Typography variant="h4" color={colors.primary.main} mb={1}>
+      <BCTypography variant="h5" color="primary" mb={1}>
         User Activity
-      </Typography>
-      <BCTable
-        rowData={rows}
-        columnDefs={[
-          { field: 'actionTaken' },
-          { field: 'transactionType' },
-          { field: 'transactionID' },
-          { field: 'timestamp' },
-          { field: 'organization' }
-        ]}
+      </BCTypography>
+      {/* TODO: Once the table data and models are finalized implement below table */}
+      <BCDataGridClient
+        columnDefs={userActivityColDefs}
+        gridRef={gridRef}
+        gridKey="user-activity-grid"
+        rowData={[]}
+        gridOptions={gridOptions}
+        getRowId={(data) => data.user_profile_id}
       />
     </div>
   )

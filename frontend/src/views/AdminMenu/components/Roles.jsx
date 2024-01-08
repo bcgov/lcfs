@@ -35,7 +35,7 @@ export const Roles = (props) => {
           apiEndpoint={'roles/list'}
           defaultColDef={rolesDefaultColDef}
           columnDefs={rolesColumnDefs}
-          gridKey={`roles-grid-${Math.random()}`}
+          gridKey={'roles-grid'}
           getRowId={getRowId}
           gridOptions={gridOptions}
         />

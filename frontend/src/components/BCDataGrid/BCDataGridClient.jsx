@@ -26,6 +26,7 @@ const BCDataGridClient = ({
   columnDefs,
   defaultColDef,
   getRowId,
+  inputData,
   ...others
 }) => {
   const defaultGridOptions = useMemo(() => ({
@@ -67,10 +68,14 @@ const BCDataGridClient = ({
 
   const onGridReady = useCallback((params) => {
     params.api.rowSelection = 'single'
-    fetchData()
+    if (inputData) {
+      setRowData(inputData)
+    } else {
+      fetchData()
+    }
   })
 
-  return isError ? (
+  return isError && !error.includes('404') ? (
     <div className="error-container">
       <div className="error-message">
         <BCAlert severity="error">

@@ -104,3 +104,32 @@ export const rolesDefaultColDef = {
   resizable: true,
   sortable: true
 }
+
+export const userActivityColDefs = [
+  {
+    colId: 'action',
+    field: 'actionTaken',
+    headerName: 'Action Taken'
+  },
+  {
+    colId: 'transactionType',
+    field: 'transactionType',
+    headerName: 'Transaction Type'
+  },
+  {
+    colId: 'transactionId',
+    field: 'transactionId',
+    headerName: 'Transaction ID'
+  },
+  {
+    colId: 'timestamp',
+    field: 'timestamp',
+    headerName: 'Timestamp',
+    filter: 'agDateColumnFilter'
+  },
+  {
+    colId: 'organization',
+    field: 'organization',
+    headerName: 'Organization'
+  }
+]

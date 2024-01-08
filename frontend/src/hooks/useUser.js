@@ -9,3 +9,12 @@ export const useUsers = (options) => {
     ...options
   })
 }
+
+export const useUser = (id, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['user', id],
+    queryFn: async () => (await client.get(`/users/${id}`)).data,
+    ...options
+  })
+}

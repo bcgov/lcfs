@@ -3,32 +3,22 @@ import BCBox from '@/components/BCBox'
 import { Stack } from '@mui/material'
 
 export const StatusRenderer = (props) => {
-  return props.data.is_active ? (
-    <BCBox mt={1}>
+  return (
+    <BCBox component={props.isView ? 'span' : 'div'} mt={1}>
       <BCBadge
-        badgeContent="active"
-        color="success"
+        badgeContent={props.data.is_active ? 'active' : 'inactive'}
+        color={props.data.is_active ? 'success' : 'smoky'}
         variant="gradient"
         size="md"
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          '& .MuiBadge-badge': { fontSize: '0.625rem' }
-        }}
-      />
-    </BCBox>
-  ) : (
-    <BCBox mt={1}>
-      <BCBadge
-        badgeContent="inactive"
-        color="smoky"
-        variant="gradient"
-        size="md"
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          '& .MuiBadge-badge': { fontSize: '0.625rem' }
-        }}
+        sx={
+          props.isView
+            ? { '& .MuiBadge-badge': { fontSize: '0.7rem' } }
+            : {
+                display: 'flex',
+                justifyContent: 'center',
+                '& .MuiBadge-badge': { fontSize: '0.625rem' }
+              }
+        }
       />
     </BCBox>
   )
@@ -97,3 +87,18 @@ export const RoleRenderer = (props) => {
     </Stack>
   )
 }
+
+export const RoleSpanRenderer = (props) => (
+  <>
+    {props.data.roles.map((role) => (
+      <BCBadge
+        key={role.role_id}
+        sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
+        badgeContent={role.name}
+        color={role.is_government_role ? 'primary' : 'secondary'}
+        variant="outlined"
+        size="md"
+      />
+    ))}
+  </>
+)
