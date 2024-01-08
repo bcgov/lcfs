@@ -63,6 +63,7 @@ export const Organizations = () => {
   const location = useLocation()
   const apiService = useApiService()
   const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
+  const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
 
@@ -83,6 +84,19 @@ export const Organizations = () => {
       console.error('Error downloading organization information:', error)
       setIsDownloadingOrgs(false)
       setAlertMessage('Failed to download organization information.')
+      setAlertSeverity('error')
+    }
+  }
+
+  const handleDownloadUsers = async () => {
+    setIsDownloadingUsers(true)
+    try {
+      await apiService.download('/users/export')
+      setIsDownloadingUsers(false)
+    } catch (error) {
+      console.error('Error downloading user information:', error)
+      setIsDownloadingUsers(false)
+      setAlertMessage('Failed to download user information.')
       setAlertSeverity('error')
     }
   }
@@ -122,20 +136,13 @@ export const Organizations = () => {
           downloadLabel="Downloading Organization Information..."
           dataTest="download-org-button"
         />
-        <BCButton
-          variant="outlined"
-          size="small"
-          color="primary"
-          sx={{ whiteSpace: 'nowrap' }}
-          startIcon={
-            <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
-          }
-          onClick={() => {}}
-        >
-          <BCTypography variant="subtitle2">
-            Download User Information
-          </BCTypography>
-        </BCButton>
+        <DownloadButton
+          onDownload={handleDownloadUsers}
+          isDownloading={isDownloadingUsers}
+          label="Download User Information"
+          downloadLabel="Downloading User Information..."
+          dataTest="download-user-button"
+        />
       </Stack>
       <BCBox
         component="div"

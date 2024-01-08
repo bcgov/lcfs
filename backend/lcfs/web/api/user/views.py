@@ -9,12 +9,16 @@ DELETE: /users/<user_id> (Delete only if the user has never logged in/mapped)
 GET: /users/<user_id>/roles {List of Roles with IDs}
 GET: /users/<user_id>/history
 """
+import io
 import math
 from logging import getLogger
 from typing import List
+from datetime import datetime
 
 from fastapi import APIRouter, Body, HTTPException, status, Request
+from fastapi.responses import StreamingResponse
 from starlette.responses import Response
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
@@ -35,6 +39,87 @@ async def startup_event():
         user_repo = UserRepository(db)
         break  # Break after obtaining the database connection
 
+@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@roles_required("Government")
+async def export_users(request: Request):
+    """
+    Endpoint to export information of all users
+    
+    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
+    as specified by the 'export_format' and 'media_type' variables.
+    - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
+    - 'media_type' sets the appropriate MIME type based on 'export_format':
+        'application/vnd.ms-excel' for 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
+        'text/csv' for 'csv'.
+
+    The SpreadsheetBuilder class is used for building the spreadsheet.
+    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
+    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+
+    Note: Only the first sheet data is used for the CSV format,
+        as CSV files do not support multiple sheets.
+    """
+    export_format="xls"
+    media_type="application/vnd.ms-excel"
+
+    try:
+        # Fetch all users from the database
+        users = await user_repo.export_users()
+
+        # Prepare data for the spreadsheet
+        data = [
+            [
+                user.last_name,
+                user.first_name,
+                user.email,
+                user.keycloak_username,
+                user.title,
+                user.phone,
+                user.mobile_phone,
+                "Active" if user.is_active else "Inactive",
+                ", ".join(role.value for role in user.role_names),
+                user.organization.name
+            ] for user in users
+        ]
+
+        # Create a spreadsheet
+        builder = SpreadsheetBuilder(file_format = export_format)
+
+        builder.add_sheet(
+            sheet_name="BCeID Users",
+            columns=[
+                "Last name",
+                "First name",
+                "Email",
+                "BCeID User ID",
+                "Title",
+                "Phone",
+                "Mobile",
+                "Status",
+                "Role(s)",
+                "Organization name"
+            ],
+            rows=data,
+            styles={"bold_headers": True}
+        )
+
+        file_content = builder.build_spreadsheet()
+
+        # Get the current date in YYYY-MM-DD format
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        filename = f"BC-LCFS-bceid-{current_date}.{export_format}"
+        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
+
+    except Exception as e:
+        logger.error("Internal Server Error: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error"
+        ) from e
 
 @router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
 async def get_current_user(request: Request, response: Response = None) -> UserBase:
