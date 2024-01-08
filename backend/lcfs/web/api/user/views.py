@@ -17,7 +17,7 @@ from fastapi import APIRouter, Body, HTTPException, status, Request
 from starlette.responses import Response
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.user.session import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
 from lcfs.web.core.decorators import roles_required
@@ -95,13 +95,13 @@ async def get_users(
             logger.error("Error getting users")
             response.status_code = status.HTTP_404_NOT_FOUND
             return Users(
-                pagination=PaginationResponseScehema(
+                pagination=PaginationResponseSchema(
                     total=0, page=0, size=0, total_pages=0
                 ),
                 users=users,
             )
         return Users(
-            pagination=PaginationResponseScehema(
+            pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
@@ -188,13 +188,13 @@ async def get_user_history(
             logger.error("Error getting user history")
             response.status_code = status.HTTP_404_NOT_FOUND
             return UserHistories(
-                pagination=PaginationResponseScehema(
+                pagination=PaginationResponseSchema(
                     total=0, page=0, size=0, total_pages=0
                 ),
                 users=user_histories,
             )
         return UserHistories(
-            pagination=PaginationResponseScehema(
+            pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,

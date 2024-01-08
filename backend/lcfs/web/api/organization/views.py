@@ -8,13 +8,14 @@ from sqlalchemy import select
 from starlette import status
 from sqlalchemy.orm import selectinload
 from starlette.responses import Response
+from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
 from lcfs.db.models import UserProfile
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.organization.session import OrganizationRepository
 from lcfs.web.api.organization.schema import (
     OrganizationSchema,
@@ -41,9 +42,7 @@ router = APIRouter(on_startup=[startup])
 get_async_db = dependencies.get_async_db_session
 
 
-@router.post(
-    "", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
-)
+@router.post("", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
 @roles_required("Government", "Administrator")
 async def create_organization(
     request: Request,
@@ -114,7 +113,8 @@ async def get_organization(
         return org
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error("Internal Server Error: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @router.put("/{organization_id}", response_model=OrganizationSchema)
@@ -145,9 +145,10 @@ async def update_organization(
 
         return organization
     except Exception as e:
+        logger.error("Internal Server Error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal Server Error: {str(e)}",
+            detail="Internal Server Error",
         )
 
 
@@ -167,13 +168,13 @@ async def list_organizations(
             response.status_code = status.HTTP_404_NOT_FOUND
             return Organizations(
                 organizations=[],
-                pagination=PaginationResponseScehema(
+                pagination=PaginationResponseSchema(
                     total=0, page=0, size=0, total_pages=0
                 ),
             )
         return Organizations(
             organizations=organizations,
-            pagination=PaginationResponseScehema(
+            pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
@@ -184,7 +185,7 @@ async def list_organizations(
         logger.error(f"Error getting organizations: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Technical Error: Failed to get organizations: {str(e)}",
+            detail="Technical Error: Failed to get organizations",
         )
 
 
@@ -203,7 +204,9 @@ async def get_organization_statuses() -> List[OrganizationStatusBase]:
         return statuses
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Error getting organization statuses: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @router.get(
     "/types/list",
@@ -214,13 +217,12 @@ async def get_organization_types() -> List[OrganizationTypeBase]:
     try:
         types = await organization_repo.get_types()
         if len(types) == 0:
-            raise HTTPException(
-                status_code=404, detail="No organization types found"
-            )
+            raise HTTPException(status_code=404, detail="No organization types found")
         return types
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Error getting organization types: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error")
 
 
 @router.get("/{organization_id}/users/", response_model=List[OrganizationUserSchema])
@@ -242,4 +244,5 @@ async def get_users_for_organization(
 
         return users
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Error getting users for organization: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error")

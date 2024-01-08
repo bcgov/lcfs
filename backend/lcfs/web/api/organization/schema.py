@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
-from lcfs.web.api.base import PaginationResponseScehema
+from lcfs.web.api.base import PaginationResponseSchema
 
 
 class OrganizationStatusEnum(str, Enum):
@@ -169,5 +169,5 @@ class GetOrganizationResponse(BaseModel):
 
 
 class Organizations(BaseModel):
-    pagination: PaginationResponseScehema
+    pagination: PaginationResponseSchema
     organizations: List[OrganizationBase]

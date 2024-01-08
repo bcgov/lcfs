@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 from lcfs.web.api.organization.schema import OrganizationSummarySchema
 from lcfs.web.api.role.schema import RoleSchema
-from lcfs.web.api.base import PaginationResponseScehema
+from lcfs.web.api.base import PaginationResponseSchema
 
 """
 Base - all shared attributes of a resource
@@ -60,7 +60,7 @@ class UserBase(BaseModel):
     
 
 class Users(BaseModel):
-    pagination: PaginationResponseScehema
+    pagination: PaginationResponseSchema
     users: List[UserBase]
 
 
@@ -75,5 +75,5 @@ class UserHistory(BaseModel):
 
 
 class UserHistories(BaseModel):
-    pagination: PaginationResponseScehema
+    pagination: PaginationResponseSchema
     history: List[UserHistory]

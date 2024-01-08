@@ -57,8 +57,8 @@ export function BCPaginationActions({
         {enableResetButton && (
           <Tooltip title="Reset sort and filters" placement="top-start">
             <IconButton
-              id="reloadGridBCButton"
-              aria-label="delete"
+              id="reloadGridButton"
+              aria-label="reset filters and sorts"
               onClick={reloadGrid}
               color="primary"
             >
@@ -69,8 +69,8 @@ export function BCPaginationActions({
         {enableCopyButton && (
           <Tooltip title="Copy selected rows" placement="top-start">
             <IconButton
-              id="reloadGridBCButton"
-              aria-label="delete"
+              id="copyGridButton"
+              aria-label="copy row in csv format"
               onClick={handleCopyData}
               color="primary"
             >
