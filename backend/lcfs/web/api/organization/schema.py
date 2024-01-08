@@ -122,9 +122,9 @@ class GetOrganizationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     name: str
-    email: EmailStr
-    phone: str
-    edrms_record: str
+    email: Optional[EmailStr]
+    phone: Optional[str]
+    edrms_record: Optional[str]
     org_status: StatusBaseSchema
-    org_address: AddressBaseSchema
-    org_attorney_address: AddressBaseSchema
+    org_address: Optional[AddressBaseSchema]
+    org_attorney_address: Optional[AddressBaseSchema]

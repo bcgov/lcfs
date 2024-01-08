@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box, Typography } from '@mui/material'
 import { Link } from 'react-router-dom'
 
-export const OrganizationDetails = () => {
+export const BCeIDRightColWidget = () => {
   const { data: orgData, isLoading: orgLoading } = useOrganization()
 
   return (

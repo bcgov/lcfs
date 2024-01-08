@@ -9,11 +9,18 @@ import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
 import RequireAuth from '@/components/RequireAuth'
 import { Navbar } from './components/Navbar'
+import DisclaimerBanner from '@/components/DisclaimerBanner'
+// hooks
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 // icons and typograhpy
 import typography from '@/themes/base/typography'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
 
 export const MainLayout = () => {
+  const { data: currentUser } = useCurrentUser()
+  const isGovernmentRole =
+    currentUser?.roles?.some(({ name }) => name === 'Government') ?? false
+
   const matches = useMatches()
   const { size } = typography
   const breadcrumbs = matches
@@ -83,6 +90,15 @@ export const MainLayout = () => {
           >
             <Outlet />
           </Paper>
+        </Grid>
+        <Grid lg={12}>
+          <DisclaimerBanner
+            messages={[
+              "For security and privacy reasons, please don't share personal information on this website.",
+              !isGovernmentRole &&
+                'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'
+            ]}
+          />
         </Grid>
       </Container>
       <Footer />

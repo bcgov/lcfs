@@ -24,6 +24,7 @@ export const Navbar = () => {
       organizationName={currentUser?.organization?.name}
       routes={routes}
       beta={true}
+      data-test="main-layout-navbar"
       headerRightPart={<HeaderComponent key="headerRight" />}
       menuRightPart={<Logout key="menRight" />}
     />
