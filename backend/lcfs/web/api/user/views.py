@@ -14,26 +14,24 @@ from logging import getLogger
 from typing import List
 
 from fastapi import APIRouter, Body, HTTPException, status, Request
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 from starlette.responses import Response
+
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.user.session import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
 from lcfs.web.core.decorators import roles_required
+from fastapi import Depends
 
 router = APIRouter()
 logger = getLogger("users")
 get_async_db = dependencies.get_async_db_session
-user_repo = None
-
-
-@router.on_event("startup")
-async def startup_event():
-    global user_repo
-    async for db in get_async_db():  # Iterate over the async_generator
-        user_repo = UserRepository(db)
-        break  # Break after obtaining the database connection
+# Initialize the cache with Redis backend
+FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
 
 @router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
@@ -66,7 +64,10 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
 @router.get("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def get_user_by_id(
-    request: Request, user_id: int, response: Response = None
+    request: Request,
+    user_id: int,
+    response: Response = None,
+    user_repo: UserRepository = Depends(),
 ) -> UserBase:
     try:
         user = await user_repo.get_user(user_id=user_id)
@@ -88,6 +89,7 @@ async def get_users(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
+    user_repo: UserRepository = Depends(),
 ) -> Users:
     try:
         users, total_count = await user_repo.query_users(pagination=pagination)
@@ -123,6 +125,7 @@ async def create_user(
     request: Request,
     response: Response = None,
     user_create: UserCreate = ...,
+    user_repo: UserRepository = Depends(),
 ) -> UserBase:
     try:
         return await user_repo.create_user(user_create)
@@ -139,6 +142,7 @@ async def create_user(
     response: Response = None,
     user_id: int = None,
     user_create: UserCreate = ...,
+    user_repo: UserRepository = Depends(),
 ) -> UserBase:
     try:
         return await user_repo.update_user(user_create, user_profile_id=user_id)
@@ -153,7 +157,10 @@ async def create_user(
 )
 @roles_required("Government")
 async def get_user_roles(
-    request: Request, response: Response = None, user_id: int = None
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    user_repo: UserRepository = Depends(),
 ) -> List[RoleSchema]:
     try:
         user = await user_repo.get_user(user_id=user_id)
@@ -179,6 +186,7 @@ async def get_user_history(
     response: Response = None,
     user_id: int = None,
     pagination: PaginationRequestSchema = Body(..., embed=False),
+    user_repo: UserRepository = Depends()
 ) -> UserHistories:
     try:
         user_histories, total_count = await user_repo.get_user_history(

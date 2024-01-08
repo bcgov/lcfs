@@ -52,11 +52,12 @@ class Settings(BaseSettings):
     # Variables for Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
+    redis_db: str = "lcfs"
     redis_user: Optional[str] = None
     redis_pass: Optional[str] = None
     redis_base: Optional[int] = None
 
-    # Variables for Keycloak 
+    # Variables for Keycloak
     well_known_endpoint: str = "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
     keycloak_audience: str = "tfrs-on-gold-4308"
 
@@ -75,7 +76,7 @@ class Settings(BaseSettings):
             password=self.db_pass,
             path=f"/{self.db_base}",
         )
-    
+
     @property
     def db_test_url(self) -> URL:
         """
@@ -91,7 +92,7 @@ class Settings(BaseSettings):
             password=self.db_pass,
             path=f"/{self.db_test}",
         )
-    
+
     @property
     def redis_url(self) -> URL:
         """

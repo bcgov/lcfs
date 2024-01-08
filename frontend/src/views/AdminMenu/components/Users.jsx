@@ -16,7 +16,7 @@ import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // import DemoButtons from './DemoButtons'
 
 export const Users = (props) => {
-  const [gridKey, setGridKey] = useState(`users-grid-${Math.random()}`)
+  const [gridKey, setGridKey] = useState('users-grid')
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
     if (gridRef.current) {

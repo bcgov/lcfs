@@ -36,7 +36,7 @@ export const ViewUser = () => {
           <EditIcon />
         </IconButton>
       </BCTypography>
-      <Stack direction="column" spacing={0.5} mb={5}>
+      <Stack direction="column" spacing={0.5} mb={2}>
         <BCTypography variant="body4">
           <strong>Organization:</strong>&nbsp;{data.organization.name}
         </BCTypography>

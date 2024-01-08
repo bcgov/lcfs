@@ -9,6 +9,8 @@ from starlette import status
 from sqlalchemy.orm import selectinload
 from starlette.responses import Response
 from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 
 from lcfs.db import dependencies
 from lcfs.db.models import UserProfile
@@ -29,17 +31,11 @@ from lcfs.web.api.organization.schema import (
 )
 from lcfs.web.core.decorators import roles_required
 
-
-async def startup():
-    global organization_repo
-    async for db in get_async_db():
-        organization_repo = OrganizationRepository(db)
-        break
-
-
 logger = getLogger("organization")
-router = APIRouter(on_startup=[startup])
+router = APIRouter()
 get_async_db = dependencies.get_async_db_session
+# Initialize the cache with Redis backend
+FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
 
 @router.post("", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
@@ -157,12 +153,11 @@ async def update_organization(
 async def list_organizations(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
+    repo: OrganizationRepository = Depends(),
     response: Response = None,
 ):
     try:
-        organizations, total_count = await organization_repo.get_organizations(
-            pagination
-        )
+        organizations, total_count = await repo.get_organizations(pagination)
         if not organizations:
             logger.error("Error getting organizations")
             response.status_code = status.HTTP_404_NOT_FOUND
@@ -194,9 +189,12 @@ async def list_organizations(
     response_model=List[OrganizationStatusBase],
     status_code=status.HTTP_200_OK,
 )
-async def get_organization_statuses() -> List[OrganizationStatusBase]:
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
+async def get_organization_statuses(
+    repo: OrganizationRepository = Depends(),
+) -> List[OrganizationStatusBase]:
     try:
-        statuses = await organization_repo.get_statuses()
+        statuses = await repo.get_statuses()
         if len(statuses) == 0:
             raise HTTPException(
                 status_code=404, detail="No organization statuses found"
@@ -213,9 +211,12 @@ async def get_organization_statuses() -> List[OrganizationStatusBase]:
     response_model=List[OrganizationTypeBase],
     status_code=status.HTTP_200_OK,
 )
-async def get_organization_types() -> List[OrganizationTypeBase]:
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
+async def get_organization_types(
+    repo: OrganizationRepository = Depends(),
+) -> List[OrganizationTypeBase]:
     try:
-        types = await organization_repo.get_types()
+        types = await repo.get_types()
         if len(types) == 0:
             raise HTTPException(status_code=404, detail="No organization types found")
         return types

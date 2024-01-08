@@ -1,15 +1,16 @@
 from logging import getLogger
 from typing import List
 
+from fastapi import Depends
 from sqlalchemy import and_, func, select, asc, desc, delete, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.Role import Role, RoleEnum
-from lcfs.db.models.Organization import Organization
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -22,7 +23,11 @@ logger = getLogger("user_repo")
 
 
 class UserRepository:
-    def __init__(self, session: AsyncSession, request: Request = None):
+    def __init__(
+        self,
+        session: AsyncSession = Depends(get_async_db_session),
+        request: Request = None,
+    ):
         self.session = session
         self.request = request
 
@@ -135,7 +140,9 @@ class UserRepository:
                 select(UserProfile)
                 .options(
                     joinedload(UserProfile.organization),
-                    joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
+                    joinedload(UserProfile.user_roles).options(
+                        joinedload(UserRole.role)
+                    ),
                 )
                 .where(UserProfile.user_profile_id == user_id)
             )

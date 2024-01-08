@@ -10,7 +10,7 @@ export const organizationsColDefs = [
     field: 'complianceUnits',
     headerName: 'Compliance Units',
     valueFormatter: numberFormatter,
-    valueGetter: () => 100000,
+    valueGetter: () => Math.round(Math.random() * (500000 - 100000) + 100000),
     // Temporary measures
     // filter: 'agNumberColumnFilter',
     filter: false,
@@ -21,7 +21,7 @@ export const organizationsColDefs = [
     field: 'reserve',
     headerName: 'In Reserve',
     valueFormatter: numberFormatter,
-    valueGetter: () => 100000,
+    valueGetter: () => Math.round(Math.random() * (100000 - 0)),
     // Temporary measures
     // filter: 'agNumberColumnFilter',
     filter: false,
@@ -46,3 +46,6 @@ export const organizationsColDefs = [
     suppressMenu: true
   }
 ]
+
+export const defaultSortModel = []
+export const defaultFilterModel = []

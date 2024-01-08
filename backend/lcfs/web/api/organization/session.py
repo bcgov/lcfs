@@ -1,11 +1,12 @@
 from logging import getLogger
 from typing import List
 
+from fastapi import Depends, Request
 from sqlalchemy import and_, func, select, asc, desc, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.requests import Request
 
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.api.organization.schema import (
     OrganizationBase,
     OrganizationStatusBase,
@@ -25,7 +26,11 @@ logger = getLogger("organization_repo")
 
 
 class OrganizationRepository:
-    def __init__(self, session: AsyncSession, request: Request = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession = Depends(get_async_db_session),
+        request: Request = None,
+    ) -> None:
         self.session = session
         self.request = request
 

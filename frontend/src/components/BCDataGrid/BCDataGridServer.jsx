@@ -140,6 +140,7 @@ const BCDataGridServer = ({
   // Callback for grid filter changes.
   const onFilterChanged = useCallback(() => {
     setPage(1)
+    setRowData([])
     gridRef.current.api.showLoadingOverlay()
     const filterModel = gridRef?.current?.api.getFilterModel()
     const filterArr = Object.entries(filterModel).map(([field, value]) => {
@@ -151,7 +152,9 @@ const BCDataGridServer = ({
   // Callback for grid sort changes.
   const onSortChanged = useCallback(() => {
     setPage(1)
+    setRowData([])
     gridRef.current.api.showLoadingOverlay()
+    // forming the sortModel that fits with backend schema structure
     const sortTemp = gridRef?.current?.api
       .getColumnState()
       .filter((col) => col.sort)
