@@ -104,6 +104,15 @@ async def seed_organization_attorney_addresses(session):
             "country": "Canada",
             "postalCode_zipCode": "T3E 4X8",
         },
+        {
+            "name": "Government of British Columbia",
+            "street_address": "123 Main Street",
+            "address_other": "",
+            "city": "Victoria",
+            "province_state": "BC",
+            "country": "Canada",
+            "postalCode_zipCode": "V9A 1B2",
+        },
     ]
 
     try:

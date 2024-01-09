@@ -114,6 +114,16 @@ async def seed_organizations(session):
             "organization_address_id": 10,
             "organization_attorney_address_id": 10,
         },
+        {
+            "name": "Government of British Columbia",
+            "email": "lcfs@gov.bc.ca",
+            "phone": "111-222-3333",
+            "edrms_record": "00000",
+            "organization_status_id": 1,
+            "organization_type_id": 1,
+            "organization_address_id": 11,
+            "organization_attorney_address_id": 11,
+        },
     ]
 
     try:
@@ -126,6 +136,18 @@ async def seed_organizations(session):
             )
             if not exists.scalars().first():
                 organization = Organization(**organization_data)
+                session.add(organization)
+            else:
+                organization = exists.scalars().first()
+                organization.email = organization_data["email"]
+                organization.phone = organization_data["phone"]
+                organization.edrms_record = organization_data["edrms_record"]
+                organization.organization_address_id = organization_data[
+                    "organization_address_id"
+                ]
+                organization.organization_attorney_address_id = organization_data[
+                    "organization_attorney_address_id"
+                ]
                 session.add(organization)
 
         await session.commit()

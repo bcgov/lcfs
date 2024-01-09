@@ -18,8 +18,6 @@ async def seed_organizations(session):
             "name": "Government of British Columbia",
             "organization_status_id": 1,
             "organization_type_id": 1,
-            "organization_address_id": 5,
-            "organization_attorney_address_id": 5,
         },
     ]
 
