@@ -52,7 +52,7 @@ export const organizationsColDefs = [
 const getUserColumnDefs = () => {
   const colDefs = usersColumnDefs.map((colDef) => {
     if (colDef.field === 'is_active') {
-      return { ...colDef, sortable: false, suppressMenu: true, }
+      return { ...colDef, sortable: false, suppressMenu: true, floatingFilter: false }
     }
     return colDef
   })
