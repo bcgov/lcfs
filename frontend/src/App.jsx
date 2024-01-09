@@ -24,14 +24,20 @@ import { ViewReport } from './views/ViewReport'
 import { ViewTransaction } from './views/ViewTransaction'
 import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
 import ContactUs from './components/ContactUs'
+import PublicLayout from './layouts/PublicLayout'
 
 const router = createBrowserRouter([
   {
-    name: 'Login',
-    key: 'login',
-    path: ROUTES.LOGIN,
-    element: <Login />,
-    handle: { crumb: () => 'Login' }
+    element: <PublicLayout />,
+    children: [
+      {
+        name: 'Login',
+        key: 'login',
+        path: ROUTES.LOGIN,
+        element: <Login />,
+        handle: { title: 'Login' }
+      }
+    ]
   },
   {
     element: <MainLayout />,
@@ -41,127 +47,161 @@ const router = createBrowserRouter([
         children: [
           {
             path: '',
-            element: <Dashboard />
+            element: <Dashboard />,
+            handle: { title: 'Dashboard' }
           }
         ]
       },
       {
         path: ROUTES.TRANSACTIONS,
-        element: <Transactions />
+        element: <Transactions />,
+        handle: { title: 'Transactions' }
       },
       {
         path: ROUTES.TRANSACTIONS_ADD,
-        element: <AddTransaction />
+        element: <AddTransaction />,
+        handle: { title: 'Add Transaction' }
       },
       {
         path: ROUTES.TRANSACTIONS_VIEW,
-        element: <ViewTransaction />
+        element: <ViewTransaction />,
+        handle: { title: 'View Transactions' }
       },
       {
         path: ROUTES.ORGANIZATION,
-        element: <ViewOrg />
+        element: <ViewOrg />,
+        handle: { title: 'View Organization' }
       },
       {
         path: ROUTES.ORGANIZATION_ADDUSER,
-        element: <AddEditUser />
+        element: <AddEditUser />,
+        handle: { title: 'Add User' }
       },
       {
         path: ROUTES.ORGANIZATION_VIEWUSER,
-        element: <ViewUser />
+        element: <ViewUser />,
+        handle: { title: 'View User' }
       },
       {
         path: ROUTES.ORGANIZATION_EDITUSER,
-        element: <AddEditUser />
+        element: <AddEditUser />,
+        handle: { title: 'Edit User' }
       },
       {
         path: ROUTES.ORGANIZATIONS,
-        element: <Organizations />
+        element: <Organizations />,
+        handle: { title: 'Organizations' }
       },
       {
         path: ROUTES.ORGANIZATIONS_ADD,
-        element: <AddOrganization />
+        element: <AddOrganization />,
+        handle: { title: 'Add Organization' }
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEW,
-        element: <ViewOrg />
+        element: <ViewOrg />,
+        handle: { title: 'View Organization' }
       },
       {
         path: ROUTES.ORGANIZATIONS_EDIT,
-        element: <AddOrganization />
+        element: <AddOrganization />,
+        handle: { title: 'Edit Organization' }
       },
       {
         path: ROUTES.ORGANIZATIONS_ADDUSER,
-        element: <AddEditUser />
+        element: <AddEditUser />,
+        handle: { title: 'Add Organization User' }
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEWUSER,
         element: <ViewUser />,
-        handle: { crumb: () => 'Users' }
+        handle: {
+          crumb: () => 'Users',
+          title: 'View Organization User'
+        }
       },
       {
         path: ROUTES.ORGANIZATIONS_EDITUSER,
         element: <AddEditUser />,
-        handle: { crumb: () => 'Users' }
+        handle: {
+          crumb: () => 'Users',
+          title: 'Edit Organization User'
+        }
       },
       {
         path: ROUTES.REPORTS,
-        element: <Reports />
+        element: <Reports />,
+        handle: { title: 'Reports' }
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <ViewReport />
+        element: <ViewReport />,
+        handle: { title: 'View Report' }
       },
       {
         path: ROUTES.NOTIFICATIONS,
-        element: <Notifications />
+        element: <Notifications />,
+        handle: { title: 'Notifications' }
       },
       {
         path: ROUTES.NOTIFICATIONS_SETTINGS,
-        element: <NotificationSettings />
+        element: <NotificationSettings />,
+        handle: { title: 'Notification Settings' }
       },
       {
         path: ROUTES.ADMIN,
-        element: <Navigate to={ROUTES.ADMIN_USERS} replace />
+        element: <Navigate to={ROUTES.ADMIN_USERS} replace />,
+        handle: { title: 'Admin' }
       },
       {
         path: ROUTES.ADMIN_USERS,
-        element: <AdminMenu tabIndex={0} />
+        element: <AdminMenu tabIndex={0} />,
+        handle: { title: 'Admin Users' }
       },
       {
         path: ROUTES.ADMIN_ROLES,
-        element: <AdminMenu tabIndex={1} />
+        element: <AdminMenu tabIndex={1} />,
+        handle: { title: 'Admin Roles' }
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,
-        element: <AddEditUser userType="idir" />
+        element: <AddEditUser userType="idir" />,
+        handle: { title: 'Add Admin User' }
       },
       {
         path: ROUTES.ADMIN_USERS_VIEW,
-        element: <ViewUser />
+        element: <ViewUser />,
+        handle: { title: 'View Admin User' }
       },
       {
         path: ROUTES.ADMIN_USERS_EDIT,
-        element: <AddEditUser userType="idir" />
+        element: <AddEditUser userType="idir" />,
+        handle: { title: 'Edit Admin User' }
       },
       {
         path: ROUTES.ADMIN_USERACTIVITY,
-        element: <UserActivity />
+        element: <UserActivity />,
+        handle: { title: 'Admin User Activity' }
       },
       {
         path: ROUTES.FUELCODES,
-        element: <FuelCodes />
+        element: <FuelCodes />,
+        handle: { title: 'Fuel Codes' }
       },
       {
         path: ROUTES.FUELCODES_ADD,
-        element: <AddFuelCode />
+        element: <AddFuelCode />,
+        handle: { title: 'Add Fuel Code' }
       },
       {
         path: ROUTES.FSE,
-        element: <FSE />
+        element: <FSE />,
+        handle: { title: 'FSE' }
       },
       {
         path: ROUTES.FILESUBMISSION,
-        element: <FileSubmission />
+        element: <FileSubmission />,
+        handle: { title: 'File Submission' }
       }
     ]
   },

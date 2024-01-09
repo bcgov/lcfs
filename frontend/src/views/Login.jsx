@@ -16,6 +16,8 @@ import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
 import { Link, useLocation } from 'react-router-dom'
 import Snowfall from 'react-snowfall'
+import { logout } from '@/utils/keycloak'
+import { Logout } from '@/layouts/MainLayout/components/Logout'
 
 const currentDate = new Date()
 
@@ -123,6 +125,9 @@ export const Login = () => {
         radius={seasonImages[season].radius}
         images={droplets()}
       />
+      <BCTypography variant="h1" className="visually-hidden">
+        Login
+      </BCTypography>
       <BCBox px={1} width="100%" height="100vh" mx="auto">
         <Grid
           container
@@ -171,7 +176,12 @@ export const Login = () => {
                 </BCTypography>
               </BCBox>
               <BCBox pt={1} pb={3} px={3}>
-                {message && <Alert severity={severity}>{message}</Alert>}
+                {message && (
+                  <Alert severity={severity}>
+                    {message}
+                    <Logout />
+                  </Alert>
+                )}
                 <BCBox component="form" role="form" data-test="login-container">
                   <BCBox mt={4} mb={1}>
                     <BCButton
@@ -238,6 +248,7 @@ export const Login = () => {
                     <BCButton variant="contained" color="dark" size="small">
                       {' '}
                       <Link
+                        data-test="login-help-link"
                         component="button"
                         variant="button"
                         to="/contact-us"
@@ -247,6 +258,15 @@ export const Login = () => {
                           Trouble logging in?
                         </BCTypography>
                       </Link>
+                    </BCButton>
+                    <BCButton
+                      onClick={() => {
+                        logout()
+                      }}
+                      data-test="logout-button"
+                      style={{ display: 'none' }}
+                    >
+                      Log out
                     </BCButton>
                   </BCBox>
                 </BCBox>

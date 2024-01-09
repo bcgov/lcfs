@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Cypress environment variables file
+# Cypress env vars and artifacts
 cypress.env.json
+cypress/screenshots/
+cypress/videos/
+cypress/reports/

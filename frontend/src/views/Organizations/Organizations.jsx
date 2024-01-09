@@ -3,17 +3,48 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { Stack } from '@mui/material'
+import { Stack, CircularProgress } from '@mui/material'
 // Icons
 import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
 import { organizationsColDefs } from './components/schema'
 // react components
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+// Services
+import { useApiService } from '@/services/useApiService'
+
+const DownloadButton = ({
+  onDownload,
+  isDownloading,
+  label,
+  downloadLabel,
+  dataTest
+}) => (
+  <BCButton
+    data-test={dataTest}
+    variant="outlined"
+    size="small"
+    color="primary"
+    sx={{ whiteSpace: 'nowrap' }}
+    startIcon={
+      isDownloading ? (
+        <CircularProgress size={24} />
+      ) : (
+        <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
+      )
+    }
+    onClick={onDownload}
+    disabled={isDownloading}
+  >
+    <BCTypography variant="subtitle2">
+      {isDownloading ? downloadLabel : label}
+    </BCTypography>
+  </BCButton>
+)
 
 export const Organizations = () => {
   const gridRef = useRef()
@@ -36,14 +67,52 @@ export const Organizations = () => {
   const handleRowClicked = useCallback((params) => {
     navigate(`/organizations/${params.data.organization_id}`)
   })
+  const apiService = useApiService()
+  const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
+  const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
+  const [alertMessage, setAlertMessage] = useState('')
+  const [alertSeverity, setAlertSeverity] = useState('info')
 
-  const { message, severity } = location.state || {}
+  useEffect(() => {
+    if (location.state?.message) {
+      setAlertMessage(location.state.message)
+      setAlertSeverity(location.state.severity || 'info')
+    }
+  }, [location.state])
+
+  const handleDownloadOrgs = async () => {
+    setIsDownloadingOrgs(true)
+    setAlertMessage('')
+    try {
+      await apiService.download('/organizations/export')
+      setIsDownloadingOrgs(false)
+    } catch (error) {
+      console.error('Error downloading organization information:', error)
+      setIsDownloadingOrgs(false)
+      setAlertMessage('Failed to download organization information.')
+      setAlertSeverity('error')
+    }
+  }
+
+  const handleDownloadUsers = async () => {
+    setIsDownloadingUsers(true)
+    try {
+      await apiService.download('/users/export')
+      setIsDownloadingUsers(false)
+    } catch (error) {
+      console.error('Error downloading user information:', error)
+      setIsDownloadingUsers(false)
+      setAlertMessage('Failed to download user information.')
+      setAlertSeverity('error')
+    }
+  }
+
   return (
     <>
       <div>
-        {message && (
-          <BCAlert data-test="alert-box" severity={severity || 'info'}>
-            {message}
+        {alertMessage && (
+          <BCAlert data-test="alert-box" severity={alertSeverity}>
+            {alertMessage}
           </BCAlert>
         )}
       </div>
@@ -66,34 +135,20 @@ export const Organizations = () => {
         >
           <BCTypography variant="subtitle2">New Organization</BCTypography>
         </BCButton>
-        <BCButton
-          variant="outlined"
-          size="small"
-          color="primary"
-          sx={{ whiteSpace: 'nowrap' }}
-          startIcon={
-            <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
-          }
-          onClick={() => {}}
-        >
-          <BCTypography variant="subtitle2">
-            Download Organization Information
-          </BCTypography>
-        </BCButton>
-        <BCButton
-          variant="outlined"
-          size="small"
-          color="primary"
-          sx={{ whiteSpace: 'nowrap' }}
-          startIcon={
-            <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
-          }
-          onClick={() => {}}
-        >
-          <BCTypography variant="subtitle2">
-            Download User Information
-          </BCTypography>
-        </BCButton>
+        <DownloadButton
+          onDownload={handleDownloadOrgs}
+          isDownloading={isDownloadingOrgs}
+          label="Download Organization Information"
+          downloadLabel="Downloading Organization Information..."
+          dataTest="download-org-button"
+        />
+        <DownloadButton
+          onDownload={handleDownloadUsers}
+          isDownloading={isDownloadingUsers}
+          label="Download User Information"
+          downloadLabel="Downloading User Information..."
+          dataTest="download-user-button"
+        />
       </Stack>
       <BCBox
         component="div"

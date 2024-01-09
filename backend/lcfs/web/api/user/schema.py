@@ -38,6 +38,7 @@ class UserBase(BaseModel):
     """DTO for user values."""
 
     user_profile_id: int
+    keycloak_username: str
     username: str
     email: EmailStr
     display_name: str

@@ -15,9 +15,8 @@ const Loading = ({ message = 'Loading...' }) => {
         height: '100%',
         padding: '20px'
       }}
-      role="progressbar"
     >
-      <CircularProgress />
+      <CircularProgress aria-labelledby="loading" />
       <Typography variant="subtitle1" sx={{ mt: 2 }}>
         {message}
       </Typography>

@@ -1,6 +1,6 @@
-## For each release, the value of workflow name, branches and PR_NUMBER need to be adjusted accordingly
+## For each release, the value of workflow name, branches and VERSION need to be adjusted accordingly
 
-name: LCFS Dev CI
+name: LCFS 0.2.0 Dev CI
 
 on:
   push:
@@ -9,10 +9,8 @@ on:
       - frontend/**
       - backend/**
   workflow_dispatch:
-  workflow_call:
 
 env:
-  ## The pull request number of the Tracking pull request to merge the release branch to main
   VERSION: 0.2.0
   GIT_URL: https://github.com/bcgov/lcfs.git 
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
@@ -25,14 +23,26 @@ concurrency:
 
 jobs:
 
+  set-pre-release:
+    name: Calculate pre-release number
+    runs-on: ubuntu-latest
+  
+    outputs:
+      output1: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
+    
+    steps:
+      - id: set-pre-release
+        run: echo "PRE_RELEASE=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
   build:
 
     name: Build LCFS
     runs-on: ubuntu-latest
+    needs: set-pre-release
     timeout-minutes: 60
 
-    outputs:
-      PRE_RELEASE: ${{ steps.set-pre-release.outputs.PRE_RELEASE}}
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
 
     steps:
 
@@ -47,36 +57,31 @@ jobs:
           insecure_skip_tls_verify: true
           namespace: ${{ env.TOOLS_NAMESPACE }}
 
-      - name: Calculate the PRE_RELEASE
-        id: set-pre-release
+      - name: Build LCFS Backend
         run: |
-          export PRE_RELEASE=$(date +'%Y%m%d%H%M%S')
-          echo "PRE_RELEASE=${PRE_RELEASE}" >> $GITHUB_ENV
+          cd openshift/templates
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 5s
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
-      - name: show pre release
+      - name: Build LCFS Frontend
         run: |
-          echo "PRE_RELEASE: $PRE_RELEASE"
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
+          sleep 5s
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
-      # - name: Build LCFS Backend
-      #   run: |
-      #     cd openshift/templates
-      #     oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-      #     oc start-build --wait=true lcfs-backend-${{ env.VERSION }}-$PRE_RELEASE
-      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
-
-      # - name: Build LCFS Frontend
-      #   run: |
-      #     cd openshift/templates
-      #     oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-$PRE_RELEASE GIT_URL=${{ env.GIT_URL }} GIT_REF=release-${{ env.VERSION }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-      #     oc start-build --wait=true lcfs-frontend-${{ env.VERSION }}-$PRE_RELEASE
-      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
-
-  Deploy:
+  deploy:
 
     name: Deploy LCFS
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: build
+    needs: [set-pre-release, build]
+
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
 
     steps:
       
@@ -86,16 +91,23 @@ jobs:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
-
-      - name: show pre release
-        run: |
-          echo "PRE_RELEASE: ${{ needs.build.outputs.PRE_RELEASE }}"
       
-      - name: Update tag
+      - name: Update frontend tag
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq '.image.tag = ${{ env.VERSION }}-${{ needs.build.outputs.PRE_RELEASE }}' lcfs/charts/lcfs-frontend/values-dev.yaml
-    
-      - name: Check Changed value
+            cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml
+
+      - name: Update backend tag
+        uses: mikefarah/yq@v4.40.5
+        with:
+            cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-dev.yaml
+
+      - name: GitHub Commit & Push
         run: |
-          cat lcfs/charts/lcfs-frontend/values-dev.yaml
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add lcfs/charts/lcfs-frontend/values-dev.yaml
+          git add lcfs/charts/lcfs-backend/values-dev.yaml
+          git commit -m "update the version with pre-release number"
+          git push
+      
