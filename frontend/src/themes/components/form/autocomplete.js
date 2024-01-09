@@ -15,7 +15,7 @@ const autocomplete = {
     popper: {
       boxShadow: lg,
       padding: pxToRem(8),
-      fontSize: size.sm,
+      fontSize: size.md,
       color: text.main,
       textAlign: 'left',
       backgroundColor: `${white.main} !important`,

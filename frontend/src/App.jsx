@@ -8,7 +8,6 @@ import { AddTransaction } from './views/AddTransaction'
 import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
-import { EditOrg } from './views/EditOrg'
 import { FSE } from './views/FSE'
 import { FileSubmission } from './views/FileSubmission'
 import { FuelCodes } from './views/FuelCodes'
@@ -20,10 +19,10 @@ import { Organizations } from './views/Organizations'
 import { Reports } from './views/Reports'
 import { Transactions } from './views/Transactions'
 import { UserActivity } from './views/UserActivity'
-import { ViewOrg } from './views/ViewOrg'
+import { ViewOrg } from '@/views/Organizations/components/ViewOrg'
 import { ViewReport } from './views/ViewReport'
 import { ViewTransaction } from './views/ViewTransaction'
-import { ViewUser } from './views/ViewUser'
+import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
 
@@ -105,7 +104,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_EDIT,
-        element: <EditOrg />,
+        element: <AddOrganization />,
         handle: { title: 'Edit Organization' }
       },
       {

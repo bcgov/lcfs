@@ -54,7 +54,8 @@ const colors = {
     nav: '#38598a', // Used for Nav bar
     opaque: 'transparent',
     paper: '#F3F6F9',
-    secondary: '#fade81'
+    secondary: '#fade81',
+    primary: '#002663'
   },
   // Used for headings and paragraphs
   text: {
@@ -219,6 +220,10 @@ const colors = {
     dark: {
       main: '#313132',
       state: '#606060'
+    },
+    smoky: {
+      main: '#6c757d',
+      state: '#7c8560'
     }
   }
 }

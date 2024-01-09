@@ -1,16 +1,19 @@
 import io
 from logging import getLogger
+import math
 from typing import List
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from starlette import status
 from sqlalchemy.orm import selectinload, joinedload
 from starlette.responses import Response
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.db import dependencies
@@ -18,18 +21,25 @@ from lcfs.db.models import UserProfile
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.organization.session import OrganizationRepository
 from lcfs.web.api.organization.schema import (
     OrganizationSchema,
     OrganizationCreateSchema,
+    OrganizationStatusBase,
+    OrganizationTypeBase,
     OrganizationUpdateSchema,
     OrganizationUserSchema,
     GetOrganizationResponse,
+    Organizations,
 )
 from lcfs.web.core.decorators import roles_required
 
 logger = getLogger("organization")
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
+# Initialize the cache with Redis backend
+FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
@@ -113,7 +123,7 @@ async def export_organizations(request: Request, db: AsyncSession = Depends(get_
         ) from e
 
 @router.post(
-    "/", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
+    "", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
 )
 @roles_required("Government", "Administrator")
 async def create_organization(
@@ -185,7 +195,8 @@ async def get_organization(
         return org
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error("Internal Server Error: %s", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @router.put("/{organization_id}", response_model=OrganizationSchema)
@@ -216,36 +227,89 @@ async def update_organization(
 
         return organization
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Internal Server Error: {str(e)}",
-        )
-
-
-@router.get("/list", response_model=list[OrganizationSchema])
-@roles_required("Government")
-async def list_organizations(
-    request: Request,
-    db: AsyncSession = Depends(get_async_db),
-    response: Response = None,
-):
-    try:
-        query = select(Organization)
-        result = await db.execute(query)
-        organizations = result.scalars().all()
-        if not organizations:
-            logger.error("Error getting organizations")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="No organizations found"
-            )
-
-        return organizations
-    except Exception as e:
-        logger.error(f"Internal Server Error: {str(e)}")
+        logger.error("Internal Server Error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",
         )
+
+
+@router.post("/list", response_model=Organizations, status_code=status.HTTP_200_OK)
+@roles_required("Government")
+async def list_organizations(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    repo: OrganizationRepository = Depends(),
+    response: Response = None,
+):
+    try:
+        organizations, total_count = await repo.get_organizations(pagination)
+        if not organizations:
+            logger.error("Error getting organizations")
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return Organizations(
+                organizations=[],
+                pagination=PaginationResponseSchema(
+                    total=0, page=0, size=0, total_pages=0
+                ),
+            )
+        return Organizations(
+            organizations=organizations,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+        )
+    except Exception as e:
+        logger.error(f"Error getting organizations: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Technical Error: Failed to get organizations",
+        )
+
+
+@router.get(
+    "/statuses/list",
+    response_model=List[OrganizationStatusBase],
+    status_code=status.HTTP_200_OK,
+)
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
+async def get_organization_statuses(
+    repo: OrganizationRepository = Depends(),
+) -> List[OrganizationStatusBase]:
+    try:
+        statuses = await repo.get_statuses()
+        if len(statuses) == 0:
+            raise HTTPException(
+                status_code=404, detail="No organization statuses found"
+            )
+        return statuses
+
+    except Exception as e:
+        logger.error(f"Error getting organization statuses: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.get(
+    "/types/list",
+    response_model=List[OrganizationTypeBase],
+    status_code=status.HTTP_200_OK,
+)
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
+async def get_organization_types(
+    repo: OrganizationRepository = Depends(),
+) -> List[OrganizationTypeBase]:
+    try:
+        types = await repo.get_types()
+        if len(types) == 0:
+            raise HTTPException(status_code=404, detail="No organization types found")
+        return types
+
+    except Exception as e:
+        logger.error(f"Error getting organization types: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error")
 
 
 @router.get("/{organization_id}/users/", response_model=List[OrganizationUserSchema])
@@ -267,4 +331,5 @@ async def get_users_for_organization(
 
         return users
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logger.error(f"Error getting users for organization: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error")

@@ -1,11 +1,11 @@
 import colors from './colors'
 import { rgba, pxToRem } from '../utils'
-import BCSansRegularTTF from '@/assets/fonts/BCSans-Regular_2f.woff2'
-import BCSansBoldTTF from '@/assets/fonts/BCSans-Bold_2f.woff2'
-import BCSansBoldItalicTTF from '@/assets/fonts/BCSans-BoldItalic_2f.woff2'
-import BCSansItalicTTF from '@/assets/fonts/BCSans-Italic_2f.woff2'
-import BCSansLightTTF from '@/assets/fonts/BCSans-Light_2f.woff2'
-import BCSansLightItalicTTF from '@/assets/fonts/BCSans-LightItalic_2f.woff2'
+import BCSansRegularTTF from '@bcgov/bc-sans/fonts/BCSans-Regular.woff2'
+import BCSansBoldTTF from '@bcgov/bc-sans/fonts/BCSans-Bold.woff2'
+import BCSansBoldItalicTTF from '@bcgov/bc-sans/fonts/BCSans-BoldItalic.woff2'
+import BCSansItalicTTF from '@bcgov/bc-sans/fonts/BCSans-Italic.woff2'
+import BCSansLightTTF from '@bcgov/bc-sans/fonts/BCSans-Light.woff2'
+import BCSansLightItalicTTF from '@bcgov/bc-sans/fonts/BCSans-LightItalic.woff2'
 import bceidImg from '@/assets/images/bceid.png'
 import loadingImg from '@/assets/images/logo_loading.svg'
 
@@ -91,6 +91,16 @@ const globals = {
     width: 150,
     background: `url(${loadingImg}) center / contain no-repeat`,
     margin: '0 auto'
+  },
+  '.ag-header-cell-filtered, .ag-header-cell-sorted-asc, .ag-header-cell-sorted-desc':
+    {
+      backgroundColor: rgba(dark.main, 0.1)
+    },
+  '.ag-header-cell-sorted-asc': {
+    borderTop: `2px solid ${primary.main}`
+  },
+  '.ag-header-cell-sorted-desc': {
+    borderBottom: `2px solid ${primary.main}`
   },
   '.bceid-name': {
     textIndent: '-9999px',

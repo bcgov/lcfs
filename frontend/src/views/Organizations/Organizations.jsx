@@ -8,7 +8,7 @@ import { Stack, CircularProgress } from '@mui/material'
 import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
-import { coloumnDefinition, defaultColumnOptions } from './components/columnDef'
+import { organizationsColDefs } from './components/schema'
 // react components
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -53,14 +53,20 @@ export const Organizations = () => {
     setGridKey(`users-grid-${Math.random()}`)
   }, [])
   const gridOptions = {
-    overlayNoRowsTemplate: 'No users found'
+    overlayNoRowsTemplate: 'No organizations found'
   }
   const getRowId = useCallback((params) => {
-    return params.data.organization_id
+    return params.data.name
   }, [])
 
   const navigate = useNavigate()
   const location = useLocation()
+
+  const defaultSortModel = [{ field: 'name', direction: 'asc' }]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleRowClicked = useCallback((params) => {
+    navigate(`/organizations/${params.data.organization_id}`)
+  })
   const apiService = useApiService()
   const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
   const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
@@ -146,19 +152,20 @@ export const Organizations = () => {
       </Stack>
       <BCBox
         component="div"
-        className="ag-theme-alpine"
-        style={{ height: '100%', width: '100%' }}
+        sx={{ height: '36rem', width: '100%' }}
       >
-        {/* <OrganizationTable rows={demoData} /> */}
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'organizations/list'}
-          defaultColDef={defaultColumnOptions}
-          columnDefs={coloumnDefinition}
+          apiData={'organizations'}
+          columnDefs={organizationsColDefs}
           gridKey={gridKey}
           getRowId={getRowId}
+          defaultSortModel={defaultSortModel}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
+          handleRowClicked={handleRowClicked}
+          enableCopyButton={false}
         />
       </BCBox>
     </>

@@ -8,7 +8,7 @@ export const numberFormatter = (params) => {
 export const phoneNumberFormatter = (params) => {
   const phoneNumber = params.value
   if (!phoneNumber) {
-    return '' // Return empty string if the value is null or undefined
+    return ''
   }
   // Format the phone number as needed (e.g., (123) 456-7890)
   return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(

@@ -26,13 +26,14 @@ const BCDataGridClient = ({
   columnDefs,
   defaultColDef,
   getRowId,
+  inputData,
   ...others
 }) => {
   const defaultGridOptions = useMemo(() => ({
     overlayNoRowsTemplate: 'No rows found',
     autoSizeStrategy: { type: 'fitCellContents' },
     suppressDragLeaveHidesColumns: true,
-    suppressMovableColumns: false,
+    suppressMovableColumns: true,
     suppressColumnMoveAnimation: false,
     rowSelection: 'multiple',
     animateRows: true,
@@ -67,10 +68,14 @@ const BCDataGridClient = ({
 
   const onGridReady = useCallback((params) => {
     params.api.rowSelection = 'single'
-    fetchData()
+    if (inputData) {
+      setRowData(inputData)
+    } else {
+      fetchData()
+    }
   })
 
-  return isError ? (
+  return isError && !error.includes('404') ? (
     <div className="error-container">
       <div className="error-message">
         <BCAlert severity="error">
@@ -112,7 +117,7 @@ BCDataGridClient.defaultProps = {
   headerHeight: 40,
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   apiEndpoint: '/',
-  className: 'ag-theme-alpine' // ag-theme-alpine ag-theme-material ag-theme-balham ag-theme-balham-dark ag-theme-balham-light ag-theme-balham-extended
+  className: 'ag-theme-alpine'
 }
 
 BCDataGridClient.propTypes = {
@@ -127,11 +132,15 @@ BCDataGridClient.propTypes = {
   gridOptions: PropTypes.object,
   className: PropTypes.oneOf([
     'ag-theme-alpine',
+    'ag-theme-alpine-dark',
+    'ag-theme-alpine-auto-dark',
     'ag-theme-material',
+    'ag-theme-quartz',
+    'ag-theme-quartz-dark',
+    'ag-theme-quartz-auto-dark',
     'ag-theme-balham',
     'ag-theme-balham-dark',
-    'ag-theme-balham-light',
-    'ag-theme-balham-extended'
+    'ag-theme-balham-auto-dark'
   ])
 }
 

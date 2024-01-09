@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
+
+from lcfs.web.api.base import PaginationResponseSchema
 
 
 class OrganizationStatusEnum(str, Enum):
@@ -17,7 +19,43 @@ class OrganizationTypeEnum(str, Enum):
     UTILITIES = "utilities"
 
 
+class OrganizationStatusBase(BaseModel):
+    organization_status_id: int
+    status: str
+    description: str
+
+    class Config:
+        from_attributes = True
+
+
+class OrganizationTypeBase(BaseModel):
+    organization_type_id: int
+    org_type: str
+    description: str
+
+    class Config:
+        from_attributes = True
+
+
+class OrganizationBase(BaseModel):
+    organization_id: int
+    name: str
+    email: Optional[str]
+    phone: Optional[str]
+    edrms_record: Optional[str]
+    organization_status_id: int
+    organization_type_id: int
+    organization_address_id: Optional[int]
+    organization_attorney_address_id: Optional[int]
+    org_type: Optional[OrganizationTypeBase] = []
+    org_status: Optional[OrganizationStatusBase] = []
+
+    class Config:
+        from_attributes = True
+
+
 class OrganizationBaseSchema(BaseModel):
+    organization_id: int
     name: str
     email: Optional[str]
     phone: Optional[str]
@@ -128,3 +166,9 @@ class GetOrganizationResponse(BaseModel):
     org_status: StatusBaseSchema
     org_address: Optional[AddressBaseSchema]
     org_attorney_address: Optional[AddressBaseSchema]
+
+
+class Organizations(BaseModel):
+    pagination: PaginationResponseSchema
+    organizations: List[OrganizationBase]
+

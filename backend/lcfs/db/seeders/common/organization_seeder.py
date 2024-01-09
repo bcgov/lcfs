@@ -4,6 +4,7 @@ from lcfs.db.models.Organization import Organization
 
 logger = logging.getLogger(__name__)
 
+
 async def seed_organizations(session):
     """
     Seeds the organizations into the database, if they do not already exist.
@@ -16,7 +17,7 @@ async def seed_organizations(session):
         {
             "name": "Government of British Columbia",
             "organization_status_id": 1,
-            "organization_type_id": 1
+            "organization_type_id": 1,
         },
     ]
 

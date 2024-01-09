@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 // @mui component
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
@@ -10,12 +11,12 @@ import { useNavigate } from 'react-router-dom'
 import { useCallback, useRef, useState } from 'react'
 
 import { ROUTES } from '@/constants/routes'
-import { usersColumnDefs, usersDefaultColDef } from './schema'
+import { usersColumnDefs } from './schema'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // import DemoButtons from './DemoButtons'
 
 export const Users = (props) => {
-  const [gridKey, setGridKey] = useState(`users-grid-${Math.random()}`)
+  const [gridKey, setGridKey] = useState('users-grid')
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
     if (gridRef.current) {
@@ -27,13 +28,20 @@ export const Users = (props) => {
   }
   const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
   const navigate = useNavigate()
+
   const handleNewUserClick = () => {
     navigate(ROUTES.ADMIN_USERS_ADD)
   }
   const getRowId = useCallback((params) => {
     return params.data.user_profile_id
   }, [])
+
+  const handleRowClicked = useCallback((params) => {
+    navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
+  })
+
   const gridRef = useRef()
+
   return (
     <BCBox component="div">
       <BCTypography variant="h5" my={1}>
@@ -61,13 +69,14 @@ export const Users = (props) => {
           gridRef={gridRef}
           apiEndpoint={'users/list'}
           apiData={'users'}
-          defaultColDef={usersDefaultColDef}
           columnDefs={usersColumnDefs}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
           handleGridKey={handleGridKey}
+          handleRowClicked={handleRowClicked}
+          enableCopyButton={false}
         />
       </BCBox>
     </BCBox>

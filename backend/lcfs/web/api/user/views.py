@@ -16,35 +16,37 @@ from typing import List
 from datetime import datetime
 
 from fastapi import APIRouter, Body, HTTPException, status, Request
+from fastapi_cache.decorator import cache
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 from fastapi.responses import StreamingResponse
 from starlette.responses import Response
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseScehema
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.user.session import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
 from lcfs.web.core.decorators import roles_required
+from fastapi import Depends
 
 router = APIRouter()
 logger = getLogger("users")
 get_async_db = dependencies.get_async_db_session
-user_repo = None
+# Initialize the cache with Redis backend
+FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
-
-@router.on_event("startup")
-async def startup_event():
-    global user_repo
-    async for db in get_async_db():  # Iterate over the async_generator
-        user_repo = UserRepository(db)
-        break  # Break after obtaining the database connection
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Government")
-async def export_users(request: Request):
+async def export_users(
+    request: Request,
+    user_repo: UserRepository = Depends(),
+):
     """
     Endpoint to export information of all users
-    
+
     This endpoint can support exporting data in different file formats (xls, xlsx, csv)
     as specified by the 'export_format' and 'media_type' variables.
     - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
@@ -60,8 +62,8 @@ async def export_users(request: Request):
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    export_format="xls"
-    media_type="application/vnd.ms-excel"
+    export_format = "xls"
+    media_type = "application/vnd.ms-excel"
 
     try:
         # Fetch all users from the database
@@ -79,12 +81,13 @@ async def export_users(request: Request):
                 user.mobile_phone,
                 "Active" if user.is_active else "Inactive",
                 ", ".join(role.value for role in user.role_names),
-                user.organization.name
-            ] for user in users
+                user.organization.name,
+            ]
+            for user in users
         ]
 
         # Create a spreadsheet
-        builder = SpreadsheetBuilder(file_format = export_format)
+        builder = SpreadsheetBuilder(file_format=export_format)
 
         builder.add_sheet(
             sheet_name="BCeID Users",
@@ -98,10 +101,10 @@ async def export_users(request: Request):
                 "Mobile",
                 "Status",
                 "Role(s)",
-                "Organization name"
+                "Organization name",
             ],
             rows=data,
-            styles={"bold_headers": True}
+            styles={"bold_headers": True},
         )
 
         file_content = builder.build_spreadsheet()
@@ -110,16 +113,19 @@ async def export_users(request: Request):
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         filename = f"BC-LCFS-bceid-{current_date}.{export_format}"
-        headers = {'Content-Disposition': f'attachment; filename="{filename}"'}
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
-        return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
+        return StreamingResponse(
+            io.BytesIO(file_content), media_type=media_type, headers=headers
+        )
 
     except Exception as e:
         logger.error("Internal Server Error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
+            detail="Internal Server Error",
         ) from e
+
 
 @router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
 async def get_current_user(request: Request, response: Response = None) -> UserBase:
@@ -151,7 +157,10 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
 @router.get("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def get_user_by_id(
-    request: Request, user_id: int, response: Response = None
+    request: Request,
+    user_id: int,
+    response: Response = None,
+    user_repo: UserRepository = Depends(),
 ) -> UserBase:
     try:
         user = await user_repo.get_user(user_id=user_id)
@@ -173,6 +182,7 @@ async def get_users(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
+    user_repo: UserRepository = Depends(),
 ) -> Users:
     try:
         users, total_count = await user_repo.query_users(pagination=pagination)
@@ -180,13 +190,13 @@ async def get_users(
             logger.error("Error getting users")
             response.status_code = status.HTTP_404_NOT_FOUND
             return Users(
-                pagination=PaginationResponseScehema(
+                pagination=PaginationResponseSchema(
                     total=0, page=0, size=0, total_pages=0
                 ),
                 users=users,
             )
         return Users(
-            pagination=PaginationResponseScehema(
+            pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
@@ -208,6 +218,7 @@ async def create_user(
     request: Request,
     response: Response = None,
     user_create: UserCreate = ...,
+    user_repo: UserRepository = Depends(),
 ) -> UserBase:
     try:
         return await user_repo.create_user(user_create)
@@ -224,6 +235,7 @@ async def create_user(
     response: Response = None,
     user_id: int = None,
     user_create: UserCreate = ...,
+    user_repo: UserRepository = Depends(),
 ) -> UserBase:
     try:
         return await user_repo.update_user(user_create, user_profile_id=user_id)
@@ -238,7 +250,10 @@ async def create_user(
 )
 @roles_required("Government")
 async def get_user_roles(
-    request: Request, response: Response = None, user_id: int = None
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    user_repo: UserRepository = Depends(),
 ) -> List[RoleSchema]:
     try:
         user = await user_repo.get_user(user_id=user_id)
@@ -264,6 +279,7 @@ async def get_user_history(
     response: Response = None,
     user_id: int = None,
     pagination: PaginationRequestSchema = Body(..., embed=False),
+    user_repo: UserRepository = Depends(),
 ) -> UserHistories:
     try:
         user_histories, total_count = await user_repo.get_user_history(
@@ -273,13 +289,13 @@ async def get_user_history(
             logger.error("Error getting user history")
             response.status_code = status.HTTP_404_NOT_FOUND
             return UserHistories(
-                pagination=PaginationResponseScehema(
+                pagination=PaginationResponseSchema(
                     total=0, page=0, size=0, total_pages=0
                 ),
                 users=user_histories,
             )
         return UserHistories(
-            pagination=PaginationResponseScehema(
+            pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,

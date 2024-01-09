@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then cd .. && husky install frontend/.husky; fi",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier . --check",
@@ -32,8 +31,10 @@
   "dependencies": {
     "@ag-grid-community/client-side-row-model": "^31.0.1",
     "@ag-grid-community/core": "^31.0.1",
+    "@ag-grid-community/csv-export": "^31.0.1",
     "@ag-grid-community/react": "^31.0.1",
     "@ag-grid-community/styles": "^31.0.1",
+    "@bcgov/bc-sans": "^2.1.0",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@fontsource/material-icons": "^5.0.11",

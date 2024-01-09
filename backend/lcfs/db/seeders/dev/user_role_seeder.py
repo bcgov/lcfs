@@ -4,6 +4,7 @@ from lcfs.db.models.UserRole import UserRole
 
 logger = logging.getLogger(__name__)
 
+
 async def seed_user_roles(session):
     """
     Seeds the user roles into the database, if they do not already exist.
@@ -13,22 +14,26 @@ async def seed_user_roles(session):
     """
 
     user_roles_to_seed = [
-        {
-            "user_profile_id": 1,
-            "role_id": 1
-        },
-         {
-            "user_profile_id": 2,
-            "role_id": 1
-        },
-         {
-            "user_profile_id": 3,
-            "role_id": 1
-        },
-         {
-            "user_profile_id": 4,
-            "role_id": 1
-        },
+        {"user_profile_id": 1, "role_id": 1},
+        {"user_profile_id": 2, "role_id": 1},
+        {"user_profile_id": 3, "role_id": 1},
+        {"user_profile_id": 4, "role_id": 1},
+        {"user_profile_id": 5, "role_id": 3},
+        {"user_profile_id": 6, "role_id": 8},
+        {"user_profile_id": 7, "role_id": 6},
+        {"user_profile_id": 8, "role_id": 1},
+        {"user_profile_id": 9, "role_id": 10},
+        {"user_profile_id": 10, "role_id": 4},
+        {"user_profile_id": 11, "role_id": 7},
+        {"user_profile_id": 12, "role_id": 9},
+        {"user_profile_id": 13, "role_id": 2},
+        {"user_profile_id": 14, "role_id": 11},
+        {"user_profile_id": 15, "role_id": 5},
+        {"user_profile_id": 16, "role_id": 3},
+        {"user_profile_id": 17, "role_id": 8},
+        {"user_profile_id": 18, "role_id": 6},
+        {"user_profile_id": 19, "role_id": 1},
+        {"user_profile_id": 20, "role_id": 10},
     ]
 
     try:
@@ -37,7 +42,7 @@ async def seed_user_roles(session):
             exists = await session.execute(
                 select(UserRole).where(
                     UserRole.user_profile_id == user_role_data["user_profile_id"],
-                    UserRole.role_id == user_role_data["role_id"]
+                    UserRole.role_id == user_role_data["role_id"],
                 )
             )
             if not exists.scalars().first():

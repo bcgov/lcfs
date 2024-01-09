@@ -45,7 +45,7 @@ const inputOutlined = {
     },
 
     inputSizeSmall: {
-      fontSize: size.xs,
+      fontSize: size.sm,
       padding: pxToRem(10)
     },
 
