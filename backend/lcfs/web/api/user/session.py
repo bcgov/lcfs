@@ -69,7 +69,7 @@ class UserRepository:
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
-            filter_type = filter.filter_type.default
+            filter_type = filter.filterType
 
             if filter.field == "role":
                 field = get_field_for_filter(Role, "name")

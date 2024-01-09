@@ -2,6 +2,7 @@ import { numberFormatter } from '@/utils/formatters'
 import { OrgStatusRenderer } from '@/utils/cellRenderers'
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
+import { usersColumnDefs } from '@/views/AdminMenu/components/schema'
 
 export const organizationsColDefs = [
   { colId: 'name', field: 'name', headerName: 'Organization', width: 400 },
@@ -47,5 +48,25 @@ export const organizationsColDefs = [
   }
 ]
 
+
+const getUserColumnDefs = () => {
+  const colDefs = usersColumnDefs.map((colDef) => {
+    if (colDef.field === 'is_active') {
+      return { ...colDef, sortable: false, suppressMenu: true, }
+    }
+    return colDef
+  })
+  colDefs.push({
+    colId: 'organization_id',
+    field: 'organization_id',
+    filter: 'agNumberColumnFilter',
+    headerName: 'Organization ID',
+    valueGetter: (params) => params.data.organization.organization_id,
+    hide: true,
+  })
+  return colDefs
+}
+
+export const usersColDefs = getUserColumnDefs()
 export const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
 export const defaultFilterModel = [{ filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }]

@@ -98,8 +98,9 @@ export const MainLayout = () => {
           <DisclaimerBanner
             messages={[
               "For security and privacy reasons, please don't share personal information on this website.",
-              !isGovernmentRole &&
-                'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'
+              !isGovernmentRole
+                ? 'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'
+                : undefined
             ]}
           />
         </Grid>

@@ -26,7 +26,7 @@ class SortOrder(BaseModel):
 
 
 class FilterModel(BaseModel):
-    filter_type: str = Field(Query(default="text", alias="filterType"))
+    filterType: str = Field(Query(default="text", alias="filter_type"))
     type: str = Field(Query(default="contains", alias="type"))
     filter: Any = Field(Query(default="", alias="filter"))
     field: str = Field(Query(default="", alias="field"))
@@ -161,17 +161,18 @@ def apply_number_filter_conditions(field, filter_value, filter_option):
        filter_value: The value to filter by
        filter_option: The filtering operation (equals, greater than, etc)
     """
-    number_filter_mapping = {
-        "equals": field == filter_value,
-        "notEqual": field != filter_value,
-        "greaterThan": field > filter_value,
-        "greaterThanOrEqual": field >= filter_value,
-        "lessThan": field < filter_value,
-        "lessThanOrEqual": field <= filter_value,
-        "inRange": and_(field >= filter_value[0], field <= filter_value[1]),
-    }
-
-    return number_filter_mapping.get(filter_option)
+    if isinstance(filter_value, list):
+        return and_(field >= filter_value[0], field <= filter_value[1])
+    else:
+        number_filter_mapping = {
+            "equals": field == int(filter_value),
+            "notEqual": field != int(filter_value),
+            "greaterThan": field > int(filter_value),
+            "greaterThanOrEqual": field >= int(filter_value),
+            "lessThan": field < int(filter_value),
+            "lessThanOrEqual": field <= int(filter_value),
+        }
+        return number_filter_mapping.get(filter_option)
 
 
 def apply_date_filter_conditions(field, filter_value, filter_option):

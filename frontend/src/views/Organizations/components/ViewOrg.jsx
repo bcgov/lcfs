@@ -9,8 +9,7 @@ import { ROUTES } from '@/constants/routes'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import { usersColumnDefs } from '@/views/AdminMenu/components/schema'
-import { defaultFilterModel, defaultSortModel } from './schema'
+import { defaultFilterModel, defaultSortModel, usersColDefs } from './schema'
 import { useNavigate, useParams } from 'react-router-dom'
 import { constructAddress } from '@/utils/constructAddress'
 import Loading from '@/components/Loading'
@@ -44,7 +43,8 @@ export const ViewOrg = () => {
   }, [])
 
   const gridOptions = {
-    overlayNoRowsTemplate: 'No users found'
+    overlayNoRowsTemplate: 'No users found',
+    includeHiddenColumnsInQuickFilter: true
   }
   const handleRowClicked = useCallback((params) => {
     navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
@@ -55,13 +55,21 @@ export const ViewOrg = () => {
   useEffect(() => {
     if (gridRef.current) {
       const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
+      const orgFilter =
+        gridRef?.current?.api?.getFilterInstance('organization_id')
       if (statusFilter) {
         statusFilter.setModel({
           type: 'equals',
           filter: showActive ? 'Active' : 'Inactive'
         })
-        gridRef.current.api.onFilterChanged()
       }
+      if (orgFilter) {
+        orgFilter.setModel({
+          type: 'equals',
+          filter: parseInt(orgID)
+        })
+      }
+      gridRef?.current?.api?.onFilterChanged()
     }
   }, [showActive])
 
@@ -200,12 +208,20 @@ export const ViewOrg = () => {
           gridRef={gridRef}
           apiEndpoint={'users/list'}
           apiData={'users'}
-          columnDefs={usersColumnDefs}
+          columnDefs={usersColDefs}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
-          defaultFilterModel={defaultFilterModel}
+          defaultFilterModel={[
+            ...defaultFilterModel,
+            {
+              filterType: 'number',
+              type: 'equals',
+              field: 'organization_id',
+              filter: orgID
+            }
+          ]}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
