@@ -21,11 +21,11 @@ async def seed_dev():
 
     async with AsyncSessionLocal() as session:
         try:
-            await seed_user_profiles(session)
-            await seed_user_roles(session)
             await seed_organization_addresses(session)
             await seed_organization_attorney_addresses(session)
             await seed_organizations(session)
+            await seed_user_profiles(session)
+            await seed_user_roles(session)
             logger.info("Database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")
