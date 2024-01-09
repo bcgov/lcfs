@@ -56,7 +56,7 @@ export const Organizations = () => {
     overlayNoRowsTemplate: 'No organizations found'
   }
   const getRowId = useCallback((params) => {
-    return params.data.organization_id
+    return params.data.name
   }, [])
 
   const navigate = useNavigate()

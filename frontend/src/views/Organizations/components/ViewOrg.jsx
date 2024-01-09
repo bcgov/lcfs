@@ -49,7 +49,7 @@ export const ViewOrg = () => {
   const handleRowClicked = useCallback((params) => {
     navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
   })
-  const getRowId = useCallback(() => orgID, [orgID])
+  const getRowId = useCallback((params) => params.data.user_profile_id)
   const gridRef = useRef()
 
   useEffect(() => {
