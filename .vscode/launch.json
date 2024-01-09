@@ -5,6 +5,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "LCFS Seeders",
+      "type": "python",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend",
+      "program": "${workspaceFolder}/backend/lcfs/db/seeders/seed_database.py",
+      "python": "${workspaceFolder}/backend/venv/bin/python3",
+      "args": [
+        "dev"
+      ]
+    },
+    {
       "name": "FastAPI - LCFS",
       "type": "python",
       "request": "launch",
