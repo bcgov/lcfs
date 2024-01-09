@@ -47,5 +47,5 @@ export const organizationsColDefs = [
   }
 ]
 
-export const defaultSortModel = []
-export const defaultFilterModel = []
+export const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
+export const defaultFilterModel = [{ filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }]

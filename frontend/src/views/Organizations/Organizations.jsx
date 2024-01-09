@@ -152,10 +152,8 @@ export const Organizations = () => {
       </Stack>
       <BCBox
         component="div"
-        className="ag-theme-alpine"
-        style={{ height: '100%', width: '100%' }}
+        sx={{ height: '36rem', width: '100%' }}
       >
-        {/* <OrganizationTable rows={demoData} /> */}
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'organizations/list'}

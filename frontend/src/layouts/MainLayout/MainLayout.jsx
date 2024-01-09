@@ -88,8 +88,7 @@ export const MainLayout = () => {
             elevation={5}
             sx={{
               padding: '1rem',
-              position: 'relative',
-              minHeight: 'calc(100vh - 13rem)'
+              minHeight: 'auto'
             }}
           >
             <Outlet />

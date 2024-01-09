@@ -4,13 +4,13 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { IconButton } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROUTES } from '@/constants/routes'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import { usersColumnDefs } from '@/views/AdminMenu/components/schema'
-import { defaultSortModel } from './schema'
+import { defaultFilterModel, defaultSortModel } from './schema'
 import { useNavigate, useParams } from 'react-router-dom'
 import { constructAddress } from '@/utils/constructAddress'
 import Loading from '@/components/Loading'
@@ -34,13 +34,15 @@ export const ViewOrg = () => {
     navigate(`/organizations/${orgID}/edit-org`)
   }
 
-  const [gridKey, setGridKey] = useState(`users-grid-${orgID}`)
+  const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
   const handleGridKey = useCallback(() => {
-    setGridKey(`users-grid-${Math.random()}`)
-    if (gridRef.current) {
-      gridRef.current.api.deselectAll()
+    if (showActive) {
+      setGridKey(`users-grid-${orgID}-active`)
+    } else {
+      setGridKey(`users-grid-${orgID}-inactive`)
     }
   }, [])
+
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found'
   }
@@ -49,6 +51,19 @@ export const ViewOrg = () => {
   })
   const getRowId = useCallback(() => orgID, [orgID])
   const gridRef = useRef()
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
+      if (statusFilter) {
+        statusFilter.setModel({
+          type: 'equals',
+          filter: showActive ? 'Active' : 'Inactive'
+        })
+        gridRef.current.api.onFilterChanged()
+      }
+    }
+  }, [showActive])
 
   if (isLoading) {
     return <Loading />
@@ -139,7 +154,9 @@ export const ViewOrg = () => {
                 marginRight: '8px',
                 marginBottom: '8px'
               }}
-              startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
+              startIcon={
+                <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+              }
               onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
             >
               <BCTypography variant="subtitle2">New User</BCTypography>
@@ -164,7 +181,7 @@ export const ViewOrg = () => {
         ) : (
           <BCButton
             variant="outlined"
-            size="large"
+            size="small"
             color="primary"
             sx={{
               textTransform: 'none',
@@ -178,7 +195,7 @@ export const ViewOrg = () => {
           </BCButton>
         )}
       </BCBox>
-      <BCBox>
+      <BCBox sx={{ height: '36rem', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'users/list'}
@@ -188,6 +205,7 @@ export const ViewOrg = () => {
           getRowId={getRowId}
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
+          defaultFilterModel={defaultFilterModel}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
