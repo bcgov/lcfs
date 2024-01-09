@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends
 from sqlalchemy import and_, func, select, asc, desc, delete, distinct
