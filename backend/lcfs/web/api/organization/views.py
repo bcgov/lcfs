@@ -34,6 +34,11 @@ from lcfs.web.api.organization.schema import (
     Organizations,
 )
 from lcfs.web.core.decorators import roles_required
+from lcfs.web.api.transaction.schema import Transactions
+from lcfs.db.models.Transaction import Transaction
+from lcfs.db.models.IssuanceHistory import IssuanceHistory
+from lcfs.db.models.TransferHistory import TransferHistory
+from sqlalchemy import func, select, distinct
 
 logger = getLogger("organization")
 router = APIRouter()
@@ -44,7 +49,9 @@ FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Government")
-async def export_organizations(request: Request, db: AsyncSession = Depends(get_async_db)):
+async def export_organizations(
+    request: Request, db: AsyncSession = Depends(get_async_db)
+):
     """
     Endpoint to export information of all organizations
 
@@ -63,15 +70,14 @@ async def export_organizations(request: Request, db: AsyncSession = Depends(get_
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    export_format="xls"
-    media_type="application/vnd.ms-excel"
+    export_format = "xls"
+    media_type = "application/vnd.ms-excel"
 
     try:
         # Fetch all organizations from the database
         result = await db.execute(
-            select(Organization).options(
-                    joinedload(Organization.org_status)
-                )
+            select(Organization)
+            .options(joinedload(Organization.org_status))
             .order_by(Organization.organization_id)
         )
         organizations = result.scalars().all()
@@ -86,11 +92,12 @@ async def export_organizations(request: Request, db: AsyncSession = Depends(get_
                 123456,
                 123456,
                 organization.org_status.status.value,
-            ] for organization in organizations
+            ]
+            for organization in organizations
         ]
 
         # Create a spreadsheet
-        builder = SpreadsheetBuilder(file_format = export_format)
+        builder = SpreadsheetBuilder(file_format=export_format)
 
         builder.add_sheet(
             sheet_name="Organizations",
@@ -99,10 +106,10 @@ async def export_organizations(request: Request, db: AsyncSession = Depends(get_
                 "Organization Name",
                 "Compliance Units",
                 "In Reserve",
-                "Registered"
+                "Registered",
             ],
             rows=data,
-            styles={"bold_headers": True}
+            styles={"bold_headers": True},
         )
 
         file_content = builder.build_spreadsheet()
@@ -113,18 +120,19 @@ async def export_organizations(request: Request, db: AsyncSession = Depends(get_
         filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
-        return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
+        return StreamingResponse(
+            io.BytesIO(file_content), media_type=media_type, headers=headers
+        )
 
     except Exception as e:
         logger.error("Internal Server Error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
+            detail="Internal Server Error",
         ) from e
 
-@router.post(
-    "", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
-)
+
+@router.post("", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
 @roles_required("Government", "Administrator")
 async def create_organization(
     request: Request,
@@ -333,3 +341,70 @@ async def get_users_for_organization(
     except Exception as e:
         logger.error(f"Error getting users for organization: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error")
+
+
+@router.get("/{organization_id}/transactions/", response_model=Transactions)
+async def get_transactions_for_organization(
+    organization_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    response: Response = None,
+):
+    try:
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        limit = pagination.size
+
+        query = (
+            select(Transaction)
+            .options(
+                joinedload(Transaction.issuance_history_record).options(
+                    joinedload(IssuanceHistory.organization),
+                    joinedload(IssuanceHistory.issuance_status),
+                ),
+                joinedload(Transaction.transfer_history_record).options(
+                    joinedload(TransferHistory.to_organization),
+                    joinedload(TransferHistory.from_organization),
+                    joinedload(TransferHistory.transfer_status),
+                ),
+                joinedload(Transaction.transaction_type),
+            )
+            .where(Organization.organization_id == organization_id)
+        )
+        count_query = await db.execute(
+            select(func.count(distinct(Transaction.transaction_id))).where(
+                Organization.organization_id == organization_id
+            )
+        )
+
+        total_count = count_query.unique().scalar_one_or_none()
+
+        transaction_results = await db.execute(query.offset(offset).limit(limit))
+        results = transaction_results.scalars().unique().all()
+
+        transactions = [
+            Transaction.model_validate(transaction) for transaction in results
+        ]
+
+        if len(transactions) == 0:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return Transactions(
+                pagination=PaginationResponseSchema(
+                    total=0, page=0, size=0, total_pages=0
+                ),
+                transactions=transactions,
+            )
+        return Transactions(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            transactions=transactions,
+        )
+    except Exception as e:
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code=500,
+            detail=f"Technical Error: Failed to get transactions: {str(e)}",
+        )
