@@ -3,13 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from lcfs.db import dependencies
 from lcfs.db.models import Transfer, Issuance, TransferHistory, IssuanceHistory
-from api.transfer import schema 
+from lcfs.web.api.transfer import schema
+from sqlalchemy import select
 
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
-@router.post("/transfers/", response_model=schema.Transfer)
-async def create_transfer(transfer: schema.TransferBase, db: AsyncSession = Depends(get_async_db)):
+
+@router.post("/", response_model=schema.Transfer)
+async def create_transfer(
+    transfer: schema.TransferBase, db: AsyncSession = Depends(get_async_db)
+):
     try:
         new_transfer = Transfer(**transfer.dict())
         db.add(new_transfer)
@@ -19,17 +23,20 @@ async def create_transfer(transfer: schema.TransferBase, db: AsyncSession = Depe
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
-@router.get("/transfers/", response_model=List[schema.Transfer])
+
+@router.get("/", response_model=List[schema.Transfer])
 async def get_transfers(db: AsyncSession = Depends(get_async_db)):
     try:
-        transfers = await db.execute(Transfer.query().all())
+        transfers = (await db.execute(select(Transfer))).scalars().all()
         return transfers
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.post("/transfer_histories/", response_model=schema.TransferHistory)
-async def create_transfer_history(transfer_history: schema.TransferHistory, db: AsyncSession = Depends(get_async_db)):
+async def create_transfer_history(
+    transfer_history: schema.TransferHistory, db: AsyncSession = Depends(get_async_db)
+):
     try:
         new_transfer_history = TransferHistory(**transfer_history.dict())
         db.add(new_transfer_history)
@@ -38,6 +45,7 @@ async def create_transfer_history(transfer_history: schema.TransferHistory, db: 
         return new_transfer_history
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
 
 @router.get("/transfer_histories/", response_model=List[schema.TransferHistory])
 async def get_transfer_histories(db: AsyncSession = Depends(get_async_db)):
@@ -48,10 +56,16 @@ async def get_transfer_histories(db: AsyncSession = Depends(get_async_db)):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@router.get("/transfer_histories/{transfer_history_id}", response_model=schema.TransferHistory)
-async def get_transfer_history(transfer_history_id: int, db: AsyncSession = Depends(get_async_db)):
+@router.get(
+    "/transfer_histories/{transfer_history_id}", response_model=schema.TransferHistory
+)
+async def get_transfer_history(
+    transfer_history_id: int, db: AsyncSession = Depends(get_async_db)
+):
     try:
-        transfer_history = await db.execute(models.TransferHistory.query().get(transfer_history_id))
+        transfer_history = await db.execute(
+            models.TransferHistory.query().get(transfer_history_id)
+        )
         if transfer_history is None:
             raise HTTPException(status_code=404, detail="Transfer history not found")
         return transfer_history
@@ -59,12 +73,18 @@ async def get_transfer_history(transfer_history_id: int, db: AsyncSession = Depe
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@router.put("/transfer_histories/{transfer_history_id}", response_model=schema.TransferHistory)
+@router.put(
+    "/transfer_histories/{transfer_history_id}", response_model=schema.TransferHistory
+)
 async def update_transfer_history(
-    transfer_history_id: int, transfer_history: schema.TransferHistory, db: AsyncSession = Depends(get_async_db)
+    transfer_history_id: int,
+    transfer_history: schema.TransferHistory,
+    db: AsyncSession = Depends(get_async_db),
 ):
     try:
-        db_transfer_history = await db.execute(TransferHistory.query().get(transfer_history_id))
+        db_transfer_history = await db.execute(
+            TransferHistory.query().get(transfer_history_id)
+        )
         if db_transfer_history is None:
             raise HTTPException(status_code=404, detail="Transfer history not found")
 
@@ -79,12 +99,16 @@ async def update_transfer_history(
 
 
 @router.delete("/transfer_histories/{transfer_history_id}")
-async def delete_transfer_history(transfer_history_id: int, db: AsyncSession = Depends(get_async_db)):
+async def delete_transfer_history(
+    transfer_history_id: int, db: AsyncSession = Depends(get_async_db)
+):
     try:
-        transfer_history = await db.execute(TransferHistory.query().get(transfer_history_id))
+        transfer_history = await db.execute(
+            TransferHistory.query().get(transfer_history_id)
+        )
         if transfer_history is None:
             raise HTTPException(status_code=404, detail="Transfer history not found")
-        
+
         db.delete(transfer_history)
         await db.commit()
         return {"message": "Transfer history deleted"}
@@ -92,9 +116,10 @@ async def delete_transfer_history(transfer_history_id: int, db: AsyncSession = D
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-
 @router.post("/issuances/", response_model=schema.IssuanceSchema)
-async def create_issuance(issuance: schema.IssuanceSchema, db: AsyncSession = Depends(get_async_db)):
+async def create_issuance(
+    issuance: schema.IssuanceSchema, db: AsyncSession = Depends(get_async_db)
+):
     try:
         new_issuance = Issuance(**issuance.dict())
         db.add(new_issuance)
@@ -127,7 +152,9 @@ async def get_issuance(issuance_id: int, db: AsyncSession = Depends(get_async_db
 
 @router.put("/issuances/{issuance_id}", response_model=schema.IssuanceSchema)
 async def update_issuance(
-    issuance_id: int, issuance: schema.IssuanceSchema, db: AsyncSession = Depends(get_async_db)
+    issuance_id: int,
+    issuance: schema.IssuanceSchema,
+    db: AsyncSession = Depends(get_async_db),
 ):
     try:
         db_issuance = await db.execute(Issuance.query().get(issuance_id))
@@ -150,15 +177,19 @@ async def delete_issuance(issuance_id: int, db: AsyncSession = Depends(get_async
         issuance = await db.execute(Issuance.query().get(issuance_id))
         if issuance is None:
             raise HTTPException(status_code=404, detail="Issuance not found")
-        
+
         db.delete(issuance)
         await db.commit()
         return {"message": "Issuance deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
+
 @router.post("/issuance_histories/", response_model=schema.IssuanceHistorySchema)
-async def create_issuance_history(issuance_history: schema.IssuanceHistorySchema, db: AsyncSession = Depends(get_async_db)):
+async def create_issuance_history(
+    issuance_history: schema.IssuanceHistorySchema,
+    db: AsyncSession = Depends(get_async_db),
+):
     try:
         new_issuance_history = IssuanceHistory(**issuance_history.dict())
         db.add(new_issuance_history)
@@ -178,10 +209,17 @@ async def get_issuance_histories(db: AsyncSession = Depends(get_async_db)):
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@router.get("/issuance_histories/{issuance_history_id}", response_model=schema.IssuanceHistorySchema)
-async def get_issuance_history(issuance_history_id: int, db: AsyncSession = Depends(get_async_db)):
+@router.get(
+    "/issuance_histories/{issuance_history_id}",
+    response_model=schema.IssuanceHistorySchema,
+)
+async def get_issuance_history(
+    issuance_history_id: int, db: AsyncSession = Depends(get_async_db)
+):
     try:
-        issuance_history = await db.execute(IssuanceHistory.query().get(issuance_history_id))
+        issuance_history = await db.execute(
+            IssuanceHistory.query().get(issuance_history_id)
+        )
         if issuance_history is None:
             raise HTTPException(status_code=404, detail="Issuance history not found")
         return issuance_history
@@ -189,12 +227,19 @@ async def get_issuance_history(issuance_history_id: int, db: AsyncSession = Depe
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@router.put("/issuance_histories/{issuance_history_id}", response_model=schema.IssuanceHistorySchema)
+@router.put(
+    "/issuance_histories/{issuance_history_id}",
+    response_model=schema.IssuanceHistorySchema,
+)
 async def update_issuance_history(
-    issuance_history_id: int, issuance_history: schema.IssuanceHistorySchema, db: AsyncSession = Depends(get_async_db)
+    issuance_history_id: int,
+    issuance_history: schema.IssuanceHistorySchema,
+    db: AsyncSession = Depends(get_async_db),
 ):
     try:
-        db_issuance_history = await db.execute(IssuanceHistory.query().get(issuance_history_id))
+        db_issuance_history = await db.execute(
+            IssuanceHistory.query().get(issuance_history_id)
+        )
         if db_issuance_history is None:
             raise HTTPException(status_code=404, detail="Issuance history not found")
 
@@ -209,12 +254,16 @@ async def update_issuance_history(
 
 
 @router.delete("/issuance_histories/{issuance_history_id}")
-async def delete_issuance_history(issuance_history_id: int, db: AsyncSession = Depends(get_async_db)):
+async def delete_issuance_history(
+    issuance_history_id: int, db: AsyncSession = Depends(get_async_db)
+):
     try:
-        issuance_history = await db.execute(IssuanceHistory.query().get(issuance_history_id))
+        issuance_history = await db.execute(
+            IssuanceHistory.query().get(issuance_history_id)
+        )
         if issuance_history is None:
             raise HTTPException(status_code=404, detail="Issuance history not found")
-        
+
         db.delete(issuance_history)
         await db.commit()
         return {"message": "Issuance history deleted"}

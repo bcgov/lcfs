@@ -3,48 +3,20 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { Stack, CircularProgress } from '@mui/material'
+import { Stack } from '@mui/material'
 // Icons
-import { faCirclePlus, faFileExcel } from '@fortawesome/free-solid-svg-icons'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
 import { organizationsColDefs } from './components/schema'
 // react components
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { ROUTES } from '@/constants/routes'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 // Services
+import { DownloadButton } from '@/components/DownloadButton'
 import { useApiService } from '@/services/useApiService'
-
-const DownloadButton = ({
-  onDownload,
-  isDownloading,
-  label,
-  downloadLabel,
-  dataTest
-}) => (
-  <BCButton
-    data-test={dataTest}
-    variant="outlined"
-    size="small"
-    color="primary"
-    sx={{ whiteSpace: 'nowrap' }}
-    startIcon={
-      isDownloading ? (
-        <CircularProgress size={24} />
-      ) : (
-        <FontAwesomeIcon icon={faFileExcel} className="small-icon" />
-      )
-    }
-    onClick={onDownload}
-    disabled={isDownloading}
-  >
-    <BCTypography variant="subtitle2">
-      {isDownloading ? downloadLabel : label}
-    </BCTypography>
-  </BCButton>
-)
 
 export const Organizations = () => {
   const gridRef = useRef()

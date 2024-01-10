@@ -58,13 +58,21 @@ export const MainLayout = () => {
                 <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
               }
             >
+              <BCTypography
+                component={RouterLink}
+                to={ROUTES.DASHBOARD}
+                variant="button"
+                fontSize={size.lg}
+              >
+                Home
+              </BCTypography>
               {breadcrumbs.map((crumb, index) =>
                 index + 1 !== breadcrumbs.length ? (
                   <BCTypography
                     key={crumb.path}
                     component={RouterLink}
                     to={crumb.path}
-                    disabled={true}
+                    // disabled={true}
                     variant="button"
                     fontSize={size.lg}
                   >
