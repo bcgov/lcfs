@@ -55,7 +55,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.TRANSACTIONS,
         element: <Transactions />,
-        handle: { crumb: () => 'Transactions' }
+        handle: { title: 'Transactions', crumb: () => 'Transactions' }
       },
       {
         path: ROUTES.TRANSACTIONS_ADD,
