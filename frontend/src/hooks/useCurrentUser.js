@@ -6,24 +6,49 @@ import { useQuery } from '@tanstack/react-query'
 
 export const useCurrentUser = () => {
   const client = useApiService()
-  const { keycloak } = useKeycloak()
+  const { keycloak, initialized } = useKeycloak()
   const setUser = useUserStore((state) => state.setUser)
 
+  // Fetching current user data
   const query = useQuery({
-    queryKey: ['currentUser'],
+    queryKey: ['currentUser', keycloak.token],
     queryFn: async () => {
-      return (await client.get(apiRoutes.currentUser)).data
+      const response = await client.get(apiRoutes.currentUser);
+      return response.data;
     },
-    enabled: !!keycloak.authenticated,
-    retry: false
+    enabled: !!keycloak.authenticated && initialized,
+    retry: false,
+    onSuccess: setUser,
+    onError: (error) => {
+      console.error('Error fetching current user:', error);
+    },
   })
 
-  if (query.isError) {
-    console.error('Error fetching current user:', query.error)
-  }
-  if (query.isSuccess) {
-    setUser(query.data)
-  }
+  /**
+   * Checks if the current user has all of the specified roles.
+   * 
+   * @param {string[]} roleNames - The names of the roles to check against.
+   * @return {boolean} True if the user has all of the roles.
+   *
+   * Usage:
+   * Check if the user has both the 'Government' and 'Administrator' roles:
+   *   import { roles } from '@/constants/roles'
+   *   import { useCurrentUser } from '@/hooks/useCurrentUser'
+   * 
+   *   const { hasRoles } = useCurrentUser();
+   * 
+   *   if (hasRoles(roles.government, roles.administrator)) {
+   *     // Logic for users with both 'Government' and 'Administrator' roles
+   *   }
+   */
+  const hasRoles = (...roleNames) => {
+    return roleNames.every(roleName => 
+        query.data?.roles?.some(role => role.name === roleName)
+    );
+  };
 
-  return query
+  return {
+    ...query,
+    hasRoles
+  };
 }
