@@ -40,9 +40,12 @@ root_logger.addHandler(console_handler)
 root_logger.setLevel(logging.DEBUG)
 
 origins = [
-        "http://localhost",
-        "http://localhost:3000",
-    ]
+    "http://localhost",
+    "http://localhost:3000",
+    "https://lcfs-dev.apps.silver.devops.gov.bc.ca",
+    "https://lcfs-test.apps.silver.devops.gov.bc.ca",
+    "https://lcfs.apps.silver.devops.gov.bc.ca",
+]
 
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
     """
