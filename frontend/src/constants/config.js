@@ -9,21 +9,30 @@ const getConfig = (value, def) => {
 }
 
 function getApiBaseUrl() {
-  // Split the hostname and current port (if any)
-  const [hostname] = window.location.hostname.split(':')
+  // Split the hostname
+  const hostnameParts = window.location.hostname.split('.')
 
   // Check if the environment is development
-  let baseUrl
+  let baseUrl;
   if (process.env.NODE_ENV === 'development') {
     // In development, use port 8000
-    baseUrl = `${window.location.protocol}//${hostname}:8000/api`
+    baseUrl = `${window.location.protocol}//${hostnameParts[0]}:8000/api`;
   } else {
-    // In production, use the standard URL without the port
-    baseUrl = `${window.location.protocol}//${hostname}/api`
+    // Determine the environment part of the subdomain
+    const subDomain = hostnameParts[0];
+    const envPart = subDomain.split('-')[1];
+
+    // Check if the environment is 'dev' or 'test', otherwise default to production
+    if (envPart === 'dev' || envPart === 'test') {
+      baseUrl = `${window.location.protocol}//lcfs-backend-${envPart}.${hostnameParts.slice(1).join('.')}/api`;
+    } else {
+      // Production environment
+      baseUrl = `${window.location.protocol}//lcfs-backend.${hostnameParts.slice(1).join('.')}/api`;
+    }
   }
 
   // Use getConfig to get 'api_base' from configuration or fallback to baseUrl
-  return getConfig('api_base', baseUrl)
+  return getConfig('api_base', baseUrl);
 }
 
 export const CONFIG = {
