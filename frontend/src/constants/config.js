@@ -23,7 +23,7 @@ export const CONFIG = {
   API_BASE: getApiBaseUrl(),
   KEYCLOAK: {
     REALM: getConfig('keycloak.realm', 'standard'),
-    CLIENT_ID: getConfig('keycloak.client_id', 'tfrs-on-gold-4308'),
+    CLIENT_ID: getConfig('keycloak.client_id', 'low-carbon-fuel-standard-5147'),
     AUTH_URL: getConfig(
       'keycloak.auth_url',
       'https://dev.loginproxy.gov.bc.ca/auth'

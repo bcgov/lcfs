@@ -59,7 +59,7 @@ class Settings(BaseSettings):
 
     # Variables for Keycloak
     well_known_endpoint: str = "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
-    keycloak_audience: str = "tfrs-on-gold-4308"
+    keycloak_audience: str = "low-carbon-fuel-standard-5147"
 
     @property
     def db_url(self) -> URL:
