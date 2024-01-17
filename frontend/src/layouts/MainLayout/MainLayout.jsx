@@ -2,7 +2,7 @@ import { Outlet, Link as RouterLink, useMatches } from 'react-router-dom'
 // constants
 import { ROUTES } from '@/constants/routes'
 // @mui components
-import { Breadcrumbs, Container, Paper } from '@mui/material'
+import { Breadcrumbs, Container } from '@mui/material'
 import Grid from '@mui/material/Unstable_Grid2'
 // @mui custom components
 import BCTypography from '@/components/BCTypography'
@@ -15,6 +15,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 // icons and typograhpy
 import typography from '@/themes/base/typography'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
+import BCBox from '@/components/BCBox'
 
 export const MainLayout = () => {
   const { data: currentUser } = useCurrentUser()
@@ -84,7 +85,7 @@ export const MainLayout = () => {
           )}
         </Grid>
         <Grid lg={12}>
-          <Paper
+          <BCBox
             elevation={5}
             sx={{
               padding: '1rem',
@@ -92,7 +93,7 @@ export const MainLayout = () => {
             }}
           >
             <Outlet />
-          </Paper>
+          </BCBox>
         </Grid>
         <Grid lg={12}>
           <DisclaimerBanner

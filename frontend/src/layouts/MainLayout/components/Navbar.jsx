@@ -6,12 +6,22 @@ import { ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // Nav Links
-const routes = [
+// IDIR Routes
+const idirRoutes = [
+  { name: 'Dashboard', route: ROUTES.DASHBOARD },
+  { name: 'Organizations', route: ROUTES.ORGANIZATIONS },
+  { name: 'Transactions', route: ROUTES.TRANSACTIONS },
+  { name: 'Compliance Reports', route: ROUTES.REPORTS },
+  { name: 'File Submissions', route: ROUTES.FILESUBMISSION },
+  { name: 'Administration', route: ROUTES.ADMIN }
+]
+// BCeID Routes
+const bceidRoutes = [
   { name: 'Dashboard', route: ROUTES.DASHBOARD },
   { name: 'Transactions', route: ROUTES.TRANSACTIONS },
-  { name: 'Compliance Report', route: ROUTES.REPORTS },
-  { name: 'Organization', route: ROUTES.ORGANIZATIONS },
-  { name: 'Administration', route: ROUTES.ADMIN }
+  { name: 'File Submissions', route: ROUTES.FILESUBMISSION },
+  { name: 'Compliance Reports', route: ROUTES.REPORTS },
+  { name: 'Organization', route: ROUTES.ORGANIZATION }
 ]
 
 export const Navbar = () => {
@@ -22,7 +32,7 @@ export const Navbar = () => {
       title="Low Carbon Fuel Standard"
       balance="50,000"
       organizationName={currentUser?.organization?.name}
-      routes={routes}
+      routes={currentUser.is_government_user ? idirRoutes : bceidRoutes}
       beta={true}
       data-test="main-layout-navbar"
       headerRightPart={<HeaderComponent key="headerRight" />}
