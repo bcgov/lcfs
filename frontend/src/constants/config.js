@@ -12,8 +12,15 @@ function getApiBaseUrl() {
   // Split the hostname and current port (if any)
   const [hostname] = window.location.hostname.split(':')
 
-  // Construct the new base URL with port 8000
-  const baseUrl = `${window.location.protocol}//${hostname}:8000/api`
+  // Check if the environment is development
+  let baseUrl
+  if (process.env.NODE_ENV === 'development') {
+    // In development, use port 8000
+    baseUrl = `${window.location.protocol}//${hostname}:8000/api`
+  } else {
+    // In production, use the standard URL without the port
+    baseUrl = `${window.location.protocol}//${hostname}/api`
+  }
 
   // Use getConfig to get 'api_base' from configuration or fallback to baseUrl
   return getConfig('api_base', baseUrl)
