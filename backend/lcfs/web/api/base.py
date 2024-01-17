@@ -229,23 +229,17 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
             return apply_generic_filter_conditions(field, filter_value, filter_option)
 
         # Handle various filter types
-        match filter_type:
-            # Handle text filter options (contains, notContains, equals, notEqual, startsWith, endsWith)
-            case "text":
-                return apply_text_filter_conditions(field, filter_value, filter_option)
-            # Handle number filter options (equals, notEqual, greaterThan, greaterThanOrEqual, lessThan, lessThanOrEqual, inRange)
-            case "number":
-                return apply_number_filter_conditions(
-                    field, filter_value, filter_option
-                )
-            # Handle date filter options (equals, notEqual, greaterThan, lessThan, inRange)
-            case "date":
-                return apply_date_filter_conditions(field, filter_value, filter_option)
-            case _:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid filter type: {filter_type}",
-                )
+        if filter_type == "text":
+            return apply_text_filter_conditions(field, filter_value, filter_option)
+        elif filter_type == "number":
+            return apply_number_filter_conditions(field, filter_value, filter_option)
+        elif filter_type == "date":
+            return apply_date_filter_conditions(field, filter_value, filter_option)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid filter type: {filter_type}",
+            )
     except Exception as e:
         logger.error(f"Failed to apply filter conditions: {e}")
         raise HTTPException(
