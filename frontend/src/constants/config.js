@@ -12,11 +12,11 @@ function getApiBaseUrl() {
   // Split the hostname
   const hostnameParts = window.location.hostname.split('.')
 
-  // Check if the environment is development
+  // Check if the environment is local development
   let baseUrl;
-  if (process.env.NODE_ENV === 'development') {
-    // In development, use port 8000
-    baseUrl = `${window.location.protocol}//${hostnameParts[0]}:8000/api`;
+  if (window.location.hostname === 'localhost') {
+    // In local development, use port 8000
+    baseUrl = `${window.location.protocol}//localhost:8000/api`;
   } else {
     // Determine the environment part of the subdomain
     const subDomain = hostnameParts[0];
