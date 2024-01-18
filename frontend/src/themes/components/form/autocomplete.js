@@ -14,7 +14,7 @@ const autocomplete = {
   styleOverrides: {
     popper: {
       boxShadow: lg,
-      padding: pxToRem(8),
+      padding: pxToRem(0),
       fontSize: size.md,
       color: text.main,
       textAlign: 'left',
@@ -28,11 +28,13 @@ const autocomplete = {
     },
 
     option: {
-      padding: `${pxToRem(4.8)} ${pxToRem(16)}`,
+      // padding: `${pxToRem(2)} ${pxToRem(4)}`,
       borderRadius: borderRadius.md,
-      fontSize: size.sm,
+      fontSize: size.md,
       color: text.main,
-      transition: 'background-color 300ms ease, color 300ms ease',
+      lineHeight: 1.2,
+      fontWeight: 300,
+      transition: 'background-color 150ms ease, color 150ms ease',
 
       '&:hover, &:focus, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected:focus':
         {
@@ -47,7 +49,7 @@ const autocomplete = {
     },
 
     noOptions: {
-      fontSize: size.sm,
+      fontSize: size.md,
       color: text.main
     },
 
@@ -56,7 +58,7 @@ const autocomplete = {
     },
 
     loading: {
-      fontSize: size.sm,
+      fontSize: size.md,
       color: text.main
     },
 
@@ -74,10 +76,10 @@ const autocomplete = {
       },
 
       '& .MuiSvgIcon-root, & .MuiSvgIcon-root:hover, & .MuiSvgIcon-root:focus':
-        {
-          color: white.main,
-          marginRight: 0
-        }
+      {
+        color: white.main,
+        marginRight: 0
+      }
     }
   }
 }

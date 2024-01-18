@@ -5,7 +5,7 @@ export const useRoleList = (options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['roles'],
-    queryFn: async () => (await client.get(`/roles/list`)).data,
+    queryFn: async () => (await client.get(`/roles/`)).data,
     ...options
   })
 }

@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from pydantic import BaseModel, EmailStr, ConfigDict
 
 from lcfs.web.api.base import PaginationResponseSchema
 
@@ -172,3 +172,8 @@ class Organizations(BaseModel):
     pagination: PaginationResponseSchema
     organizations: List[OrganizationBase]
 
+
+class MiniOrganization(BaseModel):
+    name: str
+    organization_id: int
+    balance: float

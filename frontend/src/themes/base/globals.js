@@ -9,7 +9,7 @@ import BCSansLightItalicTTF from '@bcgov/bc-sans/fonts/BCSans-LightItalic.woff2'
 import bceidImg from '@/assets/images/bceid.png'
 import loadingImg from '@/assets/images/logo_loading.svg'
 
-const { info, link, background, primary, light, dark } = colors
+const { info, link, background, primary, light, dark, white } = colors
 
 const bcSansRegular = {
   fontFamily: 'BCSans',
@@ -93,9 +93,9 @@ const globals = {
     margin: '0 auto'
   },
   '.ag-header-cell-filtered, .ag-header-cell-sorted-asc, .ag-header-cell-sorted-desc':
-    {
-      backgroundColor: rgba(dark.main, 0.1)
-    },
+  {
+    backgroundColor: rgba(dark.main, 0.1)
+  },
   '.ag-header-cell-sorted-asc': {
     borderTop: `2px solid ${primary.main}`
   },
@@ -120,6 +120,12 @@ const globals = {
   '.small-icon': {
     width: '1rem',
     height: '1rem'
+  },
+  '#bc-column-set-filter-listbox, #organizations-listbox': {
+    '& > li:hover, & > li:focus': {
+      backgroundColor: primary.light,
+      color: white.main
+    }
   },
   '.visually-hidden': {
     position: 'absolute',
