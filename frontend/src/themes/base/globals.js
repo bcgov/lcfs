@@ -93,14 +93,17 @@ const globals = {
     margin: '0 auto'
   },
   '.ag-header-cell-filtered, .ag-header-cell-sorted-asc, .ag-header-cell-sorted-desc':
-    {
-      backgroundColor: rgba(dark.main, 0.1)
-    },
+  {
+    backgroundColor: rgba(dark.main, 0.1)
+  },
   '.ag-header-cell-sorted-asc': {
     borderTop: `2px solid ${primary.main}`
   },
   '.ag-header-cell-sorted-desc': {
     borderBottom: `2px solid ${primary.main}`
+  },
+  '.ag-paging-panel': {
+    'justifyContent': 'flex-start'
   },
   '.bceid-name': {
     textIndent: '-9999px',

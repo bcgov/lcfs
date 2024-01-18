@@ -53,6 +53,7 @@ BCBox.defaultProps = {
 BCBox.propTypes = {
   variant: PropTypes.oneOf([
     'contained',
+    'outlined',
     'gradient',
     'success',
     'warning',

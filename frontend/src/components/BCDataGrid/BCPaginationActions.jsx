@@ -51,6 +51,8 @@ export function BCPaginationActions({
         count={Math.ceil(count / rowsPerPage)}
         color="primary"
         page={page + 1}
+        showFirstButton
+        showLastButton
         onChange={handlePageChange}
       />
       <>

@@ -88,7 +88,7 @@ export const MainLayout = () => {
           <BCBox
             elevation={5}
             sx={{
-              padding: '1rem',
+              padding: '1rem 0rem',
               minHeight: 'auto'
             }}
           >

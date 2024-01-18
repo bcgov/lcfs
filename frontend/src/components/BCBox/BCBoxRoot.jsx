@@ -94,11 +94,16 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
 
   // background value
   let backgroundValue = bgColor
+  // border value
+  let borderValue = 'none'
 
   if (variant === 'gradient') {
     backgroundValue = validGradients.find((el) => el === bgColor)
       ? linearGradient(gradients[bgColor].main, gradients[bgColor].state)
       : white.main
+  } else if (variant === 'outlined') {
+    backgroundValue = white.main
+    borderValue = `1.2px solid ${grey[500]}`
   } else if (variants.includes(variant)) {
     return {
       opacity,
@@ -118,6 +123,7 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
   return {
     opacity,
     background: backgroundValue,
+    border: borderValue,
     color: colorValue,
     borderRadius: borderRadiusValue,
     boxShadow: boxShadowValue
