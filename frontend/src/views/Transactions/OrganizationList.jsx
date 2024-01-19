@@ -37,13 +37,7 @@ const OrganizationList = ({ gridRef }) => {
   useEffect(() => {
     if (!isLoading) {
       setOptionsList(
-        data
-          .map((item) => ({
-            label: item.name,
-            id: item.organization_id,
-            balance: item.balance
-          }))
-          .sort((a, b) => (a.label.localeCompare(b.label) > 0 ? 1 : -1))
+        data.sort((a, b) => (a.label.localeCompare(b.label) > 0 ? 1 : -1))
       )
       setBalance(
         data.filter((item) => item.name === 'All Organizations').balance
@@ -72,6 +66,8 @@ const OrganizationList = ({ gridRef }) => {
           id="organizations"
           loading={isLoading}
           options={optionsList}
+          getOptionLabel={(option) => option.name}
+          getOptionKey={(option) => option.organization_id}
           onChange={onInputBoxChanged}
           sx={({ functions: { pxToRem }, palette: { primary, light } }) => ({
             width: 300,
