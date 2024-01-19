@@ -29,7 +29,7 @@ const baseProperties = {
 const baseHeadingProperties = {
   fontFamily: baseProperties.fontFamily,
   color: text.main,
-  fontWeight: baseProperties.fontWeightBold
+  fontWeight: baseProperties.fontWeightRegular
 }
 
 const baseDisplayProperties = {
@@ -74,7 +74,9 @@ const typography = {
   h5: {
     fontSize: baseProperties.headerSizeH5,
     lineHeight: 1.375,
-    ...baseHeadingProperties
+    fontWeight: baseProperties.fontWeightMedium,
+    fontFamily: baseProperties.fontFamily,
+    color: text.main,
   },
 
   h6: {

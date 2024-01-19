@@ -21,7 +21,7 @@ export const Roles = (props) => {
 
   return (
     <BCBox component="div">
-      <BCTypography variant="h5" my={1}>
+      <BCTypography variant="h5" my={1} color="primary">
         Roles
       </BCTypography>
       <BCBox

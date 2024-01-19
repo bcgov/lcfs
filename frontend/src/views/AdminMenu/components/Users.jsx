@@ -44,7 +44,7 @@ export const Users = (props) => {
 
   return (
     <BCBox component="div">
-      <BCTypography variant="h5" my={1}>
+      <BCTypography variant="h5" my={1} color="primary">
         Users
       </BCTypography>
       <BCButton

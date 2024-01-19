@@ -44,6 +44,7 @@ export const usersColumnDefs = [
     },
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle',
+    sortable: false,
   },
   { colId: 'email', field: 'email', width: 400 },
   {
