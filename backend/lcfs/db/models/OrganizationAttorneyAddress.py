@@ -21,9 +21,8 @@
     limitations under the License.
 """
 
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 
@@ -41,6 +40,5 @@ class OrganizationAttorneyAddress(BaseModel, Auditable, EffectiveDates):
     province_state = Column(String(50), nullable=True)
     country = Column(String(100), nullable=True)
     postalCode_zipCode = Column(String(10), nullable=True)
-    coordinates = Column(ARRAY(Float))
 
     organization = relationship("Organization", back_populates="org_attorney_address")
