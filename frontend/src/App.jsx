@@ -3,7 +3,7 @@ import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
 import { AddEditUser } from './views/AddEditUser'
 import { AddFuelCode } from './views/AddFuelCode'
-import { AddEditOrganization } from '@/views/AddOrganization/AddEditOrganization'
+import { AddOrganization } from './views/AddOrganization'
 import { AddTransaction } from './views/AddTransaction'
 import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
@@ -94,7 +94,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_ADD,
-        element: <AddEditOrganization />,
+        element: <AddOrganization />,
         handle: { title: 'Add Organization' }
       },
       {
@@ -104,7 +104,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_EDIT,
-        element: <AddEditOrganization />,
+        element: <AddOrganization />,
         handle: { title: 'Edit Organization' }
       },
       {
