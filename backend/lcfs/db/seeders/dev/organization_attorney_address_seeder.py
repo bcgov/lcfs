@@ -15,7 +15,7 @@ async def seed_organization_attorney_addresses(session):
 
     organization_attorney_addresses_to_seed = [
         {
-            "name": "QuantumNova Fuels",
+            "name": "LCFS1",
             "street_address": "456 Nexus Avenue",
             "address_other": "Suite 101",
             "city": "Cosmos City",
@@ -24,7 +24,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "V8X 1Y9",
         },
         {
-            "name": "NebulaWings Dynamics",
+            "name": "LCFS2",
             "street_address": "101 Celestial Road",
             "address_other": "Floor 5, Unit B",
             "city": "Astralville",
@@ -33,7 +33,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "V4X 4Z7",
         },
         {
-            "name": "SolarFlare Innovations",
+            "name": "LCFS3",
             "street_address": "345 Radiant Road",
             "address_other": "",
             "city": "Solartown",
@@ -42,7 +42,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "V6M 2W8",
         },
         {
-            "name": "SkySail Industries",
+            "name": "LCFS4",
             "street_address": "678 Breeze Boulevard",
             "address_other": "Unit 3A",
             "city": "Windhaven",
@@ -51,7 +51,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "S7K 5T1",
         },
         {
-            "name": "BioVista Fuels",
+            "name": "LCFS5",
             "street_address": "890 Nature Lane",
             "address_other": "Building 987",
             "city": "BioVista",
@@ -60,7 +60,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "H1A 9B4",
         },
         {
-            "name": "ElectraSphere Innovations",
+            "name": "LCFS6",
             "street_address": "1234 Volt Street",
             "address_other": "Floor 567",
             "city": "Electropolis",
@@ -69,7 +69,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "V3S 8K6",
         },
         {
-            "name": "GasVortex Enterprises",
+            "name": "LCFS7",
             "street_address": "678 Combustion Road",
             "address_other": "",
             "city": "EnergySphere",
@@ -78,7 +78,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "T2E 5G7",
         },
         {
-            "name": "EcoPulse Solutions",
+            "name": "LCFS8",
             "street_address": "1011 Eco Drive",
             "address_other": "",
             "city": "Greenfield",
@@ -87,7 +87,7 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "R1N 7L3",
         },
         {
-            "name": "FusionGalaxy Dynamics",
+            "name": "LCFS9",
             "street_address": "1122 Fusion Avenue",
             "address_other": "Suite 1213",
             "city": "Astrumtown",
@@ -96,22 +96,13 @@ async def seed_organization_attorney_addresses(session):
             "postalCode_zipCode": "M4L 3R9",
         },
         {
-            "name": "TurboDrive Dynamics",
+            "name": "LCFS10",
             "street_address": "1314 Power Lane",
             "address_other": "Unit 1415",
             "city": "Turbopolis",
             "province_state": "BC",
             "country": "Canada",
             "postalCode_zipCode": "T3E 4X8",
-        },
-        {
-            "name": "Government of British Columbia",
-            "street_address": "123 Main Street",
-            "address_other": "",
-            "city": "Victoria",
-            "province_state": "BC",
-            "country": "Canada",
-            "postalCode_zipCode": "V9A 1B2",
         },
     ]
 
