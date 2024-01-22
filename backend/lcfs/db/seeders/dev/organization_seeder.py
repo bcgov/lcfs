@@ -15,8 +15,8 @@ async def seed_organizations(session):
 
     organizations_to_seed = [
         {
-            "name": "QuantumNova Fuels",
-            "email": "info@quantumnova.com",
+            "name": "LCFS Org 1",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1234",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -25,8 +25,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 1,
         },
         {
-            "name": "NebulaWings Dynamics",
-            "email": "contact@nebulawings.org",
+            "name": "LCFS Org 2",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-5678",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -35,8 +35,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 2,
         },
         {
-            "name": "SolarFlare Innovations",
-            "email": "admin@solarflare.net",
+            "name": "LCFS Org 3",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-9101",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -45,8 +45,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 3,
         },
         {
-            "name": "SkySail Industries",
-            "email": "info@skysail.com",
+            "name": "LCFS Org 4",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1122",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -55,8 +55,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 4,
         },
         {
-            "name": "BioVista Fuels",
-            "email": "contact@biovista.org",
+            "name": "LCFS Org 5",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1313",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -65,8 +65,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 5,
         },
         {
-            "name": "ElectraSphere Innovations",
-            "email": "admin@electrasphere.net",
+            "name": "LCFS Org 6",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1414",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -75,8 +75,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 6,
         },
         {
-            "name": "GasVortex Enterprises",
-            "email": "info@gasvortex.com",
+            "name": "LCFS Org 7",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1515",
             "edrms_record": "12345",
             "organization_status_id": 2,
@@ -85,8 +85,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 7,
         },
         {
-            "name": "EcoPulse Solutions",
-            "email": "contact@ecopulse.org",
+            "name": "LCFS Org 8",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1616",
             "edrms_record": "12345",
             "organization_status_id": 1,
@@ -95,8 +95,8 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 8,
         },
         {
-            "name": "FusionGalaxy Dynamics",
-            "email": "admin@fusiongalaxy.net",
+            "name": "LCFS Org 9",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1717",
             "edrms_record": "12345",
             "organization_status_id": 3,
@@ -105,24 +105,14 @@ async def seed_organizations(session):
             "organization_attorney_address_id": 9,
         },
         {
-            "name": "TurboDrive Dynamics",
-            "email": "info@turbodrive.com",
+            "name": "LCFS Org 10",
+            "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1818",
             "edrms_record": "12345",
             "organization_status_id": 4,
             "organization_type_id": 4,
             "organization_address_id": 10,
             "organization_attorney_address_id": 10,
-        },
-        {
-            "name": "Government of British Columbia",
-            "email": "lcfs@gov.bc.ca",
-            "phone": "111-222-3333",
-            "edrms_record": "00000",
-            "organization_status_id": 1,
-            "organization_type_id": 1,
-            "organization_address_id": 11,
-            "organization_attorney_address_id": 11,
         },
     ]
 
