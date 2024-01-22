@@ -27,6 +27,8 @@ export const Transactions = () => {
     alert('Download Transactions clicked')
 
     // enable once we have transactions in db
+    // TODO: implement all transactions related backend logic
+    // TODO: implement transactions seed
 
     // setIsDownloadingTransactions(true)
     // setAlertMessage('')
@@ -61,7 +63,7 @@ export const Transactions = () => {
           startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
           onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
         >
-          <Typography variant="subtitle2">New Transfer</Typography>
+          <Typography variant="subtitle2">New Transaction</Typography>
         </BCButton>
         <DownloadButton
           onDownload={handleDownloadTransactions}
