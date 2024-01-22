@@ -14,6 +14,33 @@ import { dummy } from './data'
 import { getStatus } from '@/utils/getStatus'
 import { getOrgnization } from '@/utils/getOrganization'
 
+const columnDefs = [
+  { field: 'transaction_id', headerName: 'ID' },
+  {
+    field: 'compliance_period',
+    headerName: 'Compliant period'
+  },
+  { field: 'transaction_type.type', headerName: 'Type' },
+  {
+    valueGetter: (data) => getOrgnization(data, 'from'),
+    headerName: 'Compliance units from'
+  },
+  {
+    valueGetter: (data) => getOrgnization(data, 'to'),
+    headerName: 'Compliance units to'
+  },
+  { field: 'compliance_units', headerName: 'Number of units' },
+  { field: 'value_per_unit', headerName: 'Value per unit' },
+  {
+    valueGetter: getStatus,
+    headerName: 'Status'
+  },
+  {
+    valueFormatter: (data) => dayjs(data.last_updated).format('YYYY-MM-DD'),
+    headerName: 'Last updated'
+  }
+]
+
 export const Transactions = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
@@ -76,33 +103,7 @@ export const Transactions = () => {
       <AgGridReact
         className="ag-theme-alpine"
         animateRows="true"
-        columnDefs={[
-          { field: 'transaction_id', headerName: 'ID' },
-          {
-            field: 'compliance_period',
-            headerName: 'Compliant period'
-          },
-          { field: 'transaction_type.type', headerName: 'Type' },
-          {
-            valueGetter: (data) => getOrgnization(data, 'from'),
-            headerName: 'Compliance units from'
-          },
-          {
-            valueGetter: (data) => getOrgnization(data, 'to'),
-            headerName: 'Compliance units to'
-          },
-          { field: 'compliance_units', headerName: 'Number of units' },
-          { field: 'value_per_unit', headerName: 'Value per unit' },
-          {
-            valueGetter: getStatus,
-            headerName: 'Status'
-          },
-          {
-            valueFormatter: (data) =>
-              dayjs(data.last_updated).format('YYYY-MM-DD'),
-            headerName: 'Last updated'
-          }
-        ]}
+        columnDefs={columnDefs}
         defaultColDef={{
           resizable: true,
           sortable: true,
@@ -123,37 +124,12 @@ export const Transactions = () => {
       />
       {/* rework BCDataGridServer */}
       {/* move BCPagination into BCDataGrid and conditionally render via a prop */}
+      {/* TODO: once all pieces for data retrieval are in place, we can implement the BCDataGridServer component */}
       {/* <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'transactions'}
           apiData={'transactions'}
-          columnDefs={[
-            { field: 'transaction_id', headerName: 'ID' },
-            {
-              field: 'compliance_period',
-              headerName: 'Compliant period'
-            },
-            { field: 'transaction_type.type', headerName: 'Type' },
-            {
-              valueGetter: (data) => getOrgnization(data, 'from'),
-              headerName: 'Compliance units from'
-            },
-            {
-              valueGetter: (data) => getOrgnization(data, 'to'),
-              headerName: 'Compliance units to'
-            },
-            { field: 'compliance_units', headerName: 'Number of units' },
-            { field: 'value_per_unit', headerName: 'Value per unit' },
-            {
-              valueGetter: getStatus,
-              headerName: 'Status'
-            },
-            {
-              valueFormatter: (data) =>
-                dayjs(data.last_updated).format('YYYY-MM-DD'),
-              headerName: 'Last updated'
-            }
-          ]}
+          columnDefs={columnDefs}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
