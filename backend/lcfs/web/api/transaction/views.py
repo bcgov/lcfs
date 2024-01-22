@@ -16,7 +16,7 @@ router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-@router.get("/", status_code=status.HTTP_200_OK, response_model=Transactions)
+@router.post("/", status_code=status.HTTP_200_OK, response_model=Transactions)
 async def get_all_transactions(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
