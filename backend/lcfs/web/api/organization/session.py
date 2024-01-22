@@ -1,4 +1,5 @@
 import io
+import math
 from datetime import datetime
 from logging import getLogger
 from typing import List
@@ -26,6 +27,11 @@ from lcfs.web.api.base import (
     validate_pagination,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.web.api.transaction.schema import TransactionBase
+from lcfs.db.models.Transaction import Transaction
+from lcfs.db.models.IssuanceHistory import IssuanceHistory
+from lcfs.db.models.TransferHistory import TransferHistory
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 
 logger = getLogger("organization_repo")
 
@@ -154,8 +160,10 @@ class OrganizationRepository:
                 for organization in organizations
             ], total_count
         except Exception as e:
-            logger.error(f"Error occurred while fetching organizations: {e}")
-            raise Exception(f"Error occurred while fetching organizations")
+            logger.error(
+                f"Error occurred while fetching organization transactions: {e}")
+            raise Exception(
+                f"Error occurred while fetching organization transactions")
 
     async def get_statuses(self) -> List[OrganizationStatusBase]:
         """
@@ -251,3 +259,59 @@ class OrganizationRepository:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal Server Error",
             ) from e
+
+    async def get_transactions(self, organization_id, pagination) -> List[TransactionBase]:
+        # Apply filters
+        conditions = []
+        pagination = validate_pagination(pagination)
+        if pagination.filters and len(pagination.filters) > 0:
+            try:
+                self.apply_filters(pagination, conditions)
+            except Exception as e:
+                raise ValueError(
+                    f"Invalid filter provided: {pagination.filters}."
+                )
+
+        offset = 0 if (pagination.page < 1) else (
+            pagination.page - 1) * pagination.size
+        limit = pagination.size
+
+        query = (
+            select(Transaction)
+            .options(
+                joinedload(Transaction.issuance_history_record).options(
+                    joinedload(IssuanceHistory.organization),
+                    joinedload(IssuanceHistory.issuance_status),
+                ),
+                joinedload(Transaction.transfer_history_record).options(
+                    joinedload(TransferHistory.to_organization),
+                    joinedload(TransferHistory.from_organization),
+                    joinedload(TransferHistory.transfer_status),
+                ),
+                joinedload(Transaction.transaction_type),
+            )
+            .where(Organization.organization_id == organization_id)
+            .where(and_(*conditions))
+        )
+        count_query = await self.session.execute(
+            select(func.count(distinct(Transaction.transaction_id)))
+            .where(Organization.organization_id == organization_id)
+            .where(and_(*conditions))
+        )
+
+        total_count = count_query.unique().scalar_one_or_none()
+
+        for order in pagination.sortOrders:
+            sort_method = asc if order.direction == "asc" else desc
+            query = query.order_by(
+                sort_method(
+                    order.field if order.field != "status" else "description"
+                )
+            )
+
+        transaction_results = await self.session.execute(query.offset(offset).limit(limit))
+        results = transaction_results.scalars().unique().all()
+
+        return [
+            Transaction.model_validate(transaction) for transaction in results
+        ], total_count

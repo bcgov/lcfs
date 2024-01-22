@@ -302,48 +302,16 @@ async def get_transactions_for_organization(
     db: AsyncSession = Depends(get_async_db),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
+    repo: OrganizationRepository = Depends()
 ):
     """
     Endpoint to retrieve transactions from a specific organization. This includes processing the provided
     transaction details.
     """
     try:
-        offset = 0 if (pagination.page < 1) else (
-            pagination.page - 1) * pagination.size
-        limit = pagination.size
+        transactions, total_count = await repo.get_transactions(organization_id, pagination)
 
-        query = (
-            select(Transaction)
-            .options(
-                joinedload(Transaction.issuance_history_record).options(
-                    joinedload(IssuanceHistory.organization),
-                    joinedload(IssuanceHistory.issuance_status),
-                ),
-                joinedload(Transaction.transfer_history_record).options(
-                    joinedload(TransferHistory.to_organization),
-                    joinedload(TransferHistory.from_organization),
-                    joinedload(TransferHistory.transfer_status),
-                ),
-                joinedload(Transaction.transaction_type),
-            )
-            .where(Organization.organization_id == organization_id)
-        )
-        count_query = await db.execute(
-            select(func.count(distinct(Transaction.transaction_id))).where(
-                Organization.organization_id == organization_id
-            )
-        )
-
-        total_count = count_query.unique().scalar_one_or_none()
-
-        transaction_results = await db.execute(query.offset(offset).limit(limit))
-        results = transaction_results.scalars().unique().all()
-
-        transactions = [
-            Transaction.model_validate(transaction) for transaction in results
-        ]
-
-        if len(transactions) == 0:
+        if not transactions:
             response.status_code = status.HTTP_404_NOT_FOUND
             return Transactions(
                 pagination=PaginationResponseSchema(
@@ -351,6 +319,7 @@ async def get_transactions_for_organization(
                 ),
                 transactions=transactions,
             )
+
         return Transactions(
             pagination=PaginationResponseSchema(
                 total=total_count,
@@ -360,6 +329,7 @@ async def get_transactions_for_organization(
             ),
             transactions=transactions,
         )
+
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise HTTPException(

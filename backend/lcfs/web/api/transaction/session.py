@@ -23,6 +23,7 @@ from lcfs.db.models.IssuanceHistory import IssuanceHistory
 
 from fastapi.responses import StreamingResponse
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.web.api.transaction.schema import TransactionBase
 
 logger = getLogger("transaction_repo")
 
@@ -38,7 +39,7 @@ class TransactionRepo:
 
     async def get_transactions(
         self, pagination: PaginationRequestSchema = {}
-    ) -> List[OrganizationBase]:
+    ) -> List[TransactionBase]:
         """
         Get all organizations based on the provided filters and pagination.
         This method returns a list of OrganizationBase objects.
