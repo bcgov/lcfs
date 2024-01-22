@@ -296,13 +296,17 @@ async def get_users_for_organization(
         raise HTTPException(status_code=500, detail=f"Internal Server Error")
 
 
-@router.get("/{organization_id}/transactions/", response_model=Transactions)
+@router.post("/{organization_id}/transactions/", response_model=Transactions)
 async def get_transactions_for_organization(
     organization_id: int,
     db: AsyncSession = Depends(get_async_db),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
 ):
+    """
+    Endpoint to retrieve transactions from a specific organization. This includes processing the provided
+    transaction details.
+    """
     try:
         offset = 0 if (pagination.page < 1) else (
             pagination.page - 1) * pagination.size
