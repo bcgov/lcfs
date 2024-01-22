@@ -156,6 +156,8 @@ class UserRepository:
             # Sort the query results
             for order in pagination.sortOrders:
                 sort_method = asc if order.direction == "asc" else desc
+                if order.field == "role":
+                    order.field = get_field_for_filter(Role, "name")
                 query = query.order_by(sort_method(order.field))
 
             # Execute the query

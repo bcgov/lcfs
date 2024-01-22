@@ -48,9 +48,9 @@ const DownloadButton = ({
 
 export const Organizations = () => {
   const gridRef = useRef()
-  const [gridKey, setGridKey] = useState(`organizations-grid-${Math.random()}`)
+  const [gridKey, setGridKey] = useState(`organizations-grid`)
   const handleGridKey = useCallback(() => {
-    setGridKey(`users-grid-${Math.random()}`)
+    setGridKey(`organizations-grid`)
   }, [])
   const gridOptions = {
     overlayNoRowsTemplate: 'No organizations found'
@@ -65,7 +65,12 @@ export const Organizations = () => {
   const defaultSortModel = [{ field: 'name', direction: 'asc' }]
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
-    navigate(`/organizations/${params.data.organization_id}`)
+    navigate(
+      ROUTES.ORGANIZATIONS_VIEW.replace(
+        ':orgID',
+        params.data.organization_id
+      )
+    )
   })
   const apiService = useApiService()
   const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
@@ -116,7 +121,9 @@ export const Organizations = () => {
           </BCAlert>
         )}
       </div>
-      <BCTypography variant="h5">Organizations</BCTypography>
+      <BCTypography variant="h5" color="primary">
+        Organizations
+      </BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}
@@ -150,10 +157,7 @@ export const Organizations = () => {
           dataTest="download-user-button"
         />
       </Stack>
-      <BCBox
-        component="div"
-        sx={{ height: '36rem', width: '100%' }}
-      >
+      <BCBox component="div" sx={{ height: '36rem', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'organizations/list'}

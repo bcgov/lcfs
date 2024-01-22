@@ -237,17 +237,19 @@ const BCDataGridServer = ({
       {/* TablePagination components setup using Material UI,
        * so it looks similar to the one provided by ag-grid by default
        */}
-      <BCPagination
-        page={page}
-        size={size}
-        total={total}
-        handleChangePage={handleChangePage}
-        handleChangeRowsPerPage={handleChangeRowsPerPage}
-        enableResetButton={enableResetButton}
-        enableCopyButton={enableCopyButton}
-        gridRef={gridRef}
-        rowsPerPageOptions={paginationPageSizeSelector}
-      />
+      <BCBox display="flex" justifyContent="flex-start" variant="outlined">
+        <BCPagination
+          page={page}
+          size={size}
+          total={total}
+          handleChangePage={handleChangePage}
+          handleChangeRowsPerPage={handleChangeRowsPerPage}
+          enableResetButton={enableResetButton}
+          enableCopyButton={enableCopyButton}
+          gridRef={gridRef}
+          rowsPerPageOptions={paginationPageSizeSelector}
+        />
+      </BCBox>
     </BCBox>
   )
 }

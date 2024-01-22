@@ -86,7 +86,7 @@ const BCDataGridClient = ({
   ) : (
     <BCBox
       sx={{
-        height: '60vh',
+        height: '54vh',
         width: '100%'
       }}
       className="bc-grid-container"

@@ -14,7 +14,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { constructAddress } from '@/utils/constructAddress'
 import Loading from '@/components/Loading'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { phoneNumberFormatter } from '@/utils/formatters'
 
 const OrgDetailTypography = ({ bold, children, ...rest }) => {
   return (
@@ -28,9 +30,13 @@ export const ViewOrg = () => {
   const [showActive, setShowActive] = useState(true)
   const navigate = useNavigate()
   const { orgID } = useParams()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const { data: orgData, isLoading } = useOrganization(orgID)
   const handleEditClick = () => {
-    navigate(`/organizations/${orgID}/edit-org`)
+    navigate(ROUTES.ORGANIZATIONS_EDIT.replace(':orgID', orgID), {
+      state: { orgID, isEditMode: true }
+    })
   }
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
@@ -79,13 +85,19 @@ export const ViewOrg = () => {
 
   return (
     <>
-      <BCTypography variant="h5">
+      <BCTypography variant="h5" color="primary">
         {orgData.name}{' '}
-        <IconButton aria-label="edit" color="primary" onClick={handleEditClick}>
-          <EditIcon />
-        </IconButton>
+        {!isCurrentUserLoading && currentUser.is_government_user && (
+          <IconButton
+            aria-label="edit"
+            color="primary"
+            onClick={handleEditClick}
+          >
+            <EditIcon />
+          </IconButton>
+        )}
       </BCTypography>
-      <BCBox p={3} bgColor={colors.background.grey}>
+      <BCBox p={3} bgColor={colors.grey[300]}>
         <BCBox display="flex" gap={10}>
           <BCBox
             display="grid"
@@ -102,7 +114,9 @@ export const ViewOrg = () => {
             </OrgDetailTypography>
             <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
             <OrgDetailTypography bold>Telephone:</OrgDetailTypography>
-            <OrgDetailTypography>{orgData.phone}</OrgDetailTypography>
+            <OrgDetailTypography>
+              {phoneNumberFormatter({ value: orgData.phone })}
+            </OrgDetailTypography>
             <OrgDetailTypography bold>Email:</OrgDetailTypography>
             <OrgDetailTypography>{orgData.email}</OrgDetailTypography>
           </BCBox>
@@ -132,18 +146,17 @@ export const ViewOrg = () => {
             </OrgDetailTypography>
           </BCBox>
         </BCBox>
-        {/* TODO: need to fix below */}
-        {/* {!orgData.user.is_government && (
+        {!isCurrentUserLoading && !currentUser.is_government_user && (
           <OrgDetailTypography mt={1}>
             Email <a href="mailto:lcfs@gov.bc.ca">lcfs@gov.bc.ca</a> to update
             address information.
           </OrgDetailTypography>
-        )} */}
+        )}
       </BCBox>
       <BCBox
         sx={{
           display: 'flex',
-          flexDirection: 'row', // default layout is row
+          flexDirection: 'column', // default layout is row
           flexWrap: 'wrap', // allow items to wrap to the next row
           justifyContent: 'flex-start',
           alignItems: 'flex-start',
@@ -153,22 +166,46 @@ export const ViewOrg = () => {
       >
         {showActive ? (
           <>
-            <BCButton
-              variant="contained"
-              size="small"
-              color="primary"
-              sx={{
-                textTransform: 'none',
-                marginRight: '8px',
-                marginBottom: '8px'
-              }}
-              startIcon={
-                <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-              }
-              onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
-            >
-              <BCTypography variant="subtitle2">New User</BCTypography>
-            </BCButton>
+            <BCBox component="div">
+              <BCButton
+                variant="contained"
+                size="small"
+                color="primary"
+                sx={{
+                  textTransform: 'none',
+                  marginRight: '8px',
+                  marginBottom: '8px'
+                }}
+                startIcon={
+                  <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+                }
+                onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
+              >
+                <BCTypography variant="subtitle2">New User</BCTypography>
+              </BCButton>
+              <BCButton
+                variant="outlined"
+                size="small"
+                color="primary"
+                sx={{
+                  textTransform: 'none',
+                  marginRight: '8px',
+                  marginBottom: '8px',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={() => setShowActive(false)}
+              >
+                <BCTypography variant="subtitle2">
+                  Show Inactive Users
+                </BCTypography>
+              </BCButton>
+            </BCBox>
+            <BCTypography variant="h5" mt={1} color="primary">
+              Active Users
+            </BCTypography>
+          </>
+        ) : (
+          <>
             <BCButton
               variant="outlined"
               size="small"
@@ -179,28 +216,14 @@ export const ViewOrg = () => {
                 marginBottom: '8px',
                 whiteSpace: 'nowrap'
               }}
-              onClick={() => setShowActive(false)}
+              onClick={() => setShowActive(true)}
             >
-              <BCTypography variant="subtitle2">
-                Show Inactive Users
-              </BCTypography>
+              <BCTypography variant="subtitle2">Show Active Users</BCTypography>
             </BCButton>
+            <BCTypography variant="h5" mt={1} color="primary">
+              Inactive Users
+            </BCTypography>
           </>
-        ) : (
-          <BCButton
-            variant="outlined"
-            size="small"
-            color="primary"
-            sx={{
-              textTransform: 'none',
-              marginRight: '8px',
-              marginBottom: '8px',
-              whiteSpace: 'nowrap'
-            }}
-            onClick={() => setShowActive(true)}
-          >
-            <BCTypography variant="subtitle2">Show Active Users</BCTypography>
-          </BCButton>
         )}
       </BCBox>
       <BCBox sx={{ height: '36rem', width: '100%' }}>

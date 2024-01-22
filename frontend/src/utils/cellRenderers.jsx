@@ -62,8 +62,9 @@ export const OrgStatusRenderer = (props) => {
     </BCBox>
   )
 }
-
+// if the status of the user is in-active then don't show their previously held roles
 export const RoleRenderer = (props) => {
+  if (!props.data.is_active) return <></>
   return (
     <Stack
       component="div"
