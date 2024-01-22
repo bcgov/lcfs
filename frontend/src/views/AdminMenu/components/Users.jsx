@@ -26,7 +26,10 @@ export const Users = (props) => {
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found'
   }
-  const defaultSortModel = [{ field: 'is_active', direction: 'desc' }]
+  const defaultSortModel = [
+    { field: 'is_active', direction: 'desc' },
+    { field: 'display_name', direction: 'asc' }
+  ]
   const navigate = useNavigate()
 
   const handleNewUserClick = () => {
