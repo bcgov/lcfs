@@ -1,7 +1,11 @@
+import io
+from datetime import datetime
 from logging import getLogger
 from typing import List
+from starlette import status
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import and_, func, select, asc, desc, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +25,7 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     validate_pagination,
 )
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
 logger = getLogger("organization_repo")
 
@@ -56,7 +61,8 @@ class OrganizationRepository:
                 field = get_field_for_filter(Organization, filter.field)
 
             conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type)
             )
 
     async def get_organizations(
@@ -96,11 +102,14 @@ class OrganizationRepository:
                 try:
                     self.apply_filters(pagination, conditions)
                 except Exception as e:
-                    raise ValueError(f"Invalid filter provided: {pagination.filters}.")
+                    raise ValueError(
+                        f"Invalid filter provided: {pagination.filters}."
+                    )
 
             # Apply pagination
             offset = (
-                0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+                0 if (pagination.page < 1) else (
+                    pagination.page - 1) * pagination.size
             )
             limit = pagination.size
             # Build base query
@@ -179,3 +188,66 @@ class OrganizationRepository:
         except Exception as e:
             logger.error(f"Error occurred while fetching types: {e}")
             raise Exception(f"Error occurred while fetching types")
+
+    async def export_organizations(self) -> StreamingResponse:
+        try:
+            export_format = "xls"
+            media_type = "application/vnd.ms-excel"
+
+            # Fetch all organizations from the database
+            result = await self.session.execute(
+                select(Organization)
+                .options(joinedload(Organization.org_status))
+                .order_by(Organization.organization_id)
+            )
+            organizations = result.scalars().all()
+
+            # Prepare data for the spreadsheet
+            data = [
+                [
+                    organization.organization_id,
+                    organization.name,
+                    # TODO: Update this section with actual data retrieval
+                    # once the Compliance Units models are implemented.
+                    123456,
+                    123456,
+                    organization.org_status.status.value,
+                ]
+                for organization in organizations
+            ]
+
+            # Create a spreadsheet
+            builder = SpreadsheetBuilder(file_format=export_format)
+
+            builder.add_sheet(
+                sheet_name="Organizations",
+                columns=[
+                    "ID",
+                    "Organization Name",
+                    "Compliance Units",
+                    "In Reserve",
+                    "Registered",
+                ],
+                rows=data,
+                styles={"bold_headers": True},
+            )
+
+            file_content = builder.build_spreadsheet()
+
+            # Get the current date in YYYY-MM-DD format
+            current_date = datetime.now().strftime("%Y-%m-%d")
+
+            filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
+            headers = {
+                "Content-Disposition": f'attachment; filename="{filename}"'}
+
+            return StreamingResponse(
+                io.BytesIO(file_content), media_type=media_type, headers=headers
+            )
+
+        except Exception as e:
+            logger.error("Internal Server Error: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal Server Error",
+            ) from e

@@ -39,6 +39,7 @@ from lcfs.db.models.Transaction import Transaction
 from lcfs.db.models.IssuanceHistory import IssuanceHistory
 from lcfs.db.models.TransferHistory import TransferHistory
 from sqlalchemy import func, select, distinct
+from lcfs.web.api.organization.session import OrganizationRepository
 
 logger = getLogger("organization")
 router = APIRouter()
@@ -50,7 +51,8 @@ FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def export_organizations(
-    request: Request, db: AsyncSession = Depends(get_async_db)
+    request: Request,
+    repo: OrganizationRepository = Depends()
 ):
     """
     Endpoint to export information of all organizations
@@ -70,62 +72,11 @@ async def export_organizations(
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    export_format = "xls"
-    media_type = "application/vnd.ms-excel"
 
     try:
-        # Fetch all organizations from the database
-        result = await db.execute(
-            select(Organization)
-            .options(joinedload(Organization.org_status))
-            .order_by(Organization.organization_id)
-        )
-        organizations = result.scalars().all()
-
-        # Prepare data for the spreadsheet
-        data = [
-            [
-                organization.organization_id,
-                organization.name,
-                # TODO: Update this section with actual data retrieval
-                # once the Compliance Units models are implemented.
-                123456,
-                123456,
-                organization.org_status.status.value,
-            ]
-            for organization in organizations
-        ]
-
-        # Create a spreadsheet
-        builder = SpreadsheetBuilder(file_format=export_format)
-
-        builder.add_sheet(
-            sheet_name="Organizations",
-            columns=[
-                "ID",
-                "Organization Name",
-                "Compliance Units",
-                "In Reserve",
-                "Registered",
-            ],
-            rows=data,
-            styles={"bold_headers": True},
-        )
-
-        file_content = builder.build_spreadsheet()
-
-        # Get the current date in YYYY-MM-DD format
-        current_date = datetime.now().strftime("%Y-%m-%d")
-
-        filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
-        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-
-        return StreamingResponse(
-            io.BytesIO(file_content), media_type=media_type, headers=headers
-        )
+        return await repo.export_organizations()
 
     except Exception as e:
-        logger.error("Internal Server Error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",
@@ -146,7 +97,8 @@ async def create_organization(
     async with db.begin():
         try:
             # Create and add address models to the database
-            org_address = OrganizationAddress(**organization_data.address.dict())
+            org_address = OrganizationAddress(
+                **organization_data.address.dict())
             org_attorney_address = OrganizationAttorneyAddress(
                 **organization_data.attorney_address.dict()
             )
@@ -312,7 +264,8 @@ async def get_organization_types(
     try:
         types = await repo.get_types()
         if len(types) == 0:
-            raise HTTPException(status_code=404, detail="No organization types found")
+            raise HTTPException(
+                status_code=404, detail="No organization types found")
         return types
 
     except Exception as e:
@@ -351,7 +304,8 @@ async def get_transactions_for_organization(
     response: Response = None,
 ):
     try:
-        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
 
         query = (
