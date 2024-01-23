@@ -81,13 +81,15 @@ const typography = {
 
   h6: {
     fontSize: baseProperties.headerSizeH6,
-    lineHeight: 1.625,
-    ...baseHeadingProperties
+    lineHeight: 1.375,
+    fontWeight: baseProperties.fontWeightMedium,
+    fontFamily: baseProperties.fontFamily,
+    color: text.main,
   },
 
   subtitle1: {
     fontFamily: baseProperties.fontFamily,
-    fontSize: baseProperties.fontSizeXL,
+    fontSize: baseProperties.fontSizeLG,
     fontWeight: baseProperties.fontWeightLight,
     lineHeight: 1.625
   },
@@ -137,6 +139,13 @@ const typography = {
   caption: {
     fontFamily: baseProperties.fontFamily,
     fontSize: baseProperties.fontSizeXS,
+    fontWeight: baseProperties.fontWeightLight,
+    lineHeight: 1.25
+  },
+
+  caption1: {
+    fontFamily: baseProperties.fontFamily,
+    fontSize: baseProperties.fontSizeSM,
     fontWeight: baseProperties.fontWeightLight,
     lineHeight: 1.25
   },
