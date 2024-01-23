@@ -7,39 +7,10 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box, Typography } from '@mui/material'
 import { AgGridReact } from 'ag-grid-react'
-import * as dayjs from 'dayjs'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { dummy } from './data'
-import { getStatus } from '@/utils/getStatus'
-import { getOrgnization } from '@/utils/getOrganization'
-
-const columnDefs = [
-  { field: 'transaction_id', headerName: 'ID' },
-  {
-    field: 'compliance_period',
-    headerName: 'Compliant period'
-  },
-  { field: 'transaction_type.type', headerName: 'Type' },
-  {
-    valueGetter: (data) => getOrgnization(data, 'from'),
-    headerName: 'Compliance units from'
-  },
-  {
-    valueGetter: (data) => getOrgnization(data, 'to'),
-    headerName: 'Compliance units to'
-  },
-  { field: 'compliance_units', headerName: 'Number of units' },
-  { field: 'value_per_unit', headerName: 'Value per unit' },
-  {
-    valueGetter: getStatus,
-    headerName: 'Status'
-  },
-  {
-    valueFormatter: (data) => dayjs(data.last_updated).format('YYYY-MM-DD'),
-    headerName: 'Last updated'
-  }
-]
+import { gridProps } from './options'
 
 export const Transactions = () => {
   const navigate = useNavigate()
@@ -103,13 +74,8 @@ export const Transactions = () => {
       <AgGridReact
         className="ag-theme-alpine"
         animateRows="true"
-        columnDefs={columnDefs}
-        defaultColDef={{
-          resizable: true,
-          sortable: true,
-          filter: true,
-          floatingFilter: true
-        }}
+        columnDefs={gridProps.columnDefs}
+        defaultColDef={gridProps.defaultColDef}
         rowData={dummy.transactions}
         rowSelection="multiple"
         suppressRowClickSelection="true"
