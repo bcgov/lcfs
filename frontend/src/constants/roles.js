@@ -6,7 +6,7 @@ export const roles = {
   compliance_manager: 'Compliance Manager',
   director: 'Director',
   manage_users: 'Manage Users',
-  transfers: 'Transfers',
+  transfers: 'Transfer',
   compliance_reporting: 'Compliance Reporting',
   signing_authority: 'Signing Authority',
   read_only: 'Read Only'
