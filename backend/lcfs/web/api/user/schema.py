@@ -50,15 +50,21 @@ class UserBase(BaseModel):
     mobile_phone: Optional[str] = None
     organization: Optional[OrganizationSummarySchema] = None
     roles: Optional[List[RoleSchema]] = []
+    is_government_user: Optional[bool] = None
 
     class Config:
         from_attributes = True
 
     @classmethod
     def model_validate(cls, user_profile):
-        roles = [role.to_dict() for role in user_profile.user_roles]
-        return cls(roles=roles, **user_profile.__dict__)
-    
+        is_government_user = False
+        roles = []
+        for role in user_profile.user_roles:
+            roles.append(role.to_dict())
+            if role.role.is_government_role:
+                is_government_user = True
+        return cls(roles=roles, is_government_user=is_government_user, **user_profile.__dict__)
+
 
 class Users(BaseModel):
     pagination: PaginationResponseSchema

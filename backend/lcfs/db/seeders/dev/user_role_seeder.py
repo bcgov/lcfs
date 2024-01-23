@@ -27,13 +27,7 @@ async def seed_user_roles(session):
         {"user_profile_id": 11, "role_id": 7},
         {"user_profile_id": 12, "role_id": 9},
         {"user_profile_id": 13, "role_id": 2},
-        {"user_profile_id": 14, "role_id": 11},
-        {"user_profile_id": 15, "role_id": 5},
-        {"user_profile_id": 16, "role_id": 3},
-        {"user_profile_id": 17, "role_id": 8},
-        {"user_profile_id": 18, "role_id": 6},
-        {"user_profile_id": 19, "role_id": 1},
-        {"user_profile_id": 20, "role_id": 10},
+        {"user_profile_id": 14, "role_id": 11}
     ]
 
     try:

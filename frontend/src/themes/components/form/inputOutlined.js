@@ -13,7 +13,7 @@ const inputOutlined = {
   styleOverrides: {
     root: {
       backgroundColor: transparent.main,
-      fontSize: size.lg,
+      fontSize: size.md,
       borderRadius: borderRadius.md,
       overflow: 'hidden',
 

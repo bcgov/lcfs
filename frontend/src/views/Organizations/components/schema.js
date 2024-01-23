@@ -5,7 +5,7 @@ import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/AdminMenu/components/schema'
 
 export const organizationsColDefs = [
-  { colId: 'name', field: 'name', headerName: 'Organization', width: 400 },
+  { colId: 'name', field: 'name', headerName: 'Organization Name', width: 400 },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',
@@ -55,14 +55,6 @@ const getUserColumnDefs = () => {
       return { ...colDef, sortable: false, suppressMenu: true, floatingFilter: false }
     }
     return colDef
-  })
-  colDefs.push({
-    colId: 'organization_id',
-    field: 'organization_id',
-    filter: 'agNumberColumnFilter',
-    headerName: 'Organization ID',
-    valueGetter: (params) => params.data.organization.organization_id,
-    hide: true,
   })
   return colDefs
 }

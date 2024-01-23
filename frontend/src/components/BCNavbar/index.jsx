@@ -50,6 +50,7 @@ function BCNavbar(props) {
         postition="sticky"
         data-test="bc-navbar"
         component="nav"
+        sx={{ border: 'none' }}
         color={isScrolled ? 'transparent' : 'inherit'}
         elevation={isScrolled ? 5 : 0}
       >

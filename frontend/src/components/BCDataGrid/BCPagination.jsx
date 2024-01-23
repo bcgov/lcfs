@@ -16,6 +16,7 @@ const BCPagination = ({
 }) => {
   return (
     <TablePagination
+      className="ag-grid-pagination"
       aria-label="pagination for BC DataGrid"
       component="div"
       count={total}

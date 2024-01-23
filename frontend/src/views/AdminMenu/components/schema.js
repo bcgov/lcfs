@@ -8,14 +8,18 @@ import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useRoleList } from '@/hooks/useRole'
 
 export const usersColumnDefs = [
-  { colId: 'display_name', field: 'display_name', headerName: 'Name' },
+  { colId: 'display_name', field: 'display_name', headerName: 'User Name' },
   {
     colId: 'role',
     field: 'role',
     headerName: 'Role(s)',
-    valueGetter: (params) =>
-      params.data.roles.map((role) => role.name).join(', '),
+    valueGetter: (params) => (
+      (params.data.is_active) ?
+        params.data.roles.map((role) => role.name).join(', ')
+        : ''
+    ),
     width: 300,
+    suppressMenu: true,
     filterParams: {
       textMatcher: (filter) => {
         const filterTextArray = filter.filterText.split(',')
@@ -40,7 +44,6 @@ export const usersColumnDefs = [
     },
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle',
-    sortable: false
   },
   { colId: 'email', field: 'email', width: 400 },
   {
@@ -75,6 +78,14 @@ export const usersColumnDefs = [
       multiple: false
     },
     suppressMenu: false
+  },
+  {
+    colId: 'organization_id',
+    field: 'organization_id',
+    filter: 'agNumberColumnFilter',
+    headerName: 'Organization ID',
+    valueGetter: (params) => params.data.organization.organization_id,
+    hide: true,
   }
 ]
 

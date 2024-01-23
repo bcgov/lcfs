@@ -48,7 +48,7 @@ export function AdminMenu({ tabIndex }) {
 
   return (
     <BCBox sx={{ bgcolor: 'background.paper' }}>
-      <AppBar position="static" sx={{ boxShadow: 'none' }}>
+      <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
           sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '60%' }}
           orientation={tabsOrientation}
@@ -64,10 +64,10 @@ export function AdminMenu({ tabIndex }) {
           <Tab label="Historical Data Entry" {...a11yProps(5)} />
         </Tabs>
       </AppBar>
-      <AdminTabPanel value={tabIndex} index={0} component="div">
+      <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>
         <Users />
       </AdminTabPanel>
-      <AdminTabPanel value={tabIndex} index={1} component="div">
+      <AdminTabPanel value={tabIndex} index={1} component="div" mx={-3}>
         <Roles />
       </AdminTabPanel>
     </BCBox>
