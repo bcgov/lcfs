@@ -25,7 +25,7 @@ export const Comments = ({ comments }) => (
       }}
     >
       {comments.map((comment) => (
-        <>
+        <BCBox component="div" key={comment.commentID}>
           <ListItem alignItems="flex-start" sx={{ padding: '8px' }}>
             <ListItemAvatar>
               <Avatar>
@@ -67,7 +67,7 @@ export const Comments = ({ comments }) => (
             />
           </ListItem>
           <Divider variant="inset" component="li" />
-        </>
+        </BCBox>
       ))}
     </List>
   </BCBox>

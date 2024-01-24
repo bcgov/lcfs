@@ -8,7 +8,12 @@ import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useRoleList } from '@/hooks/useRole'
 
 export const usersColumnDefs = [
-  { colId: 'display_name', field: 'display_name', headerName: 'User Name' },
+  {
+    colId: 'first_name',
+    field: 'first_name',
+    headerName: 'User Name',
+    valueGetter: (params) => (params.data.first_name + ' ' + params.data.last_name)
+  },
   {
     colId: 'role',
     field: 'role',

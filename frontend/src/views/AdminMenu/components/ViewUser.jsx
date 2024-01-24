@@ -31,14 +31,15 @@ export const ViewUser = () => {
   return (
     <div>
       <BCTypography variant="h5" color="primary" mb={1}>
-        {data.display_name}&nbsp;
+        {data.first_name + ' ' + data.last_name}&nbsp;
         <IconButton aria-label="edit" color="primary" onClick={handleEditClick}>
           <EditIcon />
         </IconButton>
       </BCTypography>
       <Stack direction="column" spacing={0.5} mb={2}>
         <BCTypography variant="body4">
-          <strong>Organization:</strong>&nbsp;{data.organization.name}
+          <strong>Organization:</strong>&nbsp;
+          {data.organization?.name || 'Government of British Columbia'}
         </BCTypography>
         <BCTypography variant="body4">
           <strong>Email:</strong>&nbsp;{data.email}

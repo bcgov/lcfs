@@ -10,7 +10,8 @@ import {
 } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { numberFormatter } from '@/utils/formatters'
+import { decimalFormatter } from '@/utils/formatters'
+import { BTN_RESCIND_TRANSFER, BTN_APP_CANCEL } from '@/constants/langEnUs'
 // Icons
 import arrowRight from '@/assets/icons/arrowRight.svg'
 import arrowLeft from '@/assets/icons/arrowLeft.svg'
@@ -28,7 +29,7 @@ import { Comments } from './components/Comments'
 
 const idirSteps = ['Draft', 'Sent', 'Submitted', 'Recorded']
 
-const TransferDetailsView = () => {
+export const TransferDetailsView = () => {
   const navigate = useNavigate()
   return (
     <BCBox>
@@ -94,7 +95,7 @@ const TransferDetailsView = () => {
           </BCBox>
           <Typography variant="caption1" textAlign="center">
             $
-            {numberFormatter({
+            {decimalFormatter({
               value: demoData.noOfComplianceUnits * demoData.valuePerUnit
             })}
           </Typography>
@@ -112,11 +113,12 @@ const TransferDetailsView = () => {
         <Typography variant="body4">
           <b>{demoData.FromOrganization}</b> transfers{' '}
           <b>{demoData.noOfComplianceUnits}</b> compliance units to{' '}
-          <b>{demoData.ToOrganization}</b> for <b>${demoData.valuePerUnit}</b>{' '}
-          per compliance unit for a total value of{' '}
+          <b>{demoData.ToOrganization}</b> for{' '}
+          <b>${decimalFormatter({ value: demoData.valuePerUnit })}</b> per
+          compliance unit for a total value of{' '}
           <b>
             $
-            {numberFormatter({
+            {decimalFormatter({
               value: demoData.noOfComplianceUnits * demoData.valuePerUnit
             })}
           </b>{' '}
@@ -156,7 +158,7 @@ const TransferDetailsView = () => {
           >
             <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
             <Typography variant="body4" sx={{ textTransform: 'capitalize' }}>
-              Back
+              {BTN_APP_CANCEL}
             </Typography>
           </BCButton>
           <BCButton
@@ -178,7 +180,7 @@ const TransferDetailsView = () => {
           >
             <FontAwesomeIcon icon={faTrash} fontSize={8} />
             <Typography variant="body4" sx={{ textTransform: 'capitalize' }}>
-              Rescind Transfer
+              {BTN_RESCIND_TRANSFER}
             </Typography>
           </BCButton>
         </Stack>
@@ -189,5 +191,3 @@ const TransferDetailsView = () => {
 
 // Defining PropTypes for the component
 TransferDetailsView.propTypes = {}
-
-export default TransferDetailsView
