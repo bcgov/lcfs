@@ -12,14 +12,15 @@ export const OrganizationBadge = ({ content, isGovernmentUser }) => (
           <Typography variant="body4">Registered: Yes</Typography>
         </Stack>
       ) : (
-        content
+        { content }
       )
     }
     color={'primary'}
     variant="outlined"
     size="md"
     sx={({ palette: { primary } }) => ({
-      height: '90px',
+      minHeight: '90px',
+      padding: '4px',
       display: 'flex',
       justifyContent: 'center',
       '& .MuiBadge-badge': {

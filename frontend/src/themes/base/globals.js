@@ -76,7 +76,7 @@ const globals = {
     color: `${info.main} !important`
   },
   '.ag-theme-alpine': {
-    '--ag-odd-row-background-color': rgba(dark.main, 0.1),
+    '--ag-odd-row-background-color': rgba(light.main, 0.6),
     '--ag-font-size': pxToRem(16),
     '--ag-color': rgba(dark.main, 0.9),
     '--ag-font-family':

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useMemo } from 'react'
 import {
   Typography,
@@ -9,6 +9,7 @@ import {
   List,
   ListItem
 } from '@mui/material'
+import { useTransaction } from '@/hooks/useTransactions'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import { decimalFormatter } from '@/utils/formatters'
@@ -27,10 +28,12 @@ import { OrganizationBadge } from './components/OrganizationBadge'
 import { demoData } from './components/demo'
 import { AttachmentList } from './components/AttachmentList'
 import { Comments } from './components/Comments'
+import Loading from '@/components/Loading'
 
 export const TransferDetailsView = () => {
   const navigate = useNavigate()
-
+  const { transactionID } = useParams()
+  const { data: transaction, isLoading } = useTransaction(transactionID)
   // testing only -- Remove later
   const isGovernmentUser = true
   // -- Remove later
@@ -53,7 +56,9 @@ export const TransferDetailsView = () => {
       default:
         return ['Draft', 'Sent', 'Submitted', 'Recorded']
     }
-  }, [])
+  }, [isGovernmentUser])
+
+  if (isLoading) return <Loading />
   return (
     <BCBox>
       {/* Header section */}
