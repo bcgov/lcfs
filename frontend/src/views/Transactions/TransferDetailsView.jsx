@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import {
   Typography,
   Stepper,
@@ -27,10 +28,32 @@ import { demoData } from './components/demo'
 import { AttachmentList } from './components/AttachmentList'
 import { Comments } from './components/Comments'
 
-const idirSteps = ['Draft', 'Sent', 'Submitted', 'Recorded']
-
 export const TransferDetailsView = () => {
   const navigate = useNavigate()
+
+  // testing only -- Remove later
+  const isGovernmentUser = true
+  // -- Remove later
+
+  const steps = useMemo(() => {
+    if (isGovernmentUser && demoData.status !== 'Refused') {
+      return ['Draft', 'Sent', 'Submitted', 'Recommended', 'Recorded']
+    }
+    switch (demoData.status) {
+      case 'Rescind':
+        return ['Draft', 'Rescind', 'Submitted', 'Recorded']
+      case 'Declined':
+        return ['Draft', 'Sent', 'Declined', 'Recorded']
+      case 'Refused': {
+        if (isGovernmentUser) {
+          return ['Draft', 'Sent', 'Submitted', 'Recommended', 'Refused']
+        }
+        return ['Draft', 'Sent', 'Submitted', 'Refused']
+      }
+      default:
+        return ['Draft', 'Sent', 'Submitted', 'Recorded']
+    }
+  }, [])
   return (
     <BCBox>
       {/* Header section */}
@@ -50,20 +73,30 @@ export const TransferDetailsView = () => {
         p={2}
         sx={{ width: '50%', alignContent: 'center', margin: 'auto' }}
       >
-        <Stepper
-          activeStep={idirSteps.indexOf(demoData.status)}
-          alternativeLabel
-        >
-          {idirSteps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
+        <Stepper activeStep={steps.indexOf(demoData.status)} alternativeLabel>
+          {steps.map((label, index) => {
+            const labelProps = {}
+            if (
+              label === 'Rescind' ||
+              label === 'Declined' ||
+              label === 'Refused'
+            ) {
+              labelProps.error = true
+            }
+            return (
+              <Step key={label}>
+                <StepLabel {...labelProps}>{label}</StepLabel>
+              </Step>
+            )
+          })}
         </Stepper>
       </BCBox>
       {/* Flow Representation of transaction */}
       <Stack spacing={4} direction="row" justifyContent="center">
-        <OrganizationBadge content={demoData.FromOrganization} />
+        <OrganizationBadge
+          content={demoData.FromOrganization}
+          isGovernmentUser={isGovernmentUser}
+        />
         <Stack spacing={-1} direction="column" justifyContent="center" pl={2}>
           <Typography variant="caption1" textAlign="center">
             {demoData.noOfComplianceUnits} compliance units
@@ -100,7 +133,10 @@ export const TransferDetailsView = () => {
             })}
           </Typography>
         </Stack>
-        <OrganizationBadge content={demoData.ToOrganization} />
+        <OrganizationBadge
+          content={demoData.ToOrganization}
+          isGovernmentUser={isGovernmentUser}
+        />
       </Stack>
       <BCBox
         variant="outlined"

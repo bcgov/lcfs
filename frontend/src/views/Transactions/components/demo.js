@@ -1,6 +1,6 @@
 export const demoData = {
   id: 1178,
-  status: 'Sent',
+  status: 'Refused',
   FromOrganization: 'Fuel Supplier Canada Ltd.',
   ToOrganization: 'Fantastic Fuels Co.',
   noOfComplianceUnits: '100',

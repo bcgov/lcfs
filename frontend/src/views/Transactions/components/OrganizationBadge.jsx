@@ -1,8 +1,20 @@
+import { PropTypes } from 'prop-types'
 import BCBadge from '@/components/BCBadge'
+import { Stack, Typography } from '@mui/material'
 
-export const OrganizationBadge = ({ content }) => (
+export const OrganizationBadge = ({ content, isGovernmentUser }) => (
   <BCBadge
-    badgeContent={content}
+    badgeContent={
+      isGovernmentUser ? (
+        <Stack direction="column">
+          <Typography variant="body4">{content}</Typography>
+          <Typography variant="body4">Balance: 40,000</Typography>
+          <Typography variant="body4">Registered: Yes</Typography>
+        </Stack>
+      ) : (
+        content
+      )
+    }
     color={'primary'}
     variant="outlined"
     size="md"
@@ -21,3 +33,8 @@ export const OrganizationBadge = ({ content }) => (
     })}
   />
 )
+
+OrganizationBadge.propTypes = {
+  content: PropTypes.string.isRequired,
+  isGovernmentUser: PropTypes.bool.isRequired
+}
