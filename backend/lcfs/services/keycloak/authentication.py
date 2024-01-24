@@ -139,11 +139,11 @@ class UserAuthentication(AuthenticationBackend):
                     UserProfile.keycloak_username == _parse_external_username(user_token)
                 )
             )
-            # TODO may need to not use org id == 1 if gov no longer is organization in lcfs
+            # Check for Government or Supplier affiliation
             if user_token['identity_provider'] == 'idir':
-                user_query = user_query.where(UserProfile.organization_id == 1)
+                user_query = user_query.where(UserProfile.organization_id is None)
             elif user_token['identity_provider'] == 'bceidbusiness':
-                user_query = user_query.where(UserProfile.organization_id != 1)
+                user_query = user_query.where(UserProfile.organization_id is not None)
             else:
                 error_text = 'Unknown identity provider.'
                 await self.create_login_history(user_token, False, error_text, request.url.path)

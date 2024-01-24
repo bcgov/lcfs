@@ -171,7 +171,7 @@ async def test_idir_identity_provider_authentication(user_auth_backend, dbsessio
 
     assert credentials.scopes == ["authenticated"]
     assert user.username == "idiruser"
-    assert user.organization_id == 1
+    assert user.organization_id is None
 
 
 @pytest.mark.anyio
@@ -195,7 +195,7 @@ async def test_bceidbusiness_identity_provider_authentication(user_auth_backend,
 
     assert credentials.scopes == ["authenticated"]
     assert user.username == "bceiduser"
-    assert user.organization_id != 1
+    assert user.organization_id is not None
 
 
 @pytest.mark.anyio
