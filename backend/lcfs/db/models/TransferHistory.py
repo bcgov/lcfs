@@ -13,6 +13,7 @@ class TransferHistory(BaseModel, Auditable, EffectiveDates):
     to_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
     transaction_effective_date = Column(DateTime, comment="Transaction effective date")
+    price_per_unit = Column(Integer, comment="Price per unit")
     # compliance_period = Column(Integer, )
     transfer_status_id = Column(Integer, ForeignKey('transfer_status.transfer_status_id'))
     transfer_category_id = Column(Integer, ForeignKey('category.category_id'))

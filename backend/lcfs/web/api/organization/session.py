@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.api.organization.schema import (
     OrganizationBase,
+    OrganizationSummarySchema,
     OrganizationStatusBase,
     OrganizationTypeBase,
 )
@@ -315,3 +316,45 @@ class OrganizationRepository:
         return [
             Transaction.model_validate(transaction) for transaction in results
         ], total_count
+
+    async def get_external_registered_organizations(
+        self, org_id: int
+    ) -> List[OrganizationSummarySchema]:
+        """
+        Retrieve a list of registered organizations, excluding the specified organization.
+
+        Args:
+            org_id (int): The ID of the organization to be excluded from the list.
+
+        Returns:
+            List[OrganizationSummarySchema]: A list of OrganizationSummarySchema objects
+                representing registered organizations, excluding the specified organization.
+
+        Raises:
+            Exception: If an error occurs during the database query.
+        """
+        try:
+            conditions = [Organization.org_status.has(status='Registered'),
+                          Organization.organization_id != org_id]
+
+            # Build base query
+            query = (
+                select(Organization)
+                .where(and_(*conditions))
+                .options(
+                    joinedload(Organization.org_type),
+                    joinedload(Organization.org_status),
+                )
+            )
+
+            # Execute the query
+            results = await self.session.execute(query)
+            organizations = results.scalars().all()
+
+            # Map the results to OrganizationSummarySchema
+            return [OrganizationSummarySchema.from_orm(organization)
+                    for organization in organizations]
+
+        except Exception as e:
+            logger.error("Error occurred while fetching external registered organizations: %s", e)
+            raise Exception("Error occurred while fetching external registered organizations")

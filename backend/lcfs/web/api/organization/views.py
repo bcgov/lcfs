@@ -25,6 +25,7 @@ from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.organization.session import OrganizationRepository
 from lcfs.web.api.organization.schema import (
     OrganizationSchema,
+    OrganizationSummarySchema,
     OrganizationCreateSchema,
     OrganizationStatusBase,
     OrganizationTypeBase,
@@ -295,7 +296,6 @@ async def get_users_for_organization(
         logger.error(f"Error getting users for organization: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error")
 
-
 @router.post("/{organization_id}/transactions/", response_model=Transactions)
 async def get_transactions_for_organization(
     organization_id: int,
@@ -335,4 +335,30 @@ async def get_transactions_for_organization(
         raise HTTPException(
             status_code=500,
             detail=f"Technical Error: Failed to get transactions: {str(e)}",
+
+@router.get("/registered/external", response_model=List[OrganizationSummarySchema], status_code=status.HTTP_200_OK)
+async def list_external_registered_organizations(
+    request: Request,
+    db: AsyncSession = Depends(get_async_db),
+    repo: OrganizationRepository = Depends()
+):
+    try:
+        user_org_id = request.user.organization_id
+
+        organizations = await repo.get_external_registered_organizations(user_org_id)
+
+        if not organizations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No external registered organizations found"
+            )
+
+        return organizations
+
+    except Exception as e:
+        logger.error("Error listing external registered organizations: %s", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Technical Error: Failed to list external registered organizations"
+
         )
