@@ -11,9 +11,6 @@ import globals from './base/globals'
 import { boxShadow, hexToRgb, linearGradient, pxToRem, rgba } from './utils'
 // components base styles for @mui material components
 import sidenav from './components/sidenav'
-import list from './components/list'
-import listItem from './components/list/listItem'
-import listItemText from './components/list/listItemText'
 import card from './components/card'
 import cardMedia from './components/card/cardMedia'
 import cardContent from './components/card/cardContent'
@@ -37,11 +34,6 @@ import tooltip from './components/tooltip'
 import appBar from './components/appBar'
 import tabs from './components/tabs'
 import tab from './components/tabs/tab'
-import stepper from './components/stepper'
-import step from './components/stepper/step'
-import stepConnector from './components/stepper/stepConnector'
-import stepLabel from './components/stepper/stepLabel'
-import stepIcon from './components/stepper/stepIcon'
 import select from './components/form/select'
 import formControlLabel from './components/form/formControlLabel'
 import formLabel from './components/form/formLabel'
@@ -82,9 +74,6 @@ export default createTheme({
     },
     MuiButton: { ...button },
     MuiDrawer: { ...sidenav },
-    MuiList: { ...list },
-    MuiListItem: { ...listItem },
-    MuiListItemText: { ...listItemText },
     MuiCard: { ...card },
     MuiCardMedia: { ...cardMedia },
     MuiCardContent: { ...cardContent },
@@ -107,11 +96,6 @@ export default createTheme({
     MuiAppBar: { ...appBar },
     MuiTabs: { ...tabs },
     MuiTab: { ...tab },
-    MuiStepper: { ...stepper },
-    MuiStep: { ...step },
-    MuiStepConnector: { ...stepConnector },
-    MuiStepLabel: { ...stepLabel },
-    MuiStepIcon: { ...stepIcon },
     MuiSelect: { ...select },
     MuiFormControlLabel: { ...formControlLabel },
     MuiFormLabel: { ...formLabel },

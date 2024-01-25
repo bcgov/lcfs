@@ -13,28 +13,30 @@ export const HeaderComponent = (props) => {
   return (
     <>
       <BCTypography className="organization_name" variant="body1" align="right">
-        {data.organizationName}
+        {data.organizationName || 'Government of British Columbia'}
       </BCTypography>
-      <BCBox component="div" className="organization_balance">
-        <BCBox
-          component="div"
-          sx={{ display: 'inline-flex', alignItems: 'center' }}
-        >
-          <Icon
-            style={{
-              fontSize: 20,
-              cursor: 'pointer',
-              margin: '5px',
-              height: '26px'
-            }}
-            onClick={toggleBalanceVisibility}
+      {data.organizationLogo && (
+        <BCBox component="div" className="organization_balance">
+          <BCBox
+            component="div"
+            sx={{ display: 'inline-flex', alignItems: 'center' }}
           >
-            {showBalance ? 'visibility' : 'visibility_off'}
-          </Icon>
-          Balance:&nbsp;&nbsp;
-          {showBalance && <div className="balance">{data.balance}</div>}
+            <Icon
+              style={{
+                fontSize: 20,
+                cursor: 'pointer',
+                margin: '5px',
+                height: '26px'
+              }}
+              onClick={toggleBalanceVisibility}
+            >
+              {showBalance ? 'visibility' : 'visibility_off'}
+            </Icon>
+            Balance:&nbsp;&nbsp;
+            {showBalance && <div className="balance">{data.balance}</div>}
+          </BCBox>
         </BCBox>
-      </BCBox>
+      )}
     </>
   )
 }

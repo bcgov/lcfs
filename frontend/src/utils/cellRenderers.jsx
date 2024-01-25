@@ -57,7 +57,7 @@ export const OrgStatusRenderer = (props) => {
         color={statusColorArr[statusIndex]}
         variant="contained"
         size="lg"
-        sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
+        sx={{ '& .MuiBadge-badge': { minWidth: '120px', fontSize: '0.7rem' } }}
       />
     </BCBox>
   )

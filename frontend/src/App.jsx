@@ -21,10 +21,10 @@ import { Transactions } from './views/Transactions'
 import { UserActivity } from './views/UserActivity'
 import { ViewOrg } from '@/views/Organizations/components/ViewOrg'
 import { ViewReport } from './views/ViewReport'
-import { ViewTransaction } from './views/ViewTransaction'
 import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
+import { TransferDetailsView } from './views/Transactions/TransferDetailsView'
 
 const router = createBrowserRouter([
   {
@@ -64,8 +64,8 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.TRANSACTIONS_VIEW,
-        element: <ViewTransaction />,
-        handle: { title: 'View Transactions' }
+        element: <TransferDetailsView />,
+        handle: { crumb: () => 'New Transfer', title: 'New Transfer' }
       },
       {
         path: ROUTES.ORGANIZATION,
