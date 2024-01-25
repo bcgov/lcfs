@@ -141,9 +141,9 @@ class UserAuthentication(AuthenticationBackend):
             )
             # Check for Government or Supplier affiliation
             if user_token['identity_provider'] == 'idir':
-                user_query = user_query.where(UserProfile.organization_id is None)
+                user_query = user_query.where(UserProfile.organization_id.is_(None))
             elif user_token['identity_provider'] == 'bceidbusiness':
-                user_query = user_query.where(UserProfile.organization_id is not None)
+                user_query = user_query.where(UserProfile.organization_id.isnot(None))
             else:
                 error_text = 'Unknown identity provider.'
                 await self.create_login_history(user_token, False, error_text, request.url.path)
