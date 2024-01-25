@@ -35,6 +35,12 @@ from lcfs.web.api.organization.schema import (
     Organizations,
 )
 from lcfs.web.core.decorators import roles_required
+from lcfs.web.api.transaction.schema import Transactions
+from lcfs.db.models.Transaction import Transaction
+from lcfs.db.models.IssuanceHistory import IssuanceHistory
+from lcfs.db.models.TransferHistory import TransferHistory
+from sqlalchemy import func, select, distinct
+from lcfs.web.api.organization.session import OrganizationRepository
 
 logger = getLogger("organization")
 router = APIRouter()
@@ -45,7 +51,10 @@ FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Government")
-async def export_organizations(request: Request, db: AsyncSession = Depends(get_async_db)):
+async def export_organizations(
+    request: Request,
+    repo: OrganizationRepository = Depends()
+):
     """
     Endpoint to export information of all organizations
 
@@ -64,68 +73,18 @@ async def export_organizations(request: Request, db: AsyncSession = Depends(get_
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    export_format="xls"
-    media_type="application/vnd.ms-excel"
 
     try:
-        # Fetch all organizations from the database
-        result = await db.execute(
-            select(Organization).options(
-                    joinedload(Organization.org_status)
-                )
-            .order_by(Organization.organization_id)
-        )
-        organizations = result.scalars().all()
-
-        # Prepare data for the spreadsheet
-        data = [
-            [
-                organization.organization_id,
-                organization.name,
-                # TODO: Update this section with actual data retrieval
-                # once the Compliance Units models are implemented.
-                123456,
-                123456,
-                organization.org_status.status.value,
-            ] for organization in organizations
-        ]
-
-        # Create a spreadsheet
-        builder = SpreadsheetBuilder(file_format = export_format)
-
-        builder.add_sheet(
-            sheet_name="Organizations",
-            columns=[
-                "ID",
-                "Organization Name",
-                "Compliance Units",
-                "In Reserve",
-                "Registered"
-            ],
-            rows=data,
-            styles={"bold_headers": True}
-        )
-
-        file_content = builder.build_spreadsheet()
-
-        # Get the current date in YYYY-MM-DD format
-        current_date = datetime.now().strftime("%Y-%m-%d")
-
-        filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
-        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
-
-        return StreamingResponse(io.BytesIO(file_content), media_type=media_type, headers=headers)
+        return await repo.export_organizations()
 
     except Exception as e:
-        logger.error("Internal Server Error: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
+            detail="Internal Server Error",
         ) from e
 
-@router.post(
-    "", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED
-)
+
+@router.post("", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
 @roles_required("Government", "Administrator")
 async def create_organization(
     request: Request,
@@ -139,7 +98,8 @@ async def create_organization(
     async with db.begin():
         try:
             # Create and add address models to the database
-            org_address = OrganizationAddress(**organization_data.address.dict())
+            org_address = OrganizationAddress(
+                **organization_data.address.dict())
             org_attorney_address = OrganizationAttorneyAddress(
                 **organization_data.attorney_address.dict()
             )
@@ -305,7 +265,8 @@ async def get_organization_types(
     try:
         types = await repo.get_types()
         if len(types) == 0:
-            raise HTTPException(status_code=404, detail="No organization types found")
+            raise HTTPException(
+                status_code=404, detail="No organization types found")
         return types
 
     except Exception as e:
@@ -335,6 +296,46 @@ async def get_users_for_organization(
         logger.error(f"Error getting users for organization: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error")
 
+@router.post("/{organization_id}/transactions/", response_model=Transactions)
+async def get_transactions_for_organization(
+    organization_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    response: Response = None,
+    repo: OrganizationRepository = Depends()
+):
+    """
+    Endpoint to retrieve transactions from a specific organization. This includes processing the provided
+    transaction details.
+    """
+    try:
+        transactions, total_count = await repo.get_transactions(organization_id, pagination)
+
+        if not transactions:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return Transactions(
+                pagination=PaginationResponseSchema(
+                    total=0, page=0, size=0, total_pages=0
+                ),
+                transactions=transactions,
+            )
+
+        return Transactions(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            transactions=transactions,
+        )
+
+    except Exception as e:
+        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code=500,
+            detail=f"Technical Error: Failed to get transactions: {str(e)}",
+
 @router.get("/registered/external", response_model=List[OrganizationSummarySchema], status_code=status.HTTP_200_OK)
 async def list_external_registered_organizations(
     request: Request,
@@ -359,4 +360,5 @@ async def list_external_registered_organizations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Technical Error: Failed to list external registered organizations"
+
         )
