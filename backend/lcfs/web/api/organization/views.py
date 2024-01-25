@@ -334,7 +334,8 @@ async def get_transactions_for_organization(
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         raise HTTPException(
             status_code=500,
-            detail=f"Technical Error: Failed to get transactions: {str(e)}",
+            detail=f"Technical Error: Failed to get transactions: {str(e)}"
+        )
 
 @router.get("/registered/external", response_model=List[OrganizationSummarySchema], status_code=status.HTTP_200_OK)
 async def list_external_registered_organizations(
