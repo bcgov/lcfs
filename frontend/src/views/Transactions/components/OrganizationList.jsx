@@ -38,7 +38,7 @@ const OrganizationList = ({ gridRef }) => {
     if (!isLoading) {
       setOptionsList(
         data.sort((a, b) =>
-          ('' + a.label).localeCompare(b.label) > 0 ? 1 : -1
+          ('' + a.name).localeCompare(b.name) > 0 ? 1 : -1
         )
       )
       setBalance(
