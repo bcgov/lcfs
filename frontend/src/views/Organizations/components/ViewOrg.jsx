@@ -229,7 +229,7 @@ export const ViewOrg = () => {
       <BCBox sx={{ height: '36rem', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'users/list'}
+          apiEndpoint={'users/'}
           apiData={'users'}
           columnDefs={usersColDefs}
           gridKey={gridKey}
