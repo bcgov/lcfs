@@ -32,7 +32,7 @@ export const Roles = (props) => {
       >
         <BCDataGridClient
           gridRef={gridRef}
-          apiEndpoint={'roles/list'}
+          apiEndpoint={'roles/'}
           defaultColDef={rolesDefaultColDef}
           columnDefs={rolesColumnDefs}
           gridKey={'roles-grid'}

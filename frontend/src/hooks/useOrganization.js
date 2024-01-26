@@ -20,7 +20,18 @@ export const useOrganizationStatuses = (options) => {
   return useQuery({
     queryKey: ['organization-statuses'],
     queryFn: async () =>
-      (await client.get('/organizations/statuses/list')).data,
+      (await client.get('/organizations/statuses/')).data,
+    ...options
+  })
+}
+
+export const useOrganizationNames = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['organization-names'],
+    queryFn: async () =>
+      (await client.get('/organizations/names/')).data,
     ...options
   })
 }

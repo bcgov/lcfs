@@ -1,19 +1,22 @@
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
+import BCTypography from '@/components/BCTypography'
 import { DownloadButton } from '@/components/DownloadButton'
 import { ROUTES } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { AgGridReact } from 'ag-grid-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { dummy } from './data'
 import { gridProps } from './options'
+import OrganizationList from './components/OrganizationList'
 
 export const Transactions = () => {
   const navigate = useNavigate()
+  const gridRef = useRef()
   const apiService = useApiService()
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
@@ -50,18 +53,19 @@ export const Transactions = () => {
           </BCAlert>
         )}
       </div>
-      <Typography variant="h5" mb={2}>
+      <BCTypography variant="h5" mb={2} color="primary">
         Transactions
-      </Typography>
+      </BCTypography>
+      <OrganizationList gridRef={gridRef} />
       <Box display={'flex'} gap={2} mb={2}>
         <BCButton
           variant="contained"
           size="small"
           color="primary"
-          startIcon={<FontAwesomeIcon icon={faCirclePlus} />}
+          startIcon={<FontAwesomeIcon icon={faCirclePlus} size="2x" />}
           onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
         >
-          <Typography variant="subtitle2">New Transaction</Typography>
+          <BCTypography variant="subtitle2">New Transaction</BCTypography>
         </BCButton>
         <DownloadButton
           onDownload={handleDownloadTransactions}
@@ -73,6 +77,7 @@ export const Transactions = () => {
       </Box>
       <AgGridReact
         className="ag-theme-alpine"
+        gridRef={gridRef}
         animateRows="true"
         columnDefs={gridProps.columnDefs}
         defaultColDef={gridProps.defaultColDef}

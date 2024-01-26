@@ -70,7 +70,7 @@ export const Users = (props) => {
         {/* <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} /> */}
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'users/list'}
+          apiEndpoint={'users/'}
           apiData={'users'}
           columnDefs={usersColumnDefs}
           gridKey={gridKey}

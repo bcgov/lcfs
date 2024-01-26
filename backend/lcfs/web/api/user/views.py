@@ -176,7 +176,7 @@ async def get_user_by_id(
         )
 
 
-@router.post("/list", response_model=Users, status_code=status.HTTP_200_OK)
+@router.post("/", response_model=Users, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def get_users(
     request: Request,

@@ -5,7 +5,7 @@ export const useUsers = (options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['users'],
-    queryFn: async () => (await client.post('/users/list')).data,
+    queryFn: async () => (await client.post('/users/')).data,
     ...options
   })
 }

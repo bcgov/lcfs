@@ -172,3 +172,7 @@ class Organizations(BaseModel):
     pagination: PaginationResponseSchema
     organizations: List[OrganizationBase]
 
+class MiniOrganization(BaseModel):
+    name: str
+    organization_id: int
+    balance: float
