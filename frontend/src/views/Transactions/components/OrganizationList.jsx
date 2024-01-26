@@ -12,7 +12,7 @@ const OrganizationList = ({ gridRef }) => {
   const [balance, setBalance] = useState(0)
 
   const onInputBoxChanged = (event, input) => {
-    const val = input ? input.label : ''
+    const val = input ? input.name : ''
     if (val === '' || val === 'All Organizations') {
       // Remove the filter
       setOrg('All Organizations')
