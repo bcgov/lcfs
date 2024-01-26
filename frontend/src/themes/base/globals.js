@@ -139,6 +139,12 @@ const globals = {
     width: '1rem',
     height: '1rem'
   },
+  '#bc-column-set-filter-listbox, #organizations-listbox': {
+    '& > li:hover, & > li:focus': {
+      backgroundColor: primary.light,
+      color: white.main
+    }
+  },
   '.visually-hidden': {
     position: 'absolute',
     width: '1px',

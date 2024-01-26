@@ -132,8 +132,7 @@ const typography = {
     fontFamily: baseProperties.fontFamily,
     fontSize: baseProperties.fontSizeSM,
     fontWeight: baseProperties.fontWeightLight,
-    lineHeight: 1.5,
-    textTransform: 'uppercase'
+    lineHeight: 1.5
   },
 
   caption: {

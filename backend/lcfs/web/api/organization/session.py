@@ -1,5 +1,5 @@
 import io
-import math
+import random
 from datetime import datetime
 from logging import getLogger
 from typing import List
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.api.organization.schema import (
+    MiniOrganization,
     OrganizationBase,
     OrganizationSummarySchema,
     OrganizationStatusBase,
@@ -358,3 +359,29 @@ class OrganizationRepository:
         except Exception as e:
             logger.error("Error occurred while fetching external registered organizations: %s", e)
             raise Exception("Error occurred while fetching external registered organizations")
+        
+    async def get_names(self) -> List[MiniOrganization]:
+        """
+        Get all organization names from the database.
+        Returns:
+            List[MiniOrganization]: A list of MiniOrganization objects containing the basic organization name & Id details.
+        """
+        try:
+            query = select(Organization.organization_id, Organization.name)
+            results = await self.session.execute(query)
+            names = []
+            for id, name in results.unique().all():
+                names.append(
+                    MiniOrganization.model_validate(
+                        {
+                            "name": name,
+                            "organization_id": id,
+                            # TODO: implement balance query
+                            "balance": random.randint(0, 9),
+                        }
+                    )
+                )
+            return names
+        except Exception as e:
+            logger.error(f"Error occurred while fetching names: {e}")
+            raise Exception(f"Error occurred while fetching names")

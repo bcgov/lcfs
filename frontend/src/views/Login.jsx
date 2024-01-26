@@ -136,7 +136,7 @@ export const Login = () => {
           alignItems="center"
           height="100%"
         >
-          <Grid item xs={11} sm={9} md={5} lg={4} xl={3}>
+          <Grid item xs={11} sm={9} md={5} lg={4} xl={3} hd={3} u4k={2}>
             <Card
               className="login"
               sx={{

@@ -4,7 +4,7 @@ import math
 from typing import List
 from datetime import datetime
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Request, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -12,8 +12,6 @@ from starlette import status
 from sqlalchemy.orm import selectinload, joinedload
 from starlette.responses import Response
 from fastapi_cache.decorator import cache
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
 
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.db import dependencies
@@ -24,6 +22,7 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.organization.session import OrganizationRepository
 from lcfs.web.api.organization.schema import (
+    MiniOrganization,
     OrganizationSchema,
     OrganizationSummarySchema,
     OrganizationCreateSchema,
@@ -45,8 +44,6 @@ from lcfs.web.api.organization.session import OrganizationRepository
 logger = getLogger("organization")
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
-# Initialize the cache with Redis backend
-FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
@@ -195,7 +192,7 @@ async def update_organization(
         )
 
 
-@router.post("/list", response_model=Organizations, status_code=status.HTTP_200_OK)
+@router.post("/", response_model=Organizations, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 async def list_organizations(
     request: Request,
@@ -232,7 +229,7 @@ async def list_organizations(
 
 
 @router.get(
-    "/statuses/list",
+    "/statuses/",
     response_model=List[OrganizationStatusBase],
     status_code=status.HTTP_200_OK,
 )
@@ -254,7 +251,7 @@ async def get_organization_statuses(
 
 
 @router.get(
-    "/types/list",
+    "/types/",
     response_model=List[OrganizationTypeBase],
     status_code=status.HTTP_200_OK,
 )
@@ -271,6 +268,31 @@ async def get_organization_types(
 
     except Exception as e:
         logger.error(f"Error getting organization types: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error")
+    
+@router.get(
+    "/names/", response_model=List[MiniOrganization], status_code=status.HTTP_200_OK
+)
+@cache(expire=60 * 60)  # cache for 1 hour
+async def get_organization_names(repo: OrganizationRepository = Depends()):
+    try:
+        names = await repo.get_names()
+        if len(names) == 0:
+            raise HTTPException(status_code=404, detail="No organization names found")
+        # TODO: Implement for All Organizations and Balance calculation for it.
+        names.append(
+            MiniOrganization.model_validate(
+                {
+                    "organization_id": 0,
+                    "name": "All Organizations",
+                    "balance": 0,
+                }
+            )
+        )
+        return names
+
+    except Exception as e:
+        logger.error(f"Error getting organization names: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error")
 
 

@@ -132,7 +132,7 @@ export const Organizations = () => {
       <BCBox component="div" sx={{ height: '36rem', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'organizations/list'}
+          apiEndpoint={'organizations/'}
           apiData={'organizations'}
           columnDefs={organizationsColDefs}
           gridKey={gridKey}
