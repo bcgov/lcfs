@@ -10,6 +10,7 @@ import TransferDetails, {
   TransferDetailsSchema
 } from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
+import Comment from './components/Comment'
 
 // Hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -77,7 +78,7 @@ export const AddTransaction = () => {
         compliance unit.
       </BCTypography>
 
-      <Box my={3}>
+      <Box mt={5}>
         <ProgressBreadcrumb
           steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
           currentStep="Draft"
@@ -95,14 +96,26 @@ export const AddTransaction = () => {
 
       <FormProvider {...methods}>
         <form onSubmit={methods.handleSubmit(handleSubmitForm)}>
+          {/* Transfer details */}
           <BCTypography variant="h6" sx={{ color: 'primary.main', mb: 1 }}>
             Transfer details (required)
           </BCTypography>
-          <Box sx={{ border: '1px solid #c0c0c0', p: 3 }}>
+          <Box sx={{ border: '1px solid #c0c0c0', p: 2 }}>
             <TransferDetails
               currentOrg={currentUser?.organization}
               organizations={organizations}
             />
+          </Box>
+
+          {/* Comments */}
+          <BCTypography
+            variant="h6"
+            sx={{ color: 'primary.main', mb: 1, mt: 4 }}
+          >
+            Comments (optional)
+          </BCTypography>
+          <Box sx={{ border: '1px solid #c0c0c0', p: 2 }}>
+            <Comment />
           </Box>
         </form>
       </FormProvider>

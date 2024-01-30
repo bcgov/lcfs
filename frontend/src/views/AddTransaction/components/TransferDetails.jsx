@@ -157,9 +157,12 @@ const TransferDetails = ({ currentOrg, organizations }) => {
           helperText={errors.pricePerUnit?.message}
           style={{ width: '375px', marginRight: '10px' }}
         />
-        {' per compliance unit for a total value of $'}
+        {' per compliance unit for a total value of '}
         <Typography variant="body1" component="span" color="primary">
-          {totalValue.toFixed(2)}
+          {totalValue.toLocaleString('en-CA', {
+            style: 'currency',
+            currency: 'CAD'
+          })}
         </Typography>
         {' CAD.'}
       </Typography>
