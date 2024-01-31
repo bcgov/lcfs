@@ -2,8 +2,11 @@ export const DASHBOARD = '/'
 export const LOGIN = '/login'
 
 export const TRANSACTIONS = '/transactions'
-export const TRANSACTIONS_ADD = `${TRANSACTIONS}/add`
 export const TRANSACTIONS_VIEW = `${TRANSACTIONS}/:transactionID`
+export const TRANSACTIONS_NEW_TRANSFER = `${TRANSACTIONS}/new-transfer`
+
+export const TRANSFERS = '/transfers'
+export const TRANSFERS_VIEW = `${TRANSFERS}/:transferID`
 
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`

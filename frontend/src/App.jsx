@@ -4,7 +4,7 @@ import { MainLayout } from './layouts/MainLayout'
 import { AddEditUser } from './views/AddEditUser'
 import { AddFuelCode } from './views/AddFuelCode'
 import { AddOrganization } from './views/AddOrganization'
-import { AddTransaction } from './views/AddTransaction'
+import { NewTransfer } from './views/Transfer/NewTransfer'
 import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
@@ -24,7 +24,7 @@ import { ViewReport } from './views/ViewReport'
 import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
-import { TransferDetailsView } from './views/Transactions/TransferDetailsView'
+import { TransferDetailsView } from './views/Transfer/TransferDetailsView'
 
 const router = createBrowserRouter([
   {
@@ -58,14 +58,17 @@ const router = createBrowserRouter([
         handle: { title: 'Transactions', crumb: () => 'Transactions' }
       },
       {
-        path: ROUTES.TRANSACTIONS_ADD,
-        element: <AddTransaction />,
-        handle: { title: 'Add Transaction' }
+        path: ROUTES.TRANSACTIONS_NEW_TRANSFER,
+        element: <NewTransfer />,
+        handle: {
+          title: 'New Transfer',
+          crumb: () => 'New Transfer'
+        }
       },
       {
-        path: ROUTES.TRANSACTIONS_VIEW,
+        path: ROUTES.TRANSFERS_VIEW,
         element: <TransferDetailsView />,
-        handle: { crumb: () => 'New Transfer', title: 'New Transfer' }
+        handle: { title: 'View Transfer' }
       },
       {
         path: ROUTES.ORGANIZATION,

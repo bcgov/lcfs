@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react'
 import { BrowserRouter as Router } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Organizations } from './Organizations'
+import { Organizations } from '../Organizations'
 import { getByDataTest } from '@/utils/test/testHelpers'
 
 const renderComponent = () => {

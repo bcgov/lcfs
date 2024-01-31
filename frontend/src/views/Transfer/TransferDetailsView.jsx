@@ -24,10 +24,10 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 // Sub components
-import { OrganizationBadge } from './components/OrganizationBadge'
-import { demoData } from './components/demo'
-import { AttachmentList } from './components/AttachmentList'
-import { Comments } from './components/Comments'
+import { OrganizationBadge } from '../Transactions/components/OrganizationBadge'
+import { demoData } from '../Transactions/components/demo'
+import { AttachmentList } from '../Transactions/components/AttachmentList'
+import { Comments } from '../Transactions/components/Comments'
 import Loading from '@/components/Loading'
 
 export const TransferDetailsView = () => {
