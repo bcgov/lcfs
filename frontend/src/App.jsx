@@ -4,7 +4,8 @@ import { MainLayout } from './layouts/MainLayout'
 import { AddEditUser } from './views/AddEditUser'
 import { AddFuelCode } from './views/AddFuelCode'
 import { AddOrganization } from './views/AddOrganization'
-import { NewTransfer } from './views/Transfer/NewTransfer'
+import { NewTransfer } from './views/Transfers/NewTransfer'
+import { TransferDetailsView } from './views/Transfers/TransferDetailsView'
 import { AdminMenu } from './views/AdminMenu'
 import { ApiDocs } from './views/ApiDocs'
 import { Dashboard } from './views/Dashboard'
@@ -24,7 +25,6 @@ import { ViewReport } from './views/ViewReport'
 import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
-import { TransferDetailsView } from './views/Transfer/TransferDetailsView'
 
 const router = createBrowserRouter([
   {
