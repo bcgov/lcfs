@@ -131,7 +131,7 @@ export const AddOrganization = () => {
   // useMutation hook from React Query for handling API request
   const { mutate, isLoading, isError } = useMutation({
     mutationFn: async (userData) =>
-      await apiService.post('/organizations/', userData),
+      await apiService.post('/organizations/create', userData),
     onSuccess: () => {
       // Redirect to Organization route on success
       navigate(ROUTES.ORGANIZATIONS, {
