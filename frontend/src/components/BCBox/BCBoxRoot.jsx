@@ -39,6 +39,7 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
     'warning',
     'error',
     'dark',
+    'nav',
     'light'
   ]
 
@@ -54,6 +55,7 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
     'error',
     'light',
     'dark',
+    'nav',
     'text',
     'grey-100',
     'grey-200',

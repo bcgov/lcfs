@@ -99,6 +99,10 @@ const colors = {
     main: '#344767',
     focus: '#2c3c58'
   },
+  nav: {
+    main: '#38598a',
+    focus: '#2c3c58'
+  },
 
   badgeColors: {
     primary: {

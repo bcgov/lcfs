@@ -1,31 +1,60 @@
+import { useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
+
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/constants/routes'
-import colors from '@/themes/base/colors'
-import { Box, Typography } from '@mui/material'
-import { Link } from 'react-router-dom'
+import { List, ListItemButton } from '@mui/material'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 
 export const IDIRRightColWIdget = () => {
+  const adminLinks = useMemo(() => [
+    {
+      title: 'Manage government users',
+      route: ROUTES.ADMIN_USERS
+    },
+    {
+      title: 'Add/edit fuel suppliers',
+      route: ROUTES.ORGANIZATIONS
+    },
+    {
+      title: 'User activity',
+      route: ROUTES.ADMIN_USERACTIVITY
+    }
+  ])
+  const navigate = useNavigate()
+
   return (
-    <Box p={2.5} bgcolor="background.default">
-      <Typography variant="h2" fontSize={24} mb={1}>
-        Administration
-      </Typography>
-      <Box display={'flex'} flexDirection={'column'} gap={1}>
-        <Link to={ROUTES.ADMIN_USERS}>
-          <Typography fontSize={16} color={colors.link.main}>
-            Manage government users
-          </Typography>
-        </Link>
-        <Link to={ROUTES.ORGANIZATIONS}>
-          <Typography fontSize={16} color={colors.link.main}>
-            Add / edit fuel suppliers
-          </Typography>
-        </Link>
-        <Link to={ROUTES.ADMIN_USERACTIVITY}>
-          <Typography fontSize={16} color={colors.link.main}>
-            User activity
-          </Typography>
-        </Link>
-      </Box>
-    </Box>
+    <BCWidgetCard
+      component="div"
+      style={{ width: '40vh'}}
+      color="nav"
+      icon="admin"
+      title="Administration"
+      avatar={<AdminPanelSettingsIcon fontSize="large" color="inherit" />}
+      content={
+        <List component="div" sx={{ maxWidth: '100%' }}>
+          {adminLinks.map((link, index) => (
+            <ListItemButton
+              component="a"
+              key={index}
+              alignItems="flex-start"
+              onClick={() => navigate(link.route)}
+            >
+              <BCTypography
+                variant="subtitle2"
+                color="link"
+                sx={{
+                  textDecoration: 'underline',
+                  '&:hover': { color: 'info.main' }
+                }}
+              >
+                {link.title}
+              </BCTypography>
+            </ListItemButton>
+          ))}
+        </List>
+      }
+    />
   )
 }
