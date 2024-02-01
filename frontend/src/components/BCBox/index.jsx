@@ -54,6 +54,7 @@ BCBox.propTypes = {
   variant: PropTypes.oneOf([
     'contained',
     'outlined',
+    'bordered',
     'gradient',
     'success',
     'warning',
