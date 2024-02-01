@@ -8,8 +8,10 @@ import { useScrollTrigger } from '@mui/material'
 
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PropTypes } from 'prop-types'
+import { useTranslation } from 'react-i18next'
 
 export const Logout = (props) => {
+  const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const { keycloak } = useKeycloak()
   const isScrolled = useScrollTrigger()
@@ -40,7 +42,7 @@ export const Logout = (props) => {
           variant={isScrolled ? 'contained' : 'outlined'}
           data-test="logout-button"
         >
-          Log out
+          {t('logout')}
         </BCButton>
       </BCBox>
     )

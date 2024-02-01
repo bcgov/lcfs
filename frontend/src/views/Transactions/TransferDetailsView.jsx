@@ -15,8 +15,7 @@ import BCButton from '@/components/BCButton'
 import { decimalFormatter } from '@/utils/formatters'
 import { BTN_RESCIND_TRANSFER, BTN_APP_CANCEL } from '@/constants/langEnUs'
 // Icons
-import arrowRight from '@/assets/icons/arrowRight.svg'
-import arrowLeft from '@/assets/icons/arrowLeft.svg'
+import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faCircle,
@@ -31,6 +30,9 @@ import { Comments } from './components/Comments'
 import Loading from '@/components/Loading'
 
 export const TransferDetailsView = () => {
+  const iconSizeStyle = {
+    fontSize: (theme) => `${theme.spacing(12)} !important`
+  }
   const navigate = useNavigate()
   const { transactionID } = useParams()
   const { data: transaction, isLoading } = useTransaction(transactionID)
@@ -102,7 +104,7 @@ export const TransferDetailsView = () => {
           content={demoData.FromOrganization}
           isGovernmentUser={isGovernmentUser}
         />
-        <Stack spacing={-1} direction="column" justifyContent="center" pl={2}>
+        <Stack spacing={1} direction="column" justifyContent="center" pl={2}>
           <Typography variant="caption1" textAlign="center">
             {demoData.noOfComplianceUnits} compliance units
           </Typography>
@@ -112,22 +114,12 @@ export const TransferDetailsView = () => {
             flexDirection="column"
             pl={2}
           >
-            <img
-              src={arrowRight}
-              alt="Arrow Right"
-              style={{
-                width: '7rem',
-                marginTop: '-10px',
-                height: 'auto'
-              }}
-            />
-            <img
-              src={arrowLeft}
-              alt="Arrow Left"
-              style={{
-                width: '7rem',
-                marginTop: '-40px',
-                height: 'auto'
+            <SyncAltIcon
+              color="primary"
+              sx={{
+                ...iconSizeStyle,
+                marginTop: '-20px',
+                marginBottom: '-25px'
               }}
             />
           </BCBox>

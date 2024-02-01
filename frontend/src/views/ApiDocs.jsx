@@ -1,7 +1,7 @@
 import SwaggerUI from 'swagger-ui-react'
 import 'swagger-ui-react/swagger-ui.css'
 import { useKeycloak } from '@react-keycloak/web'
-import { Login } from './Login'
+import { Login } from './Login/LoginPage'
 
 export const ApiDocs = () => {
   const { keycloak } = useKeycloak()
