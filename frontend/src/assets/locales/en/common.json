@@ -5,6 +5,9 @@
   "supplier": "Fuel Supplier",
   "balance": "Balance",
   "logout": "Log out",
+  "complianceUnits": "Compliance units",
+  "inReserve": "In reserve",
+  "status": "Status",
   "login": {
     "loginMessage": "Login with",
     "troubleMessage": "Trouble logging in?"
@@ -23,26 +26,5 @@
   "FileSubmissions": "File submissions",
   "Administration": "Administration",
   "Organization": "Organization",
-  "lcfsEmail": "lcfs@gov.bc.ca",
-  "admin": {
-    "OrgId": "Organization ID",
-    "Users": "Users",
-    "UserActivity": "User activity",
-    "Roles": "Roles",
-    "Role": "Role",
-    "FuelCodes": "Fuel codes",
-    "ComplianceReporting": "Compliance reporting",
-    "HistoricalDataEntry": "Historical data entry",
-    "Email": "Email",
-    "WorkPhone": "Work phone",
-    "MobilePhone": "Mobile phone",
-    "Phone": "Phone",
-    "Status": "Status",
-    "Title": "Title",
-    "usersNotFound": "No users found",
-    "newUserBtn": "New user",
-    "userName": "User name",
-    "roleTo": "Role conferred to",
-    "description": "Description"
-  }
+  "lcfsEmail": "lcfs@gov.bc.ca"
 }

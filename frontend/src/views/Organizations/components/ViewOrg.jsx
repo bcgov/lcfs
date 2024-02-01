@@ -9,7 +9,7 @@ import { ROUTES } from '@/constants/routes'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useTranslation } from 'react-i18next'
-import { defaultFilterModel, defaultSortModel, usersColDefs } from './options'
+import { defaultFilterModel, defaultSortModel, getUserColumnDefs } from './options'
 import { useNavigate, useParams } from 'react-router-dom'
 import { constructAddress } from '@/utils/constructAddress'
 import Loading from '@/components/Loading'
@@ -238,7 +238,7 @@ export const ViewOrg = () => {
           gridRef={gridRef}
           apiEndpoint={'users/'}
           apiData={'users'}
-          columnDefs={usersColDefs}
+          columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}

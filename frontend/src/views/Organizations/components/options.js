@@ -4,12 +4,12 @@ import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/AdminMenu/components/options'
 
-export const organizationsColDefs = [
-  { colId: 'name', field: 'name', headerName: 'Organization Name', width: 400 },
+export const organizationsColDefs = (t) => [
+  { colId: 'name', field: 'name', headerName: t('org:orgColNames.orgName'), width: 400 },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',
-    headerName: 'Compliance Units',
+    headerName: t('org:orgColNames.complianceUnits'),
     valueFormatter: numberFormatter,
     valueGetter: () => Math.round(Math.random() * (500000 - 100000) + 100000),
     // Temporary measures
@@ -20,7 +20,7 @@ export const organizationsColDefs = [
   {
     colId: 'reserve',
     field: 'reserve',
-    headerName: 'In Reserve',
+    headerName: t('org:orgColNames.inReserve'),
     valueFormatter: numberFormatter,
     valueGetter: () => Math.round(Math.random() * (100000 - 0)),
     // Temporary measures
@@ -31,7 +31,7 @@ export const organizationsColDefs = [
   {
     colId: 'status',
     field: 'status',
-    headerName: 'Status',
+    headerName: t('org:orgColNames.status'),
     width: 200,
     valueGetter: (params) => params.data.org_status.status,
     cellRenderer: OrgStatusRenderer,
@@ -49,8 +49,8 @@ export const organizationsColDefs = [
 ]
 
 
-const getUserColumnDefs = () => {
-  const colDefs = usersColumnDefs.map((colDef) => {
+export const getUserColumnDefs = (t) => {
+  const colDefs = usersColumnDefs(t).map((colDef) => {
     if (colDef.field === 'is_active') {
       return { ...colDef, sortable: false, suppressMenu: true, floatingFilter: false }
     }
@@ -59,6 +59,5 @@ const getUserColumnDefs = () => {
   return colDefs
 }
 
-export const usersColDefs = getUserColumnDefs()
 export const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
 export const defaultFilterModel = [{ filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }]

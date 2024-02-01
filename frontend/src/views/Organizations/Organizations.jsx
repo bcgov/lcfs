@@ -9,25 +9,25 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
 import { organizationsColDefs } from './components/options'
-import { useTranslation } from 'react-i18next'
 // react components
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { ROUTES } from '@/constants/routes'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 // Services
 import { DownloadButton } from '@/components/DownloadButton'
 import { useApiService } from '@/services/useApiService'
 
 export const Organizations = () => {
-  const { t } = useTranslation(["common", "org"])
+  const { t } = useTranslation(['common', 'org'])
   const gridRef = useRef()
   const [gridKey, setGridKey] = useState(`organizations-grid`)
   const handleGridKey = useCallback(() => {
     setGridKey(`organizations-grid`)
   }, [])
   const gridOptions = {
-    overlayNoRowsTemplate: t('org:noOrgsFound'),
+    overlayNoRowsTemplate: t('org:noOrgsFound')
   }
   const getRowId = useCallback((params) => {
     return params.data.name
@@ -40,10 +40,7 @@ export const Organizations = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
     navigate(
-      ROUTES.ORGANIZATIONS_VIEW.replace(
-        ':orgID',
-        params.data.organization_id
-      )
+      ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', params.data.organization_id)
     )
   })
   const apiService = useApiService()
@@ -120,14 +117,14 @@ export const Organizations = () => {
           onDownload={handleDownloadOrgs}
           isDownloading={isDownloadingOrgs}
           label={t('org:orgDownloadBtn')}
-          downloadLabel={ t("org:orgDownloadBtn") + "..."}
+          downloadLabel={t('org:orgDownloadBtn') + '...'}
           dataTest="download-org-button"
         />
         <DownloadButton
           onDownload={handleDownloadUsers}
           isDownloading={isDownloadingUsers}
           label={t('org:userDownloadBtn')}
-          downloadLabel={ t("org:userDownloadBtn") + "..."}
+          downloadLabel={t('org:userDownloadBtn') + '...'}
           dataTest="download-user-button"
         />
       </Stack>
@@ -136,7 +133,7 @@ export const Organizations = () => {
           gridRef={gridRef}
           apiEndpoint={'organizations/'}
           apiData={'organizations'}
-          columnDefs={organizationsColDefs}
+          columnDefs={organizationsColDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}

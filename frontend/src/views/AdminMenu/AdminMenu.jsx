@@ -20,7 +20,7 @@ function a11yProps(index) {
 }
 
 export function AdminMenu({ tabIndex }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(["admin"])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
   const paths = useMemo(() => [ADMIN_USERS, ADMIN_ROLES, '#', '#', '#', '#'])
@@ -57,12 +57,12 @@ export function AdminMenu({ tabIndex }) {
           aria-label="Tabs for selection of administration options"
           onChange={handleSetTabValue}
         >
-          <Tab label={t('admin.Users')} wrapped {...a11yProps(0)} />
-          <Tab label={t('admin.Roles')} {...a11yProps(1)} />
-          <Tab label={t('admin.UserActivity')} {...a11yProps(2)} />
-          <Tab label={t('admin.FuelCodes')} {...a11yProps(3)} />
-          <Tab label={t('admin.ComplianceReporting')} {...a11yProps(4)} />
-          <Tab label={t('admin.HistoricalDataEntry')} {...a11yProps(5)} />
+          <Tab label={t('Users')} wrapped {...a11yProps(0)} />
+          <Tab label={t('Roles')} {...a11yProps(1)} />
+          <Tab label={t('UserActivity')} {...a11yProps(2)} />
+          <Tab label={t('FuelCodes')} {...a11yProps(3)} />
+          <Tab label={t('ComplianceReporting')} {...a11yProps(4)} />
+          <Tab label={t('HistoricalDataEntry')} {...a11yProps(5)} />
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>

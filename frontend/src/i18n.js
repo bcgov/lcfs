@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import commonEn from '@/assets/locales/en/common.json'
 import orgEn from '@/assets/locales/en/organization.json'
+import adminEn from '@/assets/locales/en/admin.json'
 
 // the translations
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
@@ -9,6 +10,7 @@ const resources = {
   en: {
     // Namespaces
     common: commonEn,
+    admin: adminEn,
     org: orgEn,
   },
 };

@@ -16,7 +16,8 @@ import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // import DemoButtons from './DemoButtons'
 
 export const Users = (props) => {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'admin'])
+  const colsDef = usersColumnDefs(t)
   const [gridKey, setGridKey] = useState('users-grid')
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -25,7 +26,7 @@ export const Users = (props) => {
     }
   }, [])
   const gridOptions = {
-    overlayNoRowsTemplate: t('admin.usersNotFound')
+    overlayNoRowsTemplate: t('admin:usersNotFound')
   }
   const defaultSortModel = [
     { field: 'is_active', direction: 'desc' },
@@ -49,7 +50,7 @@ export const Users = (props) => {
   return (
     <BCBox component="div">
       <BCTypography variant="h5" mb={1} color="primary">
-        {t('admin.Users')}
+        {t('admin:Users')}
       </BCTypography>
       <BCButton
         variant="contained"
@@ -60,7 +61,7 @@ export const Users = (props) => {
         }
         onClick={handleNewUserClick}
       >
-        <BCTypography variant="subtitle2">{t('admin.newUserBtn')}</BCTypography>
+        <BCTypography variant="subtitle2">{t('admin:newUserBtn')}</BCTypography>
       </BCButton>
       <BCBox
         my={2}
@@ -73,7 +74,7 @@ export const Users = (props) => {
           gridRef={gridRef}
           apiEndpoint={'users/'}
           apiData={'users'}
-          columnDefs={usersColumnDefs}
+          columnDefs={colsDef}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}

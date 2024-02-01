@@ -1,4 +1,10 @@
 {
+  "orgColNames": {
+    "orgName": "Organization name",
+    "complianceUnits": "Compliance units",
+    "inReserve": "In reserve",
+    "status": "Status"
+  },
   "noOrgsFound": "No organizations found",
   "noUsersFound": "No users found",
   "orgDownloadFailMsg": "Failed to download organization information.",
