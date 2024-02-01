@@ -1,30 +1,30 @@
 import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
 import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
-import { AddEditUser } from './views/AddEditUser'
-import { AddFuelCode } from './views/AddFuelCode'
-import { AddOrganization } from './views/AddOrganization'
-import { AddTransaction } from './views/AddTransaction'
-import { AdminMenu } from './views/AdminMenu'
-import { ApiDocs } from './views/ApiDocs'
+import { AdminMenu } from './views/Admin/AdminMenu'
+import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
+import {
+  ComplianceReports,
+  ViewComplianceReport
+} from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
-import { FSE } from './views/FSE'
-import { FileSubmission } from './views/FileSubmission'
-import { FuelCodes } from './views/FuelCodes'
-import { Login } from './views/Login'
-import { NotFound } from './views/NotFound'
-import { NotificationSettings } from './views/NotificationSettings'
-import { Notifications } from './views/Notifications'
-import { Organizations } from './views/Organizations'
-import { Reports } from './views/Reports'
+import { FileSubmissions } from './views/FileSubmissions'
+import { FuelCodes, AddFuelCode } from './views/FuelCodes'
+import { Notifications, NotificationSettings } from './views/Notifications'
+import {
+  Organizations,
+  AddOrganization,
+  ViewOrganization,
+  EditOrganization
+} from './views/Organizations'
 import { Transactions } from './views/Transactions'
-import { UserActivity } from './views/UserActivity'
-import { ViewOrg } from '@/views/Organizations/components/ViewOrg'
-import { ViewReport } from './views/ViewReport'
-import { ViewUser } from '@/views/AdminMenu/components/ViewUser'
+import { ViewTransfer, AddTransfer } from './views/Transfers'
+import { AddEditUser, UserActivity } from './views/Users'
+import { ApiDocs } from './components/ApiDocs'
+import { Login } from './components/Login'
+import { NotFound } from './components/NotFound'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
-import { TransferDetailsView } from './views/Transactions/TransferDetailsView'
 
 const router = createBrowserRouter([
   {
@@ -58,18 +58,21 @@ const router = createBrowserRouter([
         handle: { title: 'Transactions', crumb: () => 'Transactions' }
       },
       {
-        path: ROUTES.TRANSACTIONS_ADD,
-        element: <AddTransaction />,
-        handle: { title: 'Add Transaction' }
+        path: ROUTES.TRANSFERS_ADD,
+        element: <AddTransfer />,
+        handle: {
+          title: 'New Transfer',
+          crumb: () => 'New Transfer'
+        }
       },
       {
-        path: ROUTES.TRANSACTIONS_VIEW,
-        element: <TransferDetailsView />,
-        handle: { crumb: () => 'New Transfer', title: 'New Transfer' }
+        path: ROUTES.TRANSFERS_VIEW,
+        element: <ViewTransfer />,
+        handle: { title: 'View Transfer' }
       },
       {
         path: ROUTES.ORGANIZATION,
-        element: <ViewOrg />,
+        element: <ViewOrganization />,
         handle: { title: 'View Organization' }
       },
       {
@@ -99,12 +102,12 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEW,
-        element: <ViewOrg />,
+        element: <ViewOrganization />,
         handle: { title: 'View Organization' }
       },
       {
         path: ROUTES.ORGANIZATIONS_EDIT,
-        element: <AddOrganization />,
+        element: <EditOrganization />,
         handle: { title: 'Edit Organization' }
       },
       {
@@ -130,13 +133,13 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS,
-        element: <Reports />,
-        handle: { title: 'Reports' }
+        element: <ComplianceReports />,
+        handle: { title: 'ComplianceReports' }
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <ViewReport />,
-        handle: { title: 'View Report' }
+        element: <ViewComplianceReport />,
+        handle: { title: 'View Compliance Report' }
       },
       {
         path: ROUTES.NOTIFICATIONS,
@@ -194,14 +197,9 @@ const router = createBrowserRouter([
         handle: { title: 'Add Fuel Code' }
       },
       {
-        path: ROUTES.FSE,
-        element: <FSE />,
-        handle: { title: 'FSE' }
-      },
-      {
         path: ROUTES.FILESUBMISSION,
-        element: <FileSubmission />,
-        handle: { title: 'File Submission' }
+        element: <FileSubmissions />,
+        handle: { title: 'File Submissions' }
       }
     ]
   },

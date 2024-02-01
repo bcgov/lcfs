@@ -8,7 +8,7 @@ import { Stack } from '@mui/material'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
-import { organizationsColDefs } from './components/schema'
+import { organizationsColDefs } from './ViewOrganization/_schema'
 // react components
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { ROUTES } from '@/constants/routes'
@@ -38,10 +38,7 @@ export const Organizations = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
     navigate(
-      ROUTES.ORGANIZATIONS_VIEW.replace(
-        ':orgID',
-        params.data.organization_id
-      )
+      ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', params.data.organization_id)
     )
   })
   const apiService = useApiService()

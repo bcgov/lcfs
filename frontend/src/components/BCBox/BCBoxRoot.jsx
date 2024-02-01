@@ -14,7 +14,7 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
     coloredShadow
   } = ownerState
 
-  const { alerts, gradients, grey, white } = palette
+  const { alerts, gradients, grey, white, transparent } = palette
   const { linearGradient } = functions
   const { borderRadius: radius } = borders
   const { colored } = boxShadows
@@ -104,6 +104,10 @@ const BCBoxRoot = styled(Box)(({ theme, ownerState }) => {
   } else if (variant === 'outlined') {
     backgroundValue = white.main
     borderValue = `1.2px solid ${grey[500]}`
+  } else if (variant === 'bordered') {
+    backgroundValue = transparent.main
+    borderValue = `1.3px solid ${grey[400]}`
+    borderRadiusValue = '2px'
   } else if (variants.includes(variant)) {
     return {
       opacity,
