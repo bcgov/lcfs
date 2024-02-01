@@ -14,6 +14,7 @@ const DisclaimerBanner = ({ messages }) => {
         fontSize: '14px',
         border: `1px solid ${colors.borderDivider.nav}`
       }}
+      mx={2}
     >
       {messages.map((message, index) => (
         <Typography key={index} variant="body2">

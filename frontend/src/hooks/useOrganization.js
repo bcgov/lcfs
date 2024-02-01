@@ -5,7 +5,7 @@ import { useCurrentUser } from './useCurrentUser'
 export const useOrganization = (orgID, options) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
-  const id = orgID ?? currentUser.organization.organization_id
+  const id = orgID ?? currentUser?.organization?.organization_id
 
   return useQuery({
     queryKey: ['organization', id],
@@ -19,8 +19,7 @@ export const useOrganizationStatuses = (options) => {
 
   return useQuery({
     queryKey: ['organization-statuses'],
-    queryFn: async () =>
-      (await client.get('/organizations/statuses/')).data,
+    queryFn: async () => (await client.get('/organizations/statuses/')).data,
     ...options
   })
 }
@@ -30,8 +29,7 @@ export const useOrganizationNames = (options) => {
 
   return useQuery({
     queryKey: ['organization-names'],
-    queryFn: async () =>
-      (await client.get('/organizations/names/')).data,
+    queryFn: async () => (await client.get('/organizations/names/')).data,
     ...options
   })
 }

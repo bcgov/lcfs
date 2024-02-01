@@ -33,7 +33,7 @@ class Transfer(TransferBase):
     transfer_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TransferHistory(TransferBase):
@@ -41,7 +41,7 @@ class TransferHistory(TransferBase):
     transfer_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class IssuanceSchema(BaseModel):

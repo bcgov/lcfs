@@ -2,8 +2,11 @@ export const DASHBOARD = '/'
 export const LOGIN = '/login'
 
 export const TRANSACTIONS = '/transactions'
-export const TRANSACTIONS_ADD = `${TRANSACTIONS}/add`
 export const TRANSACTIONS_VIEW = `${TRANSACTIONS}/:transactionID`
+
+export const TRANSFERS = '/transfers'
+export const TRANSFERS_ADD = `${TRANSFERS}/add`
+export const TRANSFERS_VIEW = `${TRANSFERS}/:transferID`
 
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`
@@ -37,7 +40,7 @@ export const FUELCODES_ADD = `${FUELCODES}/add-fuel-code`
 
 export const FSE = '/fse' // might not need
 
-export const FILESUBMISSION = '/file-submission' // might not need
+export const FILESUBMISSION = '/file-submissions' // might not need
 
 export const APIDOCS = '/docs'
 export const CONTACT_US = '/contact-us'
