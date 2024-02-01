@@ -107,7 +107,7 @@ class Settings(BaseSettings):
             scheme="redis",
             host=self.redis_host,
             port=self.redis_port,
-            # user=self.redis_user,
+            user=self.redis_user,
             password=self.redis_pass,
             path=path,
         )
