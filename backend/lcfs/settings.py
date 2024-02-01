@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: str = "lcfs"
     redis_user: Optional[str] = None
-    redis_pass: Optional[str] = None
+    redis_pass: Optional[str] = "development_only"
     redis_base: Optional[int] = None
 
     # Variables for Keycloak
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
             scheme="redis",
             host=self.redis_host,
             port=self.redis_port,
-            user=self.redis_user,
+            # user=self.redis_user,
             password=self.redis_pass,
             path=path,
         )
