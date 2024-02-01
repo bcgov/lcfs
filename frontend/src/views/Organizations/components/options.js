@@ -2,7 +2,7 @@ import { numberFormatter } from '@/utils/formatters'
 import { OrgStatusRenderer } from '@/utils/cellRenderers'
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
-import { usersColumnDefs } from '@/views/AdminMenu/components/schema'
+import { usersColumnDefs } from '@/views/AdminMenu/components/options'
 
 export const organizationsColDefs = [
   { colId: 'name', field: 'name', headerName: 'Organization Name', width: 400 },

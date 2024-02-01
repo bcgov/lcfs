@@ -22,7 +22,7 @@ export const MainLayout = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
-    currentUser?.roles?.some(({ name }) => name === 'Government') ?? false
+    currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
 
   const matches = useMatches()
   const { size } = typography

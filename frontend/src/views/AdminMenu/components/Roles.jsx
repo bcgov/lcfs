@@ -4,7 +4,7 @@ import BCBox from '@/components/BCBox'
 // react components
 import { useCallback, useRef } from 'react'
 
-import { rolesColumnDefs, rolesDefaultColDef } from './schema'
+import { rolesColumnDefs, rolesDefaultColDef } from './options'
 import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
 
 export const Roles = (props) => {

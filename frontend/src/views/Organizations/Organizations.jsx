@@ -8,7 +8,8 @@ import { Stack } from '@mui/material'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
-import { organizationsColDefs } from './components/schema'
+import { organizationsColDefs } from './components/options'
+import { useTranslation } from 'react-i18next'
 // react components
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { ROUTES } from '@/constants/routes'
@@ -19,13 +20,14 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { useApiService } from '@/services/useApiService'
 
 export const Organizations = () => {
+  const { t } = useTranslation(["common", "org"])
   const gridRef = useRef()
   const [gridKey, setGridKey] = useState(`organizations-grid`)
   const handleGridKey = useCallback(() => {
     setGridKey(`organizations-grid`)
   }, [])
   const gridOptions = {
-    overlayNoRowsTemplate: 'No organizations found'
+    overlayNoRowsTemplate: t('org:noOrgsFound'),
   }
   const getRowId = useCallback((params) => {
     return params.data.name
@@ -66,7 +68,7 @@ export const Organizations = () => {
     } catch (error) {
       console.error('Error downloading organization information:', error)
       setIsDownloadingOrgs(false)
-      setAlertMessage('Failed to download organization information.')
+      setAlertMessage(t('org:orgDownloadFailMsg'))
       setAlertSeverity('error')
     }
   }
@@ -79,7 +81,7 @@ export const Organizations = () => {
     } catch (error) {
       console.error('Error downloading user information:', error)
       setIsDownloadingUsers(false)
-      setAlertMessage('Failed to download user information.')
+      setAlertMessage(t('org:userDownloadFailMsg'))
       setAlertSeverity('error')
     }
   }
@@ -94,7 +96,7 @@ export const Organizations = () => {
         )}
       </div>
       <BCTypography variant="h5" color="primary">
-        Organizations
+        {t('common:Organizations')}
       </BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
@@ -112,20 +114,20 @@ export const Organizations = () => {
           }
           onClick={() => navigate(ROUTES.ORGANIZATIONS_ADD)}
         >
-          <BCTypography variant="subtitle2">New Organization</BCTypography>
+          <BCTypography variant="subtitle2">{t('org:newOrgBtn')}</BCTypography>
         </BCButton>
         <DownloadButton
           onDownload={handleDownloadOrgs}
           isDownloading={isDownloadingOrgs}
-          label="Download Organization Information"
-          downloadLabel="Downloading Organization Information..."
+          label={t('org:orgDownloadBtn')}
+          downloadLabel={ t("org:orgDownloadBtn") + "..."}
           dataTest="download-org-button"
         />
         <DownloadButton
           onDownload={handleDownloadUsers}
           isDownloading={isDownloadingUsers}
-          label="Download User Information"
-          downloadLabel="Downloading User Information..."
+          label={t('org:userDownloadBtn')}
+          downloadLabel={ t("org:userDownloadBtn") + "..."}
           dataTest="download-user-button"
         />
       </Stack>

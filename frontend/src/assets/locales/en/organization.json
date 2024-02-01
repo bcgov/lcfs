@@ -1,0 +1,22 @@
+{
+  "noOrgsFound": "No organizations found",
+  "noUsersFound": "No users found",
+  "orgDownloadFailMsg": "Failed to download organization information.",
+  "userDownloadFailMsg": "Failed to download user information.",
+  "newOrgBtn": "New organization",
+  "orgDownloadBtn": "Download organization information",
+  "userDownloadBtn": "Download user information",
+  "active": "Active",
+  "inctive": "Inactive",
+  "legalNameLabel": "Legal name of organization",
+  "operatingNameLabel": "Operating name of organization",
+  "telephoneLabel": "Telephone",
+  "serviceAddrLabel": "Address for service (postal address)",
+  "bcAddrLabel": "Address in B.C. (at which records are maintained)",
+  "regBoolLabel": "Registered for credit transfers",
+  "contactMsg": "to update address informations.",
+  "activeUsersBtn": "Active users",
+  "inactiveUsersBtn": "Inactive users",
+  "showInactiveUsersBtn": "Show inactive users",
+  "showActiveUsersBtn": "Show active users"
+}

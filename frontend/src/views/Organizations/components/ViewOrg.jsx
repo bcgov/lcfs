@@ -8,8 +8,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ROUTES } from '@/constants/routes'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-
-import { defaultFilterModel, defaultSortModel, usersColDefs } from './schema'
+import { useTranslation } from 'react-i18next'
+import { defaultFilterModel, defaultSortModel, usersColDefs } from './options'
 import { useNavigate, useParams } from 'react-router-dom'
 import { constructAddress } from '@/utils/constructAddress'
 import Loading from '@/components/Loading'
@@ -27,6 +27,7 @@ const OrgDetailTypography = ({ bold, children, ...rest }) => {
 }
 
 export const ViewOrg = () => {
+  const { t } = useTranslation(['common', 'org'])
   const [showActive, setShowActive] = useState(true)
   const navigate = useNavigate()
   const { orgID } = useParams()
@@ -49,7 +50,7 @@ export const ViewOrg = () => {
   }, [])
 
   const gridOptions = {
-    overlayNoRowsTemplate: 'No users found',
+    overlayNoRowsTemplate: t('org:noUsersFound'),
     includeHiddenColumnsInQuickFilter: true
   }
   const handleRowClicked = useCallback((params) => {
@@ -66,7 +67,7 @@ export const ViewOrg = () => {
       if (statusFilter) {
         statusFilter.setModel({
           type: 'equals',
-          filter: showActive ? 'Active' : 'Inactive'
+          filter: showActive ? t('active') : t('inactive')
         })
       }
       if (orgFilter) {
@@ -106,18 +107,20 @@ export const ViewOrg = () => {
             alignItems="end"
           >
             <OrgDetailTypography bold>
-              Legal name of organization:
+              {t('org:legalNameLabel')}
             </OrgDetailTypography>
             <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
             <OrgDetailTypography bold>
-              Operating name of organization:
+              {t('org:operatingNameLabel')}
             </OrgDetailTypography>
             <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
-            <OrgDetailTypography bold>Telephone:</OrgDetailTypography>
+            <OrgDetailTypography bold>
+              {t('org:telephoneLabel')}:
+            </OrgDetailTypography>
             <OrgDetailTypography>
               {phoneNumberFormatter({ value: orgData.phone })}
             </OrgDetailTypography>
-            <OrgDetailTypography bold>Email:</OrgDetailTypography>
+            <OrgDetailTypography bold>{t('admin.Email')}:</OrgDetailTypography>
             <OrgDetailTypography>{orgData.email}</OrgDetailTypography>
           </BCBox>
           <BCBox
@@ -127,19 +130,19 @@ export const ViewOrg = () => {
             alignItems="end"
           >
             <OrgDetailTypography bold>
-              Address for service (postal address):
+              {t('org:serviceAddrLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
               {constructAddress(orgData.org_address)}
             </OrgDetailTypography>
             <OrgDetailTypography bold>
-              Address in B.C. (at which records are maintained):
+              {t('org:bcAddrLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
               {constructAddress(orgData.org_attorney_address)}
             </OrgDetailTypography>
             <OrgDetailTypography bold>
-              Registered for credit transfers:
+              {t('org:regBoolLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
               {orgData.org_status.status}
@@ -148,8 +151,8 @@ export const ViewOrg = () => {
         </BCBox>
         {!isCurrentUserLoading && !currentUser.is_government_user && (
           <OrgDetailTypography mt={1}>
-            Email <a href="mailto:lcfs@gov.bc.ca">lcfs@gov.bc.ca</a> to update
-            address information.
+            Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a> to
+            update address information.
           </OrgDetailTypography>
         )}
       </BCBox>
@@ -181,7 +184,9 @@ export const ViewOrg = () => {
                 }
                 onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
               >
-                <BCTypography variant="subtitle2">New User</BCTypography>
+                <BCTypography variant="subtitle2">
+                  {t('admin.newUserBtn')}
+                </BCTypography>
               </BCButton>
               <BCButton
                 variant="outlined"
@@ -196,12 +201,12 @@ export const ViewOrg = () => {
                 onClick={() => setShowActive(false)}
               >
                 <BCTypography variant="subtitle2">
-                  Show Inactive Users
+                  {t('org:showInactiveUsersBtn')}
                 </BCTypography>
               </BCButton>
             </BCBox>
             <BCTypography variant="h5" mt={1} color="primary">
-              Active Users
+              {t('org:activeUsersBtn')}
             </BCTypography>
           </>
         ) : (
@@ -218,10 +223,12 @@ export const ViewOrg = () => {
               }}
               onClick={() => setShowActive(true)}
             >
-              <BCTypography variant="subtitle2">Show Active Users</BCTypography>
+              <BCTypography variant="subtitle2">
+                {t('org:showActiveUsersBtn')}
+              </BCTypography>
             </BCButton>
             <BCTypography variant="h5" mt={1} color="primary">
-              Inactive Users
+              {t('org:inactiveUsersBtn')}
             </BCTypography>
           </>
         )}
