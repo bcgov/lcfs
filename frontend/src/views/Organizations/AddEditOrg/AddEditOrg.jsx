@@ -32,7 +32,7 @@ import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
 
 // Component for adding a new organization
-export const AddOrganization = () => {
+export const AddEditOrg = () => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
@@ -203,7 +203,7 @@ export const AddOrganization = () => {
         bgcolor: 'background.paper',
         border: 'none'
       }}
-      data-test="addOrganizationContainer"
+      data-test="addEditOrgContainer"
     >
       {/* Error Alert */}
       {isError && <BCAlert severity="error">{t('org:errMsg')}</BCAlert>}

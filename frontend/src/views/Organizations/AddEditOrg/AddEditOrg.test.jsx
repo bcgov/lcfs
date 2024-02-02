@@ -1,7 +1,7 @@
 import { wrapper } from '@/utils/test/wrapper'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AddOrganization } from './AddOrganization'
+import { AddEditOrg } from './AddEditOrg'
 import { useTranslation } from 'react-i18next'
 
 // Mock Keycloak
@@ -12,10 +12,10 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-describe('AddOrganization Component Tests', () => {
+describe('AddEditOrg Component Tests', () => {
   const { t } = useTranslation()
   beforeEach(() => {
-    render(<AddOrganization />, { wrapper })
+    render(<AddEditOrg />, { wrapper })
   })
 
   afterEach(() => {
@@ -23,8 +23,8 @@ describe('AddOrganization Component Tests', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders the AddOrganization component correctly', () => {
-    expect(screen.getByText(/Add organization/i)).toBeInTheDocument()
+  it('renders the AddEditOrg component correctly', () => {
+    expect(screen.getByText(/Add Organization/i)).toBeInTheDocument()
   })
 
   it('renders all form fields except address fields', () => {

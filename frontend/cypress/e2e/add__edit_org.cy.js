@@ -19,7 +19,7 @@ describe('Add Organization Test Suite', () => {
   })
 
   it('verifies that the add organization loads correctly', () => {
-    cy.getByDataTest('addOrganizationContainer').should('be.visible')
+    cy.getByDataTest('addEditOrgContainer').should('be.visible')
   })
 
   context('Check if form validation works', () => {

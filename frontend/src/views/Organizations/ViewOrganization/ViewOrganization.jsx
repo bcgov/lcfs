@@ -152,7 +152,9 @@ export const ViewOrganization = () => {
               {t('org:regTrnLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
-              {orgData.org_status.status}
+              {orgData.org_status.status === 'Registered'
+                ? 'Yes — A registered organization is able to transfer compliance units.'
+                : 'No — An organization must be registered to transfer compliance units.'}
             </OrgDetailTypography>
           </BCBox>
         </BCBox>
