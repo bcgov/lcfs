@@ -113,6 +113,11 @@ const router = createBrowserRouter([
         handle: { title: 'View Organization' }
       },
       {
+        path: ROUTES.ORGANIZATIONS_EDIT,
+        element: <AddEditOrg />,
+        handle: { title: 'Edit Organization' }
+      },
+      {
         path: ROUTES.ORGANIZATIONS_ADDUSER,
         element: <AddEditUser />,
         handle: { title: 'Add Organization User' }
