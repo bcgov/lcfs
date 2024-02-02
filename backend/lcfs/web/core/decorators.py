@@ -1,7 +1,13 @@
+import inspect
 from functools import wraps
+from logging import getLogger
+
 from fastapi import HTTPException, Request
+
 from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.Role import RoleEnum
+from lcfs.web.exception.exceptions import ServiceException, DatabaseException, DataNotFoundException
+
 
 def role_enum_member(role):
     # If role is a RoleEnum member, return it directly
@@ -9,7 +15,7 @@ def role_enum_member(role):
         return role
     # If role is a UserRole object, convert its role attribute to RoleEnum member
     if isinstance(role, UserRole):
-        return RoleEnum[role.role.name.name] # TODO refactor
+        return RoleEnum[role.role.name.name]  # TODO refactor
     # Otherwise, raise an error
     raise ValueError(f"Invalid role type: {type(role)}")
 
@@ -21,19 +27,94 @@ def roles_required(*required_roles):
             user = getattr(request, "user", None)
 
             if not user:
-                raise HTTPException(status_code=401, detail="User not authenticated")
-            
+                raise HTTPException(
+                    status_code=401, detail="User not authenticated")
+
             # Extract the role names or enum members from the user_roles attribute
-            user_role_names = {role_enum_member(role) for role in user.user_roles}
+            user_role_names = {role_enum_member(
+                role) for role in user.user_roles}
 
             # Convert required_roles to a set of RoleEnum members
-            required_role_set = {RoleEnum[role.upper()] for role in required_roles}
+            required_role_set = {RoleEnum[role.upper()]
+                                 for role in required_roles}
 
             # Check if user has all the required roles
             if not required_role_set.issubset(user_role_names):
-                raise HTTPException(status_code=403, detail="Insufficient permissions")
+                raise HTTPException(
+                    status_code=403, detail="Insufficient permissions")
 
             return await func(request, *args, **kwargs)
-        
+
         return wrapper
     return decorator
+
+
+def view_handler(func):
+    '''Hanldes try except in the view layer'''
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        logger = getLogger(func.__module__)
+        try:
+            return await func(*args, **kwargs)
+        except (DatabaseException, ServiceException):
+            raise HTTPException(
+                status_code=500, detail=f"Internal Server Error")
+        except HTTPException:
+            raise
+        except DataNotFoundException:
+            raise HTTPException(
+                status_code=404, detail=f"Not Found")
+        except Exception as e:
+            file_path = inspect.getfile(func)
+            func_name = func.__name__
+            logger.error(
+                f"View error in \
+                    {func_name} (file: {file_path}) - {str(e)}"
+            )
+            raise HTTPException(
+                status_code=500, detail=f"Internal Server Error")
+    return wrapper
+
+
+def service_handler(func):
+    '''Hanldes try except in the service layer'''
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        logger = getLogger(func.__module__)
+        try:
+            return await func(*args, **kwargs)
+
+        # raise the error to the view layer
+        except (DatabaseException, HTTPException, DataNotFoundException):
+            raise
+        # all other errors that occur in the service layer will log an error
+        except Exception as e:
+            file_path = inspect.getfile(func)
+            func_name = func.__name__
+            logger.error(
+                f"Service error in \
+                    {func_name} (file: {file_path}) - {str(e)}"
+            )
+            raise ServiceException
+    return wrapper
+
+
+def repo_handler(func):
+    '''Hanldes try except in the repo layer'''
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        logger = getLogger(func.__module__)
+        try:
+            return await func(*args, **kwargs)
+        # raise the error to the service layer
+        except (HTTPException, DataNotFoundException):
+            raise
+        # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
+        except Exception as e:
+            file_path = inspect.getfile(func)
+            func_name = func.__name__
+            logger.error(
+                f"Repo error in {func_name} (file: {file_path}) - {str(e)}"
+            )
+            raise DatabaseException
+    return wrapper
