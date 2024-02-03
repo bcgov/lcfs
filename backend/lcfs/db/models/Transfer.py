@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -8,7 +8,6 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     __table_args__ = (UniqueConstraint('transfer_id'),
                       {'comment': "Records of tranfer from Organization to Organization"}
     )
-
 
     transfer_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the org to org transfer record")
     from_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
@@ -20,6 +19,7 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     comment_id = Column(Integer, ForeignKey('comment.comment_id'))
     transfer_status_id = Column(Integer, ForeignKey('transfer_status.transfer_status_id'))
     transfer_category_id = Column(Integer, ForeignKey('category.category_id'))
+    signing_authority_declaration = Column(Boolean, default=False)
 
     category = relationship('Category')
     transaction = relationship('Transaction')

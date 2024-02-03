@@ -9,9 +9,24 @@ import {
 import { BrowserRouter as Router } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Organizations } from './Organizations'
+// Import utilities directly, if getByDataTest is a custom utility, ensure it's correctly imported
 import { getByDataTest } from '@/utils/test/testHelpers'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
+
+// Mock the specific import of BCDataGridServer
+vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
+  // Replace BCDataGridServer with a dummy component
+  __esModule: true, // This is important for mocking ES modules
+  default: () => <div data-testid="mockedBCDataGridServer"></div>
+}))
+
+// You need to mock the entire module where useApiService is exported
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({
+    download: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)))
+  })
+}))
 
 const renderComponent = () => {
   const queryClient = new QueryClient()
@@ -33,22 +48,10 @@ describe('Organizations Component Tests', () => {
 
   afterEach(() => {
     cleanup()
+    vi.resetAllMocks() // Reset mocks to their initial state after each test
   })
 
   describe('Download organization information', () => {
-    beforeEach(() => {
-      // Mock the download function to always resolve successfully
-      vi.mock('@/services/useApiService', () => ({
-        useApiService: () => ({
-          download: vi.fn().mockResolvedValueOnce()
-        })
-      }))
-    })
-
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
     it('initially shows the download organization button with correct text and enabled', () => {
       const downloadButton = getByDataTest('download-org-button')
       expect(downloadButton).toBeInTheDocument()
@@ -59,20 +62,20 @@ describe('Organizations Component Tests', () => {
       const downloadButton = getByDataTest('download-org-button')
       fireEvent.click(downloadButton)
 
-      // Wait for the download operation to complete and the component state to update
+      // First, ensure the button text changes to the downloading state
       await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(
-          /Downloading Organization Information.../i
+        expect(downloadButton.textContent).toContain(
+          'Downloading Organization Information...'
         )
-        expect(downloadButton).toBeDisabled()
       })
+      // Then, check if the button gets disabled
+      expect(downloadButton).toBeDisabled()
     })
 
     it('shows an error message if the download organization fails', async () => {
-      // Update the mock to simulate a failure
       vi.mock('@/services/useApiService', () => ({
         useApiService: () => ({
-          download: vi.fn().mockRejectedValueOnce(new Error('Download failed'))
+          download: vi.fn(() => Promise.reject(new Error('Download failed')))
         })
       }))
 
@@ -82,7 +85,6 @@ describe('Organizations Component Tests', () => {
       const downloadButton = getByDataTest('download-org-button')
       fireEvent.click(downloadButton)
 
-      // Wait for the component to react to the error
       await waitFor(() => {
         const errorMessage = screen.getByText(
           /Failed to download organization information./i
@@ -94,16 +96,17 @@ describe('Organizations Component Tests', () => {
 
   describe('Download user information', () => {
     beforeEach(() => {
-      // Mock the download function to always resolve successfully
+      // Mock the download function to always resolve successfully for user info
       vi.mock('@/services/useApiService', () => ({
         useApiService: () => ({
-          download: vi.fn().mockResolvedValueOnce()
+          downloadUser: vi.fn(() => Promise.resolve())
         })
       }))
     })
 
     afterEach(() => {
-      vi.restoreAllMocks()
+      cleanup()
+      vi.restoreAllMocks() // Ensure mocks are cleared and restored after each test
     })
 
     it('initially shows the download user button with correct text and enabled', () => {
@@ -116,20 +119,24 @@ describe('Organizations Component Tests', () => {
       const downloadButton = getByDataTest('download-user-button')
       fireEvent.click(downloadButton)
 
-      // Wait for the download operation to complete and the component state to update
+      expect(
+        screen.queryByText(/Downloading User Information.../i)
+      ).toBeInTheDocument()
+
       await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(
-          /Downloading User Information.../i
+        expect(downloadButton.textContent).toContain(
+          'Downloading User Information...'
         )
-        expect(downloadButton).toBeDisabled()
       })
+      expect(downloadButton).toBeDisabled()
     })
 
     it('shows an error message if the download user fails', async () => {
-      // Update the mock to simulate a failure
       vi.mock('@/services/useApiService', () => ({
         useApiService: () => ({
-          download: vi.fn().mockRejectedValueOnce(new Error('Download failed'))
+          downloadUser: vi.fn(() =>
+            Promise.reject(new Error('Download failed'))
+          ) // Mock failure for download
         })
       }))
 
@@ -139,7 +146,6 @@ describe('Organizations Component Tests', () => {
       const downloadButton = getByDataTest('download-user-button')
       fireEvent.click(downloadButton)
 
-      // Wait for the component to react to the error
       await waitFor(() => {
         const errorMessage = screen.getByText(
           /Failed to download user information./i

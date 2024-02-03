@@ -10,7 +10,7 @@ from lcfs.db.models.NotificationMessage import NotificationMessage
 class UserProfile(BaseModel, Auditable):
     __tablename__ = "user_profile"
     __table_args__ = (
-        UniqueConstraint("username"),
+        UniqueConstraint("keycloak_username"),
         {"comment": "Users who may access the application"},
     )
 
@@ -25,9 +25,6 @@ class UserProfile(BaseModel, Auditable):
         String(150), unique=True, nullable=False, comment="keycloak Username"
     )
     email = Column(String(255), nullable=True, comment="Primary email address")
-    username = Column(
-        String(150), unique=True, nullable=False, comment="Login Username"
-    )
     display_name = Column(
         "display_name", String(500), nullable=True, comment="Displayed name for user"
     )

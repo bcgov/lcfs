@@ -13,8 +13,8 @@ import {
 } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import LabelBox from './components/LabelBox'
-import TransferAgreementDate from './components/TransferAgreementDate'
-import BCTypography from '@/components/BCTypography'
+import AgreementDate from './components/AgreementDate'
+import SigningAuthority from './components/SigningAuthority'
 import Comment from './components/Comment'
 
 // Schema for validating form fields
@@ -194,11 +194,8 @@ const TransferDetails = ({ currentOrg, organizations }) => {
         </LabelBox>
       </BCBox>
 
-      <TransferAgreementDate
-        register={register}
-        errors={errors}
-        maxDate={maxDate}
-      />
+      {/* Agreement Date */}
+      <AgreementDate register={register} errors={errors} maxDate={maxDate} />
 
       {/* Comments */}
       <LabelBox
@@ -207,6 +204,9 @@ const TransferDetails = ({ currentOrg, organizations }) => {
       >
         <Comment />
       </LabelBox>
+
+      {/* Signing Authority */}
+      <SigningAuthority register={register} errors={errors} />
 
       {/* TEST Submit button, To be Replaced with real Action Buttons */}
       <Box mt={2} display="flex" justifyContent="flex-end">

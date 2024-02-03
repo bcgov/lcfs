@@ -18,7 +18,6 @@ Public - attributes present on public facing resources being returned from GET, 
 class UserCreate(BaseModel):
     user_profile_id: Optional[int] = None
     title: str
-    username: str
     email: EmailStr
     display_name: str
     phone: str
@@ -39,7 +38,6 @@ class UserBase(BaseModel):
 
     user_profile_id: int
     keycloak_username: str
-    username: str
     email: EmailStr
     display_name: str
     title: Optional[str] = None
