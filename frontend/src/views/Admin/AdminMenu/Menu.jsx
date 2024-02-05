@@ -2,6 +2,7 @@ import { PropTypes } from 'prop-types'
 // React components
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 // mui components
 import { AppBar, Tab, Tabs } from '@mui/material'
 import breakpoints from '@/themes/base/breakpoints'
@@ -20,6 +21,7 @@ function a11yProps(index) {
 }
 
 export function AdminMenu({ tabIndex }) {
+  const { t } = useTranslation(['admin'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
   const paths = useMemo(() => [ADMIN_USERS, ADMIN_ROLES, '#', '#', '#', '#'])
@@ -56,12 +58,12 @@ export function AdminMenu({ tabIndex }) {
           aria-label="Tabs for selection of administration options"
           onChange={handleSetTabValue}
         >
-          <Tab label="Users" wrapped {...a11yProps(0)} />
-          <Tab label="Roles" {...a11yProps(1)} />
-          <Tab label="User Activity" {...a11yProps(2)} />
-          <Tab label="Fuel Codes" {...a11yProps(3)} />
-          <Tab label="Compliance Reporting" {...a11yProps(4)} />
-          <Tab label="Historical Data Entry" {...a11yProps(5)} />
+          <Tab label={t('Users')} wrapped {...a11yProps(0)} />
+          <Tab label={t('Roles')} {...a11yProps(1)} />
+          <Tab label={t('UserActivity')} {...a11yProps(2)} />
+          <Tab label={t('FuelCodes')} {...a11yProps(3)} />
+          <Tab label={t('ComplianceReporting')} {...a11yProps(4)} />
+          <Tab label={t('HistoricalDataEntry')} {...a11yProps(5)} />
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>

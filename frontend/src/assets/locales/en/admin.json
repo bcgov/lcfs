@@ -13,7 +13,7 @@
   "Title": "Title",
   "usersNotFound": "No users found",
   "newUserBtn": "New user",
-  "userColNames": {
+  "userColLabels": {
     "userName": "User name",
     "role": "Role(s)",
     "email": "Email",
@@ -22,9 +22,9 @@
     "active": "Active",
     "inactive": "Inactive"
   },
-  "roleColNames": {
+  "roleColLabels": {
     "role": "Role",
-    "roleTo": "Role conferred to",
+    "roleOf": "Role conferred to",
     "description": "Description"
   }
 }

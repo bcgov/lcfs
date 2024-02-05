@@ -1,5 +1,6 @@
 import { logout } from '@/utils/keycloak'
 import { useKeycloak } from '@react-keycloak/web'
+import { useTranslation } from 'react-i18next'
 // @mui components
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -10,6 +11,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { PropTypes } from 'prop-types'
 
 export const Logout = (props) => {
+  const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const { keycloak } = useKeycloak()
   const isScrolled = useScrollTrigger()
@@ -40,7 +42,7 @@ export const Logout = (props) => {
           variant={isScrolled ? 'contained' : 'outlined'}
           data-test="logout-button"
         >
-          Log out
+          {t('logout')}
         </BCButton>
       </BCBox>
     )

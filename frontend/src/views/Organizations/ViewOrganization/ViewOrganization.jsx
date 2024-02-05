@@ -5,11 +5,16 @@ import BCTypography from '@/components/BCTypography'
 import { IconButton } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/constants/routes'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import { defaultFilterModel, defaultSortModel, usersColDefs } from './_schema'
+import {
+  defaultFilterModel,
+  defaultSortModel,
+  getUserColumnDefs
+} from './_schema'
 import { useNavigate, useParams } from 'react-router-dom'
 import { constructAddress } from '@/utils/constructAddress'
 import Loading from '@/components/Loading'
@@ -27,6 +32,7 @@ const OrgDetailTypography = ({ bold, children, ...rest }) => {
 }
 
 export const ViewOrganization = () => {
+  const { t } = useTranslation(['common', 'org'])
   const [showActive, setShowActive] = useState(true)
   const navigate = useNavigate()
   const { orgID } = useParams()
@@ -106,18 +112,22 @@ export const ViewOrganization = () => {
             alignItems="end"
           >
             <OrgDetailTypography bold>
-              Legal name of organization:
+              {t('org:legalNameLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
             <OrgDetailTypography bold>
-              Operating name of organization:
+              {t('org:operatingNameLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
-            <OrgDetailTypography bold>Telephone:</OrgDetailTypography>
+            <OrgDetailTypography bold>
+              {t('org:phoneNbrLabel')}:
+            </OrgDetailTypography>
             <OrgDetailTypography>
               {phoneNumberFormatter({ value: orgData.phone })}
             </OrgDetailTypography>
-            <OrgDetailTypography bold>Email:</OrgDetailTypography>
+            <OrgDetailTypography bold>
+              {t('org:emailAddrLabel')}:
+            </OrgDetailTypography>
             <OrgDetailTypography>{orgData.email}</OrgDetailTypography>
           </BCBox>
           <BCBox
@@ -127,19 +137,19 @@ export const ViewOrganization = () => {
             alignItems="end"
           >
             <OrgDetailTypography bold>
-              Address for service (postal address):
+              {t('org:serviceAddrLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
               {constructAddress(orgData.org_address)}
             </OrgDetailTypography>
             <OrgDetailTypography bold>
-              Address in B.C. (at which records are maintained):
+              {t('org:bcAddrLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
               {constructAddress(orgData.org_attorney_address)}
             </OrgDetailTypography>
             <OrgDetailTypography bold>
-              Registered for credit transfers:
+              {t('org:regTrnLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
               {orgData.org_status.status}
@@ -148,8 +158,8 @@ export const ViewOrganization = () => {
         </BCBox>
         {!isCurrentUserLoading && !currentUser.is_government_user && (
           <OrgDetailTypography mt={1}>
-            Email <a href="mailto:lcfs@gov.bc.ca">lcfs@gov.bc.ca</a> to update
-            address information.
+            Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>
+            {t('org:toUpdateMsg')}
           </OrgDetailTypography>
         )}
       </BCBox>
@@ -181,7 +191,9 @@ export const ViewOrganization = () => {
                 }
                 onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
               >
-                <BCTypography variant="subtitle2">New User</BCTypography>
+                <BCTypography variant="button">
+                  {t('org:newUsrBtn')}
+                </BCTypography>
               </BCButton>
               <BCButton
                 variant="outlined"
@@ -195,13 +207,13 @@ export const ViewOrganization = () => {
                 }}
                 onClick={() => setShowActive(false)}
               >
-                <BCTypography variant="subtitle2">
-                  Show Inactive Users
+                <BCTypography variant="button">
+                  {t('org:showInactiveUsersBtn')}
                 </BCTypography>
               </BCButton>
             </BCBox>
             <BCTypography variant="h5" mt={1} color="primary">
-              Active Users
+              {t('org:activeUsersBtn')}
             </BCTypography>
           </>
         ) : (
@@ -218,10 +230,12 @@ export const ViewOrganization = () => {
               }}
               onClick={() => setShowActive(true)}
             >
-              <BCTypography variant="subtitle2">Show Active Users</BCTypography>
+              <BCTypography variant="subtitle2">
+                {t('org:showActiveUsersBtn')}
+              </BCTypography>
             </BCButton>
             <BCTypography variant="h5" mt={1} color="primary">
-              Inactive Users
+              {t('org:inactiveUsersBtn')}
             </BCTypography>
           </>
         )}
@@ -231,7 +245,7 @@ export const ViewOrganization = () => {
           gridRef={gridRef}
           apiEndpoint={'users/'}
           apiData={'users'}
-          columnDefs={usersColDefs}
+          columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
