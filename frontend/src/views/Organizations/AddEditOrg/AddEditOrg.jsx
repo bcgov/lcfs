@@ -1,41 +1,47 @@
 // External Modules
-import { useState, useEffect, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
+import { faArrowLeft, faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { schemaValidation } from './_schema'
 import {
-  Paper,
-  Grid,
   Box,
-  Typography,
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Grid,
   InputLabel,
-  TextField,
+  Paper,
   Radio,
   RadioGroup,
-  FormControlLabel,
-  FormControl,
-  FormLabel,
-  Checkbox,
-  Button
+  TextField,
+  Typography
 } from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
-import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { useCallback, useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { schemaValidation } from './_schema'
 
 // Internal Modules
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
-import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useApiService } from '@/services/useApiService'
 
 // Component for adding a new organization
-export const AddEditOrg = () => {
+export const AddEditOrg = ({ mode }) => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
+  const { orgID } = useParams()
+
+  const { data, isFetched } = useOrganization(orgID, {
+    enabled: mode === 'edit',
+    retry: false
+  })
 
   // State for controlling checkbox behavior
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
@@ -48,10 +54,53 @@ export const AddEditOrg = () => {
     formState: { errors },
     watch,
     setValue,
-    trigger
+    trigger,
+    reset
   } = useForm({
-    resolver: yupResolver(schemaValidation)
+    resolver: yupResolver(schemaValidation),
+    defaultValues: {
+      orgRegForTransfers: 2
+    }
   })
+
+  useEffect(() => {
+    if (isFetched && data) {
+      reset({
+        orgLegalName: data.name,
+        orgOperatingName: data?.operating_name,
+        orgEmailAddress: data.email,
+        orgPhoneNumber: data.phone,
+        orgEDRMSRecord: data.edrms_record,
+        orgRegForTransfers:
+          data.org_status.organization_status_id === 2 ? '2' : '1',
+        orgStreetAddress: data.org_address.street_address,
+        orgAddressOther: data.org_address.address_other,
+        orgCity: data.org_address.city,
+        orgPostalCodeZipCode: data.org_address.postalCode_zipCode,
+        orgAttorneyStreetAddress: data.org_attorney_address.street_address,
+        orgAttroneyAddressOther: data.org_attorney_address.address_other,
+        orgAttroneyCity: data.org_attorney_address.city,
+        orgAttroneyPostalCodeZipCode:
+          data.org_attorney_address.postalCode_zipCode
+      })
+
+      if (
+        data.name === data?.operating_name ||
+        (data.name && !data?.operating_name)
+      ) {
+        setSameAsLegalName(true)
+      }
+
+      if (
+        data.org_address.postalCode_zipCode ===
+          data.org_attorney_address.postalCode_zipCode &&
+        data.org_address.street_address ===
+          data.org_attorney_address.street_address
+      ) {
+        setSameAsServiceAddress(true)
+      }
+    }
+  }, [isFetched])
 
   // Watching form fields
   const orgLegalName = watch('orgLegalName')
@@ -104,6 +153,7 @@ export const AddEditOrg = () => {
   const onSubmit = async (data) => {
     const payload = {
       name: data.orgLegalName,
+      operating_name: data.orgOperatingName,
       email: data.orgEmailAddress,
       phone: data.orgPhoneNumber,
       edrms_record: data.orgEDRMSRecord,
@@ -128,11 +178,22 @@ export const AddEditOrg = () => {
         postalCode_zipCode: data.orgAttroneyPostalCodeZipCode
       }
     }
-    mutate(payload)
+
+    if (mode === 'add') {
+      createOrg(payload)
+    }
+    if (mode === 'edit') {
+      console.log('payload: ', payload)
+      updateOrg(payload)
+    }
   }
 
   // useMutation hook from React Query for handling API request
-  const { mutate, isLoading, isError } = useMutation({
+  const {
+    mutate: createOrg,
+    isPending: isCreateOrgPending,
+    isError: isCreateOrgError
+  } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
     onSuccess: () => {
@@ -146,6 +207,26 @@ export const AddEditOrg = () => {
     },
     onError: (error) => {
       // Error handling logic
+      console.error('Error posting data:', error)
+    }
+  })
+
+  const {
+    mutate: updateOrg,
+    isPending: isUpdateOrgPending,
+    isError: isUpdateOrgError
+  } = useMutation({
+    mutationFn: async (payload) =>
+      await apiService.put(`/organizations/${orgID}`, payload),
+    onSuccees: () => {
+      navigate(ROUTES.ORGANIZATIONS, {
+        state: {
+          message: 'Organization has been successfully updated.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
       console.error('Error posting data:', error)
     }
   })
@@ -191,7 +272,7 @@ export const AddEditOrg = () => {
   ])
 
   // Conditional rendering for loading
-  if (isLoading) {
+  if (isCreateOrgPending || isUpdateOrgPending) {
     return <Loading message="Adding Organization..." />
   }
 
@@ -206,7 +287,9 @@ export const AddEditOrg = () => {
       data-test="addEditOrgContainer"
     >
       {/* Error Alert */}
-      {isError && <BCAlert severity="error">{t('org:errMsg')}</BCAlert>}
+      {(isCreateOrgError || isUpdateOrgError) && (
+        <BCAlert severity="error">{t('org:errMsg')}</BCAlert>
+      )}
 
       <Typography variant="h5" px={3}>
         {t('org:addOrgTitle')}

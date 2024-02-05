@@ -17,7 +17,7 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateResponseSchema
+from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
 
 
 logger = getLogger("organization_repo")
@@ -50,13 +50,13 @@ class OrganizationRepository:
         Saves an organization to the database.
         It first adds and flushes address entities to obtain their IDs,
         then assigns these IDs to the organization model before saving it.
-        
+
         Parameters:
             org_address (OrganizationAddress): The address of the organization.
             org_attorney_address (OrganizationAttorneyAddress):
                 The address of the organization's attorney.
             org_model (Organization): The organization model to be saved.
-        
+
         Returns:
             OrganizationCreateResponseSchema: The schema with the ID of the created organization.
         """
@@ -75,7 +75,7 @@ class OrganizationRepository:
                 await self.db.flush()
 
                 return OrganizationCreateResponseSchema(
-                    organization_id = org_model.organization_id
+                    organization_id=org_model.organization_id
                 )
             except Exception as e:
                 await transaction.rollback()
@@ -99,21 +99,34 @@ class OrganizationRepository:
             )
             .where(Organization.organization_id == organization_id)
         )
-    
+
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:
         '''
         Fetch a single organization by organization id from the database without related tables
         '''
         return await self.db.scalar(
-            select(Organization).where(Organization.organization_id == organization_id)
+            select(Organization).where(
+                Organization.organization_id == organization_id)
         )
 
     @repo_handler
-    async def update_organization(self, organization_id: int, organization_data) -> Organization:
+    async def update_organization(
+        self,
+        organization_id: int,
+        organization_data: OrganizationCreateSchema
+    ):
         '''
         update an organization in the database
         '''
+        # print(org_address)
+        # print('------------')
+        # print(org_attorney_address)
+        # print('------------')
+        # print(org_model)
+        print('------------')
+        print(organization_data)
+
         async with self.db.begin():
             organization = await self.db.scalar(
                 select(Organization).where(
@@ -123,12 +136,29 @@ class OrganizationRepository:
             if not organization:
                 raise DataNotFoundException("Organization not found")
 
-            # Update the organization fields with new data
+            org_address = await self.db.scalar(
+                select(OrganizationAddress).where(
+                    OrganizationAddress.organization_address_id == organization.organization_address_id
+                )
+            )
+            org_attorney_address = await self.db.scalar(
+                select(OrganizationAttorneyAddress).where(OrganizationAttorneyAddress.organization_attorney_address_id ==
+                                                          organization.organization_attorney_address_id)
+            )
+
+            for key, value in organization_data.address.dict().items():
+                if hasattr(org_address, key):
+                    setattr(org_address, key, value)
+
+            for key, value in organization_data.attorney_address.dict().items():
+                if hasattr(org_attorney_address, key):
+                    setattr(org_attorney_address, key, value)
+
             for key, value in organization_data.dict().items():
-                setattr(organization, key, value)
+                if hasattr(organization, key):
+                    setattr(organization, key, value)
 
-            await self.db.refresh(organization)
-
+            await self.db.commit()
         return organization
 
     @repo_handler

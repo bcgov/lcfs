@@ -145,8 +145,27 @@ class OrganizationServices:
         return await self.repo.create_organization(org_address, org_attorney_address, org_model)
 
     @service_handler
-    async def update_organization(self, organization_id: int, organization_data):
+    async def update_organization(self, organization_id: int, organization_data: OrganizationCreateSchema):
         '''handles updating an organization'''
+        org_address = OrganizationAddress(
+            **organization_data.address.dict())
+        org_attorney_address = OrganizationAttorneyAddress(
+            **organization_data.attorney_address.dict()
+        )
+
+        # Create and add organization model to the database
+        org_model = Organization(
+            name=organization_data.name,
+            operating_name=organization_data.operating_name,
+            email=organization_data.email,
+            phone=organization_data.phone,
+            edrms_record=organization_data.edrms_record,
+            organization_status_id=organization_data.organization_status_id,
+            organization_type_id=organization_data.organization_type_id,
+            organization_address_id=org_address.organization_address_id,
+            organization_attorney_address_id=org_attorney_address.organization_attorney_address_id,
+        )
+
         return await self.repo.update_organization(organization_id, organization_data)
 
     @service_handler
