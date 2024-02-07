@@ -1,178 +1,168 @@
 from enum import Enum
-from typing import Optional, List
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from typing import List, Optional
+
+from pydantic import BaseModel
 
 from lcfs.web.api.base import PaginationResponseSchema
 
 
+# --------------------------------------
+# Base Configuration
+# --------------------------------------
+class BaseConfig:
+    from_attributes = True
+
+# --------------------------------------
+# Organization Type
+# --------------------------------------
+class OrganizationTypeEnum(str, Enum):
+    FUEL_SUPPLIER = "Fuel Supplier"
+    ELECTRICITY_SUPPLIER = "Electricity Supplier"
+    BROKER = "Broker"
+    UTILITIES = "Utilities (local or public)"
+
+class OrganizationTypeBase(BaseModel):
+    organization_type_id: int
+    org_type: OrganizationTypeEnum
+    description: Optional[str] = None
+
+    class Config(BaseConfig):
+        pass
+
+class OrganizationTypeSchema(OrganizationTypeBase):
+    pass
+
+# --------------------------------------
+# Organization Status
+# --------------------------------------
 class OrganizationStatusEnum(str, Enum):
     UNREGISTERED = "Unregistered"
     REGISTERED = "Registered"
     SUSPENDED = "Suspended"
     CANCELED = "Canceled"
 
-
-class OrganizationTypeEnum(str, Enum):
-    FUEL_SUPPLIER = "fuel_supplier"
-    ELECTRICITY_SUPPLIER = "electricity_supplier"
-    BROKER = "broker"
-    UTILITIES = "utilities"
-
-
 class OrganizationStatusBase(BaseModel):
     organization_status_id: int
-    status: str
-    description: str
+    status: OrganizationStatusEnum
+    description: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    class Config(BaseConfig):
+        pass
 
+class OrganizationStatusSchema(OrganizationStatusBase):
+    pass
 
-class OrganizationTypeBase(BaseModel):
-    organization_type_id: int
-    org_type: str
-    description: str
+# --------------------------------------
+# Address Base Model
+# Unified Address Model for 'Organization Address' and 'Organization Attorney Address'
+# --------------------------------------
+class AddressBase(BaseModel):
+    name: str
+    street_address: str
+    address_other: Optional[str] = None
+    city: str
+    province_state: str
+    country: str
+    postalCode_zipCode: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+# --------------------------------------
+# Organization Address
+# --------------------------------------
+class OrganizationAddressBase(AddressBase):
 
+    class Config(BaseConfig):
+        pass
 
+class OrganizationAddressSchema(OrganizationAddressBase):
+    organization_id: Optional[int] = None
+
+class OrganizationAddressCreateSchema(OrganizationAddressBase):
+    pass
+
+# --------------------------------------
+# Organization Attorney Address
+# --------------------------------------
+class OrganizationAttorneyAddressBase(AddressBase):
+
+    class Config(BaseConfig):
+        pass
+
+class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBase):
+    organization_id: Optional[int] = None
+
+class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
+    pass
+
+# --------------------------------------
+# Organization
+# --------------------------------------
 class OrganizationBase(BaseModel):
-    organization_id: int
+    organization_id: Optional[int] = None
     name: str
-    email: Optional[str]
-    phone: Optional[str]
-    edrms_record: Optional[str]
-    organization_status_id: int
-    organization_type_id: int
-    organization_address_id: Optional[int]
-    organization_attorney_address_id: Optional[int]
-    org_type: Optional[OrganizationTypeBase] = []
-    org_status: Optional[OrganizationStatusBase] = []
-
-    class Config:
-        from_attributes = True
-
-
-class OrganizationBaseSchema(BaseModel):
-    organization_id: int
-    name: str
-    email: Optional[str]
-    phone: Optional[str]
-    edrms_record: Optional[str]
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    edrms_record: Optional[str] = None
     organization_status_id: int
     organization_type_id: int
 
+    class Config(BaseConfig):
+        pass
 
-class OrganizationAttorneyAddressBaseSchema(BaseModel):
-    name: str
-    street_address: str
-    address_other: str
-    city: str
-    province_state: str
-    country: str
-    postalCode_zipCode: str
+class OrganizationSchema(OrganizationBase):
+    organization_address_id: Optional[int] = None
+    organization_attorney_address_id: Optional[int] = None
+    org_type: Optional[OrganizationTypeSchema] = []
+    org_status: Optional[OrganizationStatusSchema] = []
 
+class OrganizationListSchema(BaseModel):
+    pagination: PaginationResponseSchema
+    organizations: List[OrganizationSchema]
 
-class OrganizationAddressBaseSchema(BaseModel):
-    name: str
-    street_address: str
-    address_other: str
-    city: str
-    province_state: str
-    country: str
-    postalCode_zipCode: str
-
-
-class OrganizationAddressCreateSchema(OrganizationAddressBaseSchema):
-    pass
-
-
-class OrganizationAttorneyAddressCreateSchema(OrganizationAttorneyAddressBaseSchema):
-    pass
-
-
-class OrganizationCreateSchema(OrganizationBaseSchema):
+class OrganizationCreateSchema(OrganizationBase):
     address: OrganizationAddressCreateSchema
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
+class OrganizationUpdateSchema(BaseModel):
+    name: Optional[str] = None
+    status: Optional[int] = None
+    type: Optional[int] = None
+    address: Optional[OrganizationAddressCreateSchema] = []
+    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
 
-class OrganizationSchema(OrganizationBaseSchema):
-    organization_id: int
+class OrganizationResponseSchema(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    edrms_record: Optional[str] = None
+    org_status: OrganizationStatusSchema
+    org_address: Optional[OrganizationAddressSchema] = []
+    org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
 
-    class Config:
-        from_attributes = True
+    class Config(BaseConfig):
+        pass
 
-
-class OrganizationSummarySchema(BaseModel):
+class OrganizationSummaryResponseSchema(BaseModel):
     organization_id: int
     name: str
+    balance: Optional[float] = None
 
-    class Config:
-        from_attributes = True
+    class Config(BaseConfig):
+        pass
 
-
-class OrganizationUpdateSchema(BaseModel):
-    name: Optional[str]
-    status: Optional[int]
-    type: Optional[int]
-    address: Optional[OrganizationAddressCreateSchema]
-    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema]
-
-
-class OrganizationAddressSchema(OrganizationAddressBaseSchema):
-    organization_id: int
-
-
-class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBaseSchema):
-    organization_id: int
-
-
-class OrganizationUserSchema(BaseModel):
+# --------------------------------------
+# Organization User
+# --------------------------------------
+class OrganizationUserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     display_name: str
     title: Optional[str] = None
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
-    user_roles: Optional[List[object]] = None
+    user_roles: Optional[List[object]] = []
 
+    class Config(BaseConfig):
+        pass
 
-class AddressBaseSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    name: str
-    street_address: str
-    address_other: str
-    city: str
-    province_state: str
-    country: str
-    postalCode_zipCode: str
-
-
-class StatusBaseSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
-
-    status: OrganizationStatusEnum
-
-
-class GetOrganizationResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    name: str
-    email: Optional[EmailStr]
-    phone: Optional[str]
-    edrms_record: Optional[str]
-    org_status: StatusBaseSchema
-    org_address: Optional[AddressBaseSchema]
-    org_attorney_address: Optional[AddressBaseSchema]
-
-
-class Organizations(BaseModel):
-    pagination: PaginationResponseSchema
-    organizations: List[OrganizationBase]
-
-class MiniOrganization(BaseModel):
-    name: str
-    organization_id: int
-    balance: float
+class OrganizationUserSchema(OrganizationUserBase):
+    pass

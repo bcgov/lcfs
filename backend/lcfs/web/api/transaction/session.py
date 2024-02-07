@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.api.organization.schema import (
-    OrganizationBase,
+    OrganizationSchema,
 )
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -42,23 +42,23 @@ class TransactionRepo:
     ) -> List[TransactionBase]:
         """
         Get all organizations based on the provided filters and pagination.
-        This method returns a list of OrganizationBase objects.
-        The OrganizationBase objects contain the basic organization details,
+        This method returns a list of OrganizationSchema objects.
+        The OrganizationSchema objects contain the basic organization details,
         including the organization type, organization status, and other relevant fields.
         The pagination object is used to control the number of results returned
         and the page number.
         The filters object is used to filter the results based on specific criteria.
-        The OrganizationBase objects are returned in the order specified by the sortOrders object.
+        The OrganizationSchema objects are returned in the order specified by the sortOrders object.
         The total_count field is used to return the total number of organizations that match the filters.
-        The OrganizationBase objects are returned in the order specified by the sortOrders object.
+        The OrganizationSchema objects are returned in the order specified by the sortOrders object.
 
         Args:
             pagination (PaginationRequestSchema, optional): The pagination object containing page and size information. Defaults to {}.
 
         Returns:
-            List[OrganizationBase]: A list of OrganizationBase objects containing the basic organization details.
+            List[OrganizationSchema]: A list of OrganizationSchema objects containing the basic organization details.
             The total_count field is used to return the total number of organizations that match the filters.
-            The OrganizationBase objects are returned in the order specified by the sortOrders object.
+            The OrganizationSchema objects are returned in the order specified by the sortOrders object.
 
         Raises:
             Exception: If any errors occur during the query execution.
