@@ -20,7 +20,7 @@ const SigningAuthority = ({ register, errors }) => {
         <FormControlLabel
           control={
             <Checkbox
-              {...register('signingAuthority')}
+              {...register('signingAuthorityDeclaration')}
               color="primary"
               defaultChecked={false}
             />
@@ -33,9 +33,9 @@ const SigningAuthority = ({ register, errors }) => {
             </Typography>
           }
         />
-        {errors.signingAuthority && (
+        {errors.signingAuthorityDeclaration && (
           <Typography color="error" variant="caption">
-            {errors.signingAuthority.message}
+            {errors.signingAuthorityDeclaration.message}
           </Typography>
         )}
       </Box>
@@ -43,7 +43,7 @@ const SigningAuthority = ({ register, errors }) => {
   )
 }
 
-const AllowedRoles = ['SigningAuthority']
+const AllowedRoles = ['Signing Authority']
 const SigningAuthorityWithRole = withRole(SigningAuthority, AllowedRoles)
 
 export default SigningAuthorityWithRole

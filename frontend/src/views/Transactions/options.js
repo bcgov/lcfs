@@ -1,5 +1,5 @@
 import { getStatus } from '@/utils/getStatus'
-import { getOrgnization } from '@/utils/getOrganization'
+import { getOrganization } from '@/utils/getOrganization'
 import * as dayjs from 'dayjs'
 
 export const gridProps = {
@@ -11,11 +11,11 @@ export const gridProps = {
     },
     { field: 'transaction_type.type', headerName: 'Type' },
     {
-      valueGetter: (data) => getOrgnization(data, 'from'),
+      valueGetter: (data) => getOrganization(data, 'from'),
       headerName: 'Compliance units from'
     },
     {
-      valueGetter: (data) => getOrgnization(data, 'to'),
+      valueGetter: (data) => getOrganization(data, 'to'),
       headerName: 'Compliance units to'
     },
     { field: 'compliance_units', headerName: 'Number of units' },

@@ -7,17 +7,18 @@ import { useNavigate } from 'react-router-dom'
 // Components
 import BCTypography from '@/components/BCTypography'
 import ProgressBreadcrumb from '@/components/ProgressBreadcrumb'
-import TransferDetails, { TransferDetailsSchema } from './TransferDetails'
+import { AddTransferSchema } from './TransferSchema'
+import TransferForm from './TransferForm'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
-import Comment from './components/Comment'
 import TransferGraphic from './components/TransferGraphic'
 
 // Hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useApiService } from '@/services/useApiService'
 import { TRANSFERS_VIEW } from '@/constants/routes/routes'
+import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
 
 export const AddTransfer = () => {
   const navigate = useNavigate()
@@ -26,12 +27,16 @@ export const AddTransfer = () => {
   const [organizations, setOrganizations] = useState([])
 
   const methods = useForm({
-    resolver: yupResolver(TransferDetailsSchema),
+    resolver: yupResolver(AddTransferSchema),
     mode: 'onChange',
     defaultValues: {
-      organization: '',
+      fromOrganizationId: currentUser?.organization?.organization_id,
+      agreementDate: new Date().toISOString().split('T')[0],
+      toOrganizationId: null,
       quantity: null,
-      pricePerUnit: null
+      pricePerUnit: null,
+      signingAuthorityDeclaration: false,
+      comments: ''
     }
   })
 
@@ -56,9 +61,13 @@ export const AddTransfer = () => {
   })
 
   // Handle form submission
-  const handleSubmitForm = (data) => {
-    console.log(data)
-    mutate(data)
+  const handleSubmitForm = (form) => {
+    console.log(form)
+    form.fromOrganizationId = parseInt(form.fromOrganizationId)
+    form.toOrganizationId = parseInt(form.toOrganizationId)
+    form.agreementDate = formatDateToISO(form.agreementDate)
+    const convertedPayload = convertObjectKeys(form)
+    mutate(convertedPayload)
   }
 
   // Fetch the list of registered external organizations
@@ -69,7 +78,7 @@ export const AddTransfer = () => {
           '/organizations/registered/external'
         )
         const orgs = response.data.map((org) => ({
-          value: String(org.organization_id),
+          value: parseInt(org.organization_id),
           label: org.name || 'Unknown'
         }))
         setOrganizations(orgs)
@@ -90,8 +99,8 @@ export const AddTransfer = () => {
   const quantity = parseInt(watch('quantity'))
   const creditsFrom = currentUser?.organization?.name
   const creditsTo =
-    organizations.find((org) => org.value === watch('organization'))?.label ||
-    ''
+    organizations.find((org) => org.value === watch('toOrganizationId'))
+      ?.label || ''
   const pricePerUnit = watch('pricePerUnit')
   const totalValue =
     quantity && pricePerUnit ? parseInt(quantity * pricePerUnit) : 0
@@ -142,7 +151,7 @@ export const AddTransfer = () => {
             data-testid="new-transfer-form"
           >
             {/* Transfer Form Fields */}
-            <TransferDetails
+            <TransferForm
               currentOrg={currentUser?.organization}
               organizations={organizations}
             />

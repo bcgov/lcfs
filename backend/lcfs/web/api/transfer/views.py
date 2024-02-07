@@ -1,24 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from lcfs.db import dependencies
 from lcfs.db.models import Transfer, Issuance, TransferHistory, IssuanceHistory
 from lcfs.web.api.transfer import schema
 from sqlalchemy import select
+from datetime import datetime
+
+from lcfs.web.api.transfer.schema import TransferCreate, Transfer as TransferSchema  # Adjust import paths as needed
+from lcfs.web.api.transfer.services import TransferServices  # Adjust import path as needed
+from lcfs.web.core.decorators import roles_required, view_handler  # Adjust import path as needed
+
 
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-@router.post("/", response_model=schema.Transfer)
+@router.post("/", response_model=TransferSchema, status_code=status.HTTP_201_CREATED)
+# @roles_required("SUPPLIER")
+@view_handler
 async def create_transfer(
-    transfer: schema.TransferBase, db: AsyncSession = Depends(get_async_db)
+    request: Request,
+    transfer_data: TransferCreate,
+    service: TransferServices = Depends()
 ):
     try:
-        new_transfer = Transfer(**transfer.dict())
-        db.add(new_transfer)
-        await db.commit()
-        await db.refresh(new_transfer)
+        new_transfer = await service.create_transfer(transfer_data)
         return new_transfer
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

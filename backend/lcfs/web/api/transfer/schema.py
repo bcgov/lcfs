@@ -1,6 +1,6 @@
 from pydantic import BaseModel, constr
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 class TransactionTypeEnum(str, Enum):
@@ -31,6 +31,19 @@ class TransferBase(BaseModel):
 
 class Transfer(TransferBase):
     transfer_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class TransferCreate(BaseModel):
+    from_organization_id: int
+    to_organization_id: int
+    agreement_date: date
+    quantity: int
+    price_per_unit: int
+    signing_authority_declaration: bool
+    comments: Optional[str]
 
     class Config:
         from_attributes = True
