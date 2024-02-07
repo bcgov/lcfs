@@ -47,7 +47,7 @@ export const AddTransfer = () => {
     onSuccess: (response) => {
       // Redirect or handle success
       navigate(TRANSFERS_VIEW, {
-        transferID: response.id, // TODO THIS NEEDS TO BE UPDATED TO THE CORRECT FIELD
+        transferID: response.transfer_id,
         state: {
           message: 'Transfer successfully submitted.',
           severity: 'success'

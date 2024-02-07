@@ -20,16 +20,27 @@ class TransferStatusEnum(str, Enum):
     declined = "Declined"
     rescinded = "Rescinded"
 
-class TransferBase(BaseModel):
-    from_organization: int
-    to_organization: int
-    transaction_id: int
-    transaction_effective_date: Optional[datetime]
-    comment_id: Optional[int]
-    transfer_status: int
-    transfer_category: int
+class TransferOrganizationSchema(BaseModel):
+    organization_id: int
+    name: str
 
-class Transfer(TransferBase):
+class TransferStatusSchema(BaseModel):
+    status: str
+
+class TransferCategorySchema(BaseModel):
+    category: str
+
+class TransferBase(BaseModel):
+    from_organization: TransferOrganizationSchema
+    to_organization: TransferOrganizationSchema
+    # transaction_id: Optional[int]
+    # transaction_effective_date: Optional[datetime]
+    # comments: Optional[str]
+    transfer_status: TransferStatusSchema
+    transfer_category: TransferCategorySchema
+
+
+class TransferSchema(TransferBase):
     transfer_id: int
 
     class Config:
@@ -87,9 +98,9 @@ class TransactionTypeSchema(BaseModel):
     transaction_typ_id: int
     type: TransactionTypeEnum
 
-class TransferStatusSchema(BaseModel):
-    transaction_status_id: int
-    status: TransferStatusEnum
+# class TransferStatusSchema(BaseModel):
+#     transaction_status_id: int
+#     status: TransferStatusEnum
 
 class CommentSchema(BaseModel):
     comment_id: int

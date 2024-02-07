@@ -23,9 +23,9 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     transfer_category_id = Column(Integer, ForeignKey('category.category_id'))
     signing_authority_declaration = Column(Boolean, default=False)
 
-    category = relationship('Category')
     transaction = relationship('Transaction')
     transfer_status = relationship('TransferStatus')
+    transfer_category = relationship('Category')
     comments = relationship('Comment', back_populates='transfer')
     transfer_history_records = relationship('TransferHistory', back_populates='transfer')
 

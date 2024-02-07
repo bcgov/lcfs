@@ -7,7 +7,7 @@ from lcfs.web.api.transfer import schema
 from sqlalchemy import select
 from datetime import datetime
 
-from lcfs.web.api.transfer.schema import TransferCreate, Transfer as TransferSchema  # Adjust import paths as needed
+from lcfs.web.api.transfer.schema import TransferCreate, TransferSchema  # Adjust import paths as needed
 from lcfs.web.api.transfer.services import TransferServices  # Adjust import path as needed
 from lcfs.web.core.decorators import roles_required, view_handler  # Adjust import path as needed
 
@@ -31,7 +31,7 @@ async def create_transfer(
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@router.get("/", response_model=List[schema.Transfer])
+@router.get("/", response_model=List[TransferSchema])
 async def get_transfers(db: AsyncSession = Depends(get_async_db)):
     try:
         transfers = (await db.execute(select(Transfer))).scalars().all()
