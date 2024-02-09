@@ -3,11 +3,13 @@ import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 // react components
 import { useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { rolesColumnDefs, rolesDefaultColDef } from './_schema'
 import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
 
 export const Roles = (props) => {
+  const { t } = useTranslation(['admin'])
   const gridRef = useRef()
   const gridOptions = {
     overlayNoRowsTemplate: 'No roles found',
@@ -22,7 +24,7 @@ export const Roles = (props) => {
   return (
     <BCBox component="div">
       <BCTypography variant="h5" my={1} color="primary">
-        Roles
+        {t('Roles')}
       </BCTypography>
       <BCBox
         my={2}
@@ -34,7 +36,7 @@ export const Roles = (props) => {
           gridRef={gridRef}
           apiEndpoint={'roles/'}
           defaultColDef={rolesDefaultColDef}
-          columnDefs={rolesColumnDefs}
+          columnDefs={rolesColumnDefs(t)}
           gridKey={'roles-grid'}
           getRowId={getRowId}
           gridOptions={gridOptions}

@@ -9,6 +9,7 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 // react components
 import { useNavigate } from 'react-router-dom'
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { ROUTES } from '@/constants/routes'
 import { usersColumnDefs } from './_schema'
@@ -16,6 +17,7 @@ import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // import DemoButtons from './DemoButtons'
 
 export const Users = (props) => {
+  const { t } = useTranslation(['common', 'admin'])
   const [gridKey, setGridKey] = useState('users-grid')
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -24,7 +26,7 @@ export const Users = (props) => {
     }
   }, [])
   const gridOptions = {
-    overlayNoRowsTemplate: 'No users found'
+    overlayNoRowsTemplate: t('admin:usersNotFound')
   }
   const defaultSortModel = [
     { field: 'is_active', direction: 'desc' },
@@ -48,7 +50,7 @@ export const Users = (props) => {
   return (
     <BCBox component="div">
       <BCTypography variant="h5" my={1} color="primary">
-        Users
+        {t('admin:Users')}
       </BCTypography>
       <BCButton
         variant="contained"
@@ -59,7 +61,7 @@ export const Users = (props) => {
         }
         onClick={handleNewUserClick}
       >
-        <BCTypography variant="subtitle2">New User</BCTypography>
+        <BCTypography variant="subtitle2">{t('admin:newUserBtn')}</BCTypography>
       </BCButton>
       <BCBox
         my={2}
@@ -72,7 +74,7 @@ export const Users = (props) => {
           gridRef={gridRef}
           apiEndpoint={'users/'}
           apiData={'users'}
-          columnDefs={usersColumnDefs}
+          columnDefs={usersColumnDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}

@@ -83,6 +83,10 @@ const colors = {
     main: '#1a5a96',
     focus: '#1a5a96'
   },
+  nav: {
+    main: '#38598a',
+    focus: '#2c3c58'
+  },
   // Used for text input, textarea, checkbox, radio button
   input: {
     main: '#606060',

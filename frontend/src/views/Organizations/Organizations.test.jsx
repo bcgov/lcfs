@@ -62,7 +62,7 @@ describe('Organizations Component Tests', () => {
       // Wait for the download operation to complete and the component state to update
       await waitFor(() => {
         expect(downloadButton).toHaveTextContent(
-          /Downloading Organization Information.../i
+          /Downloading organization information.../i
         )
         expect(downloadButton).toBeDisabled()
       })
@@ -119,7 +119,7 @@ describe('Organizations Component Tests', () => {
       // Wait for the download operation to complete and the component state to update
       await waitFor(() => {
         expect(downloadButton).toHaveTextContent(
-          /Downloading User Information.../i
+          /Downloading user information.../i
         )
         expect(downloadButton).toBeDisabled()
       })

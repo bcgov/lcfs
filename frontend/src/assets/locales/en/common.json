@@ -1,0 +1,34 @@
+{
+  "title": "Low Carbon Fuel Standard",
+  "govOrg": "Government of British Columbia",
+  "gov": "Government",
+  "yes": "Yes",
+  "no": "No",
+  "backBtn": "Back",
+  "saveBtn": "Save",
+  "supplier": "Fuel Supplier",
+  "balance": "Balance",
+  "logout": "Log out",
+  "complianceUnits": "Compliance units",
+  "inReserve": "In reserve",
+  "status": "Status",
+  "login": {
+    "loginMessage": "Login with",
+    "troubleMessage": "Trouble logging in?"
+  },
+  "layout": {
+    "breadCrumbHome": "Home",
+    "disclaimer": {
+      "part1": "For security and privacy reasons, please don't share personal information on this website.",
+      "part2": "This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations."
+    }
+  },
+  "Dashboard": "Dashboard",
+  "Organizations": "Organizations",
+  "Transactions": "Transactions",
+  "ComplianceReports": "Complaince reports",
+  "FileSubmissions": "File submissions",
+  "Administration": "Administration",
+  "Organization": "Organization",
+  "lcfsEmail": "lcfs@gov.bc.ca"
+}
