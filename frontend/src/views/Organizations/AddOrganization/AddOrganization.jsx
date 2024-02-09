@@ -22,15 +22,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 // Internal Modules
 import BCAlert from '@/components/BCAlert'
+import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
 
 // Component for adding a new organization
 export const AddOrganization = () => {
+  const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
 
@@ -197,18 +200,17 @@ export const AddOrganization = () => {
     <Paper
       elevation={0}
       sx={{
-        bgcolor: 'background.paper'
+        bgcolor: 'background.paper',
+        border: 'none'
       }}
       data-test="addOrganizationContainer"
     >
       {/* Error Alert */}
-      {isError && (
-        <BCAlert severity="error">
-          Error occurred. Please retry. For ongoing issues, contact support.
-        </BCAlert>
-      )}
+      {isError && <BCAlert severity="error">{t('org:errMsg')}</BCAlert>}
 
-      <Typography variant="h5">Add Organization</Typography>
+      <Typography variant="h5" px={3}>
+        {t('org:addOrgTitle')}
+      </Typography>
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
@@ -224,7 +226,7 @@ export const AddOrganization = () => {
                   <Box sx={{ mr: { sm: 0, md: 4 } }}>
                     <Box mb={2}>
                       <InputLabel htmlFor="orgLegalName" sx={{ pb: 1 }}>
-                        Legal Name of Organization:
+                        {t('org:legalNameLabel')}
                       </InputLabel>
                       <TextField
                         required
@@ -242,7 +244,7 @@ export const AddOrganization = () => {
                       <Grid container>
                         <Grid item xs={6}>
                           <InputLabel htmlFor="orgOperatingName" sx={{ pb: 1 }}>
-                            Operating Name of Organization:
+                            {t('org:operatingNameLabel')}:
                           </InputLabel>
                         </Grid>
                         <Grid
@@ -262,7 +264,7 @@ export const AddOrganization = () => {
                             }
                             label={
                               <Typography variant="body3">
-                                Same as Legal Name
+                                {t('org:sameAsLegalNameLabel')}
                               </Typography>
                             }
                           />
@@ -283,7 +285,7 @@ export const AddOrganization = () => {
                     </Box>
                     <Box mb={2}>
                       <InputLabel htmlFor="orgEmailAddress" sx={{ pb: 1 }}>
-                        Email Address:
+                        {t('org:emailAddrLabel')}:
                       </InputLabel>
                       <TextField
                         required
@@ -299,7 +301,7 @@ export const AddOrganization = () => {
                     </Box>
                     <Box mb={2}>
                       <InputLabel htmlFor="orgPhoneNumber" sx={{ pb: 1 }}>
-                        Phone Number:
+                        {t('org:phoneNbrLabel')}:
                       </InputLabel>
                       <TextField
                         required
@@ -323,7 +325,7 @@ export const AddOrganization = () => {
                           <Grid item xs={4}>
                             <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
                               <Typography variant="body3">
-                                Supplier Type:
+                                {t('org:supplierTypLabel')}:
                               </Typography>
                             </FormLabel>
                           </Grid>
@@ -345,7 +347,7 @@ export const AddOrganization = () => {
                                 }
                                 label={
                                   <Typography variant="body3">
-                                    Fuel Supplier
+                                    {t('supplier')}
                                   </Typography>
                                 }
                               />
@@ -361,7 +363,7 @@ export const AddOrganization = () => {
                           <Grid item xs={4}>
                             <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
                               <Typography variant="body3">
-                                Registered For Transfers:
+                                {t('org:regTrnLabel')}:
                               </Typography>
                             </FormLabel>
                           </Grid>
@@ -380,7 +382,9 @@ export const AddOrganization = () => {
                                   />
                                 }
                                 label={
-                                  <Typography variant="body3">Yes</Typography>
+                                  <Typography variant="body3">
+                                    {t('yes')}
+                                  </Typography>
                                 }
                               />
                               <FormControlLabel
@@ -392,7 +396,9 @@ export const AddOrganization = () => {
                                   />
                                 }
                                 label={
-                                  <Typography variant="body3">No</Typography>
+                                  <Typography variant="body3">
+                                    {t('no')}
+                                  </Typography>
                                 }
                               />
                             </RadioGroup>
@@ -403,7 +409,7 @@ export const AddOrganization = () => {
                     </Box>
                     <Box mb={2}>
                       <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
-                        Organization Profile, EDRMS Record # (optional):
+                        {t('org:edrmsLabel')}:
                       </InputLabel>
                       <TextField
                         required
@@ -425,11 +431,11 @@ export const AddOrganization = () => {
           <Grid item xs={12} md={6} data-testid="service-address-section">
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
               <Typography variant="h6" sx={{ pb: 7 }}>
-                Address for service (postal address)
+                {t('org:serviceAddrLabel')}
               </Typography>
               <Box mb={2}>
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
-                  Street Address / PO Box:
+                  {t('org:streetAddrLabel')}:
                 </InputLabel>
                 <TextField
                   required
@@ -445,7 +451,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgAddressOther" sx={{ pb: 1 }}>
-                  Address Other (optional):
+                  {t('org:addrOthLabel')}:
                 </InputLabel>
                 <TextField
                   id="orgAddressOther"
@@ -458,7 +464,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgCity" sx={{ pb: 1 }}>
-                  City:
+                  {t('org:cityLabel')}:
                 </InputLabel>
                 <TextField
                   required
@@ -474,7 +480,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgProvince" sx={{ pb: 1 }}>
-                  Province:
+                  {t('org:provinceLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
@@ -488,7 +494,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgCountry" sx={{ pb: 1 }}>
-                  Country:
+                  {t('org:cntryLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
@@ -502,7 +508,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgPostalCodeZipCode" sx={{ pb: 1 }}>
-                  Postal / ZIP Code:
+                  {t('org:poLabel')}:
                 </InputLabel>
                 <TextField
                   required
@@ -521,7 +527,7 @@ export const AddOrganization = () => {
           <Grid item xs={12} md={6} data-testid="attorney-address-section">
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
               <Typography variant="h6" sx={{ pb: 2 }}>
-                Address in B.C. at which records are maintained
+                {t('org:bcAddrLabel')}
               </Typography>
               <Box mb={2}>
                 <FormControlLabel
@@ -535,14 +541,14 @@ export const AddOrganization = () => {
                   }
                   label={
                     <Typography variant="body3">
-                      Same as Address for service
+                      {t('org:sameAddrLabel')}
                     </Typography>
                   }
                 />
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgAttroneyStreetAddress" sx={{ pb: 1 }}>
-                  Street Address / PO Box:
+                  {t('org:streetAddrLabel')}:
                 </InputLabel>
                 <TextField
                   required
@@ -559,7 +565,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgAttroneyAddressOther" sx={{ pb: 1 }}>
-                  Address Other (optional):
+                  {t('org:addrOthLabel')}:
                 </InputLabel>
                 <TextField
                   disabled={sameAsServiceAddress}
@@ -573,7 +579,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgAttroneyCity" sx={{ pb: 1 }}>
-                  City:
+                  {t('org:cityLabel')}:
                 </InputLabel>
                 <TextField
                   required
@@ -590,7 +596,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgAttroneyProvince" sx={{ pb: 1 }}>
-                  Province:
+                  {t('org:provinceLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
@@ -604,7 +610,7 @@ export const AddOrganization = () => {
               </Box>
               <Box mb={2}>
                 <InputLabel htmlFor="orgAttroneyCountry" sx={{ pb: 1 }}>
-                  Country:
+                  {t('org:cntryLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
@@ -621,7 +627,7 @@ export const AddOrganization = () => {
                   htmlFor="orgAttroneyPostalCodeZipCode"
                   sx={{ pb: 1 }}
                 >
-                  Postal / ZIP Code:
+                  {t('org:poLabel')}:
                 </InputLabel>
                 <TextField
                   required
@@ -649,44 +655,36 @@ export const AddOrganization = () => {
                 justifyContent: 'flex-end'
               }}
             >
-              <Button
+              <BCButton
                 variant="outlined"
-                size="large"
+                size="medium"
                 color="primary"
                 sx={{
-                  marginLeft: 3,
-                  backgroundColor: '#fff',
-                  color: '#013365',
-                  border: '1px solid #013365',
-                  '&:hover': {
-                    backgroundColor: '#003364',
-                    color: '#fff',
-                    border: '1px solid #003364'
-                  }
+                  backgroundColor: 'white.main'
                 }}
-                startIcon={<FontAwesomeIcon icon={faArrowLeft} />}
+                startIcon={
+                  <FontAwesomeIcon icon={faArrowLeft} className="small-icon" />
+                }
                 onClick={() => navigate(ROUTES.ORGANIZATIONS)}
               >
-                <Typography variant="subtitle2">Back</Typography>
-              </Button>
-              <Button
+                <Typography variant="subtitle2" textTransform="none">
+                  {t('backBtn')}
+                </Typography>
+              </BCButton>
+              <BCButton
                 type="submit"
                 variant="contained"
-                size="large"
+                size="medium"
                 color="primary"
                 data-test="saveOrganization"
-                sx={{
-                  marginLeft: 3,
-                  backgroundColor: '#013365',
-                  '&:hover': {
-                    backgroundColor: '#013365'
-                  }
-                }}
+                sx={{ ml: 2 }}
                 data-testid="saveOrganization"
-                startIcon={<FontAwesomeIcon icon={faFloppyDisk} />}
+                startIcon={
+                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+                }
               >
-                <Typography variant="subtitle2">Save</Typography>
-              </Button>
+                <Typography variant="button">{t('saveBtn')}</Typography>
+              </BCButton>
             </Box>
           </Grid>
         </Grid>

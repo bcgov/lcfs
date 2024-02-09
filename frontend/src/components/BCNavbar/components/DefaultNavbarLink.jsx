@@ -59,7 +59,6 @@ function DefaultNavbarLink({ icon, name, route, light }) {
         variant="body2"
         fontWeight="light"
         color={light ? 'primary' : 'white'}
-        textTransform="capitalize"
         sx={{
           width: '100%',
           lineHeight: 0,

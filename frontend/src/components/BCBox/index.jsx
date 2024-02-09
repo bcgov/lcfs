@@ -75,6 +75,7 @@ BCBox.propTypes = {
     'error',
     'light',
     'dark',
+    'nav',
     'none'
   ])
 }

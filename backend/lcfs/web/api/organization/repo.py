@@ -17,7 +17,7 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationBase, OrganizationStatusBase, OrganizationTypeBase
+from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema
 
 
 logger = getLogger("organization_repo")
@@ -136,25 +136,25 @@ class OrganizationRepository:
         organizations = results.scalars().all()
 
         return [
-            OrganizationBase.model_validate(organization)
+            OrganizationSchema.model_validate(organization)
             for organization in organizations
         ], total_count
 
     @repo_handler
-    async def get_organization_statuses(self) -> List[OrganizationStatusBase]:
+    async def get_organization_statuses(self) -> List[OrganizationStatusSchema]:
         """
         Get all available statuses for organizations from the database.
 
         Returns:
-            List[OrganizationStatusBase]: A list of OrganizationStatusBase objects containing the basic organization status details.
+            List[OrganizationStatusSchema]: A list of OrganizationStatusSchema objects containing the basic organization status details.
         """
         query = select(OrganizationStatus).distinct()
         status_results = await self.db.execute(query)
         results = status_results.scalars().all()
-        return [OrganizationStatusBase.model_validate(status) for status in results]
+        return [OrganizationStatusSchema.model_validate(status) for status in results]
 
     @repo_handler
-    async def get_organization_types(self) -> List[OrganizationTypeBase]:
+    async def get_organization_types(self) -> List[OrganizationTypeSchema]:
         '''
         Get all available types for organizations from the database.
         '''
