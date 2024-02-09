@@ -40,6 +40,10 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * - handleGridKey: Function to handle changes in the grid key.
  * - handleRowClicked: Function to handle row click events.
  * - others: Other props that can be spread into the AG Grid component.
+ * 
+ * TODO:
+ * - Ability to clear the custom filter input boxes
+ * - Ability to populate the custom filter inputs from the stored values that are retrieved from localStorage.
  */
 const BCDataGridServer = ({
   gridOptions,
@@ -115,21 +119,34 @@ const BCDataGridServer = ({
   const loadingOverlayComponent = useMemo(() => DataGridLoading)
 
   // Callback for ag-grid initialization
+  // if any filter or sort state is stored in browser local storage then apply them
   // if there are any default sort and filter model, apply them
   const onGridReady = useCallback((params) => {
-    params.api.applyColumnState(() => {
-      let state = []
-      if (defaultSortModel && defaultSortModel.length > 0) {
-        state = defaultSortModel.map((col) => ({
-          colId: col.field,
-          sort: col.direction
-        }))
-        return {
-          state,
-          defaultState: { sort: null }
+    const filterState = JSON.parse(localStorage.getItem(`${gridKey}-filter`))
+    const columnState = JSON.parse(localStorage.getItem(`${gridKey}-column`))
+    if (filterState) {
+      params.api.setFilterModel(filterState)
+    }
+    if (columnState) {
+      params.api.applyColumnState({
+        state: columnState,
+        applyOrder: true
+      })
+    } else {
+      params.api.applyColumnState(() => {
+        let state = []
+        if (defaultSortModel && defaultSortModel.length > 0) {
+          state = defaultSortModel.map((col) => ({
+            colId: col.field,
+            sort: col.direction
+          }))
+          return {
+            state,
+            defaultState: { sort: null }
+          }
         }
-      }
-    })
+      })
+    }
   })
 
   // Callback for handling the first rendering of data
@@ -147,6 +164,11 @@ const BCDataGridServer = ({
       return { field, ...value }
     })
     setFilterModel(filterArr)
+    // save the filter state in browser cache.
+    localStorage.setItem(
+      `${gridKey}-filter`,
+      JSON.stringify(gridRef.current.api.getFilterModel())
+    )
   }, [])
 
   // Callback for grid sort changes.
@@ -166,6 +188,11 @@ const BCDataGridServer = ({
         }
       })
     setSortModel(sortTemp)
+    // save the sort state in browser cache.
+    localStorage.setItem(
+      `${gridKey}-column`,
+      JSON.stringify(gridRef.current.api.getColumnState())
+    )
   }, [])
 
   // Memorized default ag-grid options

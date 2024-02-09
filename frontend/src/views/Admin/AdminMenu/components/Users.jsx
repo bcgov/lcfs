@@ -10,7 +10,7 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
 import { useCallback, useRef, useState } from 'react'
 
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { usersColumnDefs } from './_schema'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // import DemoButtons from './DemoButtons'
@@ -70,7 +70,7 @@ export const Users = (props) => {
         {/* <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} /> */}
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'users/'}
+          apiEndpoint={apiRoutes.listUsers}
           apiData={'users'}
           columnDefs={usersColumnDefs}
           gridKey={gridKey}

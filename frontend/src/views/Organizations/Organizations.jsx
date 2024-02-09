@@ -11,7 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { organizationsColDefs } from './ViewOrganization/_schema'
 // react components
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 // Services
@@ -71,7 +71,7 @@ export const Organizations = () => {
   const handleDownloadUsers = async () => {
     setIsDownloadingUsers(true)
     try {
-      await apiService.download('/users/export')
+      await apiService.download(apiRoutes.exportUsers)
       setIsDownloadingUsers(false)
     } catch (error) {
       console.error('Error downloading user information:', error)

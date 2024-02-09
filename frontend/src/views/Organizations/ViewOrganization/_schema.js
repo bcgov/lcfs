@@ -5,7 +5,7 @@ import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 export const organizationsColDefs = [
-  { colId: 'name', field: 'name', headerName: 'Organization Name', width: 400 },
+  { colId: 'name', field: 'name', headerName: 'Organization Name', maxWidth: 800, flex: 1 },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',

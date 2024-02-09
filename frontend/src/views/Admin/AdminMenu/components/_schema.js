@@ -12,6 +12,7 @@ export const usersColumnDefs = [
     colId: 'first_name',
     field: 'first_name',
     headerName: 'User Name',
+    minWidth: 250,
     valueGetter: (params) =>
       params.data.first_name + ' ' + params.data.last_name
   },
@@ -23,6 +24,7 @@ export const usersColumnDefs = [
       params.data.is_active
         ? params.data.roles.map((role) => role.name).join(', ')
         : '',
+    flex: 1,
     width: 300,
     suppressMenu: true,
     filterParams: {
@@ -98,13 +100,14 @@ export const usersDefaultColDef = {
   resizable: true,
   sortable: true,
   filter: true,
+  minWidth: 300,
   floatingFilter: true, // enables the filter boxes under the header label
   suppressMenu: true // suppresses the menu button appearing next to the Header Label
 }
 
 export const rolesColumnDefs = [
   { colId: 'name', field: 'name', headerName: 'Role' },
-  { colId: 'description', field: 'description', headerName: 'Description' },
+  { colId: 'description', field: 'description', headerName: 'Description', flex: 1 },
   {
     colId: 'is_government_role',
     field: 'is_government_role',

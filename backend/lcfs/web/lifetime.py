@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from redis import asyncio as aioredis
 
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
 from lcfs.settings import settings
@@ -54,7 +55,10 @@ def register_startup_event(
         app.state.settings = settings
 
         # Initialize the cache with Redis backend
-        FastAPICache.init(RedisBackend(dependencies.pool), prefix="fastapi-cache")
+        redis = aioredis.from_url(
+            str(settings.redis_url), encoding="utf8", decode_responses=True
+        )
+        FastAPICache.init(RedisBackend(redis), prefix="lcfs")
         pass  # noqa: WPS420
 
     return _startup

@@ -5,7 +5,7 @@ import BCTypography from '@/components/BCTypography'
 import { IconButton } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -229,7 +229,7 @@ export const ViewOrganization = () => {
       <BCBox sx={{ height: '36rem', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'users/'}
+          apiEndpoint={apiRoutes.listUsers}
           apiData={'users'}
           columnDefs={usersColDefs}
           gridKey={gridKey}

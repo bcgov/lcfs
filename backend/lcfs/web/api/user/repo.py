@@ -1,11 +1,11 @@
 from logging import getLogger
 from typing import List, Optional
 
-from fastapi import Depends
+from fastapi import Depends, Request
+from fastapi_cache.decorator import cache
 from sqlalchemy import and_, func, select, asc, desc, delete, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.requests import Request
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.UserProfile import UserProfile
@@ -14,6 +14,7 @@ from lcfs.db.models.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
 from lcfs.web.api.base import (
     PaginationRequestSchema,
+    lcfs_cache_key_builder,
     apply_filter_conditions,
     get_field_for_filter,
 )
@@ -40,9 +41,9 @@ class UserRepository:
         Retrieves all users from the database, optionally sorted by a specified field.
 
         Args:
-            sort_field (Optional[str]): The field by which to sort the users. 
+            sort_field (Optional[str]): The field by which to sort the users.
                                         Defaults to 'last_name'. Set to None for no sorting.
-            sort_direction (str): The direction of sorting, either 'asc' for ascending or 
+            sort_direction (str): The direction of sorting, either 'asc' for ascending or
                                 'desc' for descending. Defaults to 'asc'.
 
         Returns:
@@ -90,6 +91,26 @@ class UserRepository:
                         filter_type,
                     )
                 )
+            elif filter.field == "first_name":
+                txt = filter_value.split(" ")
+                field1 = get_field_for_filter(UserProfile, "first_name")
+                conditions.append(
+                    apply_filter_conditions(
+                        field1,
+                        txt[0],
+                        filter_option,
+                        filter_type,
+                    )
+                )
+                field2 = get_field_for_filter(UserProfile, "last_name")
+                conditions.append(
+                    apply_filter_conditions(
+                        field2,
+                        txt[1] if len(txt) > 1 else "",
+                        filter_option,
+                        filter_type,
+                    )
+                )
             else:
                 field = get_field_for_filter(UserProfile, filter.field)
                 conditions.append(
@@ -98,7 +119,12 @@ class UserRepository:
                     )
                 )
 
-    async def query_users(
+    @cache(
+        expire=3600 * 24,
+        key_builder=lcfs_cache_key_builder,
+        namespace="users",
+    )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
+    async def get_all_users(
         self,
         pagination: PaginationRequestSchema = {},
     ) -> List[UserBase]:
@@ -161,7 +187,11 @@ class UserRepository:
                 query = query.order_by(sort_method(order.field))
 
             # Execute the query
-            user_results = await self.session.execute(query.offset(offset).limit(limit))
+            user_results = (
+                await self.session.execute(query.offset(offset).limit(limit))
+                if limit > 0
+                else await self.session.execute(query)
+            )
             results = user_results.scalars().unique().all()
 
             # Convert the results to UserBase schemas
@@ -186,7 +216,7 @@ class UserRepository:
             # Execute the query
             result = await self.session.execute(query)
             user = result.unique().scalar_one_or_none()
-            return user
+            return UserBase.model_validate(user)
         except Exception as e:
             logger.error(f"Error occurred while fetching user: {e}")
             raise Exception("Error occurred while fetching user.")
