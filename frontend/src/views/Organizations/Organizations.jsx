@@ -11,7 +11,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Internal components
 import { organizationsColDefs } from './ViewOrganization/_schema'
 // react components
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
