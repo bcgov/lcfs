@@ -1,6 +1,4 @@
-import React from 'react'
 import { Box, FormControlLabel, Checkbox, Typography } from '@mui/material'
-import LabelBox from './LabelBox' // Assuming LabelBox is already defined in your project
 import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
 
