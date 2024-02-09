@@ -40,6 +40,7 @@ def upgrade() -> None:
     )
     op.drop_constraint("user_profile_username_key", "user_profile", type_="unique")
     op.drop_column("user_profile", "username")
+    op.drop_column("user_profile", "display_name")
 
 
 def downgrade() -> None:
@@ -51,6 +52,16 @@ def downgrade() -> None:
             autoincrement=False,
             nullable=False,
             comment="Login Username",
+        ),
+    )
+    op.add_column(
+        "user_profile",
+        sa.Column(
+            "display_name",
+            sa.VARCHAR(length=150),
+            autoincrement=False,
+            nullable=False,
+            comment="Display Name",
         ),
     )
     op.create_unique_constraint(

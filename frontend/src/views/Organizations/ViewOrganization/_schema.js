@@ -64,7 +64,7 @@ const getUserColumnDefs = () => {
 }
 
 export const usersColDefs = getUserColumnDefs()
-export const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
+export const defaultSortModel = [{ field: 'first_name', direction: 'asc' }]
 export const defaultFilterModel = [
   { filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }
 ]

@@ -16,7 +16,7 @@ const DemoButtons = ({ handleGridKey, gridRef }) => {
   // Sort by user name
   const sortByUserName = useCallback(() => {
     gridRef.current.api.applyColumnState({
-      state: [{ colId: 'display_name', sort: 'desc' }],
+      state: [{ colId: 'first_name', sort: 'desc' }],
       defaultState: { sort: null }
     })
   }, [gridRef])

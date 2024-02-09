@@ -19,7 +19,6 @@ class UserCreate(BaseModel):
     user_profile_id: Optional[int] = None
     title: str
     email: EmailStr
-    display_name: str
     phone: str
     mobile_phone: str
     first_name: str
@@ -39,7 +38,6 @@ class UserBase(BaseModel):
     user_profile_id: int
     keycloak_username: str
     email: EmailStr
-    display_name: str
     title: Optional[str] = None
     phone: Optional[str] = None
     first_name: Optional[str] = None

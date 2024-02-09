@@ -9,7 +9,7 @@ const Logout = () => {
   if (keycloak.authenticated) {
     return (
       <div className="logout">
-        <span>{`Logged in as: ${currentUser?.display_name} |`}</span>
+        <span>{`Logged in as: ${currentUser?.fullName()} |`}</span>
         <BCButton
           data-test="logout-button"
           onClick={() => {

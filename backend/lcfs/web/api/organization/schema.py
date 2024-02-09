@@ -130,7 +130,6 @@ class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBaseSchema):
 
 class OrganizationUserSchema(BaseModel):
     email: EmailStr
-    display_name: str
     title: Optional[str] = None
     phone: Optional[str] = None
     mobile_phone: Optional[str] = None
