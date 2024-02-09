@@ -84,8 +84,11 @@ const TransferForm = ({ currentOrg, organizations }) => {
         control={control}
         errors={errors}
       />
+
       <AgreementDate register={register} errors={errors} maxDate={maxDate} />
+
       <Comments register={register} />
+      
       <SigningAuthority register={register} errors={errors} />
 
       {/* Save Draft Button */}
