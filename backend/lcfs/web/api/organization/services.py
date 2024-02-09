@@ -27,12 +27,11 @@ from lcfs.db.models.Organization import Organization
 
 from .repo import OrganizationRepository
 from .schema import (
-    MiniOrganization,
-    OrganizationBase,
-    OrganizationSummarySchema,
-    OrganizationTypeBase,
+    OrganizationTypeSchema,
+    OrganizationSchema,
+    OrganizationListSchema,
     OrganizationCreateSchema,
-    Organizations
+    OrganizationSummaryResponseSchema
 )
 
 
@@ -165,27 +164,27 @@ class OrganizationServices:
     @service_handler
     async def get_organizations(
         self, pagination: PaginationRequestSchema = {}
-    ) -> List[OrganizationBase]:
+    ) -> List[OrganizationSchema]:
         '''handles fetching organizations and providing pagination data'''
         """
         Get all organizations based on the provided filters and pagination.
-        This method returns a list of OrganizationBase objects.
-        The OrganizationBase objects contain the basic organization details,
+        This method returns a list of OrganizationSchema objects.
+        The OrganizationSchema objects contain the basic organization details,
         including the organization type, organization status, and other relevant fields.
         The pagination object is used to control the number of results returned
         and the page number.
         The filters object is used to filter the results based on specific criteria.
-        The OrganizationBase objects are returned in the order specified by the sortOrders object.
+        The OrganizationSchema objects are returned in the order specified by the sortOrders object.
         The total_count field is used to return the total number of organizations that match the filters.
-        The OrganizationBase objects are returned in the order specified by the sortOrders object.
+        The OrganizationSchema objects are returned in the order specified by the sortOrders object.
 
         Args:
             pagination (PaginationRequestSchema, optional): The pagination object containing page and size information. Defaults to {}.
 
         Returns:
-            List[OrganizationBase]: A list of OrganizationBase objects containing the basic organization details.
+            List[OrganizationSchema]: A list of OrganizationSchema objects containing the basic organization details.
             The total_count field is used to return the total number of organizations that match the filters.
-            The OrganizationBase objects are returned in the order specified by the sortOrders object.
+            The OrganizationSchema objects are returned in the order specified by the sortOrders object.
 
         Raises:
             Exception: If any errors occur during the query execution.
@@ -216,7 +215,7 @@ class OrganizationServices:
         if not organizations:
             raise DataNotFoundException('Organizations not found')
 
-        return Organizations(
+        return OrganizationListSchema(
             organizations=organizations,
             pagination=PaginationResponseSchema(
                 total=total_count,
@@ -227,11 +226,11 @@ class OrganizationServices:
         )
 
     @service_handler
-    async def get_organization_types(self) -> List[OrganizationTypeBase]:
+    async def get_organization_types(self) -> List[OrganizationTypeSchema]:
         '''handles fetching all organization types'''
         result = await self.repo.get_organization_types()
 
-        types = [OrganizationTypeBase.model_validate(
+        types = [OrganizationTypeSchema.model_validate(
             types) for types in result]
 
         if len(types) == 0:
@@ -240,7 +239,7 @@ class OrganizationServices:
         return types
 
     @service_handler
-    async def get_organization_names(self) -> List[MiniOrganization]:
+    async def get_organization_names(self) -> List[OrganizationSummaryResponseSchema]:
         """
         handles fetching all organization names
         """
@@ -249,7 +248,7 @@ class OrganizationServices:
 
         for id, name in results:
             names.append(
-                MiniOrganization.model_validate(
+                OrganizationSummaryResponseSchema.model_validate(
                     {
                         "name": name,
                         "organization_id": id,
@@ -264,7 +263,7 @@ class OrganizationServices:
 
         # TODO: Implement for All Organizations and Balance calculation for it.
         names.append(
-            MiniOrganization.model_validate(
+            OrganizationSummaryResponseSchema.model_validate(
                 {
                     "organization_id": 0,
                     "name": "All Organizations",
@@ -278,14 +277,14 @@ class OrganizationServices:
     @service_handler
     async def get_externally_registered_organizations(
         self, org_id: int
-    ) -> List[OrganizationSummarySchema]:
+    ) -> List[OrganizationSummaryResponseSchema]:
         '''handles getting a list of organizations excluding the current organization'''
         conditions = [Organization.org_status.has(status='Registered'),
                       Organization.organization_id != org_id]
         results = await self.repo.get_externally_registered_organizations(conditions)
 
-        # Map the results to OrganizationSummarySchema
-        organizations = [OrganizationSummarySchema.from_orm(organization)
+        # Map the results to OrganizationSummaryResponseSchema
+        organizations = [OrganizationSummaryResponseSchema.from_orm(organization)
                          for organization in results]
 
         if not organizations:

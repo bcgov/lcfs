@@ -2,7 +2,7 @@ from typing import Optional, List, Union
 
 from pydantic import BaseModel, EmailStr, Field
 
-from lcfs.web.api.organization.schema import OrganizationSummarySchema
+from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.base import PaginationResponseSchema
 
@@ -27,7 +27,7 @@ class UserCreate(BaseModel):
     last_name: str
     is_active: bool
     organization_id: Optional[int] = None
-    organization: OrganizationSummarySchema = Field(exclude=True)
+    organization: OrganizationSummaryResponseSchema = Field(exclude=True)
     roles: List[RoleSchema] = Field(exclude=True)
 
     class Config:
@@ -48,7 +48,7 @@ class UserBase(BaseModel):
     last_name: Optional[str] = None
     is_active: Union[bool, str]
     mobile_phone: Optional[str] = None
-    organization: Optional[OrganizationSummarySchema] = None
+    organization: Optional[OrganizationSummaryResponseSchema] = None
     roles: Optional[List[RoleSchema]] = []
     is_government_user: Optional[bool] = None
 

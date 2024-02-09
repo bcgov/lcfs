@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, ConfigDict
 
-from lcfs.web.api.organization.schema import OrganizationSummarySchema, OrganizationBase
+from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.transfer.schema import (
@@ -20,7 +20,7 @@ class TransactionBase(BaseModel):
     transaction_type_id: int
     organization_id: int
 
-    organization: Optional[OrganizationSummarySchema]
+    organization: Optional[OrganizationSummaryResponseSchema]
     transaction_type: TransactionTypeSchema
     issuance_history_record: IssuanceHistorySchema
     transfer_history_record: TransferHistory
