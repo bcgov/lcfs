@@ -13,6 +13,8 @@ echo -e
 # Function to seed the database
 seed_database() {
     echo "🌱  Seeding the database..."
+
+    # Note: Calling seed_database will default to using 'dev' seeds for the development environment.
     if poetry run python /app/lcfs/db/seeders/seed_database.py; then
         echo "✅  Database successfully seeded."
     else
