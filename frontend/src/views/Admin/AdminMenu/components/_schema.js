@@ -11,7 +11,6 @@ export const usersColumnDefs = (t) => [
   {
     colId: 'first_name',
     field: 'first_name',
-    headerName: 'User Name',
     minWidth: 250,
     headerName: t('admin:userColLabels.userName'),
     valueGetter: (params) =>
