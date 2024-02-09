@@ -11,7 +11,7 @@ const colors = {
     main: '#003366',
     focus: '#003366',
     nav: '#036',
-    light: '#1a5a96',
+    light: '#1a5a96'
   },
   // Used for header, footer, beta status
   secondary: {
@@ -82,6 +82,10 @@ const colors = {
   link: {
     main: '#1a5a96',
     focus: '#1a5a96'
+  },
+  nav: {
+    main: '#38598a',
+    focus: '#2c3c58'
   },
   // Used for text input, textarea, checkbox, radio button
   input: {

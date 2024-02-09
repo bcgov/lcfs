@@ -2,8 +2,10 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import Icon from '@mui/material/Icon'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export const HeaderComponent = (props) => {
+  const { t } = useTranslation()
   const [showBalance, setShowBalance] = useState(false)
   const { data } = props
   const toggleBalanceVisibility = () => {
@@ -13,7 +15,7 @@ export const HeaderComponent = (props) => {
   return (
     <>
       <BCTypography className="organization_name" variant="body1" align="right">
-        {data.organizationName || 'Government of British Columbia'}
+        {data.organizationName || t('govOrg')}
       </BCTypography>
       {data.organizationLogo && (
         <BCBox component="div" className="organization_balance">
@@ -32,7 +34,7 @@ export const HeaderComponent = (props) => {
             >
               {showBalance ? 'visibility' : 'visibility_off'}
             </Icon>
-            Balance:&nbsp;&nbsp;
+            {t('balance')}:&nbsp;&nbsp;
             {showBalance && <div className="balance">{data.balance}</div>}
           </BCBox>
         </BCBox>

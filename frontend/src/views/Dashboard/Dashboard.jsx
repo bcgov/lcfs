@@ -2,7 +2,7 @@ import { Role } from '@/components/Role'
 import { govRoles, nonGovRoles } from '@/constants/roles'
 import { Box } from '@mui/material'
 import { BCeIDRightColWidget } from './components/BCeIDRightColWidget'
-import { IDIRRightColWIdget } from './components/IDIRRightColWIdget'
+import { AdminLinksCard } from './components/AdminLinksCard'
 
 export const Dashboard = () => {
   return (
@@ -25,7 +25,7 @@ export const Dashboard = () => {
           <BCeIDRightColWidget />
         </Role>
         <Role roles={govRoles}>
-          <IDIRRightColWIdget />
+          <AdminLinksCard />
         </Role>
       </Box>
     </Box>

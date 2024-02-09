@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { getKeycloak, keycloakInitOptions } from '@/utils/keycloak'
 import Loading from '@/components/Loading'
 import theme from '@/themes'
+import './i18n'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()

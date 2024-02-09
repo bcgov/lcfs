@@ -5,6 +5,8 @@ import BCTypography from '@/components/BCTypography'
 import { useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@/hooks/useUser'
+import { useTranslation } from 'react-i18next'
+
 import Loading from '@/components/Loading'
 import { phoneNumberFormatter } from '@/utils/formatters'
 import { RoleSpanRenderer, StatusRenderer } from '@/utils/cellRenderers'
@@ -12,6 +14,7 @@ import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
 import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 export const ViewUser = () => {
+  const { t } = useTranslation(['common', 'admin'])
   const gridRef = useRef()
   const gridOptions = {
     overlayNoRowsTemplate: 'No previous user activities found',
@@ -38,33 +41,34 @@ export const ViewUser = () => {
       </BCTypography>
       <Stack direction="column" spacing={0.5} mb={2}>
         <BCTypography variant="body4">
-          <strong>Organization:</strong>&nbsp;
-          {data.organization?.name || 'Government of British Columbia'}
+          <strong>{t('Organization')}:</strong>&nbsp;
+          {data.organization?.name || t('govOrg')}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>Email:</strong>&nbsp;{data.email}
+          <strong>{t('admin:Email')}:</strong>&nbsp;{data.email}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>Work Phone:</strong>&nbsp;
+          <strong>{t('admin:WorkPhone')}:</strong>&nbsp;
           {phoneNumberFormatter({ value: data.phone })}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>Mobile Phone:</strong>&nbsp;
+          <strong>{t('admin:MobilePhone')}:</strong>&nbsp;
           {phoneNumberFormatter({ value: data.mobile_phone })}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>Status:</strong>&nbsp;{StatusRenderer({ data, isView: true })}
+          <strong>{t('Status')}:</strong>&nbsp;
+          {StatusRenderer({ data, isView: true })}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>Roles:</strong>&nbsp;
+          <strong>{t('admin:Roles')}:</strong>&nbsp;
           {RoleSpanRenderer({ data })}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>Title:</strong>&nbsp;{data.title}
+          <strong>{t('admin:Title')}:</strong>&nbsp;{data.title}
         </BCTypography>
       </Stack>
       <BCTypography variant="h5" color="primary" mb={1}>
-        User Activity
+        {t('admin:UserActivity')}
       </BCTypography>
       {/* TODO: Once the table data and models are finalized implement below table */}
       <BCDataGridClient

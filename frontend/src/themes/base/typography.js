@@ -76,7 +76,7 @@ const typography = {
     lineHeight: 1.375,
     fontWeight: baseProperties.fontWeightMedium,
     fontFamily: baseProperties.fontFamily,
-    color: text.main,
+    color: text.main
   },
 
   h6: {
@@ -84,7 +84,7 @@ const typography = {
     lineHeight: 1.375,
     fontWeight: baseProperties.fontWeightMedium,
     fontFamily: baseProperties.fontFamily,
-    color: text.main,
+    color: text.main
   },
 
   subtitle1: {
@@ -130,9 +130,10 @@ const typography = {
 
   button: {
     fontFamily: baseProperties.fontFamily,
-    fontSize: baseProperties.fontSizeSM,
+    fontSize: baseProperties.fontSizeMD,
     fontWeight: baseProperties.fontWeightLight,
-    lineHeight: 1.5
+    lineHeight: 1.625,
+    textTransform: 'none'
   },
 
   caption: {

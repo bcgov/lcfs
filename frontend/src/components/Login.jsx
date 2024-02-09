@@ -22,6 +22,8 @@ import { Card, Alert } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
 import { Link, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useMemo } from 'react'
 import Snowfall from 'react-snowfall'
 import { logout } from '@/utils/keycloak'
 import { Logout } from '@/layouts/MainLayout/components/Logout'
@@ -103,30 +105,32 @@ const droplets = () => {
 const image = seasonImages[season].image
 
 export const Login = () => {
+  const { t } = useTranslation()
   const { keycloak } = useKeycloak()
   const location = useLocation()
   const redirectUri = window.location.origin
   const { message, severity } = location.state || {}
+  const styles = useMemo(() => ({
+    loginBackground: {
+      backgroundImage: `url(${image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    },
+    loginCard: {
+      background: 'rgba(255, 255, 255, 0.15)',
+      backdropFilter: 'blur(8px)',
+      bordeRadius: '15px',
+      border: '1px solid rgba(43, 43, 43, 0.568)'
+    }
+  }))
 
   return (
     <BCBox
       position="absolute"
       width="100%"
       minHeight="100vh"
-      sx={{
-        backgroundImage: ({
-          functions: { linearGradient, rgba },
-          palette: { gradients }
-        }) =>
-          image &&
-          `${linearGradient(
-            rgba(gradients.dark.main, 0.1),
-            rgba(gradients.dark.state, 0.1)
-          )}, url(${image})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
+      sx={styles.loginBackground}
     >
       <Snowfall
         wind={seasonImages[season].wind}
@@ -146,15 +150,7 @@ export const Login = () => {
           height="100%"
         >
           <Grid item xs={11} sm={9} md={5} lg={4} xl={3} hd={3} u4k={2}>
-            <Card
-              className="login"
-              sx={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                bordeRadius: '15px',
-                border: '1px solid rgba(43, 43, 43, 0.568)'
-              }}
-            >
+            <Card className="login" sx={styles.loginCard}>
               <BCBox
                 variant="gradient"
                 bgColor="primary"
@@ -181,7 +177,7 @@ export const Login = () => {
                   color="white"
                   mt={1}
                 >
-                  Low Carbon Fuel Standard
+                  {t('title')}
                 </BCTypography>
               </BCBox>
               <BCBox pt={1} pb={3} px={3}>
@@ -214,7 +210,7 @@ export const Login = () => {
                         color="text"
                         sx={{ fontWeight: '400' }}
                       >
-                        Login with&nbsp;
+                        {t('login.loginMessage')}h&nbsp;
                       </BCTypography>
                       <BCTypography
                         variant="h6"
@@ -246,7 +242,7 @@ export const Login = () => {
                         color="text"
                         sx={{ fontWeight: '400' }}
                       >
-                        Login with&nbsp;
+                        {t('login.loginMessage')}&nbsp;
                       </BCTypography>
                       <BCTypography variant="h6" mr={3} className="idir-name">
                         IDIR
@@ -264,18 +260,9 @@ export const Login = () => {
                         fontWeight="medium"
                       >
                         <BCTypography variant="body2" color="light">
-                          Trouble logging in?
+                          {t('login.troubleMessage')}
                         </BCTypography>
                       </Link>
-                    </BCButton>
-                    <BCButton
-                      onClick={() => {
-                        logout()
-                      }}
-                      data-test="logout-button"
-                      style={{ display: 'none' }}
-                    >
-                      Log out
                     </BCButton>
                   </BCBox>
                 </BCBox>

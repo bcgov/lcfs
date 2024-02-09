@@ -46,7 +46,6 @@ const HeaderBar = (props) => {
                 color="secondary"
                 sx={{
                   marginTop: '-1em',
-                  textTransform: 'uppercase',
                   fontWeight: 600,
                   fontSize: '1.1rem',
                   marginLeft: '0.5em'

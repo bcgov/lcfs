@@ -13,15 +13,14 @@ from lcfs.web.api.base import PaginationRequestSchema
 
 from .services import OrganizationServices
 from .schema import (
-    MiniOrganization,
+    OrganizationTypeSchema,
+    OrganizationStatusSchema,
     OrganizationSchema,
-    OrganizationSummarySchema,
+    OrganizationListSchema,
     OrganizationCreateSchema,
-    OrganizationStatusBase,
-    OrganizationTypeBase,
     OrganizationUpdateSchema,
-    GetOrganizationResponse,
-    Organizations,
+    OrganizationResponseSchema,
+    OrganizationSummaryResponseSchema,
 )
 
 
@@ -74,7 +73,7 @@ async def create_organization(
 
 @router.get(
     "/{organization_id}",
-    response_model=GetOrganizationResponse,
+    response_model=OrganizationResponseSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler
@@ -99,7 +98,7 @@ async def update_organization(
     return await service.update_organization(organization_id, organization_data)
 
 
-@router.post("/", response_model=Organizations, status_code=status.HTTP_200_OK)
+@router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 @view_handler
 async def get_organizations(
@@ -113,34 +112,34 @@ async def get_organizations(
 
 @router.get(
     "/statuses/",
-    response_model=List[OrganizationStatusBase],
+    response_model=List[OrganizationStatusSchema],
     status_code=status.HTTP_200_OK,
 )
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler
 async def get_organization_statuses(
     service: OrganizationServices = Depends()
-) -> List[OrganizationStatusBase]:
+) -> List[OrganizationStatusSchema]:
     '''Fetch all organization statuses'''
     return await service.get_organization_statuses()
 
 
 @router.get(
     "/types/",
-    response_model=List[OrganizationTypeBase],
+    response_model=List[OrganizationTypeSchema],
     status_code=status.HTTP_200_OK,
 )
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler
 async def get_organization_types(
     service: OrganizationServices = Depends()
-) -> List[OrganizationTypeBase]:
+) -> List[OrganizationTypeSchema]:
     '''Fetch all organization types'''
     return await service.get_organization_types()
 
 
 @router.get(
-    "/names/", response_model=List[MiniOrganization], status_code=status.HTTP_200_OK
+    "/names/", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK
 )
 @cache(expire=60 * 60)  # cache for 1 hour
 @view_handler
@@ -149,7 +148,7 @@ async def get_organization_names(service: OrganizationServices = Depends()):
     return await service.get_organization_names()
 
 
-@router.get("/registered/external", response_model=List[OrganizationSummarySchema], status_code=status.HTTP_200_OK)
+@router.get("/registered/external", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
 @view_handler
 async def get_externally_registered_organizations(
     request: Request,
@@ -162,7 +161,7 @@ async def get_externally_registered_organizations(
         org_id (int): The ID of the organization to be excluded from the list.
 
     Returns:
-        List[OrganizationSummarySchema]: A list of OrganizationSummarySchema objects
+        List[OrganizationSummaryResponseSchema]: A list of OrganizationSummaryResponseSchema objects
             representing registered organizations, excluding the specified organization.
 
     Raises:

@@ -7,18 +7,18 @@ import {
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useRoleList } from '@/hooks/useRole'
 
-export const usersColumnDefs = [
+export const usersColumnDefs = (t) => [
   {
     colId: 'first_name',
     field: 'first_name',
-    headerName: 'User Name',
+    headerName: t('admin:userColLabels.userName'),
     valueGetter: (params) =>
       params.data.first_name + ' ' + params.data.last_name
   },
   {
     colId: 'role',
     field: 'role',
-    headerName: 'Role(s)',
+    headerName: t('admin:userColLabels.role'),
     valueGetter: (params) =>
       params.data.is_active
         ? params.data.roles.map((role) => role.name).join(', ')
@@ -50,17 +50,23 @@ export const usersColumnDefs = [
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle'
   },
-  { colId: 'email', field: 'email', width: 400 },
+  {
+    colId: 'email',
+    field: 'email',
+    headerName: t('admin:userColLabels.email'),
+    width: 400
+  },
   {
     colId: 'phone',
     field: 'phone',
+    headerName: t('admin:userColLabels.phone'),
     valueFormatter: phoneNumberFormatter,
     filter: 'agTextColumnFilter'
   },
   {
     colId: 'is_active',
     field: 'is_active',
-    headerName: 'Status',
+    headerName: t('admin:userColLabels.status'),
     valueGetter: (params) => params.data.is_active,
     filterParams: {
       textMatcher: (filter) => {
@@ -74,8 +80,8 @@ export const usersColumnDefs = [
       suppressFilterButton: true,
       apiQuery: () => ({
         data: [
-          { id: 1, name: 'Active' },
-          { id: 0, name: 'Inactive' }
+          { id: 1, name: t('admin:userColLabels.active') },
+          { id: 0, name: t('admin:userColLabels.inactive') }
         ],
         isLoading: false
       }),
@@ -88,7 +94,7 @@ export const usersColumnDefs = [
     colId: 'organization_id',
     field: 'organization_id',
     filter: 'agNumberColumnFilter',
-    headerName: 'Organization ID',
+    headerName: t('admin:OrgId'),
     valueGetter: (params) => params.data.organization.organization_id,
     hide: true
   }
@@ -102,15 +108,19 @@ export const usersDefaultColDef = {
   suppressMenu: true // suppresses the menu button appearing next to the Header Label
 }
 
-export const rolesColumnDefs = [
-  { colId: 'name', field: 'name', headerName: 'Role' },
-  { colId: 'description', field: 'description', headerName: 'Description' },
+export const rolesColumnDefs = (t) => [
+  { colId: 'name', field: 'name', headerName: t('admin:roleColLabels.role') },
+  {
+    colId: 'description',
+    field: 'description',
+    headerName: t('admin:roleColLabels.description')
+  },
   {
     colId: 'is_government_role',
     field: 'is_government_role',
-    headerName: 'Role conferred to',
+    headerName: t('admin:roleColLabels.roleOf'),
     valueGetter: (params) =>
-      params.data.is_government_role ? 'Government' : 'Fuel Supplier',
+      params.data.is_government_role ? t('gov') : t('supplier'),
     cellRenderer: GovernmentRoleRenderer,
     cellClass: 'vertical-middle'
   }

@@ -64,8 +64,8 @@ describe('Organizations Component Tests', () => {
 
       // First, ensure the button text changes to the downloading state
       await waitFor(() => {
-        expect(downloadButton.textContent).toContain(
-          'Downloading Organization Information...'
+        expect(downloadButton).toHaveTextContent(
+          /Downloading organization information.../i
         )
       })
       // Then, check if the button gets disabled
@@ -124,8 +124,8 @@ describe('Organizations Component Tests', () => {
       ).toBeInTheDocument()
 
       await waitFor(() => {
-        expect(downloadButton.textContent).toContain(
-          'Downloading User Information...'
+        expect(downloadButton).toHaveTextContent(
+          /Downloading user information.../i
         )
       })
       expect(downloadButton).toBeDisabled()

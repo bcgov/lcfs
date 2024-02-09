@@ -1,0 +1,30 @@
+{
+  "OrgId": "Organization ID",
+  "Users": "Users",
+  "UserActivity": "User activity",
+  "Roles": "Roles",
+  "Role": "Role",
+  "FuelCodes": "Fuel codes",
+  "ComplianceReporting": "Compliance reporting",
+  "HistoricalDataEntry": "Historical data entry",
+  "Email": "Email",
+  "WorkPhone": "Work phone",
+  "MobilePhone": "Mobile phone",
+  "Title": "Title",
+  "usersNotFound": "No users found",
+  "newUserBtn": "New user",
+  "userColLabels": {
+    "userName": "User name",
+    "role": "Role(s)",
+    "email": "Email",
+    "phone": "Phone",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "roleColLabels": {
+    "role": "Role",
+    "roleOf": "Role conferred to",
+    "description": "Description"
+  }
+}

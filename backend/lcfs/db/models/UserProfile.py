@@ -1,4 +1,4 @@
-from lcfs.web.api.organization.schema import OrganizationSummarySchema
+from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
 from lcfs.db.models import UserRole
 from lcfs.db.base import Auditable, BaseModel
 
@@ -62,7 +62,7 @@ class UserProfile(BaseModel, Auditable):
         Copy UserProfile instance with data from UserCreate instance.
         """
 
-        organization_data = OrganizationSummarySchema(
+        organization_data = OrganizationSummaryResponseSchema(
             **user_data.pop("organization", {})
         )
         user_data["user_profile_id"] = user_profile_id

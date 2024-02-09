@@ -12,15 +12,17 @@ import { Navbar } from './components/Navbar'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 // hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTranslation } from 'react-i18next'
 // icons and typograhpy
 import typography from '@/themes/base/typography'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
 import BCBox from '@/components/BCBox'
 
 export const MainLayout = () => {
+  const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
-    currentUser?.roles?.some(({ name }) => name === 'Government') ?? false
+    currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
 
   const matches = useMatches()
   const { size } = typography
@@ -64,7 +66,7 @@ export const MainLayout = () => {
                 variant="button"
                 fontSize={size.lg}
               >
-                Home
+                {t('layout.breadCrumbHome')}
               </BCTypography>
               {breadcrumbs.map((crumb, index) =>
                 index + 1 !== breadcrumbs.length ? (
@@ -106,10 +108,8 @@ export const MainLayout = () => {
         <Grid lg={12}>
           <DisclaimerBanner
             messages={[
-              "For security and privacy reasons, please don't share personal information on this website.",
-              !isGovernmentRole
-                ? 'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'
-                : undefined
+              t('layout.disclaimer.part1'),
+              !isGovernmentRole ? t('layout.disclaimer.part2') : undefined
             ]}
           />
         </Grid>
