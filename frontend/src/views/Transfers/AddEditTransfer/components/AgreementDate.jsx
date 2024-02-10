@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, TextField, Typography } from '@mui/material'
 import LabelBox from './LabelBox' // Assuming LabelBox is a custom component
 
-const AgreementDateComponent = ({ register, errors, maxDate }) => {
+const AgreementDate = ({ register, errors, maxDate }) => {
   return (
     <LabelBox
       label="Agreement Date (required)"
@@ -33,4 +33,4 @@ const AgreementDateComponent = ({ register, errors, maxDate }) => {
   )
 }
 
-export default AgreementDateComponent
+export default AgreementDate

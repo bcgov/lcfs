@@ -1,4 +1,4 @@
-export const getOrgnization = ({ data }, type) => {
+export const getOrganization = ({ data }, type) => {
   switch (data.transaction_type.type) {
     case 'Transfer':
       if (type === 'to') {

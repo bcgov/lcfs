@@ -71,6 +71,15 @@ class OrganizationRepository:
             )
             .where(Organization.organization_id == organization_id)
         )
+    
+    @repo_handler
+    async def get_organization_lite(self, organization_id: int) -> Organization:
+        '''
+        Fetch a single organization by organization id from the database without related tables
+        '''
+        return await self.db.scalar(
+            select(Organization).where(Organization.organization_id == organization_id)
+        )
 
     @repo_handler
     async def update_organization(self, organization_id: int, organization_data) -> Organization:

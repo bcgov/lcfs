@@ -47,8 +47,13 @@ export const useCurrentUser = () => {
     );
   };
 
+  const fullName = () => {
+    return query.data?.first_name + ' ' + query.data?.last_name
+  }
+
   return {
     ...query,
-    hasRoles
+    hasRoles,
+    fullName
   };
 }

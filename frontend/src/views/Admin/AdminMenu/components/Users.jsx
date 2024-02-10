@@ -30,7 +30,7 @@ export const Users = (props) => {
   }
   const defaultSortModel = [
     { field: 'is_active', direction: 'desc' },
-    { field: 'display_name', direction: 'asc' }
+    { field: 'first_name', direction: 'asc' }
   ]
   const navigate = useNavigate()
 

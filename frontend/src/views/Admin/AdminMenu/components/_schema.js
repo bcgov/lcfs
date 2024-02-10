@@ -110,7 +110,11 @@ export const usersDefaultColDef = {
 
 export const rolesColumnDefs = (t) => [
   { colId: 'name', field: 'name', headerName: t('admin:roleColLabels.role') },
-  { colId: 'description', field: 'description', headerName: t('admin:roleColLabels.description') },
+  {
+    colId: 'description',
+    field: 'description',
+    headerName: t('admin:roleColLabels.description')
+  },
   {
     colId: 'is_government_role',
     field: 'is_government_role',
