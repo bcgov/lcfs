@@ -1,6 +1,6 @@
 import * as Yup from 'yup'
 
-export const AddTransferSchema = Yup.object({
+export const AddEditTransferSchema = Yup.object({
   agreementDate: Yup.date()
     .required('Agreement Date is required')
     .max(new Date(), 'Agreement Date cannot be in the future'),

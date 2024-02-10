@@ -69,6 +69,13 @@ const TransferDetails = ({
                       paddingBottom: '0px'
                     }
                   }}
+                  renderValue={(selected) => {
+                    if (selected === "") {
+                      return <em>Select an Organization</em>;
+                    }
+                    const selectedOrg = organizations.find(org => org.value === selected);
+                    return selectedOrg ? selectedOrg.label : <em>Select an Organization</em>;
+                  }}
                 >
                   <MenuItem value="">
                     <em>Select an Organization</em>

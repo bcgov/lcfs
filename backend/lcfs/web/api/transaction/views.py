@@ -1,90 +1,93 @@
 import math
 from logging import getLogger
-from fastapi import APIRouter, Depends, HTTPException, status, Body
-from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.responses import Response
-from lcfs.db import dependencies
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
-from lcfs.web.api.transaction.schema import Transactions
-from lcfs.web.core.decorators import roles_required
-from lcfs.web.api.transaction.session import TransactionRepo
+from fastapi import APIRouter, Depends, status
+from lcfs.web.core.decorators import view_handler
+from lcfs.web.api.transaction.services import TransactionsService
+from lcfs.web.api.transaction.schema import TransactionPaginationResponse
 
 logger = getLogger("transaction")
 
 router = APIRouter()
-get_async_db = dependencies.get_async_db_session
 
 
-@router.post("/", status_code=status.HTTP_200_OK, response_model=Transactions)
-async def get_all_transactions(
-    pagination: PaginationRequestSchema = Body(..., embed=False),
-    response: Response = None,
-    repo: TransactionRepo = Depends(),
+@router.get("/transactions", response_model=TransactionPaginationResponse, status_code=status.HTTP_200_OK)
+@view_handler
+async def get_transactions(
+    page: int = 1,
+    size: int = 10,
+    transactions_service: TransactionsService = Depends(),
 ):
     """
-    Endpoint to get all transactions along with the 'from' and 'to' organization data.
-    This will return paginated data.
+    Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
     """
-    try:
-
-        transactions, total_count = await repo.get_transactions(pagination)
-
-        if not transactions:
-            logger.error("Error getting transactions")
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return Transactions(
-                pagination=PaginationResponseSchema(
-                    total=0, page=0, size=0, total_pages=0
-                ),
-                transactions=transactions,
-            )
-        return Transactions(
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
-            ),
-            transactions=transactions,
-        )
-
-    except Exception as e:
-        logger.error(f"Error getting transactions: {str(e)}")
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        raise HTTPException(
-            status_code=500,
-            detail=f"Technical Error: Failed to get transactions: {str(e)}",
-        )
+    return await transactions_service.get_combined_transactions_paginated(page, size)
 
 
-@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-async def export_organizations(db: AsyncSession = Depends(get_async_db), repo: TransactionRepo = Depends(),):
-    """
-    Endpoint to export information of transactions
+# @router.get("/transactions", status_code=status.HTTP_200_OK)
+# @view_handler
+# async def get_transactions(
+#     page: int = 1,
+#     size: int = 10,
+#     issuance_service: IssuanceServices = Depends(),
+#     transfer_service: TransferServices = Depends(),
+# ):
+#     """
+#     Fetches a combined list of Issuances and Transfers, sorted by create_date.
+#     Applies pagination to the combined list.
+#     """
+#     # Fetch lists - In a real scenario, you'd adjust this to fetch based on pagination params
+#     issuances = await issuance_service.get_all_issuances()
+#     transfers = await transfer_service.get_all_transfers()
 
-    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
-    as specified by the 'export_format' and 'media_type' variables.
-    - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
-    - 'media_type' sets the appropriate MIME type based on 'export_format':
-        'application/vnd.ms-excel' for 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
-        'text/csv' for 'csv'.
+#     # Combine and sort - Assuming both schemas have a 'create_date' or similar field
+#     combined = sorted(issuances + transfers, key=lambda x: x.create_date, reverse=True)
 
-    The SpreadsheetBuilder class is used for building the spreadsheet.
-    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
-    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+#     # Apply pagination
+#     start = (page - 1) * size
+#     end = start + size
+#     paginated_combined = combined[start:end]
 
-    Note: Only the first sheet data is used for the CSV format,
-        as CSV files do not support multiple sheets.
-    """
+#     total_count = len(combined)
+#     total_pages = ceil(total_count / size)
 
-    try:
-        return await repo.export_transactions()
+#     # Construct and return the paginated response
+#     return {
+#         "transactions": paginated_combined,
+#         "pagination": {
+#             "total": total_count,
+#             "page": page,
+#             "size": size,
+#             "total_pages": total_pages,
+#         }
+#     }
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        ) from e
+# @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+# @roles_required("Government")
+# async def export_organizations(db: AsyncSession = Depends(get_async_db), repo: TransactionRepo = Depends(),):
+#     """
+#     Endpoint to export information of transactions
+
+#     This endpoint can support exporting data in different file formats (xls, xlsx, csv)
+#     as specified by the 'export_format' and 'media_type' variables.
+#     - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
+#     - 'media_type' sets the appropriate MIME type based on 'export_format':
+#         'application/vnd.ms-excel' for 'xls',
+#         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
+#         'text/csv' for 'csv'.
+
+#     The SpreadsheetBuilder class is used for building the spreadsheet.
+#     It allows adding multiple sheets with custom styling options and exports them as a byte stream.
+#     Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+
+#     Note: Only the first sheet data is used for the CSV format,
+#         as CSV files do not support multiple sheets.
+#     """
+
+#     try:
+#         return await repo.export_transactions()
+
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Internal Server Error",
+#         ) from e

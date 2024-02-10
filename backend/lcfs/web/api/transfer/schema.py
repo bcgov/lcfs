@@ -1,6 +1,6 @@
-from pydantic import BaseModel, constr
-from typing import Optional, List
-from datetime import datetime, date
+from pydantic import BaseModel
+from typing import Optional
+from datetime import date
 from enum import Enum
 
 class TransactionTypeEnum(str, Enum):
@@ -20,32 +20,41 @@ class TransferStatusEnum(str, Enum):
     declined = "Declined"
     rescinded = "Rescinded"
 
-class TransferOrganizationSchema(BaseModel):
-    organization_id: int
-    name: str
-
 class TransferStatusSchema(BaseModel):
     status: str
-
-class TransferCategorySchema(BaseModel):
-    category: str
-
-class TransferBase(BaseModel):
-    from_organization: TransferOrganizationSchema
-    to_organization: TransferOrganizationSchema
-    # transaction_id: Optional[int]
-    # transaction_effective_date: Optional[datetime]
-    # comments: Optional[str]
-    transfer_status: TransferStatusSchema
-    transfer_category: TransferCategorySchema
-
-
-class TransferSchema(TransferBase):
-    transfer_id: int
-
     class Config:
         from_attributes = True
 
+class TransferCategorySchema(BaseModel):
+    category: str
+    class Config:
+        from_attributes = True
+
+class TransferOrganizationSchema(BaseModel):
+    organization_id: int
+    name: str
+    class Config:
+        from_attributes = True
+
+class TransferCommentSchema(BaseModel):
+    comment_id: int
+    comment: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+class TransferSchema(BaseModel):
+    transfer_id: int
+    from_organization: TransferOrganizationSchema
+    to_organization: TransferOrganizationSchema
+    agreement_date: date
+    quantity: int
+    price_per_unit: int
+    signing_authority_declaration: bool
+    comments: Optional[TransferCommentSchema] = None
+    transfer_status: TransferStatusSchema
+    transfer_category: TransferCategorySchema
+    class Config:
+        from_attributes = True
 
 class TransferCreate(BaseModel):
     from_organization_id: int
@@ -55,57 +64,11 @@ class TransferCreate(BaseModel):
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[str]
-
     class Config:
         from_attributes = True
 
-
-class TransferHistory(TransferBase):
+class TransferHistory(BaseModel):
     transfer_history_id: int
     transfer_id: int
-
     class Config:
         from_attributes = True
-
-
-class IssuanceSchema(BaseModel):
-    issuance_id: int
-    compliance_units: int
-    organization_id: int
-    transaction_effective_date: datetime
-    transaction_id: int
-    comment_id: Optional[int]
-
-class IssuanceHistorySchema(BaseModel):
-    issuance_history_id: int
-    compliance_units: int
-    issuance_id: int
-    organization_id: int
-    transaction_id: Optional[int]
-    transaction_effective_date: Optional[datetime]
-    comment_id: Optional[int]
-
-
-class TransactionSchema(BaseModel):
-    transaction_id: int
-    compliance_units: int
-    issuance_id: int
-    transfer_id: int
-    transaction_type: TransactionTypeEnum
-    organization: int
-
-class TransactionTypeSchema(BaseModel):
-    transaction_typ_id: int
-    type: TransactionTypeEnum
-
-# class TransferStatusSchema(BaseModel):
-#     transaction_status_id: int
-#     status: TransferStatusEnum
-
-class CommentSchema(BaseModel):
-    comment_id: int
-    comment: str
-
-class CategorySchema(BaseModel):
-    category_id: int
-    category: str

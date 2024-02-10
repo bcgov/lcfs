@@ -18,7 +18,7 @@ import {
   EditOrganization
 } from './views/Organizations'
 import { Transactions } from './views/Transactions'
-import { ViewTransfer, AddTransfer } from './views/Transfers'
+import { ViewTransfer, AddEditTransfer } from './views/Transfers'
 import { AddEditUser, UserActivity } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
 import { Login } from './components/Login'
@@ -59,11 +59,20 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.TRANSFERS_ADD,
-        element: <AddTransfer />,
+        element: <AddEditTransfer />,
         handle: {
           title: 'New Transfer',
           crumb: () => 'New Transfer'
         }
+      },
+      {
+        path: ROUTES.TRANSFERS_EDIT, // Use the dynamic route
+        element: <AddEditTransfer />,
+        handle: {
+          title: 'Edit Transfer',
+          // Dynamically set the breadcrumb title if needed
+          crumb: () => `Edit Transfer`,
+        },
       },
       {
         path: ROUTES.TRANSFERS_VIEW,

@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useMutation } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 // Components
 import BCTypography from '@/components/BCTypography'
 import ProgressBreadcrumb from '@/components/ProgressBreadcrumb'
-import { AddTransferSchema } from './TransferSchema'
+import { AddEditTransferSchema } from './_schema'
 import TransferForm from './TransferForm'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
@@ -20,14 +20,15 @@ import { useApiService } from '@/services/useApiService'
 import { TRANSFERS_VIEW } from '@/constants/routes/routes'
 import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
 
-export const AddTransfer = () => {
+export const AddEditTransfer = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
+  const { transferId } = useParams() // This extracts the transferId from the URL
   const { data: currentUser } = useCurrentUser()
   const [organizations, setOrganizations] = useState([])
 
   const methods = useForm({
-    resolver: yupResolver(AddTransferSchema),
+    resolver: yupResolver(AddEditTransferSchema),
     mode: 'onChange',
     defaultValues: {
       fromOrganizationId: currentUser?.organization?.organization_id,
@@ -40,37 +41,43 @@ export const AddTransfer = () => {
     }
   })
 
-  // useMutation hook from React Query for handling API request
-  const { mutate, isLoading, isError } = useMutation({
-    mutationFn: async (transferData) =>
-      await apiService.post('/transfers', transferData),
-    onSuccess: (response) => {
-      // Redirect or handle success
-      navigate(TRANSFERS_VIEW, {
-        transferID: response.transfer_id,
-        state: {
-          message: 'Transfer successfully submitted.',
-          severity: 'success'
-        }
-      })
-    },
-    onError: (error) => {
-      // Handle error
-      console.error('Error submitting transfer:', error)
+  /**
+   * Fetches and populates the form with existing transfer data for editing.
+   * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
+   * is loaded. It fetches the transfer data using the provided `transferId`, and then resets the form
+   * fields with the fetched data, formatting and handling null values appropriately.
+   * In case of an error during the fetch operation, it logs the error to the console.
+  */
+  useEffect(() => {
+    const fetchTransferData = async () => {
+      if (!transferId) return
+  
+      try {
+        const response = await apiService.get(`/transfers/${transferId}`)
+        const transferData = response.data
+  
+        // Populate the form with fetched transfer data
+        methods.reset({
+          fromOrganizationId: transferData.from_organization.organization_id,
+          toOrganizationId: transferData.to_organization.organization_id,
+          quantity: transferData.quantity,
+          pricePerUnit: transferData.price_per_unit,
+          signingAuthorityDeclaration: transferData.signing_authority_declaration,
+          comments: transferData.comments.comment, // Assuming you only want the comment text
+          agreementDate: transferData.agreement_date ? 
+            new Date(transferData.agreement_date).toISOString().split('T')[0] : 
+            new Date().toISOString().split('T')[0], // Format date or use current date as fallback
+        })
+      } catch (error) {
+        console.error('Error fetching transfer data:', error)
+      }
     }
-  })
-
-  // Handle form submission
-  const handleSubmitForm = (form) => {
-    console.log(form)
-    form.fromOrganizationId = parseInt(form.fromOrganizationId)
-    form.toOrganizationId = parseInt(form.toOrganizationId)
-    form.agreementDate = formatDateToISO(form.agreementDate)
-    const convertedPayload = convertObjectKeys(form)
-    mutate(convertedPayload)
-  }
-
-  // Fetch the list of registered external organizations
+    if (transferId) fetchTransferData()
+  }, [transferId])
+  
+  /**
+   * Fetch the list of registered external organizations
+  */ 
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
@@ -86,9 +93,42 @@ export const AddTransfer = () => {
         console.error('Error fetching organizations:', error)
       }
     }
-
     fetchOrganizations()
   }, [])
+
+  const { mutate, isLoading, isError } = useMutation({
+      mutationFn: (convertedPayload) => {
+        if (transferId) {
+          // If editing, use PUT request
+          return apiService.put(`/transfers/${transferId}`, convertedPayload)
+        } else {
+          // If adding new, use POST request
+          return apiService.post('/transfers', convertedPayload)
+        }
+      },
+      onSuccess: (response) => {
+        // Redirect on success
+        navigate(TRANSFERS_VIEW, {
+          transferID: response.transfer_id,
+          state: {
+            message: 'Transfer successfully submitted.',
+            severity: 'success',
+          },
+        })
+      },
+      onError: (error) => {
+        console.error('Error submitting transfer:', error)
+      },
+    }
+  )
+
+  const handleSubmitForm = (form) => {
+    form.fromOrganizationId = parseInt(form.fromOrganizationId)
+    form.toOrganizationId = parseInt(form.toOrganizationId)
+    form.agreementDate = formatDateToISO(form.agreementDate)
+    const convertedPayload = convertObjectKeys(form)
+    mutate(convertedPayload)
+  }
 
   // Conditional rendering for loading
   if (isLoading) {
@@ -109,7 +149,7 @@ export const AddTransfer = () => {
     <>
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
-          New Transfer
+          {transferId ? 'Edit Transfer' : 'New Transfer'}
         </BCTypography>
 
         <BCTypography>
@@ -120,7 +160,7 @@ export const AddTransfer = () => {
           the fair market value of the consideration in Canadian dollars per
           compliance unit.
         </BCTypography>
-        <BCTypography>&nbsp;</BCTypography>
+        <BCTypography>&nbsp</BCTypography>
 
         {isError && (
           <BCAlert severity="error">

@@ -37,6 +37,3 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
         'Organization', 
         foreign_keys=[to_organization_id]
     )
-
-
-

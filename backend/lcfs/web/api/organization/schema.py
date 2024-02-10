@@ -148,33 +148,3 @@ class OrganizationSummaryResponseSchema(BaseModel):
 
     class Config(BaseConfig):
         pass
-
-
-class OrganizationUpdateSchema(BaseModel):
-    name: Optional[str]
-    status: Optional[int]
-    type: Optional[int]
-    address: Optional[OrganizationAddressCreateSchema]
-    attorney_address: Optional[OrganizationAttorneyAddressCreateSchema]
-
-
-class OrganizationAddressSchema(OrganizationAddressBaseSchema):
-    organization_id: int
-
-
-class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBaseSchema):
-    organization_id: int
-
-
-class OrganizationUserSchema(BaseModel):
-    email: str
-    title: Optional[str] = None
-    phone: Optional[str] = None
-    mobile_phone: Optional[str] = None
-    user_roles: Optional[List[object]] = []
-
-    class Config(BaseConfig):
-        pass
-
-class OrganizationUserSchema(OrganizationUserBase):
-    pass

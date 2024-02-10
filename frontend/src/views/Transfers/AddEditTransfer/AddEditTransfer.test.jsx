@@ -48,7 +48,7 @@ vi.mock('@/services/useApiService', () => ({
 }))
 
 // eslint-disable-next-line import/first
-import { AddTransfer } from './AddTransfer'
+import { AddTransfer } from './AddEditTransfer'
 
 const renderComponent = () => {
   const queryClient = new QueryClient()
