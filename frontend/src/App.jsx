@@ -66,13 +66,12 @@ const router = createBrowserRouter([
         }
       },
       {
-        path: ROUTES.TRANSFERS_EDIT, // Use the dynamic route
+        path: ROUTES.TRANSFERS_EDIT,
         element: <AddEditTransfer />,
         handle: {
           title: 'Edit Transfer',
-          // Dynamically set the breadcrumb title if needed
-          crumb: () => `Edit Transfer`,
-        },
+          crumb: () => `Edit Transfer`
+        }
       },
       {
         path: ROUTES.TRANSFERS_VIEW,
