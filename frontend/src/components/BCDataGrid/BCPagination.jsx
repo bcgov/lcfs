@@ -51,7 +51,7 @@ const BCPagination = ({
           IconComponent: (props) => (
             <ArrowDropDownIcon
               fontSize="medium"
-              sx={{ marginRight: '-8px' }}
+              sx={{ marginRight: '-8px', left: '34px' }}
               {...props}
             />
           )

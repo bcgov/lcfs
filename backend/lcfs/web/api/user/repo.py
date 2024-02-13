@@ -7,6 +7,7 @@ from sqlalchemy import and_, func, select, asc, desc, delete, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
@@ -31,40 +32,6 @@ class UserRepository:
     ):
         self.session = session
         self.request = request
-
-    async def export_users(
-        self,
-        sort_field: Optional[str] = "last_name",
-        sort_direction: str = "asc",
-    ) -> List:
-        """
-        Retrieves all users from the database, optionally sorted by a specified field.
-
-        Args:
-            sort_field (Optional[str]): The field by which to sort the users.
-                                        Defaults to 'last_name'. Set to None for no sorting.
-            sort_direction (str): The direction of sorting, either 'asc' for ascending or
-                                'desc' for descending. Defaults to 'asc'.
-
-        Returns:
-            List: A list of user profiles, optionally sorted.
-        """
-        # Build the base query statement
-        query = select(UserProfile).options(
-            joinedload(UserProfile.organization),
-            joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
-        )
-
-        # Apply sorting if sort_field is provided
-        if sort_field:
-            sort_method = asc if sort_direction == "asc" else desc
-            query = query.order_by(sort_method(getattr(UserProfile, sort_field)))
-
-        # Execute the query
-        user_results = await self.session.execute(query)
-        results = user_results.scalars().unique().all()
-
-        return results
 
     def apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
@@ -124,9 +91,10 @@ class UserRepository:
         key_builder=lcfs_cache_key_builder,
         namespace="users",
     )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
-    async def get_all_users(
+    @repo_handler
+    async def get_users_paginated(
         self,
-        pagination: PaginationRequestSchema = {},
+        pagination: PaginationRequestSchema,
     ) -> List[UserBase]:
         """
         Queries users from the database with optional filters for username, surname,
@@ -142,63 +110,59 @@ class UserRepository:
         Returns:
             List[UserBase]: A list of user profiles matching the query.
         """
-        try:
-            # Build the base query statement
-            conditions = []
-            if pagination.filters and len(pagination.filters) > 0:
-                try:
-                    self.apply_filters(pagination, conditions)
-                except Exception as e:
-                    raise ValueError(f"Invalid filter provided: {pagination.filters}.")
+        # Build the base query statement
+        conditions = []
+        if pagination.filters and len(pagination.filters) > 0:
+            try:
+                self.apply_filters(pagination, conditions)
+            except Exception as e:
+                raise ValueError(f"Invalid filter provided: {pagination.filters}.")
 
-            # Apply pagination and sorting parameters
-            offset = (
-                0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        # Apply pagination and sorting parameters
+        offset = (
+            0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        )
+        limit = pagination.size
+
+        # Applying pagination, sorting, and filters to the query
+        query = (
+            select(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(
+                    joinedload(UserRole.role)
+                ),
             )
-            limit = pagination.size
+            .where(and_(*conditions))
+        )
 
-            # Applying pagination, sorting, and filters to the query
-            query = (
-                select(UserProfile)
-                .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
-                .join(Role, UserRole.role_id == Role.role_id)
-                .options(
-                    joinedload(UserProfile.organization),
-                    joinedload(UserProfile.user_roles).options(
-                        joinedload(UserRole.role)
-                    ),
-                )
-                .where(and_(*conditions))
-            )
+        count_query = await self.session.execute(
+            select(func.count(distinct(UserProfile.user_profile_id)))
+            .select_from(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
+            .where(and_(*conditions))
+        )
+        total_count = count_query.unique().scalar_one_or_none()
+        # Sort the query results
+        for order in pagination.sortOrders:
+            sort_method = asc if order.direction == "asc" else desc
+            if order.field == "role":
+                order.field = get_field_for_filter(Role, "name")
+            query = query.order_by(sort_method(order.field))
 
-            count_query = await self.session.execute(
-                select(func.count(distinct(UserProfile.user_profile_id)))
-                .select_from(UserProfile)
-                .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
-                .join(Role, UserRole.role_id == Role.role_id)
-                .where(and_(*conditions))
-            )
-            total_count = count_query.unique().scalar_one_or_none()
-            # Sort the query results
-            for order in pagination.sortOrders:
-                sort_method = asc if order.direction == "asc" else desc
-                if order.field == "role":
-                    order.field = get_field_for_filter(Role, "name")
-                query = query.order_by(sort_method(order.field))
+        # Execute the query
+        user_results = (
+            await self.session.execute(query.offset(offset).limit(limit))
+            if limit > 0
+            else await self.session.execute(query)
+        )
+        results = user_results.scalars().unique().all()
 
-            # Execute the query
-            user_results = (
-                await self.session.execute(query.offset(offset).limit(limit))
-                if limit > 0
-                else await self.session.execute(query)
-            )
-            results = user_results.scalars().unique().all()
-
-            # Convert the results to UserBase schemas
-            return [UserBase.model_validate(user) for user in results], total_count
-        except Exception as e:
-            logger.error(f"Error occurred while fetching users: {e}")
-            raise Exception("Error occurred while fetching users.")
+        # Convert the results to UserBase schemas
+        return [UserBase.model_validate(user) for user in results], total_count
 
     async def get_user(self, user_id: int):
         try:

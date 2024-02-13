@@ -16,7 +16,16 @@ import math
 from logging import getLogger
 from typing import List
 
-from fastapi import APIRouter, Body, HTTPException, status, Request, Response
+from fastapi import (
+    APIRouter,
+    Body,
+    HTTPException,
+    status,
+    Request,
+    Response,
+    Depends,
+    Query,
+)
 from fastapi.responses import StreamingResponse
 
 from lcfs.web.api.role.schema import RoleSchema
@@ -28,7 +37,6 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
-from fastapi import Depends, Query
 
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.user.services import UserServices
@@ -66,6 +74,7 @@ async def export_users(
     """
     return await service.export_users(format)
 
+
 @router.post("/list", response_model=Users, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 @view_handler
@@ -73,34 +82,27 @@ async def get_users(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
-    user_repo: UserRepository = Depends(),
+    service: UserServices = Depends(),
 ) -> Users:
-    try:
-        users, total_count = await user_repo.get_all_users(pagination=pagination)
-        if len(users) == 0:
-            logger.error("Error getting users")
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return Users(
-                pagination=PaginationResponseSchema(
-                    total=0, page=0, size=0, total_pages=0
-                ),
-                users=users,
-            )
-        return Users(
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
-            ),
-            users=users,
-        )
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e))
-        raise HTTPException(
-            status_code=500, detail=f"Technical Error: Failed to get users: {str(e)}"
-        )
+    """
+    Enpoint to get information of all users for ag-grid in the UI
+
+    Pagination Request Schema:
+    - page: offset/ page indicates the pagination of rows for the users list
+    - size: size indicates the number of rows per page for the users list
+    - sortOrders: sortOrders is an array of objects that specify the sorting criteria for the users list.
+        Each object has the following properties:
+        - field: the name of the field to sort by
+        - direction: the sorting direction ('asc' or 'desc')
+    - filterModel: filterModel is an array of objects that specifies the filtering criteria for the users list.
+        It has the following properties:
+        - filterType: the type of filtering to perform ('text', 'number', 'date', 'boolean')
+        - type: the type of filter to apply ('equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'endsWith')
+        - filter: the actual filter value
+        - field: Database Field that needs filtering.
+    """
+    return await service.get_all_users(pagination)
+
 
 @router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
 @view_handler
@@ -124,6 +126,7 @@ async def get_user_by_id(
     Get the user's information by ID
     """
     return await service.get_user_by_id(user_id)
+
 
 @router.post("", response_model=UserBase, status_code=status.HTTP_201_CREATED)
 async def create_user(

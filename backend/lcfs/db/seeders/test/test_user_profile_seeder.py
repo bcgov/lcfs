@@ -58,7 +58,7 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
-            "organization_id": 1,
+            "organization_id": None,
             "is_active": True
         },
         {

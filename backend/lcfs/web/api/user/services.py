@@ -53,7 +53,7 @@ class UserServices:
             filter=None,
         )
         # Query database for the list of users. Exclude government users.
-        results = await self.repo.get_all_users(
+        results = await self.repo.get_users_paginated(
             pagination=PaginationRequestSchema(
                 page=1,
                 size=0,
@@ -108,7 +108,28 @@ class UserServices:
         )
 
     @service_handler
+    async def get_all_users(self, pagination: PaginationRequestSchema) -> Users:
+        """
+        Get all users
+        """
+        users, total_count = await self.repo.get_users_paginated(pagination=pagination)
+        if len(users) == 0:
+            raise DataNotFoundException("No users found")
+        return Users(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            users=users,
+        )
+
+    @service_handler
     async def get_user_by_id(self, user_id: int) -> UserBase:
+        """
+        Get user info by ID
+        """
         user = await self.repo.get_user(user_id)
         if not user:
             raise DataNotFoundException("User not found")

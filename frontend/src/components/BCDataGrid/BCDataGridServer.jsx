@@ -40,7 +40,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * - handleGridKey: Function to handle changes in the grid key.
  * - handleRowClicked: Function to handle row click events.
  * - others: Other props that can be spread into the AG Grid component.
- * 
+ *
  * TODO:
  * - Ability to clear the custom filter input boxes
  * - Ability to populate the custom filter inputs from the stored values that are retrieved from localStorage.
@@ -213,7 +213,7 @@ const BCDataGridServer = ({
     onRowClicked: handleRowClicked
   }))
 
-  // Memoized default column definition parameters
+  // Memorized default column definition parameters
   const defaultColDefParams = useMemo(() => ({
     resizable: true,
     sortable: true,
