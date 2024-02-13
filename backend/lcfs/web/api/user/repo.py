@@ -28,10 +28,8 @@ class UserRepository:
     def __init__(
         self,
         session: AsyncSession = Depends(get_async_db_session),
-        request: Request = None,
     ):
         self.session = session
-        self.request = request
 
     def apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
@@ -164,26 +162,22 @@ class UserRepository:
         # Convert the results to UserBase schemas
         return [UserBase.model_validate(user) for user in results], total_count
 
-    async def get_user(self, user_id: int):
-        try:
-            query = (
-                select(UserProfile)
-                .options(
-                    joinedload(UserProfile.organization),
-                    joinedload(UserProfile.user_roles).options(
-                        joinedload(UserRole.role)
-                    ),
-                )
-                .where(UserProfile.user_profile_id == user_id)
+    @repo_handler
+    async def get_user_by_id(self, user_id: int) -> UserBase:
+        query = (
+            select(UserProfile)
+            .options(
+                joinedload(UserProfile.organization),
+                joinedload(UserProfile.user_roles).options(
+                    joinedload(UserRole.role)
+                ),
             )
+            .where(UserProfile.user_profile_id == user_id)
+        )
 
-            # Execute the query
-            result = await self.session.execute(query)
-            user = result.unique().scalar_one_or_none()
-            return UserBase.model_validate(user)
-        except Exception as e:
-            logger.error(f"Error occurred while fetching user: {e}")
-            raise Exception("Error occurred while fetching user.")
+        # Execute the query
+        user = await self.session.scalar(query)
+        return UserBase.model_validate(user)
 
     async def create_user(
         self, user_create: UserCreate, user_id: int = None
@@ -214,7 +208,7 @@ class UserRepository:
             raise Exception(f"Error creating user")
 
         logger.info(f"Created user with id: {user_id}")
-        return UserBase.model_validate(await self.get_user(user_id))
+        return UserBase.model_validate(await self.get_user_by_id(user_id))
 
     async def update_user(
         self, user_update: UserCreate, user_profile_id: int = None
@@ -247,7 +241,7 @@ class UserRepository:
             raise Exception(f"Error updating user:.")
 
         logger.info(f"Updated user_profile_id: {user_profile_id}")
-        return await self.get_user(user_profile_id)
+        return await self.get_user_by_id(user_profile_id)
 
     # TODO: User History implementation
     async def get_user_history(

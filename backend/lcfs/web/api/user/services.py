@@ -7,17 +7,16 @@ from typing import List
 
 from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
-from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.web.core.decorators import service_handler
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
+from lcfs.web.core.decorators import service_handler, transactional
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
-    PaginationResponseSchema,
-    apply_filter_conditions,
-    get_field_for_filter,
-    validate_pagination,
+    PaginationResponseSchema
 )
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
@@ -34,11 +33,14 @@ class UserServices:
         self,
         request: Request = None,
         repo: UserRepository = Depends(UserRepository),
+        session: AsyncSession = Depends(get_async_db_session)
     ) -> None:
         self.repo = repo
         self.request = request
+        self.session = session
 
     @service_handler
+    @transactional
     async def export_users(self, export_format) -> StreamingResponse:
         """
         Prepares a list of users in a file that is downloadable
@@ -108,6 +110,7 @@ class UserServices:
         )
 
     @service_handler
+    @transactional
     async def get_all_users(self, pagination: PaginationRequestSchema) -> Users:
         """
         Get all users
@@ -126,11 +129,12 @@ class UserServices:
         )
 
     @service_handler
+    @transactional
     async def get_user_by_id(self, user_id: int) -> UserBase:
         """
         Get user info by ID
         """
-        user = await self.repo.get_user(user_id)
+        user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
         return user

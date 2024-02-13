@@ -3,6 +3,7 @@ from functools import wraps
 from logging import getLogger
 
 from fastapi import HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.Role import RoleEnum
@@ -117,4 +118,24 @@ def repo_handler(func):
                 f"Repo error in {func_name} (file: {file_path}) - {str(e)}"
             )
             raise DatabaseException
+    return wrapper
+
+
+def transactional(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        db: AsyncSession = args[0].session
+        if not db:
+            raise HTTPException(
+                status_code=500, detail="Database session not available"
+            )
+
+        try:
+            result = None
+            async with db.begin():
+                result = await func(*args, **kwargs)
+            return result
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     return wrapper

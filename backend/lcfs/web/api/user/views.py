@@ -108,7 +108,9 @@ async def get_users(
 @view_handler
 async def get_current_user(request: Request, response: Response = None) -> UserBase:
     """
-    Get the current user's information
+    Endpoint to get information of the current user
+
+    This endpoint returns the information of the current user, including their roles and organization.
     """
     return UserBase.model_validate(request.user)
 
@@ -119,11 +121,11 @@ async def get_current_user(request: Request, response: Response = None) -> UserB
 async def get_user_by_id(
     request: Request,
     user_id: int,
-    response: Response = None,
     service: UserServices = Depends(),
 ) -> UserBase:
     """
-    Get the user's information by ID
+    Endpoint to get information of a user by ID
+    This endpoint returns the information of a user by ID, including their roles and organization.
     """
     return await service.get_user_by_id(user_id)
 

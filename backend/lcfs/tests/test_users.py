@@ -93,3 +93,48 @@ async def test_get_users_with_sort_order(
     emails = [user.email for user in content.users]
     # check if emails are sorted in descending order.
     assert np.all(emails[:-1] >= emails[1:])
+
+
+@pytest.mark.anyio
+async def test_get_users_with_filter(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("get_users")
+    request_data = {
+        "page": 1,
+        "size": 10,
+        "sortOrders": [],
+        "filters": [
+            {
+                "filterType": "number",
+                "type": "equals",
+                "filter": "1",
+                "field": "user_profile_id",
+            }
+        ],
+    }
+    response = await client.post(url, json=request_data)
+
+    # Check the status code
+    assert response.status_code == status.HTTP_200_OK
+    # check if pagination is working as expected.
+    content = Users(**response.json())
+    ids = [user.user_profile_id for user in content.users]
+    # check if only one user element exists with user_profile_id 1.
+    assert len(ids) == 1
+    assert ids[0] == 1
+
+
+@pytest.mark.anyio
+async def test_get_user_by_id(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("get_user_by_id", user_id=1)
+    response = await client.get(url)
+
+    # Check the status code
+    assert response.status_code == status.HTTP_200_OK
+    # check the user_profile_id
+    assert response.json()["user_profile_id"] == 1
