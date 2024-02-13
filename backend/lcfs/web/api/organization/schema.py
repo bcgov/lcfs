@@ -119,6 +119,7 @@ class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
 class OrganizationBase(BaseModel):
     organization_id: Optional[int] = None
     name: str
+    operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None

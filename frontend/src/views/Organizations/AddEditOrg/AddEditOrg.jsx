@@ -152,6 +152,7 @@ export const AddEditOrg = ({ mode }) => {
   // Prepare payload and call mutate function
   const onSubmit = async (data) => {
     const payload = {
+      organization_id: orgID,
       name: data.orgLegalName,
       operating_name: data.orgOperatingName,
       email: data.orgEmailAddress,
@@ -183,7 +184,6 @@ export const AddEditOrg = ({ mode }) => {
       createOrg(payload)
     }
     if (mode === 'edit') {
-      console.log('payload: ', payload)
       updateOrg(payload)
     }
   }

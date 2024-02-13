@@ -111,57 +111,6 @@ class OrganizationRepository:
         )
 
     @repo_handler
-    async def update_organization(
-        self,
-        organization_id: int,
-        organization_data: OrganizationCreateSchema
-    ):
-        '''
-        update an organization in the database
-        '''
-        # print(org_address)
-        # print('------------')
-        # print(org_attorney_address)
-        # print('------------')
-        # print(org_model)
-        print('------------')
-        print(organization_data)
-
-        async with self.db.begin():
-            organization = await self.db.scalar(
-                select(Organization).where(
-                    Organization.organization_id == organization_id)
-            )
-
-            if not organization:
-                raise DataNotFoundException("Organization not found")
-
-            org_address = await self.db.scalar(
-                select(OrganizationAddress).where(
-                    OrganizationAddress.organization_address_id == organization.organization_address_id
-                )
-            )
-            org_attorney_address = await self.db.scalar(
-                select(OrganizationAttorneyAddress).where(OrganizationAttorneyAddress.organization_attorney_address_id ==
-                                                          organization.organization_attorney_address_id)
-            )
-
-            for key, value in organization_data.address.dict().items():
-                if hasattr(org_address, key):
-                    setattr(org_address, key, value)
-
-            for key, value in organization_data.attorney_address.dict().items():
-                if hasattr(org_attorney_address, key):
-                    setattr(org_attorney_address, key, value)
-
-            for key, value in organization_data.dict().items():
-                if hasattr(organization, key):
-                    setattr(organization, key, value)
-
-            await self.db.commit()
-        return organization
-
-    @repo_handler
     async def get_organizations_paginated(self, offset, limit, conditions, pagination):
         '''
         Fetch all organizations. returns pagination data
@@ -258,3 +207,17 @@ class OrganizationRepository:
         # Execute the query
         results = await self.db.execute(query)
         return results.scalars().all()
+
+    @repo_handler
+    async def get_organization_address(self, organization_address_id: int):
+        return await self.db.scalar(
+            select(OrganizationAddress)
+            .where(OrganizationAddress.organization_address_id == organization_address_id)
+        )
+
+    @repo_handler
+    async def get_organization_attorney_address(self, organization_attorney_address_id: int):
+        return await self.db.scalar(
+            select(OrganizationAttorneyAddress)
+            .where(OrganizationAttorneyAddress.organization_attorney_address_id == organization_attorney_address_id)
+        )

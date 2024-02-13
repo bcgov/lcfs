@@ -20,9 +20,8 @@ import { Role } from '@/components/Role'
 export const Transactions = () => {
   const navigate = useNavigate()
   const gridRef = useRef()
-  const apiService = useApiService()
+  // const apiService = useApiService()
   const { data: currentUserOrgData } = useOrganization()
-  const { data: currentUserData } = useCurrentUser()
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -64,7 +63,7 @@ export const Transactions = () => {
       <OrganizationList gridRef={gridRef} />
       <Box display={'flex'} gap={2} mb={2}>
         {currentUserOrgData?.org_status.status === 'Registered' && (
-          <Role roles={['Transfer']}>
+          <Role roles={['Government']}>
             <BCButton
               variant="contained"
               size="small"
