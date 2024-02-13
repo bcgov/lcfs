@@ -148,3 +148,6 @@ class OrganizationSummaryResponseSchema(BaseModel):
 
     class Config(BaseConfig):
         pass
+
+class OrganizationCreateResponseSchema(BaseModel):
+    organization_id: int

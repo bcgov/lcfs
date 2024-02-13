@@ -139,9 +139,7 @@ class OrganizationServices:
             phone=organization_data.phone,
             edrms_record=organization_data.edrms_record,
             organization_status_id=organization_data.organization_status_id,
-            organization_type_id=organization_data.organization_type_id,
-            organization_address_id=org_address.organization_address_id,
-            organization_attorney_address_id=org_attorney_address.organization_attorney_address_id,
+            organization_type_id=organization_data.organization_type_id
         )
 
         return await self.repo.create_organization(org_address, org_attorney_address, org_model)
