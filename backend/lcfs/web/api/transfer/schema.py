@@ -63,7 +63,7 @@ class TransferCreate(BaseModel):
     quantity: int
     price_per_unit: int
     signing_authority_declaration: bool
-    comments: Optional[str]
+    comments: Optional[str] = None
     class Config:
         from_attributes = True
 
