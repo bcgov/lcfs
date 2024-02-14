@@ -16,6 +16,7 @@ import OrganizationList from './components/OrganizationList'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { Role } from '@/components/Role'
+import { statuses } from '@/constants/statuses'
 
 export const Transactions = () => {
   const navigate = useNavigate()
@@ -62,7 +63,7 @@ export const Transactions = () => {
       </BCTypography>
       <OrganizationList gridRef={gridRef} />
       <Box display={'flex'} gap={2} mb={2}>
-        {currentUserOrgData?.org_status.status === 'Registered' && (
+        {currentUserOrgData?.org_status.status === statuses.registered && (
           <Role roles={['Government']}>
             <BCButton
               variant="contained"
