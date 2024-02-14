@@ -104,7 +104,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_ADD,
-        element: <AddEditOrg mode="add" />,
+        element: <AddEditOrg />,
         handle: { title: 'Add Organization' }
       },
       {
@@ -114,7 +114,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_EDIT,
-        element: <AddEditOrg mode="edit" />,
+        element: <AddEditOrg />,
         handle: { title: 'Edit Organization' }
       },
       {

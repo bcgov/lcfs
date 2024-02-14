@@ -135,14 +135,17 @@ class OrganizationServices:
         # Create and add organization model to the database
         org_model = Organization(
             name=organization_data.name,
+            operating_name=organization_data.operating_name,
             email=organization_data.email,
             phone=organization_data.phone,
             edrms_record=organization_data.edrms_record,
             organization_status_id=organization_data.organization_status_id,
-            organization_type_id=organization_data.organization_type_id
+            organization_type_id=organization_data.organization_type_id,
+            org_address=org_address,
+            org_attorney_address=org_attorney_address,
         )
 
-        return await self.repo.create_organization(org_address, org_attorney_address, org_model)
+        return await self.repo.create_organization(org_model)
 
     @service_handler
     async def update_organization(self, organization_id: int, organization_data: OrganizationCreateSchema):

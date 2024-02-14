@@ -30,9 +30,10 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     organization_attorney_address_id = Column(Integer, ForeignKey(
         'organization_attorney_address.organization_attorney_address_id'))
 
-    org_type = relationship('OrganizationType', back_populates='organizations')
+    org_type = relationship(
+        'OrganizationType', back_populates='organizations', lazy='joined')
     org_status = relationship('OrganizationStatus',
-                              back_populates='organizations')
+                              back_populates='organizations', lazy='joined')
     org_address = relationship(
         'OrganizationAddress', back_populates='organization')
     org_attorney_address = relationship(

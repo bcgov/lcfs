@@ -60,6 +60,7 @@ async def export_organizations(
 
 @router.post("/create", response_model=OrganizationCreateResponseSchema, status_code=status.HTTP_201_CREATED)
 @roles_required("Government", "Administrator")
+@view_handler
 async def create_organization(
     request: Request,
     organization_data: OrganizationCreateSchema,

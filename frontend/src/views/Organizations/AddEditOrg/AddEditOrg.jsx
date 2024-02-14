@@ -32,14 +32,14 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 
 // Component for adding a new organization
-export const AddEditOrg = ({ mode }) => {
+export const AddEditOrg = () => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
   const { orgID } = useParams()
 
   const { data, isFetched } = useOrganization(orgID, {
-    enabled: mode === 'edit',
+    enabled: orgID,
     retry: false
   })
 
@@ -180,11 +180,10 @@ export const AddEditOrg = ({ mode }) => {
       }
     }
 
-    if (mode === 'add') {
-      createOrg(payload)
-    }
-    if (mode === 'edit') {
+    if (orgID) {
       updateOrg(payload)
+    } else {
+      createOrg(payload)
     }
   }
 

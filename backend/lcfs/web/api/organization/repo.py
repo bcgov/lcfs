@@ -41,49 +41,18 @@ class OrganizationRepository:
 
     @repo_handler
     async def create_organization(
-        self,
-        org_address: OrganizationAddress,
-        org_attorney_address: OrganizationAttorneyAddress,
-        org_model: Organization
+            self,
+            org_model: Organization
     ):
-        """
-        Saves an organization to the database.
-        It first adds and flushes address entities to obtain their IDs,
-        then assigns these IDs to the organization model before saving it.
+        '''
+        save an organization in the database
+        '''
 
-        Parameters:
-            org_address (OrganizationAddress): The address of the organization.
-            org_attorney_address (OrganizationAttorneyAddress):
-                The address of the organization's attorney.
-            org_model (Organization): The organization model to be saved.
+        self.db.add(org_model)
+        await self.db.commit()
+        await self.db.refresh(org_model)
 
-        Returns:
-            OrganizationCreateResponseSchema: The schema with the ID of the created organization.
-        """
-        async with self.db.begin() as transaction:
-            try:
-                # Add and flush the address entities to obtain their IDs
-                self.db.add_all([org_address, org_attorney_address])
-                await self.db.flush()
-
-                # Assign the foreign key fields with the generated IDs
-                org_model.organization_address_id = org_address.organization_address_id
-                org_model.organization_attorney_address_id = org_attorney_address.organization_attorney_address_id
-
-                # Add the main entity
-                self.db.add(org_model)
-                await self.db.flush()
-
-                return OrganizationCreateResponseSchema(
-                    organization_id=org_model.organization_id
-                )
-            except Exception as e:
-                await transaction.rollback()
-                logger.exception(
-                    "An unexpected error occurred while creating an organization",
-                    exc_info=e
-                )
-                raise
+        return org_model
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
