@@ -189,7 +189,11 @@ export const ViewOrganization = () => {
                 startIcon={
                   <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
                 }
-                onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
+                onClick={() =>
+                  navigate(
+                    ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                  )
+                }
               >
                 <BCTypography variant="button">
                   {t('org:newUsrBtn')}

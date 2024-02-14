@@ -20,7 +20,7 @@ export const IDIRSpecificRoleFields = ({
           </span>
         }
         onChange={handleCheckbox}
-        name={govRoles[1]}
+        name={govRoles[1].toLocaleLowerCase()}
         checked={formData.administrator}
         disabled={formData.active === 'inactive'}
       />
