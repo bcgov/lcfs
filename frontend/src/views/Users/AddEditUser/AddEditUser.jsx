@@ -1,11 +1,19 @@
+import { useCallback, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useMutation } from '@tanstack/react-query'
+import { saveUpdateUser } from '@/hooks/useUser'
+import { useForm } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { schemaValidation } from './_schema'
+
 import colors from '@/themes/base/colors'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import SaveIcon from '@mui/icons-material/Save'
 import {
   Box,
   FormControlLabel,
-  FormHelperText,
   Radio,
   RadioGroup,
   Stack,
@@ -13,13 +21,14 @@ import {
   Typography
 } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2'
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Label } from './components/Label'
 import { IDIRSpecificFormFields } from './components/IDIRSpecificFormFields'
 import { BCeIDSpecificFormFields } from './components/BCeIDSpecificFormFields'
 import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
+import BCAlert from '@/components/BCAlert'
+import { ROUTES } from '@/constants/routes'
+import Loading from '@/components/Loading'
 
 const dummy = {
   errors: {
@@ -40,6 +49,8 @@ const dummy = {
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const navigate = useNavigate()
+  const { t } = useTranslation(['common', 'admin'])
+  const { userID } = useParams()
   const [formData, setFormData] = useState({
     userType,
     active: 'active',
@@ -61,28 +72,88 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     IDIRUserName: ''
   })
 
-  //   const { mutate: save } = useMutation({
-  //     mutationsFn: async (data) => await apiService.put(`/users/${userID}`, data),
-  //     onSuccess: async () => {
-  //         // on success navigate somewhere
-  //         navigate('ROUTE_HERE')
-  //     },
-  //     onError: async () => {
-  //         // handle axios errors here
-  //     },
-  //   });
+  // useForm hook setup with yup form validation
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    trigger,
+    formState: { errors }
+  } = useForm({ resolver: yupResolver(schemaValidation) })
 
-  const handleSave = async (e) => {
-    e.preventDefault()
-    // do something with data before saving?
-    if (edit) {
-      // find user and update
-    } else {
-      // save as new user
-      // get org id from either url or context and save user to the org
+  // watching form fields
+  const firstName = watch('firstName')
+  const lastName = watch('lastName')
+  const jobTitle = watch('jobTitle')
+  const IDIRUserName = watch('IDIRUserName')
+  const BCeIDUserID = watch('BCeIDUserID')
+  const email = watch('email')
+  const altEmail = watch('altEmail')
+  const phone = watch('phone')
+  const mobile = watch('mobile')
+
+  // Set value and trigger validation function
+  const setValueAndTriggerValidation = useCallback(
+    (fieldName, value) => {
+      if (watch(fieldName) !== value) {
+        setValue(fieldName, value)
+        if (value.trim().length > 0) {
+          trigger(fieldName)
+        }
+      }
+    },
+    [setValue, trigger, watch]
+  )
+
+  // Function to render form error messages
+  const renderError = (fieldName, sameAsField = null) => {
+    // If the sameAsField is provided and is true, hide errors for this field
+    if (sameAsField && watch(sameAsField)) {
+      return null
     }
-    // save(formData);
+    return (
+      errors[fieldName] && (
+        <Typography color="error" variant="caption">
+          {errors[fieldName].message}
+        </Typography>
+      )
+    )
   }
+
+  // Prepare payload and call mutate function
+  const onSubmit = async (data) => {
+    const payload = {
+      first_name: data.firstName,
+      last_name: data.lastName,
+      title: data.title,
+      username: data.idirUserName,
+      email: data.email,
+      phone: data.phone,
+      mobile_phone: data.mobile,
+      is_active: data.status,
+      roles: data.roles
+    }
+    mutate(payload)
+  }
+
+  // useMutation hook from React Query for handling API request
+  const { mutate, isLoading, isError } = useMutation({
+    mutationsFn: (data) => saveUpdateUser(userID, data),
+    onSuccess: () => {
+      // on success navigate somewhere
+      navigate(ROUTES.ADMIN_USERS, {
+        state: {
+          message: 'User has been successfully saved.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      // handle axios errors here
+      console.error('Error posting data:', error)
+    }
+  })
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -114,17 +185,6 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     setFormData((prev) => ({ ...prev, [name]: checked, readOnly: false }))
   }
 
-  const handleBackClick = () => {
-    // if (userType === 'idir') {
-    //   navigate(routes.VIEW_USER)
-    // }
-    // if (userType === 'bceid') {
-    //   navigate(routes.ORGANIZATION_USER)
-    // }
-    // should probably not be a specific route to navigate to as more than 1 page can lead to this page. instead navigate to previous page
-    navigate(-1)
-  }
-
   const handleReadOnlyClick = () => {
     setFormData((prev) => ({
       ...prev,
@@ -136,64 +196,73 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     }))
   }
 
+  if (isLoading) {
+    return <Loading message="Adding user..." />
+  }
+
   return (
     <div>
-      <Typography variant="h4" color={colors.primary.main} mb={2}>
-        Add/Edit User {userType === 'bceid' && `to ${dummy.orgName}`}
+      {isError && <BCAlert severity="error" message={t('user:')} />}
+      <Typography variant="h5" color={colors.primary.main} mb={2}>
+        {userID ? 'Edit' : 'Add'} User&nbsp;
+        {userType === 'bceid' && `to ${dummy.orgName}`}
       </Typography>
-      <Grid2 container columnSpacing={2.5} rowSpacing={3.5}>
+      <Grid2
+        container
+        columnSpacing={2.5}
+        rowSpacing={3.5}
+        component="form"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        {/* Form fields */}
         <Grid2 xs={12} md={5} lg={4}>
           <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
-            <div>
-              <Label htmlFor="firstName">First Name</Label>
+            <Box>
+              <Label htmlFor="firstName">{t('admin:userForm.firstName')}</Label>
               <TextField
                 fullWidth
                 required
-                error={!!dummy.errors.firstName}
                 name="firstName"
-                onChange={handleChange}
-                value={formData.firstName}
                 id="firstName"
+                data-test="firstName"
+                error={!!errors.firstName}
+                helperText={errors.firstName?.message}
+                {...register('firstName')}
               />
-              {dummy.errors.firstName && (
-                <FormHelperText error>{dummy.errors.firstName}</FormHelperText>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="lastName">Last Name</Label>
+            </Box>
+            <Box>
+              <Label htmlFor="lastName">{t('admin:userForm.lastName')}</Label>
               <TextField
                 fullWidth
                 required
-                error={!!dummy.errors.lastName}
                 name="lastName"
-                onChange={handleChange}
-                value={formData.lastName}
                 id="lastName"
+                data-test="lastName"
+                error={!!errors.lastName}
+                helperText={errors.lastName?.message}
+                {...register('lastName')}
               />
-              {dummy.errors.lastName && (
-                <FormHelperText error>{dummy.errors.lastName}</FormHelperText>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="jobTitle">Job Title</Label>
+            </Box>
+            <Box>
+              <Label htmlFor="jobTitle">{t('admin:userForm.jobTitle')}</Label>
               <TextField
                 fullWidth
                 required
-                error={!!dummy.errors.jobTitle}
                 name="jobTitle"
-                onChange={handleChange}
-                value={formData.jobTitle}
                 id="jobTitle"
+                data-test="jobTitle"
+                error={!!errors.jobTitle}
+                helperText={errors.jobTitle?.message}
+                {...register('jobTitle')}
               />
-              {dummy.errors.jobTitle && (
-                <FormHelperText error>{dummy.errors.jobTitle}</FormHelperText>
-              )}
-            </div>
+            </Box>
             {userType === 'idir' ? (
               <IDIRSpecificFormFields
                 formData={formData}
                 handleChange={handleChange}
-                errors={dummy.errors}
+                errors={errors}
+                register={register}
               />
             ) : (
               <BCeIDSpecificFormFields
@@ -203,39 +272,42 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               />
             )}
 
-            <div>
+            <Box>
               <Label htmlFor="phone">
-                Phone <span style={{ fontWeight: 'normal' }}>(optional)</span>
+                {t('admin:userForm.phone')}{' '}
+                <span style={{ fontWeight: 'normal' }}>
+                  ({t('admin:userForm.optional')})
+                </span>
               </Label>
               <TextField
                 fullWidth
-                error={!!dummy.errors.phone}
+                required
                 name="phone"
-                onChange={handleChange}
-                value={formData.phone}
                 id="phone"
+                data-test="phone"
+                error={!!errors.phone}
+                helperText={errors.phone?.message}
+                {...register('phone')}
               />
-              {dummy.errors.phone && (
-                <FormHelperText error>{dummy.errors.phone}</FormHelperText>
-              )}
-            </div>
-            <div>
+            </Box>
+            <Box>
               <Label htmlFor="mobile">
-                Mobile Phone{' '}
-                <span style={{ fontWeight: 'normal' }}>(optional)</span>
+                {t('admin:userForm.mobilePhone')}{' '}
+                <span style={{ fontWeight: 'normal' }}>
+                  ({t('admin:userForm.optional')})
+                </span>
               </Label>
               <TextField
                 fullWidth
-                error={!!dummy.errors.mobile}
-                name="mobile"
-                onChange={handleChange}
-                value={formData.mobile}
-                id="mobile"
+                required
+                name="mobilePhone"
+                id="mobilePhone"
+                data-test="mobilePhone"
+                error={!!errors.mobilePhone}
+                helperText={errors.mobilePhone?.message}
+                {...register('mobilePhone')}
               />
-              {dummy.errors.mobile && (
-                <FormHelperText error>{dummy.errors.mobile}</FormHelperText>
-              )}
-            </div>
+            </Box>
           </Stack>
           <Box
             bgcolor={colors.background.grey}
@@ -245,30 +317,33 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
           >
             <BCButton
               variant="outlined"
-              color="dark"
-              style={{
-                background: 'white',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8
+              size="medium"
+              color="primary"
+              sx={{
+                backgroundColor: 'white.main'
               }}
-              onClick={handleBackClick}
+              startIcon={
+                <FontAwesomeIcon icon={faArrowLeft} className="small-icon" />
+              }
+              onClick={() => navigate(-1)}
             >
-              <ArrowBackIcon />
-              Back
+              <Typography variant="subtitle2" textTransform="none">
+                {t('backBtn')}
+              </Typography>
             </BCButton>
             <BCButton
+              type="submit"
               variant="contained"
-              color="dark"
-              style={{
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8
-              }}
-              onClick={handleSave}
+              size="medium"
+              color="primary"
+              data-test="saveOrganization"
+              sx={{ ml: 2 }}
+              data-testid="saveOrganization"
+              startIcon={
+                <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+              }
             >
-              <SaveIcon />
-              Save
+              <Typography variant="button">{t('saveBtn')}</Typography>
             </BCButton>
           </Box>
         </Grid2>

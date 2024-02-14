@@ -26,5 +26,28 @@
     "role": "Role",
     "roleOf": "Role conferred to",
     "description": "Description"
+  },
+  "errMsg": "Error occurred. Please retry. For ongoing issues, contact support.",
+  "userForm": {
+    "firstName": "First name",
+    "lastName": "Last name",
+    "jobTitle": "Job title",
+    "idirUserName": "IDIR user name",
+    "bceidUserName": "BCEID user name",
+    "email": "Email address",
+    "phone": "Phone",
+    "mobilePhone": "Mobile phone",
+    "status": "status",
+    "active": "Active, user can login to LCFS portal",
+    "inactive": "Inactive, user cannot login to LCFS portal",
+    "admin": "Administrator",
+    "adminRole": "can add/edit IDIR users and assign roles and add/edit organizations, BCeID users and assign roles.",
+    "analyst": "Analyst",
+    "analystRole": "can make recommendations on transfers, transactions and compliance reports, manage file submissions and add/edit fuel codes.",
+    "complianceMgr": "Compliance manager",
+    "complianceMgrRole": "can make recommendations on compliance reports.",
+    "director": "Director",
+    "directorRole": "can assess compliance reports and approve transactions.",
+    "optional": "optional"
   }
 }

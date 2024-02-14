@@ -1,37 +1,42 @@
-import { FormHelperText, TextField } from '@mui/material'
+import { Box, TextField } from '@mui/material'
 import { Label } from './Label'
+import { useTranslation } from 'react-i18next'
 
-export const IDIRSpecificFormFields = ({ handleChange, formData, errors }) => {
+export const IDIRSpecificFormFields = ({
+  handleChange,
+  formData,
+  errors,
+  register
+}) => {
+  const { t } = useTranslation(['admin'])
   return (
     <>
-      <div>
-        <Label htmlFor="IDIRUserName">IDIR User Name</Label>
+      <Box>
+        <Label htmlFor="IDIRUserName">{t('userForm.idirUserName')}</Label>
         <TextField
           fullWidth
           required
-          error={!!errors.IDIRUserName}
           name="IDIRUserName"
-          onChange={handleChange}
-          value={formData.IDIRUserName}
           id="IDIRUserName"
+          data-test="IDIRUserName"
+          error={!!errors.IDIRUserName}
+          helperText={errors.IDIRUserName?.message}
+          {...register('IDIRUserName')}
         />
-        {errors.IDIRUserName && (
-          <FormHelperText error>{errors.IDIRUserName}</FormHelperText>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="email">Email address</Label>
+      </Box>
+      <Box>
+        <Label htmlFor="email">{t('userForm.email')}</Label>
         <TextField
           fullWidth
           required
-          error={!!errors.email}
           name="email"
-          onChange={handleChange}
-          value={formData.email}
           id="email"
+          data-test="email"
+          error={!!errors.email}
+          helperText={errors.email?.message}
+          {...register('email')}
         />
-        {errors.email && <FormHelperText error>{errors.email}</FormHelperText>}
-      </div>
+      </Box>
     </>
   )
 }
