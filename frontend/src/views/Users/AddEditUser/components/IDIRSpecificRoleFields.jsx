@@ -1,5 +1,6 @@
 import { Checkbox, FormControlLabel, Radio, RadioGroup } from '@mui/material'
 import { useTranslation } from 'react-i18next'
+import { govRoles } from '@/constants/roles'
 
 export const IDIRSpecificRoleFields = ({
   formData,
@@ -11,14 +12,15 @@ export const IDIRSpecificRoleFields = ({
   return (
     <>
       <FormControlLabel
-        control={<Checkbox {...register('roles')} data-test="roleAdmin" />}
+        control={<Checkbox {...register('roles')} data-test={govRoles[1]} />}
         label={
           <span>
-            <strong>{t('userForm.admin')}</strong> — {t('userForm.adminRole')}
+            <strong>{govRoles[1]}</strong> —{' '}
+            {t(`userForm.${govRoles[1].toLowerCase().replace(' ', '_')}`)}
           </span>
         }
         onChange={handleCheckbox}
-        name="administrator"
+        name={govRoles[1]}
         checked={formData.administrator}
         disabled={formData.active === 'inactive'}
       />
@@ -32,43 +34,28 @@ export const IDIRSpecificRoleFields = ({
         onChange={handleChange}
         value={formData.govRole}
       >
-        <FormControlLabel
-          value="analyst"
-          control={<Radio />}
-          style={{
-            '.MuiFormControlLabel-label': {
-              fontSize: 16
-            }
-          }}
-          label={
-            <span>
-              <strong>{t('userForm.analyst')}</strong> —{' '}
-              {t('userForm.analystRole')}
-            </span>
-          }
-          disabled={formData.active === 'inactive'}
-        />
-        <FormControlLabel
-          value="compliance_manager"
-          control={<Radio />}
-          label={
-            <span>
-              <strong>{t('userForm.cMgr')}</strong> — {t('userForm.cMgrRole')}
-            </span>
-          }
-          disabled={formData.active === 'inactive'}
-        />
-        <FormControlLabel
-          value="director"
-          control={<Radio />}
-          label={
-            <span>
-              <strong>{t('userForm.director')}</strong> —{' '}
-              {t('userForm.directorRole')}
-            </span>
-          }
-          disabled={formData.active === 'inactive'}
-        />
+        {govRoles.map(
+          (role, idx) =>
+            idx > 1 && (
+              <FormControlLabel
+                key={idx}
+                value={role}
+                control={<Radio />}
+                style={{
+                  '.MuiFormControlLabel-label': {
+                    fontSize: 16
+                  }
+                }}
+                label={
+                  <span>
+                    <strong>{role}</strong> —{' '}
+                    {t(`userForm.${role.toLowerCase().replace(' ', '_')}`)}
+                  </span>
+                }
+                disabled={formData.active === 'inactive'}
+              />
+            )
+        )}
       </RadioGroup>
     </>
   )
