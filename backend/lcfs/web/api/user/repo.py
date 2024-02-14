@@ -1,7 +1,8 @@
 from logging import getLogger
-from typing import List, Optional
+from typing import List
+import numpy as np
 
-from fastapi import Depends, Request
+from fastapi import Depends
 from fastapi_cache.decorator import cache
 from sqlalchemy import and_, func, select, asc, desc, delete, distinct
 from sqlalchemy.orm import joinedload
@@ -11,6 +12,7 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
+from lcfs.db.models.UserLoginHistory import UserLoginHistory
 from lcfs.db.models.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
 from lcfs.web.api.base import (
@@ -19,7 +21,6 @@ from lcfs.web.api.base import (
     apply_filter_conditions,
     get_field_for_filter,
 )
-from fastapi import HTTPException
 
 logger = getLogger("user_repo")
 
@@ -117,9 +118,7 @@ class UserRepository:
                 raise ValueError(f"Invalid filter provided: {pagination.filters}.")
 
         # Apply pagination and sorting parameters
-        offset = (
-            0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
-        )
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Applying pagination, sorting, and filters to the query
@@ -129,9 +128,7 @@ class UserRepository:
             .join(Role, UserRole.role_id == Role.role_id)
             .options(
                 joinedload(UserProfile.organization),
-                joinedload(UserProfile.user_roles).options(
-                    joinedload(UserRole.role)
-                ),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
             )
             .where(and_(*conditions))
         )
@@ -163,88 +160,82 @@ class UserRepository:
         return [UserBase.model_validate(user) for user in results], total_count
 
     @repo_handler
-    async def get_user_by_id(self, user_id: int) -> UserBase:
+    async def get_user_by_id(self, user_id: int) -> UserProfile:
         query = (
             select(UserProfile)
             .options(
                 joinedload(UserProfile.organization),
-                joinedload(UserProfile.user_roles).options(
-                    joinedload(UserRole.role)
-                ),
+                joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
             )
             .where(UserProfile.user_profile_id == user_id)
         )
 
         # Execute the query
-        user = await self.session.scalar(query)
-        return UserBase.model_validate(user)
+        return await self.session.scalar(query)
 
+    @repo_handler
     async def create_user(
         self, user_create: UserCreate, user_id: int = None
     ) -> UserProfile:
         user_data = user_create.model_dump()
         roles = user_data.pop("roles", {})
         new_user = UserProfile()
-        try:
-            # get the next sequence value for the user_profile_id and begin the async transaction.
-            user_profile_id_seq = func.nextval("user_profile_user_profile_id_seq")
-            user_profile_id = await self.session.execute(select(user_profile_id_seq))
-            user_id = user_profile_id.unique().scalar_one_or_none()
-            new_user.user_profile_id = user_id
-            # convert the UserCreate instance to UserProfile schema object
-            new_user = UserProfile.form_user_profile(new_user, user_data, user_id)
-            self.session.add(new_user)
-            self.session.refresh(new_user)
-            # Update/insert the roles separately
-            user_roles = UserRole.get_user_roles(roles, new_user)
-            self.session.add_all(user_roles)
-            # Commit and close the connection
-            self.session.commit()
-
-        except Exception as e:
-            # in case of any failures rollback the session
-            self.session.rollback()
-            logger.error(f"Error creating user: {e}")
-            raise Exception(f"Error creating user")
+        # get the next sequence value for the user_profile_id and begin the async transaction.
+        id_seq = func.nextval("user_profile_user_profile_id_seq")
+        result = await self.session.execute(select(id_seq))
+        user_id = result.unique().scalar_one_or_none()
+        user_data["user_profile_id"] = user_id
+        # convert the UserCreate instance to UserProfile schema object
+        new_user = UserProfile.form_user_profile(new_user, user_data)
+        new_user.roles = roles
+        self.session.add(new_user)
+        # Update/insert the roles separately
+        user_roles = UserRole.get_user_roles(new_user)
+        self.session.add_all(user_roles)
 
         logger.info(f"Created user with id: {user_id}")
-        return UserBase.model_validate(await self.get_user_by_id(user_id))
+        return user_id
 
+    @repo_handler
     async def update_user(
-        self, user_update: UserCreate, user_profile_id: int = None
+        self, user: UserProfile, user_update: UserCreate
     ) -> UserProfile:
         user_data = user_update.model_dump()
 
-        try:
-            # Get existing record for update.
-            user = await self.session.get(UserProfile, user_profile_id)
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found")
-            # convert UserCreate instance to UserProfile and save the data.
-            user_profile = UserProfile.form_user_profile(
-                user, user_data, user_profile_id
-            )
+        # convert UserCreate instance to UserProfile and save the data.
+        user_profile = UserProfile.form_user_profile(user, user_data)
+        self.session.add(user_profile)
+        existing_roles = [ur.role_id for ur in user_profile.user_roles]
+        new_roles = [role["role_id"] for role in user_data.pop("roles", [])]
+        if not np.array_equal(existing_roles, new_roles):
             # Delete existing roles and update with new roles
             await self.session.execute(
                 delete(UserRole).where(UserRole.user_profile_id == user.user_profile_id)
             )
-            user_roles = UserRole.get_user_roles(
-                user_data.pop("roles", {}), user_profile
-            )
+            user_roles = UserRole.get_user_roles(user_profile)
             self.session.add_all(user_roles)
-            # commit and close the connection
-            self.session.commit()
 
-        except Exception as e:
-            self.session.rollback()
-            logger.error(f"Error updating user: {e}")
-            raise Exception(f"Error updating user:.")
+        logger.info(f"Updated user_profile_id: {user.user_profile_id}")
+        return user_profile.user_profile_id
 
-        logger.info(f"Updated user_profile_id: {user_profile_id}")
-        return await self.get_user_by_id(user_profile_id)
+    @repo_handler
+    async def delete_user(self, user: UserProfile) -> None:
+        await self.session.delete(user)
+        logger.info(f"Deleted user with id: {user.user_profile_id}")
+        return None
 
-    # TODO: User History implementation
-    async def get_user_history(
-        self, pagination: PaginationRequestSchema = {}, user_id: int = None
-    ) -> List[UserHistory]:
-        return []
+    # TODO: User History pagination implementation if needed
+    @repo_handler
+    async def get_user_history(self, user_id: int = None) -> List[UserHistory]:
+        histories = await self.session.execute(
+            select(UserLoginHistory)
+            .join(
+                UserProfile,
+                UserProfile.keycloak_username == UserLoginHistory.external_username,
+            )
+            .filter(
+                UserProfile.user_profile_id == user_id,
+                UserLoginHistory.is_login_successful == True,
+            )
+        )
+        return histories.all()

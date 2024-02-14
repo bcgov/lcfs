@@ -1,5 +1,4 @@
 import io
-import random
 import math
 from datetime import datetime
 from logging import getLogger
@@ -9,6 +8,7 @@ from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.web.core.decorators import service_handler, transactional
@@ -16,14 +16,18 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
-    PaginationResponseSchema
+    PaginationResponseSchema,
 )
-from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
+from lcfs.db.models import UserProfile
+from lcfs.web.api.user.schema import (
+    UserCreate,
+    UserBase,
+    UserHistory,
+    Users,
+)
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
-
-from .repo import UserRepository
-
+from fastapi_cache import FastAPICache
 
 logger = getLogger("organization_repo")
 
@@ -33,7 +37,7 @@ class UserServices:
         self,
         request: Request = None,
         repo: UserRepository = Depends(UserRepository),
-        session: AsyncSession = Depends(get_async_db_session)
+        session: AsyncSession = Depends(get_async_db_session),
     ) -> None:
         self.repo = repo
         self.request = request
@@ -137,4 +141,64 @@ class UserServices:
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
+        return UserBase.model_validate(user)
+
+    @service_handler
+    @transactional
+    async def create_user(self, user_create: UserCreate) -> UserBase:
+        """
+        Create a new user
+        """
+        user = await self.repo.create_user(user_create)
+        FastAPICache.clear(namespace="users")
         return user
+
+    @service_handler
+    @transactional
+    async def update_user(self, user_create: UserCreate, user_id: int) -> UserProfile:
+        """
+        Update user info
+        """
+        user = await self.repo.get_user_by_id(user_id)
+        if not user:
+            raise DataNotFoundException("User not found")
+        await self.repo.update_user(user, user_create)
+        await FastAPICache.clear(namespace="users")
+        return user
+
+    @service_handler
+    @transactional
+    async def delete_user(self, user_id: int) -> None:
+        """
+        Delete only if the user has never logged in to the system.
+        """
+        user = await self.repo.get_user_by_id(user_id)
+        if not user:
+            raise DataNotFoundException("User not found")
+        history = await self.repo.get_user_history(user_id)
+        if len(history) <= 0:
+            await self.repo.delete_user(user)
+            await FastAPICache.clear(namespace="users")
+        return None
+
+    @service_handler
+    @transactional
+    async def get_user_roles(self, user_id: int) -> List[dict]:
+        """
+        Get user roles
+        """
+        user = await self.repo.get_user_by_id(user_id)
+        if not user:
+            raise DataNotFoundException("User not found")
+        return [RoleSchema.model_validate(role.to_dict()) for role in user.user_roles]
+
+    @service_handler
+    @transactional
+    async def get_user_history(self, user_id: str) -> List[UserHistory]:
+        """
+        Get user activities
+        """
+        result = await self.repo.get_user_history(user_id)
+        if len(result) <= 0:
+            raise DataNotFoundException("User history not found")
+        return [UserHistory.model_validate(history._data[0]) for history in result]

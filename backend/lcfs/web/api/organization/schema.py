@@ -143,7 +143,7 @@ class OrganizationResponseSchema(BaseModel):
 
 class OrganizationSummaryResponseSchema(BaseModel):
     organization_id: int
-    name: str
+    name: Optional[str] = None
     balance: Optional[float] = None
 
     class Config(BaseConfig):

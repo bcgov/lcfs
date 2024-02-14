@@ -32,12 +32,12 @@ class UserRole(BaseModel, Auditable):
     role = relationship("Role", back_populates="user_roles")
 
     @classmethod
-    def get_user_roles(cls, roles, user_profile):
+    def get_user_roles(cls, user_profile):
         return [
             UserRole(
                 user_profile_id=user_profile.user_profile_id, role_id=role["role_id"]
             )
-            for role in roles
+            for role in user_profile.roles
         ]
 
     def to_dict(self):

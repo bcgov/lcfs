@@ -11,15 +11,12 @@ GET: /users/<user_id>/roles {List of Roles with IDs}
 GET: /users/<user_id>/history
 """
 
-import io
-import math
 from logging import getLogger
 from typing import List
 
 from fastapi import (
     APIRouter,
     Body,
-    HTTPException,
     status,
     Request,
     Response,
@@ -30,13 +27,8 @@ from fastapi.responses import StreamingResponse
 
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-    PaginationResponseSchema,
-    lcfs_cache_key_builder,
-)
-from lcfs.web.api.user.repo import UserRepository
-from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistories, Users
+from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory, Users
 
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.user.services import UserServices
@@ -131,98 +123,86 @@ async def get_user_by_id(
 
 
 @router.post("", response_model=UserBase, status_code=status.HTTP_201_CREATED)
+@roles_required("Government")
+@view_handler
 async def create_user(
     request: Request,
     response: Response = None,
     user_create: UserCreate = ...,
-    user_repo: UserRepository = Depends(),
+    service: UserServices = Depends(),
 ) -> UserBase:
-    try:
-        return await user_repo.create_user(user_create)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Technical Error: Failed to create user: {str(e)}"
-        )
+    """
+    Endpoint to create a new user
+    This endpoint creates a new user and returns the information of the created user.
+    """
+    user_id = await service.create_user(user_create)
+    return await service.get_user_by_id(user_id)
 
 
 @router.put("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
-async def create_user(
+@roles_required("Government")
+@view_handler
+async def update_user(
     request: Request,
     response: Response = None,
     user_id: int = None,
     user_create: UserCreate = ...,
-    user_repo: UserRepository = Depends(),
+    service: UserServices = Depends(),
 ) -> UserBase:
-    try:
-        return await user_repo.update_user(user_create, user_profile_id=user_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Technical Error: Failed to create user: {str(e)}"
-        )
+    """
+    Endpoint to update a user
+    This endpoint updates a user and returns the information of the updated user.
+    """
+    await service.update_user(user_create, user_id)
+    return await service.get_user_by_id(user_id)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_200_OK)
+@roles_required("Government")
+@view_handler
+async def delete_user(
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    service: UserServices = Depends(),
+) -> None:
+    """
+    Endpoint to delete a user
+    This endpoint deletes a user, if the user had never logged in before.
+    """
+    return await service.delete_user(user_id)
 
 
 @router.get(
     "/{user_id}/roles", response_model=List[RoleSchema], status_code=status.HTTP_200_OK
 )
 @roles_required("Government")
+@view_handler
 async def get_user_roles(
     request: Request,
     response: Response = None,
     user_id: int = None,
-    user_repo: UserRepository = Depends(),
+    service: UserServices = Depends(),
 ) -> List[RoleSchema]:
-    try:
-        user = await user_repo.get_user(user_id=user_id)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
-        return [RoleSchema.model_validate(role.to_dict()) for role in user.user_roles]
-        return []
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Technical Error: Failed to get user roles: {str(e)}",
-        )
+    """
+    Endpoint to get the roles of a user
+    """
+    return await service.get_user_roles(user_id)
 
 
 @router.get(
-    "/{user_id}/history", response_model=UserHistories, status_code=status.HTTP_200_OK
+    "/{user_id}/activity", response_model=List[UserHistory], status_code=status.HTTP_200_OK
 )
 @roles_required("Government")
-async def get_user_history(
+@view_handler
+async def get_user_activities(
     request: Request,
     response: Response = None,
     user_id: int = None,
-    pagination: PaginationRequestSchema = Body(..., embed=False),
-    user_repo: UserRepository = Depends(),
-) -> UserHistories:
-    try:
-        user_histories, total_count = await user_repo.get_user_history(
-            pagination=pagination
-        )
-        if len(user_histories) == 0:
-            logger.error("Error getting user history")
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return UserHistories(
-                pagination=PaginationResponseSchema(
-                    total=0, page=0, size=0, total_pages=0
-                ),
-                users=user_histories,
-            )
-        return UserHistories(
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
-            ),
-            history=user_histories,
-        )
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting user history", str(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Technical Error: Failed to get user history: {str(e)}",
-        )
+    service: UserServices = Depends(),
+) -> List[UserHistory]:
+    """
+    Endpoint to get the activities of a user
+    It provides the details of the user login history
+    """
+    return await service.get_user_history(user_id)
