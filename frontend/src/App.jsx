@@ -101,7 +101,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATIONS,
         element: <Organizations />,
-        handle: { title: 'Organizations' }
+        handle: { title: 'Organizations', crumb: () => `Organizations` }
       },
       {
         path: ROUTES.ORGANIZATIONS_ADD,
