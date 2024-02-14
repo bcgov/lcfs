@@ -39,7 +39,7 @@ export const AddEditOrg = () => {
   const { orgID } = useParams()
 
   const { data, isFetched } = useOrganization(orgID, {
-    enabled: orgID,
+    enabled: !!orgID,
     retry: false
   })
 
