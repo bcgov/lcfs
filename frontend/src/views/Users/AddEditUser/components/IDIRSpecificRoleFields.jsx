@@ -1,18 +1,20 @@
 import { Checkbox, FormControlLabel, Radio, RadioGroup } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 
 export const IDIRSpecificRoleFields = ({
   formData,
   handleCheckbox,
-  handleChange
+  handleChange,
+  register
 }) => {
+  const { t } = useTranslation('admin')
   return (
     <>
       <FormControlLabel
-        control={<Checkbox />}
+        control={<Checkbox {...register('roles')} data-test="roleAdmin" />}
         label={
           <span>
-            <strong>Administrator</strong> — can add/edit IDIR users and assign
-            roles and add/edit organizations, BCeID users and assign roles
+            <strong>{t('userForm.admin')}</strong> — {t('userForm.adminRole')}
           </span>
         }
         onChange={handleCheckbox}
@@ -40,9 +42,8 @@ export const IDIRSpecificRoleFields = ({
           }}
           label={
             <span>
-              <strong>Analyst</strong> — can make recommendations on transfers,
-              transactions and compliance reports, manage file submissions and
-              add/edit fuel codes
+              <strong>{t('userForm.analyst')}</strong> —{' '}
+              {t('userForm.analystRole')}
             </span>
           }
           disabled={formData.active === 'inactive'}
@@ -52,8 +53,7 @@ export const IDIRSpecificRoleFields = ({
           control={<Radio />}
           label={
             <span>
-              <strong>Compliance Manager</strong> — can make recommendations on
-              compliance reports
+              <strong>{t('userForm.cMgr')}</strong> — {t('userForm.cMgrRole')}
             </span>
           }
           disabled={formData.active === 'inactive'}
@@ -63,8 +63,8 @@ export const IDIRSpecificRoleFields = ({
           control={<Radio />}
           label={
             <span>
-              <strong>Director</strong> — can assess compliance reports and
-              approve transactions
+              <strong>{t('userForm.director')}</strong> —{' '}
+              {t('userForm.directorRole')}
             </span>
           }
           disabled={formData.active === 'inactive'}

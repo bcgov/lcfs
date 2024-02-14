@@ -336,9 +336,9 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               variant="contained"
               size="medium"
               color="primary"
-              data-test="saveOrganization"
+              data-test="saveUser"
               sx={{ ml: 2 }}
-              data-testid="saveOrganization"
+              data-testid="saveUser"
               startIcon={
                 <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
               }
@@ -350,36 +350,43 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
         <Grid2 xs={12} md={7} lg={6}>
           <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
             <Box>
-              <Typography mb={1.5}>Status</Typography>
+              <Typography mb={1.5}>{t('status')}</Typography>
               <RadioGroup
+                aria-labelledby="status"
+                name="status"
+                id="status"
                 defaultValue="active"
                 style={{
                   gap: 8,
                   marginTop: 8
                 }}
-                value={formData.active}
-                name="active"
                 onChange={handleStatusChange}
               >
                 <FormControlLabel
                   value="active"
-                  control={<Radio />}
-                  label="Active, user can login to LCFS"
+                  control={
+                    <Radio {...register('status')} data-test="statusActive" />
+                  }
+                  label={t('admin:userForm.activeLabel')}
                 />
                 <FormControlLabel
                   value="inactive"
-                  control={<Radio />}
-                  label="Inactive, user cannot login to LCFS"
+                  control={
+                    <Radio {...register('status')} data-test="statusInactive" />
+                  }
+                  label={t('admin:userForm.inactiveLabel')}
                 />
+                {renderError('status')}
               </RadioGroup>
             </Box>
             <Box>
-              <Typography mb={1.5}>Roles</Typography>
+              <Typography mb={1.5}>{t('admin:Roles')}</Typography>
               {userType === 'idir' ? (
                 <IDIRSpecificRoleFields
                   formData={formData}
                   handleCheckbox={handleCheckbox}
                   handleChange={handleChange}
+                  register={register}
                 />
               ) : (
                 <BCeIDSpecificRoleFields
