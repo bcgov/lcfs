@@ -78,9 +78,9 @@ export const AddEditOrg = ({ mode }) => {
         orgCity: data.org_address.city,
         orgPostalCodeZipCode: data.org_address.postalCode_zipCode,
         orgAttorneyStreetAddress: data.org_attorney_address.street_address,
-        orgAttroneyAddressOther: data.org_attorney_address.address_other,
-        orgAttroneyCity: data.org_attorney_address.city,
-        orgAttroneyPostalCodeZipCode:
+        orgAttorneyAddressOther: data.org_attorney_address.address_other,
+        orgAttorneyCity: data.org_attorney_address.city,
+        orgAttorneyPostalCodeZipCode:
           data.org_attorney_address.postalCode_zipCode
       })
 
@@ -171,12 +171,12 @@ export const AddEditOrg = ({ mode }) => {
       },
       attorney_address: {
         name: data.orgOperatingName,
-        street_address: data.orgAttroneyStreetAddress,
-        address_other: data.orgAttroneyAddressOther || '',
-        city: data.orgAttroneyCity,
-        province_state: data.orgAttroneyProvince || 'BC',
-        country: data.orgAttroneyCountry || 'Canada',
-        postalCode_zipCode: data.orgAttroneyPostalCodeZipCode
+        street_address: data.orgAttorneyStreetAddress,
+        address_other: data.orgAttorneyAddressOther || '',
+        city: data.orgAttorneyCity,
+        province_state: data.orgAttorneyProvince || 'BC',
+        country: data.orgAttorneyCountry || 'Canada',
+        postalCode_zipCode: data.orgAttorneyPostalCodeZipCode
       }
     }
 
@@ -243,17 +243,17 @@ export const AddEditOrg = ({ mode }) => {
   // Syncing logic for 'sameAsServiceAddress'
   useEffect(() => {
     const attorneyFields = [
-      'orgAttroneyStreetAddress',
-      'orgAttroneyAddressOther',
-      'orgAttroneyCity',
-      'orgAttroneyPostalCodeZipCode'
+      'orgAttorneyStreetAddress',
+      'orgAttorneyAddressOther',
+      'orgAttorneyCity',
+      'orgAttorneyPostalCodeZipCode'
     ]
     if (sameAsServiceAddress) {
       const fieldsToSync = [
-        { target: 'orgAttroneyStreetAddress', value: orgStreetAddress },
-        { target: 'orgAttroneyAddressOther', value: orgAddressOther },
-        { target: 'orgAttroneyCity', value: orgCity },
-        { target: 'orgAttroneyPostalCodeZipCode', value: orgPostalCodeZipCode }
+        { target: 'orgAttorneyStreetAddress', value: orgStreetAddress },
+        { target: 'orgAttorneyAddressOther', value: orgAddressOther },
+        { target: 'orgAttorneyCity', value: orgCity },
+        { target: 'orgAttorneyPostalCodeZipCode', value: orgPostalCodeZipCode }
       ]
       fieldsToSync.forEach(({ target, value }) =>
         setValueAndTriggerValidation(target, value)
@@ -630,84 +630,84 @@ export const AddEditOrg = ({ mode }) => {
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyStreetAddress" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}:
                 </InputLabel>
                 <TextField
                   required
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyStreetAddress"
-                  name="orgAttroneyStreetAddress"
-                  data-test="orgAttroneyStreetAddress"
+                  id="orgAttorneyStreetAddress"
+                  name="orgAttorneyStreetAddress"
+                  data-test="orgAttorneyStreetAddress"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttroneyStreetAddress}
-                  helperText={errors.orgAttroneyStreetAddress?.message}
-                  {...register('orgAttroneyStreetAddress')}
+                  error={!!errors.orgAttorneyStreetAddress}
+                  helperText={errors.orgAttorneyStreetAddress?.message}
+                  {...register('orgAttorneyStreetAddress')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyAddressOther" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyAddressOther" sx={{ pb: 1 }}>
                   {t('org:addrOthLabel')}:
                 </InputLabel>
                 <TextField
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyAddressOther"
-                  name="orgAttroneyAddressOther"
-                  data-test="orgAttroneyAddressOther"
+                  id="orgAttorneyAddressOther"
+                  name="orgAttorneyAddressOther"
+                  data-test="orgAttorneyAddressOther"
                   variant="outlined"
                   fullWidth
-                  {...register('orgAttroneyAddressOther')}
+                  {...register('orgAttorneyAddressOther')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyCity" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyCity" sx={{ pb: 1 }}>
                   {t('org:cityLabel')}:
                 </InputLabel>
                 <TextField
                   required
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyCity"
-                  name="orgAttroneyCity"
-                  data-test="orgAttroneyCity"
+                  id="orgAttorneyCity"
+                  name="orgAttorneyCity"
+                  data-test="orgAttorneyCity"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttroneyCity}
-                  helperText={errors.orgAttroneyCity?.message}
-                  {...register('orgAttroneyCity')}
+                  error={!!errors.orgAttorneyCity}
+                  helperText={errors.orgAttorneyCity?.message}
+                  {...register('orgAttorneyCity')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyProvince" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyProvince" sx={{ pb: 1 }}>
                   {t('org:provinceLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
-                  id="orgAttroneyProvince"
-                  name="orgAttroneyProvince"
-                  data-test="orgAttroneyProvince"
+                  id="orgAttorneyProvince"
+                  name="orgAttorneyProvince"
+                  data-test="orgAttorneyProvince"
                   variant="outlined"
                   defaultValue="BC"
-                  {...register('orgAttroneyProvince')}
+                  {...register('orgAttorneyProvince')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyCountry" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyCountry" sx={{ pb: 1 }}>
                   {t('org:cntryLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
-                  id="orgAttroneyCountry"
-                  name="orgAttroneyCountry"
-                  data-test="orgAttroneyCountry"
+                  id="orgAttorneyCountry"
+                  name="orgAttorneyCountry"
+                  data-test="orgAttorneyCountry"
                   variant="outlined"
                   defaultValue="Canada"
-                  {...register('orgAttroneyCountry')}
+                  {...register('orgAttorneyCountry')}
                 />
               </Box>
               <Box mb={2}>
                 <InputLabel
-                  htmlFor="orgAttroneyPostalCodeZipCode"
+                  htmlFor="orgAttorneyPostalCodeZipCode"
                   sx={{ pb: 1 }}
                 >
                   {t('org:poLabel')}:
@@ -715,14 +715,14 @@ export const AddEditOrg = ({ mode }) => {
                 <TextField
                   required
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyPostalCodeZipCode"
-                  name="orgAttroneyPostalCodeZipCode"
-                  data-test="orgAttroneyPostalCodeZipCode"
+                  id="orgAttorneyPostalCodeZipCode"
+                  name="orgAttorneyPostalCodeZipCode"
+                  data-test="orgAttorneyPostalCodeZipCode"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttroneyPostalCodeZipCode}
-                  helperText={errors.orgAttroneyPostalCodeZipCode?.message}
-                  {...register('orgAttroneyPostalCodeZipCode')}
+                  error={!!errors.orgAttorneyPostalCodeZipCode}
+                  helperText={errors.orgAttorneyPostalCodeZipCode?.message}
+                  {...register('orgAttorneyPostalCodeZipCode')}
                 />
               </Box>
             </Box>

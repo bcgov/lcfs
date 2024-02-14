@@ -75,10 +75,10 @@ describe('Add Organization Test Suite', () => {
       cy.getByDataTest('orgAddressOther').type('Address other')
       cy.getByDataTest('orgCity').type('City')
       cy.getByDataTest('orgPostalCodeZipCode').type('V3B 0G2')
-      cy.getByDataTest('orgAttroneyStreetAddress').type('Street address')
-      cy.getByDataTest('orgAttroneyAddressOther').type('Address other')
-      cy.getByDataTest('orgAttroneyCity').type('City')
-      cy.getByDataTest('orgAttroneyPostalCodeZipCode').type('12345')
+      cy.getByDataTest('orgAttorneyStreetAddress').type('Street address')
+      cy.getByDataTest('orgAttorneyAddressOther').type('Address other')
+      cy.getByDataTest('orgAttorneyCity').type('City')
+      cy.getByDataTest('orgAttorneyPostalCodeZipCode').type('12345')
 
       cy.getByDataTest('saveOrganization').click()
       cy.getByDataTest('alert-box').should(
