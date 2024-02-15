@@ -1,6 +1,6 @@
 import { getStatus } from '@/utils/getStatus'
 import { getOrganization } from '@/utils/getOrganization'
-import * as dayjs from 'dayjs'
+import dayjs from 'dayjs'
 
 export const gridProps = {
   columnDefs: [
