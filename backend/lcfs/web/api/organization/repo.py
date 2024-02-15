@@ -17,7 +17,7 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema
+from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
 
 
 logger = getLogger("organization_repo")
@@ -42,20 +42,16 @@ class OrganizationRepository:
     @repo_handler
     async def create_organization(
             self,
-            org_address: OrganizationAddress, org_attorney_address: OrganizationAttorneyAddress, org_model: Organization
+            org_model: Organization
     ):
         '''
         save an organization in the database
         '''
-        async with self.db.begin():
 
-            self.db.add_all([org_address, org_attorney_address])
-            await self.db.flush()
-
-            self.db.add(org_model)
-            await self.db.flush()
-
-            return OrganizationSchema.model_validate(org_model)
+        self.db.add(org_model)
+        await self.db.commit()
+        await self.db.refresh(org_model)
+        return OrganizationSchema.model_validate(org_model)
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
@@ -71,37 +67,16 @@ class OrganizationRepository:
             )
             .where(Organization.organization_id == organization_id)
         )
-    
+
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:
         '''
         Fetch a single organization by organization id from the database without related tables
         '''
         return await self.db.scalar(
-            select(Organization).where(Organization.organization_id == organization_id)
+            select(Organization).where(
+                Organization.organization_id == organization_id)
         )
-
-    @repo_handler
-    async def update_organization(self, organization_id: int, organization_data) -> Organization:
-        '''
-        update an organization in the database
-        '''
-        async with self.db.begin():
-            organization = await self.db.scalar(
-                select(Organization).where(
-                    Organization.organization_id == organization_id)
-            )
-
-            if not organization:
-                raise DataNotFoundException("Organization not found")
-
-            # Update the organization fields with new data
-            for key, value in organization_data.dict().items():
-                setattr(organization, key, value)
-
-            await self.db.refresh(organization)
-
-        return organization
 
     @repo_handler
     async def get_organizations_paginated(self, offset, limit, conditions, pagination):
@@ -200,3 +175,17 @@ class OrganizationRepository:
         # Execute the query
         results = await self.db.execute(query)
         return results.scalars().all()
+
+    @repo_handler
+    async def get_organization_address(self, organization_address_id: int):
+        return await self.db.scalar(
+            select(OrganizationAddress)
+            .where(OrganizationAddress.organization_address_id == organization_address_id)
+        )
+
+    @repo_handler
+    async def get_organization_attorney_address(self, organization_attorney_address_id: int):
+        return await self.db.scalar(
+            select(OrganizationAttorneyAddress)
+            .where(OrganizationAttorneyAddress.organization_attorney_address_id == organization_attorney_address_id)
+        )

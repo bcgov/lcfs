@@ -1,4 +1,3 @@
 export { Organizations } from './Organizations'
-export { AddOrganization } from './AddOrganization/AddOrganization'
-export { EditOrganization } from './EditOrganization/EditOrganization'
-export { ViewOrganization } from './ViewOrganization/ViewOrganization'
+export { AddEditOrg } from './AddEditOrg'
+export { ViewOrganization } from './ViewOrganization'

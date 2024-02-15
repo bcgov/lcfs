@@ -13,9 +13,8 @@ import { FuelCodes, AddFuelCode } from './views/FuelCodes'
 import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
-  AddOrganization,
-  ViewOrganization,
-  EditOrganization
+  AddEditOrg,
+  ViewOrganization
 } from './views/Organizations'
 import { Transactions } from './views/Transactions'
 import { ViewTransfer, AddEditTransfer } from './views/Transfers'
@@ -101,11 +100,11 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATIONS,
         element: <Organizations />,
-        handle: { title: 'Organizations' }
+        handle: { title: 'Organizations', crumb: () => `Organizations` }
       },
       {
         path: ROUTES.ORGANIZATIONS_ADD,
-        element: <AddOrganization />,
+        element: <AddEditOrg />,
         handle: { title: 'Add Organization' }
       },
       {
@@ -115,7 +114,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_EDIT,
-        element: <EditOrganization />,
+        element: <AddEditOrg />,
         handle: { title: 'Edit Organization' }
       },
       {

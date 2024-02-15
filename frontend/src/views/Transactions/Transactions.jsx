@@ -13,11 +13,16 @@ import { useNavigate } from 'react-router-dom'
 import { dummy } from './data'
 import { gridProps } from './options'
 import OrganizationList from './components/OrganizationList'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { Role } from '@/components/Role'
+import { statuses } from '@/constants/statuses'
 
 export const Transactions = () => {
   const navigate = useNavigate()
   const gridRef = useRef()
-  const apiService = useApiService()
+  // const apiService = useApiService()
+  const { data: currentUserOrgData } = useOrganization()
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -58,15 +63,19 @@ export const Transactions = () => {
       </BCTypography>
       <OrganizationList gridRef={gridRef} />
       <Box display={'flex'} gap={2} mb={2}>
-        <BCButton
-          variant="contained"
-          size="small"
-          color="primary"
-          startIcon={<FontAwesomeIcon icon={faCirclePlus} size="2x" />}
-          onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
-        >
-          <BCTypography variant="subtitle2">New transaction</BCTypography>
-        </BCButton>
+        {currentUserOrgData?.org_status.status === statuses.registered && (
+          <Role roles={['Government']}>
+            <BCButton
+              variant="contained"
+              size="small"
+              color="primary"
+              startIcon={<FontAwesomeIcon icon={faCirclePlus} size="2x" />}
+              onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+            >
+              <BCTypography variant="subtitle2">New transaction</BCTypography>
+            </BCButton>
+          </Role>
+        )}
         <DownloadButton
           onDownload={handleDownloadTransactions}
           isDownloading={isDownloadingTransactions}
