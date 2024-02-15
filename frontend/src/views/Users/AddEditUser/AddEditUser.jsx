@@ -45,13 +45,14 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     [t]
   )
   const status = watch('status')
+  const readOnly = watch('readOnly')
   useEffect(() => {
-    if (status === 'active') {
-      setDisabled(false)
-    } else {
+    if (status !== 'active' || readOnly === 'read only') {
       setDisabled(true)
+    } else {
+      setDisabled(false)
     }
-  }, [status])
+  }, [status, readOnly])
 
   // useMutation hook from React Query for handling API request
   const { mutate, isLoading, isError } = useMutation({
@@ -179,6 +180,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
                     setValue={setValue}
                     disabled={disabled}
                     control={control}
+                    status={status}
                     t={t}
                   />
                 )}
