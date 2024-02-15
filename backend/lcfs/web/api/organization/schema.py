@@ -15,11 +15,14 @@ class BaseConfig:
 # --------------------------------------
 # Organization Type
 # --------------------------------------
+
+
 class OrganizationTypeEnum(str, Enum):
     FUEL_SUPPLIER = "Fuel Supplier"
     ELECTRICITY_SUPPLIER = "Electricity Supplier"
     BROKER = "Broker"
     UTILITIES = "Utilities (local or public)"
+
 
 class OrganizationTypeBase(BaseModel):
     organization_type_id: int
@@ -29,17 +32,21 @@ class OrganizationTypeBase(BaseModel):
     class Config(BaseConfig):
         pass
 
+
 class OrganizationTypeSchema(OrganizationTypeBase):
     pass
 
 # --------------------------------------
 # Organization Status
 # --------------------------------------
+
+
 class OrganizationStatusEnum(str, Enum):
     UNREGISTERED = "Unregistered"
     REGISTERED = "Registered"
     SUSPENDED = "Suspended"
     CANCELED = "Canceled"
+
 
 class OrganizationStatusBase(BaseModel):
     organization_status_id: int
@@ -49,6 +56,7 @@ class OrganizationStatusBase(BaseModel):
     class Config(BaseConfig):
         pass
 
+
 class OrganizationStatusSchema(OrganizationStatusBase):
     pass
 
@@ -56,6 +64,8 @@ class OrganizationStatusSchema(OrganizationStatusBase):
 # Address Base Model
 # Unified Address Model for 'Organization Address' and 'Organization Attorney Address'
 # --------------------------------------
+
+
 class AddressBase(BaseModel):
     name: str
     street_address: str
@@ -68,13 +78,17 @@ class AddressBase(BaseModel):
 # --------------------------------------
 # Organization Address
 # --------------------------------------
+
+
 class OrganizationAddressBase(AddressBase):
 
     class Config(BaseConfig):
         pass
 
+
 class OrganizationAddressSchema(OrganizationAddressBase):
     organization_id: Optional[int] = None
+
 
 class OrganizationAddressCreateSchema(OrganizationAddressBase):
     pass
@@ -82,13 +96,17 @@ class OrganizationAddressCreateSchema(OrganizationAddressBase):
 # --------------------------------------
 # Organization Attorney Address
 # --------------------------------------
+
+
 class OrganizationAttorneyAddressBase(AddressBase):
 
     class Config(BaseConfig):
         pass
 
+
 class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBase):
     organization_id: Optional[int] = None
+
 
 class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
     pass
@@ -96,9 +114,12 @@ class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
 # --------------------------------------
 # Organization
 # --------------------------------------
+
+
 class OrganizationBase(BaseModel):
     organization_id: Optional[int] = None
     name: str
+    operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
@@ -108,19 +129,23 @@ class OrganizationBase(BaseModel):
     class Config(BaseConfig):
         pass
 
+
 class OrganizationSchema(OrganizationBase):
     organization_address_id: Optional[int] = None
     organization_attorney_address_id: Optional[int] = None
     org_type: Optional[OrganizationTypeSchema] = []
     org_status: Optional[OrganizationStatusSchema] = []
 
+
 class OrganizationListSchema(BaseModel):
     pagination: PaginationResponseSchema
     organizations: List[OrganizationSchema]
 
+
 class OrganizationCreateSchema(OrganizationBase):
     address: OrganizationAddressCreateSchema
     attorney_address: OrganizationAttorneyAddressCreateSchema
+
 
 class OrganizationUpdateSchema(BaseModel):
     name: Optional[str] = None
@@ -128,6 +153,7 @@ class OrganizationUpdateSchema(BaseModel):
     type: Optional[int] = None
     address: Optional[OrganizationAddressCreateSchema] = []
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
+
 
 class OrganizationResponseSchema(BaseModel):
     name: str
@@ -140,6 +166,7 @@ class OrganizationResponseSchema(BaseModel):
 
     class Config(BaseConfig):
         pass
+
 
 class OrganizationSummaryResponseSchema(BaseModel):
     organization_id: int

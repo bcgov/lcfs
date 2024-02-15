@@ -135,19 +135,53 @@ class OrganizationServices:
         # Create and add organization model to the database
         org_model = Organization(
             name=organization_data.name,
+            operating_name=organization_data.operating_name,
             email=organization_data.email,
             phone=organization_data.phone,
             edrms_record=organization_data.edrms_record,
             organization_status_id=organization_data.organization_status_id,
-            organization_type_id=organization_data.organization_type_id
+            organization_type_id=organization_data.organization_type_id,
+            org_address=org_address,
+            org_attorney_address=org_attorney_address,
         )
 
-        return await self.repo.create_organization(org_address, org_attorney_address, org_model)
+        return await self.repo.create_organization(org_model)
 
     @service_handler
-    async def update_organization(self, organization_id: int, organization_data):
+    async def update_organization(self, organization_id: int, organization_data: OrganizationCreateSchema):
         '''handles updating an organization'''
-        return await self.repo.update_organization(organization_id, organization_data)
+
+        organization = await self.repo.get_organization(organization_id)
+
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        for key, value in organization_data.dict().items():
+            if hasattr(organization, key):
+                setattr(organization, key, value)
+
+        if organization.organization_address_id:
+            org_address = await self.repo.get_organization_address(organization.organization_address_id)
+
+            if not org_address:
+                raise DataNotFoundException("Organization address not found")
+
+            for key, value in organization_data.address.dict().items():
+                if hasattr(org_address, key):
+                    setattr(org_address, key, value)
+
+        if organization.organization_attorney_address_id:
+            org_attorney_address = await self.repo.get_organization_attorney_address(organization.organization_attorney_address_id)
+
+            if not org_attorney_address:
+                raise DataNotFoundException(
+                    "Organization attorney address not found")
+
+            for key, value in organization_data.attorney_address.dict().items():
+                if hasattr(org_attorney_address, key):
+                    setattr(org_attorney_address, key, value)
+
+        return organization
 
     @service_handler
     async def get_organization(self, organization_id: int):

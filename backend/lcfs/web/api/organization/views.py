@@ -60,6 +60,7 @@ async def export_organizations(
 
 @router.post("/create", response_model=OrganizationCreateResponseSchema, status_code=status.HTTP_201_CREATED)
 @roles_required("Government", "Administrator")
+@view_handler
 async def create_organization(
     request: Request,
     organization_data: OrganizationCreateSchema,
@@ -87,12 +88,12 @@ async def get_organization(
     return await service.get_organization(organization_id)
 
 
-@router.put("/{organization_id}", response_model=OrganizationSchema)
+@router.put("/{organization_id}")
 @view_handler
 async def update_organization(
     request: Request,
     organization_id: int,
-    organization_data: OrganizationUpdateSchema,
+    organization_data: OrganizationCreateSchema,
     service: OrganizationServices = Depends()
 ):
     '''Update an organizations data by id'''
