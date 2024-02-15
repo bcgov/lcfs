@@ -1,27 +1,27 @@
-import colors from '@/themes/base/colors.js'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { IconButton } from '@mui/material'
-import EditIcon from '@mui/icons-material/Edit'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/constants/routes'
+import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import EditIcon from '@mui/icons-material/Edit'
+import { IconButton } from '@mui/material'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
+import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import Loading from '@/components/Loading'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useOrganization } from '@/hooks/useOrganization'
+import { constructAddress } from '@/utils/constructAddress'
+import { phoneNumberFormatter } from '@/utils/formatters'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   defaultFilterModel,
   defaultSortModel,
   getUserColumnDefs
 } from './_schema'
-import { useNavigate, useParams } from 'react-router-dom'
-import { constructAddress } from '@/utils/constructAddress'
-import Loading from '@/components/Loading'
-import { useOrganization } from '@/hooks/useOrganization'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { phoneNumberFormatter } from '@/utils/formatters'
 
 const OrgDetailTypography = ({ bold, children, ...rest }) => {
   return (
@@ -118,7 +118,7 @@ export const ViewOrganization = () => {
             <OrgDetailTypography bold>
               {t('org:operatingNameLabel')}:
             </OrgDetailTypography>
-            <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
+            <OrgDetailTypography>{orgData.operating_name}</OrgDetailTypography>
             <OrgDetailTypography bold>
               {t('org:phoneNbrLabel')}:
             </OrgDetailTypography>
@@ -152,7 +152,9 @@ export const ViewOrganization = () => {
               {t('org:regTrnLabel')}:
             </OrgDetailTypography>
             <OrgDetailTypography>
-              {orgData.org_status.status}
+              {orgData.org_status.status === 'Registered'
+                ? 'Yes — A registered organization is able to transfer compliance units.'
+                : 'No — An organization must be registered to transfer compliance units.'}
             </OrgDetailTypography>
           </BCBox>
         </BCBox>

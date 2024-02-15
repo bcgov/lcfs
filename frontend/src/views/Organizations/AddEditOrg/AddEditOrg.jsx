@@ -1,41 +1,47 @@
 // External Modules
-import { useState, useEffect, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
+import { faArrowLeft, faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { schemaValidation } from './_schema'
 import {
-  Paper,
-  Grid,
   Box,
-  Typography,
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Grid,
   InputLabel,
-  TextField,
+  Paper,
   Radio,
   RadioGroup,
-  FormControlLabel,
-  FormControl,
-  FormLabel,
-  Checkbox,
-  Button
+  TextField,
+  Typography
 } from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
-import { useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { useCallback, useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { schemaValidation } from './_schema'
 
 // Internal Modules
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
-import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
+import { useOrganization } from '@/hooks/useOrganization'
+import { useApiService } from '@/services/useApiService'
 
 // Component for adding a new organization
-export const AddOrganization = () => {
+export const AddEditOrg = () => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
+  const { orgID } = useParams()
+
+  const { data, isFetched } = useOrganization(orgID, {
+    enabled: !!orgID,
+    retry: false
+  })
 
   // State for controlling checkbox behavior
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
@@ -48,10 +54,53 @@ export const AddOrganization = () => {
     formState: { errors },
     watch,
     setValue,
-    trigger
+    trigger,
+    reset
   } = useForm({
-    resolver: yupResolver(schemaValidation)
+    resolver: yupResolver(schemaValidation),
+    defaultValues: {
+      orgRegForTransfers: 2
+    }
   })
+
+  useEffect(() => {
+    if (isFetched && data) {
+      reset({
+        orgLegalName: data.name,
+        orgOperatingName: data?.operating_name,
+        orgEmailAddress: data.email,
+        orgPhoneNumber: data.phone,
+        orgEDRMSRecord: data.edrms_record,
+        orgRegForTransfers:
+          data.org_status.organization_status_id === 2 ? '2' : '1',
+        orgStreetAddress: data.org_address.street_address,
+        orgAddressOther: data.org_address.address_other,
+        orgCity: data.org_address.city,
+        orgPostalCodeZipCode: data.org_address.postalCode_zipCode,
+        orgAttorneyStreetAddress: data.org_attorney_address.street_address,
+        orgAttorneyAddressOther: data.org_attorney_address.address_other,
+        orgAttorneyCity: data.org_attorney_address.city,
+        orgAttorneyPostalCodeZipCode:
+          data.org_attorney_address.postalCode_zipCode
+      })
+
+      if (
+        data.name === data?.operating_name ||
+        (data.name && !data?.operating_name)
+      ) {
+        setSameAsLegalName(true)
+      }
+
+      if (
+        data.org_address.postalCode_zipCode ===
+          data.org_attorney_address.postalCode_zipCode &&
+        data.org_address.street_address ===
+          data.org_attorney_address.street_address
+      ) {
+        setSameAsServiceAddress(true)
+      }
+    }
+  }, [isFetched])
 
   // Watching form fields
   const orgLegalName = watch('orgLegalName')
@@ -103,7 +152,9 @@ export const AddOrganization = () => {
   // Prepare payload and call mutate function
   const onSubmit = async (data) => {
     const payload = {
+      organization_id: orgID,
       name: data.orgLegalName,
+      operating_name: data.orgOperatingName,
       email: data.orgEmailAddress,
       phone: data.orgPhoneNumber,
       edrms_record: data.orgEDRMSRecord,
@@ -120,19 +171,28 @@ export const AddOrganization = () => {
       },
       attorney_address: {
         name: data.orgOperatingName,
-        street_address: data.orgAttroneyStreetAddress,
-        address_other: data.orgAttroneyAddressOther || '',
-        city: data.orgAttroneyCity,
-        province_state: data.orgAttroneyProvince || 'BC',
-        country: data.orgAttroneyCountry || 'Canada',
-        postalCode_zipCode: data.orgAttroneyPostalCodeZipCode
+        street_address: data.orgAttorneyStreetAddress,
+        address_other: data.orgAttorneyAddressOther || '',
+        city: data.orgAttorneyCity,
+        province_state: data.orgAttorneyProvince || 'BC',
+        country: data.orgAttorneyCountry || 'Canada',
+        postalCode_zipCode: data.orgAttorneyPostalCodeZipCode
       }
     }
-    mutate(payload)
+
+    if (orgID) {
+      updateOrg(payload)
+    } else {
+      createOrg(payload)
+    }
   }
 
   // useMutation hook from React Query for handling API request
-  const { mutate, isLoading, isError } = useMutation({
+  const {
+    mutate: createOrg,
+    isPending: isCreateOrgPending,
+    isError: isCreateOrgError
+  } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
     onSuccess: () => {
@@ -150,6 +210,26 @@ export const AddOrganization = () => {
     }
   })
 
+  const {
+    mutate: updateOrg,
+    isPending: isUpdateOrgPending,
+    isError: isUpdateOrgError
+  } = useMutation({
+    mutationFn: async (payload) =>
+      await apiService.put(`/organizations/${orgID}`, payload),
+    onSuccees: () => {
+      navigate(ROUTES.ORGANIZATIONS, {
+        state: {
+          message: 'Organization has been successfully updated.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      console.error('Error posting data:', error)
+    }
+  })
+
   // Syncing logic for 'sameAsLegalName'
   useEffect(() => {
     if (sameAsLegalName) {
@@ -162,17 +242,17 @@ export const AddOrganization = () => {
   // Syncing logic for 'sameAsServiceAddress'
   useEffect(() => {
     const attorneyFields = [
-      'orgAttroneyStreetAddress',
-      'orgAttroneyAddressOther',
-      'orgAttroneyCity',
-      'orgAttroneyPostalCodeZipCode'
+      'orgAttorneyStreetAddress',
+      'orgAttorneyAddressOther',
+      'orgAttorneyCity',
+      'orgAttorneyPostalCodeZipCode'
     ]
     if (sameAsServiceAddress) {
       const fieldsToSync = [
-        { target: 'orgAttroneyStreetAddress', value: orgStreetAddress },
-        { target: 'orgAttroneyAddressOther', value: orgAddressOther },
-        { target: 'orgAttroneyCity', value: orgCity },
-        { target: 'orgAttroneyPostalCodeZipCode', value: orgPostalCodeZipCode }
+        { target: 'orgAttorneyStreetAddress', value: orgStreetAddress },
+        { target: 'orgAttorneyAddressOther', value: orgAddressOther },
+        { target: 'orgAttorneyCity', value: orgCity },
+        { target: 'orgAttorneyPostalCodeZipCode', value: orgPostalCodeZipCode }
       ]
       fieldsToSync.forEach(({ target, value }) =>
         setValueAndTriggerValidation(target, value)
@@ -191,7 +271,7 @@ export const AddOrganization = () => {
   ])
 
   // Conditional rendering for loading
-  if (isLoading) {
+  if (isCreateOrgPending || isUpdateOrgPending) {
     return <Loading message="Adding Organization..." />
   }
 
@@ -203,10 +283,12 @@ export const AddOrganization = () => {
         bgcolor: 'background.paper',
         border: 'none'
       }}
-      data-test="addOrganizationContainer"
+      data-test="addEditOrgContainer"
     >
       {/* Error Alert */}
-      {isError && <BCAlert severity="error">{t('org:errMsg')}</BCAlert>}
+      {(isCreateOrgError || isUpdateOrgError) && (
+        <BCAlert severity="error">{t('org:errMsg')}</BCAlert>
+      )}
 
       <Typography variant="h5" px={3}>
         {t('org:addOrgTitle')}
@@ -547,84 +629,84 @@ export const AddOrganization = () => {
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyStreetAddress" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}:
                 </InputLabel>
                 <TextField
                   required
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyStreetAddress"
-                  name="orgAttroneyStreetAddress"
-                  data-test="orgAttroneyStreetAddress"
+                  id="orgAttorneyStreetAddress"
+                  name="orgAttorneyStreetAddress"
+                  data-test="orgAttorneyStreetAddress"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttroneyStreetAddress}
-                  helperText={errors.orgAttroneyStreetAddress?.message}
-                  {...register('orgAttroneyStreetAddress')}
+                  error={!!errors.orgAttorneyStreetAddress}
+                  helperText={errors.orgAttorneyStreetAddress?.message}
+                  {...register('orgAttorneyStreetAddress')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyAddressOther" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyAddressOther" sx={{ pb: 1 }}>
                   {t('org:addrOthLabel')}:
                 </InputLabel>
                 <TextField
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyAddressOther"
-                  name="orgAttroneyAddressOther"
-                  data-test="orgAttroneyAddressOther"
+                  id="orgAttorneyAddressOther"
+                  name="orgAttorneyAddressOther"
+                  data-test="orgAttorneyAddressOther"
                   variant="outlined"
                   fullWidth
-                  {...register('orgAttroneyAddressOther')}
+                  {...register('orgAttorneyAddressOther')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyCity" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyCity" sx={{ pb: 1 }}>
                   {t('org:cityLabel')}:
                 </InputLabel>
                 <TextField
                   required
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyCity"
-                  name="orgAttroneyCity"
-                  data-test="orgAttroneyCity"
+                  id="orgAttorneyCity"
+                  name="orgAttorneyCity"
+                  data-test="orgAttorneyCity"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttroneyCity}
-                  helperText={errors.orgAttroneyCity?.message}
-                  {...register('orgAttroneyCity')}
+                  error={!!errors.orgAttorneyCity}
+                  helperText={errors.orgAttorneyCity?.message}
+                  {...register('orgAttorneyCity')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyProvince" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyProvince" sx={{ pb: 1 }}>
                   {t('org:provinceLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
-                  id="orgAttroneyProvince"
-                  name="orgAttroneyProvince"
-                  data-test="orgAttroneyProvince"
+                  id="orgAttorneyProvince"
+                  name="orgAttorneyProvince"
+                  data-test="orgAttorneyProvince"
                   variant="outlined"
                   defaultValue="BC"
-                  {...register('orgAttroneyProvince')}
+                  {...register('orgAttorneyProvince')}
                 />
               </Box>
               <Box mb={2}>
-                <InputLabel htmlFor="orgAttroneyCountry" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="orgAttorneyCountry" sx={{ pb: 1 }}>
                   {t('org:cntryLabel')}:
                 </InputLabel>
                 <TextField
                   disabled
-                  id="orgAttroneyCountry"
-                  name="orgAttroneyCountry"
-                  data-test="orgAttroneyCountry"
+                  id="orgAttorneyCountry"
+                  name="orgAttorneyCountry"
+                  data-test="orgAttorneyCountry"
                   variant="outlined"
                   defaultValue="Canada"
-                  {...register('orgAttroneyCountry')}
+                  {...register('orgAttorneyCountry')}
                 />
               </Box>
               <Box mb={2}>
                 <InputLabel
-                  htmlFor="orgAttroneyPostalCodeZipCode"
+                  htmlFor="orgAttorneyPostalCodeZipCode"
                   sx={{ pb: 1 }}
                 >
                   {t('org:poLabel')}:
@@ -632,14 +714,14 @@ export const AddOrganization = () => {
                 <TextField
                   required
                   disabled={sameAsServiceAddress}
-                  id="orgAttroneyPostalCodeZipCode"
-                  name="orgAttroneyPostalCodeZipCode"
-                  data-test="orgAttroneyPostalCodeZipCode"
+                  id="orgAttorneyPostalCodeZipCode"
+                  name="orgAttorneyPostalCodeZipCode"
+                  data-test="orgAttorneyPostalCodeZipCode"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttroneyPostalCodeZipCode}
-                  helperText={errors.orgAttroneyPostalCodeZipCode?.message}
-                  {...register('orgAttroneyPostalCodeZipCode')}
+                  error={!!errors.orgAttorneyPostalCodeZipCode}
+                  helperText={errors.orgAttorneyPostalCodeZipCode?.message}
+                  {...register('orgAttorneyPostalCodeZipCode')}
                 />
               </Box>
             </Box>

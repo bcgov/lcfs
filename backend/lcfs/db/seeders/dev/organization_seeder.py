@@ -16,6 +16,7 @@ async def seed_organizations(session):
     organizations_to_seed = [
         {
             "name": "LCFS Org 1",
+            "operating_name": 'LCFS Org 1',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1234",
             "edrms_record": "12345",
@@ -26,6 +27,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 2",
+            "operating_name": 'LCFS Org 2',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-5678",
             "edrms_record": "12345",
@@ -36,6 +38,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 3",
+            "operating_name": 'LCFS Org 3',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-9101",
             "edrms_record": "12345",
@@ -46,6 +49,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 4",
+            "operating_name": 'LCFS Org 4',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1122",
             "edrms_record": "12345",
@@ -56,6 +60,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 5",
+            "operating_name": 'LCFS Org 5',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1313",
             "edrms_record": "12345",
@@ -66,6 +71,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 6",
+            "operating_name": 'LCFS Org 6',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1414",
             "edrms_record": "12345",
@@ -76,6 +82,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 7",
+            "operating_name": 'LCFS Org 7',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1515",
             "edrms_record": "12345",
@@ -86,6 +93,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 8",
+            "operating_name": 'LCFS Org 8',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1616",
             "edrms_record": "12345",
@@ -96,6 +104,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 9",
+            "operating_name": 'LCFS Org 9',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1717",
             "edrms_record": "12345",
@@ -106,6 +115,7 @@ async def seed_organizations(session):
         },
         {
             "name": "LCFS Org 10",
+            "operating_name": 'LCFS Org 10',
             "email": "tfrs@gov.bc.ca",
             "phone": "000-555-1818",
             "edrms_record": "12345",
