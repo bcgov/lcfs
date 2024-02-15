@@ -52,9 +52,9 @@ async def seed_user_profiles(session):
             "last_name": "Hashimoto",
         },
         {
-            "keycloak_email": "protonater@live.com",
+            "keycloak_email": "prashanth.venkateshappa@gov.bc.ca",
             "keycloak_username": "PVENKATE",
-            "email": "protonater@live.com",
+            "email": "prashanth.venkateshappa@gov.bc.ca",
             "title": "Developer",
             "phone": "1234567890",
             "mobile_phone": "1234567890",

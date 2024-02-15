@@ -26,5 +26,31 @@
     "role": "Role",
     "roleOf": "Role conferred to",
     "description": "Description"
+  },
+  "errMsg": "Error occurred. Please retry. For ongoing issues, contact support.",
+  "userForm": {
+    "firstName": "First name",
+    "lastName": "Last name",
+    "jobTitle": "Job title",
+    "idirUserName": "IDIR user name",
+    "bceidUserName": "BCeID Userid",
+    "email": "Email address",
+    "bceidEmail": "Email address associated with the BCeID user account",
+    "bceidAltEmail": "Alternate email for notifications",
+    "phone": "Phone",
+    "mobilePhone": "Mobile phone",
+    "status": "status",
+    "activeLabel": "Active, user can login to LCFS portal",
+    "inactiveLabel": "Inactive, user cannot login to LCFS portal",
+    "administrator": "can add/edit IDIR users and assign roles and add/edit organizations, BCeID users and assign roles.",
+    "analyst": "can make recommendations on transfers, transactions and compliance reports, manage file submissions and add/edit fuel codes.",
+    "compliance_manager": "can make recommendations on compliance reports.",
+    "director": "can assess compliance reports and approve transactions.",
+    "manage_users": "can add/edit BCeID users and assign roles.",
+    "transfer": "can create/save transfers and submit files.",
+    "compliance_reporting": "can create/save compliance reports and submit files.",
+    "signing_authority": "can sign and submit compliance reports to government and transfers to trade partners/government.",
+    "read_only": "can view transactions, compliance reports and files.",
+    "optional": "optional"
   }
 }

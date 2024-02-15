@@ -3,7 +3,7 @@ import colors from '@/themes/base/colors'
 
 import { pxToRem, linearGradient } from '@/themes/utils'
 const { borderWidth, borderColor } = borders
-const { transparent, primary } = colors
+const { transparent, primary, white } = colors
 
 const radio = {
   styleOverrides: {
@@ -12,7 +12,8 @@ const radio = {
       '& .MuiSvgIcon-root': {
         width: pxToRem(20),
         height: pxToRem(20),
-        color: transparent.main,
+        color: white.main,
+        backgroundColor: white.main,
         border: `${borderWidth[1]} solid ${borderColor}`,
         borderRadius: '50%'
       },
@@ -44,7 +45,8 @@ const radio = {
         borderColor: colors.grey[700]
       },
       '&.Mui-disabled .MuiSvgIcon-fontSizeMedium': {
-        borderColor: colors.grey[500]
+        borderColor: colors.grey[500],
+        backgroundColor: transparent.main
       }
     },
 

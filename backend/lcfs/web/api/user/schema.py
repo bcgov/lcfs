@@ -25,8 +25,8 @@ class UserCreate(BaseModel):
     last_name: str
     is_active: bool
     organization_id: Optional[int] = None
-    organization: OrganizationSummaryResponseSchema = Field(exclude=True)
-    roles: List[RoleSchema] = Field(exclude=True)
+    organization: Optional[OrganizationSummaryResponseSchema] = None
+    roles: List[RoleSchema]
 
     class Config:
         from_attributes = True
@@ -45,7 +45,7 @@ class UserBase(BaseModel):
     is_active: Union[bool, str]
     mobile_phone: Optional[str] = None
     organization: Optional[OrganizationSummaryResponseSchema] = None
-    roles: Optional[List[RoleSchema]] = []
+    roles: Optional[List[RoleSchema]] = None
     is_government_user: Optional[bool] = None
 
     class Config:
@@ -59,7 +59,11 @@ class UserBase(BaseModel):
             roles.append(role.to_dict())
             if role.role.is_government_role:
                 is_government_user = True
-        return cls(roles=roles, is_government_user=is_government_user, **user_profile.__dict__)
+        user_dict = user_profile.__dict__.copy() # make a copy of the dictionary
+        user_dict.pop('roles', None) # remove the roles key if it exists
+        return cls(
+            roles=roles, is_government_user=is_government_user, **user_dict
+        )
 
 
 class Users(BaseModel):
@@ -68,13 +72,14 @@ class Users(BaseModel):
 
 
 class UserHistory(BaseModel):
-    user_profile_id: int
     user_login_history_id: int
-    keycloak_email: str
+    keycloak_email: EmailStr
     external_username: str
-    keycloak_user_id: str
     is_login_successful: bool
-    login_error_message: str
+    login_error_message: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
 
 
 class UserHistories(BaseModel):

@@ -4,7 +4,7 @@ import colors from '@/themes/base/colors'
 import { pxToRem, linearGradient } from '@/themes/utils'
 
 const { borderWidth, borderColor } = borders
-const { transparent, primary, background } = colors
+const { transparent, primary, background, white } = colors
 
 const checkbox = {
   styleOverrides: {
@@ -33,7 +33,8 @@ const checkbox = {
         borderColor: colors.grey[700]
       },
       '&.Mui-disabled .MuiSvgIcon-fontSizeMedium': {
-        borderColor: colors.grey[500]
+        borderColor: colors.grey[500],
+        backgroundColor: colors.grey[100]
       }
     },
 
