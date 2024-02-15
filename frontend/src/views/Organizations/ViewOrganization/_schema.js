@@ -9,8 +9,7 @@ export const organizationsColDefs = (t) => [
   {
     colId: 'name',
     field: 'name',
-    headerName: t('org:orgColLabels.orgName'),
-    width: 400
+    headerName: t('org:orgColLabels.orgName')
   },
   {
     colId: 'complianceUnits',
@@ -38,7 +37,6 @@ export const organizationsColDefs = (t) => [
     colId: 'status',
     field: 'status',
     headerName: t('org:orgColLabels.status'),
-    width: 200,
     valueGetter: (params) => params.data.org_status.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
