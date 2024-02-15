@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
@@ -31,7 +31,7 @@ import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   // User form hook and form validation
-  const { handleSubmit, control, setValue } = useForm({
+  const { handleSubmit, control, setValue, watch } = useForm({
     resolver: yupResolver(userInfoSchema),
     mode: 'onChange',
     defaultValues
@@ -44,6 +44,14 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     () => (orgID ? bceidTextFields(t) : idirTextFields(t)),
     [t]
   )
+  const status = watch('status')
+  useEffect(() => {
+    if (status === 'active') {
+      setDisabled(false)
+    } else {
+      setDisabled(true)
+    }
+  }, [status])
 
   // useMutation hook from React Query for handling API request
   const { mutate, isLoading, isError } = useMutation({
