@@ -8,15 +8,25 @@ import {
 } from '@mui/material'
 import { Controller } from 'react-hook-form'
 import PropTypes from 'prop-types'
+import { CustomLabel } from './CustomLabel'
 
-export const BCFormRadio = ({ name, control, label, options }) => {
+export const BCFormRadio = ({ name, control, label, options, disabled }) => {
   const generateRadioOptions = () => {
     return options.map((singleOption, idx) => (
       <FormControlLabel
         key={singleOption.value}
         value={singleOption.value}
-        label={singleOption.label}
-        control={<Radio />}
+        label={
+          singleOption.header ? (
+            <CustomLabel
+              header={singleOption.header}
+              text={singleOption.text}
+            />
+          ) : (
+            singleOption.label
+          )
+        }
+        control={<Radio sx={{ marginTop: 0.5 }} disabled={disabled} />}
       />
     ))
   }
@@ -39,7 +49,7 @@ export const BCFormRadio = ({ name, control, label, options }) => {
           <RadioGroup
             value={value}
             onChange={onChange}
-            aria-labelledby="status"
+            aria-labelledby={label}
             style={{
               gap: 8,
               marginTop: 8
@@ -58,5 +68,5 @@ BCFormRadio.propTypes = {
   control: PropTypes.any.isRequired,
   label: PropTypes.string,
   setValue: PropTypes.any,
-  options: PropTypes.array.isRequired,
+  options: PropTypes.array.isRequired
 }

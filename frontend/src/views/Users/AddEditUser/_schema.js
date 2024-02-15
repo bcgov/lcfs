@@ -115,8 +115,8 @@ export const statusOptions = (t) => [
 export const idirRoleOptions = (t) => (
   govRoles.map(
     (role, idx) => (idx > 1 && {
-      label: { role },
-      header: { role },
+      label: role,
+      header: role,
       text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
       value: role.toLowerCase()
     })

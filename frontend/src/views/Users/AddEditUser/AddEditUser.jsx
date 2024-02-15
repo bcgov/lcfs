@@ -27,7 +27,6 @@ import { Box, Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
-import { CheckboxLabel } from './components/CheckBoxLabel'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
@@ -169,15 +168,12 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
                     setValue={setValue}
                     options={[
                       {
-                        label: (
-                          <CheckboxLabel
-                            header={govRoles[1]}
-                            text={t(
-                              `admin:userForm.${govRoles[1]
-                                .toLowerCase()
-                                .replace(' ', '_')}`
-                            )}
-                          />
+                        label: govRoles[1],
+                        header: govRoles[1],
+                        text: t(
+                          `admin:userForm.${govRoles[1]
+                            .toLowerCase()
+                            .replace(' ', '_')}`
                         ),
                         value: govRoles[1].toLowerCase()
                       }

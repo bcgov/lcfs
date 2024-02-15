@@ -7,6 +7,7 @@ import {
   Typography
 } from '@mui/material'
 import { Controller } from 'react-hook-form'
+import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
 
 export const BCFormCheckbox = ({
@@ -62,7 +63,16 @@ export const BCFormCheckbox = ({
                   control={control}
                 />
               }
-              label={option.label}
+              label={
+                option.header ? (
+                  <CustomLabel
+                    header={option.header}
+                    text={option.text}
+                  />
+                ) : (
+                  option.label
+                )
+              }
               key={option.value}
             />
           )
