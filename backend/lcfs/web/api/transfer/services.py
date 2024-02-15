@@ -2,6 +2,7 @@ from logging import getLogger
 from typing import List
 
 from fastapi import Depends, Request
+from datetime import datetime
 
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -10,7 +11,7 @@ from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Comment import Comment
 from lcfs.web.api.organization.repo import OrganizationRepository
 from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate
+from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
 
 logger = getLogger("transfer_service")
 
@@ -29,18 +30,21 @@ class TransferServices:
     async def get_all_transfers(self) -> List[TransferSchema]:
         """Fetches all transfer records and converts them to Pydantic models."""
         transfers = await self.repo.get_all_transfers()
-        return [TransferSchema.from_orm(transfer) for transfer in transfers]
+        return [TransferSchema.model_validate(transfer) for transfer in transfers]
 
     @service_handler
     async def get_transfers_paginated(self, page: int, size: int) -> List[TransferSchema]:
         transfers = await self.repo.get_transfers_paginated(page, size)
-        return [TransferSchema.from_orm(transfer) for transfer in transfers]
+        return [TransferSchema.model_validate(transfer) for transfer in transfers]
 
     @service_handler
     async def get_transfer(self, transfer_id: int) -> TransferSchema:
         '''Fetches a single transfer by its ID and converts it to a Pydantic model.'''
         transfer = await self.repo.get_transfer_by_id(transfer_id)
-        return TransferSchema.from_orm(transfer)
+        if not transfer:
+            raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
+
+        return TransferSchema.model_validate(transfer)
 
     @service_handler
     async def create_transfer(self, transfer_data: TransferCreate) -> TransferSchema:
@@ -67,7 +71,7 @@ class TransferServices:
         transfer_model = Transfer(
             from_organization=from_org,
             to_organization=to_org,
-            agreement_date=transfer_data.agreement_date,
+            agreement_date=datetime.strptime(transfer_data.agreement_date, "%Y-%m-%d").date(),
             quantity=transfer_data.quantity,
             price_per_unit=transfer_data.price_per_unit,
             signing_authority_declaration=transfer_data.signing_authority_declaration,
@@ -80,20 +84,20 @@ class TransferServices:
         created_transfer = await self.repo.create_transfer(transfer_model)
 
         # Convert the ORM model to a Pydantic model for the response
-        return TransferSchema.from_orm(created_transfer)
+        return TransferSchema.model_validate(created_transfer)
 
     @service_handler
-    async def update_transfer(self, transfer_id: int, transfer_data: TransferCreate) -> TransferSchema:
+    async def update_transfer(self, transfer_data: TransferUpdate) -> TransferSchema:
         '''Updates an existing transfer record with new data.'''
-
-        transfer = await self.repo.get_transfer_by_id(transfer_id)
+        transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
         if not transfer:
-            raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
+            raise DataNotFoundException(f"Transfer with ID {transfer_data.transfer_id} not found")
 
-        transfer.agreement_date = transfer_data.agreement_date
+        transfer.agreement_date = datetime.strptime(transfer_data.agreement_date, "%Y-%m-%d").date()
         transfer.quantity = transfer_data.quantity
         transfer.price_per_unit = transfer_data.price_per_unit
         transfer.signing_authority_declaration = transfer_data.signing_authority_declaration
+        transfer.to_organization_id = transfer_data.to_organization_id
 
         if transfer_data.comments:
             if transfer.comments:
@@ -101,6 +105,5 @@ class TransferServices:
             else:
                 transfer.comments = Comment(comment=transfer_data.comments)
 
-        await self.repo.update_transfer(transfer)
-
-        return TransferSchema.from_orm(transfer)
+        updated_transfer = await self.repo.update_transfer(transfer)
+        return TransferSchema.model_validate(updated_transfer)

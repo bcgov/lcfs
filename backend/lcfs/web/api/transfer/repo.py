@@ -24,8 +24,16 @@ class TransferRepository:
     @repo_handler
     async def get_all_transfers(self) -> List[Transfer]:
         """Queries the database for all transfer records."""
-        result = await self.db.execute(select(Transfer))
-        return result.scalars().all()
+        query = select(Transfer).options(
+            selectinload(Transfer.from_organization),
+            selectinload(Transfer.to_organization),
+            selectinload(Transfer.transfer_status),
+            selectinload(Transfer.transfer_category),
+            selectinload(Transfer.comments)
+        )
+        result = await self.db.execute(query)
+        transfers = result.scalars().all()
+        return transfers
 
     @repo_handler
     async def get_transfers_paginated(self, page: int, size: int) -> List[Transfer]:

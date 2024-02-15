@@ -29,7 +29,7 @@ async def seed_test_organizations(session):
             "name": fake.company(),
             "organization_status_id": 2,
             "organization_type_id": 1
-        },
+        }
     ]
 
     try:
