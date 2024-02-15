@@ -44,6 +44,6 @@ class CombinedTransaction(BaseModel):
 # Generic type for data
 T = TypeVar("T")
 
-class TransactionPaginationResponse(Generic[T], BaseModel):
+class TransactionPaginationResponse(BaseModel, Generic[T]):
     pagination: PaginationResponseSchema
     transactions: List[T]

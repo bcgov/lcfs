@@ -27,12 +27,12 @@ class IssuanceServices:
     async def get_all_issuances(self) -> List[IssuanceSchema]:
         """Fetches all issuance records and converts them to Pydantic models."""
         issuances = await self.repo.get_all_issuances()
-        return [IssuanceSchema.from_orm(issuance) for issuance in issuances]
+        return [IssuanceSchema.model_validate(issuance) for issuance in issuances]
 
     @service_handler
     async def get_issuances_paginated(self, page: int, size: int) -> List[IssuanceSchema]:
         issuances = await self.repo.get_issuances_paginated(page, size)
-        return [IssuanceSchema.from_orm(issuance) for issuance in issuances]
+        return [IssuanceSchema.model_validate(issuance) for issuance in issuances]
 
     @service_handler
     async def get_issuance(self, issuance_id: int) -> IssuanceSchema:
@@ -40,7 +40,7 @@ class IssuanceServices:
         issuance = await self.repo.get_issuance_by_id(issuance_id)
         if not issuance:
             raise DataNotFoundException(f"Issuance with ID {issuance_id} not found")
-        return IssuanceSchema.from_orm(issuance)
+        return IssuanceSchema.model_validate(issuance)
 
     @service_handler
     async def create_issuance(self, issuance_data: IssuanceCreate) -> IssuanceSchema:
@@ -61,7 +61,7 @@ class IssuanceServices:
         # Persist the issuance model and its comment in the database
         created_issuance = await self.repo.create_issuance(issuance_model)
 
-        return IssuanceSchema.from_orm(created_issuance)
+        return IssuanceSchema.model_validate(created_issuance)
 
     @service_handler
     async def update_issuance(self, issuance_id: int, issuance_data: IssuanceCreate) -> IssuanceSchema:
@@ -77,4 +77,4 @@ class IssuanceServices:
 
         await self.repo.update_issuance(issuance)
 
-        return IssuanceSchema.from_orm(issuance)
+        return IssuanceSchema.model_validate(issuance)

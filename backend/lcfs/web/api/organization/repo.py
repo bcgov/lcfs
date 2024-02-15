@@ -51,8 +51,7 @@ class OrganizationRepository:
         self.db.add(org_model)
         await self.db.commit()
         await self.db.refresh(org_model)
-
-        return org_model
+        return OrganizationSchema.model_validate(org_model)
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
