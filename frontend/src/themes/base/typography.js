@@ -127,6 +127,12 @@ const typography = {
     fontWeight: baseProperties.fontWeightRegular,
     lineHeight: 1.625
   },
+  label: {
+    fontFamily: baseProperties.fontFamily,
+    fontSize: baseProperties.fontSizeMD,
+    fontWeight: baseProperties.fontWeightBold,
+    lineHeight: 1.625
+  },
 
   button: {
     fontFamily: baseProperties.fontFamily,

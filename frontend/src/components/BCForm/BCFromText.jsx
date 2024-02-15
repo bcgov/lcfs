@@ -1,8 +1,8 @@
 import { Controller } from 'react-hook-form'
-import TextField from '@mui/material/TextField'
+import { TextField, InputLabel, Typography } from '@mui/material'
 import PropTypes from 'prop-types'
 
-export const BCFormText = ({ name, control, label }) => {
+export const BCFormText = ({ name, control, label, optional }) => {
   return (
     <Controller
       name={name}
@@ -12,16 +12,27 @@ export const BCFormText = ({ name, control, label }) => {
         fieldState: { error },
         formState
       }) => (
-        <TextField
-          helperText={error ? error.message : null}
-          size="small"
-          error={!!error}
-          onChange={onChange}
-          value={value}
-          fullWidth
-          label={label}
-          variant="outlined"
-        />
+        <>
+          <InputLabel htmlFor={name} component="label" className="form-label">
+            <Typography variant="label" component="span">
+              {label}&nbsp;
+              {optional && (
+                <span className="optional" style={{ fontWeight: 'normal' }}>
+                  (optional)
+                </span>
+              )}
+            </Typography>
+          </InputLabel>
+          <TextField
+            helperText={error ? error.message : null}
+            size="medium"
+            error={!!error}
+            onChange={onChange}
+            value={value}
+            fullWidth
+            variant="outlined"
+          />
+        </>
       )}
     />
   )

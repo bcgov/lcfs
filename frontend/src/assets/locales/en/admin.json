@@ -33,7 +33,7 @@
     "lastName": "Last name",
     "jobTitle": "Job title",
     "idirUserName": "IDIR user name",
-    "bceidUserName": "BCEID user name",
+    "bceidUserName": "BCeID Userid",
     "email": "Email address",
     "bceidEmail": "Email address associated with the BCeID user account",
     "bceidAltEmail": "Alternate email for notifications",

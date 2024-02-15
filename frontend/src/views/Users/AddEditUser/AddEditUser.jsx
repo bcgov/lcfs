@@ -1,146 +1,55 @@
-import { useCallback, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
-import { saveUpdateUser } from '@/hooks/useUser'
-import { useForm } from 'react-hook-form'
+import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { schemaValidation } from './_schema'
-
+// hooks
+import { saveUpdateUser } from '@/hooks/useUser'
+import {
+  userInfoSchema,
+  idirTextFields,
+  bceidTextFields,
+  defaultValues,
+  statusOptions,
+  idirRoleOptions
+} from './_schema'
+import { govRoles } from '@/constants/roles'
+import { useApiService } from '@/services/useApiService'
+import { ROUTES } from '@/constants/routes'
+// components
+import { BCFormCheckbox, BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
-import {
-  Box,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Stack,
-  TextField,
-  Typography
-} from '@mui/material'
+import { Box, Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2'
-import { Label } from './components/Label'
-import { IDIRSpecificFormFields } from './components/IDIRSpecificFormFields'
-import { BCeIDSpecificFormFields } from './components/BCeIDSpecificFormFields'
-import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
-import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 import BCAlert from '@/components/BCAlert'
-import { ROUTES } from '@/constants/routes'
 import Loading from '@/components/Loading'
-
-const dummy = {
-  errors: {
-    firstName: '',
-    lastName: 'Example Last Name error text',
-    jobTitle: '',
-    IDIRUserName: '',
-    BCeIDUserID: '',
-    email: '',
-    altEmail: '',
-    phone: '',
-    mobile: ''
-  },
-  gov: true,
-  orgName: 'Fuel Supplier Canada Ltd.'
-}
+import { CheckboxLabel } from './components/CheckBoxLabel'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
+  // User form hook and form validation
+  const { handleSubmit, control, setValue } = useForm({
+    resolver: yupResolver(userInfoSchema),
+    mode: 'onChange',
+    defaultValues
+  })
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'admin'])
-  const { userID } = useParams()
-  const [formData, setFormData] = useState({
-    userType,
-    active: 'active',
-    administrator: false,
-    govRole: '',
-    manageUsers: false,
-    transfer: false,
-    complianceReporting: false,
-    signingAuthority: false,
-    readOnly: false,
-    firstName: '',
-    lastName: '',
-    jobTitle: '',
-    BCeIDUserID: '',
-    email: '',
-    altEmail: '',
-    phone: '',
-    mobile: '',
-    IDIRUserName: ''
-  })
-
-  // useForm hook setup with yup form validation
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    trigger,
-    formState: { errors }
-  } = useForm({ resolver: yupResolver(schemaValidation) })
-
-  // watching form fields
-  const firstName = watch('firstName')
-  const lastName = watch('lastName')
-  const jobTitle = watch('jobTitle')
-  const IDIRUserName = watch('IDIRUserName')
-  const BCeIDUserID = watch('BCeIDUserID')
-  const email = watch('email')
-  const altEmail = watch('altEmail')
-  const phone = watch('phone')
-  const mobile = watch('mobile')
-
-  // Set value and trigger validation function
-  const setValueAndTriggerValidation = useCallback(
-    (fieldName, value) => {
-      if (watch(fieldName) !== value) {
-        setValue(fieldName, value)
-        if (value.trim().length > 0) {
-          trigger(fieldName)
-        }
-      }
-    },
-    [setValue, trigger, watch]
+  const { userID, orgID } = useParams()
+  const textFields = useMemo(
+    () => (orgID ? bceidTextFields(t) : idirTextFields(t)),
+    [t]
   )
-
-  // Function to render form error messages
-  const renderError = (fieldName, sameAsField = null) => {
-    // If the sameAsField is provided and is true, hide errors for this field
-    if (sameAsField && watch(sameAsField)) {
-      return null
-    }
-    return (
-      errors[fieldName] && (
-        <Typography color="error" variant="caption">
-          {errors[fieldName].message}
-        </Typography>
-      )
-    )
-  }
-
-  // Prepare payload and call mutate function
-  const onSubmit = async (data) => {
-    const payload = {
-      first_name: data.firstName,
-      last_name: data.lastName,
-      title: data.title,
-      username: data.idirUserName,
-      email: data.email,
-      phone: data.phone,
-      mobile_phone: data.mobile,
-      is_active: data.status,
-      roles: data.roles
-    }
-    mutate(payload)
-  }
 
   // useMutation hook from React Query for handling API request
   const { mutate, isLoading, isError } = useMutation({
-    mutationsFn: (data) => saveUpdateUser(userID, data),
-    onSuccess: () => {
+    mutationsFn: async (userData) =>
+      await useApiService.post('/users', userData),
+    onSuccess: (response) => {
       // on success navigate somewhere
       navigate(ROUTES.ADMIN_USERS, {
         state: {
@@ -151,49 +60,18 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     },
     onError: (error) => {
       // handle axios errors here
-      console.error('Error posting data:', error)
+      console.error('Error saving user:', error)
     }
   })
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+  // Prepare payload and call mutate function
+  const onSubmit = (data) => {
+    console.log(data)
+    // mutate(data)
   }
 
-  const handleStatusChange = (e) => {
-    const { value } = e.target
-    if (value === 'active') {
-      setFormData((prev) => ({ ...prev, active: value }))
-    }
-    if (value === 'inactive') {
-      setFormData((prev) => ({
-        ...prev,
-        active: value,
-        readOnly: false,
-        manageUsers: false,
-        transfer: false,
-        complianceReporting: false,
-        signingAuthority: false,
-        administrator: false,
-        govRole: ''
-      }))
-    }
-  }
-
-  const handleCheckbox = (e) => {
-    const { checked, name } = e.target
-    setFormData((prev) => ({ ...prev, [name]: checked, readOnly: false }))
-  }
-
-  const handleReadOnlyClick = () => {
-    setFormData((prev) => ({
-      ...prev,
-      manageUsers: false,
-      transfer: false,
-      complianceReporting: false,
-      signingAuthority: false,
-      readOnly: true
-    }))
+  const onErrors = (error) => {
+    console.log(error)
   }
 
   if (isLoading) {
@@ -202,203 +80,120 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
 
   return (
     <div>
-      {isError && <BCAlert severity="error" message={t('user:')} />}
+      {isError && <BCAlert severity="error" message={t('admin:errMsg')} />}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
-        {userID ? 'Edit' : 'Add'} User&nbsp;
-        {userType === 'bceid' && `to ${dummy.orgName}`}
+        {userID ? 'Edit' : 'Add'} user&nbsp;
+        {userType === 'bceid' && `to Test Org`}
       </Typography>
-      <Grid2
-        container
-        columnSpacing={2.5}
-        rowSpacing={3.5}
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-      >
-        {/* Form fields */}
-        <Grid2 xs={12} md={5} lg={4}>
-          <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
-            <Box>
-              <Label htmlFor="firstName">{t('admin:userForm.firstName')}</Label>
-              <TextField
-                fullWidth
-                required
-                name="firstName"
-                id="firstName"
-                data-test="firstName"
-                error={!!errors.firstName}
-                helperText={errors.firstName?.message}
-                {...register('firstName')}
-              />
-            </Box>
-            <Box>
-              <Label htmlFor="lastName">{t('admin:userForm.lastName')}</Label>
-              <TextField
-                fullWidth
-                required
-                name="lastName"
-                id="lastName"
-                data-test="lastName"
-                error={!!errors.lastName}
-                helperText={errors.lastName?.message}
-                {...register('lastName')}
-              />
-            </Box>
-            <Box>
-              <Label htmlFor="jobTitle">{t('admin:userForm.jobTitle')}</Label>
-              <TextField
-                fullWidth
-                required
-                name="jobTitle"
-                id="jobTitle"
-                data-test="jobTitle"
-                error={!!errors.jobTitle}
-                helperText={errors.jobTitle?.message}
-                {...register('jobTitle')}
-              />
-            </Box>
-            {userType === 'idir' ? (
-              <IDIRSpecificFormFields
-                formData={formData}
-                handleChange={handleChange}
-                errors={errors}
-                register={register}
-              />
-            ) : (
-              <BCeIDSpecificFormFields
-                formData={formData}
-                handleChange={handleChange}
-                errors={dummy.errors}
-              />
-            )}
-
-            <Box>
-              <Label htmlFor="phone">
-                {t('admin:userForm.phone')}{' '}
-                <span style={{ fontWeight: 'normal' }}>
-                  ({t('admin:userForm.optional')})
-                </span>
-              </Label>
-              <TextField
-                fullWidth
-                required
-                name="phone"
-                id="phone"
-                data-test="phone"
-                error={!!errors.phone}
-                helperText={errors.phone?.message}
-                {...register('phone')}
-              />
-            </Box>
-            <Box>
-              <Label htmlFor="mobile">
-                {t('admin:userForm.mobilePhone')}{' '}
-                <span style={{ fontWeight: 'normal' }}>
-                  ({t('admin:userForm.optional')})
-                </span>
-              </Label>
-              <TextField
-                fullWidth
-                required
-                name="mobilePhone"
-                id="mobilePhone"
-                data-test="mobilePhone"
-                error={!!errors.mobilePhone}
-                helperText={errors.mobilePhone?.message}
-                {...register('mobilePhone')}
-              />
-            </Box>
-          </Stack>
-          <Box
-            bgcolor={colors.background.grey}
-            p={3}
-            display="flex"
-            justifyContent="space-between"
-          >
-            <BCButton
-              variant="outlined"
-              size="medium"
-              color="primary"
-              sx={{
-                backgroundColor: 'white.main'
-              }}
-              startIcon={
-                <FontAwesomeIcon icon={faArrowLeft} className="small-icon" />
-              }
-              onClick={() => navigate(-1)}
-            >
-              <Typography variant="subtitle2" textTransform="none">
-                {t('backBtn')}
-              </Typography>
-            </BCButton>
-            <BCButton
-              type="submit"
-              variant="contained"
-              size="medium"
-              color="primary"
-              data-test="saveUser"
-              sx={{ ml: 2 }}
-              data-testid="saveUser"
-              startIcon={
-                <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
-              }
-            >
-              <Typography variant="button">{t('saveBtn')}</Typography>
-            </BCButton>
-          </Box>
-        </Grid2>
-        <Grid2 xs={12} md={7} lg={6}>
-          <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
-            <Box>
-              <Typography mb={1.5}>{t('status')}</Typography>
-              <RadioGroup
-                aria-labelledby="status"
-                name="status"
-                id="status"
-                defaultValue="active"
-                style={{
-                  gap: 8,
-                  marginTop: 8
-                }}
-                onChange={handleStatusChange}
+      <form onSubmit={handleSubmit(onSubmit, onErrors)}>
+        <FormProvider {...{ control, setValue }}>
+          <Grid2 container columnSpacing={2.5} rowSpacing={3.5}>
+            {/* Form fields */}
+            <Grid2 xs={12} md={5} lg={4}>
+              <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
+                {textFields.map((field) => (
+                  <BCFormText
+                    key={field.name}
+                    control={control}
+                    label={field.label}
+                    name={field.name}
+                    optional={field.optional}
+                  />
+                ))}
+              </Stack>
+              <Box
+                bgcolor={colors.background.grey}
+                p={3}
+                display="flex"
+                justifyContent="space-between"
               >
-                <FormControlLabel
-                  value="active"
-                  control={
-                    <Radio {...register('status')} data-test="statusActive" />
+                <BCButton
+                  variant="outlined"
+                  size="medium"
+                  color="primary"
+                  sx={{
+                    backgroundColor: 'white.main'
+                  }}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faArrowLeft}
+                      className="small-icon"
+                    />
                   }
-                  label={t('admin:userForm.activeLabel')}
-                />
-                <FormControlLabel
-                  value="inactive"
-                  control={
-                    <Radio {...register('status')} data-test="statusInactive" />
+                  onClick={() =>
+                    navigate(
+                      userType === 'idir'
+                        ? ROUTES.ADMIN_USERS
+                        : ROUTES.ORGANIZATIONS
+                    )
                   }
-                  label={t('admin:userForm.inactiveLabel')}
+                >
+                  <Typography variant="subtitle2" textTransform="none">
+                    {t('backBtn')}
+                  </Typography>
+                </BCButton>
+                <BCButton
+                  type="submit"
+                  variant="contained"
+                  size="medium"
+                  color="primary"
+                  data-test="saveUser"
+                  sx={{ ml: 2 }}
+                  data-testid="saveUser"
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faFloppyDisk}
+                      className="small-icon"
+                    />
+                  }
+                >
+                  <Typography variant="button">{t('saveBtn')}</Typography>
+                </BCButton>
+              </Box>
+            </Grid2>
+            <Grid2 xs={12} md={7} lg={6}>
+              <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
+                <BCFormRadio
+                  control={control}
+                  name="status"
+                  label="Status"
+                  options={statusOptions(t)}
                 />
-                {renderError('status')}
-              </RadioGroup>
-            </Box>
-            <Box>
-              <Typography mb={1.5}>{t('admin:Roles')}</Typography>
-              {userType === 'idir' ? (
-                <IDIRSpecificRoleFields
-                  formData={formData}
-                  handleCheckbox={handleCheckbox}
-                  handleChange={handleChange}
-                  register={register}
-                />
-              ) : (
-                <BCeIDSpecificRoleFields
-                  formData={formData}
-                  handleCheckbox={handleCheckbox}
-                  handleReadOnlyClick={handleReadOnlyClick}
-                />
-              )}
-            </Box>
-          </Stack>
-        </Grid2>
-      </Grid2>
+                <Box>
+                  <Typography variant="label" component="span">
+                    {t('admin:Roles')}
+                  </Typography>
+                  <BCFormCheckbox
+                    name={govRoles[1].toLocaleLowerCase()}
+                    control={control}
+                    setValue={setValue}
+                    options={[
+                      {
+                        label: (
+                          <CheckboxLabel
+                            header={govRoles[1]}
+                            text={t(
+                              `admin:userForm.${govRoles[1]
+                                .toLowerCase()
+                                .replace(' ', '_')}`
+                            )}
+                          />
+                        ),
+                        value: govRoles[1].toLowerCase()
+                      }
+                    ]}
+                  />
+                  <BCFormRadio
+                    control={control}
+                    name="idirRole"
+                    options={idirRoleOptions(t)}
+                  />
+                </Box>
+              </Stack>
+            </Grid2>
+          </Grid2>
+        </FormProvider>
+      </form>
     </div>
   )
 }

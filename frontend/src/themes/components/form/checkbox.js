@@ -16,7 +16,7 @@ const checkbox = {
         backgroundRepeat: 'no-repeat',
         width: pxToRem(20),
         height: pxToRem(20),
-        color: white.main,
+        color: transparent.main,
         border: `${borderWidth[1]} solid ${borderColor}`,
         borderRadius: pxToRem(5.6),
         backgroundColor: background.default
