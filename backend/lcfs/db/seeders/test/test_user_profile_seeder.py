@@ -20,8 +20,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": fake.email(),
             "keycloak_username": fake.user_name(),
             "email": fake.email(),
-            "username": fake.user_name(),
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -31,8 +29,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": fake.email(),
             "keycloak_username": fake.user_name(),
             "email": fake.email(),
-            "username": fake.user_name(),
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -42,8 +38,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": fake.email(),
             "keycloak_username": fake.user_name(),
             "email": fake.email(),
-            "username": fake.user_name(),
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -53,8 +47,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": 'idir@test.com',
             "keycloak_username": 'IDIRUSER',
             "email": 'user@test.com',
-            "username": 'idiruser',
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -65,8 +57,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": 'bceid@test.com',
             "keycloak_username": 'BCEIDUSER',
             "email": 'user@test.com',
-            "username": 'bceiduser',
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -77,8 +67,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": 'active@test.com',
             "keycloak_username": 'ACTIVEUSER',
             "email": 'user@test.com',
-            "username": 'activeuser',
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -89,8 +77,6 @@ async def seed_test_user_profiles(session):
             "keycloak_email": 'inactive@test.com',
             "keycloak_username": 'INACTIVEUSER',
             "email": 'user@test.com',
-            "username": 'inactiveuser',
-            "display_name": fake.name(),
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
@@ -101,7 +87,7 @@ async def seed_test_user_profiles(session):
 
     try:
         for user_data in user_profiles_to_seed:
-            # Check if the user already exists based on a unique attribute, e.g., username
+            # Check if the user already exists based on a unique attribute
             exists = await session.execute(
                 select(UserProfile).where(UserProfile.keycloak_email == user_data["keycloak_email"])
             )

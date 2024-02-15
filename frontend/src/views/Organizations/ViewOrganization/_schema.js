@@ -3,6 +3,7 @@ import { OrgStatusRenderer } from '@/utils/cellRenderers'
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
+import { t } from 'i18next'
 
 export const organizationsColDefs = (t) => [
   { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), maxWidth: 800, flex: 1 },
@@ -63,7 +64,8 @@ export const getUserColumnDefs = (t) => {
   return colDefs
 }
 
-export const defaultSortModel = [{ field: 'display_name', direction: 'asc' }]
+export const usersColDefs = getUserColumnDefs(t)
+export const defaultSortModel = [{ field: 'first_name', direction: 'asc' }]
 export const defaultFilterModel = [
   { filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }
 ]

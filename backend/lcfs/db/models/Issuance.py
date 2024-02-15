@@ -13,7 +13,6 @@ class Issuance(BaseModel, Auditable, EffectiveDates):
     issuance_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the issuance")
     compliance_units = Column(BigInteger, comment="Compliance Units")
     transaction_effective_date = Column(DateTime, comment='Transaction effective date')
-    # compliance_period = Column(Integer )
     organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
     comment_id = Column(Integer, ForeignKey('comment.comment_id'))

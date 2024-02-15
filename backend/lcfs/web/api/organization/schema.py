@@ -149,20 +149,5 @@ class OrganizationSummaryResponseSchema(BaseModel):
     class Config(BaseConfig):
         pass
 
-# --------------------------------------
-# Organization User
-# --------------------------------------
-class OrganizationUserBase(BaseModel):
-    username: str
-    email: str
-    display_name: str
-    title: Optional[str] = None
-    phone: Optional[str] = None
-    mobile_phone: Optional[str] = None
-    user_roles: Optional[List[object]] = []
-
-    class Config(BaseConfig):
-        pass
-
-class OrganizationUserSchema(OrganizationUserBase):
-    pass
+class OrganizationCreateResponseSchema(BaseModel):
+    organization_id: int

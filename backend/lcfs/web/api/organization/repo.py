@@ -17,7 +17,7 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema
+from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateResponseSchema
 
 
 logger = getLogger("organization_repo")
@@ -41,21 +41,49 @@ class OrganizationRepository:
 
     @repo_handler
     async def create_organization(
-            self,
-            org_address: OrganizationAddress, org_attorney_address: OrganizationAttorneyAddress, org_model: Organization
+        self,
+        org_address: OrganizationAddress,
+        org_attorney_address: OrganizationAttorneyAddress,
+        org_model: Organization
     ):
-        '''
-        save an organization in the database
-        '''
-        async with self.db.begin():
+        """
+        Saves an organization to the database.
+        It first adds and flushes address entities to obtain their IDs,
+        then assigns these IDs to the organization model before saving it.
+        
+        Parameters:
+            org_address (OrganizationAddress): The address of the organization.
+            org_attorney_address (OrganizationAttorneyAddress):
+                The address of the organization's attorney.
+            org_model (Organization): The organization model to be saved.
+        
+        Returns:
+            OrganizationCreateResponseSchema: The schema with the ID of the created organization.
+        """
+        async with self.db.begin() as transaction:
+            try:
+                # Add and flush the address entities to obtain their IDs
+                self.db.add_all([org_address, org_attorney_address])
+                await self.db.flush()
 
-            self.db.add_all([org_address, org_attorney_address])
-            await self.db.flush()
+                # Assign the foreign key fields with the generated IDs
+                org_model.organization_address_id = org_address.organization_address_id
+                org_model.organization_attorney_address_id = org_attorney_address.organization_attorney_address_id
 
-            self.db.add(org_model)
-            await self.db.flush()
+                # Add the main entity
+                self.db.add(org_model)
+                await self.db.flush()
 
-            return OrganizationSchema.from_orm(org_model)
+                return OrganizationCreateResponseSchema(
+                    organization_id = org_model.organization_id
+                )
+            except Exception as e:
+                await transaction.rollback()
+                logger.exception(
+                    "An unexpected error occurred while creating an organization",
+                    exc_info=e
+                )
+                raise
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
@@ -70,6 +98,15 @@ class OrganizationRepository:
                 joinedload(Organization.org_attorney_address),
             )
             .where(Organization.organization_id == organization_id)
+        )
+    
+    @repo_handler
+    async def get_organization_lite(self, organization_id: int) -> Organization:
+        '''
+        Fetch a single organization by organization id from the database without related tables
+        '''
+        return await self.db.scalar(
+            select(Organization).where(Organization.organization_id == organization_id)
         )
 
     @repo_handler

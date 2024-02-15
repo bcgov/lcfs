@@ -29,7 +29,7 @@ export const schemaValidation = Yup.object({
   orgPostalCodeZipCode: Yup.string()
     .required('Postal / ZIP Code is required.')
     .matches(
-      /^(?!.*[DFIOQU])[A-VXY][0-9][A-Z] [0-9][A-Z][0-9]$|^\d{5}(-\d{4})?$/,
+      /^(?!.*[DFIOQU])[A-VXY][0-9][A-Z]\s?[0-9][A-Z][0-9]$|^\d{5}(-\d{4})?$/i,
       'Please enter a valid Postal / ZIP Code.'
     ),
   orgAttroneyStreetAddress: Yup.string().required(
@@ -39,7 +39,7 @@ export const schemaValidation = Yup.object({
   orgAttroneyPostalCodeZipCode: Yup.string()
     .required('Postal / ZIP Code is required.')
     .matches(
-      /^(?!.*[DFIOQU])[A-VXY][0-9][A-Z] [0-9][A-Z][0-9]$|^\d{5}(-\d{4})?$/,
+      /^(?!.*[DFIOQU])[A-VXY][0-9][A-Z]\s?[0-9][A-Z][0-9]$|^\d{5}(-\d{4})?$/i,
       'Please enter a valid Postal / ZIP Code.'
     )
 })

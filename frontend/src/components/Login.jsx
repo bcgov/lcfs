@@ -1,12 +1,19 @@
-import autumn1 from '@/assets/images/autumn-fall-leaves.png'
-import autumn2 from '@/assets/images/autumn-fall-leaves2.png'
-import bgAutumnImage from '@/assets/images/bg_autumn.jpg'
-import bgSummerImage from '@/assets/images/bg_summer.jpg'
-import bgWinterImage from '@/assets/images/bg_winter2.jpg'
+// Particle Images
+import waterdrop from '@/assets/images/particles/water-drop.png'
+import autumn1 from '@/assets/images/particles/autumn-fall-leaves.png'
+import autumn2 from '@/assets/images/particles/autumn-fall-leaves2.png'
+import snowflake1 from '@/assets/images/particles/snowflake.png'
+import snowflake2 from '@/assets/images/particles/snowflake2.png'
+import cherry1 from '@/assets/images/particles/cherry-blossom.png'
+import cherry2 from '@/assets/images/particles/cherry-blossom2.png'
+
+// Background Images
+import bgSpringImage from '@/assets/images/backgrounds/spring.jpg'
+import bgSummerImage from '@/assets/images/backgrounds/summer.jpg'
+import bgAutumnImage from '@/assets/images/backgrounds/autumn.jpg'
+import bgWinterImage from '@/assets/images/backgrounds/winter.jpg'
+
 import logoDark from '@/assets/images/logo-banner.svg'
-import snowflake1 from '@/assets/images/snowflake.png'
-import snowflake2 from '@/assets/images/snowflake2.png'
-import waterdrop from '@/assets/images/water-drop.png'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
@@ -42,22 +49,16 @@ const season =
         : 'winter'
 
 const seasonImages = {
-  winter: {
-    count: 150,
-    radius: [2, 6],
-    wind: [-0.5, 2.0],
-    image: bgWinterImage
-  },
   spring: {
     count: 250,
     radius: [1, 4],
-    wind: [0, 0],
-    image: bgSummerImage
+    wind: [2, 1],
+    image: bgSpringImage
   },
   summer: {
-    count: 0,
-    radius: [0, 0],
-    wind: [0, 0],
+    count: 150,
+    radius: [2, 6],
+    wind: [1, 1],
     image: bgSummerImage
   },
   autumn: {
@@ -65,6 +66,12 @@ const seasonImages = {
     radius: [12, 24],
     wind: [-0.5, 2.0],
     image: bgAutumnImage
+  },
+  winter: {
+    count: 150,
+    radius: [2, 6],
+    wind: [-0.5, 2.0],
+    image: bgWinterImage
   }
 }
 
@@ -73,6 +80,14 @@ const droplets = () => {
   const elm2 = document.createElement('img')
 
   switch (season) {
+    case 'spring':
+      elm1.src = waterdrop
+      elm2.src = waterdrop
+      break
+    case 'summer':
+      elm1.src = cherry1
+      elm2.src = cherry2
+      break
     case 'autumn':
       elm1.src = autumn1
       elm2.src = autumn2
@@ -81,12 +96,6 @@ const droplets = () => {
       elm1.src = snowflake1
       elm2.src = snowflake2
       break
-    case 'spring':
-      elm1.src = waterdrop
-      elm2.src = waterdrop
-      break
-    case 'summer':
-      return []
     default:
       break
   }

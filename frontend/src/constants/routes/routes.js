@@ -6,7 +6,8 @@ export const TRANSACTIONS_VIEW = `${TRANSACTIONS}/:transactionID`
 
 export const TRANSFERS = '/transfers'
 export const TRANSFERS_ADD = `${TRANSFERS}/add`
-export const TRANSFERS_VIEW = `${TRANSFERS}/:transferID`
+export const TRANSFERS_EDIT = `${TRANSFERS}/edit/:transferId`
+export const TRANSFERS_VIEW = `${TRANSFERS}/:transferId`
 
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`

@@ -178,8 +178,6 @@ class UserAuthentication(AuthenticationBackend):
         """
         # Map the keycloak user id to the user for future login caching
         user_profile.keycloak_user_id = user_token['preferred_username']
-        # TODO may want to map keycloak display name to user as well
-        # user.display_name = user_token['display_name']
 
         # The merge method is used to merge the state of the given object into the current session
         # If the instance does not exist in the session, insert it.

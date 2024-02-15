@@ -21,6 +21,7 @@ from .schema import (
     OrganizationUpdateSchema,
     OrganizationResponseSchema,
     OrganizationSummaryResponseSchema,
+    OrganizationCreateResponseSchema
 )
 
 
@@ -57,7 +58,7 @@ async def export_organizations(
     return await service.export_organizations()
 
 
-@router.post("/create", response_model=OrganizationSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/create", response_model=OrganizationCreateResponseSchema, status_code=status.HTTP_201_CREATED)
 @roles_required("Government", "Administrator")
 async def create_organization(
     request: Request,

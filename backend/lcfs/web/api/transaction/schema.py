@@ -1,15 +1,22 @@
 from typing import Optional, List
 
 from pydantic import BaseModel, ConfigDict
-
+from enum import Enum
+from typing import List, Optional, Generic, TypeVar
 from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
-from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.base import PaginationResponseSchema
-from lcfs.web.api.transfer.schema import (
-    TransactionTypeSchema,
-    IssuanceHistorySchema,
-    TransferHistory,
-)
+
+
+class TransactionTypeEnum(str, Enum):
+    administrative_adjustment = "Administrative Adjustment"
+    initiative_agreement = "Initiative Agreement"
+    assessment = "Assessment"
+    transfer = "Transfer"
+
+
+class TransactionTypeSchema(BaseModel):
+    transaction_typ_id: int
+    type: TransactionTypeEnum
 
 
 class TransactionBase(BaseModel):
@@ -22,10 +29,21 @@ class TransactionBase(BaseModel):
 
     organization: Optional[OrganizationSummaryResponseSchema]
     transaction_type: TransactionTypeSchema
-    issuance_history_record: IssuanceHistorySchema
-    transfer_history_record: TransferHistory
 
 
 class Transactions(BaseModel):
     pagination: PaginationResponseSchema
     transactions: List[TransactionBase]
+
+
+class CombinedTransaction(BaseModel):
+    type: str  # 'Issuance' or 'Transfer'
+    id: int
+    create_date: str  # or datetime, depending on how we format it in the service
+
+# Generic type for data
+T = TypeVar("T")
+
+class TransactionPaginationResponse(Generic[T], BaseModel):
+    pagination: PaginationResponseSchema
+    transactions: List[T]

@@ -11,7 +11,7 @@ const colors = {
     main: '#003366',
     focus: '#003366',
     nav: '#036',
-    light: '#1a5a96',
+    light: '#1a5a96'
   },
   // Used for header, footer, beta status
   secondary: {

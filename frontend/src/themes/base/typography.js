@@ -76,7 +76,7 @@ const typography = {
     lineHeight: 1.375,
     fontWeight: baseProperties.fontWeightMedium,
     fontFamily: baseProperties.fontFamily,
-    color: text.main,
+    color: text.main
   },
 
   h6: {
@@ -84,7 +84,7 @@ const typography = {
     lineHeight: 1.375,
     fontWeight: baseProperties.fontWeightMedium,
     fontFamily: baseProperties.fontFamily,
-    color: text.main,
+    color: text.main
   },
 
   subtitle1: {
