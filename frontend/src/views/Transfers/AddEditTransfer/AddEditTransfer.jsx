@@ -100,7 +100,7 @@ export const AddEditTransfer = () => {
       mutationFn: (convertedPayload) => {
         if (transferId) {
           // If editing, use PUT request
-          return apiService.put(`/transfers/${transferId}`, convertedPayload)
+          return apiService.put(`/transfers`, convertedPayload)
         } else {
           // If adding new, use POST request
           return apiService.post('/transfers', convertedPayload)

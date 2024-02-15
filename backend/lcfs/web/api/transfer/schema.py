@@ -53,19 +53,24 @@ class TransferSchema(BaseModel):
     comments: Optional[TransferCommentSchema] = None
     transfer_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
+
     class Config:
+        extra = 'ignore'
         from_attributes = True
 
 class TransferCreate(BaseModel):
     from_organization_id: int
     to_organization_id: int
-    agreement_date: date
+    agreement_date: str
     quantity: int
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[str] = None
     class Config:
         from_attributes = True
+
+class TransferUpdate(TransferCreate):
+    transfer_id: int
 
 class TransferHistory(BaseModel):
     transfer_history_id: int

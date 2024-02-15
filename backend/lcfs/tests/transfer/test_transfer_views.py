@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient, Response
 from fastapi import FastAPI, status
-
+from lcfs.tests.transfer.transfer_payloads import transfer_create_payload_2, transfer_update_payload_2
 
 @pytest.mark.anyio
 async def test_get_all_transfers(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
@@ -23,32 +23,12 @@ async def test_get_transfer(client: AsyncClient, fastapi_app: FastAPI, set_mock_
 async def test_create_transfer(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("create_transfer")
-    transfer_payload = {
-        "from_organization_id": 1,
-        "to_organization_id": 2,
-        "agreement_date": "2023-01-01",
-        "quantity": 100,
-        "price_per_unit": 10.0,
-        "signing_authority_declaration": True,
-        "comments": "Initial Transfer"
-    }
-    response = await client.post(url, json=transfer_payload)
+    response = await client.post(url, json=transfer_create_payload_2.dict())
     assert response.status_code == status.HTTP_201_CREATED
 
 @pytest.mark.anyio
 async def test_update_transfer(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
     set_mock_user_roles(fastapi_app, ["Supplier"])
-    transfer_id = 1
-    url = fastapi_app.url_path_for("update_transfer", transfer_id=transfer_id)
-    update_payload = {
-        "from_organization_id": 1,
-        "to_organization_id": 2,
-        "agreement_date": "2023-02-02",
-        "quantity": 150,
-        "price_per_unit": 20.0,
-        "signing_authority_declaration": "Updated Authorization",
-        "comments": "Updated Transfer"
-    }
-    response = await client.put(url, json=update_payload)
+    url = fastapi_app.url_path_for("update_transfer")
+    response = await client.put(url, json=transfer_update_payload_2.dict())
     assert response.status_code == status.HTTP_200_OK
-

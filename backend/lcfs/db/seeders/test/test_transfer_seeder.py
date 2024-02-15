@@ -1,5 +1,6 @@
 import logging
-from sqlalchemy import select
+from datetime import datetime
+from sqlalchemy import select, and_
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Organization import Organization
 
@@ -13,24 +14,24 @@ async def seed_test_transfers(session):
     """
     transfers_to_seed = [
         {
-            "transfer_id": 1,
             "from_organization_id": 1,
             "to_organization_id": 2,
-            "agreement_date": "2023-01-01",
+            "transfer_status_id":1,
+            "transfer_category_id":1,
+            "agreement_date": datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
             "quantity": 100,
             "price_per_unit": 10.0,
-            "signing_authority_declaration": True,
-            "comments": "Initial Transfer"
+            "signing_authority_declaration": True
         },
         {
-            "transfer_id": 2,
             "from_organization_id": 2,
             "to_organization_id": 1,
-            "agreement_date": "2023-01-02",
+            "transfer_status_id":1,
+            "transfer_category_id":1,
+            "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
             "quantity": 50,
             "price_per_unit": 5.0,
-            "signing_authority_declaration": True,
-            "comments": "Initial Transfer"
+            "signing_authority_declaration": True
         },
     ]
 
@@ -45,7 +46,16 @@ async def seed_test_transfers(session):
         try:
             exists = await session.execute(
                 select(Transfer).where(
-                    Transfer.transfer_id == transfer_data["transfer_id"]
+                    and_(
+                        Transfer.from_organization_id == transfer_data["from_organization_id"],
+                        Transfer.to_organization_id == transfer_data["to_organization_id"],
+                        Transfer.transfer_status_id == transfer_data["transfer_status_id"],
+                        Transfer.transfer_category_id == transfer_data["transfer_category_id"],
+                        Transfer.agreement_date == transfer_data["agreement_date"],
+                        Transfer.quantity == transfer_data["quantity"],
+                        Transfer.price_per_unit == transfer_data["price_per_unit"],
+                        Transfer.signing_authority_declaration == transfer_data["signing_authority_declaration"]
+                    )
                 )
             )
             transfer = exists.scalars().first()

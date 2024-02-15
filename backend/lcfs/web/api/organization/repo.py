@@ -55,7 +55,7 @@ class OrganizationRepository:
             self.db.add(org_model)
             await self.db.flush()
 
-            return OrganizationSchema.from_orm(org_model)
+            return OrganizationSchema.model_validate(org_model)
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:

@@ -284,7 +284,7 @@ class OrganizationServices:
         results = await self.repo.get_externally_registered_organizations(conditions)
 
         # Map the results to OrganizationSummaryResponseSchema
-        organizations = [OrganizationSummaryResponseSchema.from_orm(organization)
+        organizations = [OrganizationSummaryResponseSchema.model_validate(organization)
                          for organization in results]
 
         if not organizations:
