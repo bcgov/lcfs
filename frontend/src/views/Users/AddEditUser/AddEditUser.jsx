@@ -11,14 +11,12 @@ import {
   idirTextFields,
   bceidTextFields,
   defaultValues,
-  statusOptions,
-  idirRoleOptions
+  statusOptions
 } from './_schema'
-import { govRoles } from '@/constants/roles'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
 // components
-import { BCFormCheckbox, BCFormRadio, BCFormText } from '@/components/BCForm'
+import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
@@ -27,6 +25,8 @@ import { Box, Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
+import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
+import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
@@ -39,6 +39,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
+  const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
     () => (orgID ? bceidTextFields(t) : idirTextFields(t)),
     [t]
@@ -102,7 +103,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               </Stack>
               <Box
                 bgcolor={colors.background.grey}
-                p={3}
+                px={3}
                 display="flex"
                 justifyContent="space-between"
               >
@@ -158,33 +159,21 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
                   label="Status"
                   options={statusOptions(t)}
                 />
-                <Box>
-                  <Typography variant="label" component="span">
-                    {t('admin:Roles')}
-                  </Typography>
-                  <BCFormCheckbox
-                    name={govRoles[1].toLocaleLowerCase()}
-                    control={control}
+                {userType === 'idir' ? (
+                  <IDIRSpecificRoleFields
                     setValue={setValue}
-                    options={[
-                      {
-                        label: govRoles[1],
-                        header: govRoles[1],
-                        text: t(
-                          `admin:userForm.${govRoles[1]
-                            .toLowerCase()
-                            .replace(' ', '_')}`
-                        ),
-                        value: govRoles[1].toLowerCase()
-                      }
-                    ]}
-                  />
-                  <BCFormRadio
+                    disabled={disabled}
                     control={control}
-                    name="idirRole"
-                    options={idirRoleOptions(t)}
+                    t={t}
                   />
-                </Box>
+                ) : (
+                  <BCeIDSpecificRoleFields
+                    setValue={setValue}
+                    disabled={disabled}
+                    control={control}
+                    t={t}
+                  />
+                )}
               </Stack>
             </Grid2>
           </Grid2>

@@ -1,62 +1,36 @@
-import { Checkbox, FormControlLabel, Radio, RadioGroup } from '@mui/material'
-import { useTranslation } from 'react-i18next'
+import { Typography, Box } from '@mui/material'
+import { BCFormCheckbox, BCFormRadio } from '@/components/BCForm'
 import { govRoles } from '@/constants/roles'
+import { idirRoleOptions } from '../_schema'
 
-export const IDIRSpecificRoleFields = ({
-  formData,
-  handleCheckbox,
-  handleChange,
-  register
-}) => {
-  const { t } = useTranslation('admin')
+export const IDIRSpecificRoleFields = ({ control, setValue, disabled, t }) => {
   return (
-    <>
-      <FormControlLabel
-        control={<Checkbox {...register('roles')} data-test={govRoles[1]} />}
-        label={
-          <span>
-            <strong>{govRoles[1]}</strong> —{' '}
-            {t(`userForm.${govRoles[1].toLowerCase().replace(' ', '_')}`)}
-          </span>
-        }
-        onChange={handleCheckbox}
-        name={govRoles[1].toLocaleLowerCase()}
-        checked={formData.administrator}
-        disabled={formData.active === 'inactive'}
+    <Box>
+      <Typography variant="label" component="span">
+        {t('admin:Roles')}
+      </Typography>
+      <BCFormCheckbox
+        name={'adminRole'}
+        control={control}
+        setValue={setValue}
+        options={[
+          {
+            label: govRoles[1],
+            header: govRoles[1],
+            text: t(
+              `admin:userForm.${govRoles[1].toLowerCase().replace(' ', '_')}`
+            ),
+            value: govRoles[1].toLowerCase()
+          }
+        ]}
+        disabled={disabled}
       />
-      <RadioGroup
-        defaultValue="active"
-        name="govRole"
-        style={{
-          gap: 16,
-          marginTop: 8
-        }}
-        onChange={handleChange}
-        value={formData.govRole}
-      >
-        {govRoles.map(
-          (role, idx) =>
-            idx > 1 && (
-              <FormControlLabel
-                key={idx}
-                value={role}
-                control={<Radio />}
-                style={{
-                  '.MuiFormControlLabel-label': {
-                    fontSize: 16
-                  }
-                }}
-                label={
-                  <span>
-                    <strong>{role}</strong> —{' '}
-                    {t(`userForm.${role.toLowerCase().replace(' ', '_')}`)}
-                  </span>
-                }
-                disabled={formData.active === 'inactive'}
-              />
-            )
-        )}
-      </RadioGroup>
-    </>
+      <BCFormRadio
+        control={control}
+        name="idirRole"
+        options={idirRoleOptions(t)}
+        disabled={disabled}
+      />
+    </Box>
   )
 }

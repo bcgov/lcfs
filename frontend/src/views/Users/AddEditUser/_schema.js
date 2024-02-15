@@ -1,6 +1,5 @@
 import * as Yup from 'yup'
-import { govRoles } from '@/constants/roles'
-import { CheckboxLabel } from './components/CheckBoxLabel'
+import { govRoles, nonGovRoles, roles } from '@/constants/roles'
 
 // Schema for form validation
 export const userInfoSchema = Yup.object({
@@ -15,6 +14,10 @@ export const userInfoSchema = Yup.object({
   phone: Yup.string().optional(),
   mobilePhone: Yup.string().optional().nullable(),
   status: Yup.string(),
+  adminRole: Yup.array(),
+  idirRole: Yup.string(),
+  bceidRoles: Yup.array(),
+  readOnly: Yup.string(),
   // roles: Yup.string().required('One or more role is required.')
 })
 
@@ -121,4 +124,16 @@ export const idirRoleOptions = (t) => (
       value: role.toLowerCase()
     })
   ).filter((val) => val)
+)
+
+export const bceidRoleOptions = (t) => (
+  nonGovRoles.map((role, idx) => (
+    (!role.includes(roles.supplier) && !role.includes(roles.read_only)) && (
+      {
+        label: role,
+        header: role,
+        text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
+        value: role.toLowerCase()
+      }
+    ))).filter((val) => val)
 )

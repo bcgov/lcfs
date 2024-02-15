@@ -46,15 +46,11 @@
     "analyst": "can make recommendations on transfers, transactions and compliance reports, manage file submissions and add/edit fuel codes.",
     "compliance_manager": "can make recommendations on compliance reports.",
     "director": "can assess compliance reports and approve transactions.",
-    "manageUsrs": "Manage users",
-    "manageUsrsRole": "can add/edit BCeID users and assign roles.",
-    "transferRole": "can create/save transfers and submit files.",
-    "cRpt": "Compliance reporting",
-    "cRptRole": "can create/save compliance reports and submit files.",
-    "signAuth": "Signing authority",
-    "signAuthRole": "can sign and submit compliance reports to government and transfers to trade partners/government.",
-    "readOnly": "Ready only",
-    "readOnlyRole": "can view transactions, compliance reports and files.",
+    "manage_users": "can add/edit BCeID users and assign roles.",
+    "transfer": "can create/save transfers and submit files.",
+    "compliance_reporting": "can create/save compliance reports and submit files.",
+    "signing_authority": "can sign and submit compliance reports to government and transfers to trade partners/government.",
+    "read_only": "can view transactions, compliance reports and files.",
     "optional": "optional"
   }
 }

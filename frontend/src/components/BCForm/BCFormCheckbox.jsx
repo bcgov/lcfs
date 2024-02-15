@@ -47,6 +47,7 @@ export const BCFormCheckbox = ({
         {options.map((option) => {
           return (
             <FormControlLabel
+              sx={{ marginY: 2 }}
               control={
                 <Controller
                   name={name}
@@ -65,10 +66,7 @@ export const BCFormCheckbox = ({
               }
               label={
                 option.header ? (
-                  <CustomLabel
-                    header={option.header}
-                    text={option.text}
-                  />
+                  <CustomLabel header={option.header} text={option.text} />
                 ) : (
                   option.label
                 )
