@@ -13,6 +13,7 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.UserLoginHistory import UserLoginHistory
+from lcfs.db.models.Organization import Organization
 from lcfs.db.models.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
 from lcfs.web.api.base import (
@@ -196,6 +197,12 @@ class UserRepository:
                 if role:
                     db_user_role = UserRole(role=role)
                     db_user_profile.user_roles.append(db_user_role)
+        if db_user_profile.organization_id:
+            org_result = await self.session.execute(
+                select(Organization).filter(Organization.organization_id == db_user_profile.organization_id)
+            )
+            org = org_result.scalar_one_or_none()
+            db_user_profile.organization = org
         self.session.add(db_user_profile)
         return db_user_profile.user_profile_id
 
