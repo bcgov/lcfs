@@ -895,15 +895,6 @@ def upgrade() -> None:
             comment="Primary email address",
         ),
         sa.Column(
-            "username", sa.String(length=150), nullable=False, comment="Login Username"
-        ),
-        sa.Column(
-            "display_name",
-            sa.String(length=500),
-            nullable=True,
-            comment="Displayed name for user",
-        ),
-        sa.Column(
             "title", sa.String(length=100), nullable=True, comment="Professional Title"
         ),
         sa.Column(
@@ -948,8 +939,6 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("user_profile_id"),
         sa.UniqueConstraint("keycloak_username"),
-        sa.UniqueConstraint("username"),
-        sa.UniqueConstraint("username"),
         comment="Users who may access the application",
     )
     op.create_table(

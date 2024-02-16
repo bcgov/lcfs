@@ -38,35 +38,9 @@ def upgrade() -> None:
         existing_comment="The fair market value of any consideration, in Canadian dollars, per validated credit being transferred.",
         existing_nullable=True,
     )
-    op.drop_constraint("user_profile_username_key", "user_profile", type_="unique")
-    op.drop_column("user_profile", "username")
-    op.drop_column("user_profile", "display_name")
 
 
 def downgrade() -> None:
-    op.add_column(
-        "user_profile",
-        sa.Column(
-            "username",
-            sa.VARCHAR(length=150),
-            autoincrement=False,
-            nullable=False,
-            comment="Login Username",
-        ),
-    )
-    op.add_column(
-        "user_profile",
-        sa.Column(
-            "display_name",
-            sa.VARCHAR(length=150),
-            autoincrement=False,
-            nullable=False,
-            comment="Display Name",
-        ),
-    )
-    op.create_unique_constraint(
-        "user_profile_username_key", "user_profile", ["username"]
-    )
     op.alter_column(
         "transfer_history",
         "price_per_unit",
