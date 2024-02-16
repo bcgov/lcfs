@@ -15,7 +15,7 @@
         "run",
         "pytest",
         "-v",
-        "lcfs/tests/test_users.py::test_get_users_with_single_sortOrder"
+        "lcfs/tests/"
       ]
     },
     {

@@ -15,29 +15,32 @@ Public - attributes present on public facing resources being returned from GET, 
 """
 
 
-class UserCreate(BaseModel):
+class UserCreateSchema(BaseModel):
     user_profile_id: Optional[int] = None
     title: str
-    email: EmailStr
-    phone: str
-    mobile_phone: str
+    keycloak_username: str
+    keycloak_email: EmailStr
+    email: Optional[EmailStr] = ""
+    phone: Optional[str] = None
+    mobile_phone: Optional[str] = None
     first_name: str
     last_name: str
     is_active: bool
     organization_id: Optional[int] = None
     organization: Optional[OrganizationSummaryResponseSchema] = None
-    roles: List[RoleSchema]
+    roles: Optional[List[str]] = []
 
     class Config:
         from_attributes = True
 
 
-class UserBase(BaseModel):
+class UserBaseSchema(BaseModel):
     """DTO for user values."""
 
     user_profile_id: int
     keycloak_username: str
-    email: EmailStr
+    keycloak_email: EmailStr
+    email: Optional[EmailStr] = None
     title: Optional[str] = None
     phone: Optional[str] = None
     first_name: Optional[str] = None
@@ -59,29 +62,27 @@ class UserBase(BaseModel):
             roles.append(role.to_dict())
             if role.role.is_government_role:
                 is_government_user = True
-        user_dict = user_profile.__dict__.copy() # make a copy of the dictionary
-        user_dict.pop('roles', None) # remove the roles key if it exists
-        return cls(
-            roles=roles, is_government_user=is_government_user, **user_dict
-        )
+        user_dict = user_profile.__dict__.copy()  # make a copy of the dictionary
+        user_dict.pop("roles", None)  # remove the roles key if it exists
+        return cls(roles=roles, is_government_user=is_government_user, **user_dict)
 
 
-class Users(BaseModel):
+class UsersSchema(BaseModel):
     pagination: PaginationResponseSchema
-    users: List[UserBase]
+    users: List[UserBaseSchema]
 
 
-class UserHistory(BaseModel):
+class UserHistorySchema(BaseModel):
     user_login_history_id: int
     keycloak_email: EmailStr
     external_username: str
     is_login_successful: bool
     login_error_message: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 
 
 class UserHistories(BaseModel):
     pagination: PaginationResponseSchema
-    history: List[UserHistory]
+    history: List[UserHistorySchema]

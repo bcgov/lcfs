@@ -20,10 +20,10 @@ from lcfs.web.api.base import (
 )
 from lcfs.db.models import UserProfile
 from lcfs.web.api.user.schema import (
-    UserCreate,
-    UserBase,
-    UserHistory,
-    Users,
+    UserCreateSchema,
+    UserBaseSchema,
+    UserHistorySchema,
+    UsersSchema,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
@@ -115,14 +115,14 @@ class UserServices:
 
     @service_handler
     @transactional
-    async def get_all_users(self, pagination: PaginationRequestSchema) -> Users:
+    async def get_all_users(self, pagination: PaginationRequestSchema) -> UsersSchema:
         """
         Get all users
         """
         users, total_count = await self.repo.get_users_paginated(pagination=pagination)
         if len(users) == 0:
             raise DataNotFoundException("No users found")
-        return Users(
+        return UsersSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
@@ -134,18 +134,18 @@ class UserServices:
 
     @service_handler
     @transactional
-    async def get_user_by_id(self, user_id: int) -> UserBase:
+    async def get_user_by_id(self, user_id: int) -> UserBaseSchema:
         """
         Get user info by ID
         """
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
-        return UserBase.model_validate(user)
+        return UserBaseSchema.model_validate(user)
 
     @service_handler
     @transactional
-    async def create_user(self, user_create: UserCreate) -> UserBase:
+    async def create_user(self, user_create: UserCreateSchema) -> UserBaseSchema:
         """
         Create a new user
         """
@@ -155,7 +155,9 @@ class UserServices:
 
     @service_handler
     @transactional
-    async def update_user(self, user_create: UserCreate, user_id: int) -> UserProfile:
+    async def update_user(
+        self, user_create: UserCreateSchema, user_id: int
+    ) -> UserProfile:
         """
         Update user info
         """
@@ -194,11 +196,13 @@ class UserServices:
 
     @service_handler
     @transactional
-    async def get_user_history(self, user_id: str) -> List[UserHistory]:
+    async def get_user_history(self, user_id: str) -> List[UserHistorySchema]:
         """
         Get user activities
         """
         result = await self.repo.get_user_history(user_id)
         if len(result) <= 0:
             raise DataNotFoundException("User history not found")
-        return [UserHistory.model_validate(history._data[0]) for history in result]
+        return [
+            UserHistorySchema.model_validate(history._data[0]) for history in result
+        ]

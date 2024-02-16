@@ -13,8 +13,9 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.UserLoginHistory import UserLoginHistory
+from lcfs.db.models.Organization import Organization
 from lcfs.db.models.Role import Role, RoleEnum
-from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory
+from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     lcfs_cache_key_builder,
@@ -94,7 +95,7 @@ class UserRepository:
     async def get_users_paginated(
         self,
         pagination: PaginationRequestSchema,
-    ) -> List[UserBase]:
+    ) -> List[UserBaseSchema]:
         """
         Queries users from the database with optional filters for username, surname,
         organization, and active status. Supports pagination and sorting.
@@ -107,7 +108,7 @@ class UserRepository:
             pagination (dict): Pagination and sorting parameters.
 
         Returns:
-            List[UserBase]: A list of user profiles matching the query.
+            List[UserBaseSchema]: A list of user profiles matching the query.
         """
         # Build the base query statement
         conditions = []
@@ -122,6 +123,7 @@ class UserRepository:
         limit = pagination.size
 
         # Applying pagination, sorting, and filters to the query
+        # TODO: convert Role and UserRole to outer join, as it'll miss out records without any roles especially inactive records.
         query = (
             select(UserProfile)
             .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
@@ -156,8 +158,8 @@ class UserRepository:
         )
         results = user_results.scalars().unique().all()
 
-        # Convert the results to UserBase schemas
-        return [UserBase.model_validate(user) for user in results], total_count
+        # Convert the results to UserBaseSchema schemas
+        return [UserBaseSchema.model_validate(user) for user in results], total_count
 
     @repo_handler
     async def get_user_by_id(self, user_id: int) -> UserProfile:
@@ -171,34 +173,42 @@ class UserRepository:
         )
 
         # Execute the query
-        return await self.session.scalar(query)
+        user_result = await self.session.execute(query)
+        return user_result.unique().scalar_one_or_none() if user_result else None
 
     @repo_handler
     async def create_user(
-        self, user_create: UserCreate, user_id: int = None
+        self, user_create: UserCreateSchema, user_id: int = None
     ) -> UserProfile:
+        db_user_profile = UserProfile(**user_create.model_dump(exclude={"roles"}))
         user_data = user_create.model_dump()
         roles = user_data.pop("roles", {})
-        new_user = UserProfile()
-        # get the next sequence value for the user_profile_id and begin the async transaction.
-        id_seq = func.nextval("user_profile_user_profile_id_seq")
-        result = await self.session.execute(select(id_seq))
-        user_id = result.unique().scalar_one_or_none()
-        user_data["user_profile_id"] = user_id
-        # convert the UserCreate instance to UserProfile schema object
-        new_user = UserProfile.form_user_profile(new_user, user_data)
-        new_user.roles = roles
-        self.session.add(new_user)
-        # Update/insert the roles separately
-        user_roles = UserRole.get_user_roles(new_user)
-        self.session.add_all(user_roles)
+        # Find the RoleEnum member corresponding to each role
+        role_enum_members = [
+            role_enum for role_enum in RoleEnum if role_enum.value.lower() in roles
+        ]
 
-        logger.info(f"Created user with id: {user_id}")
-        return user_id
+        if db_user_profile.is_active:
+            for role_name in role_enum_members:
+                role_result = await self.session.execute(
+                    select(Role).filter(Role.name == role_name)
+                )
+                role = role_result.scalar_one_or_none()
+                if role:
+                    db_user_role = UserRole(role=role)
+                    db_user_profile.user_roles.append(db_user_role)
+        if db_user_profile.organization_id:
+            org_result = await self.session.execute(
+                select(Organization).filter(Organization.organization_id == db_user_profile.organization_id)
+            )
+            org = org_result.scalar_one_or_none()
+            db_user_profile.organization = org
+        self.session.add(db_user_profile)
+        return db_user_profile.user_profile_id
 
     @repo_handler
     async def update_user(
-        self, user: UserProfile, user_update: UserCreate
+        self, user: UserProfile, user_update: UserCreateSchema
     ) -> UserProfile:
         user_data = user_update.model_dump()
 
@@ -226,7 +236,7 @@ class UserRepository:
 
     # TODO: User History pagination implementation if needed
     @repo_handler
-    async def get_user_history(self, user_id: int = None) -> List[UserHistory]:
+    async def get_user_history(self, user_id: int = None) -> List[UserHistorySchema]:
         histories = await self.session.execute(
             select(UserLoginHistory)
             .join(

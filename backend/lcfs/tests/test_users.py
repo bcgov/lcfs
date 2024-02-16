@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
 
-from lcfs.web.api.user.schema import Users
+from lcfs.web.api.user.schema import UsersSchema
 
 
 @pytest.mark.anyio
@@ -67,7 +67,7 @@ async def test_get_users_with_pagination(
     # Check the status code
     assert response.status_code == status.HTTP_200_OK
     # check if pagination is working as expected.
-    content = Users(**response.json())
+    content = UsersSchema(**response.json())
     assert len(content.users) <= 5
     assert content.pagination.page == 1
 
@@ -89,7 +89,7 @@ async def test_get_users_with_sort_order(
     # Check the status code
     assert response.status_code == status.HTTP_200_OK
 
-    content = Users(**response.json())
+    content = UsersSchema(**response.json())
     emails = [user.email for user in content.users]
     # check if emails are sorted in descending order.
     assert np.all(emails[:-1] >= emails[1:])
@@ -119,7 +119,7 @@ async def test_get_users_with_filter(
     # Check the status code
     assert response.status_code == status.HTTP_200_OK
     # check if pagination is working as expected.
-    content = Users(**response.json())
+    content = UsersSchema(**response.json())
     ids = [user.user_profile_id for user in content.users]
     # check if only one user element exists with user_profile_id 1.
     assert len(ids) == 1

@@ -5,7 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 // hooks
-import { saveUpdateUser } from '@/hooks/useUser'
+import { saveUpdateUser, useUser } from '@/hooks/useUser'
 import {
   userInfoSchema,
   idirTextFields,
@@ -27,18 +27,26 @@ import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
+import { roles } from '@/constants/roles'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
+  const navigate = useNavigate()
+  const apiService = useApiService()
+  const { t } = useTranslation(['common', 'admin'])
+  const { userID, orgID } = useParams()
+
+  const {
+    data,
+    isLoading: isUserLoading,
+    isFetched: isUserFetched
+  } = useUser(userID)
   // User form hook and form validation
-  const { handleSubmit, control, setValue, watch } = useForm({
+  const { handleSubmit, control, setValue, watch, reset } = useForm({
     resolver: yupResolver(userInfoSchema),
     mode: 'onChange',
     defaultValues
   })
-  const navigate = useNavigate()
-  const { t } = useTranslation(['common', 'admin'])
-  const { userID, orgID } = useParams()
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
     () => (orgID ? bceidTextFields(t) : idirTextFields(t)),
@@ -54,30 +62,59 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     }
   }, [status, readOnly])
 
-  // useMutation hook from React Query for handling API request
-  const { mutate, isLoading, isError } = useMutation({
-    mutationsFn: async (userData) =>
-      await useApiService.post('/users', userData),
-    onSuccess: (response) => {
-      // on success navigate somewhere
-      navigate(ROUTES.ADMIN_USERS, {
-        state: {
-          message: 'User has been successfully saved.',
-          severity: 'success'
-        }
+  useEffect(() => {
+    if (isUserFetched && data) {
+      reset({
+        keycloakEmail: data?.keycloak_email,
+        altEmail: data?.email,
+        jobTitle: data?.title,
+        firstName: data?.first_name,
+        lastName: data?.last_name,
+        userName: data?.keycloak_username,
+        phone: data?.phone,
+        mobile: data?.mobile_phone,
+        status: data?.is_active ? 'active' : 'inactive',
+        readOnly: data?.roles.includes(roles.read_only) ? 'read only' : '',
+        adminRole: !data?.organization_id
+          ? data?.roles
+              .map((role) => role.name.toLowerCase())
+              .filter((role) => role === roles.administrator.toLowerCase)
+          : [],
+        idirRole: !data?.organization_id
+          ? data?.roles
+              .map((role) => role.name.toLowerCase())
+              .filter((role) => role !== roles.administrator.toLowerCase)
+              .join('')
+          : '',
+        bceidRoles: data?.organization_id
+          ? data?.roles.map((role) => role.name.toLowerCase())
+          : []
       })
-    },
-    onError: (error) => {
-      // handle axios errors here
-      console.error('Error saving user:', error)
     }
-  })
-
+  }, [isUserFetched])
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
-    console.log(data)
     const payload = {
-      ...data,
+      user_profile_id: userID,
+      title: data.jobTitle,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      keycloak_username: data.userName,
+      keycloak_email: data.keycloakEmail,
+      email: data.altEmail === '' ? null : data.altEmail,
+      phone: data.phone,
+      mobile_phone: data.mobile,
+      is_active: data.status === 'active',
+      organization_id: orgID,
+      roles:
+        data.status === 'active'
+          ? [
+              ...data.adminRole,
+              ...(data.readOnly === '' ? data.bceidRoles : []),
+              data.idirRole,
+              data.readOnly
+            ]
+          : []
     }
     mutate(payload)
   }
@@ -85,14 +122,42 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const onErrors = (error) => {
     console.log(error)
   }
-
-  if (isLoading) {
+  // useMutation hook from React Query for handling API request
+  const { mutate, isPending, isError } = useMutation({
+    mutationFn: async (payload) =>
+      userID
+        ? await apiService.put(`/users/${userID}`, payload)
+        : await apiService.post('/users', payload),
+    onSuccess: () => {
+      // on success navigate somewhere
+      if (orgID) {
+        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+          state: {
+            message: 'User has been successfully saved.',
+            severity: 'success'
+          }
+        })
+      } else {
+        navigate(ROUTES.ADMIN_USERS, {
+          state: {
+            message: 'User has been successfully saved.',
+            severity: 'success'
+          }
+        })
+      }
+    },
+    onError: (error) => {
+      // handle axios errors here
+      console.error('Error saving user:', error)
+    }
+  })
+  if (isPending || isUserLoading) {
     return <Loading message="Adding user..." />
   }
 
   return (
     <div>
-      {isError && <BCAlert severity="error" message={t('admin:errMsg')} />}
+      {isError && <BCAlert severity="error">{t('admin:errMsg')}</BCAlert>}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
         {userID ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to Test Org`}

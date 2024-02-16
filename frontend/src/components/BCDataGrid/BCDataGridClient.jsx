@@ -112,6 +112,7 @@ BCDataGridClient.defaultProps = {
   gridRef: null,
   gridKey: `bcgrid-key-${Math.random()}`,
   defaultSortModel: [],
+  defaultColDef: {},
   gridOptions: {},
   rowHeight: 40,
   headerHeight: 40,
@@ -126,7 +127,7 @@ BCDataGridClient.propTypes = {
     PropTypes.func
   ]).isRequired,
   columnDefs: PropTypes.array.isRequired,
-  defaultColDef: PropTypes.object.isRequired,
+  defaultColDef: PropTypes.object,
   apiEndpoint: PropTypes.string.isRequired,
   gridKey: PropTypes.string,
   gridOptions: PropTypes.object,
