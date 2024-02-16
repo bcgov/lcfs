@@ -89,7 +89,7 @@ async def seed_user_profiles(session):
         },
         {
             "keycloak_email": "tfrs@gov.bc.ca",
-            "keycloak_username": "LCFS1",
+            "keycloak_username": "lcfs1",
             "email": "tfrs@gov.bc.ca",
             "title": "Analyst",
             "phone": "1112223333",
