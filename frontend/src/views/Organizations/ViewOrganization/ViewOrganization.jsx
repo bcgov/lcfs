@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -191,7 +191,11 @@ export const ViewOrganization = () => {
                 startIcon={
                   <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
                 }
-                onClick={() => navigate(ROUTES.ORGANIZATIONS_ADDUSER)}
+                onClick={() =>
+                  navigate(
+                    ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                  )
+                }
               >
                 <BCTypography variant="button">
                   {t('org:newUsrBtn')}
@@ -245,7 +249,7 @@ export const ViewOrganization = () => {
       <BCBox sx={{ height: '36rem', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'users/'}
+          apiEndpoint={apiRoutes.listUsers}
           apiData={'users'}
           columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}

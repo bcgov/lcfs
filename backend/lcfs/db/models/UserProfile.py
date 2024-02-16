@@ -1,5 +1,4 @@
 from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
-from lcfs.db.models import UserRole
 from lcfs.db.base import Auditable, BaseModel
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
@@ -54,17 +53,17 @@ class UserProfile(BaseModel, Auditable):
     )
 
     @classmethod
-    def form_user_profile(cls, user_profile, user_data, user_profile_id):
+    def form_user_profile(cls, user_profile, user_data):
         """
         Copy UserProfile instance with data from UserCreate instance.
         """
+        if user_data.get("organization"):
+            organization_data = OrganizationSummaryResponseSchema(
+                **user_data.pop("organization", {})
+            )
+            user_data["organization_id"] = organization_data.organization_id
 
-        organization_data = OrganizationSummaryResponseSchema(
-            **user_data.pop("organization", {})
-        )
-        user_data["user_profile_id"] = user_profile_id
-        user_data["organization_id"] = organization_data.organization_id
-        # Iterate over each field in UserCreate and update UserProfile
+        # user_profile = cls(**user_data)
         for field in user_data:
             setattr(user_profile, field, user_data[field])
         setattr(user_profile, "keycloak_email", user_data["email"])

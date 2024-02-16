@@ -1,8 +1,9 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from typing_extensions import deprecated
 from sqlalchemy import and_
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from fastapi import HTTPException, Query
+from fastapi import HTTPException, Query, Request, Response
+from fastapi_cache import FastAPICache
 
 from pydantic import BaseModel, Field
 from logging import getLogger
@@ -246,3 +247,39 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
             status_code=500,
             detail=f"Failed to apply filter conditions",
         )
+
+
+async def lcfs_cache_key_builder(
+    func,
+    namespace: Optional[str] = "",
+    request: Request = None,
+    response: Response = None,
+    *args,
+    **kwargs,
+):
+    """
+    Build a cache key for a function using the request and response objects.
+
+    Args:
+        func: The function to build the cache key for
+        namespace: The namespace to use for the cache key
+        request: The request object
+        response: The response object
+        args: Positional arguments for the function
+        kwargs: Keyword arguments for the function
+
+    Returns:
+        The cache key for the function
+    """
+    # Get the FastAPICache prefix
+    prefix = FastAPICache.get_prefix()
+    request_key = ""
+    for key, value in kwargs.items():
+        if "object at" not in str(value):
+            request_key += f"{key}:{value}"
+    # Build the cache key
+    cache_key = f"{prefix}:{namespace}:{func.__name__}:{request_key}"
+    logger.info(f"Cache key: {cache_key}")
+
+    # Return the cache key
+    return cache_key

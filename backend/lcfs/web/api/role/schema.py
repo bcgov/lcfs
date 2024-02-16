@@ -1,11 +1,12 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
 class RoleSchema(BaseModel):
     role_id: int
-    name: str
-    description: str
-    display_order: int
+    name: Optional[str] = None
+    description: Optional[str] = None
+    display_order: Optional[int] = None
     is_government_role: bool
 
     class Config:

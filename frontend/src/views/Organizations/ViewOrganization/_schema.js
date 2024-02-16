@@ -6,11 +6,7 @@ import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
 
 export const organizationsColDefs = (t) => [
-  {
-    colId: 'name',
-    field: 'name',
-    headerName: t('org:orgColLabels.orgName')
-  },
+  { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), maxWidth: 800, flex: 1 },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',
@@ -37,6 +33,7 @@ export const organizationsColDefs = (t) => [
     colId: 'status',
     field: 'status',
     headerName: t('org:orgColLabels.status'),
+    width: 200,
     valueGetter: (params) => params.data.org_status.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',

@@ -3,7 +3,9 @@ from typing import Any, AsyncGenerator, List, Callable
 import pytest
 import subprocess
 import logging
-from fakeredis import FakeServer
+from fakeredis import FakeServer, aioredis
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 from starlette.authentication import SimpleUser, AuthCredentials, AuthenticationBackend
 from starlette.middleware.authentication import AuthenticationMiddleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -125,7 +127,6 @@ async def dbsession_factory(_engine: AsyncEngine) -> Callable[[], AsyncGenerator
     )
     return session_factory
 
-
 @pytest.fixture
 def fastapi_app(
     dbsession: AsyncSession,
@@ -137,7 +138,7 @@ def fastapi_app(
     application = get_app()
     application.dependency_overrides[get_async_db_session] = lambda: dbsession
     application.dependency_overrides[get_redis_pool] = lambda: fake_redis_pool
-    
+
     # Set up application state for testing
     application.state.redis_pool = fake_redis_pool
     # application.state.db_session_factory = test_session_factory
@@ -146,8 +147,11 @@ def fastapi_app(
     # Set up mock authentication backend with the specified roles
     set_mock_user_roles(application, user_roles)
 
+    # Initialize the cache with fake Redis backend
+    fake_redis = aioredis.FakeRedis(connection_pool=fake_redis_pool)
+    FastAPICache.init(RedisBackend(fake_redis), prefix="lcfs")
+
     return application
-  
 
 @pytest.fixture
 async def client(
@@ -191,16 +195,16 @@ def set_mock_user_roles():
 
         # Add necessary middleware for testing, excluding LazyAuthenticationBackend
         application.add_middleware(
-            CORSMiddleware, 
-            allow_origins=["*"], 
-            allow_methods=["*"], 
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_methods=["*"],
             allow_headers=["*"]
         )
 
         # Add the Mock Authentication Middleware
         mock_auth_backend = MockAuthenticationBackend(user_roles=roles)
         application.add_middleware(
-            AuthenticationMiddleware, 
+            AuthenticationMiddleware,
             backend=mock_auth_backend
         )
 

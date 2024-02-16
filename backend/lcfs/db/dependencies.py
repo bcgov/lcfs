@@ -48,26 +48,6 @@ async def get_async_db_session() -> AsyncGenerator[AsyncSession, None]:
         await session.close()
 
 
-def transactional(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        db: AsyncSession = kwargs.get("db")
-        if not db:
-            raise HTTPException(
-                status_code=500, detail="Database session not available"
-            )
-
-        try:
-            result = None
-            async with db.begin():
-                result = await func(*args, **kwargs)
-            return result
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    return wrapper
-
-
 def create_redis():
     return aioredis.ConnectionPool(
         host=settings.redis_host,
