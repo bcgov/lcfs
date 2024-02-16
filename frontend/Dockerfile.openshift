@@ -7,6 +7,6 @@ RUN npm install --omit=dev && \
 
 FROM artifacts.developer.gov.bc.ca/docker-remote/bitnami/nginx:1.24.0
 COPY --from=builder /usr/src/app/dist /app
-# COPY nginx.conf /opt/bitnami/nginx/conf/bitnami/
+COPY nginx.conf /opt/bitnami/nginx/conf/bitnami/
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
