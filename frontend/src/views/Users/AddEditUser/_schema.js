@@ -18,7 +18,6 @@ export const userInfoSchema = Yup.object({
   idirRole: Yup.string(),
   bceidRoles: Yup.array(),
   readOnly: Yup.string(),
-  // roles: Yup.string().required('One or more role is required.')
 })
 
 export const idirTextFields = (t) => [
@@ -102,6 +101,10 @@ export const defaultValues = {
   phone: '',
   mobile: '',
   status: 'active',
+  adminRole: [],
+  idirRole: '',
+  bceidRoles: [],
+  readOnly: ''
 }
 
 export const statusOptions = (t) => [

@@ -37,6 +37,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     defaultValues
   })
   const navigate = useNavigate()
+  const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
   const [disabled, setDisabled] = useState(false)
@@ -54,11 +55,41 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     }
   }, [status, readOnly])
 
+  // Prepare payload and call mutate function
+  const onSubmit = (data) => {
+    const payload = {
+      user_profile_id: userID,
+      title: data.jobTitle,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      keycloak_username: data.userName,
+      keycloak_email: data.keycloakEmail,
+      email: data.altEmail === '' ? null : data.altEmail,
+      phone: data.phone,
+      mobile_phone: data.mobile,
+      is_active: data.status === 'active',
+      organization_id: orgID,
+      roles: [
+        ...data.adminRole,
+        data.idirRole,
+        data.readOnly,
+        ...data.bceidRoles
+      ]
+    }
+    console.log(payload)
+    mutate(payload)
+  }
+
+  const onErrors = (error) => {
+    console.log(error)
+  }
   // useMutation hook from React Query for handling API request
-  const { mutate, isLoading, isError } = useMutation({
-    mutationsFn: async (userData) =>
-      await useApiService.post('/users', userData),
-    onSuccess: (response) => {
+  const { mutate, isPending, isError } = useMutation({
+    mutationFn: async (payload) =>
+      userID
+        ? await apiService.put(`/users/${userID}`, payload)
+        : await apiService.post('/users', payload),
+    onSuccess: () => {
       // on success navigate somewhere
       navigate(ROUTES.ADMIN_USERS, {
         state: {
@@ -72,27 +103,13 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
       console.error('Error saving user:', error)
     }
   })
-
-  // Prepare payload and call mutate function
-  const onSubmit = (data) => {
-    console.log(data)
-    const payload = {
-      ...data,
-    }
-    mutate(payload)
-  }
-
-  const onErrors = (error) => {
-    console.log(error)
-  }
-
-  if (isLoading) {
+  if (isPending) {
     return <Loading message="Adding user..." />
   }
 
   return (
     <div>
-      {isError && <BCAlert severity="error" message={t('admin:errMsg')} />}
+      {isError && <BCAlert severity="error">{t('admin:errMsg')}</BCAlert>}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
         {userID ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to Test Org`}

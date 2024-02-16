@@ -66,8 +66,6 @@ class UserProfile(BaseModel, Auditable):
         # user_profile = cls(**user_data)
         for field in user_data:
             setattr(user_profile, field, user_data[field])
-        setattr(user_profile, "keycloak_email", user_data["email"])
-        setattr(user_profile, "keycloak_username", user_data["username"])
 
         return user_profile
 

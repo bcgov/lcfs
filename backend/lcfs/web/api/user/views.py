@@ -28,7 +28,12 @@ from fastapi.responses import StreamingResponse
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.user.schema import UserCreate, UserBase, UserHistory, Users
+from lcfs.web.api.user.schema import (
+    UserCreateSchema,
+    UserBaseSchema,
+    UserHistorySchema,
+    UsersSchema,
+)
 
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.user.services import UserServices
@@ -67,7 +72,7 @@ async def export_users(
     return await service.export_users(format)
 
 
-@router.post("/list", response_model=Users, status_code=status.HTTP_200_OK)
+@router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 @view_handler
 async def get_users(
@@ -75,7 +80,7 @@ async def get_users(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
     service: UserServices = Depends(),
-) -> Users:
+) -> UsersSchema:
     """
     Enpoint to get information of all users for ag-grid in the UI
 
@@ -96,25 +101,27 @@ async def get_users(
     return await service.get_all_users(pagination)
 
 
-@router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
+@router.get("/current", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
 @view_handler
-async def get_current_user(request: Request, response: Response = None) -> UserBase:
+async def get_current_user(
+    request: Request, response: Response = None
+) -> UserBaseSchema:
     """
     Endpoint to get information of the current user
 
     This endpoint returns the information of the current user, including their roles and organization.
     """
-    return UserBase.model_validate(request.user)
+    return UserBaseSchema.model_validate(request.user)
 
 
-@router.get("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
+@router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 @view_handler
 async def get_user_by_id(
     request: Request,
     user_id: int,
     service: UserServices = Depends(),
-) -> UserBase:
+) -> UserBaseSchema:
     """
     Endpoint to get information of a user by ID
     This endpoint returns the information of a user by ID, including their roles and organization.
@@ -122,33 +129,33 @@ async def get_user_by_id(
     return await service.get_user_by_id(user_id)
 
 
-@router.post("", response_model=UserBase, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
 @roles_required("Government")
 @view_handler
 async def create_user(
     request: Request,
     response: Response = None,
-    user_create: UserCreate = ...,
+    user_create: UserCreateSchema = ...,
     service: UserServices = Depends(),
-) -> UserBase:
+) -> None:
     """
     Endpoint to create a new user
     This endpoint creates a new user and returns the information of the created user.
     """
     user_id = await service.create_user(user_create)
-    return await service.get_user_by_id(user_id)
+    return await service.get_user_by_id(user_id) if user_id else None
 
 
-@router.put("/{user_id}", response_model=UserBase, status_code=status.HTTP_200_OK)
+@router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 @view_handler
 async def update_user(
     request: Request,
     response: Response = None,
     user_id: int = None,
-    user_create: UserCreate = ...,
+    user_create: UserCreateSchema = ...,
     service: UserServices = Depends(),
-) -> UserBase:
+) -> UserBaseSchema:
     """
     Endpoint to update a user
     This endpoint updates a user and returns the information of the updated user.
@@ -191,7 +198,9 @@ async def get_user_roles(
 
 
 @router.get(
-    "/{user_id}/activity", response_model=List[UserHistory], status_code=status.HTTP_200_OK
+    "/{user_id}/activity",
+    response_model=List[UserHistorySchema],
+    status_code=status.HTTP_200_OK,
 )
 @roles_required("Government")
 @view_handler
@@ -200,7 +209,7 @@ async def get_user_activities(
     response: Response = None,
     user_id: int = None,
     service: UserServices = Depends(),
-) -> List[UserHistory]:
+) -> List[UserHistorySchema]:
     """
     Endpoint to get the activities of a user
     It provides the details of the user login history
