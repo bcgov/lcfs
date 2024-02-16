@@ -10,9 +10,9 @@ logger = getLogger("transaction")
 router = APIRouter()
 
 
-@router.get("/transactions", response_model=TransactionPaginationResponse, status_code=status.HTTP_200_OK)
+@router.get("/", response_model=TransactionPaginationResponse, status_code=status.HTTP_200_OK)
 @view_handler
-async def get_transactions(
+async def get_all_transactions(
     page: int = 1,
     size: int = 10,
     transactions_service: TransactionsService = Depends(),

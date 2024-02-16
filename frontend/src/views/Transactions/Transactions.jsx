@@ -64,7 +64,7 @@ export const Transactions = () => {
       <OrganizationList gridRef={gridRef} />
       <Box display={'flex'} gap={2} mb={2}>
         {currentUserOrgData?.org_status.status === statuses.registered && (
-          <Role roles={['Government']}>
+          <Role roles={['Supplier', 'Transfer']}>
             <BCButton
               variant="contained"
               size="small"

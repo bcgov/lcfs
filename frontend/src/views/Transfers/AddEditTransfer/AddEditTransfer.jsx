@@ -17,7 +17,7 @@ import TransferGraphic from './components/TransferGraphic'
 // Hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useApiService } from '@/services/useApiService'
-import { TRANSFERS_VIEW } from '@/constants/routes/routes'
+import { TRANSACTIONS } from '@/constants/routes/routes'
 import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
 
 export const AddEditTransfer = () => {
@@ -108,8 +108,7 @@ export const AddEditTransfer = () => {
       },
       onSuccess: (response) => {
         // Redirect on success
-        navigate(TRANSFERS_VIEW, {
-          transferID: response.transfer_id,
+        navigate(TRANSACTIONS, {
           state: {
             message: 'Transfer successfully submitted.',
             severity: 'success',
