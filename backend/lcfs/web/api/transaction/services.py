@@ -5,13 +5,20 @@ from fastapi import Depends
 
 from .repo import TransactionsRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+    apply_filter_conditions,
+    get_field_for_filter,
+    validate_pagination,
+)
 
 class TransactionsService:
     def __init__(self, transactions_repo: TransactionsRepository = Depends()):
         self.transactions_repo = transactions_repo
 
     @service_handler
-    async def get_combined_transactions_paginated(self, page: int = 1, size: int = 10) -> Dict[str, Any]:
+    async def get_combined_transactions_paginated(self, pagination: PaginationRequestSchema = {}) -> Dict[str, Any]:
         """
         Fetches a combined paginated list of Transfers and Issuances, ordered by create_date.
         Returns a structured response that includes the paginated list and pagination details.

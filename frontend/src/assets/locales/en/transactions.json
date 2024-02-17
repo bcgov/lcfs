@@ -1,0 +1,24 @@
+{
+  "title": "Transactions",
+  "txnColLabels": {
+    "txnId": "Txn Id",
+    "compliancePeriod": "Compliance period",
+    "type": "Type",
+    "complianceUnitsFrom": "Compliance units from",
+    "complianceUnitsTo": "Compliance units to",
+    "numberOfUnits": "Number of units",
+    "valuePerUnit": "Value per unit",
+    "status": "Status"
+  },
+  "txnId": "Transaction ID",
+  "noTxnsFound": "No transactions found",
+  "txnDownloadFailMsg": "Failed to download transaction information.",
+  "newTxnBtn": "New transaction",
+  "compliancePeriod": "Compliance Period",
+  "type": "Type",
+  "complianceUnitsFrom": "Compliance Units From",
+  "complianceUnitsTo": "Compliance Units To",
+  "numberOfUnits": "Number of Units",
+  "valuePerUnit": "Value Per Unit",
+  "status": "Status"
+}

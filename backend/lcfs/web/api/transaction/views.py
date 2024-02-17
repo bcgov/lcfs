@@ -1,26 +1,28 @@
 import math
 from logging import getLogger
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request, Body
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.transaction.services import TransactionsService
-from lcfs.web.api.transaction.schema import TransactionPaginationResponse
+from lcfs.web.api.transaction.schema import TransactionListSchema
+from lcfs.web.api.base import PaginationRequestSchema
 
 logger = getLogger("transaction")
 
 router = APIRouter()
 
 
-@router.get("/", response_model=TransactionPaginationResponse, status_code=status.HTTP_200_OK)
+@router.get("/", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
 @view_handler
-async def get_all_transactions(
-    page: int = 1,
-    size: int = 10,
-    transactions_service: TransactionsService = Depends(),
+async def get_transactions(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    service: TransactionsService = Depends(),
 ):
     """
     Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
     """
-    return await transactions_service.get_combined_transactions_paginated(page, size)
+    return await service.get_combined_transactions_paginated(pagination)
+
 
 
 # @router.get("/transactions", status_code=status.HTTP_200_OK)

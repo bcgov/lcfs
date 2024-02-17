@@ -19,7 +19,7 @@ class TransactionTypeSchema(BaseModel):
     type: TransactionTypeEnum
 
 
-class TransactionBase(BaseModel):
+class TransactionBaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     transaction_id: int
@@ -33,10 +33,10 @@ class TransactionBase(BaseModel):
 
 class Transactions(BaseModel):
     pagination: PaginationResponseSchema
-    transactions: List[TransactionBase]
+    transactions: List[TransactionBaseSchema]
 
 
-class CombinedTransaction(BaseModel):
+class CombinedTransactionSchema(BaseModel):
     type: str  # 'Issuance' or 'Transfer'
     id: int
     create_date: str  # or datetime, depending on how we format it in the service
@@ -44,6 +44,6 @@ class CombinedTransaction(BaseModel):
 # Generic type for data
 T = TypeVar("T")
 
-class TransactionPaginationResponse(BaseModel, Generic[T]):
+class TransactionListSchema(BaseModel, Generic[T]):
     pagination: PaginationResponseSchema
     transactions: List[T]
