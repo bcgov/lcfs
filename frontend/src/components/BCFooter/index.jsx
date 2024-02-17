@@ -112,6 +112,7 @@ function Footer({ repoDetails, links }) {
           </BCTypography>
         </Link>
       </BCBox>
+      {import.meta.env.VITE_TEST ?? 'not working'}
     </BCBox>
   )
 }
