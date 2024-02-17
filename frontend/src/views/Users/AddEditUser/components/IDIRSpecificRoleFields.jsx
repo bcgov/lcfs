@@ -3,7 +3,8 @@ import { BCFormCheckbox, BCFormRadio } from '@/components/BCForm'
 import { govRoles } from '@/constants/roles'
 import { idirRoleOptions } from '../_schema'
 
-export const IDIRSpecificRoleFields = ({ control, setValue, disabled, t }) => {
+export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
+  const { control } = form
   return (
     <Box>
       <Typography variant="label" component="span">
@@ -11,8 +12,7 @@ export const IDIRSpecificRoleFields = ({ control, setValue, disabled, t }) => {
       </Typography>
       <BCFormCheckbox
         name={'adminRole'}
-        control={control}
-        setValue={setValue}
+        form={form}
         options={[
           {
             label: govRoles[1],

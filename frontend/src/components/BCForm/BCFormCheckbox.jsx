@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import {
   Checkbox,
   FormControl,
@@ -10,30 +9,15 @@ import { Controller } from 'react-hook-form'
 import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
 
-export const BCFormCheckbox = ({
-  name,
-  control,
-  setValue,
-  label,
-  options,
-  disabled
-}) => {
-  const [selectedItems, setSelectedItems] = useState([])
-  // we are handling the selection manually here
-  const handleSelect = (value) => {
-    const isPresent = selectedItems.indexOf(value)
-    if (isPresent !== -1) {
-      const remaining = selectedItems.filter((item) => item !== value)
-      setSelectedItems(remaining)
+export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
+  const { control } = form
+  const handleSelect = (selectedValue) => (currentValues) => {
+    if (currentValues.includes(selectedValue)) {
+      return currentValues.filter((value) => value !== selectedValue)
     } else {
-      setSelectedItems((prevItems) => [...prevItems, value])
+      return [...currentValues, selectedValue]
     }
   }
-
-  // we are setting form value manually here
-  useEffect(() => {
-    setValue(name, selectedItems)
-  }, [name, selectedItems, setValue])
 
   return (
     <FormControl size={'small'} variant={'outlined'}>
@@ -51,12 +35,14 @@ export const BCFormCheckbox = ({
               control={
                 <Controller
                   name={name}
-                  render={({ field }) => {
+                  render={({ field: { onChange, value } }) => {
                     return (
                       <Checkbox
                         sx={{ marginTop: 0.5 }}
-                        checked={selectedItems.includes(option.value)}
-                        onChange={() => handleSelect(option.value)}
+                        checked={value.includes(option.value)}
+                        onChange={() =>
+                          onChange(handleSelect(option.value)(value))
+                        }
                         disabled={disabled}
                       />
                     )
@@ -80,11 +66,15 @@ export const BCFormCheckbox = ({
   )
 }
 
+BCFormCheckbox.defaultProps = {
+  initialItems: []
+}
+BCFormCheckbox.displayName = 'BCFormCheckbox'
 BCFormCheckbox.propTypes = {
   name: PropTypes.string.isRequired,
-  control: PropTypes.any.isRequired,
+  form: PropTypes.any.isRequired,
   label: PropTypes.string,
-  setValue: PropTypes.any,
   options: PropTypes.array.isRequired,
-  disabled: PropTypes.bool
+  disabled: PropTypes.bool,
+  initialItems: PropTypes.array
 }

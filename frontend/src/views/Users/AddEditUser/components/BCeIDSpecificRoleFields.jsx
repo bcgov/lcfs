@@ -3,21 +3,15 @@ import { BCFormCheckbox, BCFormRadio } from '@/components/BCForm'
 import { nonGovRoles } from '@/constants/roles'
 import { bceidRoleOptions } from '../_schema'
 
-export const BCeIDSpecificRoleFields = ({
-  control,
-  setValue,
-  disabled,
-  t,
-  status
-}) => {
+export const BCeIDSpecificRoleFields = ({ form, disabled, t, status }) => {
+  const { control } = form
   return (
     <Box>
       <Typography variant="label" component="span">
         {t('admin:Roles')}
       </Typography>
       <BCFormCheckbox
-        control={control}
-        setValue={setValue}
+        form={form}
         name="bceidRoles"
         options={bceidRoleOptions(t)}
         disabled={disabled}

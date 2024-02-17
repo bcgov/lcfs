@@ -150,7 +150,7 @@ class UserServices:
         Create a new user
         """
         user = await self.repo.create_user(user_create)
-        FastAPICache.clear(namespace="users")
+        await FastAPICache.clear(namespace="users")
         return user
 
     @service_handler

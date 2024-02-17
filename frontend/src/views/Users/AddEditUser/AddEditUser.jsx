@@ -35,25 +35,28 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
+  const [orgId, setOrgId] = useState(orgID)
 
   const {
     data,
     isLoading: isUserLoading,
     isFetched: isUserFetched
-  } = useUser(userID)
+  } = useUser(userID, { enabled: !!userID, retry: false })
   // User form hook and form validation
-  const { handleSubmit, control, setValue, watch, reset } = useForm({
+  const form = useForm({
     resolver: yupResolver(userInfoSchema),
     mode: 'onChange',
     defaultValues
   })
+  const { handleSubmit, control, setValue, watch, reset, trigger } = form
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
-    () => (orgID ? bceidTextFields(t) : idirTextFields(t)),
+    () => (orgID || orgId ? bceidTextFields(t) : idirTextFields(t)),
     [t]
   )
   const status = watch('status')
   const readOnly = watch('readOnly')
+
   useEffect(() => {
     if (status !== 'active' || readOnly === 'read only') {
       setDisabled(true)
@@ -64,7 +67,8 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
 
   useEffect(() => {
     if (isUserFetched && data) {
-      reset({
+      const dataRoles = data?.roles.map((role) => role.name.toLowerCase())
+      const userData = {
         keycloakEmail: data?.keycloak_email,
         altEmail: data?.email,
         jobTitle: data?.title,
@@ -74,24 +78,22 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
         phone: data?.phone,
         mobile: data?.mobile_phone,
         status: data?.is_active ? 'active' : 'inactive',
-        readOnly: data?.roles.includes(roles.read_only) ? 'read only' : '',
-        adminRole: !data?.organization_id
-          ? data?.roles
-              .map((role) => role.name.toLowerCase())
-              .filter((role) => role === roles.administrator.toLowerCase)
-          : [],
-        idirRole: !data?.organization_id
-          ? data?.roles
-              .map((role) => role.name.toLowerCase())
-              .filter((role) => role !== roles.administrator.toLowerCase)
-              .join('')
-          : '',
-        bceidRoles: data?.organization_id
-          ? data?.roles.map((role) => role.name.toLowerCase())
-          : []
-      })
+        readOnly: dataRoles
+          .filter((r) => r === roles.read_only.toLocaleLowerCase())
+          .join(''),
+        adminRole: dataRoles.filter((r) => r === roles.administrator.toLocaleLowerCase()),
+        idirRole: dataRoles
+          .filter((r) => r !== roles.administrator.toLocaleLowerCase())
+          .join(''),
+        bceidRoles: dataRoles.includes(roles.read_only.toLocaleLowerCase())
+          ? []
+          : dataRoles
+      }
+
+      reset(userData)
+      setOrgId(data.organization?.organization_id)
     }
-  }, [isUserFetched])
+  }, [isUserFetched, data, reset, orgId])
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
@@ -151,7 +153,12 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
       console.error('Error saving user:', error)
     }
   })
-  if (isPending || isUserLoading) {
+
+  if (isUserLoading) {
+    return <Loading message="Loading..." />
+  }
+
+  if (isPending) {
     return <Loading message="Adding user..." />
   }
 
@@ -236,19 +243,17 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
                   label="Status"
                   options={statusOptions(t)}
                 />
-                {userType === 'idir' ? (
-                  <IDIRSpecificRoleFields
-                    setValue={setValue}
+                {userType === 'bceid' || orgId ? (
+                  <BCeIDSpecificRoleFields
+                    form={form}
                     disabled={disabled}
-                    control={control}
+                    status={status}
                     t={t}
                   />
                 ) : (
-                  <BCeIDSpecificRoleFields
-                    setValue={setValue}
+                  <IDIRSpecificRoleFields
+                    form={form}
                     disabled={disabled}
-                    control={control}
-                    status={status}
                     t={t}
                   />
                 )}
