@@ -45,7 +45,7 @@ export const ViewUser = () => {
           {data.organization?.name || t('govOrg')}
         </BCTypography>
         <BCTypography variant="body4">
-          <strong>{t('admin:Email')}:</strong>&nbsp;{data.email}
+          <strong>{t('admin:Email')}:</strong>&nbsp;{data.keycloak_email}
         </BCTypography>
         <BCTypography variant="body4">
           <strong>{t('admin:WorkPhone')}:</strong>&nbsp;

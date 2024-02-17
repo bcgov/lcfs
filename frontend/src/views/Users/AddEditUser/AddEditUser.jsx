@@ -81,7 +81,9 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
         readOnly: dataRoles
           .filter((r) => r === roles.read_only.toLocaleLowerCase())
           .join(''),
-        adminRole: dataRoles.filter((r) => r === roles.administrator.toLocaleLowerCase()),
+        adminRole: dataRoles.filter(
+          (r) => r === roles.administrator.toLocaleLowerCase()
+        ),
         idirRole: dataRoles
           .filter((r) => r !== roles.administrator.toLocaleLowerCase())
           .join(''),
@@ -164,7 +166,11 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
 
   return (
     <div>
-      {isError && <BCAlert severity="error">{t('admin:errMsg')}</BCAlert>}
+      {isError && (
+        <BCAlert severity="error"  dismissible={true}>
+          {t('admin:errMsg')}
+        </BCAlert>
+      )}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
         {userID ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to Test Org`}

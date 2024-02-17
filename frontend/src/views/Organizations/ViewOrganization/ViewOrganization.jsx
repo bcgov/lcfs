@@ -5,7 +5,7 @@ import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
-import { Snackbar, IconButton } from '@mui/material'
+import { IconButton } from '@mui/material'
 // icons
 import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -39,7 +39,6 @@ export const ViewOrganization = () => {
   const [showActive, setShowActive] = useState(true)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [showAlert, setShowAlert] = useState(false)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -93,13 +92,8 @@ export const ViewOrganization = () => {
     }
   }, [showActive])
 
-  const closeAlert = () => {
-    setShowAlert(false)
-  }
-
   useEffect(() => {
     if (location.state?.message) {
-      setShowAlert(true)
       setAlertMessage(location.state.message)
       setAlertSeverity(location.state.severity || 'info')
     }
@@ -111,18 +105,9 @@ export const ViewOrganization = () => {
 
   return (
     <>
-      <Snackbar
-        sx={{ marginTop: '150px' }}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        open={showAlert}
-        onClose={closeAlert}
-        TransitionComponent={'Fade'}
-        autoHideDuration={5000} // Automatically close after 6 seconds
-      >
-        <BCAlert data-test="alert-box" severity={alertSeverity}>
-          {alertMessage}
-        </BCAlert>
-      </Snackbar>
+      <BCAlert data-test="alert-box" severity={alertSeverity}>
+        {alertMessage}
+      </BCAlert>
       <BCTypography variant="h5" color="primary">
         {orgData.name}{' '}
         {!isCurrentUserLoading && currentUser.is_government_user && (

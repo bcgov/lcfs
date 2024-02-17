@@ -5,7 +5,6 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { Snackbar } from '@mui/material'
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -24,7 +23,6 @@ export const Users = () => {
   const [gridKey, setGridKey] = useState('users-grid')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [showAlert, setShowAlert] = useState(false)
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -53,12 +51,8 @@ export const Users = () => {
   })
 
   const gridRef = useRef()
-  const closeAlert = () => {
-    setShowAlert(false)
-  }
   useEffect(() => {
     if (location.state?.message) {
-      setShowAlert(true)
       setAlertMessage(location.state.message)
       setAlertSeverity(location.state.severity || 'info')
     }
@@ -66,19 +60,10 @@ export const Users = () => {
 
   return (
     <>
+      <BCAlert data-test="alert-box" severity={alertSeverity}>
+        {alertMessage}
+      </BCAlert>
       <BCBox component="div">
-        <Snackbar
-          sx={{ marginTop: '150px' }}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-          open={showAlert}
-          onClose={closeAlert}
-          TransitionComponent={'Slide'}
-          autoHideDuration={5000} // Automatically close after 6 seconds
-        >
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        </Snackbar>
         <BCTypography variant="h5" my={1} color="primary">
           {t('admin:Users')}
         </BCTypography>
