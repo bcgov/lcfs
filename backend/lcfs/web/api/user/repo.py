@@ -33,6 +33,7 @@ class UserRepository:
         self.session = session
 
     def apply_filters(self, pagination, conditions):
+        role_filter_present = False
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
@@ -40,6 +41,7 @@ class UserRepository:
 
             if filter.field == "role":
                 field = get_field_for_filter(Role, "name")
+                role_filter_present = True
                 conditions.append(
                     Role.name.in_(
                         [RoleEnum(role.strip()) for role in filter_value.split(",")]
@@ -84,6 +86,7 @@ class UserRepository:
                         field, filter_value, filter_option, filter_type
                     )
                 )
+        return role_filter_present
 
     async def find_user_role(self, role_name):
         role_result = await self.session.execute(
@@ -212,11 +215,11 @@ class UserRepository:
             List[UserBaseSchema]: A list of user profiles matching the query.
         """
         # Build the base query statement
-        # TODO: Need further optimization.
         conditions = []
+        role_filter_present = False
         if pagination.filters and len(pagination.filters) > 0:
             try:
-                self.apply_filters(pagination, conditions)
+                role_filter_present = self.apply_filters(pagination, conditions)
             except Exception as e:
                 raise ValueError(f"Invalid filter provided: {pagination.filters}.")
 
@@ -225,6 +228,10 @@ class UserRepository:
         limit = pagination.size
         # get distinct profile ids from UserProfile
         unique_ids_query = select(UserProfile).where(and_(*conditions))
+        if role_filter_present:
+            unique_ids_query = unique_ids_query.join(
+                UserRole, UserProfile.user_profile_id == UserRole.user_profile_id
+            ).join(Role, UserRole.role_id == Role.role_id)
 
         # Applying pagination, sorting, and filters to the query
         query = (
@@ -241,12 +248,10 @@ class UserRepository:
             )
         )
 
-        count_query = await self.session.execute(
-            select(func.count(distinct(UserProfile.user_profile_id)))
-            .select_from(UserProfile)
-            .where(and_(*conditions))
+        query_result = (
+            (await self.session.execute(unique_ids_query)).unique().scalars().all()
         )
-        total_count = count_query.unique().scalar_one_or_none()
+        total_count = len(query_result)
         # Sort the query results
         for order in pagination.sortOrders:
             sort_method = asc if order.direction == "asc" else desc
