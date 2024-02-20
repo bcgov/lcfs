@@ -224,11 +224,11 @@ class UserRepository:
         limit = pagination.size
 
         # Applying pagination, sorting, and filters to the query
-        # TODO: convert Role and UserRole to outer join, as it'll miss out records without any roles especially inactive records.
+        # TODO: ability to sort on roles do more testing.
         query = (
             select(UserProfile)
-            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
-            .join(Role, UserRole.role_id == Role.role_id)
+            # .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            # .join(Role, UserRole.role_id == Role.role_id)
             .options(
                 joinedload(UserProfile.organization),
                 joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
@@ -239,8 +239,8 @@ class UserRepository:
         count_query = await self.session.execute(
             select(func.count(distinct(UserProfile.user_profile_id)))
             .select_from(UserProfile)
-            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
-            .join(Role, UserRole.role_id == Role.role_id)
+            # .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            # .join(Role, UserRole.role_id == Role.role_id)
             .where(and_(*conditions))
         )
         total_count = count_query.unique().scalar_one_or_none()
