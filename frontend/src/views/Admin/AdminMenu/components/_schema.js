@@ -25,7 +25,7 @@ export const usersColumnDefs = (t) => [
         ? params.data.roles.map((role) => role.name).join(', ')
         : '',
     flex: 1,
-    width: 600,
+    width: 300,
     suppressMenu: true,
     filterParams: {
       textMatcher: (filter) => {

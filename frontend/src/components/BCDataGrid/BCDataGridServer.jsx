@@ -242,7 +242,10 @@ const BCDataGridServer = ({
     <BCBox
       sx={{
         height: '54vh',
-        width: '100%'
+        width: '100%',
+        display: 'grid',
+        gridTemplateRows: '1fr 1fr' /* Two equal rows */,
+        gap: '1px' /* Gap between rows */
       }}
       className="bc-grid-container"
     >
@@ -259,13 +262,19 @@ const BCDataGridServer = ({
         onFilterChanged={onFilterChanged}
         onFirstDataRendered={onFirstDataRendered}
         getRowId={getRowId}
+        domLayout="autoHeight"
         loadingOverlayComponent={loadingOverlayComponent}
         {...others}
       />
       {/* TablePagination components setup using Material UI,
        * so it looks similar to the one provided by ag-grid by default
        */}
-      <BCBox display="flex" justifyContent="flex-start" variant="outlined">
+      <BCBox
+        display="flex"
+        justifyContent="flex-start"
+        variant="outlined"
+        sx={{ maxHeight: '3.5rem' }}
+      >
         <BCPagination
           page={page}
           size={size}

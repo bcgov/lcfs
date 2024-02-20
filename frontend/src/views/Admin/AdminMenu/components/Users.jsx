@@ -60,9 +60,11 @@ export const Users = () => {
 
   return (
     <>
-      <BCAlert data-test="alert-box" severity={alertSeverity}>
-        {alertMessage}
-      </BCAlert>
+      {alertMessage && (
+        <BCAlert data-test="alert-box" severity={alertSeverity}>
+          {alertMessage}
+        </BCAlert>
+      )}
       <BCBox component="div">
         <BCTypography variant="h5" my={1} color="primary">
           {t('admin:Users')}
