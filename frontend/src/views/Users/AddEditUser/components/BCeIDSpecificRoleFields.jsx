@@ -3,7 +3,7 @@ import { BCFormCheckbox, BCFormRadio } from '@/components/BCForm'
 import { nonGovRoles } from '@/constants/roles'
 import { bceidRoleOptions } from '../_schema'
 
-export const BCeIDSpecificRoleFields = ({ form, disabled, t, status }) => {
+export const BCeIDSpecificRoleFields = ({ form, disabled, t }) => {
   const { control } = form
   return (
     <Box>
@@ -29,7 +29,7 @@ export const BCeIDSpecificRoleFields = ({ form, disabled, t, status }) => {
             value: nonGovRoles[5].toLowerCase()
           }
         ]}
-        disabled={status === 'inactive' && disabled}
+        disabled={disabled}
       />
     </Box>
   )

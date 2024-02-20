@@ -151,10 +151,7 @@ class UserRepository:
                 roles_to_keep = [
                     user_role
                     for user_role in user.user_roles
-                    if user_role.role.name
-                    not in {
-                        RoleEnum.SUPPLIER,
-                    }
+                    if user_role.role.name == RoleEnum.SUPPLIER
                 ]
                 # Add read_only role
                 user.user_roles = roles_to_keep
@@ -183,6 +180,7 @@ class UserRepository:
                     RoleEnum.MANAGE_USERS,
                     RoleEnum.TRANSFER,
                     RoleEnum.SIGNING_AUTHORITY,
+                    RoleEnum.READ_ONLY,
                 }
                 and user_role.role.name not in new_roles
             ):

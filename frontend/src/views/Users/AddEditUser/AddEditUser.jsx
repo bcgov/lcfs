@@ -68,6 +68,18 @@ export const AddEditUser = ({ userType }) => {
   }, [status])
 
   useEffect(() => {
+    if (readOnly === roles.read_only.toLocaleLowerCase()) {
+      setValue('bceidRoles', [])
+    }
+  }, [readOnly])
+
+  useEffect(() => {
+    if (bceidRoles.length > 0) {
+      setValue('readOnly', '')
+    }
+  }, [bceidRoles])
+
+  useEffect(() => {
     if (isUserFetched && data) {
       const dataRoles = data?.roles
         .map((role) => role.name.toLowerCase())
