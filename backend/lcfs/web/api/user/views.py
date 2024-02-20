@@ -73,7 +73,7 @@ async def export_users(
 
 
 @router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Government", "Supplier")
 @view_handler
 async def get_users(
     request: Request,
@@ -98,6 +98,8 @@ async def get_users(
         - filter: the actual filter value
         - field: Database Field that needs filtering.
     """
+    print('------------------')
+    print(pagination)
     return await service.get_all_users(pagination)
 
 
