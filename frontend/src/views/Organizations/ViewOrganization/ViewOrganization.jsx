@@ -1,22 +1,25 @@
+// components
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import BCAlert from '@/components/BCAlert'
+import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import Loading from '@/components/Loading'
+import { IconButton } from '@mui/material'
+// icons
 import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import EditIcon from '@mui/icons-material/Edit'
-import { IconButton } from '@mui/material'
+// hooks
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import Loading from '@/components/Loading'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
 import { phoneNumberFormatter } from '@/utils/formatters'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   defaultFilterModel,
   defaultSortModel,
@@ -34,7 +37,11 @@ const OrgDetailTypography = ({ bold, children, ...rest }) => {
 export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
   const [showActive, setShowActive] = useState(true)
+  const [alertMessage, setAlertMessage] = useState('')
+  const [alertSeverity, setAlertSeverity] = useState('info')
+
   const navigate = useNavigate()
+  const location = useLocation()
   const { orgID } = useParams()
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     useCurrentUser()
@@ -59,7 +66,12 @@ export const ViewOrganization = () => {
     includeHiddenColumnsInQuickFilter: true
   }
   const handleRowClicked = useCallback((params) => {
-    navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
+    navigate(
+      ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
+        ':userID',
+        params.data.user_profile_id
+      )
+    )
   })
   const getRowId = useCallback((params) => params.data.user_profile_id)
   const gridRef = useRef()
@@ -85,12 +97,22 @@ export const ViewOrganization = () => {
     }
   }, [showActive])
 
+  useEffect(() => {
+    if (location.state?.message) {
+      setAlertMessage(location.state.message)
+      setAlertSeverity(location.state.severity || 'info')
+    }
+  }, [location.state])
+
   if (isLoading) {
     return <Loading />
   }
 
   return (
     <>
+      <BCAlert data-test="alert-box" severity={alertSeverity}>
+        {alertMessage}
+      </BCAlert>
       <BCTypography variant="h5" color="primary">
         {orgData.name}{' '}
         {!isCurrentUserLoading && currentUser.is_government_user && (

@@ -10,7 +10,7 @@ export const userInfoSchema = Yup.object({
   keycloakEmail: Yup.string()
     .required('Email Address is required.')
     .email('Please enter a valid Email Address.'),
-  altEmail: Yup.string().optional().email('Please enter a valid Email Address.'),
+  altEmail: Yup.string().optional(),
   phone: Yup.string().optional(),
   mobilePhone: Yup.string().optional().nullable(),
   status: Yup.string(),

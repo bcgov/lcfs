@@ -1,9 +1,5 @@
-import { useState } from 'react'
-
-// prop-types is a library for typechecking of props
+import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
-
-// @mui material components
 import Fade from '@mui/material/Fade'
 import {
   Info as InfoIcon,
@@ -12,17 +8,22 @@ import {
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon
 } from '@mui/icons-material'
-
-// Custom styles for the BCAlert
 import BCBox from '@/components/BCBox'
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 
-function BCAlert({ severity, dismissible, children, ...rest }) {
+function BCAlert({ severity, dismissible, delay, children, ...rest }) {
   const [alertStatus, setAlertStatus] = useState('mount')
   const color = severity
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAlertStatus('fadeOut')
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [])
+
   const handleAlertStatus = () => setAlertStatus('fadeOut')
 
-  // The base template for the alert
   const alertTemplate = (mount = true) => (
     <Fade in={mount} timeout={300}>
       <BCAlertRoot ownerState={{ color }} {...rest}>
@@ -59,16 +60,16 @@ function BCAlert({ severity, dismissible, children, ...rest }) {
   return null
 }
 
-// Setting default values for the props of BCAlert
 BCAlert.defaultProps = {
   severity: 'info',
-  dismissible: false
+  dismissible: false,
+  delay: 5000, // default fade out in 5s
 }
 
-// Typechecking props of the BCAlert
 BCAlert.propTypes = {
   severity: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
   dismissible: PropTypes.bool,
+  delay: PropTypes.number,
   children: PropTypes.node.isRequired
 }
 
