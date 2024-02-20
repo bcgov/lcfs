@@ -265,10 +265,14 @@ class UserRepository:
             .scalars()
             .all()
         )
+    
         profile_id_list = [user.user_profile_id for user in unique_ids]
-        query = query.where(
-            and_(UserProfile.user_profile_id.in_(profile_id_list), *conditions)
-        )
+        if limit <=0:
+            query = query.where(*conditions)
+        else:
+            query = query.where(
+                and_(UserProfile.user_profile_id.in_(profile_id_list), *conditions)
+            )
         # Execute the query
         user_results = await self.session.execute(query)
         results = user_results.scalars().unique().all()
