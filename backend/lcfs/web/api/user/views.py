@@ -98,8 +98,6 @@ async def get_users(
         - filter: the actual filter value
         - field: Database Field that needs filtering.
     """
-    print('------------------')
-    print(pagination)
     return await service.get_all_users(pagination)
 
 
