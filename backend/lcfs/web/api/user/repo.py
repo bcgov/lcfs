@@ -1,6 +1,5 @@
 from logging import getLogger
 from typing import List
-import numpy as np
 
 from fastapi import Depends
 from fastapi_cache.decorator import cache
@@ -85,6 +84,110 @@ class UserRepository:
                         field, filter_value, filter_option, filter_type
                     )
                 )
+
+    async def find_user_role(self, role_name):
+        role_result = await self.session.execute(
+            select(Role).filter(Role.name == role_name)
+        )
+        role = role_result.scalar_one_or_none()
+        if role:
+            db_user_role = UserRole(role=role)
+            return db_user_role
+        return None
+
+    async def update_idir_roles(self, user, new_roles, existing_roles_set):
+        for new_role in new_roles:
+            if new_role in {
+                RoleEnum.ANALYST,
+                RoleEnum.COMPLIANCE_MANAGER,
+                RoleEnum.DIRECTOR,
+            }:
+                if new_role not in existing_roles_set:
+                    # Remove existing roles
+                    roles_to_keep = [
+                        user_role
+                        for user_role in user.user_roles
+                        if user_role.role.name
+                        not in {
+                            RoleEnum.ANALYST,
+                            RoleEnum.COMPLIANCE_MANAGER,
+                            RoleEnum.DIRECTOR,
+                        }
+                    ]
+                    # Add new role
+                    user.user_roles = roles_to_keep
+                    user.user_roles.append(await self.find_user_role(new_role.name))
+            elif (
+                new_role == RoleEnum.ADMINISTRATOR
+                and RoleEnum.ADMINISTRATOR not in existing_roles_set
+            ):
+                # Add administrator role
+                user.user_roles.append(await self.find_user_role(new_role.name))
+            elif (
+                new_role == RoleEnum.GOVERNMENT
+                and RoleEnum.GOVERNMENT not in existing_roles_set
+            ):
+                # Add government role
+                user.user_roles.append(await self.find_user_role(new_role.name))
+
+        if (
+            RoleEnum.ADMINISTRATOR not in new_roles
+            and RoleEnum.ADMINISTRATOR in existing_roles_set
+        ):
+            # Remove existing roles
+            roles_to_keep = [
+                user_role
+                for user_role in user.user_roles
+                if user_role.role.name != RoleEnum.ADMINISTRATOR
+            ]
+            user.user_roles = roles_to_keep
+
+    async def update_bceid_roles(self, user, new_roles, existing_roles_set):
+        for new_role in new_roles:
+            if (
+                new_role == RoleEnum.READ_ONLY
+                and RoleEnum.READ_ONLY not in existing_roles_set
+            ):
+                roles_to_keep = [
+                    user_role
+                    for user_role in user.user_roles
+                    if user_role.role.name
+                    not in {
+                        RoleEnum.SUPPLIER,
+                    }
+                ]
+                # Add read_only role
+                user.user_roles = roles_to_keep
+                user.user_roles.append(await self.find_user_role(new_role.name))
+            elif (
+                new_role == RoleEnum.SUPPLIER
+                and RoleEnum.SUPPLIER not in existing_roles_set
+            ):
+                # Add supplier role
+                user.user_roles.append(await self.find_user_role(new_role.name))
+            elif new_role in {
+                RoleEnum.COMPLIANCE_REPORTING,
+                RoleEnum.MANAGE_USERS,
+                RoleEnum.TRANSFER,
+                RoleEnum.SIGNING_AUTHORITY,
+            }:
+                if new_role not in existing_roles_set:
+                    # Add missing role
+                    user.user_roles.append(await self.find_user_role(new_role.name))
+        user_roles_to_keep = [user_role for user_role in user.user_roles]
+        for user_role in user.user_roles:
+            if (
+                user_role.role.name
+                in {
+                    RoleEnum.COMPLIANCE_REPORTING,
+                    RoleEnum.MANAGE_USERS,
+                    RoleEnum.TRANSFER,
+                    RoleEnum.SIGNING_AUTHORITY,
+                }
+                and user_role.role.name not in new_roles
+            ):
+                user_roles_to_keep.remove(user_role)
+        user.user_roles = user_roles_to_keep
 
     @cache(
         expire=3600 * 24,
@@ -199,7 +302,9 @@ class UserRepository:
                     db_user_profile.user_roles.append(db_user_role)
         if db_user_profile.organization_id:
             org_result = await self.session.execute(
-                select(Organization).filter(Organization.organization_id == db_user_profile.organization_id)
+                select(Organization).filter(
+                    Organization.organization_id == db_user_profile.organization_id
+                )
             )
             org = org_result.scalar_one_or_none()
             db_user_profile.organization = org
@@ -209,24 +314,34 @@ class UserRepository:
     @repo_handler
     async def update_user(
         self, user: UserProfile, user_update: UserCreateSchema
-    ) -> UserProfile:
+    ) -> None:
         user_data = user_update.model_dump()
+        updated_user_profile = UserProfile(**user_update.model_dump(exclude={"roles"}))
+        roles = user_data.pop("roles", {})
+        # Find the RoleEnum member corresponding to each role
+        new_roles = [
+            role_enum for role_enum in RoleEnum if role_enum.value.lower() in roles
+        ]
+        # Create a set for faster membership checks
+        existing_roles_set = set([user_role.role.name for user_role in user.user_roles])
 
-        # convert UserCreate instance to UserProfile and save the data.
-        user_profile = UserProfile.form_user_profile(user, user_data)
-        self.session.add(user_profile)
-        existing_roles = [ur.role_id for ur in user_profile.user_roles]
-        new_roles = [role["role_id"] for role in user_data.pop("roles", [])]
-        if not np.array_equal(existing_roles, new_roles):
-            # Delete existing roles and update with new roles
-            await self.session.execute(
-                delete(UserRole).where(UserRole.user_profile_id == user.user_profile_id)
-            )
-            user_roles = UserRole.get_user_roles(user_profile)
-            self.session.add_all(user_roles)
+        # Update the user object with the new data
+        user.email = updated_user_profile.email
+        user.title = updated_user_profile.title
+        user.first_name = updated_user_profile.first_name
+        user.last_name = updated_user_profile.last_name
+        user.is_active = updated_user_profile.is_active
+        user.keycloak_email = updated_user_profile.keycloak_email
+        user.keycloak_username = updated_user_profile.keycloak_username
+        user.phone = updated_user_profile.phone
+        user.mobile_phone = updated_user_profile.mobile_phone
 
-        logger.info(f"Updated user_profile_id: {user.user_profile_id}")
-        return user_profile.user_profile_id
+        if user.organization:
+            await self.update_bceid_roles(user, new_roles, existing_roles_set)
+        else:
+            await self.update_idir_roles(user, new_roles, existing_roles_set)
+        self.session.add(user)
+        return user
 
     @repo_handler
     async def delete_user(self, user: UserProfile) -> None:

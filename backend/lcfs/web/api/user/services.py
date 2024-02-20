@@ -164,7 +164,7 @@ class UserServices:
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
-        await self.repo.update_user(user, user_create)
+        user = await self.repo.update_user(user, user_create)
         await FastAPICache.clear(namespace="users")
         return user
 

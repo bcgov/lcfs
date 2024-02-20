@@ -1,3 +1,4 @@
+import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -30,7 +31,7 @@ import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 import { roles } from '@/constants/roles'
 
 // switch between 'idir' and 'bceid'
-export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
+export const AddEditUser = ({ userType }) => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
@@ -48,7 +49,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
     mode: 'onChange',
     defaultValues
   })
-  const { handleSubmit, control, setValue, watch, reset, trigger } = form
+  const { handleSubmit, control, setValue, watch, reset } = form
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
     () => (orgID || orgId ? bceidTextFields(t) : idirTextFields(t)),
@@ -56,18 +57,25 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   )
   const status = watch('status')
   const readOnly = watch('readOnly')
+  const bceidRoles = watch('bceidRoles')
 
   useEffect(() => {
-    if (status !== 'active' || readOnly === 'read only') {
+    if (status !== 'active') {
       setDisabled(true)
     } else {
       setDisabled(false)
     }
-  }, [status, readOnly])
+  }, [status])
 
   useEffect(() => {
     if (isUserFetched && data) {
-      const dataRoles = data?.roles.map((role) => role.name.toLowerCase())
+      const dataRoles = data?.roles
+        .map((role) => role.name.toLowerCase())
+        .filter(
+          (r) =>
+            r !== roles.government.toLocaleLowerCase() &&
+            r !== roles.supplier.toLocaleLowerCase()
+        )
       const userData = {
         keycloakEmail: data?.keycloak_email,
         altEmail: data?.email,
@@ -91,7 +99,13 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
           ? []
           : dataRoles
       }
-
+      if (data.is_government_user) {
+        userData.bceidRoles = []
+        userData.readOnly = ''
+      } else {
+        userData.adminRole = []
+        userData.idirRole = ''
+      }
       reset(userData)
       setOrgId(data.organization?.organization_id)
     }
@@ -119,6 +133,11 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               data.readOnly
             ]
           : []
+    }
+    if (orgID) {
+      payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
+    } else {
+      payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
     }
     mutate(payload)
   }
@@ -167,7 +186,7 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
   return (
     <div>
       {isError && (
-        <BCAlert severity="error"  dismissible={true}>
+        <BCAlert severity="error" dismissible={true}>
           {t('admin:errMsg')}
         </BCAlert>
       )}
@@ -270,4 +289,12 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
       </form>
     </div>
   )
+}
+
+AddEditUser.defaultProps = {
+  userType: 'idir'
+}
+
+AddEditUser.propTypes = {
+  userType: PropTypes.oneOf(['idir', 'bceid'])
 }

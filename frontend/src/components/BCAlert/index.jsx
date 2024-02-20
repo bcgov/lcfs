@@ -11,14 +11,14 @@ import {
 import BCBox from '@/components/BCBox'
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 
-function BCAlert({ severity, dismissible, children, ...rest }) {
+function BCAlert({ severity, dismissible, delay, children, ...rest }) {
   const [alertStatus, setAlertStatus] = useState('mount')
   const color = severity
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setAlertStatus('fadeOut')
-    }, 3000)
+    }, delay)
     return () => clearTimeout(timer)
   }, [])
 
@@ -62,12 +62,14 @@ function BCAlert({ severity, dismissible, children, ...rest }) {
 
 BCAlert.defaultProps = {
   severity: 'info',
-  dismissible: false
+  dismissible: false,
+  delay: 5000, // default fade out in 5s
 }
 
 BCAlert.propTypes = {
   severity: PropTypes.oneOf(['info', 'success', 'warning', 'error']),
   dismissible: PropTypes.bool,
+  delay: PropTypes.number,
   children: PropTypes.node.isRequired
 }
 

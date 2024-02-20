@@ -66,7 +66,12 @@ export const ViewOrganization = () => {
     includeHiddenColumnsInQuickFilter: true
   }
   const handleRowClicked = useCallback((params) => {
-    navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
+    navigate(
+      ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
+        ':userID',
+        params.data.user_profile_id
+      )
+    )
   })
   const getRowId = useCallback((params) => params.data.user_profile_id)
   const gridRef = useRef()

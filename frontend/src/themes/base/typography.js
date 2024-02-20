@@ -47,6 +47,21 @@ const typography = {
   fontWeightMedium: baseProperties.fontWeightMedium,
   fontWeightBold: baseProperties.fontWeightBold,
 
+  fontSizeXXS: pxToRem(10.4),
+  fontSizeXS: pxToRem(12),
+  fontSizeSM: pxToRem(14),
+  fontSizeMD: pxToRem(16),
+  fontSizeLG: pxToRem(18),
+  fontSizeXL: pxToRem(20),
+  fontSize2XL: pxToRem(24),
+  fontSize3XL: pxToRem(30),
+  headerSizeH1: '2.986rem',
+  headerSizeH2: '2.488rem',
+  headerSizeH3: '2.074rem',
+  headerSizeH4: '1.728rem',
+  headerSizeH5: '1.44rem',
+  headerSizeH6: '1.2rem',
+
   h1: {
     fontSize: baseProperties.headerSizeH1,
     lineHeight: 1.25,

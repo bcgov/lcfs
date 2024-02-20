@@ -12,6 +12,7 @@ import { phoneNumberFormatter } from '@/utils/formatters'
 import { RoleSpanRenderer, StatusRenderer } from '@/utils/cellRenderers'
 import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
 import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
+import { ROUTES } from '@/constants/routes'
 
 export const ViewUser = () => {
   const { t } = useTranslation(['common', 'admin'])
@@ -22,12 +23,19 @@ export const ViewUser = () => {
     paginationPageSize: 20
   }
 
-  const { userID } = useParams()
+  const { userID, orgID } = useParams()
   const navigate = useNavigate()
   const { data, isLoading } = useUser(userID)
 
   const handleEditClick = () => {
-    navigate(`/admin/users/${userID}/edit-user`)
+    if (orgID)
+      navigate(
+        ROUTES.ORGANIZATIONS_EDITUSER.replace(':orgID', orgID).replace(
+          ':userID',
+          userID
+        )
+      )
+    else navigate(ROUTES.ADMIN_USERS_EDIT.replace(':userID', userID))
   }
   if (isLoading) return <Loading />
 
