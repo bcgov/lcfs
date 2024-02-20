@@ -212,6 +212,7 @@ class UserRepository:
             List[UserBaseSchema]: A list of user profiles matching the query.
         """
         # Build the base query statement
+        # TODO: Need further optimization.
         conditions = []
         if pagination.filters and len(pagination.filters) > 0:
             try:
@@ -222,25 +223,27 @@ class UserRepository:
         # Apply pagination and sorting parameters
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
+        # get distinct profile ids from UserProfile
+        unique_ids_query = select(UserProfile).where(and_(*conditions))
 
         # Applying pagination, sorting, and filters to the query
-        # TODO: ability to sort on roles do more testing.
         query = (
             select(UserProfile)
-            # .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
-            # .join(Role, UserRole.role_id == Role.role_id)
+            .join(
+                UserRole,
+                UserProfile.user_profile_id == UserRole.user_profile_id,
+                isouter=True,
+            )
+            .join(Role, UserRole.role_id == Role.role_id, isouter=True)
             .options(
                 joinedload(UserProfile.organization),
                 joinedload(UserProfile.user_roles).options(joinedload(UserRole.role)),
             )
-            .where(and_(*conditions))
         )
 
         count_query = await self.session.execute(
             select(func.count(distinct(UserProfile.user_profile_id)))
             .select_from(UserProfile)
-            # .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
-            # .join(Role, UserRole.role_id == Role.role_id)
             .where(and_(*conditions))
         )
         total_count = count_query.unique().scalar_one_or_none()
@@ -249,14 +252,20 @@ class UserRepository:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "role":
                 order.field = get_field_for_filter(Role, "name")
+            unique_ids_query = unique_ids_query.order_by(sort_method(order.field))
             query = query.order_by(sort_method(order.field))
-
-        # Execute the query
-        user_results = (
-            await self.session.execute(query.offset(offset).limit(limit))
-            if limit > 0
-            else await self.session.execute(query)
+        unique_ids = (
+            (await self.session.execute(unique_ids_query.offset(offset).limit(limit)))
+            .unique()
+            .scalars()
+            .all()
         )
+        profile_id_list = [user.user_profile_id for user in unique_ids]
+        query = query.where(
+            and_(UserProfile.user_profile_id.in_(profile_id_list), *conditions)
+        )
+        # Execute the query
+        user_results = await self.session.execute(query)
         results = user_results.scalars().unique().all()
 
         # Convert the results to UserBaseSchema schemas
