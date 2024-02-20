@@ -37,6 +37,7 @@ export const AddEditUser = ({ userType }) => {
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
   const [orgId, setOrgId] = useState(orgID)
+  const [orgName, setOrgName] = useState('')
 
   const {
     data,
@@ -117,6 +118,7 @@ export const AddEditUser = ({ userType }) => {
       } else {
         userData.adminRole = []
         userData.idirRole = ''
+        setOrgName(data.organization.name)
       }
       reset(userData)
       setOrgId(data.organization?.organization_id)
@@ -204,7 +206,7 @@ export const AddEditUser = ({ userType }) => {
       )}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
         {userID ? 'Edit' : 'Add'} user&nbsp;
-        {userType === 'bceid' && `to Test Org`}
+        {userType === 'bceid' && `to ${orgName}`}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)}>
         <FormProvider {...{ control, setValue }}>
