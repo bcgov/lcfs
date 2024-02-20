@@ -91,7 +91,7 @@ export const AddEditUser = ({ userType }) => {
         )
       const userData = {
         keycloakEmail: data?.keycloak_email,
-        altEmail: data?.email,
+        altEmail: data?.email || '',
         jobTitle: data?.title,
         firstName: data?.first_name,
         lastName: data?.last_name,

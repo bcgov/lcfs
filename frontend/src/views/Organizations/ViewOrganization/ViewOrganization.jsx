@@ -110,9 +110,11 @@ export const ViewOrganization = () => {
 
   return (
     <>
-      <BCAlert data-test="alert-box" severity={alertSeverity}>
-        {alertMessage}
-      </BCAlert>
+      {alertMessage && (
+        <BCAlert data-test="alert-box" severity={alertSeverity}>
+          {alertMessage}
+        </BCAlert>
+      )}
       <BCTypography variant="h5" color="primary">
         {orgData.name}{' '}
         {!isCurrentUserLoading && currentUser.is_government_user && (
