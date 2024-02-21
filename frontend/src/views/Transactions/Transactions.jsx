@@ -72,7 +72,7 @@ export const Transactions = () => {
               startIcon={<FontAwesomeIcon icon={faCirclePlus} size="2x" />}
               onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
             >
-              <BCTypography variant="subtitle2">New transaction</BCTypography>
+              <BCTypography variant="subtitle2">New transfer</BCTypography>
             </BCButton>
           </Role>
         )}
