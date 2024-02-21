@@ -152,14 +152,14 @@ export const AddEditTransfer = () => {
         </BCTypography>
 
         <BCTypography>
-          A transfer is not effective until it is recorded by the Director.
+          A transfer is not effective until it is recorded by the director.
         </BCTypography>
         <BCTypography>
           Transfers must indicate whether they are for consideration, and if so,
           the fair market value of the consideration in Canadian dollars per
           compliance unit.
         </BCTypography>
-        <BCTypography>&nbsp</BCTypography>
+        <BCTypography>&nbsp;</BCTypography>
 
         {isError && (
           <BCAlert severity="error">
