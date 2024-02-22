@@ -18,7 +18,7 @@ import {
 } from '@mui/material'
 import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { schemaValidation } from './_schema'
@@ -55,12 +55,10 @@ export const AddEditOrg = () => {
     watch,
     setValue,
     trigger,
-    reset
+    reset,
+    control
   } = useForm({
-    resolver: yupResolver(schemaValidation),
-    defaultValues: {
-      orgRegForTransfers: 2
-    }
+    resolver: yupResolver(schemaValidation)
   })
 
   useEffect(() => {
@@ -180,11 +178,13 @@ export const AddEditOrg = () => {
       }
     }
 
-    if (orgID) {
-      updateOrg(payload)
-    } else {
-      createOrg(payload)
-    }
+    console.log(payload)
+
+    // if (orgID) {
+    //   updateOrg(payload)
+    // } else {
+    //   createOrg(payload)
+    // }
   }
 
   // useMutation hook from React Query for handling API request
@@ -291,7 +291,7 @@ export const AddEditOrg = () => {
       )}
 
       <Typography variant="h5" px={3}>
-        {t('org:addOrgTitle')}
+        {orgID ? t('org:editOrgTitle') : t('org:addOrgTitle')}
       </Typography>
       <Box
         component="form"
@@ -450,40 +450,44 @@ export const AddEditOrg = () => {
                             </FormLabel>
                           </Grid>
                           <Grid item xs={8}>
-                            <RadioGroup
-                              id="orgRegForTransfers"
+                            <Controller
+                              control={control}
                               name="orgRegForTransfers"
-                              sx={{ pt: 1 }}
+                              defaultValue=""
+                              render={({ field }) => (
+                                <RadioGroup
+                                  id="orgRegForTransfers"
+                                  name="orgRegForTransfers"
+                                  sx={{ pt: 1 }}
+                                  {...field}
+                                >
+                                  <FormControlLabel
+                                    value="2"
+                                    control={
+                                      <Radio data-test="orgRegForTransfers2" />
+                                    }
+                                    label={
+                                      <Typography variant="body3">
+                                        {t('yes')}
+                                      </Typography>
+                                    }
+                                  />
+                                  <FormControlLabel
+                                    value="1"
+                                    control={
+                                      <Radio data-test="orgRegForTransfers1" />
+                                    }
+                                    label={
+                                      <Typography variant="body3">
+                                        {t('no')}
+                                      </Typography>
+                                    }
+                                  />
+                                </RadioGroup>
+                              )}
                             >
-                              <FormControlLabel
-                                value="2"
-                                control={
-                                  <Radio
-                                    {...register('orgRegForTransfers')}
-                                    data-test="orgRegForTransfers2"
-                                  />
-                                }
-                                label={
-                                  <Typography variant="body3">
-                                    {t('yes')}
-                                  </Typography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="1"
-                                control={
-                                  <Radio
-                                    {...register('orgRegForTransfers')}
-                                    data-test="orgRegForTransfers1"
-                                  />
-                                }
-                                label={
-                                  <Typography variant="body3">
-                                    {t('no')}
-                                  </Typography>
-                                }
-                              />
-                            </RadioGroup>
+                              /
+                            </Controller>
                             {renderError('orgRegForTransfers')}
                           </Grid>
                         </Grid>
