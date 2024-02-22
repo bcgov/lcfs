@@ -25,7 +25,8 @@ export const usersColumnDefs = (t) => [
         ? params.data.roles.map((role) => role.name).join(', ')
         : '',
     flex: 1,
-    width: 600,
+    width: 300,
+    sortable: false,
     suppressMenu: true,
     filterParams: {
       textMatcher: (filter) => {
@@ -54,7 +55,7 @@ export const usersColumnDefs = (t) => [
   },
   {
     colId: 'email',
-    field: 'email',
+    field: 'keycloak_email',
     headerName: t('admin:userColLabels.email'),
     width: 400
   },

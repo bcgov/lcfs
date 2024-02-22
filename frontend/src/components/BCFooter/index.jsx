@@ -63,7 +63,8 @@ function Footer({ repoDetails, links }) {
         backgroundColor: primary.nav,
         borderTop: `2px solid ${secondary.main}`,
         color: white.main,
-        minHeight: pxToRem(46)
+        minHeight: pxToRem(46),
+        position: 'relative'
       })}
     >
       <BCBox

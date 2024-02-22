@@ -128,7 +128,7 @@ export const Organizations = () => {
           dataTest="download-user-button"
         />
       </Stack>
-      <BCBox component="div" sx={{ height: '36rem', width: '100%' }}>
+      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'organizations/'}
