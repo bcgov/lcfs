@@ -286,7 +286,7 @@ export const ViewOrganization = () => {
               filterType: 'number',
               type: 'equals',
               field: 'organization_id',
-              filter: orgID
+              filter: orgID ?? currentUser?.organization?.organization_id
             }
           ]}
           handleGridKey={handleGridKey}
