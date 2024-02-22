@@ -40,7 +40,7 @@ from . import Role
 from . import UserProfile
 from . import UserRole
 from . import UserLoginHistory
-from . import Category
+from . import TransferCategory
 from . import Comment
 from . import NotificationChannel
 from . import NotificationType
@@ -48,8 +48,12 @@ from . import NotificationChannelSubscription
 from . import NotificationMessage
 from . import Transaction
 from . import TransactionType
-from . import Issuance
-from . import IssuanceHistory
+from . import AdminAdjustment
+from . import AdminAdjustmentStatus
+from . import AdminAdjustmentHistory
+from . import InitiativeAgreement
+from . import InitiativeAgreementStatus
+from . import InitiativeAgreementHistory
 from . import Transfer
 from . import TransferHistory
 from . import TransferStatus

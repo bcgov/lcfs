@@ -11,7 +11,7 @@ from lcfs.web.core.decorators import repo_handler
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus
-from lcfs.db.models.Category import Category
+from backend.lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.Comment import Comment
 
 logger = getLogger("transfer_repo")
@@ -83,7 +83,7 @@ class TransferRepository:
     async def get_transfer_category(self, transfer_category_id: int) -> TransferStatus:
         '''Fetch a single category by category id from the database'''
         return await self.db.scalar(
-            select(Category).where(Category.category_id == transfer_category_id)
+            select(TransferCategory).where(TransferCategory.category_id == transfer_category_id)
         )
 
     @repo_handler

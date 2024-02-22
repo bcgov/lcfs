@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from lcfs.db.models.Category import Category  # Adjust import path as needed
+from backend.lcfs.db.models.TransferCategory import TransferCategory
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,10 @@ async def seed_transfer_categories(session: AsyncSession):
         for data in category_data:
             # Check if the Category already exists based on category
             exists = await session.execute(
-                select(Category).where(Category.category == data['category'])
+                select(TransferCategory).where(TransferCategory.category == data['category'])
             )
             if not exists.scalars().first():
-                new_category = Category(**data)
+                new_category = TransferCategory(**data)
                 session.add(new_category)
 
         await session.commit()
