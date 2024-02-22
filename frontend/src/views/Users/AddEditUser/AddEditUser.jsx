@@ -1,3 +1,4 @@
+import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -30,43 +31,67 @@ import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 import { roles } from '@/constants/roles'
 
 // switch between 'idir' and 'bceid'
-export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
+export const AddEditUser = ({ userType }) => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
+  const [orgId, setOrgId] = useState(orgID)
+  const [orgName, setOrgName] = useState('')
 
   const {
     data,
     isLoading: isUserLoading,
     isFetched: isUserFetched
-  } = useUser(userID)
+  } = useUser(userID, { enabled: !!userID, retry: false })
   // User form hook and form validation
-  const { handleSubmit, control, setValue, watch, reset } = useForm({
+  const form = useForm({
     resolver: yupResolver(userInfoSchema),
     mode: 'onChange',
     defaultValues
   })
+  const { handleSubmit, control, setValue, watch, reset } = form
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
-    () => (orgID ? bceidTextFields(t) : idirTextFields(t)),
+    () => (orgID || orgId ? bceidTextFields(t) : idirTextFields(t)),
     [t]
   )
   const status = watch('status')
   const readOnly = watch('readOnly')
+  const bceidRoles = watch('bceidRoles')
+
   useEffect(() => {
-    if (status !== 'active' || readOnly === 'read only') {
+    if (status !== 'active') {
       setDisabled(true)
     } else {
       setDisabled(false)
     }
-  }, [status, readOnly])
+  }, [status])
+
+  useEffect(() => {
+    if (readOnly === roles.read_only.toLocaleLowerCase()) {
+      setValue('bceidRoles', [])
+    }
+  }, [readOnly])
+
+  useEffect(() => {
+    if (bceidRoles.length > 0) {
+      setValue('readOnly', '')
+    }
+  }, [bceidRoles])
 
   useEffect(() => {
     if (isUserFetched && data) {
-      reset({
+      const dataRoles = data?.roles
+        .map((role) => role.name.toLowerCase())
+        .filter(
+          (r) =>
+            r !== roles.government.toLocaleLowerCase() &&
+            r !== roles.supplier.toLocaleLowerCase()
+        )
+      const userData = {
         keycloakEmail: data?.keycloak_email,
-        altEmail: data?.email,
+        altEmail: data?.email || '',
         jobTitle: data?.title,
         firstName: data?.first_name,
         lastName: data?.last_name,
@@ -74,24 +99,31 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
         phone: data?.phone,
         mobile: data?.mobile_phone,
         status: data?.is_active ? 'active' : 'inactive',
-        readOnly: data?.roles.includes(roles.read_only) ? 'read only' : '',
-        adminRole: !data?.organization_id
-          ? data?.roles
-              .map((role) => role.name.toLowerCase())
-              .filter((role) => role === roles.administrator.toLowerCase)
-          : [],
-        idirRole: !data?.organization_id
-          ? data?.roles
-              .map((role) => role.name.toLowerCase())
-              .filter((role) => role !== roles.administrator.toLowerCase)
-              .join('')
-          : '',
-        bceidRoles: data?.organization_id
-          ? data?.roles.map((role) => role.name.toLowerCase())
-          : []
-      })
+        readOnly: dataRoles
+          .filter((r) => r === roles.read_only.toLocaleLowerCase())
+          .join(''),
+        adminRole: dataRoles.filter(
+          (r) => r === roles.administrator.toLocaleLowerCase()
+        ),
+        idirRole: dataRoles
+          .filter((r) => r !== roles.administrator.toLocaleLowerCase())
+          .join(''),
+        bceidRoles: dataRoles.includes(roles.read_only.toLocaleLowerCase())
+          ? []
+          : dataRoles
+      }
+      if (data.is_government_user) {
+        userData.bceidRoles = []
+        userData.readOnly = ''
+      } else {
+        userData.adminRole = []
+        userData.idirRole = ''
+        setOrgName(data.organization.name)
+      }
+      reset(userData)
+      setOrgId(data.organization?.organization_id)
     }
-  }, [isUserFetched])
+  }, [isUserFetched, data, reset, orgId])
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
@@ -115,6 +147,11 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
               data.readOnly
             ]
           : []
+    }
+    if (orgID) {
+      payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
+    } else {
+      payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
     }
     mutate(payload)
   }
@@ -151,16 +188,25 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
       console.error('Error saving user:', error)
     }
   })
-  if (isPending || isUserLoading) {
+
+  if (isUserLoading) {
+    return <Loading message="Loading..." />
+  }
+
+  if (isPending) {
     return <Loading message="Adding user..." />
   }
 
   return (
     <div>
-      {isError && <BCAlert severity="error">{t('admin:errMsg')}</BCAlert>}
+      {isError && (
+        <BCAlert severity="error" dismissible={true}>
+          {t('admin:errMsg')}
+        </BCAlert>
+      )}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
         {userID ? 'Edit' : 'Add'} user&nbsp;
-        {userType === 'bceid' && `to Test Org`}
+        {userType === 'bceid' && `to ${orgName}`}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)}>
         <FormProvider {...{ control, setValue }}>
@@ -236,19 +282,17 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
                   label="Status"
                   options={statusOptions(t)}
                 />
-                {userType === 'idir' ? (
-                  <IDIRSpecificRoleFields
-                    setValue={setValue}
+                {userType === 'bceid' || orgId ? (
+                  <BCeIDSpecificRoleFields
+                    form={form}
                     disabled={disabled}
-                    control={control}
+                    status={status}
                     t={t}
                   />
                 ) : (
-                  <BCeIDSpecificRoleFields
-                    setValue={setValue}
+                  <IDIRSpecificRoleFields
+                    form={form}
                     disabled={disabled}
-                    control={control}
-                    status={status}
                     t={t}
                   />
                 )}
@@ -259,4 +303,12 @@ export const AddEditUser = ({ userType = 'bceid', edit = false }) => {
       </form>
     </div>
   )
+}
+
+AddEditUser.defaultProps = {
+  userType: 'idir'
+}
+
+AddEditUser.propTypes = {
+  userType: PropTypes.oneOf(['idir', 'bceid'])
 }

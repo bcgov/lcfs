@@ -44,6 +44,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * TODO:
  * - Ability to clear the custom filter input boxes
  * - Ability to populate the custom filter inputs from the stored values that are retrieved from localStorage.
+ * - Retain the default filter even after reset.
  */
 const BCDataGridServer = ({
   gridOptions,
@@ -240,8 +241,10 @@ const BCDataGridServer = ({
   ) : (
     <BCBox
       sx={{
-        height: '54vh',
-        width: '100%'
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
       }}
       className="bc-grid-container"
     >
@@ -259,12 +262,18 @@ const BCDataGridServer = ({
         onFirstDataRendered={onFirstDataRendered}
         getRowId={getRowId}
         loadingOverlayComponent={loadingOverlayComponent}
+        domLayout="autoHeight"
         {...others}
       />
       {/* TablePagination components setup using Material UI,
        * so it looks similar to the one provided by ag-grid by default
        */}
-      <BCBox display="flex" justifyContent="flex-start" variant="outlined">
+      <BCBox
+        display="flex"
+        justifyContent="flex-start"
+        variant="outlined"
+        sx={{ maxHeight: '3.5rem', position: 'relative' }}
+      >
         <BCPagination
           page={page}
           size={size}

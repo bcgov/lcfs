@@ -7,7 +7,7 @@ const BCAlertRoot = styled(Box)(({ theme, ownerState }) => {
   const { color } = ownerState
 
   const { gradients, alerts } = palette
-  const { fontSizeRegular, fontWeightMedium } = typography
+  const { fontSizeMD, fontWeightMedium } = typography
   const { borderRadius } = borders
   const { pxToRem, linearGradient } = functions
 
@@ -20,14 +20,14 @@ const BCAlertRoot = styled(Box)(({ theme, ownerState }) => {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    minHeight: pxToRem(60),
+    minHeight: pxToRem(40),
     backgroundImage: backgroundImageValue,
     color: alerts[color].color,
     position: 'relative',
-    padding: pxToRem(16),
-    marginBottom: pxToRem(16),
+    padding: pxToRem(8),
+    marginBottom: pxToRem(8),
     borderRadius: borderRadius.md,
-    fontSize: fontSizeRegular,
+    fontSize: fontSizeMD,
     fontWeight: fontWeightMedium
   }
 })

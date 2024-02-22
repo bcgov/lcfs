@@ -26,6 +26,7 @@ export const usersColumnDefs = (t) => [
         : '',
     flex: 1,
     width: 300,
+    sortable: false,
     suppressMenu: true,
     filterParams: {
       textMatcher: (filter) => {
@@ -54,7 +55,7 @@ export const usersColumnDefs = (t) => [
   },
   {
     colId: 'email',
-    field: 'email',
+    field: 'keycloak_email',
     headerName: t('admin:userColLabels.email'),
     width: 400
   },
@@ -113,7 +114,12 @@ export const usersDefaultColDef = {
 
 export const rolesColumnDefs = (t) => [
   { colId: 'name', field: 'name', headerName: t('admin:roleColLabels.role') },
-  { colId: 'description', field: 'description', headerName: t('admin:roleColLabels.description'), flex: 1 },
+  {
+    colId: 'description',
+    field: 'description',
+    headerName: t('admin:roleColLabels.description'),
+    flex: 1
+  },
   {
     colId: 'is_government_role',
     field: 'is_government_role',

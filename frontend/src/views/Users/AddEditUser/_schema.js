@@ -10,14 +10,14 @@ export const userInfoSchema = Yup.object({
   keycloakEmail: Yup.string()
     .required('Email Address is required.')
     .email('Please enter a valid Email Address.'),
-  altEmail: Yup.string().optional().email('Please enter a valid Email Address.'),
+  altEmail: Yup.string().optional(),
   phone: Yup.string().optional(),
   mobilePhone: Yup.string().optional().nullable(),
   status: Yup.string(),
   adminRole: Yup.array(),
   idirRole: Yup.string(),
   bceidRoles: Yup.array(),
-  readOnly: Yup.string(),
+  readOnly: Yup.string()
 })
 
 export const idirTextFields = (t) => [
@@ -118,25 +118,29 @@ export const statusOptions = (t) => [
   }
 ]
 
-export const idirRoleOptions = (t) => (
-  govRoles.map(
-    (role, idx) => (idx > 1 && {
-      label: role,
-      header: role,
-      text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
-      value: role.toLowerCase()
-    })
-  ).filter((val) => val)
-)
+export const idirRoleOptions = (t) =>
+  govRoles
+    .map(
+      (role, idx) =>
+        idx > 1 && {
+          label: role,
+          header: role,
+          text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
+          value: role.toLowerCase()
+        }
+    )
+    .filter((val) => val)
 
-export const bceidRoleOptions = (t) => (
-  nonGovRoles.map((role, idx) => (
-    (!role.includes(roles.supplier) && !role.includes(roles.read_only)) && (
-      {
-        label: role,
-        header: role,
-        text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
-        value: role.toLowerCase()
-      }
-    ))).filter((val) => val)
-)
+export const bceidRoleOptions = (t) =>
+  nonGovRoles
+    .map(
+      (role, idx) =>
+        !role.includes(roles.supplier) &&
+        !role.includes(roles.read_only) && {
+          label: role,
+          header: role,
+          text: t(`admin:userForm.${role.toLowerCase().replace(' ', '_')}`),
+          value: role.toLowerCase()
+        }
+    )
+    .filter((val) => val)
