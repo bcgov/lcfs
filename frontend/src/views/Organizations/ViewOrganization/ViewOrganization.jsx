@@ -78,6 +78,8 @@ export const ViewOrganization = () => {
 
   useEffect(() => {
     if (gridRef.current) {
+      // clear any previous filters
+      localStorage.removeItem(`${gridKey}-filter`)
       const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
       const orgFilter =
         gridRef?.current?.api?.getFilterInstance('organization_id')
@@ -270,7 +272,7 @@ export const ViewOrganization = () => {
           </>
         )}
       </BCBox>
-      <BCBox sx={{ height: '36rem', width: '100%' }}>
+      <BCBox sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={apiRoutes.listUsers}
