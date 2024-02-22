@@ -5,7 +5,7 @@ from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 import enum
 
 class TransactionTypeEnum(enum.Enum):
-    administrative_adjustment = "Administrative Adjustment"
+    admin_adjustment = "Admin Adjustment"
     initiative_agreement = "Initiative Agreement"
     assessment = "Assessment"
     transfer = "Transfer"

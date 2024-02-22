@@ -5,6 +5,7 @@ from fastapi import Depends
 
 from .repo import TransactionsRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
+from lcfs.db.models import Transfer, TransferStatus
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -17,13 +18,57 @@ class TransactionsService:
     def __init__(self, transactions_repo: TransactionsRepository = Depends()):
         self.transactions_repo = transactions_repo
 
+    def apply_transaction_filters(self, pagination, conditions):
+        """
+        Apply filters to the transactions query.
+
+        Args:
+            pagination (PaginationRequestSchema): The pagination object containing page and size information.
+            conditions (List[Condition]): The list of conditions to apply.
+
+        Returns:
+            List[Transactions]: The list of transactions after applying the filters.
+        """
+        for filter in pagination.filters:
+            filter_value = filter.filter
+            filter_option = filter.type
+            filter_type = filter.filterType
+            if filter.field == "status":
+                field = get_field_for_filter(TransferStatus, "status")
+                # field = get_field_for_filter(TransferStatus, "status")
+                # TODO add other transaction type status lookups here
+            else:
+                field = get_field_for_filter(Transfer, filter.field)
+
+            conditions.append(
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type)
+            )
+
     @service_handler
     async def get_combined_transactions_paginated(self, pagination: PaginationRequestSchema = {}) -> Dict[str, Any]:
         """
         Fetches a combined paginated list of Transfers and Issuances, ordered by create_date.
         Returns a structured response that includes the paginated list and pagination details.
         """
-        combined_transactions = await self.transactions_repo.get_combined_transactions_paginated(page, size)
+        # Apply filters
+        conditions = []
+        pagination = validate_pagination(pagination)
+        if pagination.filters and len(pagination.filters) > 0:
+            try:
+                self.apply_transaction_filters(pagination, conditions)
+            except Exception:
+                raise ValueError(
+                    f"Invalid filter provided: {pagination.filters}."
+                )
+
+        # Apply pagination
+        offset = (
+            0 if (pagination.page < 1) else (
+                pagination.page - 1) * pagination.size
+        )
+        limit = pagination.size
+        combined_transactions = await self.transactions_repo.get_combined_transactions_paginated()
         
         # Example post-processing to fit a common schema or structure
         processed_transactions = [

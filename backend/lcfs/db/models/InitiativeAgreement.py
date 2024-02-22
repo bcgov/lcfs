@@ -3,25 +3,23 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
-class Issuance(BaseModel, Auditable, EffectiveDates):
-    __tablename__ = 'issuance'
-    __table_args__ = (UniqueConstraint('issuance_id'),
-                      {'comment': "Goverment to organization compliance units issuance"}
+class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
+    __tablename__ = 'initiative_agreement'
+    __table_args__ = (UniqueConstraint('initiative_agreement_id'),
+                      {'comment': "Goverment to organization compliance units initiative agreement"}
     )
 
-
-    issuance_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the issuance")
+    initiative_agreement_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the initiative_agreement")
     compliance_units = Column(BigInteger, comment="Compliance Units")
     transaction_effective_date = Column(DateTime, comment='Transaction effective date')
     organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
     comment_id = Column(Integer, ForeignKey('comment.comment_id'))
 
-    organization = relationship('Organization', back_populates='issuances')
+    organization = relationship('Organization', back_populates='initiative_agreements')
     transaction = relationship('Transaction')
-    comments = relationship('Comment', back_populates='issuance')
-    issuance_history_records = relationship('IssuanceHistory', back_populates='issuance')
+    comments = relationship('Comment', back_populates='initiative_agreement')
+    initiative_agreement_history_records = relationship('InitiativeAgreementHistory', back_populates='initiative_agreement')
 
     def __repr__(self):
         return self.compliance_units
-

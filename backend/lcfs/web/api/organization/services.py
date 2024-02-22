@@ -47,9 +47,9 @@ class OrganizationServices:
         self.repo = repo
         self.request = request
 
-    def apply_filters(self, pagination, conditions):
+    def apply_organization_filters(self, pagination, conditions):
         """
-        Apply filters to the query.
+        Apply filters to the organizations query.
 
         Args:
             pagination (PaginationRequestSchema): The pagination object containing page and size information.
@@ -229,7 +229,7 @@ class OrganizationServices:
         pagination = validate_pagination(pagination)
         if pagination.filters and len(pagination.filters) > 0:
             try:
-                self.apply_filters(pagination, conditions)
+                self.apply_organization_filters(pagination, conditions)
             except Exception:
                 raise ValueError(
                     f"Invalid filter provided: {pagination.filters}."
