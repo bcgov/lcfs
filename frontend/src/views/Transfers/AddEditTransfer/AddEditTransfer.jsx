@@ -2,7 +2,7 @@ import { yupResolver } from '@hookform/resolvers/yup'
 import { useMutation } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 // Components
 import BCAlert from '@/components/BCAlert'
@@ -20,7 +20,16 @@ import { useTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
 import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
 
-import { Box, Button } from '@mui/material'
+import BCButton from '@/components/BCButton'
+import colors from '@/themes/base/colors'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Box } from '@mui/material'
+import {
+  deleteDraftButton,
+  saveDraftButton,
+  submitButton
+} from './buttonConfigs'
 import AgreementDate from './components/AgreementDate'
 import Comments from './components/Comments'
 import SigningAuthority from './components/SigningAuthority'
@@ -67,7 +76,7 @@ export const AddEditTransfer = () => {
         quantity: transferData.quantity,
         pricePerUnit: transferData.price_per_unit,
         signingAuthorityDeclaration: transferData.signing_authority_declaration,
-        comments: transferData.comments.comment, // Assuming you only want the comment text
+        comments: transferData.comments?.comment, // Assuming you only want the comment text
         agreementDate: transferData.agreement_date
           ? new Date(transferData.agreement_date).toISOString().split('T')[0]
           : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
@@ -99,12 +108,42 @@ export const AddEditTransfer = () => {
     }
   })
 
-  const handleSubmitForm = (form) => {
+  const saveDraft = (form) => {
     form.fromOrganizationId = parseInt(form.fromOrganizationId)
     form.toOrganizationId = parseInt(form.toOrganizationId)
     form.agreementDate = formatDateToISO(form.agreementDate)
     const convertedPayload = convertObjectKeys(form)
     mutate(convertedPayload)
+  }
+
+  const submitDraft = () => {
+    console.log('submit')
+  }
+
+  const deleteDraft = () => {
+    console.log('delete')
+  }
+
+  const buttonClusterConfig = {
+    New: [
+      { ...saveDraftButton, handler: saveDraft },
+      {
+        ...submitButton,
+        disabled: true
+      }
+    ],
+    Draft: [
+      { ...deleteDraftButton, handler: deleteDraft },
+      { ...saveDraftButton, handler: saveDraft },
+      { ...submitButton, handler: submitDraft }
+    ],
+    Sent: [],
+    Rescinded: [],
+    Declined: [],
+    Submitted: [],
+    Recommended: [],
+    Recorded: [],
+    Refused: []
   }
 
   // Conditional rendering for loading
@@ -139,7 +178,9 @@ export const AddEditTransfer = () => {
         <BCBox mt={5}>
           <ProgressBreadcrumb
             steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
-            currentStep="Draft"
+            currentStep={
+              transferId ? transferData?.transfer_status.status : null
+            }
           />
         </BCBox>
 
@@ -148,10 +189,7 @@ export const AddEditTransfer = () => {
             <TransferGraphic />
           </BCBox>
 
-          <form
-            onSubmit={methods.handleSubmit(handleSubmitForm)}
-            data-testid="new-transfer-form"
-          >
+          <form data-testid="new-transfer-form">
             {/* Transfer Form Fields */}
             <TransferDetails />
 
@@ -160,17 +198,45 @@ export const AddEditTransfer = () => {
             <Comments />
 
             <SigningAuthority />
-
-            {/* Save Draft Button */}
-            <Box mt={2} display="flex" justifyContent="flex-end">
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                onClick={() => console.log('Submitting form')}
-              >
-                Save Draft
-              </Button>
+            <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
+              <Link>
+                <BCButton
+                  variant="outlined"
+                  color="dark"
+                  onClick={() => console.log('Submitting form')}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faArrowLeft}
+                      color={colors.dark.main}
+                    />
+                  }
+                >
+                  Back
+                </BCButton>
+              </Link>
+              {buttonClusterConfig[
+                transferId ? transferData?.transfer_status.status : 'New'
+              ]?.map((config) => (
+                <BCButton
+                  key={config.label}
+                  size="small"
+                  variant={config.variant}
+                  color={config.color}
+                  onClick={config.handler}
+                  startIcon={
+                    config.startIcon && (
+                      <FontAwesomeIcon
+                        icon={config.startIcon}
+                        color={config.iconColor ?? colors.primary.main}
+                        className="small-icon"
+                      />
+                    )
+                  }
+                  disabled={config.disabled}
+                >
+                  {config.label}
+                </BCButton>
+              ))}
             </Box>
           </form>
         </FormProvider>

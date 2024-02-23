@@ -9,6 +9,8 @@ import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule'
 import { useFormContext } from 'react-hook-form'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganization'
+import { useParams } from 'react-router-dom'
+import { useTransfer } from '@/hooks/useTransfer'
 
 const TransferGraphic = () => {
   const theme = useTheme()
@@ -16,9 +18,15 @@ const TransferGraphic = () => {
   const { watch } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
+  const { transferId } = useParams()
+  const { data: transferData } = useTransfer(transferId, {
+    enabled: !!transferId
+  })
 
   const quantity = parseInt(watch('quantity'))
-  const creditsFrom = currentUser?.organization?.name
+  const creditsFrom = transferId
+    ? transferData?.from_organization.name
+    : currentUser?.organization?.name
   const creditsTo =
     orgData.find(
       (org) => parseInt(org.organization_id) === watch('toOrganizationId')
