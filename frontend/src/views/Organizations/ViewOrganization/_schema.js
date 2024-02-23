@@ -58,6 +58,9 @@ export const getUserColumnDefs = (t) => {
         suppressMenu: true,
         floatingFilter: false
       }
+    } else if (colDef.field === 'role') {
+      // pick only supplier roles
+      colDef.floatingFilterComponentParams.params = "government_roles_only=false"
     }
     return colDef
   })

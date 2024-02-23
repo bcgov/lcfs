@@ -161,9 +161,12 @@ const BCDataGridServer = ({
     setRowData([])
     gridRef.current.api.showLoadingOverlay()
     const filterModel = gridRef?.current?.api.getFilterModel()
-    const filterArr = Object.entries(filterModel).map(([field, value]) => {
-      return { field, ...value }
-    })
+    const filterArr = [
+      ...Object.entries(filterModel).map(([field, value]) => {
+        return { field, ...value }
+      }),
+      ...defaultFilterModel
+    ]
     setFilterModel(filterArr)
     // save the filter state in browser cache.
     localStorage.setItem(

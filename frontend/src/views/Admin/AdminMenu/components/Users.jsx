@@ -14,8 +14,7 @@ import { useCallback, useRef, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ROUTES, apiRoutes } from '@/constants/routes'
-import { usersColumnDefs } from './_schema'
-// import DemoButtons from './DemoButtons'
+import { usersColumnDefs, idirUserDefaultFilter } from './_schema'
 
 export const Users = () => {
   const { t } = useTranslation(['common', 'admin'])
@@ -88,7 +87,6 @@ export const Users = () => {
           className="ag-theme-alpine"
           style={{ height: '100%', width: '100%' }}
         >
-          {/* <DemoButtons gridRef={gridRef} handleGridKey={handleGridKey} /> */}
           <BCDataGridServer
             gridRef={gridRef}
             apiEndpoint={apiRoutes.listUsers}
@@ -98,6 +96,7 @@ export const Users = () => {
             getRowId={getRowId}
             gridOptions={gridOptions}
             defaultSortModel={defaultSortModel}
+            defaultFilterModel={idirUserDefaultFilter}
             handleGridKey={handleGridKey}
             handleRowClicked={handleRowClicked}
             enableCopyButton={false}

@@ -10,7 +10,7 @@ const checkedIcon = <CheckBoxIcon fontSize="small" />
 const BCColumnSetFilter = forwardRef((props, ref) => {
   const { columnWidth } = props.column.colDef
   const [options, setOptions] = useState([])
-  const { data: optionsData, isLoading: optionsIsLoading } = props.apiQuery()
+  const { data: optionsData, isLoading: optionsIsLoading } = props.apiQuery(props.params)
 
   const [currentValue, setCurrentValue] = useState(null)
 

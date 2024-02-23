@@ -16,9 +16,9 @@ const menu = {
 
   styleOverrides: {
     paper: {
-      minWidth: pxToRem(160),
+      maxWidth: pxToRem(160),
       boxShadow: lg,
-      padding: `${pxToRem(16)} ${pxToRem(8)}`,
+      padding: `${pxToRem(4)} ${pxToRem(4)}`,
       fontSize: size.sm,
       color: text.main,
       textAlign: 'left',
