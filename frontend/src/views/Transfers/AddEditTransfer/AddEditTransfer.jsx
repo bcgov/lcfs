@@ -16,7 +16,6 @@ import TransferGraphic from './components/TransferGraphic'
 // Hooks
 import { TRANSACTIONS } from '@/constants/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useRegExtOrgs } from '@/hooks/useOrganization'
 import { useTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
 import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
@@ -30,14 +29,12 @@ import TransferDetails from './components/TransferDetails'
 export const AddEditTransfer = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
-  const { transferId } = useParams() // This extracts the transferId from the URL
+  const { transferId } = useParams()
   const { data: currentUser } = useCurrentUser()
-  const { data: orgData } = useRegExtOrgs()
   const { data: transferData, isFetched } = useTransfer(transferId, {
     enabled: !!transferId,
     retry: false
   })
-  // const [organizations, setOrganizations] = useState([])
 
   const methods = useForm({
     resolver: yupResolver(AddEditTransferSchema),
@@ -78,27 +75,6 @@ export const AddEditTransfer = () => {
     }
   }, [isFetched, transferId])
 
-  /**
-   * Fetch the list of registered external organizations
-   */
-  // useEffect(() => {
-  //   const fetchOrganizations = async () => {
-  //     try {
-  //       const response = await apiService.get(
-  //         '/organizations/registered/external'
-  //       )
-  //       const orgs = response.data.map((org) => ({
-  //         value: parseInt(org.organization_id),
-  //         label: org.name || 'Unknown'
-  //       }))
-  //       setOrganizations(orgs)
-  //     } catch (error) {
-  //       console.error('Error fetching organizations:', error)
-  //     }
-  //   }
-  //   fetchOrganizations()
-  // }, [])
-
   const { mutate, isLoading, isError } = useMutation({
     mutationFn: (convertedPayload) => {
       if (transferId) {
@@ -136,19 +112,6 @@ export const AddEditTransfer = () => {
     return <Loading message="Submitting Transfer..." />
   }
 
-  const { watch } = methods
-  const quantity = parseInt(watch('quantity'))
-  const creditsFrom = currentUser?.organization?.name
-  const creditsTo =
-    orgData.find(
-      (org) => parseInt(org.organization_id) === watch('toOrganizationId')
-    )?.name || ''
-
-  console.log(creditsTo)
-  const pricePerUnit = watch('pricePerUnit')
-  const totalValue =
-    quantity && pricePerUnit ? parseInt(quantity * pricePerUnit) : 0
-
   return (
     <>
       <BCBox mx={2}>
@@ -180,16 +143,11 @@ export const AddEditTransfer = () => {
           />
         </BCBox>
 
-        <BCBox my={3}>
-          <TransferGraphic
-            creditsFrom={creditsFrom}
-            creditsTo={creditsTo}
-            numberOfCredits={quantity}
-            totalValue={totalValue}
-          />
-        </BCBox>
-
         <FormProvider {...methods}>
+          <BCBox my={3}>
+            <TransferGraphic />
+          </BCBox>
+
           <form
             onSubmit={methods.handleSubmit(handleSubmitForm)}
             data-testid="new-transfer-form"

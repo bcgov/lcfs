@@ -6,22 +6,35 @@ import { useTheme, Box, Typography, Paper } from '@mui/material'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat'
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule'
+import { useFormContext } from 'react-hook-form'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useRegExtOrgs } from '@/hooks/useOrganization'
 
-const TransferGraphic = ({
-  creditsFrom,
-  creditsTo,
-  numberOfCredits,
-  totalValue
-}) => {
+const TransferGraphic = () => {
   const theme = useTheme()
+
+  const { watch } = useFormContext()
+  const { data: currentUser } = useCurrentUser()
+  const { data: orgData } = useRegExtOrgs()
+
+  const quantity = parseInt(watch('quantity'))
+  const creditsFrom = currentUser?.organization?.name
+  const creditsTo =
+    orgData.find(
+      (org) => parseInt(org.organization_id) === watch('toOrganizationId')
+    )?.name || ''
+
+  const pricePerUnit = watch('pricePerUnit')
+  const totalValue =
+    quantity && pricePerUnit ? parseInt(quantity * pricePerUnit) : 0
 
   const isNumberOfCreditsValid = (number) => !isNaN(number) && number > 0
   const isTotalValueValid = (value) => typeof value === 'number' && value > 0
   const formatCurrency = (value) =>
     value.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })
 
-  const formattedNumberOfCredits = numberOfCredits
-    ? parseInt(numberOfCredits, 10).toLocaleString('en-US')
+  const formattedNumberOfCredits = quantity
+    ? parseInt(quantity, 10).toLocaleString('en-US')
     : null
 
   const iconSizeStyle = {
@@ -29,17 +42,14 @@ const TransferGraphic = ({
   }
 
   const renderIcon = () => {
-    if (
-      isNumberOfCreditsValid(numberOfCredits) &&
-      isTotalValueValid(totalValue)
-    ) {
+    if (isNumberOfCreditsValid(quantity) && isTotalValueValid(totalValue)) {
       return (
         <SyncAltIcon
           color="primary"
           sx={{ ...iconSizeStyle, marginTop: '-20px', marginBottom: '-25px' }}
         />
       )
-    } else if (isNumberOfCreditsValid(numberOfCredits)) {
+    } else if (isNumberOfCreditsValid(quantity)) {
       return (
         <TrendingFlatIcon
           color="primary"
@@ -83,7 +93,7 @@ const TransferGraphic = ({
           p: 3
         }}
       >
-        {isNumberOfCreditsValid(numberOfCredits) && (
+        {isNumberOfCreditsValid(quantity) && (
           <Typography variant="body2" sx={{ mb: 1 }}>
             {`${formattedNumberOfCredits} compliance units`}
           </Typography>
