@@ -142,7 +142,9 @@ export const AddEditTransfer = () => {
   const creditsTo =
     orgData.find(
       (org) => parseInt(org.organization_id) === watch('toOrganizationId')
-    )?.label || ''
+    )?.name || ''
+
+  console.log(creditsTo)
   const pricePerUnit = watch('pricePerUnit')
   const totalValue =
     quantity && pricePerUnit ? parseInt(quantity * pricePerUnit) : 0
