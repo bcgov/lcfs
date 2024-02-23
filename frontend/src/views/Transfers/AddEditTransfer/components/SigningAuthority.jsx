@@ -1,8 +1,13 @@
 import { Box, FormControlLabel, Checkbox, Typography } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
+import { useFormContext } from 'react-hook-form'
 
-const SigningAuthority = ({ register, errors }) => {
+const SigningAuthority = () => {
+  const {
+    register,
+    formState: { errors }
+  } = useFormContext()
   return (
     <>
       <BCTypography variant={'h6'} mt={2} mb={2} color={'primary'}>

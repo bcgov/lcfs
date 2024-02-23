@@ -1,8 +1,19 @@
-import React from 'react'
 import { Box, TextField, Typography } from '@mui/material'
+import { useFormContext } from 'react-hook-form'
 import LabelBox from './LabelBox' // Assuming LabelBox is a custom component
 
-const AgreementDate = ({ register, errors, maxDate }) => {
+const AgreementDate = () => {
+  const {
+    register,
+    formState: { errors }
+  } = useFormContext()
+
+  const formatDate = (date) => {
+    return date.toISOString().split('T')[0]
+  }
+
+  const currentDate = new Date()
+  const maxDate = formatDate(currentDate)
   return (
     <LabelBox
       label="Agreement Date (required)"

@@ -33,3 +33,15 @@ export const useOrganizationNames = (options) => {
     ...options
   })
 }
+
+export const useRegExtOrgs = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['registered-external-orgs'],
+    queryFn: async () =>
+      (await client.get('/organizations/registered/external')).data,
+    initialData: [],
+    ...options
+  })
+}
