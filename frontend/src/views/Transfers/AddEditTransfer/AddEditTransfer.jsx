@@ -86,6 +86,7 @@ export const AddEditTransfer = () => {
 
   const { mutate, isLoading, isError } = useMutation({
     mutationFn: (convertedPayload) => {
+      console.log(convertedPayload)
       if (transferId) {
         // If editing, use PUT request
         return apiService.put(`/transfers`, convertedPayload)
@@ -94,7 +95,7 @@ export const AddEditTransfer = () => {
         return apiService.post('/transfers', convertedPayload)
       }
     },
-    onSuccess: (response) => {
+    onSuccess: () => {
       // Redirect on success
       navigate(TRANSACTIONS, {
         state: {
@@ -108,25 +109,69 @@ export const AddEditTransfer = () => {
     }
   })
 
-  const saveDraft = (form) => {
+  const { mutate: createDraft, isLoading: isCreatingDraft } = useMutation({
+    mutationFn: async (convertedPayload) =>
+      await apiService.post('/transfers', convertedPayload),
+    onSuccess: () => {
+      navigate(TRANSACTIONS, {
+        state: {
+          message: 'Draft transfer successfully created.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      console.error('Error creating transfer:', error)
+    }
+  })
+  const { mutate: updateDraft, isLoading: isUpdatingDraft } = useMutation({
+    mutationFn: async (convertedPayload) =>
+      await apiService.put(`/transfers`, convertedPayload),
+    onSuccess: () => {
+      navigate(TRANSACTIONS, {
+        state: {
+          message: 'Draft transfer successfully updated.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      console.error('Error updating transfer:', error)
+    }
+  })
+  const { mutate: deleteDraft, isLoading: isDeletingDraft } = useMutation({
+    mutationFn: async () =>
+      await apiService.put(`/transfers/delete/${transferId}`),
+    onSuccess: () => {
+      navigate(TRANSACTIONS, {
+        state: {
+          message: 'Draft transfer successfully deleted.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      console.error('Error deleting transfer:', error)
+    }
+  })
+
+  const draftPayload = (form) => {
     form.fromOrganizationId = parseInt(form.fromOrganizationId)
     form.toOrganizationId = parseInt(form.toOrganizationId)
     form.agreementDate = formatDateToISO(form.agreementDate)
-    const convertedPayload = convertObjectKeys(form)
-    mutate(convertedPayload)
+    return convertObjectKeys(form)
   }
 
   const submitDraft = () => {
     console.log('submit')
   }
 
-  const deleteDraft = () => {
-    console.log('delete')
-  }
-
   const buttonClusterConfig = {
     New: [
-      { ...saveDraftButton, handler: saveDraft },
+      {
+        ...saveDraftButton,
+        handler: (form) => createDraft(draftPayload(form))
+      },
       {
         ...submitButton,
         disabled: true
@@ -134,7 +179,7 @@ export const AddEditTransfer = () => {
     ],
     Draft: [
       { ...deleteDraftButton, handler: deleteDraft },
-      { ...saveDraftButton, handler: saveDraft },
+      { ...saveDraftButton, handler: (form) => saveDraft(draftPayload(form)) },
       { ...submitButton, handler: submitDraft }
     ],
     Sent: [],
@@ -149,6 +194,9 @@ export const AddEditTransfer = () => {
   // Conditional rendering for loading
   if (isLoading) {
     return <Loading message="Submitting Transfer..." />
+  }
+  if (isDeletingDraft) {
+    return <Loading message="Deleting Draft Transfer..." />
   }
 
   return (
@@ -222,7 +270,7 @@ export const AddEditTransfer = () => {
                   size="small"
                   variant={config.variant}
                   color={config.color}
-                  onClick={config.handler}
+                  onClick={methods.handleSubmit(config.handler)}
                   startIcon={
                     config.startIcon && (
                       <FontAwesomeIcon
