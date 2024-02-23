@@ -178,13 +178,11 @@ export const AddEditOrg = () => {
       }
     }
 
-    console.log(payload)
-
-    // if (orgID) {
-    //   updateOrg(payload)
-    // } else {
-    //   createOrg(payload)
-    // }
+    if (orgID) {
+      updateOrg(payload)
+    } else {
+      createOrg(payload)
+    }
   }
 
   // useMutation hook from React Query for handling API request
