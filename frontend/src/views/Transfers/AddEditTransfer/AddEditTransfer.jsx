@@ -1,6 +1,6 @@
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useMutation } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
@@ -24,7 +24,7 @@ import BCButton from '@/components/BCButton'
 import colors from '@/themes/base/colors'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box } from '@mui/material'
+import { Box, Modal } from '@mui/material'
 import {
   deleteDraftButton,
   saveDraftButton,
@@ -34,8 +34,10 @@ import AgreementDate from './components/AgreementDate'
 import Comments from './components/Comments'
 import SigningAuthority from './components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
+import ConfirmationModal from './components/ConfirmationModal'
 
 export const AddEditTransfer = () => {
+  const [modalData, setModalData] = useState(null)
   const navigate = useNavigate()
   const apiService = useApiService()
   const { transferId } = useParams()
@@ -84,31 +86,6 @@ export const AddEditTransfer = () => {
     }
   }, [isFetched, transferId])
 
-  const { mutate, isLoading, isError } = useMutation({
-    mutationFn: (convertedPayload) => {
-      console.log(convertedPayload)
-      if (transferId) {
-        // If editing, use PUT request
-        return apiService.put(`/transfers`, convertedPayload)
-      } else {
-        // If adding new, use POST request
-        return apiService.post('/transfers', convertedPayload)
-      }
-    },
-    onSuccess: () => {
-      // Redirect on success
-      navigate(TRANSACTIONS, {
-        state: {
-          message: 'Transfer successfully submitted.',
-          severity: 'success'
-        }
-      })
-    },
-    onError: (error) => {
-      console.error('Error submitting transfer:', error)
-    }
-  })
-
   const draftPayload = (form) => {
     form.fromOrganizationId = parseInt(form.fromOrganizationId)
     form.toOrganizationId = parseInt(form.toOrganizationId)
@@ -116,7 +93,11 @@ export const AddEditTransfer = () => {
     return convertObjectKeys(form)
   }
 
-  const { mutate: createDraft, isLoading: isCreatingDraft } = useMutation({
+  const {
+    mutate: createDraft,
+    isLoading: isCreatingDraft,
+    isError: isCreateDraftError
+  } = useMutation({
     mutationFn: async (formData) => {
       const data = draftPayload(formData)
       return await apiService.post('/transfers', data)
@@ -133,7 +114,11 @@ export const AddEditTransfer = () => {
       console.error('Error creating transfer:', error)
     }
   })
-  const { mutate: updateDraft, isLoading: isUpdatingDraft } = useMutation({
+  const {
+    mutate: updateDraft,
+    isLoading: isUpdatingDraft,
+    isError: isUpdateDraftError
+  } = useMutation({
     mutationFn: async (formData) => {
       const data = draftPayload(formData)
       return await apiService.put(`/transfers/${transferId}/draft`, data)
@@ -150,7 +135,11 @@ export const AddEditTransfer = () => {
       console.error('Error updating transfer:', error)
     }
   })
-  const { mutate: updateTransfer, isLoading: isDeletingDraft } = useMutation({
+  const {
+    mutate: updateTransfer,
+    isLoading: isUpdatingTransfer,
+    isError: isUpdateTransferError
+  } = useMutation({
     mutationFn: async ({ formData, newStatus }) =>
       await apiService.put(`/transfers/${transferId}`, {
         comments: formData.comments,
@@ -178,13 +167,19 @@ export const AddEditTransfer = () => {
       {
         ...deleteDraftButton,
         handler: (formData) =>
-          updateTransfer({
-            formData,
-            newStatus: 2,
-            message: {
-              success: 'Draft transfer successfully deleted.',
-              error: 'Error deleting transfer'
-            }
+          setModalData({
+            onConfirm: () =>
+              updateTransfer({
+                formData,
+                newStatus: 2,
+                message: {
+                  success: 'Draft transfer successfully deleted.',
+                  error: 'Error deleting transfer'
+                }
+              }),
+            buttonText: 'Delete Draft',
+            onClose: () => setModalData(null),
+            text: 'Are you sure you want to delete this draft?'
           })
       },
       { ...saveDraftButton, handler: updateDraft },
@@ -200,15 +195,19 @@ export const AddEditTransfer = () => {
   }
 
   // Conditional rendering for loading
-  if (isLoading) {
-    return <Loading message="Submitting Transfer..." />
+  if (isCreatingDraft) {
+    return <Loading message="Creating Draft Transfer..." />
   }
-  if (isDeletingDraft) {
-    return <Loading message="Deleting Draft Transfer..." />
+  if (isUpdatingDraft) {
+    return <Loading message="Updating Draft Transfer..." />
+  }
+  if (isUpdatingTransfer) {
+    return <Loading message="Processing Transfer..." />
   }
 
   return (
     <>
+      <ConfirmationModal data={modalData} onClose={() => setModalData(null)} />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
           {transferId ? 'Edit Transfer' : 'New Transfer'}
@@ -224,7 +223,7 @@ export const AddEditTransfer = () => {
         </BCTypography>
         <BCTypography>&nbsp;</BCTypography>
 
-        {isError && (
+        {isCreateDraftError && (
           <BCAlert severity="error">
             Error occurred while submitting. Please retry. For ongoing issues,
             contact support.
