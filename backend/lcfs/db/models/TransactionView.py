@@ -25,12 +25,3 @@ class TransactionView(BaseModel):
     status = Column(String)
     create_date = Column(String)
     update_date = Column(String)
-
-
-# A database view that aggregates all possible transaction statuses
-# so we can return them as a full list
-class TransactionStatusView(BaseModel):
-    __tablename__ = 'transaction_status_view'
-    status = Column(String, primary_key=True)
-    create_date = Column(String)
-    update_date = Column(String)
