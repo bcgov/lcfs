@@ -12,14 +12,16 @@ class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
     admin_adjustment_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the admin_adjustment")
     compliance_units = Column(BigInteger, comment="Compliance Units")
     transaction_effective_date = Column(DateTime, comment='Transaction effective date')
-    organization_id = Column(Integer, ForeignKey('organization.organization_id'))
+    to_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
     comment_id = Column(Integer, ForeignKey('comment.comment_id'))
+    current_status_id = Column(Integer, ForeignKey('admin_adjustment_status.admin_adjustment_status_id'))
 
-    organization = relationship('Organization', back_populates='admin_adjustments')
+    to_organization = relationship('Organization', back_populates='admin_adjustments')
     transaction = relationship('Transaction')
     comments = relationship('Comment', back_populates='admin_adjustment')
     admin_adjustment_history_records = relationship('AdminAdjustmentHistory', back_populates='admin_adjustment')
+    current_status = relationship('AdminAdjustmentStatus')
 
     def __repr__(self):
         return self.compliance_units

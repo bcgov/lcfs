@@ -11,7 +11,7 @@ from lcfs.web.core.decorators import repo_handler
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus
-from backend.lcfs.db.models.TransferCategory import TransferCategory
+from lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.Comment import Comment
 
 logger = getLogger("transfer_repo")

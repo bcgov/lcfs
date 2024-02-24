@@ -1,15 +1,15 @@
-"""base models
+"""base migrations
 
-Revision ID: 661a9d1fb368
+Revision ID: 5d3a79582d21
 Revises: 
-Create Date: 2024-02-22 12:06:36.520546
+Create Date: 2024-02-23 15:37:50.767635
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "661a9d1fb368"
+revision = "5d3a79582d21"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,10 +28,10 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "draft",
-                "recommended",
-                "approved",
-                "deleted",
+                "Draft",
+                "Recommended",
+                "Approved",
+                "Deleted",
                 name="admin_adjustment_type_enum",
             ),
             nullable=True,
@@ -135,10 +135,10 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "draft",
-                "recommended",
-                "approved",
-                "deleted",
+                "Draft",
+                "Recommended",
+                "Approved",
+                "Deleted",
                 name="initiative_agreement_type_enum",
             ),
             nullable=True,
@@ -735,15 +735,15 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "draft",
-                "deleted",
-                "sent",
-                "submitted",
-                "recommended",
-                "recorded",
-                "refused",
-                "declined",
-                "rescinded",
+                "Draft",
+                "Deleted",
+                "Sent",
+                "Submitted",
+                "Recommended",
+                "Recorded",
+                "Refused",
+                "Declined",
+                "Rescinded",
                 name="transfer_type_enum",
             ),
             nullable=True,
@@ -1106,9 +1106,10 @@ def upgrade() -> None:
             nullable=True,
             comment="Transaction effective date",
         ),
-        sa.Column("organization_id", sa.Integer(), nullable=True),
+        sa.Column("to_organization_id", sa.Integer(), nullable=True),
         sa.Column("transaction_id", sa.Integer(), nullable=True),
         sa.Column("comment_id", sa.Integer(), nullable=True),
+        sa.Column("current_status_id", sa.Integer(), nullable=True),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -1152,7 +1153,11 @@ def upgrade() -> None:
             ["comment.comment_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["organization_id"],
+            ["current_status_id"],
+            ["admin_adjustment_status.admin_adjustment_status_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["to_organization_id"],
             ["organization.organization_id"],
         ),
         sa.ForeignKeyConstraint(
@@ -1184,9 +1189,10 @@ def upgrade() -> None:
             nullable=True,
             comment="Transaction effective date",
         ),
-        sa.Column("organization_id", sa.Integer(), nullable=True),
+        sa.Column("to_organization_id", sa.Integer(), nullable=True),
         sa.Column("transaction_id", sa.Integer(), nullable=True),
         sa.Column("comment_id", sa.Integer(), nullable=True),
+        sa.Column("current_status_id", sa.Integer(), nullable=True),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -1230,7 +1236,11 @@ def upgrade() -> None:
             ["comment.comment_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["organization_id"],
+            ["current_status_id"],
+            ["initiative_agreement_status.initiative_agreement_status_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["to_organization_id"],
             ["organization.organization_id"],
         ),
         sa.ForeignKeyConstraint(
@@ -1381,9 +1391,9 @@ def upgrade() -> None:
         ),
         sa.Column("quantity", sa.Integer(), nullable=True, comment="Quantity of units"),
         sa.Column("comment_id", sa.Integer(), nullable=True),
-        sa.Column("transfer_status_id", sa.Integer(), nullable=True),
         sa.Column("transfer_category_id", sa.Integer(), nullable=True),
         sa.Column("signing_authority_declaration", sa.Boolean(), nullable=True),
+        sa.Column("current_status_id", sa.Integer(), nullable=True),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -1427,6 +1437,10 @@ def upgrade() -> None:
             ["comment.comment_id"],
         ),
         sa.ForeignKeyConstraint(
+            ["current_status_id"],
+            ["transfer_status.transfer_status_id"],
+        ),
+        sa.ForeignKeyConstraint(
             ["from_organization_id"],
             ["organization.organization_id"],
         ),
@@ -1441,10 +1455,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(
             ["transfer_category_id"],
             ["transfer_category.transfer_category_id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["transfer_status_id"],
-            ["transfer_status.transfer_status_id"],
         ),
         sa.PrimaryKeyConstraint("transfer_id"),
         sa.UniqueConstraint("transfer_id"),

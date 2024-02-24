@@ -10,6 +10,14 @@ export const decimalFormatter = (params) => {
   }
   return params.value
 }
+export const dateFormatter = (params) => {
+  if (params.value != null) {
+    // Assuming params.value is a Date object, or can be converted to one
+    const date = new Date(params.value);
+    return date.toISOString().split('T')[0];
+  }
+  return params.value;
+}
 
 export const phoneNumberFormatter = (params) => {
   const phoneNumber = params?.value?.toString().replace(/\D/g, '') || ''

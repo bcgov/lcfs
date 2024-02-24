@@ -40,4 +40,12 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         'OrganizationAttorneyAddress', back_populates='organization')
     user_profiles = relationship('UserProfile', back_populates='organization')
     transactions = relationship('Transaction', back_populates='organization')
-    issuances = relationship('Issuance', back_populates='organization')
+
+    admin_adjustments = relationship('AdminAdjustment', back_populates='to_organization')
+    initiative_agreements = relationship('InitiativeAgreement', back_populates='to_organization')
+    transfers_sent = relationship('Transfer', 
+                              foreign_keys="[Transfer.from_organization_id]", 
+                              back_populates='from_organization')
+    transfers_received = relationship('Transfer', 
+                                  foreign_keys="[Transfer.to_organization_id]", 
+                                  back_populates='to_organization')

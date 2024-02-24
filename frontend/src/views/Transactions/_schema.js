@@ -1,25 +1,24 @@
-import { numberFormatter } from '@/utils/formatters'
-import { OrgStatusRenderer } from '@/utils/cellRenderers'
+import { numberFormatter, dateFormatter } from '@/utils/formatters'
+import { TransactionStatusRenderer } from '@/utils/cellRenderers'
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
-import { useOrganizationStatuses } from '@/hooks/useOrganization'
+import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 export const transactionsColDefs = (t) => [
-  { colId: 'txnId', field: 'txnId', headerName: t('txn:txnColLabels.txnId'), maxWidth: 800, flex: 1 },
-  { colId: 'compliancePeriod', field: 'compliancePeriod', headerName: t('txn:txnColLabels.compliancePeriod'), flex: 1 },
-  { colId: 'type', field: 'type', headerName: t('txn:txnColLabels.type'), flex: 1 },
-  { colId: 'complianceUnitsFrom', field: 'complianceUnitsFrom', headerName: t('txn:txnColLabels.complianceUnitsFrom'), flex: 1 },
-  { colId: 'complianceUnitsTo', field: 'complianceUnitsTo', headerName: t('txn:txnColLabels.complianceUnitsTo'), flex: 1 },
+  { colId: 'transaction_id', field: 'transaction_id', headerName: t('txn:txnColLabels.txnId'), maxWidth: 800, flex: 1 },
+  { colId: 'transaction_type', field: 'transaction_type', headerName: t('txn:txnColLabels.type'), flex: 1 },
+  { colId: 'from_organization', field: 'from_organization', headerName: t('txn:txnColLabels.organizationFrom'), flex: 1 },
+  { colId: 'to_organization', field: 'to_organization', headerName: t('txn:txnColLabels.organizationTo'), flex: 1 },
   {
-    colId: 'numberOfUnits',
-    field: 'numberOfUnits',
-    headerName: t('txn:txnColLabels.numberOfUnits'),
+    colId: 'quantity',
+    field: 'quantity',
+    headerName: t('txn:txnColLabels.quantity'),
     valueFormatter: numberFormatter,
     flex: 1
   },
   {
-    colId: 'valuePerUnit',
-    field: 'valuePerUnit',
-    headerName: t('txn:txnColLabels.valuePerUnit'),
+    colId: 'price_per_unit',
+    field: 'price_per_unit',
+    headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: numberFormatter,
     flex: 1
   },
@@ -27,19 +26,26 @@ export const transactionsColDefs = (t) => [
     colId: 'status',
     field: 'status',
     headerName: t('txn:txnColLabels.status'),
-    cellRenderer: OrgStatusRenderer,
+    cellRenderer: TransactionStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
     floatingFilterComponentParams: {
       suppressFilterButton: true,
       apiOptionField: 'status',
-      apiQuery: useOrganizationStatuses,
+      apiQuery: useTransactionStatuses,
       disableCloseOnSelect: false,
       multiple: false
     },
     suppressMenu: true,
     flex: 1
-  }
+  },
+  { 
+    colId: 'update_date', 
+    field: 'update_date', 
+    headerName: t('txn:txnColLabels.updateDate'), 
+    valueFormatter: dateFormatter,
+    flex: 1 
+  },
 ];
 
 export const defaultSortModel = [{ field: 'txnId', direction: 'asc' }]

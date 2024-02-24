@@ -10,15 +10,15 @@ class TransactionTypeEnum(str, Enum):
     transfer = "Transfer"
 
 class TransferStatusEnum(str, Enum):
-    draft = "Draft"
-    deleted = "Deleted"
-    sent = "Sent"
-    submitted = "Submitted"
-    recommended = "Recommended"
-    recorded = "Recorded"
-    refused = "Refused"
-    declined = "Declined"
-    rescinded = "Rescinded"
+    Draft = "Draft"
+    Deleted = "Deleted"
+    Sent = "Sent"
+    Submitted = "Submitted"
+    Recommended = "Recommended"
+    Recorded = "Recorded"
+    Refused = "Refused"
+    Declined = "Declined"
+    Rescinded = "Rescinded"
 
 class TransferStatusSchema(BaseModel):
     status: str

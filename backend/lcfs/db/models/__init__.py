@@ -47,7 +47,8 @@ from . import NotificationType
 from . import NotificationChannelSubscription
 from . import NotificationMessage
 from . import Transaction
-from . import TransactionType
+from . import TransactionView
+from . import TransactionStatusView
 from . import AdminAdjustment
 from . import AdminAdjustmentStatus
 from . import AdminAdjustmentHistory

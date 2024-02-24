@@ -12,14 +12,16 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     initiative_agreement_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the initiative_agreement")
     compliance_units = Column(BigInteger, comment="Compliance Units")
     transaction_effective_date = Column(DateTime, comment='Transaction effective date')
-    organization_id = Column(Integer, ForeignKey('organization.organization_id'))
+    to_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
     comment_id = Column(Integer, ForeignKey('comment.comment_id'))
+    current_status_id = Column(Integer, ForeignKey('initiative_agreement_status.initiative_agreement_status_id'))
 
-    organization = relationship('Organization', back_populates='initiative_agreements')
+    to_organization = relationship('Organization', back_populates='initiative_agreements')
     transaction = relationship('Transaction')
     comments = relationship('Comment', back_populates='initiative_agreement')
     initiative_agreement_history_records = relationship('InitiativeAgreementHistory', back_populates='initiative_agreement')
+    current_status = relationship('InitiativeAgreementStatus')
 
     def __repr__(self):
         return self.compliance_units

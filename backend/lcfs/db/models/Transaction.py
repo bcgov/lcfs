@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, String, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
-class Transaction(BaseModel,Auditable, EffectiveDates):
+class Transaction(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'transaction'
     __table_args__ = (UniqueConstraint('transaction_id'),
         {'comment': "Contains a list of all of the government to organization and Organization to Organization transaction."}
@@ -20,4 +20,3 @@ class Transaction(BaseModel,Auditable, EffectiveDates):
 
     def __repr__(self):
         return self.compliance_units
-

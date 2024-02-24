@@ -4,11 +4,12 @@
     "txnId": "Txn Id",
     "compliancePeriod": "Compliance period",
     "type": "Type",
-    "complianceUnitsFrom": "Compliance units from",
-    "complianceUnitsTo": "Compliance units to",
-    "numberOfUnits": "Number of units",
-    "valuePerUnit": "Value per unit",
-    "status": "Status"
+    "organizationFrom": "Compliance units from",
+    "organizationTo": "Compliance units to",
+    "quantity": "Number of units",
+    "pricePerUnit": "Value per unit",
+    "status": "Status",
+    "updateDate": "Latest Update"
   },
   "txnId": "Transaction ID",
   "noTxnsFound": "No transactions found",

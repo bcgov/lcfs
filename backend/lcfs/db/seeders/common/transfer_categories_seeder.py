@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.lcfs.db.models.TransferCategory import TransferCategory
+from lcfs.db.models.TransferCategory import TransferCategory
 
 logger = logging.getLogger(__name__)
 

@@ -38,16 +38,18 @@ export const Transactions = () => {
     overlayNoRowsTemplate: t('txn:noTxnsFound')
   }
   const getRowId = useCallback((params) => {
-    return params.data.name
+    return params.data.transaction_id + params.data.transaction_type
   }, [])
 
-  const defaultSortModel = [{ field: 'name', direction: 'asc' }]
+  const defaultSortModel = [{ field: 'create_date', direction: 'asc' }]
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
-    const { transactionType } = params.data
+    console.log(params)
+    const transactionType = params.data.transaction_type
+    console.log(transactionType)
     if(transactionType === 'Transfer') {
       navigate(
-        ROUTES.TRANSFERS_VIEW.replace(':transferId', params.data.transfer_id)
+        ROUTES.TRANSFERS_VIEW.replace(':transferId', params.data.transaction_id)
       )
     } else if (transactionType === 'Administrative Adjustment' ||
       transactionType === 'Initiative Agreement') {
@@ -64,9 +66,9 @@ export const Transactions = () => {
       await apiService.download('/transactions/export')
       isDownloadingTransactions(false)
     } catch (error) {
-      console.error('Error downloading organization information:', error)
+      console.error('Error downloading transactions information:', error)
       isDownloadingTransactions(false)
-      setAlertMessage('Failed to download organization information.')
+      setAlertMessage('Failed to download transactions information.')
       setAlertSeverity('error')
     }
   }
@@ -88,9 +90,9 @@ export const Transactions = () => {
         )}
       </div>
       <BCTypography variant="h5" mb={2} color="primary">
-        {t('org:title')}
+        {t('txn:title')}
       </BCTypography>
-      <OrganizationList gridRef={gridRef} />
+      {/* <OrganizationList gridRef={gridRef} /> */}
       <Box display={'flex'} gap={2} mb={2}>
         <Role roles={['Supplier', 'Transfer']}>
           <BCButton

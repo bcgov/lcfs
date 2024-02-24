@@ -13,15 +13,15 @@ async def seed_transfer_statuses(session):
     """
 
     transfer_statuses_to_seed = [
-        {"status": TransferStatusEnum.draft, "description": "Draft"},
-        {"status": TransferStatusEnum.deleted, "description": "Deleted"},
-        {"status": TransferStatusEnum.sent, "description": "Sent"},
-        {"status": TransferStatusEnum.submitted, "description": "Submitted"},
-        {"status": TransferStatusEnum.recommended, "description": "Recommended"},
-        {"status": TransferStatusEnum.recorded, "description": "Recorded"},
-        {"status": TransferStatusEnum.refused, "description": "Refused"},
-        {"status": TransferStatusEnum.declined, "description": "Declined"},
-        {"status": TransferStatusEnum.rescinded, "description": "Rescinded"}
+        {"status": TransferStatusEnum.Draft, "description": "Draft"},
+        {"status": TransferStatusEnum.Deleted, "description": "Deleted"},
+        {"status": TransferStatusEnum.Sent, "description": "Sent"},
+        {"status": TransferStatusEnum.Submitted, "description": "Submitted"},
+        {"status": TransferStatusEnum.Recommended, "description": "Recommended"},
+        {"status": TransferStatusEnum.Recorded, "description": "Recorded"},
+        {"status": TransferStatusEnum.Refused, "description": "Refused"},
+        {"status": TransferStatusEnum.Declined, "description": "Declined"},
+        {"status": TransferStatusEnum.Rescinded, "description": "Rescinded"}
     ]
 
     try:

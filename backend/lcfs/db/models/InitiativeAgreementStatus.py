@@ -3,10 +3,10 @@ from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 import enum
 
 class InitiativeAgreementStatusEnum(enum.Enum):
-    draft = "Draft" # Draft created by analyst
-    recommended = "Recommended" # Recommended by analyst
-    approved = "Approved"   # Approved by director
-    deleted = "Deleted" # Deleted by analyst
+    Draft = "Draft" # Draft created by analyst
+    Recommended = "Recommended" # Recommended by analyst
+    Approved = "Approved"   # Approved by director
+    Deleted = "Deleted" # Deleted by analyst
 
 class InitiativeAgreementStatus(BaseModel, Auditable, DisplayOrder):
 
