@@ -93,6 +93,7 @@ export const AddEditTransfer = () => {
     return convertObjectKeys(form)
   }
 
+  // mutation to create a draft transfer
   const {
     mutate: createDraft,
     isLoading: isCreatingDraft,
@@ -114,6 +115,8 @@ export const AddEditTransfer = () => {
       console.error('Error creating transfer:', error)
     }
   })
+
+  // mutation to update a draft transfer
   const {
     mutate: updateDraft,
     isLoading: isUpdatingDraft,
@@ -135,6 +138,9 @@ export const AddEditTransfer = () => {
       console.error('Error updating transfer:', error)
     }
   })
+
+  // mutation to update the status and comments of a transfer
+  // used in everything but draft transfers
   const {
     mutate: updateTransfer,
     isLoading: isUpdatingTransfer,
@@ -158,6 +164,7 @@ export const AddEditTransfer = () => {
     }
   })
 
+  // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {
     New: [
       { ...saveDraftButton, handler: createDraft },
@@ -178,7 +185,6 @@ export const AddEditTransfer = () => {
                 }
               }),
             buttonText: 'Delete Draft',
-            onClose: () => setModalData(null),
             text: 'Are you sure you want to delete this draft?'
           })
       },
