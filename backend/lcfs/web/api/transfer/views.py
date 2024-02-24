@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from typing import List
 from lcfs.db import dependencies
-from lcfs.web.api.transfer.schema import TransferCreate, TransferSchema, TransferSave
+from lcfs.web.api.transfer.schema import TransferCreate, TransferSchema, TransferUpdate
 from lcfs.web.api.transfer.services import TransferServices
 from lcfs.web.core.decorators import roles_required, view_handler
 
@@ -40,19 +40,20 @@ async def create_transfer(
     return await service.create_transfer(transfer_data)
 
 
-@router.put("/save", response_model=TransferSchema)
+@router.put("/{transfer_id}/draft", response_model=TransferSchema)
 @roles_required("SUPPLIER")
 @view_handler
-async def save_transfer(
+async def update_transfer_draft(
     request: Request,
-    transfer_data: TransferSave,
+    transfer_id: int,
+    transfer_data: TransferCreate,
     service: TransferServices = Depends()
 ):
     """Endpoint to update an existing transfer."""
-    return await service.save_transfer(transfer_data)
+    return await service.update_transfer_draft(transfer_id, transfer_data)
 
 
-@router.put("/update/{transfer_id}", response_model=TransferSchema)
+@router.put("/{transfer_id}", response_model=TransferSchema)
 @roles_required("SUPPLIER")
 @view_handler
 async def update_transfer(
@@ -62,4 +63,4 @@ async def update_transfer(
     service: TransferServices = Depends()
 ):
     """Endpoint to set an existing transfers status to 'Deleted'."""
-    return await service.delete_transfer(transfer_id)
+    return await service.update_transfer(transfer_id, transfer_data)

@@ -109,9 +109,18 @@ export const AddEditTransfer = () => {
     }
   })
 
+  const draftPayload = (form) => {
+    form.fromOrganizationId = parseInt(form.fromOrganizationId)
+    form.toOrganizationId = parseInt(form.toOrganizationId)
+    form.agreementDate = formatDateToISO(form.agreementDate)
+    return convertObjectKeys(form)
+  }
+
   const { mutate: createDraft, isLoading: isCreatingDraft } = useMutation({
-    mutationFn: async (convertedPayload) =>
-      await apiService.post('/transfers', convertedPayload),
+    mutationFn: async (formData) => {
+      const data = draftPayload(formData)
+      return await apiService.post('/transfers', data)
+    },
     onSuccess: () => {
       navigate(TRANSACTIONS, {
         state: {
@@ -125,8 +134,10 @@ export const AddEditTransfer = () => {
     }
   })
   const { mutate: updateDraft, isLoading: isUpdatingDraft } = useMutation({
-    mutationFn: async (convertedPayload) =>
-      await apiService.put(`/transfers`, convertedPayload),
+    mutationFn: async (formData) => {
+      const data = draftPayload(formData)
+      return await apiService.put(`/transfers/${transferId}/draft`, data)
+    },
     onSuccess: () => {
       navigate(TRANSACTIONS, {
         state: {
@@ -139,48 +150,45 @@ export const AddEditTransfer = () => {
       console.error('Error updating transfer:', error)
     }
   })
-  const { mutate: deleteDraft, isLoading: isDeletingDraft } = useMutation({
-    mutationFn: async () =>
-      await apiService.put(`/transfers/delete/${transferId}`),
-    onSuccess: () => {
+  const { mutate: updateTransfer, isLoading: isDeletingDraft } = useMutation({
+    mutationFn: async ({ formData, newStatus }) =>
+      await apiService.put(`/transfers/${transferId}`, {
+        comments: formData.comments,
+        transfer_status_id: newStatus
+      }),
+    onSuccess: (_, variables) => {
       navigate(TRANSACTIONS, {
         state: {
-          message: 'Draft transfer successfully deleted.',
+          message: variables.message.success,
           severity: 'success'
         }
       })
     },
-    onError: (error) => {
-      console.error('Error deleting transfer:', error)
+    onError: (error, variables) => {
+      console.error(variables.message.error, error)
     }
   })
 
-  const draftPayload = (form) => {
-    form.fromOrganizationId = parseInt(form.fromOrganizationId)
-    form.toOrganizationId = parseInt(form.toOrganizationId)
-    form.agreementDate = formatDateToISO(form.agreementDate)
-    return convertObjectKeys(form)
-  }
-
-  const submitDraft = () => {
-    console.log('submit')
-  }
-
   const buttonClusterConfig = {
     New: [
-      {
-        ...saveDraftButton,
-        handler: (form) => createDraft(draftPayload(form))
-      },
-      {
-        ...submitButton,
-        disabled: true
-      }
+      { ...saveDraftButton, handler: createDraft },
+      { ...submitButton, disabled: true }
     ],
     Draft: [
-      { ...deleteDraftButton, handler: deleteDraft },
-      { ...saveDraftButton, handler: (form) => saveDraft(draftPayload(form)) },
-      { ...submitButton, handler: submitDraft }
+      {
+        ...deleteDraftButton,
+        handler: (formData) =>
+          updateTransfer({
+            formData,
+            newStatus: 2,
+            message: {
+              success: 'Draft transfer successfully deleted.',
+              error: 'Error deleting transfer'
+            }
+          })
+      },
+      { ...saveDraftButton, handler: updateDraft },
+      { ...submitButton, handler: () => console.log('submit draft') }
     ],
     Sent: [],
     Rescinded: [],
@@ -246,12 +254,13 @@ export const AddEditTransfer = () => {
             <Comments />
 
             <SigningAuthority />
+
             <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
               <Link>
                 <BCButton
                   variant="outlined"
                   color="dark"
-                  onClick={() => console.log('Submitting form')}
+                  onClick={() => console.log('go back')}
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}

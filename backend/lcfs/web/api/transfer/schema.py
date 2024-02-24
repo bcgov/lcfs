@@ -84,12 +84,9 @@ class TransferCreate(BaseModel):
         from_attributes = True
 
 
-class TransferSave(TransferCreate):
-    transfer_id: int
-
-
-class TransferDelete(BaseModel):
-    transfer_id: int
+class TransferUpdate(BaseModel):
+    transfer_status_id: int
+    comments: Optional[str] = None
 
 
 class TransferHistory(BaseModel):

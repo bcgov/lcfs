@@ -11,7 +11,7 @@ from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Comment import Comment
 from lcfs.web.api.organization.repo import OrganizationRepository
 from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferSave
+from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
 
 logger = getLogger("transfer_service")
 
@@ -91,12 +91,12 @@ class TransferServices:
         return TransferSchema.model_validate(created_transfer)
 
     @service_handler
-    async def save_transfer(self, transfer_data: TransferSave) -> TransferSchema:
+    async def update_transfer_draft(self, transfer_id: int, transfer_data: TransferCreate) -> TransferSchema:
         '''Updates an existing transfer record with new data.'''
-        transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
+        transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
             raise DataNotFoundException(
-                f"Transfer with ID {transfer_data.transfer_id} not found")
+                f"Transfer with ID {transfer_id} not found")
 
         transfer.agreement_date = datetime.strptime(
             transfer_data.agreement_date, "%Y-%m-%d").date()
@@ -115,12 +115,17 @@ class TransferServices:
         return TransferSchema.model_validate(updated_transfer)
 
     @service_handler
-    async def delete_transfer(self, transfer_id: int) -> TransferSchema:
+    async def update_transfer(self, transfer_id: int, transfer_data: TransferUpdate) -> TransferSchema:
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
             raise DataNotFoundException(
                 f"Transfer with ID {transfer_id} not found")
-        transfer.transfer_status_id = 2
+        transfer.transfer_status_id = transfer_data.transfer_status_id
+        if transfer_data.comments:
+            if transfer.comments:
+                transfer.comments.comment = transfer_data.comments
+            else:
+                transfer.comments = Comment(comment=transfer_data.comments)
 
         updated_transfer = await self.repo.update_transfer(transfer)
         return TransferSchema.model_validate(updated_transfer)
