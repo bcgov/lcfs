@@ -11,13 +11,7 @@
 
 <body>
   <div id="root"></div>
-  <script type="module">
-    if (import.meta.env.MODE !== 'development') {
-      const script = document.createElement('script');
-      script.src = '/config.js';
-      document.body.appendChild(script);
-    }
-  </script>
+  <script type="module" src="/config.js"></script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
