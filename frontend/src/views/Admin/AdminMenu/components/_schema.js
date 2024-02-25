@@ -47,9 +47,10 @@ export const usersColumnDefs = (t) => [
       suppressFilterButton: true,
       apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
       // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
-      disableCloseOnSelect: true,
       params: "government_roles_only=true",
-      multiple: true
+      key: "admin-users",
+      disableCloseOnSelect: false,
+      multiple: false
     },
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle'
