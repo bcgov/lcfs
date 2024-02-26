@@ -99,6 +99,7 @@ export const Users = () => {
             defaultFilterModel={idirUserDefaultFilter}
             handleGridKey={handleGridKey}
             handleRowClicked={handleRowClicked}
+            enableResetButton={false}
             enableCopyButton={false}
           />
         </BCBox>

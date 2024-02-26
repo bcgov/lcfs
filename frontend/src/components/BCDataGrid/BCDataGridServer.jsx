@@ -311,7 +311,7 @@ BCDataGridServer.defaultProps = {
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   apiEndpoint: '/',
   defaultColDef: {},
-  enableResetButton: true,
+  enableResetButton: false,
   enableCopyButton: true,
   className: 'ag-theme-alpine'
 }

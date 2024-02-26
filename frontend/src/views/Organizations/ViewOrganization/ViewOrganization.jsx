@@ -300,6 +300,7 @@ export const ViewOrganization = () => {
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
+          enableResetButton={false}
         />
       </BCBox>
     </>
