@@ -39,7 +39,7 @@ const BCColumnSetFilter = (props) => {
 
   useEffect(() => {
     // if no data then wait for re-load
-    if (!optionsData || params !== props.params) return
+    if (!optionsData) return
     // if already loaded then disable re-load
     if (options === optionsData) return
     const optionsDataCopy = optionsData.map((option) => ({
