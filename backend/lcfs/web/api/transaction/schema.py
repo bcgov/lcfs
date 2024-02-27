@@ -41,10 +41,9 @@ class TransactionStatusSchema(TransactionStatusBase):
 
 
 class TransactionTypeEnum(str, Enum):
-    administrative_adjustment = "Administrative Adjustment"
-    initiative_agreement = "Initiative Agreement"
-    assessment = "Assessment"
-    transfer = "Transfer"
+    adjustment = "Adjustment"
+    reserve = "Reserve"
+    release = "Release"
 
 
 class TransactionTypeSchema(BaseModel):

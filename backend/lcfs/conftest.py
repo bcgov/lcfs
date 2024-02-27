@@ -27,6 +27,9 @@ from lcfs.settings import settings
 from lcfs.web.application import get_app
 from lcfs.db.seeders.seed_database import seed_database
 from lcfs.db.models.Role import RoleEnum
+from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.UserRole import UserRole
+from lcfs.db.models.Role import Role
 
 logging.getLogger('faker').setLevel(logging.INFO)
 
@@ -175,16 +178,40 @@ def role_enum_member(role_name):
     raise ValueError(f"Invalid role name: {role_name}")
 
 class MockAuthenticationBackend(AuthenticationBackend):
-    def __init__(self, user_roles: List[str]):
-        # Convert role names to RoleEnum members
-        self.user_roles = [role_enum_member(role) for role in user_roles]
+    def __init__(self, user_roles: List[RoleEnum]):
+        # Convert list of role names (strings) to RoleEnum members
+        self.user_roles_enum = [RoleEnum[role.upper()] for role in user_roles]
+        self.role_count = 0
 
     async def authenticate(self, request):
         # Simulate a user object based on the role
-        user = SimpleUser(username="testuser")
-        user.email = "test@test.com"
-        user.user_roles = self.user_roles
+        user = UserProfile(
+            user_profile_id=1,
+            keycloak_username="mockuser",
+            keycloak_email="test@test.com",
+            email="test@test.com",
+            first_name="Test",
+            last_name="User",
+            is_active=True
+            # Add other fields as necessary
+        )
+
+        # Create UserRole instances based on the RoleEnum members provided
+        user.user_roles = [
+            self.create_user_role(user, role_enum) for role_enum in self.user_roles_enum
+        ]
+
         return AuthCredentials(["authenticated"]), user
+
+    def create_user_role(self, user_profile, role_enum):
+        role = Role(
+            role_id=self.role_count,
+            name=role_enum, 
+            description=f"Mocked role for {role_enum.value}", 
+            is_government_role=role_enum.value in ['Government', 'Analyst', 'Administrator'])
+        user_role = UserRole(user_role_id=self.role_count, user_profile=user_profile, role=role)
+        self.role_count += 1
+        return user_role
 
 
 @pytest.fixture
