@@ -19,21 +19,23 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     quantity = Column(Integer, comment="Quantity of units")
     # compliance_period = Column(Integer, )
     comment_id = Column(Integer, ForeignKey('comment.comment_id'))
-    transfer_status_id = Column(Integer, ForeignKey('transfer_status.transfer_status_id'))
-    transfer_category_id = Column(Integer, ForeignKey('category.category_id'))
+    transfer_category_id = Column(Integer, ForeignKey('transfer_category.transfer_category_id'))
     signing_authority_declaration = Column(Boolean, default=False)
+    current_status_id = Column(Integer, ForeignKey('transfer_status.transfer_status_id'))
 
     transaction = relationship('Transaction')
-    transfer_status = relationship('TransferStatus')
-    transfer_category = relationship('Category')
+    transfer_category = relationship('TransferCategory')
     comments = relationship('Comment', back_populates='transfer')
     transfer_history_records = relationship('TransferHistory', back_populates='transfer')
+    current_status = relationship('TransferStatus')
 
     from_organization = relationship(
         'Organization', 
-        foreign_keys=[from_organization_id]
+        foreign_keys=[from_organization_id],
+        back_populates='transfers_sent'
     )
     to_organization = relationship(
         'Organization', 
-        foreign_keys=[to_organization_id]
+        foreign_keys=[to_organization_id],
+        back_populates='transfers_received'
     )

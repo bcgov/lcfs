@@ -2,42 +2,85 @@
 
 from typing import List, Dict, Any
 from fastapi import Depends
+from math import ceil
 
-from .repo import TransactionsRepository  # Adjust import path as needed
+from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
+from lcfs.db.models.TransactionView import TransactionView
+from lcfs.web.api.transaction.schema import TransactionStatusSchema, TransactionViewSchema
+from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+    apply_filter_conditions,
+    get_field_for_filter,
+    validate_pagination,
+)
 
 class TransactionsService:
-    def __init__(self, transactions_repo: TransactionsRepository = Depends()):
-        self.transactions_repo = transactions_repo
+    def __init__(
+        self, 
+        repo: TransactionRepository = Depends(TransactionRepository)
+    ) -> None:
+        self.repo = repo
+
+    def apply_transaction_filters(self, pagination, conditions):
+        """
+        Apply filters to the transactions query.
+
+        Args:
+            pagination (PaginationRequestSchema): The pagination object containing page and size information.
+            conditions (List[Condition]): The list of conditions to apply.
+
+        Returns:
+            List[Transactions]: The list of transactions after applying the filters.
+        """
+        for filter in pagination.filters:
+            filter_value = filter.filter
+            filter_option = filter.type
+            filter_type = filter.filterType
+            field = get_field_for_filter(TransactionView, filter.field)
+
+            conditions.append(
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type)
+            )
 
     @service_handler
-    async def get_combined_transactions_paginated(self, page: int = 1, size: int = 10) -> Dict[str, Any]:
+    async def get_transactions_paginated(self, pagination: PaginationRequestSchema = {}) -> List[TransactionViewSchema]:
         """
-        Fetches a combined paginated list of Transfers and Issuances, ordered by create_date.
-        Returns a structured response that includes the paginated list and pagination details.
+        Fetch transactions with filters, sorting, and pagination.
         """
-        combined_transactions = await self.transactions_repo.get_combined_transactions_paginated(page, size)
-        
-        # Example post-processing to fit a common schema or structure
-        processed_transactions = [
-            {
-                "type": transaction[0],  # 'Transfer' or 'Issuance'
-                "id": transaction[1],
-                "create_date": transaction[2].isoformat()  # Assuming create_date is a datetime object
-            } for transaction in combined_transactions
-        ]
-        
-        # Assuming you have a way to calculate total count for accurate pagination.
-        # This might require an additional repository method or a different approach.
-        total_count = len(processed_transactions)  # Placeholder for total count calculation
-        
-        # Construct and return the paginated response
+        conditions = []
+        pagination = validate_pagination(pagination)
+        if pagination.filters and len(pagination.filters) > 0:
+            self.apply_transaction_filters(pagination, conditions)
+
+        offset = (pagination.page - 1) * pagination.size if pagination.page > 0 else 0
+        limit = pagination.size
+
+        transactions, total_count = await self.repo.get_transactions_paginated(offset, limit, conditions, pagination.sortOrders)
+
+        if not transactions:
+            raise DataNotFoundException('Transactions not found')
+
         return {
-            "transactions": processed_transactions,
-            "pagination": {
-                "total": total_count,
-                "page": page,
-                "size": size,
-                "total_pages": (total_count // size) + (1 if total_count % size > 0 else 0),
-            }
+            "transactions": [TransactionViewSchema.model_validate(transaction) for transaction in transactions],
+            "pagination": PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=ceil(total_count / pagination.size),
+            )
         }
+
+    @service_handler
+    async def get_transaction_statuses(self) -> List[TransactionStatusSchema]:
+        '''handles fetching all transaction statuses'''
+        results = await self.repo.get_transaction_statuses()
+        statuses = [TransactionStatusSchema.model_validate(status) for status in results]
+
+        if len(statuses) == 0:
+            raise DataNotFoundException("No transaction statuses found")
+
+        return statuses

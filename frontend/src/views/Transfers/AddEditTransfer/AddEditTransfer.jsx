@@ -47,26 +47,27 @@ export const AddEditTransfer = () => {
    * is loaded. It fetches the transfer data using the provided `transferId`, and then resets the form
    * fields with the fetched data, formatting and handling null values appropriately.
    * In case of an error during the fetch operation, it logs the error to the console.
-  */
+   */
   useEffect(() => {
     const fetchTransferData = async () => {
       if (!transferId) return
-  
+
       try {
         const response = await apiService.get(`/transfers/${transferId}`)
         const transferData = response.data
-  
+
         // Populate the form with fetched transfer data
         methods.reset({
           fromOrganizationId: transferData.from_organization.organization_id,
           toOrganizationId: transferData.to_organization.organization_id,
           quantity: transferData.quantity,
           pricePerUnit: transferData.price_per_unit,
-          signingAuthorityDeclaration: transferData.signing_authority_declaration,
+          signingAuthorityDeclaration:
+            transferData.signing_authority_declaration,
           comments: transferData.comments.comment, // Assuming you only want the comment text
-          agreementDate: transferData.agreement_date ? 
-            new Date(transferData.agreement_date).toISOString().split('T')[0] : 
-            new Date().toISOString().split('T')[0], // Format date or use current date as fallback
+          agreementDate: transferData.agreement_date
+            ? new Date(transferData.agreement_date).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
         })
       } catch (error) {
         console.error('Error fetching transfer data:', error)
@@ -74,10 +75,10 @@ export const AddEditTransfer = () => {
     }
     if (transferId) fetchTransferData()
   }, [transferId])
-  
+
   /**
    * Fetch the list of registered external organizations
-  */ 
+   */
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
@@ -97,29 +98,28 @@ export const AddEditTransfer = () => {
   }, [])
 
   const { mutate, isLoading, isError } = useMutation({
-      mutationFn: (convertedPayload) => {
-        if (transferId) {
-          // If editing, use PUT request
-          return apiService.put(`/transfers`, convertedPayload)
-        } else {
-          // If adding new, use POST request
-          return apiService.post('/transfers', convertedPayload)
+    mutationFn: (convertedPayload) => {
+      if (transferId) {
+        // If editing, use PUT request
+        return apiService.put(`/transfers`, convertedPayload)
+      } else {
+        // If adding new, use POST request
+        return apiService.post('/transfers', convertedPayload)
+      }
+    },
+    onSuccess: (response) => {
+      // Redirect on success
+      navigate(TRANSACTIONS, {
+        state: {
+          message: 'Transfer successfully submitted.',
+          severity: 'success'
         }
-      },
-      onSuccess: (response) => {
-        // Redirect on success
-        navigate(TRANSACTIONS, {
-          state: {
-            message: 'Transfer successfully submitted.',
-            severity: 'success',
-          },
-        })
-      },
-      onError: (error) => {
-        console.error('Error submitting transfer:', error)
-      },
+      })
+    },
+    onError: (error) => {
+      console.error('Error submitting transfer:', error)
     }
-  )
+  })
 
   const handleSubmitForm = (form) => {
     form.fromOrganizationId = parseInt(form.fromOrganizationId)

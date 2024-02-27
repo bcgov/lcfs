@@ -120,7 +120,12 @@ export const idirUserDefaultFilter = [
 
 export const rolesColumnDefs = (t) => [
   { colId: 'name', field: 'name', headerName: t('admin:roleColLabels.role') },
-  { colId: 'description', field: 'description', headerName: t('admin:roleColLabels.description'), flex: 1 },
+  {
+    colId: 'description',
+    field: 'description',
+    headerName: t('admin:roleColLabels.description'),
+    flex: 1
+  },
   {
     colId: 'is_government_role',
     field: 'is_government_role',

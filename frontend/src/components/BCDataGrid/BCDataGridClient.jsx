@@ -101,7 +101,7 @@ const BCDataGridClient = ({
         onGridReady={onGridReady}
         gridOptions={{ ...defaultGridOptions, ...gridOptions }}
         getRowId={getRowId}
-        domLayout='autoHeight'
+        domLayout="autoHeight"
         loadingOverlayComponent={loadingOverlayComponent}
         {...others}
       />
