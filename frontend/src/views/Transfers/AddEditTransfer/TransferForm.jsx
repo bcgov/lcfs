@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { useFormContext, Controller } from 'react-hook-form'
 import * as Yup from 'yup'
 import PropTypes from 'prop-types'
-import { Box, Typography, Button } from '@mui/material'
+import { Box, Typography } from '@mui/material'
+import BCButton from '@/components/BCButton'
 import AgreementDate from './components/AgreementDate'
 import SigningAuthority from './components/SigningAuthority'
 import Comments from './components/Comments'
 import TransferDetails from './components/TransferDetails'
-
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // Calculate total value based on quantity and price per unit
 const calculateTotalValue = (quantity, pricePerUnit) => {
   const quantityNum = parseFloat(quantity)
@@ -88,19 +90,25 @@ const TransferForm = ({ currentOrg, organizations }) => {
       <AgreementDate register={register} errors={errors} maxDate={maxDate} />
 
       <Comments register={register} />
-      
+
       <SigningAuthority register={register} errors={errors} />
 
       {/* Save Draft Button */}
       <Box mt={2} display="flex" justifyContent="flex-end">
-        <Button
+        <BCButton
           type="submit"
           variant="contained"
+          size="medium"
           color="primary"
-          onClick={() => console.log('Submitting form')}
+          data-test="saveOrganization"
+          sx={{ ml: 2 }}
+          data-testid="saveOrganization"
+          startIcon={
+            <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+          }
         >
-          Save Draft
-        </Button>
+          <Typography variant="button">Save Draft</Typography>
+        </BCButton>
       </Box>
     </>
   )

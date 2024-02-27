@@ -28,6 +28,9 @@
     "description": "Description"
   },
   "errMsg": "Error occurred. Please retry. For ongoing issues, contact support.",
+  "mngGovUsrsLabel": "Manage government users",
+  "addEditOrgsLabel": "Add/edit fuel suppliers",
+  "usrActivity": "User activity",
   "userForm": {
     "firstName": "First name",
     "lastName": "Last name",

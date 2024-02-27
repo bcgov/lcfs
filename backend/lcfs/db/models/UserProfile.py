@@ -1,4 +1,4 @@
-from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
+from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
 from lcfs.db.base import Auditable, BaseModel
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
