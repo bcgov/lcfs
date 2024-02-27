@@ -27,7 +27,7 @@ class TransferRepository:
         query = select(Transfer).options(
             selectinload(Transfer.from_organization),
             selectinload(Transfer.to_organization),
-            selectinload(Transfer.transfer_status),
+            selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
             selectinload(Transfer.comments)
         )
@@ -55,7 +55,7 @@ class TransferRepository:
         query = select(Transfer).options(
             selectinload(Transfer.from_organization),
             selectinload(Transfer.to_organization),
-            selectinload(Transfer.transfer_status),
+            selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
             selectinload(Transfer.comments)
         ).where(Transfer.transfer_id == transfer_id)
@@ -83,7 +83,7 @@ class TransferRepository:
     async def get_transfer_category(self, transfer_category_id: int) -> TransferStatus:
         '''Fetch a single category by category id from the database'''
         return await self.db.scalar(
-            select(TransferCategory).where(TransferCategory.category_id == transfer_category_id)
+            select(TransferCategory).where(TransferCategory.transfer_category_id == transfer_category_id)
         )
 
     @repo_handler

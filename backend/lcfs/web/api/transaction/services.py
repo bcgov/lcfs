@@ -47,7 +47,7 @@ class TransactionsService:
             )
 
     @service_handler
-    async def get_transactions(self, pagination: PaginationRequestSchema = {}) -> List[TransactionViewSchema]:
+    async def get_transactions_paginated(self, pagination: PaginationRequestSchema = {}) -> List[TransactionViewSchema]:
         """
         Fetch transactions with filters, sorting, and pagination.
         """

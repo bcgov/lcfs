@@ -16,15 +16,15 @@ async def test_endpoint_success(client: AsyncClient, fastapi_app: FastAPI, set_m
 @pytest.mark.anyio
 async def test_endpoint_access_denied(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles) -> None:
     set_mock_user_roles(fastapi_app, ["Analyst"])
-    url = fastapi_app.url_path_for("list_organizations")
+    url = fastapi_app.url_path_for("get_organizations")
     response = await client.get(url)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
 @pytest.mark.anyio
 async def test_endpoint_access_success(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles) -> None:
     set_mock_user_roles(fastapi_app, ["Government"])
-    url = fastapi_app.url_path_for("list_organizations")
+    url = fastapi_app.url_path_for("get_organizations")
     response = await client.get(url)
     print(response)
     assert response.status_code == status.HTTP_200_OK

@@ -64,8 +64,6 @@ class TransactionRepository:
         Returns:
             List[TransactionStatusView]: A list of TransactionStatusView objects containing the basic transaction status details.
         """
-        query = select(TransactionStatusView).distinct()
-        print("QUERYQUERY")
-        print(query)
+        query = select(TransactionStatusView).order_by(asc(TransactionStatusView.status)).distinct()
         status_results = await self.db.execute(query)
         return status_results.scalars().all()

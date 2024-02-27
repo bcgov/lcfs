@@ -51,7 +51,7 @@ class TransferSchema(BaseModel):
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[TransferCommentSchema] = None
-    transfer_status: TransferStatusSchema
+    current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
 
     class Config:
