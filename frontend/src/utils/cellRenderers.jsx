@@ -1,5 +1,6 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
+import { roles } from '@/constants/roles'
 import { Stack } from '@mui/material'
 
 export const StatusRenderer = (props) => {
@@ -75,7 +76,27 @@ export const RoleRenderer = (props) => {
       flexWrap="wrap"
       key={props.data.user_profile_id}
     >
-      {props.data.roles.map((role) => (
+      {props.data.roles
+        .filter((r) => r.name !== roles.government && r.name !== roles.supplier)
+        .map((role) => (
+          <BCBadge
+            key={role.role_id}
+            sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
+            badgeContent={role.name}
+            color={role.is_government_role ? 'primary' : 'secondary'}
+            variant="outlined"
+            size="md"
+          />
+        ))}
+    </Stack>
+  )
+}
+
+export const RoleSpanRenderer = (props) => (
+  <>
+    {props.data.roles
+      .filter((r) => r.name !== roles.government && r.name !== roles.supplier)
+      .map((role) => (
         <BCBadge
           key={role.role_id}
           sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
@@ -85,21 +106,5 @@ export const RoleRenderer = (props) => {
           size="md"
         />
       ))}
-    </Stack>
-  )
-}
-
-export const RoleSpanRenderer = (props) => (
-  <>
-    {props.data.roles.map((role) => (
-      <BCBadge
-        key={role.role_id}
-        sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
-        badgeContent={role.name}
-        color={role.is_government_role ? 'primary' : 'secondary'}
-        variant="outlined"
-        size="md"
-      />
-    ))}
   </>
 )

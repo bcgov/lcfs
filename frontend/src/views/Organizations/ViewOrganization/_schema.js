@@ -42,6 +42,7 @@ export const organizationsColDefs = (t) => [
       suppressFilterButton: true,
       apiOptionField: 'status',
       apiQuery: useOrganizationStatuses,
+      key: "org-status",
       disableCloseOnSelect: false,
       multiple: false
     },
@@ -58,6 +59,10 @@ export const getUserColumnDefs = (t) => {
         suppressMenu: true,
         floatingFilter: false
       }
+    } else if (colDef.field === 'role') {
+      // pick only supplier roles
+      colDef.floatingFilterComponentParams.params = "government_roles_only=false"
+      colDef.floatingFilterComponentParams.key = "organization-users"
     }
     return colDef
   })

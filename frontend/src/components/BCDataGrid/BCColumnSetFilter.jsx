@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useState, useEffect } from 'react'
+import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import PropTypes from 'prop-types'
 import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
@@ -8,11 +8,12 @@ const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
 const checkedIcon = <CheckBoxIcon fontSize="small" />
 
 const BCColumnSetFilter = forwardRef((props, ref) => {
+  const { apiQuery, params, key } = props
   const { columnWidth } = props.column.colDef
   const [options, setOptions] = useState([])
-  const { data: optionsData, isLoading: optionsIsLoading } = props.apiQuery()
-
   const [currentValue, setCurrentValue] = useState(null)
+  // make api call to retrieve list
+  const { data: optionsData, isLoading: optionsIsLoading } = apiQuery(params)
 
   // expose AG Grid Filter Lifecycle callbacks
   useImperativeHandle(ref, () => {
@@ -27,7 +28,6 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
       }
     }
   })
-
   const onInputBoxChanged = (event, input) => {
     if (event.target.value === '') {
       // Remove the filter
@@ -54,7 +54,7 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
     // if no data then wait for re-load
     if (!optionsData) return
     // if already loaded then disable re-load
-    if (options.length > 0) return
+    if (options === optionsData) return
     const optionsDataCopy = optionsData.map((option) => ({
       name: option[props.apiOptionField ? props.apiOptionField : 'name']
     }))
@@ -64,6 +64,7 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
 
   return (
     <Autocomplete
+      key={key}
       multiple={props.multiple}
       disableCloseOnSelect={props.disableCloseOnSelect}
       onChange={onInputBoxChanged}
@@ -111,7 +112,7 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
           className="ag-text-field ag-input-field auto-select-filter"
           role="presentation"
           {...params}
-          label=""
+          label="Select"
           value={currentValue}
           variant="outlined"
           size="small"
@@ -128,10 +129,11 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
 BCColumnSetFilter.displayName = 'BCColumnSetFilter'
 
 BCColumnSetFilter.defaultProps = {
-  apiQuery: () => ({ data: [], isLoading: false }),
+  // apiQuery: () => ({ data: [], isLoading: false }),
   apiOptionField: 'name',
   multiple: false,
-  disableCloseOnSelect: false
+  disableCloseOnSelect: false,
+  key: 'my-ag-grid-column-filter-key'
 }
 
 BCColumnSetFilter.propTypes = {
@@ -141,7 +143,9 @@ BCColumnSetFilter.propTypes = {
   apiOptionField: PropTypes.string.isRequired, // field name of the option in the data object. For above static data 'name' is the option field
   column: PropTypes.object.isRequired, // AG Grid column object. not required to pass explicitly
   parentFilterInstance: PropTypes.func.isRequired, // AG Grid Filter Lifecycle callback. not required to pass explicitly
-  multiple: PropTypes.bool,
+  multiple: PropTypes.bool, // ability to select multiple options.
+  params: PropTypes.any, // any parameters that needs to be passed to apiQuery (React Query).
+  key: PropTypes.string, // unique key to re-render filter component
   disableCloseOnSelect: PropTypes.bool
 }
 

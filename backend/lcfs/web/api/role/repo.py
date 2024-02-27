@@ -1,28 +1,36 @@
 from logging import getLogger
 from typing import List
 
-from sqlalchemy import and_, func, select
+from fastapi import Depends
+from lcfs.db.dependencies import get_async_db_session
+
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from lcfs.web.api.role.schema import RoleSchema
-from lcfs.db.models.Role import Role
+from lcfs.db.models.Role import Role, RoleEnum
 
 logger = getLogger("role")
 
 
 class RoleRepository:
-    def __init__(self, session: AsyncSession, request: Request = None):
+    def __init__(
+        self,
+        session: AsyncSession = Depends(get_async_db_session),
+        request: Request = None,
+    ):
         self.session = session
         self.request = request
 
-    async def get_all_roles(self, government_roles_only) -> List[RoleSchema]:
+    async def get_roles(self, government_roles_only) -> List[RoleSchema]:
         logger.info("Getting all roles from repository")
+        # exclude "Government & Supplier Roles"
+        exclude_roles = [RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER]
         conditions = []
         if government_roles_only is not None:
-            conditions.append(
-                func.lower(Role.is_government_role) == government_roles_only.lower()
-            )
+            conditions.append(Role.name.not_in(exclude_roles))
+            conditions.append(Role.is_government_role == government_roles_only)
 
         results = await self.session.execute(
             select(Role)
