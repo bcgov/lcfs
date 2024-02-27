@@ -193,7 +193,6 @@ class MockAuthenticationBackend(AuthenticationBackend):
             first_name="Test",
             last_name="User",
             is_active=True
-            # Add other fields as necessary
         )
 
         # Create UserRole instances based on the RoleEnum members provided
