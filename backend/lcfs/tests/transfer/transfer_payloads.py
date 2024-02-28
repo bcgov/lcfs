@@ -26,7 +26,7 @@ transfer_create_payload_2 = TransferCreate(
 )
 
 # update payloads
-transfer_update_payload = TransferUpdate(
+transfer_update_payload = TransferCreate(
     transfer_id=1,
     from_organization_id=1,
     to_organization_id=3,
@@ -37,7 +37,7 @@ transfer_update_payload = TransferUpdate(
     comments="Initial Transfer"
 )
 
-transfer_update_payload_2 = TransferUpdate(
+transfer_update_draft_payload = TransferCreate(
     transfer_id=2,
     from_organization_id=1,
     to_organization_id=2,
@@ -46,6 +46,11 @@ transfer_update_payload_2 = TransferUpdate(
     price_per_unit=4.0,
     signing_authority_declaration=True,
     comments="Initial Transfer"
+)
+
+transfer_update_payload_2 = TransferUpdate(
+    comments="Initial Transfer",
+    current_status_id=1,
 )
 
 # transfer orm models
@@ -72,3 +77,15 @@ transfer_orm_model_2 = Transfer(
     price_per_unit=2.0,
     signing_authority_declaration=True
 )
+
+agreement_date = datetime.strptime("2024-02-02", "%Y-%m-%d").date()
+transfer_orm_fields = {
+    "from_organization_id": 2,
+    "to_organization_id": 1,
+    "current_status_id": 1,
+    "transfer_category_id": 1,
+    "agreement_date": agreement_date,
+    "quantity": 20,
+    "price_per_unit": 2.0,
+    "signing_authority_declaration": True
+}

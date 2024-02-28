@@ -40,7 +40,7 @@ async def create_transfer(
     return await service.create_transfer(transfer_data)
 
 
-@router.put("/{transfer_id}/draft", response_model=TransferSchema)
+@router.put("/{transfer_id}/draft", response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @roles_required("SUPPLIER")
 @view_handler
 async def update_transfer_draft(
@@ -53,7 +53,7 @@ async def update_transfer_draft(
     return await service.update_transfer_draft(transfer_id, transfer_data)
 
 
-@router.put("/{transfer_id}", response_model=TransferSchema)
+@router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @roles_required("SUPPLIER")
 @view_handler
 async def update_transfer(
