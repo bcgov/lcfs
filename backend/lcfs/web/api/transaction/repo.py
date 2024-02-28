@@ -105,13 +105,10 @@ class TransactionRepository:
         """
         reserved_balance = await self.db.scalar(
             select(
-                (func.sum(case(
+                func.sum(case(
                     (Transaction.transaction_action == TransactionActionEnum.Reserved, Transaction.compliance_units),
                     else_=0
-                )) - func.sum(case(
-                    (Transaction.transaction_action == TransactionActionEnum.Released, Transaction.compliance_units),
-                    else_=0
-                ))).label('reserved_balance')
+                )).label('reserved_balance')
             ).where(Transaction.organization_id == organization_id)
         )
         return reserved_balance or 0
@@ -127,22 +124,17 @@ class TransactionRepository:
         Returns:
             int: The available balance of compliance units for the specified organization. Returns 0 if no balance is calculated.
         """
-        available_balance_query = select(
-            (func.sum(case(
-                (Transaction.transaction_action == TransactionActionEnum.Adjustment, Transaction.compliance_units),
-                else_=0
-            )) - (
-                func.sum(case(
-                    (Transaction.transaction_action == TransactionActionEnum.Reserved, Transaction.compliance_units),
-                    else_=0
-                )) - func.sum(case(
-                    (Transaction.transaction_action == TransactionActionEnum.Released, Transaction.compliance_units),
-                    else_=0
-                ))
-            )).label('available_balance')
-        ).where(Transaction.organization_id == organization_id)
-
-        available_balance = await self.db.scalar(available_balance_query)
+        available_balance = await self.db.scalar(
+             select(
+                 (func.sum(case(
+                     (Transaction.transaction_action == TransactionActionEnum.Adjustment, Transaction.compliance_units),
+                     else_=0
+                 )) - func.sum(case(
+                     (Transaction.transaction_action == TransactionActionEnum.Reserved, Transaction.compliance_units),
+                     else_=0
+                 ))).label('available_balance')
+             ).where(Transaction.organization_id == organization_id)
+         )
         return available_balance or 0
 
     @repo_handler
