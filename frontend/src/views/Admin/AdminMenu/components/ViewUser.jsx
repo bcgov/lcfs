@@ -19,6 +19,7 @@ import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { ROUTES } from '@/constants/routes'
 import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
+import { Role } from '@/components/Role'
 
 export const ViewUser = () => {
   const { t } = useTranslation(['common', 'admin'])
@@ -66,13 +67,15 @@ export const ViewUser = () => {
         <>
           <BCTypography variant="h5" color="primary" mb={1}>
             {data.first_name + ' ' + data.last_name}&nbsp;
-            <IconButton
-              aria-label="edit"
-              color="primary"
-              onClick={handleEditClick}
-            >
-              <EditIcon />
-            </IconButton>
+            <Role roles={[roles.administrator]}>
+              <IconButton
+                aria-label="edit"
+                color="primary"
+                onClick={handleEditClick}
+              >
+                <EditIcon />
+              </IconButton>
+            </Role>
           </BCTypography>
           <Stack direction="column" spacing={0.5} mb={2}>
             <BCTypography variant="body4">

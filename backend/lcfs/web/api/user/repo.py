@@ -190,11 +190,11 @@ class UserRepository:
                 user_roles_to_keep.remove(user_role)
         user.user_roles = user_roles_to_keep
 
-    @cache(
-        expire=3600 * 24,
-        key_builder=lcfs_cache_key_builder,
-        namespace="users",
-    )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
+    # @cache(
+    #     expire=3600 * 24,
+    #     key_builder=lcfs_cache_key_builder,
+    #     namespace="users",
+    # )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
     @repo_handler
     async def get_users_paginated(
         self,

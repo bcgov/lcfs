@@ -69,8 +69,11 @@ export const AddEditUser = ({ userType }) => {
   const { handleSubmit, control, setValue, watch, reset } = form
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
-    () => (hasRoles(roles.supplier) ? bceidTextFields(t) : idirTextFields(t)),
-    [t, hasRoles]
+    () =>
+      hasRoles(roles.supplier) || orgName
+        ? bceidTextFields(t)
+        : idirTextFields(t),
+    [hasRoles, orgName, t]
   )
   const status = watch('status')
   const readOnly = watch('readOnly')
@@ -311,7 +314,7 @@ export const AddEditUser = ({ userType }) => {
                   label="Status"
                   options={statusOptions(t)}
                 />
-                {hasRoles(roles.supplier) ? (
+                {hasRoles(roles.supplier) || orgName ? (
                   <BCeIDSpecificRoleFields
                     form={form}
                     disabled={disabled}

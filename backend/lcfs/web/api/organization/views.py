@@ -29,7 +29,7 @@ get_async_db = dependencies.get_async_db_session
     response_model=UsersSchema,
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Supplier")
+@roles_required("Supplier", "Government")
 @view_handler
 async def get_org_users(
     request: Request,

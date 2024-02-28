@@ -73,7 +73,7 @@ async def export_users(
 
 
 @router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government", "Supplier")
+@roles_required("Government")
 @view_handler
 async def get_users(
     request: Request,
@@ -130,7 +130,7 @@ async def get_user_by_id(
 
 
 @router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def create_user(
     request: Request,
@@ -147,7 +147,7 @@ async def create_user(
 
 
 @router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def update_user(
     request: Request,
@@ -165,7 +165,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def delete_user(
     request: Request,
