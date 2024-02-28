@@ -149,7 +149,7 @@ export const AddEditTransfer = () => {
     mutationFn: async ({ formData, newStatus }) =>
       await apiService.put(`/transfers/${transferId}`, {
         comments: formData.comments,
-        transfer_status_id: newStatus
+        current_status_id: newStatus
       }),
     onSuccess: (_, variables) => {
       navigate(TRANSACTIONS, {
@@ -240,7 +240,7 @@ export const AddEditTransfer = () => {
           <ProgressBreadcrumb
             steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
             currentStep={
-              transferId ? transferData?.transfer_status.status : null
+              transferId ? transferData?.current_status.status : null
             }
           />
         </BCBox>
@@ -277,7 +277,7 @@ export const AddEditTransfer = () => {
                 </BCButton>
               </Link>
               {buttonClusterConfig[
-                transferId ? transferData?.transfer_status.status : 'New'
+                transferId ? transferData?.current_status.status : 'New'
               ]?.map((config) => (
                 <BCButton
                   key={config.label}

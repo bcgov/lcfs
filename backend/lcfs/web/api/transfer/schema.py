@@ -85,7 +85,7 @@ class TransferCreate(BaseModel):
 
 
 class TransferUpdate(BaseModel):
-    transfer_status_id: int
+    current_status_id: int
     comments: Optional[str] = None
 
 

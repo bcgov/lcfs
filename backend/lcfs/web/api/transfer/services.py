@@ -120,7 +120,7 @@ class TransferServices:
         if not transfer:
             raise DataNotFoundException(
                 f"Transfer with ID {transfer_id} not found")
-        transfer.transfer_status_id = transfer_data.transfer_status_id
+        transfer.current_status_id = transfer_data.current_status_id
         if transfer_data.comments:
             if transfer.comments:
                 transfer.comments.comment = transfer_data.comments
