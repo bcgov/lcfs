@@ -124,7 +124,7 @@ export const Transactions = () => {
           dataTest="download-transactions-button"
         />
       </Box>
-      <BCBox component="div" sx={{ height: '36rem', width: '100%' }}>
+      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={'transactions/'}

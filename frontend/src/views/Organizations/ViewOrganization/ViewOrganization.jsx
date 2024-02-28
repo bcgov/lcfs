@@ -211,30 +211,35 @@ export const ViewOrganization = () => {
         {showActive ? (
           <>
             <BCBox component="div">
-              <BCButton
-                variant="contained"
-                size="small"
-                color="primary"
-                sx={{
-                  textTransform: 'none',
-                  marginRight: '8px',
-                  marginBottom: '8px'
-                }}
-                startIcon={
-                  <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-                }
-                onClick={() =>
-                  !isCurrentUserLoading && hasRoles(roles.government)
-                    ? navigate(
-                        ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
-                      )
-                    : navigate(ROUTES.ORGANIZATION_ADDUSER)
-                }
-              >
-                <BCTypography variant="button">
-                  {t('org:newUsrBtn')}
-                </BCTypography>
-              </BCButton>
+              <Role roles={[roles.administrator, roles.manage_users]}>
+                <BCButton
+                  variant="contained"
+                  size="small"
+                  color="primary"
+                  sx={{
+                    textTransform: 'none',
+                    marginRight: '8px',
+                    marginBottom: '8px'
+                  }}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faCirclePlus}
+                      className="small-icon"
+                    />
+                  }
+                  onClick={() =>
+                    !isCurrentUserLoading && hasRoles(roles.government)
+                      ? navigate(
+                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                        )
+                      : navigate(ROUTES.ORGANIZATION_ADDUSER)
+                  }
+                >
+                  <BCTypography variant="button">
+                    {t('org:newUsrBtn')}
+                  </BCTypography>
+                </BCButton>
+              </Role>
               <BCButton
                 variant="outlined"
                 size="small"

@@ -18,6 +18,8 @@ import { useTranslation } from 'react-i18next'
 // Services
 import { DownloadButton } from '@/components/DownloadButton'
 import { useApiService } from '@/services/useApiService'
+import { roles } from '@/constants/roles'
+import { Role } from '@/components/Role'
 
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -102,17 +104,21 @@ export const Organizations = () => {
         flexWrap="wrap"
         m={2}
       >
-        <BCButton
-          variant="contained"
-          size="small"
-          color="primary"
-          startIcon={
-            <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-          }
-          onClick={() => navigate(ROUTES.ORGANIZATIONS_ADD)}
-        >
-          <BCTypography variant="subtitle2">{t('org:newOrgBtn')}</BCTypography>
-        </BCButton>
+        <Role roles={[roles.administrator]}>
+          <BCButton
+            variant="contained"
+            size="small"
+            color="primary"
+            startIcon={
+              <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+            }
+            onClick={() => navigate(ROUTES.ORGANIZATIONS_ADD)}
+          >
+            <BCTypography variant="subtitle2">
+              {t('org:newOrgBtn')}
+            </BCTypography>
+          </BCButton>
+        </Role>
         <DownloadButton
           onDownload={handleDownloadOrgs}
           isDownloading={isDownloadingOrgs}

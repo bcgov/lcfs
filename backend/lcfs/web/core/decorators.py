@@ -40,7 +40,7 @@ def roles_required(*required_roles):
                                  for role in required_roles}
 
             # Check if user has all the required roles
-            if not required_role_set.issubset(user_roles):
+            if not (user_roles & required_role_set):
                 raise HTTPException(
                     status_code=403, detail="Insufficient permissions")
 

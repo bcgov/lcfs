@@ -115,7 +115,7 @@ async def get_current_user(
 
 
 @router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Administrator")
+@roles_required("Government")
 @view_handler
 async def get_user_by_id(
     request: Request,
