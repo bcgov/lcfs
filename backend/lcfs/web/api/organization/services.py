@@ -24,8 +24,10 @@ from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
 from lcfs.db.models.Organization import Organization
+from lcfs.db.models.Transaction import TransactionActionEnum
 
 from .repo import OrganizationRepository
+from lcfs.web.api.transaction.repo import TransactionRepository
 from .schema import (
     OrganizationTypeSchema,
     OrganizationSchema,
@@ -42,10 +44,12 @@ class OrganizationServices:
     def __init__(
         self,
         request: Request = None,
-        repo: OrganizationRepository = Depends(OrganizationRepository)
+        repo: OrganizationRepository = Depends(OrganizationRepository),
+        transaction_repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
+        self.request = request,
         self.repo = repo
-        self.request = request
+        self.transaction_repo = transaction_repo
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -334,3 +338,91 @@ class OrganizationServices:
             raise DataNotFoundException("No organization statuses found")
 
         return statuses
+
+    @service_handler
+    async def calculate_total_balance(self, organization_id: int) -> int:
+        """
+        Calculates the total balance for a given organization.
+
+        Args:
+            organization_id (int): The ID of the organization.
+
+        Returns:
+            int: The total balance of the organization.
+        """
+        total_balance = await self.transaction_repo.calculate_total_balance(organization_id)
+        return total_balance
+
+    @service_handler
+    async def calculate_reserved_balance(self, organization_id: int) -> int:
+        """
+        Calculates the reserved balance for a given organization.
+
+        Args:
+            organization_id (int): The ID of the organization.
+
+        Returns:
+            int: The reserved balance of the organization.
+        """
+        reserved_balance = await self.transaction_repo.calculate_reserved_balance(organization_id)
+        return reserved_balance
+
+    @service_handler
+    async def calculate_available_balance(self, organization_id: int) -> int:
+        """
+        Calculates the available balance for a given organization by subtracting the reserved balance from the total balance.
+
+        Args:
+            organization_id (int): The ID of the organization.
+
+        Returns:
+            int: The available balance of the organization.
+        """
+        available_balance = await self.transaction_repo.calculate_available_balance(organization_id)
+        return available_balance
+
+    @service_handler
+    async def adjust_balance(
+        self,
+        transaction_action: TransactionActionEnum,
+        compliance_units: int,
+        organization_id: int
+    ):
+        """
+        Adjusts an organization's balance based on the transaction action.
+
+        Validates the transaction against the organization's current balances before proceeding.
+        It raises an error if the requested action violates balance constraints (e.g., attempting to reserve more than the available balance).
+
+        Args:
+            transaction_action (TransactionActionEnum): The type of balance adjustment (Adjustment, Reserved, Released).
+            compliance_units (int): The number of compliance units involved in the transaction.
+            organization_id (int): The ID of the organization whose balance is being adjusted.
+
+        Raises:
+            ValueError: If the transaction violates balance constraints.
+        """
+        if compliance_units == 0:
+            raise ValueError("Compliance units cannot be zero.")
+
+        # Retrieve balances
+        available_balance = await self.calculate_available_balance(organization_id)
+        reserved_balance = await self.calculate_reserved_balance(organization_id)
+
+        # Check constraints based on transaction action
+        if transaction_action == TransactionActionEnum.Reserved:
+            if compliance_units > available_balance:
+                raise ValueError("Reserve amount cannot exceed available balance.")
+        elif transaction_action == TransactionActionEnum.Released:
+            if compliance_units > reserved_balance:
+                raise ValueError("Release amount cannot exceed reserved balance.")
+        elif transaction_action == TransactionActionEnum.Adjustment and compliance_units < 0:
+            if abs(compliance_units) > available_balance:
+                raise ValueError("Cannot decrement available balance below zero.")
+
+        # Create a new transaction record in the database
+        await self.transaction_repo.create_transaction(
+            transaction_action,
+            compliance_units,
+            organization_id
+        )
