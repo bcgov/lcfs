@@ -73,7 +73,7 @@ async def export_users(
 
 
 @router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government", "Supplier")
+@roles_required("Government")
 @view_handler
 async def get_users(
     request: Request,
