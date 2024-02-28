@@ -15,6 +15,7 @@ from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, Transfe
 
 logger = getLogger("transfer_service")
 
+
 class TransferServices:
     def __init__(
         self,
@@ -42,7 +43,8 @@ class TransferServices:
         '''Fetches a single transfer by its ID and converts it to a Pydantic model.'''
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
-            raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
+            raise DataNotFoundException(
+                f"Transfer with ID {transfer_id} not found")
 
         return TransferSchema.model_validate(transfer)
 
@@ -63,7 +65,8 @@ class TransferServices:
             raise DataNotFoundException("One or more organizations not found")
 
         # Create a new Comment instance
-        new_comment = Comment(comment=transfer_data.comments) if transfer_data.comments else None
+        new_comment = Comment(
+            comment=transfer_data.comments) if transfer_data.comments else None
 
         status = await self.repo.get_transfer_status(transfer_status_id=1)
         category = await self.repo.get_transfer_category(transfer_category_id=1)
@@ -71,7 +74,8 @@ class TransferServices:
         transfer_model = Transfer(
             from_organization=from_org,
             to_organization=to_org,
-            agreement_date=datetime.strptime(transfer_data.agreement_date, "%Y-%m-%d").date(),
+            agreement_date=datetime.strptime(
+                transfer_data.agreement_date, "%Y-%m-%d").date(),
             quantity=transfer_data.quantity,
             price_per_unit=transfer_data.price_per_unit,
             signing_authority_declaration=transfer_data.signing_authority_declaration,
@@ -87,18 +91,36 @@ class TransferServices:
         return TransferSchema.model_validate(created_transfer)
 
     @service_handler
-    async def update_transfer(self, transfer_data: TransferUpdate) -> TransferSchema:
+    async def update_transfer_draft(self, transfer_id: int, transfer_data: TransferCreate) -> TransferSchema:
         '''Updates an existing transfer record with new data.'''
-        transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
+        transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
-            raise DataNotFoundException(f"Transfer with ID {transfer_data.transfer_id} not found")
+            raise DataNotFoundException(
+                f"Transfer with ID {transfer_id} not found")
 
-        transfer.agreement_date = datetime.strptime(transfer_data.agreement_date, "%Y-%m-%d").date()
+        transfer.agreement_date = datetime.strptime(
+            transfer_data.agreement_date, "%Y-%m-%d").date()
         transfer.quantity = transfer_data.quantity
         transfer.price_per_unit = transfer_data.price_per_unit
         transfer.signing_authority_declaration = transfer_data.signing_authority_declaration
         transfer.to_organization_id = transfer_data.to_organization_id
 
+        if transfer_data.comments:
+            if transfer.comments:
+                transfer.comments.comment = transfer_data.comments
+            else:
+                transfer.comments = Comment(comment=transfer_data.comments)
+
+        updated_transfer = await self.repo.update_transfer(transfer)
+        return TransferSchema.model_validate(updated_transfer)
+
+    @service_handler
+    async def update_transfer(self, transfer_id: int, transfer_data: TransferUpdate) -> TransferSchema:
+        transfer = await self.repo.get_transfer_by_id(transfer_id)
+        if not transfer:
+            raise DataNotFoundException(
+                f"Transfer with ID {transfer_id} not found")
+        transfer.current_status_id = transfer_data.current_status_id
         if transfer_data.comments:
             if transfer.comments:
                 transfer.comments.comment = transfer_data.comments

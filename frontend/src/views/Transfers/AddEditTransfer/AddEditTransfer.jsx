@@ -1,31 +1,51 @@
-import React, { useState, useEffect } from 'react'
-import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useMutation } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 // Components
+import BCAlert from '@/components/BCAlert'
+import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import Loading from '@/components/Loading'
 import ProgressBreadcrumb from '@/components/ProgressBreadcrumb'
 import { AddEditTransferSchema } from './_schema'
-import TransferForm from './TransferForm'
-import BCBox from '@/components/BCBox'
-import BCAlert from '@/components/BCAlert'
-import Loading from '@/components/Loading'
 import TransferGraphic from './components/TransferGraphic'
 
 // Hooks
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useApiService } from '@/services/useApiService'
 import { TRANSACTIONS } from '@/constants/routes/routes'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTransfer } from '@/hooks/useTransfer'
+import { useApiService } from '@/services/useApiService'
 import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
 
+import BCButton from '@/components/BCButton'
+import colors from '@/themes/base/colors'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Box, Modal } from '@mui/material'
+import {
+  deleteDraftButton,
+  saveDraftButton,
+  submitButton
+} from './buttonConfigs'
+import AgreementDate from './components/AgreementDate'
+import Comments from './components/Comments'
+import SigningAuthority from './components/SigningAuthority'
+import TransferDetails from './components/TransferDetails'
+import ConfirmationModal from './components/ConfirmationModal'
+
 export const AddEditTransfer = () => {
+  const [modalData, setModalData] = useState(null)
   const navigate = useNavigate()
   const apiService = useApiService()
-  const { transferId } = useParams() // This extracts the transferId from the URL
+  const { transferId } = useParams()
   const { data: currentUser } = useCurrentUser()
-  const [organizations, setOrganizations] = useState([])
+  const { data: transferData, isFetched } = useTransfer(transferId, {
+    enabled: !!transferId,
+    retry: false
+  })
 
   const methods = useForm({
     resolver: yupResolver(AddEditTransferSchema),
@@ -49,103 +69,151 @@ export const AddEditTransfer = () => {
    * In case of an error during the fetch operation, it logs the error to the console.
    */
   useEffect(() => {
-    const fetchTransferData = async () => {
-      if (!transferId) return
-
-      try {
-        const response = await apiService.get(`/transfers/${transferId}`)
-        const transferData = response.data
-
-        // Populate the form with fetched transfer data
-        methods.reset({
-          fromOrganizationId: transferData.from_organization.organization_id,
-          toOrganizationId: transferData.to_organization.organization_id,
-          quantity: transferData.quantity,
-          pricePerUnit: transferData.price_per_unit,
-          signingAuthorityDeclaration:
-            transferData.signing_authority_declaration,
-          comments: transferData.comments.comment, // Assuming you only want the comment text
-          agreementDate: transferData.agreement_date
-            ? new Date(transferData.agreement_date).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
-        })
-      } catch (error) {
-        console.error('Error fetching transfer data:', error)
-      }
+    if (!transferId) return
+    if (isFetched && transferData) {
+      // Populate the form with fetched transfer data
+      methods.reset({
+        fromOrganizationId: transferData.from_organization.organization_id,
+        toOrganizationId: transferData.to_organization.organization_id,
+        quantity: transferData.quantity,
+        pricePerUnit: transferData.price_per_unit,
+        signingAuthorityDeclaration: transferData.signing_authority_declaration,
+        comments: transferData.comments?.comment, // Assuming you only want the comment text
+        agreementDate: transferData.agreement_date
+          ? new Date(transferData.agreement_date).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
+      })
     }
-    if (transferId) fetchTransferData()
-  }, [transferId])
+  }, [isFetched, transferId])
 
-  /**
-   * Fetch the list of registered external organizations
-   */
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        const response = await apiService.get(
-          '/organizations/registered/external'
-        )
-        const orgs = response.data.map((org) => ({
-          value: parseInt(org.organization_id),
-          label: org.name || 'Unknown'
-        }))
-        setOrganizations(orgs)
-      } catch (error) {
-        console.error('Error fetching organizations:', error)
-      }
-    }
-    fetchOrganizations()
-  }, [])
+  const draftPayload = (form) => {
+    form.fromOrganizationId = parseInt(form.fromOrganizationId)
+    form.toOrganizationId = parseInt(form.toOrganizationId)
+    form.agreementDate = formatDateToISO(form.agreementDate)
+    return convertObjectKeys(form)
+  }
 
-  const { mutate, isLoading, isError } = useMutation({
-    mutationFn: (convertedPayload) => {
-      if (transferId) {
-        // If editing, use PUT request
-        return apiService.put(`/transfers`, convertedPayload)
-      } else {
-        // If adding new, use POST request
-        return apiService.post('/transfers', convertedPayload)
-      }
+  // mutation to create a draft transfer
+  const {
+    mutate: createDraft,
+    isLoading: isCreatingDraft,
+    isError: isCreateDraftError
+  } = useMutation({
+    mutationFn: async (formData) => {
+      const data = draftPayload(formData)
+      return await apiService.post('/transfers', data)
     },
-    onSuccess: (response) => {
-      // Redirect on success
+    onSuccess: () => {
       navigate(TRANSACTIONS, {
         state: {
-          message: 'Transfer successfully submitted.',
+          message: 'Draft transfer successfully created.',
           severity: 'success'
         }
       })
     },
     onError: (error) => {
-      console.error('Error submitting transfer:', error)
+      console.error('Error creating transfer:', error)
     }
   })
 
-  const handleSubmitForm = (form) => {
-    form.fromOrganizationId = parseInt(form.fromOrganizationId)
-    form.toOrganizationId = parseInt(form.toOrganizationId)
-    form.agreementDate = formatDateToISO(form.agreementDate)
-    const convertedPayload = convertObjectKeys(form)
-    mutate(convertedPayload)
+  // mutation to update a draft transfer
+  const {
+    mutate: updateDraft,
+    isLoading: isUpdatingDraft,
+    isError: isUpdateDraftError
+  } = useMutation({
+    mutationFn: async (formData) => {
+      const data = draftPayload(formData)
+      return await apiService.put(`/transfers/${transferId}/draft`, data)
+    },
+    onSuccess: () => {
+      navigate(TRANSACTIONS, {
+        state: {
+          message: 'Draft transfer successfully updated.',
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      console.error('Error updating transfer:', error)
+    }
+  })
+
+  // mutation to update the status and comments of a transfer
+  // used in everything but draft transfers
+  const {
+    mutate: updateTransfer,
+    isLoading: isUpdatingTransfer,
+    isError: isUpdateTransferError
+  } = useMutation({
+    mutationFn: async ({ formData, newStatus }) =>
+      await apiService.put(`/transfers/${transferId}`, {
+        comments: formData.comments,
+        current_status_id: newStatus
+      }),
+    onSuccess: (_, variables) => {
+      navigate(TRANSACTIONS, {
+        state: {
+          message: variables.message.success,
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error, variables) => {
+      console.error(variables.message.error, error)
+    }
+  })
+
+  // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
+  const buttonClusterConfig = {
+    New: [
+      { ...saveDraftButton, handler: createDraft },
+      { ...submitButton, disabled: true }
+    ],
+    Draft: [
+      {
+        ...deleteDraftButton,
+        handler: (formData) =>
+          setModalData({
+            onConfirm: () =>
+              updateTransfer({
+                formData,
+                newStatus: 2,
+                message: {
+                  success: 'Draft transfer successfully deleted.',
+                  error: 'Error deleting transfer'
+                }
+              }),
+            buttonText: 'Delete Draft',
+            text: 'Are you sure you want to delete this draft?'
+          })
+      },
+      { ...saveDraftButton, handler: updateDraft },
+      { ...submitButton, handler: () => console.log('submit draft') }
+    ],
+    Sent: [],
+    Rescinded: [],
+    Declined: [],
+    Submitted: [],
+    Recommended: [],
+    Recorded: [],
+    Refused: []
   }
 
   // Conditional rendering for loading
-  if (isLoading) {
-    return <Loading message="Submitting Transfer..." />
+  if (isCreatingDraft) {
+    return <Loading message="Creating Draft Transfer..." />
   }
-
-  const { watch } = methods
-  const quantity = parseInt(watch('quantity'))
-  const creditsFrom = currentUser?.organization?.name
-  const creditsTo =
-    organizations.find((org) => org.value === watch('toOrganizationId'))
-      ?.label || ''
-  const pricePerUnit = watch('pricePerUnit')
-  const totalValue =
-    quantity && pricePerUnit ? parseInt(quantity * pricePerUnit) : 0
+  if (isUpdatingDraft) {
+    return <Loading message="Updating Draft Transfer..." />
+  }
+  if (isUpdatingTransfer) {
+    return <Loading message="Processing Transfer..." />
+  }
 
   return (
     <>
+      <ConfirmationModal data={modalData} onClose={() => setModalData(null)} />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
           {transferId ? 'Edit Transfer' : 'New Transfer'}
@@ -161,7 +229,7 @@ export const AddEditTransfer = () => {
         </BCTypography>
         <BCTypography>&nbsp;</BCTypography>
 
-        {isError && (
+        {isCreateDraftError && (
           <BCAlert severity="error">
             Error occurred while submitting. Please retry. For ongoing issues,
             contact support.
@@ -171,29 +239,67 @@ export const AddEditTransfer = () => {
         <BCBox mt={5}>
           <ProgressBreadcrumb
             steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
-            currentStep="Draft"
-          />
-        </BCBox>
-
-        <BCBox my={3}>
-          <TransferGraphic
-            creditsFrom={creditsFrom}
-            creditsTo={creditsTo}
-            numberOfCredits={quantity}
-            totalValue={totalValue}
+            currentStep={
+              transferId ? transferData?.current_status.status : null
+            }
           />
         </BCBox>
 
         <FormProvider {...methods}>
-          <form
-            onSubmit={methods.handleSubmit(handleSubmitForm)}
-            data-testid="new-transfer-form"
-          >
+          <BCBox my={3}>
+            <TransferGraphic />
+          </BCBox>
+
+          <form data-testid="new-transfer-form">
             {/* Transfer Form Fields */}
-            <TransferForm
-              currentOrg={currentUser?.organization}
-              organizations={organizations}
-            />
+            <TransferDetails />
+
+            <AgreementDate />
+
+            <Comments />
+
+            <SigningAuthority />
+
+            <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
+              <Link>
+                <BCButton
+                  variant="outlined"
+                  color="dark"
+                  onClick={() => console.log('go back')}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faArrowLeft}
+                      color={colors.dark.main}
+                    />
+                  }
+                >
+                  Back
+                </BCButton>
+              </Link>
+              {buttonClusterConfig[
+                transferId ? transferData?.current_status.status : 'New'
+              ]?.map((config) => (
+                <BCButton
+                  key={config.label}
+                  size="small"
+                  variant={config.variant}
+                  color={config.color}
+                  onClick={methods.handleSubmit(config.handler)}
+                  startIcon={
+                    config.startIcon && (
+                      <FontAwesomeIcon
+                        icon={config.startIcon}
+                        color={config.iconColor ?? colors.primary.main}
+                        className="small-icon"
+                      />
+                    )
+                  }
+                  disabled={config.disabled}
+                >
+                  {config.label}
+                </BCButton>
+              ))}
+            </Box>
           </form>
         </FormProvider>
       </BCBox>

@@ -1,19 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import {
-  render,
-  screen,
-  cleanup,
-  fireEvent,
-  waitFor
-} from '@testing-library/react'
-import {
-  QueryClient,
-  QueryClientProvider,
-  useMutation
-} from '@tanstack/react-query'
-import { BrowserRouter as Router } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
+import { ThemeProvider } from '@mui/material'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { BrowserRouter as Router } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockCurrentUser = {
   organization: { organization_id: 1, name: 'Current Organization' }
@@ -48,7 +38,7 @@ vi.mock('@/services/useApiService', () => ({
 }))
 
 // eslint-disable-next-line import/first
-import { AddTransfer } from './AddEditTransfer'
+import { AddEditTransfer } from './AddEditTransfer'
 
 const renderComponent = () => {
   const queryClient = new QueryClient()
@@ -56,7 +46,7 @@ const renderComponent = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <Router>
-          <AddTransfer />
+          <AddEditTransfer />
         </Router>
       </ThemeProvider>
     </QueryClientProvider>
@@ -116,5 +106,45 @@ describe('AddTransfer Component Tests', () => {
 
     // Submit the form
     fireEvent.submit(form)
+  })
+
+  it('renders the TransferInputs component', () => {
+    const transferInputsElement = screen.getByText(/Transfer Details/i)
+    expect(transferInputsElement).toBeInTheDocument()
+  })
+
+  it('allows input in the quantity field', () => {
+    const quantityInput = screen.getByPlaceholderText('Quantity')
+    fireEvent.change(quantityInput, { target: { value: '10' } })
+    expect(quantityInput.value).toBe('10')
+  })
+
+  it('updates the total value when quantity and price are changed', async () => {
+    const quantityInput = screen.getByPlaceholderText('Quantity')
+    const priceInput = screen.getByPlaceholderText(/The fair market value/i)
+
+    fireEvent.change(quantityInput, { target: { value: '10' } })
+    fireEvent.change(priceInput, { target: { value: '20' } })
+
+    const totalValue = screen.getByTestId('transfer-total-value')
+    expect(totalValue.textContent).toBe('$200.00')
+    expect(totalValue).toBeInTheDocument()
+  })
+
+  it('renders the agreement date input with the current date as default', () => {
+    const currentDate = new Date().toISOString().split('T')[0]
+    const agreementDateInput = screen.getByTestId(
+      'transfer-agreement-date-input'
+    )
+    expect(agreementDateInput.value).toBe(currentDate)
+  })
+
+  it('allows changing the agreement date', () => {
+    const agreementDateInput = screen.getByTestId(
+      'transfer-agreement-date-input'
+    )
+    const testDate = '2023-01-01'
+    fireEvent.change(agreementDateInput, { target: { value: testDate } })
+    expect(agreementDateInput.value).toBe(testDate)
   })
 })

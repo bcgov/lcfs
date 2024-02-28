@@ -41,7 +41,8 @@ class TransferRepository:
         Fetches a paginated list of Transfer records from the database, ordered by their creation date.
         """
         offset = (page - 1) * size
-        query = select(Transfer).order_by(Transfer.create_date.desc()).offset(offset).limit(size)
+        query = select(Transfer).order_by(
+            Transfer.create_date.desc()).offset(offset).limit(size)
         results = await self.db.execute(query)
         transfers = results.scalars().all()
         return transfers
@@ -59,7 +60,7 @@ class TransferRepository:
             selectinload(Transfer.transfer_category),
             selectinload(Transfer.comments)
         ).where(Transfer.transfer_id == transfer_id)
-        
+
         result = await self.db.execute(query)
         transfer = result.scalars().first()
         return transfer
@@ -76,14 +77,16 @@ class TransferRepository:
     async def get_transfer_status(self, transfer_status_id: int) -> TransferStatus:
         '''Fetch a single transfer status by transfer status id from the database'''
         return await self.db.scalar(
-            select(TransferStatus).where(TransferStatus.transfer_status_id == transfer_status_id)
+            select(TransferStatus).where(
+                TransferStatus.transfer_status_id == transfer_status_id)
         )
-    
+
     @repo_handler
     async def get_transfer_category(self, transfer_category_id: int) -> TransferStatus:
         '''Fetch a single category by category id from the database'''
         return await self.db.scalar(
-            select(TransferCategory).where(TransferCategory.transfer_category_id == transfer_category_id)
+            select(TransferCategory).where(
+                TransferCategory.transfer_category_id == transfer_category_id)
         )
 
     @repo_handler
@@ -93,7 +96,8 @@ class TransferRepository:
         # we just need to commit those changes.
         try:
             await self.db.commit()
-            await self.db.refresh(transfer)  # Refresh the instance with updated data from the DB.
+            # Refresh the instance with updated data from the DB.
+            await self.db.refresh(transfer)
             return transfer
         except Exception as e:
             await self.db.rollback()  # Rollback in case of error
