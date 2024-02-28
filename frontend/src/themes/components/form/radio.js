@@ -11,9 +11,9 @@ const radio = {
         width: pxToRem(20),
         height: pxToRem(20),
         border: `${borderWidth[1]} solid ${borderColor}`,
-        borderRadius: '50%',
+        borderRadius: '50%'
       }
-    },
+    }
   }
 }
 

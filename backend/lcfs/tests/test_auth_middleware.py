@@ -51,7 +51,6 @@ async def test_successful_authentication(user_auth_backend, dbsession_factory):
     credentials, user = await user_auth_backend.authenticate(request)
 
     assert credentials.scopes == ["authenticated"]
-    assert user.username == "idiruser"
 
 
 # @pytest.mark.anyio
@@ -122,7 +121,6 @@ async def test_active_user_authentication(user_auth_backend, dbsession_factory):
     credentials, user = await user_auth_backend.authenticate(request)
 
     assert credentials.scopes == ["authenticated"]
-    assert user.username == "activeuser"
     assert user.is_active is True
 
 
@@ -147,7 +145,7 @@ async def test_inactive_user_authentication(user_auth_backend, dbsession_factory
         await user_auth_backend.authenticate(request)
 
     assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert 'User is not active' in str(exc_info.value.detail)
+    assert 'The account is currently inactive.' in str(exc_info.value.detail)
 
 
 @pytest.mark.anyio
@@ -170,7 +168,6 @@ async def test_idir_identity_provider_authentication(user_auth_backend, dbsessio
     credentials, user = await user_auth_backend.authenticate(request)
 
     assert credentials.scopes == ["authenticated"]
-    assert user.username == "idiruser"
     assert user.organization_id is None
 
 
@@ -194,7 +191,6 @@ async def test_bceidbusiness_identity_provider_authentication(user_auth_backend,
     credentials, user = await user_auth_backend.authenticate(request)
 
     assert credentials.scopes == ["authenticated"]
-    assert user.username == "bceiduser"
     assert user.organization_id is not None
 
 

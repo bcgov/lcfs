@@ -11,9 +11,9 @@ const { size } = typography
 const menuItem = {
   styleOverrides: {
     root: {
-      minWidth: pxToRem(160),
+      maxWidth: 'unset',
       minHeight: 'unset',
-      padding: `${pxToRem(4.8)} ${pxToRem(16)}`,
+      padding: `${pxToRem(6)} ${pxToRem(6)}`,
       borderRadius: borderRadius.md,
       fontSize: size.sm,
       color: text.main,

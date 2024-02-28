@@ -47,8 +47,10 @@ export const usersColumnDefs = (t) => [
       suppressFilterButton: true,
       apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
       // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
-      disableCloseOnSelect: true,
-      multiple: true
+      params: "government_roles_only=true",
+      key: "admin-users",
+      disableCloseOnSelect: false,
+      multiple: false
     },
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle'
@@ -112,9 +114,18 @@ export const usersDefaultColDef = {
   suppressMenu: true // suppresses the menu button appearing next to the Header Label
 }
 
+export const idirUserDefaultFilter = [
+  { filterType: 'text', type: 'blank', field: 'organization_id', filter: '' }
+]
+
 export const rolesColumnDefs = (t) => [
   { colId: 'name', field: 'name', headerName: t('admin:roleColLabels.role') },
-  { colId: 'description', field: 'description', headerName: t('admin:roleColLabels.description'), flex: 1 },
+  {
+    colId: 'description',
+    field: 'description',
+    headerName: t('admin:roleColLabels.description'),
+    flex: 1
+  },
   {
     colId: 'is_government_role',
     field: 'is_government_role',

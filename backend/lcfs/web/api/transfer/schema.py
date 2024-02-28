@@ -12,15 +12,15 @@ class TransactionTypeEnum(str, Enum):
 
 
 class TransferStatusEnum(str, Enum):
-    draft = "Draft"
-    deleted = "Deleted"
-    sent = "Sent"
-    submitted = "Submitted"
-    recommended = "Recommended"
-    recorded = "Recorded"
-    refused = "Refused"
-    declined = "Declined"
-    rescinded = "Rescinded"
+    Draft = "Draft"
+    Deleted = "Deleted"
+    Sent = "Sent"
+    Submitted = "Submitted"
+    Recommended = "Recommended"
+    Recorded = "Recorded"
+    Refused = "Refused"
+    Declined = "Declined"
+    Rescinded = "Rescinded"
 
 
 class TransferStatusSchema(BaseModel):
@@ -63,7 +63,7 @@ class TransferSchema(BaseModel):
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[TransferCommentSchema] = None
-    transfer_status: TransferStatusSchema
+    current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
 
     class Config:

@@ -63,7 +63,7 @@ function BCAlert({ severity, dismissible, delay, children, ...rest }) {
 BCAlert.defaultProps = {
   severity: 'info',
   dismissible: false,
-  delay: 5000, // default fade out in 5s
+  delay: 5000 // default fade out in 5s
 }
 
 BCAlert.propTypes = {

@@ -44,7 +44,6 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * TODO:
  * - Ability to clear the custom filter input boxes
  * - Ability to populate the custom filter inputs from the stored values that are retrieved from localStorage.
- * - Retain the default filter even after reset.
  */
 const BCDataGridServer = ({
   gridOptions,
@@ -161,9 +160,12 @@ const BCDataGridServer = ({
     setRowData([])
     gridRef.current.api.showLoadingOverlay()
     const filterModel = gridRef?.current?.api.getFilterModel()
-    const filterArr = Object.entries(filterModel).map(([field, value]) => {
-      return { field, ...value }
-    })
+    const filterArr = [
+      ...Object.entries(filterModel).map(([field, value]) => {
+        return { field, ...value }
+      }),
+      ...defaultFilterModel
+    ]
     setFilterModel(filterArr)
     // save the filter state in browser cache.
     localStorage.setItem(
@@ -309,7 +311,7 @@ BCDataGridServer.defaultProps = {
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   apiEndpoint: '/',
   defaultColDef: {},
-  enableResetButton: true,
+  enableResetButton: false,
   enableCopyButton: true,
   className: 'ag-theme-alpine'
 }

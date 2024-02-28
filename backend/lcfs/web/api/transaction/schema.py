@@ -1,17 +1,49 @@
 from typing import Optional, List
 
 from pydantic import BaseModel, ConfigDict
+from datetime import datetime
 from enum import Enum
 from typing import List, Optional, Generic, TypeVar
 from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.base import PaginationResponseSchema
 
+# --------------------------------------
+# Base Configuration
+# --------------------------------------
+class BaseConfig:
+    from_attributes = True
+
+# --------------------------------------
+# Transaction Status
+# --------------------------------------
+
+class TransactionStatusEnum(str, Enum):
+    DRAFT = "Draft"
+    RECOMMENDED = "Recommended"
+    SENT = "Sent"
+    SUBMITTED = "Submitted"
+    APPROVED = "Approved"
+    RECORDED = "Recorded"
+    REFUSED = "Refused"
+    DELETED = "Deleted"
+    DECLINED = "Declined"
+    RESCINDED = "Rescinded"
+
+class TransactionStatusBase(BaseModel):
+    status: TransactionStatusEnum
+    description: Optional[str] = None
+
+    class Config(BaseConfig):
+        pass
+
+class TransactionStatusSchema(TransactionStatusBase):
+    pass
+
 
 class TransactionTypeEnum(str, Enum):
-    administrative_adjustment = "Administrative Adjustment"
-    initiative_agreement = "Initiative Agreement"
-    assessment = "Assessment"
-    transfer = "Transfer"
+    adjustment = "Adjustment"
+    reserve = "Reserve"
+    release = "Release"
 
 
 class TransactionTypeSchema(BaseModel):
@@ -19,7 +51,7 @@ class TransactionTypeSchema(BaseModel):
     type: TransactionTypeEnum
 
 
-class TransactionBase(BaseModel):
+class TransactionBaseSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     transaction_id: int
@@ -31,19 +63,20 @@ class TransactionBase(BaseModel):
     transaction_type: TransactionTypeSchema
 
 
-class Transactions(BaseModel):
+class TransactionViewSchema(BaseModel):
+    transaction_id: int
+    transaction_type: str
+    from_organization: Optional[str]
+    to_organization: str
+    quantity: int
+    price_per_unit: Optional[float]
+    status: str
+    create_date: datetime
+    update_date: datetime
+
+    class Config(BaseConfig):
+        pass
+
+class TransactionListSchema(BaseModel):
     pagination: PaginationResponseSchema
-    transactions: List[TransactionBase]
-
-
-class CombinedTransaction(BaseModel):
-    type: str  # 'Issuance' or 'Transfer'
-    id: int
-    create_date: str  # or datetime, depending on how we format it in the service
-
-# Generic type for data
-T = TypeVar("T")
-
-class TransactionPaginationResponse(BaseModel, Generic[T]):
-    pagination: PaginationResponseSchema
-    transactions: List[T]
+    transactions: List[TransactionViewSchema]

@@ -80,7 +80,7 @@ class TransferServices:
             price_per_unit=transfer_data.price_per_unit,
             signing_authority_declaration=transfer_data.signing_authority_declaration,
             comments=new_comment,  # Associate the comment with the transfer
-            transfer_status=status,
+            current_status=status,
             transfer_category=category
         )
 

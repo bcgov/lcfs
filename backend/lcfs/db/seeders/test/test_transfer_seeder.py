@@ -16,7 +16,7 @@ async def seed_test_transfers(session):
         {
             "from_organization_id": 1,
             "to_organization_id": 2,
-            "transfer_status_id":1,
+            "current_status_id":1,
             "transfer_category_id":1,
             "agreement_date": datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
             "quantity": 100,
@@ -26,7 +26,7 @@ async def seed_test_transfers(session):
         {
             "from_organization_id": 2,
             "to_organization_id": 1,
-            "transfer_status_id":1,
+            "current_status_id":1,
             "transfer_category_id":1,
             "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
             "quantity": 50,
@@ -49,7 +49,7 @@ async def seed_test_transfers(session):
                     and_(
                         Transfer.from_organization_id == transfer_data["from_organization_id"],
                         Transfer.to_organization_id == transfer_data["to_organization_id"],
-                        Transfer.transfer_status_id == transfer_data["transfer_status_id"],
+                        Transfer.current_status_id == transfer_data["current_status_id"],
                         Transfer.transfer_category_id == transfer_data["transfer_category_id"],
                         Transfer.agreement_date == transfer_data["agreement_date"],
                         Transfer.quantity == transfer_data["quantity"],
