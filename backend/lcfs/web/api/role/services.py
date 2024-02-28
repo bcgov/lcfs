@@ -7,7 +7,7 @@ from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-logger = getLogger("roles")
+logger = getLogger("role_services")
 
 
 class RoleServices:

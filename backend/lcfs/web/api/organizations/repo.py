@@ -20,7 +20,7 @@ from lcfs.db.models.OrganizationType import OrganizationType
 from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
 
 
-logger = getLogger("organization_repo")
+logger = getLogger("organizations_repo")
 
 
 class OrganizationRepository:

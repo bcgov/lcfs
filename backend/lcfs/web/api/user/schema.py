@@ -2,7 +2,7 @@ from typing import Optional, List, Union
 
 from pydantic import BaseModel, EmailStr, Field
 
-from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
+from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.base import PaginationResponseSchema
 

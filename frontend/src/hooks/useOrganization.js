@@ -45,3 +45,13 @@ export const useRegExtOrgs = (options) => {
     ...options
   })
 }
+
+export const useOrganizationUser = (orgID, userID, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['organization-user'],
+    queryFn: async () => (await client.get(`/organization/${orgID}/users/${userID}`)).data,
+    ...options
+  })
+}

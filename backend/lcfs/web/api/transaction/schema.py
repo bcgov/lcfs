@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional, Generic, TypeVar
-from lcfs.web.api.organization.schema import OrganizationSummaryResponseSchema
+from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.base import PaginationResponseSchema
 
 # --------------------------------------

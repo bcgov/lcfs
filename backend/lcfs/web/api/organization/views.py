@@ -1,172 +1,127 @@
 from logging import getLogger
-from typing import List
 
-from fastapi import APIRouter, Body, Depends, status, Request
-from fastapi.responses import StreamingResponse
-from fastapi_cache.decorator import cache
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    Query,
+    Response,
+    status,
+    Request,
+)
 from starlette import status
 
 from lcfs.db import dependencies
-
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
-
+from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
+from lcfs.web.api.user.services import UserServices
 from .services import OrganizationServices
-from .schema import (
-    OrganizationTypeSchema,
-    OrganizationStatusSchema,
-    OrganizationSchema,
-    OrganizationListSchema,
-    OrganizationCreateSchema,
-    OrganizationUpdateSchema,
-    OrganizationResponseSchema,
-    OrganizationSummaryResponseSchema,
-    OrganizationCreateResponseSchema
-)
 
 
-logger = getLogger("organization")
+logger = getLogger("organization_view")
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
-async def export_organizations(
-    request: Request,
-    service: OrganizationServices = Depends()
-):
-    """
-    Endpoint to export information of all organizations
-
-    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
-    as specified by the 'export_format' and 'media_type' variables.
-    - 'export_format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
-    - 'media_type' sets the appropriate MIME type based on 'export_format':
-        'application/vnd.ms-excel' for 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
-        'text/csv' for 'csv'.
-
-    The SpreadsheetBuilder class is used for building the spreadsheet.
-    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
-    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
-
-    Note: Only the first sheet data is used for the CSV format,
-        as CSV files do not support multiple sheets.
-    """
-    return await service.export_organizations()
-
-
-@router.post("/create", response_model=OrganizationCreateResponseSchema, status_code=status.HTTP_201_CREATED)
-@roles_required("Government", "Administrator")
-@view_handler
-async def create_organization(
-    request: Request,
-    organization_data: OrganizationCreateSchema,
-    service: OrganizationServices = Depends()
-):
-    """
-    Endpoint to create a new organization. This includes processing the provided
-    organization details along with associated addresses.
-    """
-    return await service.create_organization(organization_data)
-
-
-@router.get(
-    "/{organization_id}",
-    response_model=OrganizationResponseSchema,
+@router.post(
+    "/{organization_id}/users/list",
+    response_model=UsersSchema,
     status_code=status.HTTP_200_OK,
 )
+@roles_required("Supplier", "Government")
 @view_handler
-async def get_organization(
+async def get_org_users(
     request: Request,
     organization_id: int,
-    service: OrganizationServices = Depends()
-):
-    '''Fetch a single organization by id'''
-    return await service.get_organization(organization_id)
-
-
-@router.put("/{organization_id}")
-@view_handler
-async def update_organization(
-    request: Request,
-    organization_id: int,
-    organization_data: OrganizationCreateSchema,
-    service: OrganizationServices = Depends()
-):
-    '''Update an organizations data by id'''
-    return await service.update_organization(organization_id, organization_data)
-
-
-@router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
-async def get_organizations(
-    request: Request,
+    status: str = Query(default="Active", description="Active or Inactive users list"),
     pagination: PaginationRequestSchema = Body(..., embed=False),
-    service: OrganizationServices = Depends()
+    response: Response = None,
+    org_service: OrganizationServices = Depends(),
 ):
-    '''Fetch a list of organizations'''
-    return await service.get_organizations(pagination)
+    """
+    Enpoint to get information of all users related to organization for ag-grid in the UI
+
+    Pagination Request Schema:
+    - page: offset/ page indicates the pagination of rows for the users list
+    - size: size indicates the number of rows per page for the users list
+    - sortOrders: sortOrders is an array of objects that specify the sorting criteria for the users list.
+        Each object has the following properties:
+        - field: the name of the field to sort by
+        - direction: the sorting direction ('asc' or 'desc')
+    - filterModel: filterModel is an array of objects that specifies the filtering criteria for the users list.
+        It has the following properties:
+        - filterType: the type of filtering to perform ('text', 'number', 'date', 'boolean')
+        - type: the type of filter to apply ('equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'endsWith')
+        - filter: the actual filter value
+        - field: Database Field that needs filtering.
+    """
+    return await org_service.get_organization_users_list(
+        organization_id, status, pagination
+    )
 
 
 @router.get(
-    "/statuses/",
-    response_model=List[OrganizationStatusSchema],
+    "/{organization_id}/users/{user_id}",
+    response_model=UserBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@cache(expire=60 * 60 * 24)  # cache for 24 hours
+@roles_required("Supplier")
 @view_handler
-async def get_organization_statuses(
-    service: OrganizationServices = Depends()
-) -> List[OrganizationStatusSchema]:
-    '''Fetch all organization statuses'''
-    return await service.get_organization_statuses()
-
-
-@router.get(
-    "/types/",
-    response_model=List[OrganizationTypeSchema],
-    status_code=status.HTTP_200_OK,
-)
-@cache(expire=60 * 60 * 24)  # cache for 24 hours
-@view_handler
-async def get_organization_types(
-    service: OrganizationServices = Depends()
-) -> List[OrganizationTypeSchema]:
-    '''Fetch all organization types'''
-    return await service.get_organization_types()
-
-
-@router.get(
-    "/names/", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK
-)
-@cache(expire=60 * 60)  # cache for 1 hour
-@view_handler
-async def get_organization_names(service: OrganizationServices = Depends()):
-    '''Fetch all organization names'''
-    return await service.get_organization_names()
-
-
-@router.get("/registered/external", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
-@view_handler
-async def get_externally_registered_organizations(
+async def get_user_by_id(
     request: Request,
-    service: OrganizationServices = Depends()
-):
+    organization_id: int,
+    response: Response = None,
+    user_id: int = None,
+    user_service: UserServices = Depends(),
+) -> UserBaseSchema:
     """
-    Retrieve a list of registered organizations, excluding the specified organization.
-
-    Args:
-        org_id (int): The ID of the organization to be excluded from the list.
-
-    Returns:
-        List[OrganizationSummaryResponseSchema]: A list of OrganizationSummaryResponseSchema objects
-            representing registered organizations, excluding the specified organization.
-
-    Raises:
-        Exception: If an error occurs during the database query.
+    Endpoint to get information of a user by ID
+    This endpoint returns the information of a user by ID, including their roles and organization.
     """
-    return await service.get_externally_registered_organizations(org_id=request.user.organization_id)
+    return await user_service.get_user_by_id(user_id)
+
+
+@router.post(
+    "/{organization_id}/users", response_model=None, status_code=status.HTTP_201_CREATED
+)
+@roles_required("Supplier")
+@view_handler
+async def create_user(
+    request: Request,
+    organization_id: int,
+    response: Response = None,
+    user_create: UserCreateSchema = ...,
+    user_service: UserServices = Depends(),
+) -> None:
+    """
+    Endpoint to create a new user
+    This endpoint creates a new user and returns the information of the created user.
+    """
+    user_create.organization_id = organization_id
+    user_id = await user_service.create_user(user_create)
+    return await user_service.get_user_by_id(user_id) if user_id else None
+
+
+@router.put(
+    "/{organization_id}/users/{user_id}",
+    response_model=UserBaseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Supplier")
+@view_handler
+async def update_user(
+    request: Request,
+    organization_id: int,
+    response: Response = None,
+    user_id: int = None,
+    user_create: UserCreateSchema = ...,
+    user_service: UserServices = Depends(),
+) -> UserBaseSchema:
+    """
+    Endpoint to update a user
+    This endpoint updates a user and returns the information of the updated user.
+    """
+    user_create.organization_id = organization_id
+    await user_service.update_user(user_create, user_id)
+    return await user_service.get_user_by_id(user_id)

@@ -47,15 +47,20 @@ export const Transactions = () => {
     console.log(params)
     const transactionType = params.data.transaction_type
     console.log(transactionType)
-    if(transactionType === 'Transfer') {
+    if (transactionType === 'Transfer') {
       navigate(
         ROUTES.TRANSFERS_VIEW.replace(':transferId', params.data.transaction_id)
       )
-    } else if (transactionType === 'Administrative Adjustment' ||
-      transactionType === 'Initiative Agreement') {
-        navigate(
-          ROUTES.TRANSACTIONS_VIEW.replace(':transactionId', params.data.transaction_id)
+    } else if (
+      transactionType === 'Administrative Adjustment' ||
+      transactionType === 'Initiative Agreement'
+    ) {
+      navigate(
+        ROUTES.TRANSACTIONS_VIEW.replace(
+          ':transactionId',
+          params.data.transaction_id
         )
+      )
     }
   })
 
@@ -99,7 +104,13 @@ export const Transactions = () => {
             variant="contained"
             size="small"
             color="primary"
-            startIcon={<FontAwesomeIcon icon={faCirclePlus} size="2x" />}
+            startIcon={
+              <FontAwesomeIcon
+                icon={faCirclePlus}
+                className="small-icon"
+                size="2x"
+              />
+            }
             onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
           >
             <BCTypography variant="subtitle2">New transaction</BCTypography>

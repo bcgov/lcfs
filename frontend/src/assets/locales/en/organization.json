@@ -44,5 +44,8 @@
   "addOrgTitle": "Add organization",
   "editOrgTitle": "Edit organization",
   "errMsg": "Error occurred. Please retry. For ongoing issues, contact support.",
-  "toUpdateMsg": " to update address information."
+  "toUpdateMsg": " to update address information.",
+  "orgDetailsLabel": "Organization Details",
+  "orgDetailsLoadingMsg": "Loading organization details...",
+  "createNewUsrLabel": "Create new BCeID account"
 }

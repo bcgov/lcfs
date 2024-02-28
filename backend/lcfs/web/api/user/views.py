@@ -39,7 +39,7 @@ from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.user.services import UserServices
 
 router = APIRouter()
-logger = getLogger("users")
+logger = getLogger("users_view")
 get_async_db = dependencies.get_async_db_session
 
 
@@ -115,7 +115,7 @@ async def get_current_user(
 
 
 @router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def get_user_by_id(
     request: Request,
@@ -130,7 +130,7 @@ async def get_user_by_id(
 
 
 @router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def create_user(
     request: Request,
@@ -147,7 +147,7 @@ async def create_user(
 
 
 @router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def update_user(
     request: Request,
@@ -165,7 +165,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Administrator")
 @view_handler
 async def delete_user(
     request: Request,
