@@ -18,6 +18,7 @@ import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
 // constants
 import { ROUTES } from '@/constants/routes'
 import { roles } from '@/constants/roles'
+import { useOrganizationUser } from '@/hooks/useOrganization'
 
 export const ViewUser = () => {
   const { t } = useTranslation(['common', 'admin'])
@@ -29,9 +30,16 @@ export const ViewUser = () => {
   }
 
   const { userID, orgID } = useParams()
-  const { hasRoles } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const navigate = useNavigate()
-  const { data, isLoading, isError, isLoadingError } = useUser(parseInt(userID))
+  const { data, isLoading, isLoadingError } = hasRoles(roles.supplier)
+    ? // eslint-disable-next-line react-hooks/rules-of-hooks
+      useOrganizationUser(
+        orgID || currentUser?.organization.organization_id,
+        userID
+      )
+    : // eslint-disable-next-line react-hooks/rules-of-hooks
+      useUser(parseInt(userID))
 
   const handleEditClick = () => {
     if (hasRoles(roles.supplier)) {

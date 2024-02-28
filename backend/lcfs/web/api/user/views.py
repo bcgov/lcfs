@@ -39,7 +39,7 @@ from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.user.services import UserServices
 
 router = APIRouter()
-logger = getLogger("users")
+logger = getLogger("users_view")
 get_async_db = dependencies.get_async_db_session
 
 

@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 // hooks
-import { saveUpdateUser, useUser } from '@/hooks/useUser'
+import { useUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   userInfoSchema,
@@ -30,6 +30,7 @@ import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 import { roles } from '@/constants/roles'
+import { useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType }) => {
@@ -48,7 +49,17 @@ export const AddEditUser = ({ userType }) => {
     data,
     isLoading: isUserLoading,
     isFetched: isUserFetched
-  } = useUser(userID, { enabled: !!userID, retry: false })
+  } = hasRoles(roles.supplier) && userID
+    ? userID
+      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+        useOrganizationUser(
+          orgID || currentUser?.organization.organization_id,
+          userID
+        )
+      : { undefined, isLoading: false, isFetched: false }
+    : // eslint-disable-next-line react-hooks/rules-of-hooks
+      useUser(userID, { enabled: !!userID, retry: false })
+
   // User form hook and form validation
   const form = useForm({
     resolver: yupResolver(userInfoSchema),
@@ -165,13 +176,25 @@ export const AddEditUser = ({ userType }) => {
   }
   // useMutation hook from React Query for handling API request
   const { mutate, isPending, isError } = useMutation({
-    mutationFn: async (payload) =>
-      userID
+    mutationFn: async (payload) => {
+      if (hasRoles(roles.supplier)) {
+        const orgId = orgID || currentUser.organization.organization_id
+        return userID
+          ? await apiService.put(
+              `/organization/${orgId}/users/${userID}`,
+              payload
+            )
+          : await apiService.post(`/organization/${orgId}/users`, payload)
+      }
+      return userID
         ? await apiService.put(`/users/${userID}`, payload)
-        : await apiService.post('/users', payload),
+        : await apiService.post('/users', payload)
+    },
     onSuccess: () => {
       // on success navigate somewhere
-      if (orgID) {
+      if (hasRoles(roles.supplier)) {
+        navigate(ROUTES.ORGANIZATION)
+      } else if (orgID) {
         navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
           state: {
             message: 'User has been successfully saved.',
@@ -248,11 +271,13 @@ export const AddEditUser = ({ userType }) => {
                     />
                   }
                   onClick={() =>
-                    navigate(
-                      userType === 'idir'
-                        ? ROUTES.ADMIN_USERS
-                        : ROUTES.ORGANIZATIONS
-                    )
+                    hasRoles(roles.supplier)
+                      ? navigate(ROUTES.ORGANIZATION)
+                      : navigate(
+                          userType === 'idir'
+                            ? ROUTES.ADMIN_USERS
+                            : ROUTES.ORGANIZATIONS
+                        )
                   }
                 >
                   <Typography variant="subtitle2" textTransform="none">

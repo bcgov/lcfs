@@ -44,9 +44,18 @@ export const ViewOrganization = () => {
   } = useCurrentUser()
   const { data: orgData, isLoading } = useOrganization(orgID)
   const handleEditClick = () => {
-    navigate(ROUTES.ORGANIZATIONS_EDIT.replace(':orgID', orgID), {
-      state: { orgID, isEditMode: true }
-    })
+    navigate(
+      ROUTES.ORGANIZATIONS_EDIT.replace(
+        ':orgID',
+        orgID || currentUser?.organization?.organization_id
+      ),
+      {
+        state: {
+          orgID: orgID || currentUser?.organization?.organization_id,
+          isEditMode: true
+        }
+      }
+    )
   }
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
@@ -63,6 +72,7 @@ export const ViewOrganization = () => {
     includeHiddenColumnsInQuickFilter: true
   }
   const handleRowClicked = useCallback((params) =>
+    // Based on the user Type (BCeID or IDIR) navigate to specific view
     hasRoles(roles.supplier)
       ? navigate(
           ROUTES.ORGANIZATION_VIEWUSER.replace(
@@ -85,18 +95,10 @@ export const ViewOrganization = () => {
       // clear any previous filters
       localStorage.removeItem(`${gridKey}-filter`)
       const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
-      const orgFilter =
-        gridRef?.current?.api?.getFilterInstance('organization_id')
       if (statusFilter) {
         statusFilter.setModel({
           type: 'equals',
           filter: showActive ? 'Active' : 'Inactive'
-        })
-      }
-      if (orgFilter) {
-        orgFilter.setModel({
-          type: 'equals',
-          filter: parseInt(orgID)
         })
       }
       gridRef?.current?.api?.onFilterChanged()
@@ -281,22 +283,18 @@ export const ViewOrganization = () => {
       <BCBox sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={apiRoutes.listUsers}
+          apiEndpoint={apiRoutes.orgUsers
+            .replace(
+              ':orgID',
+              orgID || currentUser?.organization?.organization_id
+            )
+            .concat(showActive ? '?status=Active' : '?status=Inactive')}
           apiData={'users'}
           columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
-          defaultFilterModel={[
-            ...defaultFilterModel,
-            {
-              filterType: 'number',
-              type: 'equals',
-              field: 'organization_id',
-              filter: orgID ?? currentUser?.organization?.organization_id
-            }
-          ]}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}

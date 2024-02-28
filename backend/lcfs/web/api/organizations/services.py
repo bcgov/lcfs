@@ -19,7 +19,7 @@ from lcfs.web.api.base import (
 )
 
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
-
+from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
@@ -35,7 +35,7 @@ from .schema import (
 )
 
 
-logger = getLogger("organization_repo")
+logger = getLogger("organizations_repo")
 
 
 class OrganizationServices:
@@ -120,7 +120,7 @@ class OrganizationServices:
             "Content-Disposition": f'attachment; filename="{filename}"'}
 
         return StreamingResponse(
-            io.BytesIO(file_content), media_type="application/vnd.ms-excel", headers=headers
+            io.BytesIO(file_content), media_type=FILE_MEDIA_TYPE.XLS, headers=headers
         )
 
     @service_handler

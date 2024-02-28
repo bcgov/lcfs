@@ -18,19 +18,3 @@ export const useUser = (id, options) => {
     ...options
   })
 }
-
-export const saveUpdateUser = (id, data, options) => {
-  const client = useApiService()
-  if (id) {
-    return useQuery({
-      queryKey: ['edit-user'],
-      queryFn: async () => (await client.put(`/users/${id}`, data)).data,
-      ...options
-    })
-  }
-  return useQuery({
-    queryKey: ['new-user'],
-    queryFn: async () => (await client.post(`/users`, data)).data,
-    ...options
-  })
-}

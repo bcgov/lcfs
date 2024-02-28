@@ -9,7 +9,6 @@ from sqlalchemy import and_, func, select, asc, desc, distinct
 from lcfs.db.dependencies import get_async_db_session
 
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
@@ -17,10 +16,14 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.db.models.OrganizationStatus import OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
+from .schema import (
+    OrganizationSchema,
+    OrganizationStatusSchema,
+    OrganizationTypeSchema,
+)
 
 
-logger = getLogger("organization_repo")
+logger = getLogger("organizations_repo")
 
 
 class OrganizationRepository:
@@ -29,9 +32,9 @@ class OrganizationRepository:
 
     @repo_handler
     async def get_organizations(self) -> List[Organization]:
-        '''
+        """
         Fetch all organizations from the database
-        '''
+        """
         result = await self.db.execute(
             select(Organization)
             .options(joinedload(Organization.org_status))
@@ -40,13 +43,10 @@ class OrganizationRepository:
         return result.scalars().all()
 
     @repo_handler
-    async def create_organization(
-            self,
-            org_model: Organization
-    ):
-        '''
+    async def create_organization(self, org_model: Organization):
+        """
         save an organization in the database
-        '''
+        """
 
         self.db.add(org_model)
         await self.db.commit()
@@ -55,9 +55,9 @@ class OrganizationRepository:
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
-        '''
+        """
         Fetch a single organization by organization id from the database
-        '''
+        """
         return await self.db.scalar(
             select(Organization)
             .options(
@@ -70,19 +70,18 @@ class OrganizationRepository:
 
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:
-        '''
+        """
         Fetch a single organization by organization id from the database without related tables
-        '''
+        """
         return await self.db.scalar(
-            select(Organization).where(
-                Organization.organization_id == organization_id)
+            select(Organization).where(Organization.organization_id == organization_id)
         )
 
     @repo_handler
     async def get_organizations_paginated(self, offset, limit, conditions, pagination):
-        '''
+        """
         Fetch all organizations. returns pagination data
-        '''
+        """
         query = (
             select(Organization)
             .join(
@@ -111,9 +110,7 @@ class OrganizationRepository:
         for order in pagination.sortOrders:
             sort_method = asc if order.direction == "asc" else desc
             query = query.order_by(
-                sort_method(
-                    order.field if order.field != "status" else "description"
-                )
+                sort_method(order.field if order.field != "status" else "description")
             )
 
         results = await self.db.execute(query.offset(offset).limit(limit))
@@ -139,9 +136,9 @@ class OrganizationRepository:
 
     @repo_handler
     async def get_organization_types(self) -> List[OrganizationTypeSchema]:
-        '''
+        """
         Get all available types for organizations from the database.
-        '''
+        """
         query = select(OrganizationType).distinct()
         result = await self.db.execute(query)
 
@@ -149,9 +146,9 @@ class OrganizationRepository:
 
     @repo_handler
     async def get_organization_names(self):
-        '''
+        """
         Get all available names for organizations from the database.
-        '''
+        """
         result = await self.db.execute(
             select(Organization.organization_id, Organization.name)
         )
@@ -159,9 +156,9 @@ class OrganizationRepository:
 
     @repo_handler
     async def get_externally_registered_organizations(self, conditions):
-        '''
+        """
         Get all externally registered  organizations from the database.
-        '''
+        """
 
         query = (
             select(Organization)
@@ -179,13 +176,18 @@ class OrganizationRepository:
     @repo_handler
     async def get_organization_address(self, organization_address_id: int):
         return await self.db.scalar(
-            select(OrganizationAddress)
-            .where(OrganizationAddress.organization_address_id == organization_address_id)
+            select(OrganizationAddress).where(
+                OrganizationAddress.organization_address_id == organization_address_id
+            )
         )
 
     @repo_handler
-    async def get_organization_attorney_address(self, organization_attorney_address_id: int):
+    async def get_organization_attorney_address(
+        self, organization_attorney_address_id: int
+    ):
         return await self.db.scalar(
-            select(OrganizationAttorneyAddress)
-            .where(OrganizationAttorneyAddress.organization_attorney_address_id == organization_attorney_address_id)
+            select(OrganizationAttorneyAddress).where(
+                OrganizationAttorneyAddress.organization_attorney_address_id
+                == organization_attorney_address_id
+            )
         )

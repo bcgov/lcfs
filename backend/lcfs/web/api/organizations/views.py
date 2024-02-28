@@ -15,17 +15,15 @@ from .services import OrganizationServices
 from .schema import (
     OrganizationTypeSchema,
     OrganizationStatusSchema,
-    OrganizationSchema,
     OrganizationListSchema,
     OrganizationCreateSchema,
-    OrganizationUpdateSchema,
     OrganizationResponseSchema,
     OrganizationSummaryResponseSchema,
     OrganizationCreateResponseSchema
 )
 
 
-logger = getLogger("organizations")
+logger = getLogger("organizations_view")
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 

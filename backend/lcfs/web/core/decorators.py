@@ -43,6 +43,10 @@ def roles_required(*required_roles):
             if not (user_role_names & required_role_set):
                 raise HTTPException(
                     status_code=403, detail="Insufficient permissions")
+            orgId = kwargs.get("organization_id", None)
+            if (RoleEnum.SUPPLIER in user_role_names and 
+                orgId and int(orgId) != user.organization_id):
+                raise HTTPException(status_code=403, detail="Insufficient permissions for this organization")
 
             return await func(request, *args, **kwargs)
 
@@ -51,7 +55,7 @@ def roles_required(*required_roles):
 
 
 def view_handler(func):
-    '''Hanldes try except in the view layer'''
+    '''Handles try except in the view layer'''
     @wraps(func)
     async def wrapper(*args, **kwargs):
         logger = getLogger(func.__module__)
@@ -80,7 +84,7 @@ def view_handler(func):
 
 
 def service_handler(func):
-    '''Hanldes try except in the service layer'''
+    '''Handles try except in the service layer'''
     @wraps(func)
     async def wrapper(*args, **kwargs):
         logger = getLogger(func.__module__)
@@ -103,7 +107,7 @@ def service_handler(func):
 
 
 def repo_handler(func):
-    '''Hanldes try except in the repo layer'''
+    '''Handles try except in the repo layer'''
     @wraps(func)
     async def wrapper(*args, **kwargs):
         logger = getLogger(func.__module__)

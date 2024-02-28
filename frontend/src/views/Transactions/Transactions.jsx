@@ -72,7 +72,7 @@ export const Transactions = () => {
               startIcon={
                 <FontAwesomeIcon
                   icon={faCirclePlus}
-                  class="small-icon"
+                  className="small-icon"
                   size="2x"
                 />
               }
