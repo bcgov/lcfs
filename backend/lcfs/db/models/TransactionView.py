@@ -8,7 +8,7 @@ from lcfs.db.base import BaseModel
 # and statuses without requiring complex joins in every query.
 class TransactionView(BaseModel):
     # Table name for the SQLAlchemy model, matching the database view name
-    __tablename__ = 'transaction_view'
+    __tablename__ = 'mv_transaction_aggregate'
 
     # Allows modification of the class definition without requiring a restart,
     # useful for dynamic schema changes or when working with database views.

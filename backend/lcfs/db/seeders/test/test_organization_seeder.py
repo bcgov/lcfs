@@ -17,16 +17,19 @@ async def seed_test_organizations(session):
     organizations_to_seed = [
         {
             "name": fake.company(),
+            "operating_name": fake.company(),
             "organization_status_id": 2,
             "organization_type_id": 1
         },
         {
             "name": fake.company(),
+            "operating_name": fake.company(),
             "organization_status_id": 2,
             "organization_type_id": 1
         },
         {
             "name": fake.company(),
+            "operating_name": fake.company(),
             "organization_status_id": 2,
             "organization_type_id": 1
         }

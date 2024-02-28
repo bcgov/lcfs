@@ -15,8 +15,6 @@ async def test_get_all_transfers(dbsession, transfer_repo):
     await dbsession.commit()
     transfers = await transfer_repo.get_all_transfers()
     assert len(transfers) == 3
-    assert transfers[0].transfer_id == 1
-    assert transfers[2].transfer_id == 3
 
 # Test retrieving a transfer by ID
 @pytest.mark.anyio

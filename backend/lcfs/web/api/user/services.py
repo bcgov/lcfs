@@ -29,7 +29,7 @@ from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
 from fastapi_cache import FastAPICache
 
-logger = getLogger("organization_repo")
+logger = getLogger("user_repo")
 
 
 class UserServices:

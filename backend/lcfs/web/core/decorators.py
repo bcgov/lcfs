@@ -32,7 +32,7 @@ def roles_required(*required_roles):
                     status_code=401, detail="User not authenticated")
 
             # Extract the role names or enum members from the user_roles attribute
-            user_role_names = {role_enum_member(
+            user_roles = {role_enum_member(
                 role) for role in user.user_roles}
 
             # Convert required_roles to a set of RoleEnum members
@@ -40,7 +40,7 @@ def roles_required(*required_roles):
                                  for role in required_roles}
 
             # Check if user has all the required roles
-            if not user_role_names.issubset(required_role_set):
+            if not required_role_set.issubset(user_roles):
                 raise HTTPException(
                     status_code=403, detail="Insufficient permissions")
 
