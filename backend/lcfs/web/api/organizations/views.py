@@ -11,7 +11,7 @@ from lcfs.db import dependencies
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 
-from .services import OrganizationServices
+from .services import OrganizationsService
 from .schema import (
     OrganizationTypeSchema,
     OrganizationStatusSchema,
@@ -33,7 +33,7 @@ get_async_db = dependencies.get_async_db_session
 @view_handler
 async def export_organizations(
     request: Request,
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ):
     """
     Endpoint to export information of all organizations
@@ -62,7 +62,7 @@ async def export_organizations(
 async def create_organization(
     request: Request,
     organization_data: OrganizationCreateSchema,
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ):
     """
     Endpoint to create a new organization. This includes processing the provided
@@ -81,7 +81,7 @@ async def create_organization(
 async def get_organization(
     request: Request,
     organization_id: int,
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ):
     '''Fetch a single organization by id'''
     return await service.get_organization(organization_id)
@@ -93,7 +93,7 @@ async def update_organization(
     request: Request,
     organization_id: int,
     organization_data: OrganizationCreateSchema,
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ):
     '''Update an organizations data by id'''
     return await service.update_organization(organization_id, organization_data)
@@ -105,7 +105,7 @@ async def update_organization(
 async def get_organizations(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ):
     '''Fetch a list of organizations'''
     return await service.get_organizations(pagination)
@@ -119,7 +119,7 @@ async def get_organizations(
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler
 async def get_organization_statuses(
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ) -> List[OrganizationStatusSchema]:
     '''Fetch all organization statuses'''
     return await service.get_organization_statuses()
@@ -133,7 +133,7 @@ async def get_organization_statuses(
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler
 async def get_organization_types(
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ) -> List[OrganizationTypeSchema]:
     '''Fetch all organization types'''
     return await service.get_organization_types()
@@ -144,7 +144,7 @@ async def get_organization_types(
 )
 @cache(expire=60 * 60)  # cache for 1 hour
 @view_handler
-async def get_organization_names(service: OrganizationServices = Depends()):
+async def get_organization_names(service: OrganizationsService = Depends()):
     '''Fetch all organization names'''
     return await service.get_organization_names()
 
@@ -153,7 +153,7 @@ async def get_organization_names(service: OrganizationServices = Depends()):
 @view_handler
 async def get_externally_registered_organizations(
     request: Request,
-    service: OrganizationServices = Depends()
+    service: OrganizationsService = Depends()
 ):
     """
     Retrieve a list of registered organizations, excluding the specified organization.

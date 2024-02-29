@@ -76,7 +76,7 @@ export const AddEditTransfer = () => {
         fromOrganizationId: transferData.from_organization.organization_id,
         toOrganizationId: transferData.to_organization.organization_id,
         quantity: transferData.quantity,
-        pricePerUnit: transferData.price_per_unit,
+        pricePerUnit: parseFloat(transferData.price_per_unit).toFixed(2),
         signingAuthorityDeclaration: transferData.signing_authority_declaration,
         comments: transferData.comments?.comment, // Assuming you only want the comment text
         agreementDate: transferData.agreement_date
@@ -219,15 +219,15 @@ export const AddEditTransfer = () => {
           {transferId ? 'Edit Transfer' : 'New Transfer'}
         </BCTypography>
 
-        <BCTypography>
+        <BCTypography variant="body4">
           A transfer is not effective until it is recorded by the director.
         </BCTypography>
-        <BCTypography>
+        <br />
+        <BCTypography variant="body4">
           Transfers must indicate whether they are for consideration, and if so,
           the fair market value of the consideration in Canadian dollars per
           compliance unit.
         </BCTypography>
-        <BCTypography>&nbsp;</BCTypography>
 
         {isCreateDraftError && (
           <BCAlert severity="error">
@@ -269,7 +269,7 @@ export const AddEditTransfer = () => {
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}
-                      color={colors.dark.main}
+                      className="small-icon"
                     />
                   }
                 >
@@ -289,7 +289,6 @@ export const AddEditTransfer = () => {
                     config.startIcon && (
                       <FontAwesomeIcon
                         icon={config.startIcon}
-                        color={config.iconColor ?? colors.primary.main}
                         className="small-icon"
                       />
                     )

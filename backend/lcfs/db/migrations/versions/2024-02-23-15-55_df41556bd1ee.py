@@ -25,7 +25,9 @@ def upgrade() -> None:
     SELECT
         t.transfer_id AS transaction_id,
         'Transfer' AS transaction_type,
+        org_from.organization_id AS from_organization_id,
         org_from.name AS from_organization,
+        org_to.organization_id AS to_organization_id,
         org_to.name AS to_organization,
         t.quantity,
         t.price_per_unit,
@@ -40,7 +42,9 @@ def upgrade() -> None:
     SELECT
         ia.initiative_agreement_id AS transaction_id,
         'InitiativeAgreement' AS transaction_type,
+        NULL AS from_organization_id,
         NULL AS from_organization,
+        org.organization_id AS to_organization_id,
         org.name AS to_organization,
         ia.compliance_units AS quantity,
         NULL AS price_per_unit,
@@ -54,7 +58,9 @@ def upgrade() -> None:
     SELECT
         aa.admin_adjustment_id AS transaction_id,
         'AdminAdjustment' AS transaction_type,
+        NULL AS from_organization_id,
         NULL AS from_organization,
+        org.organization_id AS to_organization_id,
         org.name AS to_organization,
         aa.compliance_units AS quantity,
         NULL AS price_per_unit,

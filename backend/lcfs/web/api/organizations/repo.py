@@ -9,7 +9,6 @@ from sqlalchemy import and_, func, select, asc, desc, distinct
 from lcfs.db.dependencies import get_async_db_session
 
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
@@ -23,7 +22,7 @@ from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTy
 logger = getLogger("organizations_repo")
 
 
-class OrganizationRepository:
+class OrganizationsRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 

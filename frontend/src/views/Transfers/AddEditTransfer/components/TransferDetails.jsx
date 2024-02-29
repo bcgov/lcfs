@@ -11,10 +11,11 @@ import {
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import LabelBox from './LabelBox'
+import BCTypography from '@/components/BCTypography'
 
 const calculateTotalValue = (quantity, pricePerUnit) => {
   const quantityNum = parseFloat(quantity)
-  const priceNum = parseFloat(pricePerUnit)
+  const priceNum = parseFloat(pricePerUnit).toFixed(1)
   return !isNaN(quantityNum) && !isNaN(priceNum) ? quantityNum * priceNum : 0
 }
 
@@ -69,15 +70,18 @@ const TransferDetails = () => {
   return (
     <BCBox>
       <LabelBox label="Transfer Details (required)">
-        <Typography variant="body1" component="div">
-          {`${currentUser?.organization?.name} transfers `}
+        <BCTypography variant="body4" component="div">
+          <BCTypography fontWeight="bold" variant="body4" component="span">
+            {currentUser?.organization?.name}
+          </BCTypography>
+          {' transfers '}
           <TextField
             {...register('quantity')}
             placeholder="Quantity"
             size="small"
             error={!!errors.quantity}
             helperText={errors.quantity?.message}
-            style={{ width: '200px', marginRight: '10px' }}
+            sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
           />
           {' compliance units to '}
           <FormControl
@@ -114,7 +118,9 @@ const TransferDetails = () => {
                       height: '100% !important',
                       paddingTop: '0px',
                       paddingBottom: '0px'
-                    }
+                    },
+                    bottom: '0.2rem',
+                    marginInline: '0.2rem'
                   }}
                   renderValue={(selected) => {
                     if (selected === '') {
@@ -145,27 +151,36 @@ const TransferDetails = () => {
           </FormControl>
           {' for '}
           <TextField
+            type="number"
             {...register('pricePerUnit')}
             placeholder="The fair market value of any consideration, in CAD"
             size="small"
             error={!!errors.pricePerUnit}
             helperText={errors.pricePerUnit?.message}
-            style={{ width: '375px', marginRight: '10px' }}
+            inputProps={{
+              maxLength: 13,
+              step: '10',
+              style: { textAlign: 'right' }
+            }}
+            sx={{
+              width: '12rem',
+              marginInline: '0.2rem',
+              bottom: '0.2rem'
+            }}
           />
           {' per compliance unit for a total value of '}
-          <Typography
-            variant="body1"
+          <BCTypography
+            variant="body4"
+            fontWeight="bold"
             component="span"
-            color="primary"
             data-testid="transfer-total-value"
           >
-            {totalValue.toLocaleString('en-CA', {
+            {`${totalValue.toLocaleString('en-CA', {
               style: 'currency',
               currency: 'CAD'
-            })}
-          </Typography>
-          {' CAD.'}
-        </Typography>
+            })} CAD.`}
+          </BCTypography>
+        </BCTypography>
       </LabelBox>
     </BCBox>
   )

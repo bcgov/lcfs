@@ -15,8 +15,9 @@ from lcfs.db import dependencies
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
+from lcfs.web.api.transaction.schema import TransactionListSchema
 from lcfs.web.api.user.services import UserServices
-from .services import OrganizationServices
+from .services import OrganizationService
 
 
 logger = getLogger("organization_view")
@@ -37,7 +38,7 @@ async def get_org_users(
     status: str = Query(default="Active", description="Active or Inactive users list"),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
-    org_service: OrganizationServices = Depends(),
+    org_service: OrganizationService = Depends(),
 ):
     """
     Enpoint to get information of all users related to organization for ag-grid in the UI
@@ -125,3 +126,23 @@ async def update_user(
     user_create.organization_id = organization_id
     await user_service.update_user(user_create, user_id)
     return await user_service.get_user_by_id(user_id)
+
+
+@router.post(
+    "/{organization_id}/transactions",
+    response_model=TransactionListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Supplier")
+@view_handler
+async def get_transactions_paginated(
+    request: Request,
+    organization_id: int,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    org_service: OrganizationService = Depends(),
+    response: Response = None,
+):
+    """
+    Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
+    """
+    return await org_service.get_transactions_paginated(pagination, organization_id)

@@ -14,7 +14,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Government", "Supplier")
 @view_handler
 async def get_transactions_paginated(
     request: Request,

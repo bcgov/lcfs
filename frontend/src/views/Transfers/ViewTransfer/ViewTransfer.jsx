@@ -23,10 +23,10 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 // Sub components
-import { OrganizationBadge } from '../../Transactions/components/OrganizationBadge'
-import { demoData } from '../../Transactions/components/demo'
-import { AttachmentList } from '../../Transactions/components/AttachmentList'
-import { Comments } from '../../Transactions/components/Comments'
+import { OrganizationBadge } from '@/views/Transactions/components/OrganizationBadge'
+import { demoData } from '@/views/Transactions/components/demo'
+import { AttachmentList } from '@/views/Transactions/components/AttachmentList'
+import { Comments } from '@/views/Transactions/components/Comments'
 import Loading from '@/components/Loading'
 
 export const ViewTransfer = () => {
