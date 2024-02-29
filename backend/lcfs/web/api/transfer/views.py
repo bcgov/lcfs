@@ -8,6 +8,7 @@ from lcfs.web.core.decorators import roles_required, view_handler
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
+
 @router.get("/", response_model=List[TransferSchema])
 @view_handler
 async def get_all_transfers(
@@ -39,13 +40,27 @@ async def create_transfer(
     return await service.create_transfer(transfer_data)
 
 
-@router.put("/", response_model=TransferSchema)
+@router.put("/{transfer_id}/draft", response_model=TransferSchema, status_code=status.HTTP_200_OK)
+@roles_required("SUPPLIER")
+@view_handler
+async def update_transfer_draft(
+    request: Request,
+    transfer_id: int,
+    transfer_data: TransferCreate,
+    service: TransferServices = Depends()
+):
+    """Endpoint to update an existing transfer."""
+    return await service.update_transfer_draft(transfer_id, transfer_data)
+
+
+@router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @roles_required("SUPPLIER")
 @view_handler
 async def update_transfer(
     request: Request,
+    transfer_id: int,
     transfer_data: TransferUpdate,
     service: TransferServices = Depends()
 ):
-    """Endpoint to update an existing transfer."""
-    return await service.update_transfer(transfer_data)
+    """Endpoint to set an existing transfers status to 'Deleted'."""
+    return await service.update_transfer(transfer_id, transfer_data)

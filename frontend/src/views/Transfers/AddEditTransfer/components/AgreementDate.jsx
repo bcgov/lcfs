@@ -1,12 +1,25 @@
-import React from 'react'
 import { Box, TextField, Typography } from '@mui/material'
-import LabelBox from './LabelBox' // Assuming LabelBox is a custom component
+import { useFormContext } from 'react-hook-form'
+import LabelBox from './LabelBox'
+import { useTranslation } from 'react-i18next'
 
-const AgreementDate = ({ register, errors, maxDate }) => {
+const AgreementDate = () => {
+  const { t } = useTranslation(['transfer'])
+  const {
+    register,
+    formState: { errors }
+  } = useFormContext()
+
+  const formatDate = (date) => {
+    return date.toISOString().split('T')[0]
+  }
+
+  const currentDate = new Date()
+  const maxDate = formatDate(currentDate)
   return (
     <LabelBox
-      label="Agreement Date (required)"
-      description="Date on which the written agreement for the transfer was reached between the organizations:"
+      label={t('transfer:agrDateLabel')}
+      description={t('transfer:agrDateDescText')}
     >
       <Box
         display="flex"
@@ -14,7 +27,7 @@ const AgreementDate = ({ register, errors, maxDate }) => {
         justifyContent="flex-start"
         gap="10px"
       >
-        <Typography variant="body2">Agreement Date:</Typography>
+        <Typography variant="body2">{t('transfer:agrDateHeader')}</Typography>
         <TextField
           data-testid="transfer-agreement-date"
           {...register('agreementDate')}

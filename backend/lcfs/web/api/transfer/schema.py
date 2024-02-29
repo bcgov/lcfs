@@ -3,11 +3,13 @@ from typing import Optional
 from datetime import date
 from enum import Enum
 
+
 class TransactionTypeEnum(str, Enum):
     administrative_adjustment = "Administrative Adjustment"
     initiative_agreement = "Initiative Agreement"
     assessment = "Assessment"
     transfer = "Transfer"
+
 
 class TransferStatusEnum(str, Enum):
     Draft = "Draft"
@@ -20,27 +22,37 @@ class TransferStatusEnum(str, Enum):
     Declined = "Declined"
     Rescinded = "Rescinded"
 
+
 class TransferStatusSchema(BaseModel):
+    transfer_status_id: int
     status: str
+
     class Config:
         from_attributes = True
 
+
 class TransferCategorySchema(BaseModel):
     category: str
+
     class Config:
         from_attributes = True
+
 
 class TransferOrganizationSchema(BaseModel):
     organization_id: int
     name: str
+
     class Config:
         from_attributes = True
+
 
 class TransferCommentSchema(BaseModel):
     comment_id: int
     comment: Optional[str] = None
+
     class Config:
         from_attributes = True
+
 
 class TransferSchema(BaseModel):
     transfer_id: int
@@ -58,6 +70,7 @@ class TransferSchema(BaseModel):
         extra = 'ignore'
         from_attributes = True
 
+
 class TransferCreate(BaseModel):
     from_organization_id: int
     to_organization_id: int
@@ -66,14 +79,19 @@ class TransferCreate(BaseModel):
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[str] = None
+
     class Config:
         from_attributes = True
 
-class TransferUpdate(TransferCreate):
-    transfer_id: int
+
+class TransferUpdate(BaseModel):
+    current_status_id: int
+    comments: Optional[str] = None
+
 
 class TransferHistory(BaseModel):
     transfer_history_id: int
     transfer_id: int
+
     class Config:
         from_attributes = True

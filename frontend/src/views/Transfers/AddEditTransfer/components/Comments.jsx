@@ -1,13 +1,18 @@
-import React, { useState } from 'react'
-import { Box, Collapse, IconButton, TextField, Typography } from '@mui/material'
+import { Box, Collapse, IconButton, TextField } from '@mui/material'
+import { useState } from 'react'
 
 // MUI Icons
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { useFormContext } from 'react-hook-form'
 import LabelBox from './LabelBox'
+import { useTranslation } from 'react-i18next'
 
-const Comments = ({ register }) => {
+const Comments = () => {
+  const { t } = useTranslation(['transfer'])
   const [isExpanded, setIsExpanded] = useState(false)
+
+  const { register } = useFormContext()
 
   const handleToggle = () => {
     setIsExpanded(!isExpanded)
@@ -16,8 +21,8 @@ const Comments = ({ register }) => {
   return (
     <>
       <LabelBox
-        label="Comments (optional)"
-        description="Your comments will be visible to both organizations of the transfer and government:"
+        label={t('transfer:commentsLabel')}
+        description={t('transfer:commentsDescText')}
       >
         <Box
           display="flex"

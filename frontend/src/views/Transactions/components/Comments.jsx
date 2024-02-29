@@ -24,7 +24,7 @@ export const Comments = ({ comments }) => (
         borderRadius: '5px'
       }}
     >
-      {comments.map((comment) => (
+      {comments?.map((comment) => (
         <BCBox component="div" key={comment.commentID}>
           <ListItem alignItems="flex-start" sx={{ padding: '8px' }}>
             <ListItemAvatar>
