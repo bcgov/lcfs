@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import LabelBox from './LabelBox'
 
 const calculateTotalValue = (quantity, pricePerUnit) => {
@@ -19,6 +20,7 @@ const calculateTotalValue = (quantity, pricePerUnit) => {
 }
 
 const TransferDetails = () => {
+  const { t } = useTranslation(['common', 'transfer', 'organization'])
   const [totalValue, setTotalValue] = useState(0.0)
   const {
     register,
@@ -30,7 +32,7 @@ const TransferDetails = () => {
   const { data: orgData } = useRegExtOrgs()
   const organizations = orgData?.map((org) => ({
     value: parseInt(org.organization_id),
-    label: org.name || 'Unknown'
+    label: org.name || t('common:unknown')
   }))
 
   const quantity = watch('quantity')
@@ -68,18 +70,18 @@ const TransferDetails = () => {
   }
   return (
     <BCBox>
-      <LabelBox label="Transfer Details (required)">
+      <LabelBox label={t('transfer:detailsLabel')}>
         <Typography variant="body1" component="div">
-          {`${currentUser?.organization?.name} transfers `}
+          {`${currentUser?.organization?.name} ${t('transfer:transfers')} `}
           <TextField
             {...register('quantity')}
-            placeholder="Quantity"
+            placeholder={t('common:quantity')}
             size="small"
             error={!!errors.quantity}
             helperText={errors.quantity?.message}
             style={{ width: '200px', marginRight: '10px' }}
           />
-          {' compliance units to '}
+          {t('transfer:complianceUnitsTo')}
           <FormControl
             sx={{
               width: '350px',
@@ -118,7 +120,7 @@ const TransferDetails = () => {
                   }}
                   renderValue={(selected) => {
                     if (selected === '') {
-                      return <em>Select an Organization</em>
+                      return <em>{t('organization:selectOrgLabel')}</em>
                     }
                     const selectedOrg = organizations.find(
                       (org) => org.value === selected
@@ -126,12 +128,12 @@ const TransferDetails = () => {
                     return selectedOrg ? (
                       selectedOrg.label
                     ) : (
-                      <em>Select an Organization</em>
+                      <em>{t('organization:selectOrgLabel')}</em>
                     )
                   }}
                 >
                   <MenuItem value="">
-                    <em>Select an Organization</em>
+                    <em>{t('organization:selectOrgLabel')}</em>
                   </MenuItem>
                   {organizations.map((org) => (
                     <MenuItem key={org.value} value={org.value}>
@@ -143,16 +145,16 @@ const TransferDetails = () => {
             />
             {renderError('toOrganizationId')}
           </FormControl>
-          {' for '}
+          {t('transfer:for')}
           <TextField
             {...register('pricePerUnit')}
-            placeholder="The fair market value of any consideration, in CAD"
+            placeholder={t('transfer:fairMarketText')}
             size="small"
             error={!!errors.pricePerUnit}
             helperText={errors.pricePerUnit?.message}
             style={{ width: '375px', marginRight: '10px' }}
           />
-          {' per compliance unit for a total value of '}
+          {t('transfer:totalValueText')}
           <Typography
             variant="body1"
             component="span"

@@ -14,6 +14,8 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import { decimalFormatter } from '@/utils/formatters'
 import { BTN_RESCIND_TRANSFER, BTN_APP_CANCEL } from '@/constants/langEnUs'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+
 // Icons
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -27,24 +29,35 @@ import { OrganizationBadge } from '../../Transactions/components/OrganizationBad
 import { demoData } from '../../Transactions/components/demo'
 import { AttachmentList } from '../../Transactions/components/AttachmentList'
 import { Comments } from '../../Transactions/components/Comments'
+import { useTranslation } from 'react-i18next'
 import Loading from '@/components/Loading'
+import { useTransfer } from '@/hooks/useTransfer'
 
 export const ViewTransfer = () => {
+  const { t } = useTranslation(['common', 'transfer'])
   const iconSizeStyle = {
     fontSize: (theme) => `${theme.spacing(12)} !important`
   }
   const navigate = useNavigate()
-  const { transactionID } = useParams()
-  const { data: transaction, isLoading } = useTransaction(transactionID)
-  // testing only -- Remove later
-  const isGovernmentUser = true
-  // -- Remove later
+  const { transferId } = useParams()
+  const { data: currentUser } = useCurrentUser()
+  const { data: transfer, isLoading } = useTransfer(transferId)
+  const { 
+    current_status: { status: transferStatus } = {}, 
+    to_organization: { name: toOrganization } = {}, 
+    from_organization: { name: fromOrganization } = {}, 
+    quantity, 
+    comments,
+    price_per_unit: pricePerUnit 
+  } = transfer || {}
+  const totalValue = quantity * pricePerUnit
+  const isGovernmentUser = currentUser?.is_government_user
 
   const steps = useMemo(() => {
-    if (isGovernmentUser && demoData.status !== 'Refused') {
+    if (isGovernmentUser && transferStatus !== 'Refused') {
       return ['Draft', 'Sent', 'Submitted', 'Recommended', 'Recorded']
     }
-    switch (demoData.status) {
+    switch (transferStatus) {
       case 'Rescind':
         return ['Draft', 'Rescind', 'Submitted', 'Recorded']
       case 'Declined':
@@ -58,29 +71,27 @@ export const ViewTransfer = () => {
       default:
         return ['Draft', 'Sent', 'Submitted', 'Recorded']
     }
-  }, [isGovernmentUser])
+  }, [isGovernmentUser, transferStatus])
 
   if (isLoading) return <Loading />
   return (
     <BCBox>
       {/* Header section */}
       <Typography variant="h5" color="primary">
-        Transfer—ID: {demoData.id}
+        {t('transfer:transferID')} {transferId}
       </Typography>
       <Typography variant="body4">
-        A transfer is not effective until it is recorded by the Director.
+        {t('transfer:effectiveText')}
       </Typography>
       <br />
       <Typography variant="body4">
-        Transfers must indicate whether they are for consideration, and if so,
-        the fair market value of the consideration in Canadian dollars per
-        compliance unit.
+        {t('transfer:considerationText')}
       </Typography>
       <BCBox
         p={2}
         sx={{ width: '50%', alignContent: 'center', margin: 'auto' }}
       >
-        <Stepper activeStep={steps.indexOf(demoData.status)} alternativeLabel>
+        <Stepper activeStep={steps.indexOf(transferStatus)} alternativeLabel>
           {steps.map((label, index) => {
             const labelProps = {}
             if (
@@ -101,12 +112,12 @@ export const ViewTransfer = () => {
       {/* Flow Representation of transaction */}
       <Stack spacing={4} direction="row" justifyContent="center">
         <OrganizationBadge
-          content={demoData.FromOrganization}
+          content={fromOrganization}
           isGovernmentUser={isGovernmentUser}
         />
         <Stack spacing={1} direction="column" justifyContent="center" pl={2}>
           <Typography variant="caption1" textAlign="center">
-            {demoData.noOfComplianceUnits} compliance units
+            {quantity} {t('transfer:complianceUnits')}
           </Typography>
           <BCBox
             display="flex"
@@ -126,12 +137,12 @@ export const ViewTransfer = () => {
           <Typography variant="caption1" textAlign="center">
             $
             {decimalFormatter({
-              value: demoData.noOfComplianceUnits * demoData.valuePerUnit
+              value: totalValue
             })}
           </Typography>
         </Stack>
         <OrganizationBadge
-          content={demoData.ToOrganization}
+          content={toOrganization}
           isGovernmentUser={isGovernmentUser}
         />
       </Stack>
@@ -144,15 +155,15 @@ export const ViewTransfer = () => {
         }}
       >
         <Typography variant="body4">
-          <b>{demoData.FromOrganization}</b> transfers{' '}
-          <b>{demoData.noOfComplianceUnits}</b> compliance units to{' '}
-          <b>{demoData.ToOrganization}</b> for{' '}
-          <b>${decimalFormatter({ value: demoData.valuePerUnit })}</b> per
-          compliance unit for a total value of{' '}
+          <b>{fromOrganization}</b>{t('transfer:transfers')}
+          <b>{quantity}</b>{t('transfer:complianceUnitsTo')}{' '}
+          <b>{toOrganization}</b>{t('transfer:for')}
+          <b>${decimalFormatter({ value: pricePerUnit })}</b>
+          {t('transfer:complianceUnitsPerTvo')}
           <b>
             $
             {decimalFormatter({
-              value: demoData.noOfComplianceUnits * demoData.valuePerUnit
+              value: totalValue
             })}
           </b>{' '}
           CAD.
@@ -160,12 +171,14 @@ export const ViewTransfer = () => {
       </BCBox>
       {/* Comments */}
       <Comments comments={demoData.comments} />
+      -- demo data --
       {/* List of attachments */}
-      <AttachmentList attachments={demoData.attachments} />
+      <AttachmentList attachments={demoData.attachments} /> 
       {/* Transaction History notes */}
+      -- demo data --
       <BCBox mt={2}>
         <Typography variant="h6" color="primary">
-          Transaction History
+          {t('transfer:txnHistory')}
         </Typography>
         <List>
           {demoData.transactionHistory.map((transaction) => (
@@ -178,6 +191,7 @@ export const ViewTransfer = () => {
           ))}
         </List>
       </BCBox>
+      -- demo data --
       {/* Buttons */}
       <BCBox p={2} display="flex" justifyContent="flex-end">
         <Stack spacing={4} direction="row" justifyContent="center">
@@ -191,7 +205,7 @@ export const ViewTransfer = () => {
           >
             <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
             <Typography variant="body4" sx={{ textTransform: 'capitalize' }}>
-              {BTN_APP_CANCEL}
+              {t('backBtn')}
             </Typography>
           </BCButton>
           <BCButton
@@ -213,7 +227,7 @@ export const ViewTransfer = () => {
           >
             <FontAwesomeIcon icon={faTrash} fontSize={8} />
             <Typography variant="body4" sx={{ textTransform: 'capitalize' }}>
-              {BTN_RESCIND_TRANSFER}
+              {t('transfer:rescindTransferBtn')}
             </Typography>
           </BCButton>
         </Stack>

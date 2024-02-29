@@ -22,19 +22,25 @@ const redBase = {
   iconColor: colors.error.main
 }
 
-export const saveDraftButton = {
-  ...outlineBase,
-  label: 'Save Draft',
-  startIcon: faFloppyDisk
+export const saveDraftButton = (saveDraftlabel) => {
+  return {
+    ...outlineBase,
+    label: saveDraftlabel,
+    startIcon: faFloppyDisk
+  }
 }
-export const submitButton = {
-  ...containedBase,
-  label: 'Sign and send',
-  startIcon: faPencil
+export const submitButton = (submitLabel) => {
+  return {
+    ...containedBase,
+    label: submitLabel,
+    startIcon: faPencil
+  }
 }
 
-export const deleteDraftButton = {
-  ...redBase,
-  label: 'Delete Draft',
-  startIcon: faTrash
+export const deleteDraftButton = (deleteDraftLabel) => {
+  return {
+    ...redBase,
+    label: deleteDraftLabel,
+    startIcon: faTrash
+  }
 }

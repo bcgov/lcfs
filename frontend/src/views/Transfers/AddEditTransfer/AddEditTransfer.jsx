@@ -25,6 +25,7 @@ import colors from '@/themes/base/colors'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box, Modal } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 import {
   deleteDraftButton,
   saveDraftButton,
@@ -37,6 +38,7 @@ import TransferDetails from './components/TransferDetails'
 import ConfirmationModal from './components/ConfirmationModal'
 
 export const AddEditTransfer = () => {
+  const { t } = useTranslation(['common', 'transfer'])
   const [modalData, setModalData] = useState(null)
   const navigate = useNavigate()
   const apiService = useApiService()
@@ -106,7 +108,7 @@ export const AddEditTransfer = () => {
     onSuccess: () => {
       navigate(TRANSACTIONS, {
         state: {
-          message: 'Draft transfer successfully created.',
+          message: t('transfer:createdText'),
           severity: 'success'
         }
       })
@@ -129,7 +131,7 @@ export const AddEditTransfer = () => {
     onSuccess: () => {
       navigate(TRANSACTIONS, {
         state: {
-          message: 'Draft transfer successfully updated.',
+          message: t('transfer:updatedText'),
           severity: 'success'
         }
       })
@@ -167,12 +169,12 @@ export const AddEditTransfer = () => {
   // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {
     New: [
-      { ...saveDraftButton, handler: createDraft },
-      { ...submitButton, disabled: true }
+      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: createDraft },
+      { ...submitButton(t('transfer:signAndSendBtn')), disabled: true }
     ],
     Draft: [
       {
-        ...deleteDraftButton,
+        ...deleteDraftButton(t('transfer:deleteDraftBtn')),
         handler: (formData) =>
           setModalData({
             onConfirm: () =>
@@ -180,16 +182,16 @@ export const AddEditTransfer = () => {
                 formData,
                 newStatus: 2,
                 message: {
-                  success: 'Draft transfer successfully deleted.',
-                  error: 'Error deleting transfer'
+                  success: t('transfer:deleteSuccessText'),
+                  error: t('transfer:deleteErrorText')
                 }
               }),
-            buttonText: 'Delete Draft',
-            text: 'Are you sure you want to delete this draft?'
+            buttonText: t('transfer:deleteDraftBtn'),
+            text: t('transfer:deleteConfirmText')
           })
       },
-      { ...saveDraftButton, handler: updateDraft },
-      { ...submitButton, handler: () => console.log('submit draft') }
+      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
+      { ...submitButton(t('transfer:signAndSendBtn')), handler: () => console.log('submit draft') }
     ],
     Sent: [],
     Rescinded: [],
@@ -202,13 +204,13 @@ export const AddEditTransfer = () => {
 
   // Conditional rendering for loading
   if (isCreatingDraft) {
-    return <Loading message="Creating Draft Transfer..." />
+    return <Loading message={t('transfer:creatingText')} />
   }
   if (isUpdatingDraft) {
-    return <Loading message="Updating Draft Transfer..." />
+    return <Loading message={t('transfer:updatingText')} />
   }
   if (isUpdatingTransfer) {
-    return <Loading message="Processing Transfer..." />
+    return <Loading message={t('transfer:processingText')} />
   }
 
   return (
@@ -216,23 +218,20 @@ export const AddEditTransfer = () => {
       <ConfirmationModal data={modalData} onClose={() => setModalData(null)} />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
-          {transferId ? 'Edit Transfer' : 'New Transfer'}
+          {transferId ? t('transfer:editTransfer') : t('transfer:newTransfer')}
         </BCTypography>
 
         <BCTypography>
-          A transfer is not effective until it is recorded by the director.
+          {t('transfer:effectiveText')}
         </BCTypography>
         <BCTypography>
-          Transfers must indicate whether they are for consideration, and if so,
-          the fair market value of the consideration in Canadian dollars per
-          compliance unit.
+          {t('transfer:considerationText')}
         </BCTypography>
         <BCTypography>&nbsp;</BCTypography>
 
         {isCreateDraftError && (
           <BCAlert severity="error">
-            Error occurred while submitting. Please retry. For ongoing issues,
-            contact support.
+            {t('common:submitError')}
           </BCAlert>
         )}
 
@@ -273,7 +272,7 @@ export const AddEditTransfer = () => {
                     />
                   }
                 >
-                  Back
+                  {t('common:backBtn')}
                 </BCButton>
               </Link>
               {buttonClusterConfig[
