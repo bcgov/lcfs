@@ -9,6 +9,8 @@ from lcfs.db.seeders.dev.user_role_seeder import seed_user_roles
 from .dev.organization_address_seeder import seed_organization_addresses
 from .dev.organization_attorney_address_seeder import seed_organization_attorney_addresses
 from .dev.organization_seeder import seed_organizations
+from .dev.transaction_seeder import seed_transactions
+from .dev.admin_adjustment_seeder import seed_admin_adjustments
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +26,8 @@ async def seed_dev():
             await seed_organization_addresses(session)
             await seed_organization_attorney_addresses(session)
             await seed_organizations(session)
+            await seed_transactions(session)
+            await seed_admin_adjustments(session)
             await seed_user_profiles(session)
             await seed_user_roles(session)
             logger.info("Database seeding completed successfully.")

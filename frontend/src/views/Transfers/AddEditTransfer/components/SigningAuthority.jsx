@@ -2,8 +2,10 @@ import { Box, FormControlLabel, Checkbox, Typography } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
 import { useFormContext } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 
 const SigningAuthority = () => {
+  const { t } = useTranslation(['transfer'])
   const {
     register,
     formState: { errors }
@@ -11,7 +13,7 @@ const SigningAuthority = () => {
   return (
     <>
       <BCTypography variant={'h6'} mt={2} mb={2} color={'primary'}>
-        Signing Authority Declaration
+        {t('transfer:saLabel')}
       </BCTypography>
       <Box
         display="flex"
@@ -30,9 +32,7 @@ const SigningAuthority = () => {
           }
           label={
             <Typography variant="body2">
-              I confirm that records evidencing each matter reported under
-              section 18 of the Low Carbon Fuel (General) Regulation are
-              available on request.
+              {t('transfer:saConfirmation')}
             </Typography>
           }
         />

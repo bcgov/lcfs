@@ -285,7 +285,7 @@ export const AddEditOrg = () => {
     >
       {/* Error Alert */}
       {(isCreateOrgError || isUpdateOrgError) && (
-        <BCAlert severity="error">{t('org:errMsg')}</BCAlert>
+        <BCAlert severity="error">{t('common:submitError')}</BCAlert>
       )}
 
       <Typography variant="h5" px={3}>

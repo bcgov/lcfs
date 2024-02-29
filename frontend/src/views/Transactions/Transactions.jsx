@@ -12,14 +12,11 @@ import { Box } from '@mui/material'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-// import { gridProps } from './options'
-import OrganizationList from './components/OrganizationList'
 import { Role } from '@/components/Role'
-// import { statuses } from '@/constants/statuses'
 import { transactionsColDefs } from './_schema'
 
 export const Transactions = () => {
-  const { t } = useTranslation(['common', 'transactions'])
+  const { t } = useTranslation(['common', 'transaction'])
   const navigate = useNavigate()
   const location = useLocation()
   const apiService = useApiService()
@@ -44,9 +41,7 @@ export const Transactions = () => {
   const defaultSortModel = [{ field: 'create_date', direction: 'asc' }]
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
-    console.log(params)
     const transactionType = params.data.transaction_type
-    console.log(transactionType)
     if (transactionType === 'Transfer') {
       navigate(
         ROUTES.TRANSFERS_VIEW.replace(':transferId', params.data.transaction_id)
@@ -97,7 +92,6 @@ export const Transactions = () => {
       <BCTypography variant="h5" mb={2} color="primary">
         {t('txn:title')}
       </BCTypography>
-      {/* <OrganizationList gridRef={gridRef} /> */}
       <Box display={'flex'} gap={2} mb={2}>
         <Role roles={['Supplier', 'Transfer']}>
           <BCButton
@@ -113,7 +107,7 @@ export const Transactions = () => {
             }
             onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
           >
-            <BCTypography variant="subtitle2">New transaction</BCTypography>
+            <BCTypography variant="subtitle2">{t('txn:newTxnBtn')}</BCTypography>
           </BCButton>
         </Role>
         <DownloadButton

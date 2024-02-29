@@ -231,7 +231,7 @@ export const AddEditUser = ({ userType }) => {
     <div>
       {isError && (
         <BCAlert severity="error" dismissible={true}>
-          {t('admin:errMsg')}
+          {t('common:submitError')}
         </BCAlert>
       )}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
