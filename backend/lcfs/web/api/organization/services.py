@@ -44,11 +44,6 @@ class OrganizationServices:
                 filter=organization_id,
             )
         )
-        pagination.filters.append(
-            FilterModel(
-                filterType="text", field="is_active", type="equals", filter=status
-            )
-        )
         users, total_count = await self.user_repo.get_users_paginated(
             pagination=pagination
         )

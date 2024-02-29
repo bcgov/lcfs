@@ -76,6 +76,7 @@ async def create_organization(
     response_model=OrganizationResponseSchema,
     status_code=status.HTTP_200_OK,
 )
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler
 async def get_organization(
     request: Request,
