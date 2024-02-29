@@ -16,7 +16,7 @@ from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.core.decorators import roles_required, view_handler
 
 router = APIRouter()
-logger = getLogger("role")
+logger = getLogger("role_view")
 get_async_db = dependencies.get_async_db_session
 app = FastAPI()
 

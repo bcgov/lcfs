@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import Depends
 from fastapi_cache.decorator import cache
-from sqlalchemy import and_, func, select, asc, desc, delete, distinct
+from sqlalchemy import and_, select, asc, desc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -267,7 +267,7 @@ class UserRepository:
         )
     
         profile_id_list = [user.user_profile_id for user in unique_ids]
-        if limit <=0:
+        if limit <= 0:
             query = query.where(*conditions)
         else:
             query = query.where(

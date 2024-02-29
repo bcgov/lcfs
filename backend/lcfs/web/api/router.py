@@ -8,6 +8,7 @@ from lcfs.web.api import (
     role,
     notification,
     organization,
+    organizations,
     transfer,
     transaction,
 )
@@ -26,5 +27,8 @@ api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )
 api_router.include_router(
-    organization.router, prefix="/organizations", tags=["organizations"]
+    organizations.router, prefix="/organizations", tags=["organizations"]
+)
+api_router.include_router(
+    organization.router, prefix="/organization", tags=["organization"]
 )

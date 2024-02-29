@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.future import select
 from fastapi import Depends
 
-from sqlalchemy import select, func, desc, asc, and_, case
+from sqlalchemy import select, func, desc, asc, and_, case, or_
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -20,7 +20,7 @@ class TransactionRepository:
         self.db = db
 
     @repo_handler
-    async def get_transactions_paginated(self, offset: int, limit: int, conditions: list, sort_orders: list):
+    async def get_transactions_paginated(self, offset: int, limit: int, conditions: list, sort_orders: list, organization_id: int = None):
         """
         Fetch paginated, filtered, and sorted transactions.
         
@@ -35,6 +35,9 @@ class TransactionRepository:
         """
 
         # Construct the base query
+        if organization_id:
+            conditions.append(or_(TransactionView.from_organization_id == organization_id,
+                                   TransactionView.to_organization_id == organization_id))
         query = select(TransactionView).where(and_(*conditions))
 
         # Apply sorting

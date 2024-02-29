@@ -251,7 +251,7 @@ const BCDataGridServer = ({
       className="bc-grid-container"
     >
       <AgGridReact
-        key={gridKey} // This will force the grid to re-render
+        gridKey={gridKey} // This will force the grid to re-render
         ref={gridRef} // Ref for accessing Grid's API
         className={className}
         columnDefs={columnDefs}

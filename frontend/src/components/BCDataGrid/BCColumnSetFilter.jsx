@@ -8,7 +8,7 @@ const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
 const checkedIcon = <CheckBoxIcon fontSize="small" />
 
 const BCColumnSetFilter = forwardRef((props, ref) => {
-  const { apiQuery, params, key } = props
+  const { apiQuery, params } = props
   const { columnWidth } = props.column.colDef
   const [options, setOptions] = useState([])
   const [currentValue, setCurrentValue] = useState(null)
@@ -64,7 +64,6 @@ const BCColumnSetFilter = forwardRef((props, ref) => {
 
   return (
     <Autocomplete
-      key={key}
       multiple={props.multiple}
       disableCloseOnSelect={props.disableCloseOnSelect}
       onChange={onInputBoxChanged}
@@ -132,8 +131,7 @@ BCColumnSetFilter.defaultProps = {
   // apiQuery: () => ({ data: [], isLoading: false }),
   apiOptionField: 'name',
   multiple: false,
-  disableCloseOnSelect: false,
-  key: 'my-ag-grid-column-filter-key'
+  disableCloseOnSelect: false
 }
 
 BCColumnSetFilter.propTypes = {
@@ -145,7 +143,6 @@ BCColumnSetFilter.propTypes = {
   parentFilterInstance: PropTypes.func.isRequired, // AG Grid Filter Lifecycle callback. not required to pass explicitly
   multiple: PropTypes.bool, // ability to select multiple options.
   params: PropTypes.any, // any parameters that needs to be passed to apiQuery (React Query).
-  key: PropTypes.string, // unique key to re-render filter component
   disableCloseOnSelect: PropTypes.bool
 }
 

@@ -11,7 +11,7 @@ from starlette.requests import Request
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db.models.Role import Role, RoleEnum
 
-logger = getLogger("role")
+logger = getLogger("role_repo")
 
 
 class RoleRepository:

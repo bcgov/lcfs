@@ -10,6 +10,7 @@ from lcfs.db.models.TransactionView import TransactionView
 from lcfs.web.api.transaction.schema import TransactionStatusSchema, TransactionViewSchema
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
+    FilterModel,
     PaginationRequestSchema,
     PaginationResponseSchema,
     apply_filter_conditions,
@@ -51,6 +52,7 @@ class TransactionsService:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
+        pagination.filters.append(FilterModel(field="status", filter="Draft", type="notEqual", filterType="text"))
         conditions = []
         pagination = validate_pagination(pagination)
         if pagination.filters and len(pagination.filters) > 0:

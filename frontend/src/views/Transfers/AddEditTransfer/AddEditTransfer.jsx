@@ -221,13 +221,12 @@ export const AddEditTransfer = () => {
           {transferId ? t('transfer:editTransfer') : t('transfer:newTransfer')}
         </BCTypography>
 
-        <BCTypography>
+        <BCTypography variant="body4">
           {t('transfer:effectiveText')}
-        </BCTypography>
-        <BCTypography>
+        </BCTypography><br/>
+        <BCTypography variant="body4">
           {t('transfer:considerationText')}
         </BCTypography>
-        <BCTypography>&nbsp;</BCTypography>
 
         {isCreateDraftError && (
           <BCAlert severity="error">
@@ -268,7 +267,7 @@ export const AddEditTransfer = () => {
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}
-                      color={colors.dark.main}
+                      className='small-icon'
                     />
                   }
                 >
@@ -288,7 +287,6 @@ export const AddEditTransfer = () => {
                     config.startIcon && (
                       <FontAwesomeIcon
                         icon={config.startIcon}
-                        color={config.iconColor ?? colors.primary.main}
                         className="small-icon"
                       />
                     )
