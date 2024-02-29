@@ -28,17 +28,21 @@ import { demoData } from '../../Transactions/components/demo'
 import { AttachmentList } from '../../Transactions/components/AttachmentList'
 import { Comments } from '../../Transactions/components/Comments'
 import Loading from '@/components/Loading'
+// Hooks
+import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const ViewTransfer = () => {
+  const { t } = useTranslation()
+  const { data: currentUser } = useCurrentUser()
   const iconSizeStyle = {
     fontSize: (theme) => `${theme.spacing(12)} !important`
   }
   const navigate = useNavigate()
   const { transactionID } = useParams()
   const { data: transaction, isLoading } = useTransaction(transactionID)
-  // testing only -- Remove later
-  const isGovernmentUser = true
-  // -- Remove later
+  const isGovernmentUser =
+    currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
 
   const steps = useMemo(() => {
     if (isGovernmentUser && demoData.status !== 'Refused') {
@@ -101,8 +105,12 @@ export const ViewTransfer = () => {
       {/* Flow Representation of transaction */}
       <Stack spacing={4} direction="row" justifyContent="center">
         <OrganizationBadge
-          content={demoData.FromOrganization}
+          organizationName={demoData.FromOrganization}
+          totalBalance={10000}
+          reservedBalance={100}
+          registeredStatus={true}
           isGovernmentUser={isGovernmentUser}
+          TransferStatus={demoData.status}
         />
         <Stack spacing={1} direction="column" justifyContent="center" pl={2}>
           <Typography variant="caption1" textAlign="center">
@@ -131,8 +139,12 @@ export const ViewTransfer = () => {
           </Typography>
         </Stack>
         <OrganizationBadge
-          content={demoData.ToOrganization}
+          organizationName={demoData.FromOrganization}
+          totalBalance={10000}
+          reservedBalance={100}
+          registeredStatus={true}
           isGovernmentUser={isGovernmentUser}
+          TransferStatus={demoData.status}
         />
       </Stack>
       <BCBox

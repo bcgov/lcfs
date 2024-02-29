@@ -2,17 +2,28 @@ import { PropTypes } from 'prop-types'
 import BCBadge from '@/components/BCBadge'
 import { Stack, Typography } from '@mui/material'
 
-export const OrganizationBadge = ({ content, isGovernmentUser }) => (
+export const OrganizationBadge = ({
+  organizationName,
+  totalBalance,
+  reservedBalance,
+  registeredStatus,
+  isGovernmentUser,
+  TransferStatus
+}) => (
   <BCBadge
     badgeContent={
-      isGovernmentUser ? (
+      isGovernmentUser && ['Submitted', 'Recommended'].includes(TransferStatus) ? (
         <Stack direction="column">
-          <Typography variant="body4">{content}</Typography>
-          <Typography variant="body4">Balance: 40,000</Typography>
-          <Typography variant="body4">Registered: Yes</Typography>
+          <Typography variant="body4">{organizationName}</Typography>
+          <Typography variant="body4">
+            Balance: {totalBalance.toLocaleString()} ({reservedBalance.toLocaleString()})
+          </Typography>
+          <Typography variant="body4">
+            Registered: {registeredStatus ? 'Yes' : 'No'}
+          </Typography>
         </Stack>
       ) : (
-        { content }
+        <Typography variant="body4">{organizationName}</Typography>
       )
     }
     color={'primary'}
@@ -36,6 +47,10 @@ export const OrganizationBadge = ({ content, isGovernmentUser }) => (
 )
 
 OrganizationBadge.propTypes = {
-  content: PropTypes.string.isRequired,
-  isGovernmentUser: PropTypes.bool.isRequired
+  organizationName: PropTypes.string.isRequired,
+  totalBalance: PropTypes.number,
+  reservedBalance: PropTypes.number,
+  registeredStatus: PropTypes.bool,
+  isGovernmentUser: PropTypes.bool.isRequired,
+  TransferStatus: PropTypes.string.isRequired,
 }

@@ -178,3 +178,8 @@ class OrganizationSummaryResponseSchema(BaseModel):
 
 class OrganizationCreateResponseSchema(BaseModel):
     organization_id: int
+
+class OrganizationBalanceResponseSchema(BaseModel):
+    organization_id: int
+    total_balance: int
+    reserved_balance: int
