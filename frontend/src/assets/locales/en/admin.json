@@ -27,7 +27,6 @@
     "roleOf": "Role conferred to",
     "description": "Description"
   },
-  "errMsg": "Error occurred. Please retry. For ongoing issues, contact support.",
   "userForm": {
     "firstName": "First name",
     "lastName": "Last name",

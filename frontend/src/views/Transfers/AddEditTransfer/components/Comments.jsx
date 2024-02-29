@@ -6,8 +6,10 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useFormContext } from 'react-hook-form'
 import LabelBox from './LabelBox'
+import { useTranslation } from 'react-i18next'
 
 const Comments = () => {
+  const { t } = useTranslation(['transfer'])
   const [isExpanded, setIsExpanded] = useState(false)
 
   const { register } = useFormContext()
@@ -19,8 +21,8 @@ const Comments = () => {
   return (
     <>
       <LabelBox
-        label="Comments (optional)"
-        description="Your comments will be visible to both organizations of the transfer and government:"
+        label={t('transfer:commentsLabel')}
+        description={t('transfer:commentsDescText')}
       >
         <Box
           display="flex"
