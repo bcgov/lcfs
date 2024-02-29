@@ -72,12 +72,6 @@ def upgrade() -> None:
     JOIN admin_adjustment_status aas ON aa.current_status_id = aas.admin_adjustment_status_id;
     """)
 
-    # Creates a unique composite key for our mv_transaction_aggregate view so it 
-    # can be updated concurrently
-    op.execute("""
-    CREATE UNIQUE INDEX mv_transaction_aggregate_unique_idx ON mv_transaction_aggregate (transaction_id, transaction_type);
-    """)
-
 
 def downgrade() -> None:
     # Creates or replaces a materialized view named 'mv_transaction_aggregate'.
@@ -130,8 +124,3 @@ def downgrade() -> None:
     JOIN admin_adjustment_status aas ON aa.current_status_id = aas.admin_adjustment_status_id;
     """)
 
-    # Creates a unique composite key for our mv_transaction_aggregate view so it 
-    # can be updated concurrently
-    op.execute("""
-    CREATE UNIQUE INDEX mv_transaction_aggregate_unique_idx ON mv_transaction_aggregate (transaction_id, transaction_type);
-    """)
