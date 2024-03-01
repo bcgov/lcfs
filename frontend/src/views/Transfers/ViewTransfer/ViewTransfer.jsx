@@ -112,8 +112,12 @@ export const ViewTransfer = () => {
       {/* Flow Representation of transaction */}
       <Stack spacing={4} direction="row" justifyContent="center">
         <OrganizationBadge
-          content={fromOrganization}
+          organizationName={demoData.FromOrganization}
+          totalBalance={10000}
+          reservedBalance={100}
+          registeredStatus={true}
           isGovernmentUser={isGovernmentUser}
+          TransferStatus={demoData.status}
         />
         <Stack spacing={1} direction="column" justifyContent="center" pl={2}>
           <Typography variant="caption1" textAlign="center">
@@ -142,8 +146,12 @@ export const ViewTransfer = () => {
           </Typography>
         </Stack>
         <OrganizationBadge
-          content={toOrganization}
+          organizationName={demoData.FromOrganization}
+          totalBalance={10000}
+          reservedBalance={100}
+          registeredStatus={true}
           isGovernmentUser={isGovernmentUser}
+          TransferStatus={demoData.status}
         />
       </Stack>
       <BCBox
