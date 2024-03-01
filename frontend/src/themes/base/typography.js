@@ -142,6 +142,16 @@ const typography = {
     fontWeight: baseProperties.fontWeightRegular,
     lineHeight: 1.625
   },
+  body5: {
+    fontFamily: baseProperties.fontFamily,
+    fontSize: baseProperties.fontSizeMD,
+    fontWeight: baseProperties.fontWeightRegular,
+    lineHeight: 1.625,
+    textTransform: 'none',
+    '&:first-letter': {
+      textTransform: 'uppercase'
+    }
+  },
   label: {
     fontFamily: baseProperties.fontFamily,
     fontSize: baseProperties.fontSizeMD,

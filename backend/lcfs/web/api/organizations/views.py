@@ -10,6 +10,7 @@ from lcfs.db import dependencies
 
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.db.models.OrganizationStatus import OrgStatusEnum
 
 from .services import OrganizationsService
 from .schema import (
@@ -183,9 +184,12 @@ async def get_balances(
     """
     total_balance = await service.calculate_total_balance(organization_id)
     reserved_balance = await service.calculate_reserved_balance(organization_id)
+    organization = await service.get_organization(organization_id)
 
     return OrganizationBalanceResponseSchema(
         organization_id=organization_id,
+        name=organization.name,
+        registered=True if organization.org_status.status == OrgStatusEnum.Registered else False,
         total_balance=total_balance,
         reserved_balance=reserved_balance,
     )

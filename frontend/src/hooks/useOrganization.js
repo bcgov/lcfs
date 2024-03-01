@@ -55,3 +55,13 @@ export const useOrganizationUser = (orgID, userID, options) => {
     ...options
   })
 }
+
+export const useOrganizationBalance = (orgID, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['organization-balance'],
+    queryFn: async () => (await client.get(`/organizations/balances/${orgID}`)).data,
+    ...options
+  })
+}
