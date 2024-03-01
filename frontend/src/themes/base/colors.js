@@ -23,7 +23,7 @@ const colors = {
   // Error messages and indicators
   error: {
     main: '#d8292f',
-    focus: 'd8292f'
+    focus: '#d8292f'
   },
   success: {
     main: '#2e8540',
@@ -60,6 +60,8 @@ const colors = {
   },
   // Used for headings and paragraphs
   text: {
+    main: "#7b809a",
+    focus: "#7b809a",
     primary: '#313132',
     secondary: '#313132',
     disabled: 'rgba(0,0,0,0.38)'

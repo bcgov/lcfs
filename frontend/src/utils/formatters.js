@@ -5,8 +5,11 @@ export const numberFormatter = (params) => {
   return params.value
 }
 export const decimalFormatter = (params) => {
+  // round to 2 decimal places
   if (params.value != null) {
-    return params.value.toLocaleString('en', { minimumFractionDigits: 2 }) // round to 2 decimal places
+    return params.value.toLocaleString('en', { minimumFractionDigits: 2 }) 
+  } else if (params !== null) {
+    return params.toLocaleString('en', { minimumFractionDigits: 2 })
   }
   return params.value
 }

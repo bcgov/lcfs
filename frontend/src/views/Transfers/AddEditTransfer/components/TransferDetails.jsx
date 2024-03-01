@@ -1,4 +1,5 @@
 import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganization'
 import {
@@ -6,7 +7,7 @@ import {
   MenuItem,
   Select,
   TextField,
-  Typography
+  InputAdornment
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
@@ -53,7 +54,7 @@ const TransferDetails = () => {
 
     return (
       errors[fieldName] && (
-        <Typography
+        <BCTypography
           color="error"
           variant="caption"
           sx={{
@@ -64,22 +65,25 @@ const TransferDetails = () => {
           }}
         >
           {errors[fieldName].message}
-        </Typography>
+        </BCTypography>
       )
     )
   }
   return (
     <BCBox>
       <LabelBox label={t('transfer:detailsLabel')}>
-        <Typography variant="body1" component="div">
-          {`${currentUser?.organization?.name} ${t('transfer:transfers')} `}
+        <BCTypography variant="body4" component="div">
+          <BCTypography fontWeight="bold" variant="body4" component="span">
+            {currentUser?.organization?.name}
+          </BCTypography>
+          {` ${t('transfer:transfers')} `}
           <TextField
             {...register('quantity')}
             placeholder={t('common:quantity')}
             size="small"
             error={!!errors.quantity}
             helperText={errors.quantity?.message}
-            style={{ width: '200px', marginRight: '10px' }}
+            sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
           />
           {t('transfer:complianceUnitsTo')}
           <FormControl
@@ -91,7 +95,9 @@ const TransferDetails = () => {
               },
               '& .Mui-error': {
                 height: '100%'
-              }
+              },
+              bottom: '0.2rem',
+              marginInline: '0.2rem'
             }}
           >
             <Controller
@@ -120,7 +126,7 @@ const TransferDetails = () => {
                   }}
                   renderValue={(selected) => {
                     if (selected === '') {
-                      return <em>{t('organization:selectOrgLabel')}</em>
+                      return <em>{t('org:selectOrgLabel')}</em>
                     }
                     const selectedOrg = organizations.find(
                       (org) => org.value === selected
@@ -128,12 +134,12 @@ const TransferDetails = () => {
                     return selectedOrg ? (
                       selectedOrg.label
                     ) : (
-                      <em>{t('organization:selectOrgLabel')}</em>
+                      <em>{t('org:selectOrgLabel')}</em>
                     )
                   }}
                 >
                   <MenuItem value="">
-                    <em>{t('organization:selectOrgLabel')}</em>
+                    <em>{t('org:selectOrgLabel')}</em>
                   </MenuItem>
                   {organizations.map((org) => (
                     <MenuItem key={org.value} value={org.value}>
@@ -152,22 +158,34 @@ const TransferDetails = () => {
             size="small"
             error={!!errors.pricePerUnit}
             helperText={errors.pricePerUnit?.message}
-            style={{ width: '375px', marginRight: '10px' }}
+            inputProps={{
+              maxLength: 13,
+              step: '10',
+              style: { textAlign: 'right' }
+            }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            }}
+            sx={{
+              minWidth: '24rem',
+              marginInline: '0.2rem',
+              bottom: '0.2rem'
+            }}
           />
           {t('transfer:totalValueText')}
-          <Typography
-            variant="body1"
+          <BCTypography
+            variant="body4"
+            fontWeight="bold"
             component="span"
             color="primary"
             data-testid="transfer-total-value"
           >
-            {totalValue.toLocaleString('en-CA', {
+            {`${totalValue.toLocaleString('en-CA', {
               style: 'currency',
               currency: 'CAD'
-            })}
-          </Typography>
-          {' CAD.'}
-        </Typography>
+            })} CAD.`}
+          </BCTypography>
+        </BCTypography>
       </LabelBox>
     </BCBox>
   )
