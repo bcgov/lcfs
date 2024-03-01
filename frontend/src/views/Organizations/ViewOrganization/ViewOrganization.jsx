@@ -21,18 +21,11 @@ import { constructAddress } from '@/utils/constructAddress'
 import { phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  defaultFilterModel,
   defaultSortModel,
   getUserColumnDefs
 } from './_schema'
-
-const OrgDetailTypography = ({ bold, children, ...rest }) => {
-  return (
-    <BCTypography fontSize={16} fontWeight={bold && 'bold'} {...rest}>
-      {children}
-    </BCTypography>
-  )
-}
+import { Role } from '@/components/Role'
+import { roles } from '@/constants/roles'
 
 export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -43,13 +36,25 @@ export const ViewOrganization = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { orgID } = useParams()
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    useCurrentUser()
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles
+  } = useCurrentUser()
   const { data: orgData, isLoading } = useOrganization(orgID)
   const handleEditClick = () => {
-    navigate(ROUTES.ORGANIZATIONS_EDIT.replace(':orgID', orgID), {
-      state: { orgID, isEditMode: true }
-    })
+    navigate(
+      ROUTES.ORGANIZATIONS_EDIT.replace(
+        ':orgID',
+        orgID || currentUser?.organization?.organization_id
+      ),
+      {
+        state: {
+          orgID: orgID || currentUser?.organization?.organization_id,
+          isEditMode: true
+        }
+      }
+    )
   }
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
@@ -65,14 +70,22 @@ export const ViewOrganization = () => {
     overlayNoRowsTemplate: 'No users found',
     includeHiddenColumnsInQuickFilter: true
   }
-  const handleRowClicked = useCallback((params) => {
-    navigate(
-      ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
-        ':userID',
-        params.data.user_profile_id
-      )
-    )
-  })
+  const handleRowClicked = useCallback((params) =>
+    // Based on the user Type (BCeID or IDIR) navigate to specific view
+    hasRoles(roles.supplier)
+      ? navigate(
+          ROUTES.ORGANIZATION_VIEWUSER.replace(
+            ':userID',
+            params.data.user_profile_id
+          )
+        )
+      : navigate(
+          ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
+            ':userID',
+            params.data.user_profile_id
+          )
+        )
+  )
   const getRowId = useCallback((params) => params.data.user_profile_id)
   const gridRef = useRef()
 
@@ -81,18 +94,10 @@ export const ViewOrganization = () => {
       // clear any previous filters
       localStorage.removeItem(`${gridKey}-filter`)
       const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
-      const orgFilter =
-        gridRef?.current?.api?.getFilterInstance('organization_id')
       if (statusFilter) {
         statusFilter.setModel({
           type: 'equals',
           filter: showActive ? 'Active' : 'Inactive'
-        })
-      }
-      if (orgFilter) {
-        orgFilter.setModel({
-          type: 'equals',
-          filter: parseInt(orgID)
         })
       }
       gridRef?.current?.api?.onFilterChanged()
@@ -119,7 +124,7 @@ export const ViewOrganization = () => {
       )}
       <BCTypography variant="h5" color="primary">
         {orgData.name}{' '}
-        {!isCurrentUserLoading && currentUser.is_government_user && (
+        <Role roles={[roles.administrator]}>
           <IconButton
             aria-label="edit"
             color="primary"
@@ -127,7 +132,7 @@ export const ViewOrganization = () => {
           >
             <EditIcon />
           </IconButton>
-        )}
+        </Role>
       </BCTypography>
       <BCBox p={3} bgColor={colors.grey[300]}>
         <BCBox display="flex" gap={10}>
@@ -137,24 +142,26 @@ export const ViewOrganization = () => {
             gap={1}
             alignItems="end"
           >
-            <OrgDetailTypography bold>
+            <BCTypography variant="label">
               {t('org:legalNameLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>{orgData.name}</OrgDetailTypography>
-            <OrgDetailTypography bold>
+            </BCTypography>
+            <BCTypography variant="body4">{orgData.name}</BCTypography>
+            <BCTypography variant="label">
               {t('org:operatingNameLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>{orgData.operating_name}</OrgDetailTypography>
-            <OrgDetailTypography bold>
+            </BCTypography>
+            <BCTypography variant="body4">
+              {orgData.operating_name || orgData.name}
+            </BCTypography>
+            <BCTypography variant="label">
               {t('org:phoneNbrLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>
+            </BCTypography>
+            <BCTypography variant="body4">
               {phoneNumberFormatter({ value: orgData.phone })}
-            </OrgDetailTypography>
-            <OrgDetailTypography bold>
+            </BCTypography>
+            <BCTypography variant="label">
               {t('org:emailAddrLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>{orgData.email}</OrgDetailTypography>
+            </BCTypography>
+            <BCTypography variant="body4">{orgData.email}</BCTypography>
           </BCBox>
           <BCBox
             display="grid"
@@ -162,33 +169,31 @@ export const ViewOrganization = () => {
             gap={1}
             alignItems="end"
           >
-            <OrgDetailTypography bold>
+            <BCTypography variant="label">
               {t('org:serviceAddrLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>
+            </BCTypography>
+            <BCTypography variant="body4">
               {constructAddress(orgData.org_address)}
-            </OrgDetailTypography>
-            <OrgDetailTypography bold>
-              {t('org:bcAddrLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>
+            </BCTypography>
+            <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
+            <BCTypography variant="body4">
               {constructAddress(orgData.org_attorney_address)}
-            </OrgDetailTypography>
-            <OrgDetailTypography bold>
-              {t('org:regTrnLabel')}:
-            </OrgDetailTypography>
-            <OrgDetailTypography>
+            </BCTypography>
+            <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
+            <BCTypography variant="body4">
               {orgData.org_status.status === 'Registered'
                 ? 'Yes — A registered organization is able to transfer compliance units.'
                 : 'No — An organization must be registered to transfer compliance units.'}
-            </OrgDetailTypography>
+            </BCTypography>
           </BCBox>
         </BCBox>
-        {!isCurrentUserLoading && !currentUser.is_government_user && (
-          <OrgDetailTypography mt={1}>
-            Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>
-            {t('org:toUpdateMsg')}
-          </OrgDetailTypography>
+        {!isCurrentUserLoading && hasRoles(roles.government) && (
+          <BCBox mt={2}>
+            <BCTypography variant="body4">
+              Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>
+              {t('org:toUpdateMsg')}
+            </BCTypography>
+          </BCBox>
         )}
       </BCBox>
       <BCBox
@@ -205,28 +210,35 @@ export const ViewOrganization = () => {
         {showActive ? (
           <>
             <BCBox component="div">
-              <BCButton
-                variant="contained"
-                size="small"
-                color="primary"
-                sx={{
-                  textTransform: 'none',
-                  marginRight: '8px',
-                  marginBottom: '8px'
-                }}
-                startIcon={
-                  <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-                }
-                onClick={() =>
-                  navigate(
-                    ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
-                  )
-                }
-              >
-                <BCTypography variant="button">
-                  {t('org:newUsrBtn')}
-                </BCTypography>
-              </BCButton>
+              <Role roles={[roles.administrator, roles.manage_users]}>
+                <BCButton
+                  variant="contained"
+                  size="small"
+                  color="primary"
+                  sx={{
+                    textTransform: 'none',
+                    marginRight: '8px',
+                    marginBottom: '8px'
+                  }}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faCirclePlus}
+                      className="small-icon"
+                    />
+                  }
+                  onClick={() =>
+                    !isCurrentUserLoading && hasRoles(roles.government)
+                      ? navigate(
+                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                        )
+                      : navigate(ROUTES.ORGANIZATION_ADDUSER)
+                  }
+                >
+                  <BCTypography variant="button">
+                    {t('org:newUsrBtn')}
+                  </BCTypography>
+                </BCButton>
+              </Role>
               <BCButton
                 variant="outlined"
                 size="small"
@@ -275,22 +287,18 @@ export const ViewOrganization = () => {
       <BCBox sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={apiRoutes.listUsers}
+          apiEndpoint={apiRoutes.orgUsers
+            .replace(
+              ':orgID',
+              orgID || currentUser?.organization?.organization_id
+            )
+            .concat(showActive ? '?status=Active' : '?status=Inactive')}
           apiData={'users'}
           columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
-          defaultFilterModel={[
-            ...defaultFilterModel,
-            {
-              filterType: 'number',
-              type: 'equals',
-              field: 'organization_id',
-              filter: orgID ?? currentUser?.organization?.organization_id
-            }
-          ]}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}

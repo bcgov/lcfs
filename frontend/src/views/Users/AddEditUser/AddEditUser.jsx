@@ -6,7 +6,8 @@ import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
 // hooks
-import { saveUpdateUser, useUser } from '@/hooks/useUser'
+import { useUser } from '@/hooks/useUser'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   userInfoSchema,
   idirTextFields,
@@ -29,21 +30,36 @@ import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
 import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
 import { roles } from '@/constants/roles'
+import { useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
 export const AddEditUser = ({ userType }) => {
+  const {
+    data: currentUser,
+    hasRoles,
+    isLoading: isCurrentUserLoading
+  } = useCurrentUser()
   const navigate = useNavigate()
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
-  const [orgId, setOrgId] = useState(orgID)
   const [orgName, setOrgName] = useState('')
 
   const {
     data,
     isLoading: isUserLoading,
     isFetched: isUserFetched
-  } = useUser(userID, { enabled: !!userID, retry: false })
+  } = hasRoles(roles.supplier) && userID
+    ? userID
+      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+        useOrganizationUser(
+          orgID || currentUser?.organization.organization_id,
+          userID
+        )
+      : { undefined, isLoading: false, isFetched: false }
+    : // eslint-disable-next-line react-hooks/rules-of-hooks
+      useUser(userID, { enabled: !!userID, retry: false })
+
   // User form hook and form validation
   const form = useForm({
     resolver: yupResolver(userInfoSchema),
@@ -53,8 +69,11 @@ export const AddEditUser = ({ userType }) => {
   const { handleSubmit, control, setValue, watch, reset } = form
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
-    () => (orgID || orgId ? bceidTextFields(t) : idirTextFields(t)),
-    [t]
+    () =>
+      hasRoles(roles.supplier) || orgName
+        ? bceidTextFields(t)
+        : idirTextFields(t),
+    [hasRoles, orgName, t]
   )
   const status = watch('status')
   const readOnly = watch('readOnly')
@@ -121,9 +140,8 @@ export const AddEditUser = ({ userType }) => {
         setOrgName(data.organization.name)
       }
       reset(userData)
-      setOrgId(data.organization?.organization_id)
     }
-  }, [isUserFetched, data, reset, orgId])
+  }, [isUserFetched, data, reset])
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
@@ -137,7 +155,7 @@ export const AddEditUser = ({ userType }) => {
       phone: data.phone,
       mobile_phone: data.mobile,
       is_active: data.status === 'active',
-      organization_id: orgID,
+      organization_id: orgID || currentUser.organization_id,
       roles:
         data.status === 'active'
           ? [
@@ -148,7 +166,7 @@ export const AddEditUser = ({ userType }) => {
             ]
           : []
     }
-    if (orgID) {
+    if (orgID || hasRoles(roles.supplier)) {
       payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
     } else {
       payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
@@ -161,13 +179,25 @@ export const AddEditUser = ({ userType }) => {
   }
   // useMutation hook from React Query for handling API request
   const { mutate, isPending, isError } = useMutation({
-    mutationFn: async (payload) =>
-      userID
+    mutationFn: async (payload) => {
+      if (hasRoles(roles.supplier)) {
+        const orgId = orgID || currentUser.organization.organization_id
+        return userID
+          ? await apiService.put(
+              `/organization/${orgId}/users/${userID}`,
+              payload
+            )
+          : await apiService.post(`/organization/${orgId}/users`, payload)
+      }
+      return userID
         ? await apiService.put(`/users/${userID}`, payload)
-        : await apiService.post('/users', payload),
+        : await apiService.post('/users', payload)
+    },
     onSuccess: () => {
       // on success navigate somewhere
-      if (orgID) {
+      if (hasRoles(roles.supplier)) {
+        navigate(ROUTES.ORGANIZATION)
+      } else if (orgID) {
         navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
           state: {
             message: 'User has been successfully saved.',
@@ -189,7 +219,7 @@ export const AddEditUser = ({ userType }) => {
     }
   })
 
-  if (isUserLoading) {
+  if (isUserLoading || isCurrentUserLoading) {
     return <Loading message="Loading..." />
   }
 
@@ -244,11 +274,13 @@ export const AddEditUser = ({ userType }) => {
                     />
                   }
                   onClick={() =>
-                    navigate(
-                      userType === 'idir'
-                        ? ROUTES.ADMIN_USERS
-                        : ROUTES.ORGANIZATIONS
-                    )
+                    hasRoles(roles.supplier)
+                      ? navigate(ROUTES.ORGANIZATION)
+                      : navigate(
+                          userType === 'idir'
+                            ? ROUTES.ADMIN_USERS
+                            : ROUTES.ORGANIZATIONS
+                        )
                   }
                 >
                   <Typography variant="subtitle2" textTransform="none">
@@ -282,7 +314,7 @@ export const AddEditUser = ({ userType }) => {
                   label="Status"
                   options={statusOptions(t)}
                 />
-                {userType === 'bceid' || orgId ? (
+                {hasRoles(roles.supplier) || orgName ? (
                   <BCeIDSpecificRoleFields
                     form={form}
                     disabled={disabled}

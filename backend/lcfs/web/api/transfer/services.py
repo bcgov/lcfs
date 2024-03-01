@@ -9,7 +9,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Comment import Comment
-from lcfs.web.api.organization.repo import OrganizationRepository
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
 
@@ -21,7 +21,7 @@ class TransferServices:
         self,
         request: Request = None,
         repo: TransferRepository = Depends(TransferRepository),
-        org_repo: OrganizationRepository = Depends(OrganizationRepository)
+        org_repo: OrganizationsRepository = Depends(OrganizationsRepository)
     ) -> None:
         self.repo = repo
         self.request = request

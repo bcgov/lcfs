@@ -44,5 +44,8 @@
   "addOrgTitle": "Add organization",
   "editOrgTitle": "Edit organization",
   "toUpdateMsg": " to update address information.",
+  "orgDetailsLabel": "Organization Details",
+  "orgDetailsLoadingMsg": "Loading organization details...",
+  "createNewUsrLabel": "Create new BCeID account",
   "selectOrgLabel": "Select an Organization"
 }

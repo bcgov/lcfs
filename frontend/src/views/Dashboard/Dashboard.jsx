@@ -1,8 +1,8 @@
 import { Role } from '@/components/Role'
 import { govRoles, nonGovRoles } from '@/constants/roles'
 import { Box } from '@mui/material'
-import { BCeIDRightColWidget } from './components/BCeIDRightColWidget'
-import { AdminLinksCard } from './components/AdminLinksCard'
+import { OrgDetailsWidget } from './components/bceidWidgets/OrgDetailsWidget'
+import { AdminLinksCard } from './components/idirWidgets/AdminLinksCard'
 
 export const Dashboard = () => {
   return (
@@ -22,7 +22,7 @@ export const Dashboard = () => {
           placeholder
         </Box>
         <Role roles={nonGovRoles}>
-          <BCeIDRightColWidget />
+          <OrgDetailsWidget />
         </Role>
         <Role roles={govRoles}>
           <AdminLinksCard />

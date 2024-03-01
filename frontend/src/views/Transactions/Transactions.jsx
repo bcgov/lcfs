@@ -4,7 +4,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { DownloadButton } from '@/components/DownloadButton'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -14,6 +14,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { transactionsColDefs } from './_schema'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -21,6 +23,7 @@ export const Transactions = () => {
   const location = useLocation()
   const apiService = useApiService()
   const gridRef = useRef()
+  const { data: currentUser, hasRoles } = useCurrentUser()
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -93,7 +96,7 @@ export const Transactions = () => {
             variant="contained"
             size="small"
             color="primary"
-            startIcon={<FontAwesomeIcon icon={faCirclePlus} size="2x" />}
+            startIcon={<FontAwesomeIcon icon={faCirclePlus} className="small-icon" size="2x" />}
             onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
           >
             <BCTypography variant="subtitle2">{t('txn:newTxnBtn')}</BCTypography>
@@ -107,10 +110,17 @@ export const Transactions = () => {
           dataTest="download-transactions-button"
         />
       </Box>
-      <BCBox component="div" sx={{ height: '36rem', width: '100%' }}>
+      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'transactions/'}
+          apiEndpoint={
+            hasRoles(roles.supplier)
+              ? apiRoutes.orgTransactions.replace(
+                  ':orgID',
+                  currentUser?.organization.organization_id
+                )
+              : apiRoutes.transactions
+          }
           apiData={'transactions'}
           columnDefs={transactionsColDefs(t)}
           gridKey={gridKey}
