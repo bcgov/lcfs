@@ -92,7 +92,7 @@ function Footer({ repoDetails, links }) {
         justifyContent="center"
         alignItems="center"
         flexWrap="wrap"
-        color="text"
+        color="white"
         fontSize={size.sm}
         px={1.5}
       >
