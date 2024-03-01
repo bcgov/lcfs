@@ -97,12 +97,14 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
     // background color value
     const backgroundValue =
       color === 'white' ? rgba(white.main, 0.8) : transparent.main
-    const focusedBackgroundValue =
-      color === 'white'
-        ? primary.main
-        : palette[color]
-          ? palette[color].focus
-          : white.focus
+    let focusedBackgroundValue = white.focus
+    if (color === 'white') {
+      focusedBackgroundValue = primary.main
+    } else if (color === 'light') {
+      focusedBackgroundValue = 'transparent'
+    } else if (palette[color]) {
+      focusedBackgroundValue = palette[color].focus
+    }
     // color value
     const colorValue = palette[color] ? palette[color].main : white.main
 
@@ -131,7 +133,7 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
       '&:hover': {
         background: focusedBackgroundValue,
         color: light.main,
-        borderColor: focusedBackgroundValue
+        borderColor: borderColorValue
       },
 
       '&:focus:not(:hover)': {
