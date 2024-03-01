@@ -39,7 +39,7 @@ function Footer({ repoDetails, links }) {
           aria-label={link.label}
           id={link.id}
         >
-          <BCTypography variant="button" fontWeight="regular" color="text">
+          <BCTypography variant="button" fontWeight="regular" color="white">
             {link.name}
           </BCTypography>
         </Link>
@@ -92,7 +92,7 @@ function Footer({ repoDetails, links }) {
         justifyContent="center"
         alignItems="center"
         flexWrap="wrap"
-        color="text"
+        color="white"
         fontSize={size.sm}
         px={1.5}
       >

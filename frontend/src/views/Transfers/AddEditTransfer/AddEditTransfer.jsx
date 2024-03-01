@@ -21,10 +21,10 @@ import { useApiService } from '@/services/useApiService'
 import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
 
 import BCButton from '@/components/BCButton'
-import colors from '@/themes/base/colors'
+import BCModal from '@/components/BCModal'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Modal } from '@mui/material'
+import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import {
   deleteDraftButton,
@@ -35,7 +35,7 @@ import AgreementDate from './components/AgreementDate'
 import Comments from './components/Comments'
 import SigningAuthority from './components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
-import ConfirmationModal from './components/ConfirmationModal'
+import TransferSummary from './components/TransferSummary'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -48,6 +48,12 @@ export const AddEditTransfer = () => {
     enabled: !!transferId,
     retry: false
   })
+
+  const calculateTotalValue = (quantity, pricePerUnit) => {
+    const quantityNum = parseFloat(quantity)
+    const priceNum = parseFloat(pricePerUnit)
+    return !isNaN(quantityNum) && !isNaN(priceNum) ? quantityNum * priceNum : 0
+  }
 
   const methods = useForm({
     resolver: yupResolver(AddEditTransferSchema),
@@ -177,7 +183,7 @@ export const AddEditTransfer = () => {
         ...deleteDraftButton(t('transfer:deleteDraftBtn')),
         handler: (formData) =>
           setModalData({
-            onConfirm: () =>
+            primaryButtonAction: () =>
               updateTransfer({
                 formData,
                 newStatus: 2,
@@ -186,12 +192,40 @@ export const AddEditTransfer = () => {
                   error: t('transfer:deleteErrorText')
                 }
               }),
-            buttonText: t('transfer:deleteDraftBtn'),
-            text: t('transfer:deleteConfirmText')
+            primaryButtonText: t('transfer:deleteDraftBtn'),
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:deleteConfirmText')
           })
       },
       { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
-      { ...submitButton(t('transfer:signAndSendBtn')), handler: () => console.log('submit draft') }
+      {
+        ...submitButton(t('transfer:signAndSendBtn')),
+        handler: (formData) => {
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                formData,
+                newStatus: 3,
+                message: {
+                  success: t('transfer:sendSuccessText'),
+                  error: t('transfer:sendErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:signAndSendBtn'),
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: (
+              <TransferSummary
+                transferData={transferData}
+                formData={formData}
+                calculateTotalValue={calculateTotalValue}
+              />
+            )
+          })
+        }
+      }
     ],
     Sent: [],
     Rescinded: [],
@@ -215,12 +249,15 @@ export const AddEditTransfer = () => {
 
   return (
     <>
-      <ConfirmationModal data={modalData} onClose={() => setModalData(null)} />
+      <BCModal
+        open={!!modalData}
+        onClose={() => setModalData(null)}
+        data={modalData}
+      />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
           {transferId ? t('transfer:editTransfer') : t('transfer:newTransfer')}
-        </BCTypography>
-
+        </BCTypography><br/>
         <BCTypography variant="body4">
           {t('transfer:effectiveText')}
         </BCTypography><br/>
@@ -229,9 +266,7 @@ export const AddEditTransfer = () => {
         </BCTypography>
 
         {isCreateDraftError && (
-          <BCAlert severity="error">
-            {t('common:submitError')}
-          </BCAlert>
+          <BCAlert severity="error">{t('common:submitError')}</BCAlert>
         )}
 
         <BCBox mt={5}>
@@ -267,7 +302,7 @@ export const AddEditTransfer = () => {
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}
-                      className='small-icon'
+                      className="small-icon"
                     />
                   }
                 >

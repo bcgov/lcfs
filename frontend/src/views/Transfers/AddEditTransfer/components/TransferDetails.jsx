@@ -2,7 +2,13 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganization'
-import { FormControl, MenuItem, Select, TextField } from '@mui/material'
+import {
+  FormControl,
+  MenuItem,
+  Select,
+  TextField,
+  InputAdornment
+} from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -120,7 +126,7 @@ const TransferDetails = () => {
                   }}
                   renderValue={(selected) => {
                     if (selected === '') {
-                      return <em>{t('organization:selectOrgLabel')}</em>
+                      return <em>{t('org:selectOrgLabel')}</em>
                     }
                     const selectedOrg = organizations.find(
                       (org) => org.value === selected
@@ -128,12 +134,12 @@ const TransferDetails = () => {
                     return selectedOrg ? (
                       selectedOrg.label
                     ) : (
-                      <em>{t('organization:selectOrgLabel')}</em>
+                      <em>{t('org:selectOrgLabel')}</em>
                     )
                   }}
                 >
                   <MenuItem value="">
-                    <em>{t('organization:selectOrgLabel')}</em>
+                    <em>{t('org:selectOrgLabel')}</em>
                   </MenuItem>
                   {organizations.map((org) => (
                     <MenuItem key={org.value} value={org.value}>
@@ -157,8 +163,11 @@ const TransferDetails = () => {
               step: '10',
               style: { textAlign: 'right' }
             }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+            }}
             sx={{
-              width: '12rem',
+              minWidth: '24rem',
               marginInline: '0.2rem',
               bottom: '0.2rem'
             }}

@@ -8,6 +8,7 @@ const dialog = {
   styleOverrides: {
     paper: {
       borderRadius: borderRadius.lg,
+      border: 'none',
       boxShadow: xxl
     },
 

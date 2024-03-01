@@ -207,10 +207,10 @@ export const Login = () => {
                       <BCTypography
                         variant="h6"
                         component="span"
-                        color="text"
+                        color="inherit"
                         sx={{ fontWeight: '400' }}
                       >
-                        {t('login.loginMessage')}h&nbsp;
+                        {t('login.loginMessage')}&nbsp;
                       </BCTypography>
                       <BCTypography
                         variant="h6"
@@ -223,8 +223,8 @@ export const Login = () => {
                   </BCBox>
                   <BCBox mt={4} mb={1}>
                     <BCButton
-                      variant="contained"
-                      color="light"
+                      variant="outlined"
+                      color="white"
                       onClick={() => {
                         keycloak.login({
                           idpHint: IDENTITY_PROVIDERS.IDIR,
@@ -239,7 +239,7 @@ export const Login = () => {
                     >
                       <BCTypography
                         variant="h6"
-                        color="text"
+                        color="inherit"
                         sx={{ fontWeight: '400' }}
                       >
                         {t('login.loginMessage')}&nbsp;
