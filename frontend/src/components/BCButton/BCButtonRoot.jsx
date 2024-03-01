@@ -5,7 +5,7 @@ import { styled } from '@mui/material/styles'
 const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme
   const { color, variant, size, circular, iconOnly } = ownerState
-  const { white, text, transparent, gradients, primary } = palette
+  const { white, text, transparent, gradients, primary, light } = palette
   const { boxShadow, linearGradient, pxToRem, rgba } = functions
   const { borderRadius } = borders
   const { colored } = boxShadows
@@ -65,12 +65,15 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
       background: backgroundValue,
       color: colorValue,
       boxShadow: boxShadowValue,
+      textTransform: 'none',
+      fontSize: pxToRem(16),
+      fontWeight: '400',
 
       '&:hover': {
-        backgroundColor: primary.main,
+        backgroundColor: focusedBackgroundValue,
         color: white.main,
         borderColor: colorValue,
-        opacity: 0.75,
+        opacity: 0.85,
         boxShadow: hoveredBoxShadowValue
       },
 
@@ -93,8 +96,15 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
   const outlinedStyles = () => {
     // background color value
     const backgroundValue =
-      color === 'white' ? rgba(white.main, 0.1) : transparent.main
-
+      color === 'white' ? rgba(white.main, 0.8) : transparent.main
+      let focusedBackgroundValue = white.focus
+      if (color === 'white') {
+        focusedBackgroundValue = primary.main
+      } else if (color === 'light') {
+        focusedBackgroundValue = 'transparent'
+      } else if (palette[color]) {
+        focusedBackgroundValue = palette[color].focus
+      }
     // color value
     const colorValue = palette[color] ? palette[color].main : white.main
 
@@ -116,15 +126,18 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
       background: backgroundValue,
       color: colorValue,
       borderColor: borderColorValue,
+      textTransform: 'none',
+      fontSize: pxToRem(16),
+      fontWeight: '400',
 
       '&:hover': {
-        background: palette[color].main,
-        color: white.main,
-        borderColor: colorValue
+        background: focusedBackgroundValue,
+        color: light.main,
+        borderColor: borderColorValue
       },
 
       '&:focus:not(:hover)': {
-        background: transparent.main,
+        background: color === 'white' ? colorValue : transparent.main,
         boxShadow: boxShadowValue
       },
 
@@ -188,6 +201,9 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
       background: backgroundValue,
       color: colorValue,
       boxShadow: boxShadowValue,
+      textTransform: 'none',
+      fontSize: pxToRem(16),
+      fontWeight: '400',
 
       '&:hover': {
         boxShadow: hoveredBoxShadowValue

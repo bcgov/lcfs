@@ -16,8 +16,8 @@ const dialogContent = {
     },
 
     dividers: {
-      borderTop: `${borderWidth[1]} solid ${borderColor}`,
-      borderBottom: `${borderWidth[1]} solid ${borderColor}`
+      borderTop: `${borderWidth[2]} solid ${borderColor}`,
+      borderBottom: `${borderWidth[2]} solid ${borderColor}`
     }
   }
 }

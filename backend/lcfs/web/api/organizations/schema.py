@@ -180,6 +180,8 @@ class OrganizationCreateResponseSchema(BaseModel):
     organization_id: int
 
 class OrganizationBalanceResponseSchema(BaseModel):
+    name: str
+    registered: bool
     organization_id: int
     total_balance: int
     reserved_balance: int

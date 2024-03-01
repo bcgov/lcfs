@@ -7,6 +7,8 @@ export const numberFormatter = (params) => {
 export const decimalFormatter = (params) => {
   if (params.value != null) {
     return params.value.toLocaleString('en', { minimumFractionDigits: 2 }) // round to 2 decimal places
+  } else if (params !== null) {
+    return params.toLocaleString('en', { minimumFractionDigits: 2 })
   }
   return params.value
 }
@@ -51,4 +53,10 @@ export function convertObjectKeys(obj) {
 
 export function formatDateToISO(date) {
   return date.toISOString().split('T')[0]
+}
+
+export const calculateTotalValue = (quantity, pricePerUnit) => {
+  const quantityNum = parseFloat(quantity)
+  const priceNum = parseFloat(pricePerUnit)
+  return !isNaN(quantityNum) && !isNaN(priceNum) ? quantityNum * priceNum : 0
 }
