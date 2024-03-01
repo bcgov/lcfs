@@ -21,7 +21,8 @@ from .schema import (
     OrganizationUpdateSchema,
     OrganizationResponseSchema,
     OrganizationSummaryResponseSchema,
-    OrganizationCreateResponseSchema
+    OrganizationCreateResponseSchema,
+    OrganizationBalanceResponseSchema
 )
 
 
@@ -170,3 +171,23 @@ async def get_externally_registered_organizations(
         Exception: If an error occurs during the database query.
     """
     return await service.get_externally_registered_organizations(org_id=request.user.organization_id)
+
+@router.get("/balances/{organization_id}", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
+@roles_required("Government")
+@view_handler
+async def get_balances(
+    request: Request,
+    organization_id: int,
+    service: OrganizationServices = Depends()
+):
+    """
+    Retrieve the total and reserved balances for a specific organization identified by its ID.
+    """
+    total_balance = await service.calculate_total_balance(organization_id)
+    reserved_balance = await service.calculate_reserved_balance(organization_id)
+
+    return OrganizationBalanceResponseSchema(
+        organization_id=organization_id,
+        total_balance=total_balance,
+        reserved_balance=reserved_balance,
+    )
