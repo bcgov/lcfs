@@ -293,7 +293,7 @@ export const AddEditTransfer = () => {
                 <BCButton
                   variant="outlined"
                   color="dark"
-                  onClick={() => console.log('go back')}
+                  onClick={() => navigate(-1)}
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}
