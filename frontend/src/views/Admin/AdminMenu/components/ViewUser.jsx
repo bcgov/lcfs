@@ -67,7 +67,7 @@ export const ViewUser = () => {
         <>
           <BCTypography variant="h5" color="primary" mb={1}>
             {data.first_name + ' ' + data.last_name}&nbsp;
-            <Role roles={[roles.administrator]}>
+            <Role roles={[roles.administrator, roles.manage_users]}>
               <IconButton
                 aria-label="edit"
                 color="primary"
