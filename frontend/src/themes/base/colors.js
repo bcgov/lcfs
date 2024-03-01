@@ -60,7 +60,7 @@ const colors = {
   },
   // Used for headings and paragraphs
   text: {
-    main: "#7b809a",
+    main: "#000000",
     focus: "#7b809a",
     primary: '#313132',
     secondary: '#313132',
