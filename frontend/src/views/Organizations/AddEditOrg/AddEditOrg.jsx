@@ -215,7 +215,7 @@ export const AddEditOrg = () => {
   } = useMutation({
     mutationFn: async (payload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
-    onSuccees: () => {
+    onSuccess: () => {
       navigate(ROUTES.ORGANIZATIONS, {
         state: {
           message: 'Organization has been successfully updated.',
