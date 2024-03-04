@@ -23,7 +23,7 @@ export const AdminLinksCard = () => {
         route: ROUTES.ORGANIZATIONS
       },
       {
-        title: t('admin.usrActivity'),
+        title: t('admin:usrActivity'),
         route: ROUTES.ADMIN_USERACTIVITY
       }
     ],

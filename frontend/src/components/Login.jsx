@@ -184,7 +184,6 @@ export const Login = () => {
                 {message && (
                   <Alert severity={severity}>
                     {message}
-                    <Logout />
                   </Alert>
                 )}
                 <BCBox component="form" role="form" data-test="login-container">

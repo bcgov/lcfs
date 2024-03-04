@@ -67,6 +67,12 @@ class OrganizationService:
         Get all users for the organization
         """
         # Add Organization and status to filter
+        if (pagination.filters is None) or (len(pagination.filters) == 0):
+            pagination.filters.append(
+                FilterModel(
+                    filterType="text", field="is_active", type="equals", filter=status
+                )
+            )
         pagination.filters.append(
             FilterModel(
                 filterType="number",
