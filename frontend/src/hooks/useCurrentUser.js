@@ -41,7 +41,7 @@ export const useCurrentUser = () => {
    *     // Logic for users with both 'Government' and 'Administrator' roles
    *   }
    */
-  const hasRoles = (roleNames) => {
+  const hasRoles = (...roleNames) => {
     return roleNames.every((roleName) =>
       query.data?.roles?.some((role) => role.name === roleName)
     )

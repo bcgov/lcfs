@@ -129,7 +129,7 @@ export const ViewTransfer = () => {
             title: t('confirmation'),
             content: t('transfer:rescindConfirmText')
           }),
-        disabled: !hasRoles([roles.transfers, roles.signing_authority])
+        disabled: !hasRoles(roles.transfers, roles.signing_authority)
       }
     ],
     Rescinded: [],
