@@ -42,7 +42,7 @@ export const ViewTransfer = () => {
   const navigate = useNavigate()
   const { transferId } = useParams()
   const hasRoles = useHasRoles([roles.transfers, roles.signing_authority])
-  console.log(hasRoles)
+
   const { data: currentUser } = useCurrentUser()
   const {
     data: transferData,
