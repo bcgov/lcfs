@@ -7,7 +7,6 @@ import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { TRANSACTIONS } from '@/constants/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useHasRoles } from '@/hooks/useRole'
 import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { decimalFormatter } from '@/utils/formatters'
 
@@ -41,7 +40,7 @@ export const ViewTransfer = () => {
   }
   const navigate = useNavigate()
   const { transferId } = useParams()
-  const hasRoles = useHasRoles([roles.transfers, roles.signing_authority])
+  const { hasRoles } = useCurrentUser()
 
   const { data: currentUser } = useCurrentUser()
   const {
@@ -130,7 +129,7 @@ export const ViewTransfer = () => {
             title: t('confirmation'),
             content: t('transfer:rescindConfirmText')
           }),
-        disabled: !hasRoles
+        disabled: !hasRoles([roles.transfers, roles.signing_authority])
       }
     ],
     Rescinded: [],
