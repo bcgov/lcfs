@@ -12,6 +12,8 @@
   "for": " for ",
   "txnHistory": "Transaction History",
   "rescindTransferBtn": "Rescind Transfer",
+  "rescindErrorText": "Error rescinding transfer",
+  "rescindConfirmText": "Are you sure you want to rescind this transfer?",
   "saveDraftBtn": "Save Draft",
   "signAndSendBtn": "Sign and send",
   "deleteDraftBtn": "Delete Draft",

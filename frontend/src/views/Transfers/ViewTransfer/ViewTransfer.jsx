@@ -1,46 +1,47 @@
 // hooks
-import { useNavigate, useParams } from 'react-router-dom'
-import { useMemo } from 'react'
-import { useTransfer } from '@/hooks/useTransfer'
-import { decimalFormatter } from '@/utils/formatters'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTranslation } from 'react-i18next'
-import { roles } from '@/constants/roles'
-// Components
-import {
-  Typography,
-  Stepper,
-  Step,
-  StepLabel,
-  Stack,
-  List,
-  ListItem
-} from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-// Icons
-import SyncAltIcon from '@mui/icons-material/SyncAlt'
+import { roles } from '@/constants/roles'
+import { TRANSACTIONS } from '@/constants/routes/routes'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
+import { decimalFormatter } from '@/utils/formatters'
+
+import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import {
-  faCircle,
-  faArrowLeft,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
-// Sub components
-import { OrganizationBadge } from '../../Transactions/components/OrganizationBadge'
-import { demoData } from '../../Transactions/components/demo'
+  List,
+  ListItem,
+  Stack,
+  Step,
+  StepLabel,
+  Stepper,
+  Typography
+} from '@mui/material'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+
 import { AttachmentList } from '../../Transactions/components/AttachmentList'
 import { Comments } from '../../Transactions/components/Comments'
+import { OrganizationBadge } from '../../Transactions/components/OrganizationBadge'
+import { demoData } from '../../Transactions/components/demo'
+import { rescindButton } from '../buttonConfigs'
 
 export const ViewTransfer = () => {
+  const [modalData, setModalData] = useState(null)
   const { t } = useTranslation(['common', 'transfer'])
   const iconSizeStyle = {
     fontSize: (theme) => `${theme.spacing(12)} !important`
   }
   const navigate = useNavigate()
   const { transferId } = useParams()
+  const { hasRoles } = useCurrentUser()
+
   const { data: currentUser } = useCurrentUser()
   const {
     data: transferData,
@@ -51,6 +52,25 @@ export const ViewTransfer = () => {
     enabled: !!transferId,
     retry: false
   })
+
+  const {
+    mutate: updateTransfer,
+    isLoading: isUpdatingTransfer,
+    isError: isUpdateTransferError
+  } = useUpdateTransfer(transferId, {
+    onSuccess: (_, variables) => {
+      navigate(TRANSACTIONS, {
+        state: {
+          message: variables.message.success,
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error, variables) => {
+      console.error(variables.message.error, error)
+    }
+  })
+
   const {
     current_status: { status: transferStatus } = {},
     to_organization: { name: toOrganization, organization_id: toOrgId } = {},
@@ -72,7 +92,7 @@ export const ViewTransfer = () => {
         return ['Draft', 'Sent', 'Submitted', 'Recommended', 'Recorded']
       }
       switch (transferStatus) {
-        case 'Rescind':
+        case 'Rescinded':
           return ['Draft', 'Rescind', 'Submitted', 'Recorded']
         case 'Declined':
           return ['Draft', 'Sent', 'Declined', 'Recorded']
@@ -88,10 +108,47 @@ export const ViewTransfer = () => {
     }
   }, [isFetched, isGovernmentUser, transferStatus])
 
+  const buttonClusterConfig = {
+    Deleted: [],
+    Sent: [
+      {
+        ...rescindButton(t('transfer:rescindTransferBtn')),
+        handler: (formData) =>
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                newStatus: 9,
+                message: {
+                  success: t('transfer:rescindTransferBtn'),
+                  error: t('transfer:rescindErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:rescindTransferBtn'),
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:rescindConfirmText')
+          }),
+        disabled: !hasRoles(roles.transfers, roles.signing_authority)
+      }
+    ],
+    Rescinded: [],
+    Declined: [],
+    Submitted: [],
+    Recommended: [],
+    Recorded: [],
+    Refused: []
+  }
+
   if (isLoading) return <Loading />
   return (
-    <>
-      {isFetched && (
+    isFetched && (
+      <>
+        <BCModal
+          open={!!modalData}
+          onClose={() => setModalData(null)}
+          data={modalData}
+        />
         <BCBox>
           {/* Header section */}
           <Typography variant="h5" color="primary">
@@ -243,36 +300,33 @@ export const ViewTransfer = () => {
                   {t('backBtn')}
                 </Typography>
               </BCButton>
-              <BCButton
-                variant="outlined"
-                color="error"
-                sx={({ palette: { error } }) => ({
-                  gap: 2,
-                  '&:hover': {
-                    backgroundColor: error.main,
-                    boxShadow: 'none'
-                  },
-                  '&:active': {
-                    boxShadow: 'none',
-                    backgroundColor: error.main
+              {buttonClusterConfig[
+                transferId && transferData?.current_status.status
+              ]?.map((config) => (
+                <BCButton
+                  key={config.label}
+                  size="small"
+                  variant={config.variant}
+                  color={config.color}
+                  onClick={config.handler}
+                  startIcon={
+                    config.startIcon && (
+                      <FontAwesomeIcon
+                        icon={config.startIcon}
+                        className="small-icon"
+                      />
+                    )
                   }
-                })}
-                p={4}
-                onClick={() => console.log('clicked')}
-              >
-                <FontAwesomeIcon icon={faTrash} fontSize={8} />
-                <Typography
-                  variant="body4"
-                  sx={{ textTransform: 'capitalize' }}
+                  disabled={config.disabled}
                 >
-                  {t('transfer:rescindTransferBtn')}
-                </Typography>
-              </BCButton>
+                  {config.label}
+                </BCButton>
+              ))}
             </Stack>
           </BCBox>
         </BCBox>
-      )}
-    </>
+      </>
+    )
   )
 }
 
