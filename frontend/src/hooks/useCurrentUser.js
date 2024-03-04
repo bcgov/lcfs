@@ -13,20 +13,20 @@ export const useCurrentUser = () => {
   const query = useQuery({
     queryKey: ['currentUser', keycloak.token],
     queryFn: async () => {
-      const response = await client.get(apiRoutes.currentUser)
-      return response.data
+      const response = await client.get(apiRoutes.currentUser);
+      return response.data;
     },
     enabled: !!keycloak.authenticated && initialized,
     retry: false,
     onSuccess: setUser,
     onError: (error) => {
-      console.error('Error fetching current user:', error)
-    }
+      console.error('Error fetching current user:', error);
+    },
   })
 
   /**
    * Checks if the current user has all of the specified roles.
-   *
+   * 
    * @param {string[]} roleNames - The names of the roles to check against.
    * @return {boolean} True if the user has all of the roles.
    *
@@ -34,18 +34,18 @@ export const useCurrentUser = () => {
    * Check if the user has both the 'Government' and 'Administrator' roles:
    *   import { roles } from '@/constants/roles'
    *   import { useCurrentUser } from '@/hooks/useCurrentUser'
-   *
+   * 
    *   const { hasRoles } = useCurrentUser();
-   *
+   * 
    *   if (hasRoles(roles.government, roles.administrator)) {
    *     // Logic for users with both 'Government' and 'Administrator' roles
    *   }
    */
   const hasRoles = (...roleNames) => {
-    return roleNames.every((roleName) =>
-      query.data?.roles?.some((role) => role.name === roleName)
-    )
-  }
+    return roleNames.every(roleName => 
+        query.data?.roles?.some(role => role.name === roleName)
+    );
+  };
 
   const fullName = () => {
     return query.data?.first_name + ' ' + query.data?.last_name
@@ -55,5 +55,5 @@ export const useCurrentUser = () => {
     ...query,
     hasRoles,
     fullName
-  }
+  };
 }
