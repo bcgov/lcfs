@@ -1,4 +1,3 @@
-// hooks
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
@@ -30,7 +29,7 @@ import { AttachmentList } from '../../Transactions/components/AttachmentList'
 import { Comments } from '../../Transactions/components/Comments'
 import { OrganizationBadge } from '../../Transactions/components/OrganizationBadge'
 import { demoData } from '../../Transactions/components/demo'
-import { rescindButton } from '../buttonConfigs'
+import { rescindButton, declineButton } from '../buttonConfigs'
 
 export const ViewTransfer = () => {
   const [modalData, setModalData] = useState(null)
@@ -40,7 +39,7 @@ export const ViewTransfer = () => {
   }
   const navigate = useNavigate()
   const { transferId } = useParams()
-  const { hasRoles } = useCurrentUser()
+  const { hasRoles, hasAnyRole } = useCurrentUser()
 
   const { data: currentUser } = useCurrentUser()
   const {
@@ -85,6 +84,7 @@ export const ViewTransfer = () => {
 
   const totalValue = quantity * pricePerUnit
   const isGovernmentUser = currentUser?.is_government_user
+  const currentUserOrgId = currentUser?.organization?.organization_id
 
   const steps = useMemo(() => {
     if (isFetched) {
@@ -111,6 +111,28 @@ export const ViewTransfer = () => {
   const buttonClusterConfig = {
     Deleted: [],
     Sent: [
+      {
+        ...declineButton(t('transfer:declineTransferBtn')),
+        handler: (formData) =>
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                newStatus: 8,
+                message: {
+                  success: t('transfer:declineSuccessText'),
+                  error: t('transfer:declineErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:declineTransferBtn'),
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:declineConfirmText')
+          }),
+        // Disable the action if the user lacks the necessary roles,
+        // or if they are not a member of the receiving organization for the compliance units.
+        disabled: !hasAnyRole(roles.transfers, roles.signing_authority) || currentUserOrgId !== toOrgId
+      },
       {
         ...rescindButton(t('transfer:rescindTransferBtn')),
         handler: (formData) =>

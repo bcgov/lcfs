@@ -43,5 +43,9 @@
   "agrDateLabel": "Agreement Date (required)",
   "agrDateDescText": "Date on which the written agreement for the transfer was reached between the organizations:",
   "commentsLabel": "Comments (optional)",
-  "commentsDescText": "Your comments will be visible to both organizations of the transfer and government:"
+  "commentsDescText": "Your comments will be visible to both organizations of the transfer and government:",
+  "declineTransferBtn": "Decline transfer",
+  "declineConfirmText": "Are you sure you want to decline this transfer?",
+  "declineSuccessText": "Transfer successfully declined.",
+  "declineErrorText": "Error declining transfer"
 }

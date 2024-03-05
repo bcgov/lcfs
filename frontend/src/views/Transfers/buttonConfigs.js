@@ -44,3 +44,9 @@ export const rescindButton = (label) => ({
   label,
   startIcon: faTrash
 })
+
+export const declineButton = (label) => ({
+  ...redBase,
+  label,
+  startIcon: faTrash
+})

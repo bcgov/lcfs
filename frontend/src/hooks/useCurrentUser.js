@@ -47,6 +47,26 @@ export const useCurrentUser = () => {
     );
   };
 
+  /**
+   * Checks if the current user has any of the specified roles.
+   * 
+   * @param {string[]} roleNames - The names of the roles to check against.
+   * @return {boolean} True if the user has at least one of the roles.
+   *
+   * Usage:
+   * Check if the user has either the 'Transfers' or 'Signing Authority' role:
+   *   const { hasAnyRole } = useCurrentUser();
+   * 
+   *   if (hasAnyRole(roles.transfers, roles.signing_authority)) {
+   *     // Logic for users with either 'Transfers' or 'Signing Authority' role
+   *   }
+   */
+  const hasAnyRole = (...roleNames) => {
+    return roleNames.some(roleName => 
+      query.data?.roles?.some(role => role.name === roleName)
+    );
+  }
+
   const fullName = () => {
     return query.data?.first_name + ' ' + query.data?.last_name
   }
@@ -54,6 +74,7 @@ export const useCurrentUser = () => {
   return {
     ...query,
     hasRoles,
+    hasAnyRole,
     fullName
   };
 }
