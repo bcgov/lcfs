@@ -68,6 +68,9 @@ const Crumb = () => {
                   '& .MuiChip-label': {
                     color: 'link.main',
                     overflow: 'initial'
+                  },
+                  '& span:hover': {
+                    textDecoration: 'underline'
                   }
                 }}
               />
