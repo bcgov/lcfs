@@ -17,7 +17,7 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
     fontWeight: theme.typography.fontWeightRegular,
     fontSize: theme.typography.pxToRem(16),
     borderRadius: theme.borders.borderRadius.xl,
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.8, 1),
     textTransform: 'capitalize',
     '&:hover, &:focus': {
       backgroundColor: emphasize(backgroundColor, 0.06)
@@ -35,49 +35,65 @@ const Crumb = () => {
 
   return (
     <>
-      {pathnames.length > 1 && (
-        <Breadcrumbs
-          aria-label="breadcrumb"
-          separator={
-            <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
-          }
-        >
-          {pathnames.map((name, index) => {
-            const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
-            const isLast = index === pathnames.length - 1
-            return isLast ? (
-              <StyledBreadcrumb
-                component={Typography}
-                label={
-                  viewRoutesTitle[name] ||
-                  name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+      <Breadcrumbs
+        aria-label="breadcrumb"
+        separator={
+          <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
+        }
+        sx={{ '& li': { marginX: '-2px' } }}
+      >
+        {pathnames.length > 0 && (
+          <StyledBreadcrumb
+            to={'/'}
+            component={Link}
+            label={'Home'}
+            sx={{
+              cursor: 'pointer',
+              '& .MuiChip-label': {
+                color: 'link.main',
+                overflow: 'initial'
+              },
+              '& span:hover': {
+                textDecoration: 'underline'
+              }
+            }}
+          />
+        )}
+        {pathnames.map((name, index) => {
+          const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
+          const isLast = index === pathnames.length - 1
+          return isLast ? (
+            <StyledBreadcrumb
+              component={Typography}
+              label={
+                viewRoutesTitle[name] ||
+                name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+              }
+              key={name}
+            />
+          ) : (
+            <StyledBreadcrumb
+              to={routeTo}
+              key={name}
+              component={Link}
+              label={
+                viewRoutesTitle[name] ||
+                name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+              }
+              sx={{
+                cursor: 'pointer',
+                '& .MuiChip-label': {
+                  color: 'link.main',
+                  overflow: 'initial'
+                },
+                '& span:hover': {
+                  textDecoration: 'underline'
                 }
-                key={name}
-              />
-            ) : (
-              <StyledBreadcrumb
-                to={routeTo}
-                key={name}
-                component={Link}
-                label={
-                  viewRoutesTitle[name] ||
-                  name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
-                }
-                sx={{
-                  cursor: 'pointer',
-                  '& .MuiChip-label': {
-                    color: 'link.main',
-                    overflow: 'initial'
-                  },
-                  '& span:hover': {
-                    textDecoration: 'underline'
-                  }
-                }}
-              />
-            )
-          })}
-        </Breadcrumbs>
-      )}
+              }}
+            />
+          )
+        })}
+      </Breadcrumbs>
     </>
   )
 }
