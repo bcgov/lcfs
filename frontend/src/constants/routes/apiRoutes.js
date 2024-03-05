@@ -7,3 +7,9 @@ export const apiRoutes = {
   transactions: '/transactions',
   orgTransactions: '/organization/:orgID/transactions',
 }
+
+export const viewRoutesTitle = {
+  admin: "Administration",
+  "add-user": "Add user",
+  "edit-user": "Edit user",
+}

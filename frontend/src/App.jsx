@@ -18,7 +18,7 @@ import {
 } from './views/Organizations'
 import { Transactions } from './views/Transactions'
 import { ViewTransfer, AddEditTransfer } from './views/Transfers'
-import { AddEditUser, UserActivity } from './views/Users'
+import { AddEditUser } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
 import { Login } from './components/Login'
 import { NotFound } from './components/NotFound'
@@ -161,27 +161,27 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ADMIN,
         element: <Navigate to={ROUTES.ADMIN_USERS} replace />,
-        handle: { title: 'Admin' }
+        handle: { title: 'Administration' }
       },
       {
         path: ROUTES.ADMIN_USERS,
         element: <AdminMenu tabIndex={0} />,
-        handle: { title: 'Admin users' }
+        handle: { title: 'Users' }
       },
       {
         path: ROUTES.ADMIN_USERACTIVITY,
         element: <AdminMenu tabIndex={1} />,
-        handle: { title: 'Admin user activity' }
+        handle: { title: 'User activity' }
       },
       {
         path: ROUTES.ADMIN_FUEL_CODES,
         element: <AdminMenu tabIndex={2} />,
-        handle: { title: 'Admin fuel codes' }
+        handle: { title: 'Fuel codes' }
       },
       {
         path: ROUTES.ADMIN_COMPLIANCE_REPORTING,
         element: <AdminMenu tabIndex={3} />,
-        handle: { title: 'Admin compliance reporting' }
+        handle: { title: 'Compliance reporting' }
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,
