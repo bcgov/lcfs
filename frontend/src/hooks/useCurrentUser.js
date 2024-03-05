@@ -42,18 +42,21 @@ export const useCurrentUser = () => {
    *   }
    */
   const hasRoles = (...roleNames) => {
-    return roleNames.every(roleName => 
-        query.data?.roles?.some(role => role.name === roleName)
-    );
+    return query.data?.roles?.some(role => roleNames.includes(role.name))
   };
 
   const fullName = () => {
     return query.data?.first_name + ' ' + query.data?.last_name
   }
 
+  const sameOrganization = (orgId) => {
+    return query.data?.organization?.organization_id === orgId
+  }
+
   return {
     ...query,
     hasRoles,
+    sameOrganization,
     fullName
   };
 }

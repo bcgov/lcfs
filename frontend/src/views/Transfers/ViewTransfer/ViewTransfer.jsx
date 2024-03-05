@@ -1,15 +1,14 @@
 // hooks
-import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
-import BCModal from '@/components/BCModal'
-import Loading from '@/components/Loading'
-import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
-import { TRANSACTIONS } from '@/constants/routes/routes'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { decimalFormatter } from '@/utils/formatters'
-
+// constants
+import { roles } from '@/constants/roles'
+import { TRANSACTIONS } from '@/constants/routes/routes'
+// mui components
 import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
@@ -22,14 +21,19 @@ import {
   Stepper,
   Typography
 } from '@mui/material'
-import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
-
-import { AttachmentList } from '../../Transactions/components/AttachmentList'
-import { Comments } from '../../Transactions/components/Comments'
-import { OrganizationBadge } from '../../Transactions/components/OrganizationBadge'
-import { demoData } from '../../Transactions/components/demo'
+import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import Loading from '@/components/Loading'
+import { Role } from '@/components/Role'
+// sub components
+import {
+  AddPlainComment,
+  AttachmentList,
+  CommentsList,
+  OrganizationBadge
+} from '@/views/Transfers/components'
+import { demoData } from '../components/demo'
 import { rescindButton } from '../buttonConfigs'
 
 export const ViewTransfer = () => {
@@ -41,8 +45,14 @@ export const ViewTransfer = () => {
   const navigate = useNavigate()
   const { transferId } = useParams()
   const { hasRoles } = useCurrentUser()
+  const [comment, setComment] = useState('')
 
   const { data: currentUser } = useCurrentUser()
+
+  const handleCommentChange = (e) => {
+    setComment(e.target.value)
+  }
+
   const {
     data: transferData,
     isLoading,
@@ -93,7 +103,7 @@ export const ViewTransfer = () => {
       }
       switch (transferStatus) {
         case 'Rescinded':
-          return ['Draft', 'Rescind', 'Submitted', 'Recorded']
+          return ['Draft', 'Rescinded', 'Submitted', 'Recorded']
         case 'Declined':
           return ['Draft', 'Sent', 'Declined', 'Recorded']
         case 'Refused': {
@@ -117,6 +127,7 @@ export const ViewTransfer = () => {
           setModalData({
             primaryButtonAction: () =>
               updateTransfer({
+                comments: comment,
                 newStatus: 9,
                 message: {
                   success: t('transfer:rescindTransferBtn'),
@@ -173,15 +184,14 @@ export const ViewTransfer = () => {
             >
               {steps.map((label, index) => {
                 const labelProps = {}
-                if (
-                  label === 'Rescind' ||
-                  label === 'Declined' ||
-                  label === 'Refused'
-                ) {
+                if (['Rescinded', 'Declined', 'Refused'].includes(label)) {
                   labelProps.error = true
                 }
                 return (
-                  <Step key={label}>
+                  <Step
+                    key={label}
+                    completed={index < steps.indexOf(transferStatus)}
+                  >
                     <StepLabel {...labelProps}>{label}</StepLabel>
                   </Step>
                 )
@@ -194,8 +204,7 @@ export const ViewTransfer = () => {
               organizationId={fromOrgId}
               organizationName={fromOrganization}
               isGovernmentUser={isGovernmentUser}
-              // transferStatus={transferStatus} -- demo purpose -- uncomment and remove below line
-              transferStatus={'Submitted'}
+              transferStatus={transferStatus}
             />
             <Stack
               spacing={1}
@@ -259,7 +268,13 @@ export const ViewTransfer = () => {
           </BCBox>
           -- demo data --
           {/* Comments */}
-          <Comments comments={demoData.comments} />
+          <CommentsList comments={demoData.comments} />
+          <AddPlainComment
+            toOrgId={toOrgId}
+            isGovernmentUser={isGovernmentUser}
+            handleCommentChange={handleCommentChange}
+            comment={comment}
+          />
           -- demo data --
           {/* List of attachments */}
           <AttachmentList attachments={demoData.attachments} />

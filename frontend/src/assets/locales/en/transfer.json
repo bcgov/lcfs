@@ -1,7 +1,7 @@
 {
   "title": "Transfers",
   "transfers": " transfers ",
-  "transferID": "Transfer-ID:",
+  "transferID": "Transfer — ID:",
   "editTransfer": "Edit Transfer",
   "newTransfer": "New Transfer",
   "effectiveText": "A transfer is not effective until it is recorded by the Director.",
@@ -43,5 +43,7 @@
   "agrDateLabel": "Agreement Date (required)",
   "agrDateDescText": "Date on which the written agreement for the transfer was reached between the organizations:",
   "commentsLabel": "Comments (optional)",
-  "commentsDescText": "Your comments will be visible to both organizations of the transfer and government:"
+  "commentsDescText": "Your comments will be visible to both organizations of the transfer and government:",
+  "govCommentLabel": "Government comments to organizations (optional)",
+  "toOrgCommentLabel": "Your comments (optional)"
 }

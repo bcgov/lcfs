@@ -10,7 +10,7 @@ import {
   Divider
 } from '@mui/material'
 
-export const Comments = ({ comments }) => (
+export const CommentsList = ({ comments }) => (
   <BCBox mt={2}>
     <Typography variant="h6" color="primary">
       Comments
@@ -73,6 +73,6 @@ export const Comments = ({ comments }) => (
   </BCBox>
 )
 
-Comments.propTypes = {
+CommentsList.propTypes = {
   comments: PropTypes.array.isRequired
 }
