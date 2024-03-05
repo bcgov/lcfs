@@ -157,6 +157,7 @@ class OrganizationUpdateSchema(BaseModel):
 
 class OrganizationResponseSchema(BaseModel):
     name: str
+    operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None

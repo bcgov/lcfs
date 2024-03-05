@@ -63,9 +63,15 @@ export const AddEditOrg = () => {
 
   useEffect(() => {
     if (isFetched && data) {
+      const shouldSyncNames = data.name === data.operating_name
+      const shouldSyncAddress = data.org_address?.street_address === data.org_attorney_address?.street_address
+        && data.org_address?.address_other === data.org_attorney_address?.address_other
+        && data.org_address?.city === data.org_attorney_address?.city
+        && data.org_address?.postalCode_zipCode === data.org_attorney_address?.postalCode_zipCode
+
       reset({
         orgLegalName: data.name,
-        orgOperatingName: data?.operating_name,
+        orgOperatingName: data.operating_name,
         orgEmailAddress: data.email,
         orgPhoneNumber: data.phone,
         orgEDRMSRecord: data.edrms_record,
@@ -82,23 +88,10 @@ export const AddEditOrg = () => {
           data.org_attorney_address.postalCode_zipCode
       })
 
-      if (
-        data.name === data?.operating_name ||
-        (data.name && !data?.operating_name)
-      ) {
-        setSameAsLegalName(true)
-      }
-
-      if (
-        data.org_address.postalCode_zipCode ===
-          data.org_attorney_address.postalCode_zipCode &&
-        data.org_address.street_address ===
-          data.org_attorney_address.street_address
-      ) {
-        setSameAsServiceAddress(true)
-      }
+      setSameAsLegalName(shouldSyncNames);
+      setSameAsServiceAddress(shouldSyncAddress);
     }
-  }, [isFetched])
+  }, [isFetched, data, reset])
 
   // Watching form fields
   const orgLegalName = watch('orgLegalName')
@@ -233,30 +226,32 @@ export const AddEditOrg = () => {
     if (sameAsLegalName) {
       setValueAndTriggerValidation('orgOperatingName', orgLegalName)
     } else {
-      clearFields(['orgOperatingName'])
+      if (watch('orgOperatingName') === orgLegalName) {
+        clearFields(['orgOperatingName']);
+      }
     }
-  }, [sameAsLegalName, orgLegalName, setValueAndTriggerValidation, clearFields])
+  }, [sameAsLegalName, orgLegalName, setValueAndTriggerValidation, clearFields, watch]);
 
   // Syncing logic for 'sameAsServiceAddress'
   useEffect(() => {
-    const attorneyFields = [
-      'orgAttorneyStreetAddress',
-      'orgAttorneyAddressOther',
-      'orgAttorneyCity',
-      'orgAttorneyPostalCodeZipCode'
-    ]
     if (sameAsServiceAddress) {
-      const fieldsToSync = [
-        { target: 'orgAttorneyStreetAddress', value: orgStreetAddress },
-        { target: 'orgAttorneyAddressOther', value: orgAddressOther },
-        { target: 'orgAttorneyCity', value: orgCity },
-        { target: 'orgAttorneyPostalCodeZipCode', value: orgPostalCodeZipCode }
-      ]
-      fieldsToSync.forEach(({ target, value }) =>
-        setValueAndTriggerValidation(target, value)
-      )
+      setValueAndTriggerValidation('orgAttorneyStreetAddress', watch('orgStreetAddress'));
+      setValueAndTriggerValidation('orgAttorneyAddressOther', watch('orgAddressOther'));
+      setValueAndTriggerValidation('orgAttorneyCity', watch('orgCity'));
+      setValueAndTriggerValidation('orgAttorneyPostalCodeZipCode', watch('orgPostalCodeZipCode'));
     } else {
-      clearFields(attorneyFields)
+      if (watch('orgAttorneyStreetAddress') === orgStreetAddress) {
+        clearFields(['orgAttorneyStreetAddress']);
+      }
+      if (watch('orgAttorneyAddressOther') === orgAddressOther) {
+        clearFields(['orgAttorneyAddressOther']);
+      }
+      if (watch('orgAttorneyCity') === orgCity) {
+        clearFields(['orgAttorneyCity']);
+      }
+      if (watch('orgAttorneyPostalCodeZipCode') === orgPostalCodeZipCode) {
+        clearFields(['orgAttorneyPostalCodeZipCode']);
+      }
     }
   }, [
     sameAsServiceAddress,
@@ -642,8 +637,8 @@ export const AddEditOrg = () => {
                   data-test="orgAttorneyStreetAddress"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttorneyStreetAddress}
-                  helperText={errors.orgAttorneyStreetAddress?.message}
+                  error={!!errors.orgAttorneyStreetAddress && !sameAsServiceAddress}
+                  helperText={sameAsServiceAddress ? "" : errors.orgAttorneyStreetAddress?.message}
                   {...register('orgAttorneyStreetAddress')}
                 />
               </Box>
@@ -673,8 +668,8 @@ export const AddEditOrg = () => {
                   data-test="orgAttorneyCity"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttorneyCity}
-                  helperText={errors.orgAttorneyCity?.message}
+                  error={!!errors.orgAttorneyCity && !sameAsServiceAddress}
+                  helperText={sameAsServiceAddress ? "" : errors.orgAttorneyCity?.message}
                   {...register('orgAttorneyCity')}
                 />
               </Box>
@@ -721,8 +716,8 @@ export const AddEditOrg = () => {
                   data-test="orgAttorneyPostalCodeZipCode"
                   variant="outlined"
                   fullWidth
-                  error={!!errors.orgAttorneyPostalCodeZipCode}
-                  helperText={errors.orgAttorneyPostalCodeZipCode?.message}
+                  error={!!errors.orgAttorneyPostalCodeZipCode && !sameAsServiceAddress}
+                  helperText={sameAsServiceAddress ? "" : errors.orgAttorneyPostalCodeZipCode?.message}
                   {...register('orgAttorneyPostalCodeZipCode')}
                 />
               </Box>
