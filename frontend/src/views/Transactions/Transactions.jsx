@@ -45,15 +45,33 @@ export const Transactions = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
     const transactionType = params.data.transaction_type
-    if(transactionType === 'Transfer') {
-      navigate(
-        ROUTES.TRANSFERS_VIEW.replace(':transferId', params.data.transaction_id)
-      )
-    } else if (transactionType === 'Administrative Adjustment' ||
-      transactionType === 'Initiative Agreement') {
+    if (transactionType === 'Transfer') {
+      // if the transaction is in Draft status then go directly to Edit View
+      if (params.data.status === 'Draft') {
         navigate(
-          ROUTES.TRANSACTIONS_VIEW.replace(':transactionId', params.data.transaction_id)
+          ROUTES.TRANSFERS_EDIT.replace(
+            ':transferId',
+            params.data.transaction_id
+          )
         )
+      } else {
+        navigate(
+          ROUTES.TRANSFERS_VIEW.replace(
+            ':transferId',
+            params.data.transaction_id
+          )
+        )
+      }
+    } else if (
+      transactionType === 'Administrative Adjustment' ||
+      transactionType === 'Initiative Agreement'
+    ) {
+      navigate(
+        ROUTES.TRANSACTIONS_VIEW.replace(
+          ':transactionId',
+          params.data.transaction_id
+        )
+      )
     }
   })
 
