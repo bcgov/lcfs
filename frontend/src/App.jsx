@@ -166,12 +166,22 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ADMIN_USERS,
         element: <AdminMenu tabIndex={0} />,
-        handle: { title: 'Admin Users' }
+        handle: { title: 'Admin users' }
       },
       {
-        path: ROUTES.ADMIN_ROLES,
+        path: ROUTES.ADMIN_USERACTIVITY,
         element: <AdminMenu tabIndex={1} />,
-        handle: { title: 'Admin Roles' }
+        handle: { title: 'Admin user activity' }
+      },
+      {
+        path: ROUTES.ADMIN_FUEL_CODES,
+        element: <AdminMenu tabIndex={2} />,
+        handle: { title: 'Admin fuel codes' }
+      },
+      {
+        path: ROUTES.ADMIN_COMPLIANCE_REPORTING,
+        element: <AdminMenu tabIndex={3} />,
+        handle: { title: 'Admin compliance reporting' }
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,
@@ -187,11 +197,6 @@ const router = createBrowserRouter([
         path: ROUTES.ADMIN_USERS_EDIT,
         element: <AddEditUser userType="idir" />,
         handle: { title: 'Edit Admin User' }
-      },
-      {
-        path: ROUTES.ADMIN_USERACTIVITY,
-        element: <UserActivity />,
-        handle: { title: 'Admin User Activity' }
       },
       {
         path: ROUTES.FUELCODES,
