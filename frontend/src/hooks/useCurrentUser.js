@@ -71,10 +71,15 @@ export const useCurrentUser = () => {
     return query.data?.first_name + ' ' + query.data?.last_name
   }
 
+  const sameOrganization = (orgId) => {
+    return query.data?.organization?.organization_id === orgId
+  }
+
   return {
     ...query,
     hasRoles,
     hasAnyRole,
+    sameOrganization,
     fullName
   };
 }

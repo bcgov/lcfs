@@ -23,7 +23,7 @@ const baseProperties = {
   headerSizeH3: '2.074rem',
   headerSizeH4: '1.728rem',
   headerSizeH5: '1.44rem',
-  headerSizeH6: '1.2rem'
+  headerSizeH6: pxToRem(18)
 }
 
 const baseHeadingProperties = {
