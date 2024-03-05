@@ -5,12 +5,14 @@ from fastapi import Depends, Request
 from datetime import datetime
 
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Comment import Comment
+
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transfer.repo import TransferRepository
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
 
 logger = getLogger("transfer_service")
@@ -21,11 +23,13 @@ class TransferServices:
         self,
         request: Request = None,
         repo: TransferRepository = Depends(TransferRepository),
-        org_repo: OrganizationsRepository = Depends(OrganizationsRepository)
+        org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
+        transaction_repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
         self.request = request
         self.org_repo = org_repo
+        self.transaction_repo = transaction_repo
 
     @service_handler
     async def get_all_transfers(self) -> List[TransferSchema]:
@@ -116,16 +120,34 @@ class TransferServices:
 
     @service_handler
     async def update_transfer(self, transfer_id: int, transfer_data: TransferUpdate) -> TransferSchema:
+        '''Updates an existing transfer record with new data.'''
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
             raise DataNotFoundException(
                 f"Transfer with ID {transfer_id} not found")
-        transfer.current_status_id = transfer_data.current_status_id
+
+        previous_status = transfer.current_status_id
+        new_status = transfer_data.current_status_id
+
+        # Update transfer status
+        transfer.current_status_id = new_status
+
         if transfer_data.comments:
             if transfer.comments:
                 transfer.comments.comment = transfer_data.comments
             else:
                 transfer.comments = Comment(comment=transfer_data.comments)
 
+        if new_status != previous_status:
+            # If the status has changed, add a new transfer history record
+            await self.repo.add_transfer_history(transfer_id, new_status)
+            
+            # Check if the status is being updated to 'Declined'
+            if new_status == 8:
+                release_result = await self.transaction_repo.release_transaction(transfer.transaction_id)
+                if not release_result:
+                    raise ServiceException(f"Failed to release transaction {transfer.transaction_id} for transfer {transfer_id}. Update cancelled.")
+
         updated_transfer = await self.repo.update_transfer(transfer)
+
         return TransferSchema.model_validate(updated_transfer)

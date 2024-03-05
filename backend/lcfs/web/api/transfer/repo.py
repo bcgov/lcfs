@@ -13,6 +13,7 @@ from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus
 from lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.Comment import Comment
+from lcfs.db.models.TransferHistory import TransferHistory
 
 logger = getLogger("transfer_repo")
 
@@ -102,3 +103,23 @@ class TransferRepository:
         except Exception as e:
             await self.db.rollback()  # Rollback in case of error
             raise e
+
+    @repo_handler
+    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int) -> TransferHistory:
+        """
+        Adds a new record to the transfer history in the database.
+
+        Args:
+            transfer_id (int): The ID of the transfer to which this history record relates.
+            transfer_status_id (int): The status ID that describes the current state of the transfer.
+
+        Returns:
+            TransferHistory: The newly created transfer history record.
+        """
+        new_history_record = TransferHistory(
+            transfer_id=transfer_id,
+            transfer_status_id=transfer_status_id
+        )
+        self.db.add(new_history_record)
+        await self.db.flush()
+        return new_history_record
