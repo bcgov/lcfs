@@ -33,7 +33,7 @@
   "sendConfirmText": "Are you sure you want to sign and send this transfer to ",
   "creatingText": "Creating Draft Transfer...",
   "updatingText": "Updating Draft Transfer...",
-"processingText": "Processing Transfer...",
+  "processingText": "Processing Transfer...",
   "detailsLabel": "Transfer Details (required)",
   "fairMarketText": "The fair market value of any consideration, in CAD",
   "totalValueText": " per compliance unit for a total value of ",
