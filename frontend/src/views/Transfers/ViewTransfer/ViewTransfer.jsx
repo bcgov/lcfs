@@ -34,7 +34,7 @@ import {
   OrganizationBadge
 } from '@/views/Transfers/components'
 import { demoData } from '../components/demo'
-import { rescindButton } from '../buttonConfigs'
+import { rescindButton, saveDraftButton } from '../buttonConfigs'
 
 export const ViewTransfer = () => {
   const [modalData, setModalData] = useState(null)
@@ -145,7 +145,21 @@ export const ViewTransfer = () => {
     ],
     Rescinded: [],
     Declined: [],
-    Submitted: [],
+    Submitted: [
+      {
+        ...saveDraftButton(t('saveBtn')),
+        handler: (formData) =>
+          updateTransfer({
+            comments: comment,
+            newStatus: transferData?.current_status.transfer_status_id,
+            message: {
+              success: t('transfer:commentSaveSuccessText'),
+              error: t('transfer:commentSaveErrorText')
+            }
+          }),
+        disabled: !isGovernmentUser
+      }
+    ],
     Recommended: [],
     Recorded: [],
     Refused: []
@@ -274,6 +288,7 @@ export const ViewTransfer = () => {
             isGovernmentUser={isGovernmentUser}
             handleCommentChange={handleCommentChange}
             comment={comment}
+            transferStatus={transferStatus}
           />
           -- demo data --
           {/* List of attachments */}

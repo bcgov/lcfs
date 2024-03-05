@@ -33,7 +33,7 @@
   "sendConfirmText": "Are you sure you want to sign and send this transfer to ",
   "creatingText": "Creating Draft Transfer...",
   "updatingText": "Updating Draft Transfer...",
-  "processingText": "Processing Transfer...",
+"processingText": "Processing Transfer...",
   "detailsLabel": "Transfer Details (required)",
   "fairMarketText": "The fair market value of any consideration, in CAD",
   "totalValueText": " per compliance unit for a total value of ",
@@ -44,6 +44,8 @@
   "agrDateDescText": "Date on which the written agreement for the transfer was reached between the organizations:",
   "commentsLabel": "Comments (optional)",
   "commentsDescText": "Your comments will be visible to both organizations of the transfer and government:",
+  "commentSaveSuccessText": "Comment successfully saved.",
+  "commentSaveErrorText": "Error saving comment",
   "govCommentLabel": "Government comments to organizations (optional)",
   "toOrgCommentLabel": "Your comments (optional)"
 }

@@ -54,7 +54,7 @@ async def update_transfer_draft(
 
 
 @router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
-@roles_required("SUPPLIER")
+@roles_required("SUPPLIER", "GOVERNMENT")
 @view_handler
 async def update_transfer(
     request: Request,

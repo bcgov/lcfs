@@ -12,6 +12,7 @@ export const AddPlainComment = ({
   toOrgId,
   handleCommentChange,
   comment,
+  transferStatus,
   isGovernmentUser
 }) => {
   const { t } = useTranslation(['transfer'])
@@ -21,7 +22,14 @@ export const AddPlainComment = ({
   const handleToggle = () => {
     setIsExpanded(!isExpanded)
   }
-  if (!(isGovernmentUser || sameOrganization(toOrgId))) return null
+  if (
+    !(
+      (isGovernmentUser &&
+        ['Submitted', 'Recommended'].includes(transferStatus)) ||
+      (sameOrganization(toOrgId) && transferStatus === 'Sent')
+    )
+  )
+    return null
 
   return (
     <>
@@ -64,5 +72,6 @@ AddPlainComment.propTypes = {
   toOrgId: PropTypes.any.isRequired,
   handleCommentChange: PropTypes.func.isRequired,
   comment: PropTypes.string.isRequired,
-  isGovernmentUser: PropTypes.bool.isRequired
+  isGovernmentUser: PropTypes.bool.isRequired,
+  transferStatus: PropTypes.string.isRequired
 }
