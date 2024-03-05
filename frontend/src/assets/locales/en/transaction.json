@@ -14,7 +14,7 @@
   "txnId": "Transaction ID",
   "noTxnsFound": "No transactions found",
   "txnDownloadFailMsg": "Failed to download transaction information.",
-  "newTxnBtn": "New transaction",
+  "newTransferBtn": "New transfer",
   "compliancePeriod": "Compliance Period",
   "type": "Type",
   "complianceUnitsFrom": "Compliance Units From",
