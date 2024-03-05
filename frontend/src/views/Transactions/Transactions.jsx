@@ -16,6 +16,7 @@ import { Role } from '@/components/Role'
 import { transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
+import { statuses } from '@/constants/statuses'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -42,20 +43,45 @@ export const Transactions = () => {
   }, [])
 
   const defaultSortModel = [{ field: 'create_date', direction: 'asc' }]
+
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
-    const transactionType = params.data.transaction_type
-    if(transactionType === 'Transfer') {
-      navigate(
-        ROUTES.TRANSFERS_VIEW.replace(':transferId', params.data.transaction_id)
-      )
-    } else if (transactionType === 'Administrative Adjustment' ||
-      transactionType === 'Initiative Agreement') {
-        navigate(
-          ROUTES.TRANSACTIONS_VIEW.replace(':transactionId', params.data.transaction_id)
-        )
+    const { transaction_id, transaction_type, from_organization, status } = params.data
+    const userOrgName = currentUser?.organization?.name
+  
+    // Define routes mapping for transaction types
+    const routesMapping = {
+      'Transfer': {
+        view: ROUTES.TRANSFERS_VIEW,
+        edit: ROUTES.TRANSFERS_EDIT
+      },
+      'Administrative Adjustment': {
+        view: ROUTES.TRANSACTIONS_VIEW, // TODO Replace once we develop this feature
+      },
+      'Initiative Agreement': {
+        view: ROUTES.TRANSACTIONS_VIEW, // TODO Replace once we develop this feature
+      }
     }
-  })
+  
+    // Determine if it's an edit scenario
+    const isEditScenario = userOrgName === from_organization && status === statuses.draft
+    const routeType = isEditScenario ? 'edit' : 'view'
+    console.log(isEditScenario, routeType, from_organization, userOrgName, status)
+  
+    // Select the appropriate route based on the transaction type and scenario
+    const routeTemplate = routesMapping[transaction_type]?.[routeType]
+  
+    if (routeTemplate) {
+      navigate(
+        // replace any matching query params by chaining these replace methods
+        routeTemplate.replace(':transactionId', transaction_id).replace(':transferId', transaction_id)
+      )
+    } else {
+      console.error('No route defined for this transaction type and scenario')
+    }
+  }, [currentUser, navigate])
+
 
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)

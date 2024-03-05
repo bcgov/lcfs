@@ -34,6 +34,7 @@ import SigningAuthority from './components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
 import TransferSummary from './components/TransferSummary'
+import { roles } from '@/constants/roles'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -41,7 +42,7 @@ export const AddEditTransfer = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { transferId } = useParams()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const { data: transferData, isFetched } = useTransfer(transferId, {
     enabled: !!transferId,
     retry: false
@@ -77,6 +78,8 @@ export const AddEditTransfer = () => {
       comments: ''
     }
   })
+  const { watch } = methods;
+  const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
 
   /**
    * Fetches and populates the form with existing transfer data for editing.
@@ -211,6 +214,7 @@ export const AddEditTransfer = () => {
       { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
       {
         ...submitButton(t('transfer:signAndSendBtn')),
+        disabled: !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
           setModalData({
             primaryButtonAction: () =>

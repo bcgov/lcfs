@@ -206,6 +206,18 @@ async def seed_user_profiles(session):
             "is_active": True,
             "first_name": "Noah",
             "last_name": "Thomas",
+        },
+        {
+            "keycloak_email": "kailee.douglas@gov.bc.ca",
+            "keycloak_username": "KADOUGLA",
+            "email": "kailee.douglas@gov.bc.ca",
+            "title": "Admin",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "Kailee",
+            "last_name": "Douglas",
         }
     ]
 

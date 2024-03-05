@@ -104,6 +104,7 @@ async def create_user(
     return await user_service.get_user_by_id(user_id) if user_id else None
 
 
+# TODO Check if security concern exists on user creating user in different org
 @router.put(
     "/{organization_id}/users/{user_id}",
     response_model=UserBaseSchema,
@@ -137,7 +138,6 @@ async def update_user(
 @view_handler
 async def get_transactions_paginated(
     request: Request,
-    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     org_service: OrganizationService = Depends(),
     response: Response = None,
@@ -145,4 +145,5 @@ async def get_transactions_paginated(
     """
     Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
     """
+    organization_id = request.user.organization.organization_id
     return await org_service.get_transactions_paginated(pagination, organization_id)
