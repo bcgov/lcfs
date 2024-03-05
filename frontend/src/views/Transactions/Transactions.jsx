@@ -91,7 +91,7 @@ export const Transactions = () => {
         {t('txn:title')}
       </BCTypography>
       <Box display={'flex'} gap={2} mb={2}>
-        <Role roles={['Supplier', 'Transfer']}>
+        <Role roles={[roles.transfers]}>
           <BCButton
             variant="contained"
             size="small"
