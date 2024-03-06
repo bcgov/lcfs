@@ -19,16 +19,14 @@ export const Navbar = () => {
             { name: t('Dashboard'), route: ROUTES.DASHBOARD },
             { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
             { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
-            { name: t('ComplianceReports'), route: ROUTES.REPORTS },
-            { name: t('FileSubmissions'), route: ROUTES.FILESUBMISSION },
+            { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
             { name: t('Administration'), route: ROUTES.ADMIN }
           ]
         : // BCeID Routes
           [
             { name: t('Dashboard'), route: ROUTES.DASHBOARD },
             { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
-            { name: t('FileSubmissions'), route: ROUTES.FILESUBMISSION },
-            { name: t('ComplianceReports'), route: ROUTES.REPORTS },
+            { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
             { name: t('Organization'), route: ROUTES.ORGANIZATION }
           ],
     [currentUser, t]

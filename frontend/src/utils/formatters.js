@@ -60,3 +60,8 @@ export const calculateTotalValue = (quantity, pricePerUnit) => {
   const priceNum = parseFloat(pricePerUnit)
   return !isNaN(quantityNum) && !isNaN(priceNum) ? quantityNum * priceNum : 0
 }
+
+export function isNumeric(str) {
+  if (typeof str !== 'string') return false; // We only process strings!
+  return !isNaN(str) && !isNaN(parseFloat(str));
+}
