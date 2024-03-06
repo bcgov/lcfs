@@ -122,7 +122,7 @@ export const AddEditTransfer = () => {
   } = useMutation({
     mutationFn: async (formData) => {
       const data = draftPayload(formData)
-      return await apiService.post('/transfers', data)
+      return await apiService.post('/transfers/', data)
     },
     onSuccess: () => {
       navigate(TRANSACTIONS, {
