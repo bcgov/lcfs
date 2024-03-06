@@ -64,7 +64,7 @@ export const ViewOrganization = () => {
   }, [])
 
   const getRowHeight = useCallback((params) => {
-    return params.data.roles.length > 3 ? 85: 45
+    return params.data.roles.length > 4 ? 85: 45
   }, [])
 
   const gridOptions = {
