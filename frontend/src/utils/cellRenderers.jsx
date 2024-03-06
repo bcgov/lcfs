@@ -107,7 +107,7 @@ export const RoleRenderer = (props) => {
         .map((role) => (
           <BCBadge
             key={role.role_id}
-            sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
+            sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' }, margin: '2px' }}
             badgeContent={role.name}
             color={role.is_government_role ? 'primary' : 'secondary'}
             variant="outlined"

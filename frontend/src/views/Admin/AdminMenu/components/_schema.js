@@ -26,6 +26,7 @@ export const usersColumnDefs = (t) => [
         : '',
     flex: 1,
     width: 300,
+    wrapText: true,
     sortable: false,
     suppressMenu: true,
     filterParams: {
