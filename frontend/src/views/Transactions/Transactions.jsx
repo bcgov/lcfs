@@ -42,11 +42,12 @@ export const Transactions = () => {
     return params.data.transaction_id + params.data.transaction_type
   }, [])
 
-  const defaultSortModel = [{ field: 'create_date', direction: 'asc' }]
+  const defaultSortModel = [{ field: 'create_date', direction: 'desc' }]
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
+    // eslint-disable-next-line camelcase
     const { transaction_id, transaction_type, from_organization, status } = params.data
     const userOrgName = currentUser?.organization?.name
   

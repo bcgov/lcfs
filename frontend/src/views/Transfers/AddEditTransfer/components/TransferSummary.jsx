@@ -57,8 +57,7 @@ TransferSummary.propTypes = {
     quantity: PropTypes.number.isRequired,
     pricePerUnit: PropTypes.number.isRequired,
     agreementDate: PropTypes.instanceOf(Date).isRequired,
-  }).isRequired,
-  calculateTotalValue: PropTypes.func.isRequired,
+  }).isRequired
 };
 
 TransferSummary.defaultProps = {
