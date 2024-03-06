@@ -4,7 +4,7 @@ export const apiRoutes = {
   listUsers: '/users/list',
   roles: '/roles/',
   orgUsers: '/organization/:orgID/users/list',
-  transactions: '/transactions',
+  transactions: '/transactions/',
   orgTransactions: '/organization/:orgID/transactions',
 }
 
