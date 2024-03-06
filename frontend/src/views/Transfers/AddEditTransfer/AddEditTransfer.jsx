@@ -33,7 +33,7 @@ import Comments from './components/Comments'
 import SigningAuthority from '../components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
-import TransferSummary from '../components/TransferSummary'
+import TransferSummary from './components/TransferSummary'
 import { roles } from '@/constants/roles'
 
 export const AddEditTransfer = () => {
