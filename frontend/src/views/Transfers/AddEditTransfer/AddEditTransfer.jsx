@@ -30,10 +30,10 @@ import {
 import { AddEditTransferSchema } from './_schema'
 import AgreementDate from './components/AgreementDate'
 import Comments from './components/Comments'
-import SigningAuthority from './components/SigningAuthority'
+import SigningAuthority from '../components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
-import TransferSummary from './components/TransferSummary'
+import TransferSummary from '../components/TransferSummary'
 import { roles } from '@/constants/roles'
 
 export const AddEditTransfer = () => {
@@ -80,7 +80,8 @@ export const AddEditTransfer = () => {
   })
   const { watch } = methods;
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
-
+  const currentStatus = transferData?.current_status.status
+  
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -280,7 +281,7 @@ export const AddEditTransfer = () => {
           <ProgressBreadcrumb
             steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
             currentStep={
-              transferId ? transferData?.current_status.status : null
+              transferId ? currentStatus : null
             }
           />
         </BCBox>
@@ -297,8 +298,10 @@ export const AddEditTransfer = () => {
             <AgreementDate />
 
             <Comments />
-
-            <SigningAuthority />
+            
+            {currentStatus &&
+              <SigningAuthority />
+            }
 
             <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
               <Link>
@@ -317,7 +320,7 @@ export const AddEditTransfer = () => {
                 </BCButton>
               </Link>
               {buttonClusterConfig[
-                transferId ? transferData?.current_status.status : 'New'
+                transferId ? currentStatus : 'New'
               ]?.map((config) => (
                 <Role key={config.label}>
                   <BCButton

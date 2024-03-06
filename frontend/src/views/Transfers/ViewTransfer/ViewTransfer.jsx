@@ -5,7 +5,14 @@ import { decimalFormatter } from '@/utils/formatters'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { rescindButton, declineButton, saveDraftButton } from '../buttonConfigs'
+import { FormProvider, useForm } from 'react-hook-form'
+import SigningAuthority from '../components/SigningAuthority'
+import { 
+  rescindButton, 
+  declineButton, 
+  saveDraftButton,
+  submitButton 
+} from '../buttonConfigs'
 // constants
 import { roles } from '@/constants/roles'
 import { TRANSACTIONS } from '@/constants/routes/routes'
@@ -29,12 +36,13 @@ import {
 } from '@mui/material'
 // sub components
 import {
-  AddPlainComment,
+  // AddPlainComment,
   AttachmentList,
   CommentList,
   OrganizationBadge
 } from '@/views/Transfers/components'
 import { demoData } from '../components/demo'
+import { statuses } from '@/constants/statuses'
 
 export const ViewTransfer = () => {
   const [modalData, setModalData] = useState(null)
@@ -79,6 +87,17 @@ export const ViewTransfer = () => {
     }
   })
 
+  const methods = useForm({
+    mode: 'onChange',
+    defaultValues: {
+      signingAuthorityDeclaration: false,
+      // comments: ''
+    }
+  })
+  const { watch } = methods;
+  const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
+  const currentStatus = transferData?.current_status.status
+
   const {
     current_status: { status: transferStatus } = {},
     to_organization: { name: toOrganization, organization_id: toOrgId } = {},
@@ -120,7 +139,8 @@ export const ViewTransfer = () => {
   const buttonClusterConfig = {
     Deleted: [],
     Sent: [
-      {
+      // Conditionally include the declineButton if currentUserOrgId equals toOrgId
+      ...(currentUserOrgId === toOrgId && hasAnyRole(roles.transfers, roles.signing_authority) ? [{
         ...declineButton(t('transfer:declineTransferBtn')),
         handler: (formData) =>
           setModalData({
@@ -129,22 +149,19 @@ export const ViewTransfer = () => {
                 newStatus: 8,
                 message: {
                   success: t('transfer:declineSuccessText'),
-                  error: t('transfer:declineErrorText')
-                }
+                  error: t('transfer:declineErrorText'),
+                },
               }),
             primaryButtonText: t('transfer:declineTransferBtn'),
             primaryButtonColor: 'error',
             secondaryButtonText: t('cancelBtn'),
             title: t('confirmation'),
-            content: t('transfer:declineConfirmText')
+            content: t('transfer:declineConfirmText'),
           }),
-        // Disable the action if the user lacks the necessary roles,
-        // or if they are not a member of the receiving organization for the compliance units.
-        disabled:
-          !hasAnyRole(roles.transfers, roles.signing_authority) ||
-          currentUserOrgId !== toOrgId
-      },
-      {
+      }] : []),
+      
+      // Conditionally include the rescindButton if currentUserOrgId equals fromOrgId
+      ...(currentUserOrgId === fromOrgId && hasRoles(roles.transfers, roles.signing_authority) ? [{
         ...rescindButton(t('transfer:rescindTransferBtn')),
         handler: (formData) =>
           setModalData({
@@ -152,18 +169,41 @@ export const ViewTransfer = () => {
               updateTransfer({
                 newStatus: 9,
                 message: {
-                  success: t('transfer:rescindTransferBtn'),
-                  error: t('transfer:rescindErrorText')
-                }
+                  success: t('transfer:rescindSuccessText'),
+                  error: t('transfer:rescindErrorText'),
+                },
               }),
             primaryButtonText: t('transfer:rescindTransferBtn'),
             primaryButtonColor: 'error',
             secondaryButtonText: t('cancelBtn'),
             title: t('confirmation'),
-            content: t('transfer:rescindConfirmText')
+            content: t('transfer:rescindConfirmText'),
           }),
-        disabled: !hasRoles(roles.transfers, roles.signing_authority)
+      }] : []),
+
+      {
+        ...submitButton(t('transfer:signAndSubmitBtn')),
+        disabled: !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
+        handler: (formData) => {
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                // comments: formData.comments,
+                newStatus: 4,
+                message: {
+                  success: t('transfer:sendSuccessText'),
+                  error: t('transfer:sendErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:signAndSubmitBtn'),
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:submitConfirmText'),
+          })
+        }
       }
+
     ],
     Rescinded: [],
     Declined: [],
@@ -320,13 +360,13 @@ export const ViewTransfer = () => {
           -- demo data --
           {/* Comments */}
           <CommentList comments={demoData.comments} />
-          <AddPlainComment
+          {/* <AddPlainComment
             toOrgId={toOrgId}
             isGovernmentUser={isGovernmentUser}
             handleCommentChange={handleCommentChange}
             comment={comment}
             transferStatus={transferStatus}
-          />
+          /> */}
           -- demo data --
           {/* List of attachments */}
           <AttachmentList attachments={demoData.attachments} />
@@ -348,6 +388,14 @@ export const ViewTransfer = () => {
             </List>
           </BCBox>
           -- demo data --
+
+          {/* Signing Authority Confirmation */}
+          {currentStatus === statuses.sent &&
+            <FormProvider {...methods}>
+              <SigningAuthority />
+            </FormProvider>
+          }
+
           {/* Buttons */}
           <BCBox p={2} display="flex" justifyContent="flex-end">
             <Stack spacing={4} direction="row" justifyContent="center">
