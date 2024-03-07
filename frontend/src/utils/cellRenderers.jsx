@@ -84,30 +84,10 @@ export const OrgStatusRenderer = (props) => {
 }
 
 export const TransactionStatusRenderer = (props) => {
-  const statusArr = [
-    'Draft',
-    'Recommended',
-    'Sent',
-    'Submitted',
-    'Approved',
-    'Recorded',
-    'Refused',
-    'Deleted',
-    'Declined',
-    'Rescinded'
-  ]
-  const statusColorArr = [
-    'info',
-    'info',
-    'info',
-    'info',
-    'success',
-    'success',
-    'error',
-    'error',
-    'error',
-    'error'
-  ]
+  const statusArr = ['Draft', 'Recommended', 'Sent', 'Submitted', 'Approved', 
+                     'Recorded', 'Refused', 'Deleted', 'Declined', 'Rescinded']
+  const statusColorArr = ['info', 'info', 'info', 'info', 'success', 
+                          'success', 'error', 'error', 'error', 'error']
   const statusIndex = statusArr.indexOf(props.data.status)
   return (
     <BCBox
@@ -154,7 +134,10 @@ export const RoleRenderer = (props) => {
             .map((role) => (
               <BCBadge
                 key={role.role_id}
-                sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
+                sx={{
+                  '& .MuiBadge-badge': { fontSize: '0.7rem' },
+                  margin: '2px'
+                }}
                 badgeContent={role.name}
                 color={role.is_government_role ? 'primary' : 'secondary'}
                 variant="outlined"
