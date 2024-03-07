@@ -86,7 +86,9 @@ export function isNumeric(str) {
 
 export function calculateRowHeight(columnWidth, size) {
   let height = 45
-
+  if (size <= 1) {
+    return height
+  }
   if (columnWidth >= 0 && columnWidth <= 262) {
     switch (size) {
       case 1:
