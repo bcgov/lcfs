@@ -57,6 +57,11 @@ const router = createBrowserRouter([
         handle: { title: 'Transactions', crumb: () => 'Transactions' }
       },
       {
+        path: ROUTES.TRANSFERS,
+        element: <Navigate to={ROUTES.TRANSACTIONS} replace />,
+        handle: { title: 'Transfers' }
+      },
+      {
         path: ROUTES.TRANSFERS_ADD,
         element: <AddEditTransfer />,
         handle: {
