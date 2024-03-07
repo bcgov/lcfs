@@ -252,8 +252,8 @@ export const ViewTransfer = () => {
               updateTransfer({
                 newStatus: 4,
                 message: {
-                  success: t('transfer:declineSuccessText'),
-                  error: t('transfer:declineErrorText')
+                  success: t('transfer:returnSuccessText'),
+                  error: t('transfer:returnErrorText')
                 }
               }),
             primaryButtonText: t('transfer:returnToAnalystBtn'),
