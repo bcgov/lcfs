@@ -60,24 +60,24 @@ export const OrgStatusRenderer = (props) => {
       to={props.node?.id && location.pathname + '/' + props?.node?.id}
       style={{ color: '#000' }}
     >
-      <BCBox
-        m={1}
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          width: '100%',
-          height: '100%'
-        }}
-      >
-        <BCBadge
-          badgeContent={statusArr[statusIndex]}
-          color={statusColorArr[statusIndex]}
-          variant="contained"
-          size="lg"
+      <BCBox sx={{ width: '100%', height: '100%' }}>
+        <BCBox
+          mt={1}
           sx={{
-            '& .MuiBadge-badge': { minWidth: '120px', fontSize: '0.7rem' }
+            display: 'flex',
+            justifyContent: 'center'
           }}
-        />
+        >
+          <BCBadge
+            badgeContent={statusArr[statusIndex]}
+            color={statusColorArr[statusIndex]}
+            variant="contained"
+            size="lg"
+            sx={{
+              '& .MuiBadge-badge': { minWidth: '120px', fontSize: '0.7rem' }
+            }}
+          />
+        </BCBox>
       </BCBox>
     </Link>
   )
@@ -116,35 +116,36 @@ export const RoleRenderer = (props) => {
       to={props.node?.id && location.pathname + '/' + props.node?.id}
       style={{ color: '#000' }}
     >
-      <Stack
-        component="div"
-        direction={{ md: 'coloumn', lg: 'row' }}
-        spacing={0}
-        p={1}
-        sx={{ width: '100%', height: '100%' }}
-        useFlexGap
-        flexWrap="wrap"
-        key={props.data.user_profile_id}
-      >
-        {props.data.is_active &&
-          props.data.roles
-            .filter(
-              (r) => r.name !== roles.government && r.name !== roles.supplier
-            )
-            .map((role) => (
-              <BCBadge
-                key={role.role_id}
-                sx={{
-                  '& .MuiBadge-badge': { fontSize: '0.7rem' },
-                  margin: '2px'
-                }}
-                badgeContent={role.name}
-                color={role.is_government_role ? 'primary' : 'secondary'}
-                variant="outlined"
-                size="md"
-              />
-            ))}{' '}
-      </Stack>
+      <BCBox sx={{ width: '100%', height: '100%' }}>
+        <Stack
+          component="div"
+          direction={{ md: 'coloumn', lg: 'row' }}
+          spacing={0}
+          p={1}
+          useFlexGap
+          flexWrap="wrap"
+          key={props.data.user_profile_id}
+        >
+          {props.data.is_active &&
+            props.data.roles
+              .filter(
+                (r) => r.name !== roles.government && r.name !== roles.supplier
+              )
+              .map((role) => (
+                <BCBadge
+                  key={role.role_id}
+                  sx={{
+                    '& .MuiBadge-badge': { fontSize: '0.7rem' },
+                    margin: '2px'
+                  }}
+                  badgeContent={role.name}
+                  color={role.is_government_role ? 'primary' : 'secondary'}
+                  variant="outlined"
+                  size="md"
+                />
+              ))}{' '}
+        </Stack>
+      </BCBox>
     </Link>
   )
 }
