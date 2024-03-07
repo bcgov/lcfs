@@ -12,7 +12,7 @@ export const LinkRenderer = (props) => {
       style={{ color: '#000' }}
     >
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
-        {props.value}
+        {props.valueFormatted || props.value}
       </BCBox>
     </Link>
   )
@@ -84,10 +84,30 @@ export const OrgStatusRenderer = (props) => {
 }
 
 export const TransactionStatusRenderer = (props) => {
-  const statusArr = ['Draft', 'Recommended', 'Sent', 'Submitted', 'Approved', 
-                     'Recorded', 'Refused', 'Deleted', 'Declined', 'Rescinded']
-  const statusColorArr = ['info', 'info', 'info', 'info', 'success', 
-                          'success', 'error', 'error', 'error', 'error']
+  const statusArr = [
+    'Draft',
+    'Recommended',
+    'Sent',
+    'Submitted',
+    'Approved',
+    'Recorded',
+    'Refused',
+    'Deleted',
+    'Declined',
+    'Rescinded'
+  ]
+  const statusColorArr = [
+    'info',
+    'info',
+    'info',
+    'info',
+    'success',
+    'success',
+    'error',
+    'error',
+    'error',
+    'error'
+  ]
   const statusIndex = statusArr.indexOf(props.data.status)
   return (
     <BCBox
