@@ -14,6 +14,7 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.quantity'),
     valueFormatter: numberFormatter,
     maxWidth: 170,
+    type: 'rightAligned'
   },
   {
     colId: 'price_per_unit',
@@ -21,6 +22,7 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: currencyFormatter,
     maxWidth: 170,
+    type: 'rightAligned'
   },
   {
     colId: 'status',

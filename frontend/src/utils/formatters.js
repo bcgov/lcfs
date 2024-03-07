@@ -91,9 +91,6 @@ export function calculateRowHeight(columnWidth, size) {
   }
   if (columnWidth >= 0 && columnWidth <= 262) {
     switch (size) {
-      case 1:
-        height = 45
-        break
       case 2:
         height = 90
         break
@@ -106,7 +103,6 @@ export function calculateRowHeight(columnWidth, size) {
     }
   } else if (columnWidth >= 263 && columnWidth <= 382) {
     switch (size) {
-      case 1:
       case 2:
         height = 45
         break
@@ -117,7 +113,6 @@ export function calculateRowHeight(columnWidth, size) {
     }
   } else if (columnWidth >= 383 && columnWidth <= 594) {
     switch (size) {
-      case 1:
       case 2:
       case 3:
         height = 45
