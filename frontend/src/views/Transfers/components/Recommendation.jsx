@@ -22,12 +22,12 @@ export const Recommendation = ({ value, onChange }) => {
         <FormControlLabel
           value="record"
           control={<Radio />}
-          label="Recommend Record"
+          label={t('transfer:recommendRecord')}
         />
         <FormControlLabel
           value="refuse"
           control={<Radio />}
-          label="Recommend Refuse"
+          label={t('transfer:recommendRefuse')}
         />
       </RadioGroup>
     </BCBox>

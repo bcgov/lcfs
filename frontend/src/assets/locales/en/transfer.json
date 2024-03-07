@@ -65,5 +65,7 @@
   "returnConfirmText": "Are you sure you want to return the transfer to the Analyst? This will change the status of the transfer back to Submitted.",
   "returnSuccessText": "Transfer successfully returned.",
   "returnErrorText": "Error returning transfer",
-  "analystRecommend": "Analyst recommendation to the director"
+  "analystRecommend": "Analyst recommendation to the director",
+  "recommendRefuse": "Recommend refuse",
+  "recommendRecord": "Recommend record"
 }
