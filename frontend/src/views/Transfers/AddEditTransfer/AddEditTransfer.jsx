@@ -22,19 +22,19 @@ import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import { roles } from '@/constants/roles'
 import {
   deleteDraftButton,
   saveDraftButton,
   submitButton
 } from '../buttonConfigs'
+import SigningAuthority from '../components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
 import AgreementDate from './components/AgreementDate'
 import Comments from './components/Comments'
-import SigningAuthority from '../components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
 import TransferSummary from './components/TransferSummary'
-import { roles } from '@/constants/roles'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -42,7 +42,7 @@ export const AddEditTransfer = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { transferId } = useParams()
-  const { data: currentUser, hasRoles } = useCurrentUser()
+  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: transferData, isFetched } = useTransfer(transferId, {
     enabled: !!transferId,
     retry: false
@@ -78,10 +78,10 @@ export const AddEditTransfer = () => {
       comments: ''
     }
   })
-  const { watch } = methods;
+  const { watch } = methods
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
   const currentStatus = transferData?.current_status.status
-  
+
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -189,7 +189,10 @@ export const AddEditTransfer = () => {
   const buttonClusterConfig = {
     New: [
       { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: createDraft },
-      { ...submitButton(t('transfer:signAndSendBtn')), disabled: true }
+      {
+        ...submitButton(t('transfer:signAndSendBtn')),
+        disabled: !hasAnyRole(roles.transfers, roles.signing_authority)
+      }
     ],
     Draft: [
       {
@@ -215,7 +218,8 @@ export const AddEditTransfer = () => {
       { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
       {
         ...submitButton(t('transfer:signAndSendBtn')),
-        disabled: !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
+        disabled:
+          !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
           setModalData({
             primaryButtonAction: () =>
@@ -280,9 +284,7 @@ export const AddEditTransfer = () => {
         <BCBox mt={5}>
           <ProgressBreadcrumb
             steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
-            currentStep={
-              transferId ? currentStatus : null
-            }
+            currentStep={transferId ? currentStatus : null}
           />
         </BCBox>
 
@@ -298,10 +300,8 @@ export const AddEditTransfer = () => {
             <AgreementDate />
 
             <Comments />
-            
-            {currentStatus &&
-              <SigningAuthority />
-            }
+
+            {currentStatus && <SigningAuthority />}
 
             <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
               <Link>
@@ -319,29 +319,29 @@ export const AddEditTransfer = () => {
                   {t('common:backBtn')}
                 </BCButton>
               </Link>
-              {buttonClusterConfig[
-                transferId ? currentStatus : 'New'
-              ]?.map((config) => (
-                <Role key={config.label}>
-                  <BCButton
-                    size="small"
-                    variant={config.variant}
-                    color={config.color}
-                    onClick={methods.handleSubmit(config.handler)}
-                    startIcon={
-                      config.startIcon && (
-                        <FontAwesomeIcon
-                          icon={config.startIcon}
-                          className="small-icon"
-                        />
-                      )
-                    }
-                    disabled={config.disabled}
-                  >
-                    {config.label}
-                  </BCButton>
-                </Role>
-              ))}
+              {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
+                (config) => (
+                  <Role key={config.label}>
+                    <BCButton
+                      size="small"
+                      variant={config.variant}
+                      color={config.color}
+                      onClick={methods.handleSubmit(config.handler)}
+                      startIcon={
+                        config.startIcon && (
+                          <FontAwesomeIcon
+                            icon={config.startIcon}
+                            className="small-icon"
+                          />
+                        )
+                      }
+                      disabled={config.disabled}
+                    >
+                      {config.label}
+                    </BCButton>
+                  </Role>
+                )
+              )}
             </Box>
           </form>
         </FormProvider>
