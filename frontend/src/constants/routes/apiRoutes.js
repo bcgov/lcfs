@@ -10,6 +10,7 @@ export const apiRoutes = {
 
 export const viewRoutesTitle = {
   admin: "Administration",
+  "transfers": "Transactions",
   "add-user": "Add user",
   "edit-user": "Edit user",
 }
