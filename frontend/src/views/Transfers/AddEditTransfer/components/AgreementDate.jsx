@@ -2,6 +2,7 @@ import { Box, TextField, Typography } from '@mui/material'
 import { useFormContext } from 'react-hook-form'
 import LabelBox from './LabelBox'
 import { useTranslation } from 'react-i18next'
+import { dateFormatter } from '@/utils/formatters'
 
 const AgreementDate = () => {
   const { t } = useTranslation(['transfer'])
@@ -10,12 +11,8 @@ const AgreementDate = () => {
     formState: { errors }
   } = useFormContext()
 
-  const formatDate = (date) => {
-    return date.toISOString().split('T')[0]
-  }
-
   const currentDate = new Date()
-  const maxDate = formatDate(currentDate)
+  const maxDate = dateFormatter(currentDate)
   return (
     <LabelBox
       label={t('transfer:agrDateLabel')}

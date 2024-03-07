@@ -10,7 +10,7 @@ import { TRANSACTIONS } from '@/constants/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
-import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
+import { convertObjectKeys, dateFormatter } from '@/utils/formatters'
 
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -101,7 +101,7 @@ export const AddEditTransfer = () => {
         signingAuthorityDeclaration: transferData.signing_authority_declaration,
         comments: transferData.comments?.comment, // Assuming you only want the comment text
         agreementDate: transferData.agreement_date
-          ? new Date(transferData.agreement_date).toISOString().split('T')[0]
+          ? dateFormatter(transferData.agreement_date)
           : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
       })
     }
@@ -110,7 +110,7 @@ export const AddEditTransfer = () => {
   const draftPayload = (form) => {
     form.fromOrganizationId = parseInt(form.fromOrganizationId)
     form.toOrganizationId = parseInt(form.toOrganizationId)
-    form.agreementDate = formatDateToISO(form.agreementDate)
+    form.agreementDate = dateFormatter(form.agreementDate)
     return convertObjectKeys(form)
   }
 

@@ -1,4 +1,4 @@
-import { numberFormatter, dateFormatter } from '@/utils/formatters'
+import { numberFormatter, currencyFormatter, dateFormatter } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/cellRenderers'
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
@@ -19,7 +19,7 @@ export const transactionsColDefs = (t) => [
     colId: 'price_per_unit',
     field: 'price_per_unit',
     headerName: t('txn:txnColLabels.pricePerUnit'),
-    valueFormatter: numberFormatter,
+    valueFormatter: currencyFormatter,
     flex: 1
   },
   {
@@ -39,12 +39,12 @@ export const transactionsColDefs = (t) => [
     suppressMenu: true,
     flex: 1
   },
-  { 
-    colId: 'update_date', 
-    field: 'update_date', 
-    headerName: t('txn:txnColLabels.updateDate'), 
+  {
+    colId: 'update_date',
+    field: 'update_date',
+    headerName: t('txn:txnColLabels.updateDate'),
     valueFormatter: dateFormatter,
-    flex: 1 
+    flex: 1
   },
 ];
 
