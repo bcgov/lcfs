@@ -41,10 +41,11 @@ import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  outlinedButton,
   containedButton,
+  outlinedButton,
   redOutlinedButton
 } from '../buttonConfigs'
+import { Recommendation } from '../components/Recommendation'
 import SigningAuthority from '../components/SigningAuthority'
 import { demoData } from '../components/demo'
 
@@ -62,6 +63,7 @@ export const ViewTransfer = () => {
   const { transferId } = useParams()
   const { hasRoles, hasAnyRole } = useCurrentUser()
   const [comment, setComment] = useState('')
+  const [recommendation, setRecommendation] = useState('')
   const handleCommentChange = (e) => {
     setComment(e.target.value)
   }
@@ -466,6 +468,12 @@ export const ViewTransfer = () => {
             <FormProvider {...methods}>
               <SigningAuthority />
             </FormProvider>
+          )}
+          {currentStatus === statuses.submitted && hasRoles(roles.analyst) && (
+            <Recommendation
+              value={recommendation}
+              onChange={setRecommendation}
+            />
           )}
           {/* Buttons */}
           <BCBox p={2} display="flex" justifyContent="flex-end">
