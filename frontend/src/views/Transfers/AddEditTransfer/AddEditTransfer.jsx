@@ -12,7 +12,12 @@ import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
 import { convertObjectKeys, dateFormatter } from '@/utils/formatters'
 
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowLeft,
+  faFloppyDisk,
+  faPencil,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { Box } from '@mui/material'
@@ -24,9 +29,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { roles } from '@/constants/roles'
 import {
-  deleteDraftButton,
-  saveDraftButton,
-  submitButton
+  containedButton,
+  outlinedButton,
+  redOutlinedButton
 } from '../buttonConfigs'
 import SigningAuthority from '../components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
@@ -164,15 +169,18 @@ export const AddEditTransfer = () => {
   // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {
     New: [
-      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: createDraft },
       {
-        ...submitButton(t('transfer:signAndSendBtn')),
+        ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
+        handler: createDraft
+      },
+      {
+        ...containedButton(t('transfer:signAndSendBtn'), faPencil),
         disabled: !hasAnyRole(roles.transfers, roles.signing_authority)
       }
     ],
     Draft: [
       {
-        ...deleteDraftButton(t('transfer:deleteDraftBtn')),
+        ...redOutlinedButton(t('transfer:deleteDraftBtn'), faTrash),
         handler: (formData) =>
           setModalData({
             primaryButtonAction: () =>
@@ -191,9 +199,12 @@ export const AddEditTransfer = () => {
             content: t('transfer:deleteConfirmText')
           })
       },
-      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
       {
-        ...submitButton(t('transfer:signAndSendBtn')),
+        ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
+        handler: updateDraft
+      },
+      {
+        ...containedButton(t('transfer:signAndSendBtn'), faPencil),
         disabled:
           !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
