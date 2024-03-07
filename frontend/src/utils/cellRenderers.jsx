@@ -11,7 +11,7 @@ export const LinkRenderer = (props) => {
       to={location.pathname + '/' + props?.node?.id}
       style={{ color: '#000' }}
     >
-      <BCBox component="div" mt={1} sx={{ width: '100%', height: '100%' }}>
+      <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
         {props.value}
       </BCBox>
     </Link>
