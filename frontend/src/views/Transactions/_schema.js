@@ -13,14 +13,14 @@ export const transactionsColDefs = (t) => [
     field: 'quantity',
     headerName: t('txn:txnColLabels.quantity'),
     valueFormatter: numberFormatter,
-    maxWidth: 190,
+    maxWidth: 170,
   },
   {
     colId: 'price_per_unit',
     field: 'price_per_unit',
     headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: currencyFormatter,
-    maxWidth: 190,
+    maxWidth: 170,
   },
   {
     colId: 'status',
@@ -44,7 +44,7 @@ export const transactionsColDefs = (t) => [
     field: 'update_date',
     headerName: t('txn:txnColLabels.updateDate'),
     valueFormatter: dateFormatter,
-    maxWidth: 180,
+    maxWidth: 170,
   },
 ];
 
