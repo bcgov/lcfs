@@ -262,7 +262,8 @@ export const ViewTransfer = () => {
             title: t('confirmation'),
             content: t('transfer:returnConfirmText'),
             warningText: t('transfer:returnWarningText')
-          })
+          }),
+        disabled: !hasRoles(roles.director)
       },
       {
         ...containedButton(t('transfer:recordTransferBtn')),
