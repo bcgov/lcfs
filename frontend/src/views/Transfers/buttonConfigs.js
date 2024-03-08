@@ -32,3 +32,9 @@ export const containedButton = (label, startIcon) => ({
   label,
   startIcon
 })
+
+export const containedButton = (label, startIcon) => ({
+  ...containedBase,
+  label,
+  startIcon
+})

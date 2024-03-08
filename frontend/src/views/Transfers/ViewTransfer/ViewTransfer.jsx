@@ -240,6 +240,25 @@ export const ViewTransfer = () => {
             }
           }),
         disabled: !isGovernmentUser
+      },
+      {
+        ...containedButton(t('transfer:recommendBtn')),
+        handler: () =>
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                newStatus: 5,
+                message: {
+                  success: t('transfer:recommendSuccessText'),
+                  error: t('transfer:recommendErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:recommendBtn'),
+            // primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:recommendConfirmText')
+          })
       }
     ],
     Recommended: [
