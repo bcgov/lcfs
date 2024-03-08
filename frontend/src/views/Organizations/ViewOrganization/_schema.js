@@ -1,17 +1,18 @@
 import { numberFormatter } from '@/utils/formatters'
-import { OrgStatusRenderer } from '@/utils/cellRenderers'
+import { LinkRenderer, OrgStatusRenderer } from '@/utils/cellRenderers'
 import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
 
 export const organizationsColDefs = (t) => [
-  { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), maxWidth: 800, flex: 1 },
+  { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), cellRenderer: LinkRenderer, maxWidth: 800, flex: 1 },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',
     headerName: t('org:orgColLabels.complianceUnits'),
     valueFormatter: numberFormatter,
+    cellRenderer: LinkRenderer,
     valueGetter: () => Math.round(Math.random() * (500000 - 100000) + 100000),
     // Temporary measures
     // filter: 'agNumberColumnFilter',
@@ -24,6 +25,7 @@ export const organizationsColDefs = (t) => [
     headerName: t('org:orgColLabels.inReserve'),
     valueFormatter: numberFormatter,
     valueGetter: () => Math.round(Math.random() * (100000 - 0)),
+    cellRenderer: LinkRenderer,
     // Temporary measures
     // filter: 'agNumberColumnFilter',
     filter: false,

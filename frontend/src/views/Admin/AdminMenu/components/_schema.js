@@ -1,6 +1,6 @@
 import { phoneNumberFormatter } from '@/utils/formatters'
 import {
-  GovernmentRoleRenderer,
+  LinkRenderer,
   RoleRenderer,
   StatusRenderer
 } from '@/utils/cellRenderers'
@@ -13,6 +13,7 @@ export const usersColumnDefs = (t) => [
     field: 'first_name',
     minWidth: 250,
     headerName: t('admin:userColLabels.userName'),
+    cellRenderer: LinkRenderer,
     valueGetter: (params) =>
       params.data.first_name + ' ' + params.data.last_name
   },
@@ -59,12 +60,14 @@ export const usersColumnDefs = (t) => [
     colId: 'email',
     field: 'keycloak_email',
     headerName: t('admin:userColLabels.email'),
+    cellRenderer: LinkRenderer,
     width: 400
   },
   {
     colId: 'phone',
     field: 'phone',
     headerName: t('admin:userColLabels.phone'),
+    cellRenderer: LinkRenderer,
     valueFormatter: phoneNumberFormatter,
     filter: 'agTextColumnFilter'
   },
@@ -117,30 +120,6 @@ export const usersDefaultColDef = {
 export const idirUserDefaultFilter = [
   { filterType: 'text', type: 'blank', field: 'organization_id', filter: '' }
 ]
-
-export const rolesColumnDefs = (t) => [
-  { colId: 'name', field: 'name', headerName: t('admin:roleColLabels.role') },
-  {
-    colId: 'description',
-    field: 'description',
-    headerName: t('admin:roleColLabels.description'),
-    flex: 1
-  },
-  {
-    colId: 'is_government_role',
-    field: 'is_government_role',
-    headerName: t('admin:roleColLabels.roleOf'),
-    valueGetter: (params) =>
-      params.data.is_government_role ? t('gov') : t('supplier'),
-    cellRenderer: GovernmentRoleRenderer,
-    cellClass: 'vertical-middle'
-  }
-]
-
-export const rolesDefaultColDef = {
-  resizable: true,
-  sortable: true
-}
 
 export const userActivityColDefs = [
   {

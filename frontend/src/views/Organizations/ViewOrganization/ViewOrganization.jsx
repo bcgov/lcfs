@@ -18,12 +18,9 @@ import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
-import { phoneNumberFormatter } from '@/utils/formatters'
+import { calculateRowHeight, phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import {
-  defaultSortModel,
-  getUserColumnDefs
-} from './_schema'
+import { defaultSortModel, getUserColumnDefs } from './_schema'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 
@@ -32,6 +29,7 @@ export const ViewOrganization = () => {
   const [showActive, setShowActive] = useState(true)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [gridSize, setGridSize] = useState({ height: '100%', width: '100%' })
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -64,6 +62,21 @@ export const ViewOrganization = () => {
     } else {
       setGridKey(`users-grid-${orgID}-inactive`)
     }
+  }, [])
+
+  const getRowHeight = useCallback((params) => {
+    const colWidth = params.api.getColumn('role').getActualWidth()
+    const size = params.data.roles.length
+    return calculateRowHeight(colWidth, size-1)
+  }, [])
+
+  const onColumnResized = useCallback((params) => {
+    const colWidth = params.api.getColumn('role').getActualWidth()
+    params.api.forEachNode((node) => {
+      const size = node.data?.roles?.length
+      const rowHeight = calculateRowHeight(colWidth, size-1)
+      node.setRowHeight(rowHeight)
+    })
   }, [])
 
   const gridOptions = {
@@ -187,7 +200,7 @@ export const ViewOrganization = () => {
             </BCTypography>
           </BCBox>
         </BCBox>
-        {!isCurrentUserLoading && hasRoles(roles.government) && (
+        {!isCurrentUserLoading && !hasRoles(roles.government) && (
           <BCBox mt={2}>
             <BCTypography variant="body4">
               Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>
@@ -303,6 +316,8 @@ export const ViewOrganization = () => {
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           enableResetButton={false}
+          getRowHeight={getRowHeight}
+          onColumnResized={onColumnResized}
         />
       </BCBox>
     </>

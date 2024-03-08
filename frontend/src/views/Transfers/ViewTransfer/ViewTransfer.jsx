@@ -36,7 +36,7 @@ import {
 } from '@mui/material'
 // sub components
 import {
-  // AddPlainComment,
+  AddPlainComment,
   AttachmentList,
   CommentList,
   OrganizationBadge
@@ -294,8 +294,7 @@ export const ViewTransfer = () => {
               organizationId={fromOrgId}
               organizationName={fromOrganization}
               isGovernmentUser={isGovernmentUser}
-              // transferStatus={transferStatus} -- demo purpose -- uncomment and remove below line
-              transferStatus={'Submitted'}
+              transferStatus={transferStatus}
             />
             <Stack
               spacing={1}
@@ -360,13 +359,13 @@ export const ViewTransfer = () => {
           -- demo data --
           {/* Comments */}
           <CommentList comments={demoData.comments} />
-          {/* <AddPlainComment
+          <AddPlainComment
             toOrgId={toOrgId}
             isGovernmentUser={isGovernmentUser}
             handleCommentChange={handleCommentChange}
             comment={comment}
             transferStatus={transferStatus}
-          /> */}
+          />
           -- demo data --
           {/* List of attachments */}
           <AttachmentList attachments={demoData.attachments} />

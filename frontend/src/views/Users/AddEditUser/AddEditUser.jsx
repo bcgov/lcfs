@@ -70,7 +70,7 @@ export const AddEditUser = ({ userType }) => {
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
     () =>
-      hasRoles(roles.supplier) || orgName
+      hasRoles(roles.supplier) || orgName || userType === 'bceid'
         ? bceidTextFields(t)
         : idirTextFields(t),
     [hasRoles, orgName, t]
@@ -314,7 +314,7 @@ export const AddEditUser = ({ userType }) => {
                   label="Status"
                   options={statusOptions(t)}
                 />
-                {hasRoles(roles.supplier) || orgName ? (
+                {hasRoles(roles.supplier) || orgName || orgID ? (
                   <BCeIDSpecificRoleFields
                     form={form}
                     disabled={disabled}
