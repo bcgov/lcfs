@@ -15,6 +15,7 @@ from lcfs.db.models.UserLoginHistory import UserLoginHistory
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
+from lcfs.web.api.repo import BaseRepository
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     lcfs_cache_key_builder,
@@ -25,12 +26,9 @@ from lcfs.web.api.base import (
 logger = getLogger("user_repo")
 
 
-class UserRepository:
-    def __init__(
-        self,
-        session: AsyncSession = Depends(get_async_db_session),
-    ):
-        self.session = session
+class UserRepository(BaseRepository):
+    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+        super().__init__(db)
 
     def apply_filters(self, pagination, conditions):
         role_filter_present = False
@@ -89,7 +87,7 @@ class UserRepository:
         return role_filter_present
 
     async def find_user_role(self, role_name):
-        role_result = await self.session.execute(
+        role_result = await self.db.execute(
             select(Role).filter(Role.name == role_name)
         )
         role = role_result.scalar_one_or_none()
@@ -249,7 +247,7 @@ class UserRepository:
         )
 
         query_result = (
-            (await self.session.execute(unique_ids_query)).unique().scalars().all()
+            (await self.db.execute(unique_ids_query)).unique().scalars().all()
         )
         total_count = len(query_result)
         # Sort the query results
@@ -260,7 +258,7 @@ class UserRepository:
             unique_ids_query = unique_ids_query.order_by(sort_method(order.field))
             query = query.order_by(sort_method(order.field))
         unique_ids = (
-            (await self.session.execute(unique_ids_query.offset(offset).limit(limit)))
+            (await self.db.execute(unique_ids_query.offset(offset).limit(limit)))
             .unique()
             .scalars()
             .all()
@@ -274,7 +272,7 @@ class UserRepository:
                 and_(UserProfile.user_profile_id.in_(profile_id_list), *conditions)
             )
         # Execute the query
-        user_results = await self.session.execute(query)
+        user_results = await self.db.execute(query)
         results = user_results.scalars().unique().all()
 
         # Convert the results to UserBaseSchema schemas
@@ -292,7 +290,7 @@ class UserRepository:
         )
 
         # Execute the query
-        user_result = await self.session.execute(query)
+        user_result = await self.db.execute(query)
         return user_result.unique().scalar_one_or_none() if user_result else None
 
     @repo_handler
@@ -309,7 +307,7 @@ class UserRepository:
 
         if db_user_profile.is_active:
             for role_name in role_enum_members:
-                role_result = await self.session.execute(
+                role_result = await self.db.execute(
                     select(Role).filter(Role.name == role_name)
                 )
                 role = role_result.scalar_one_or_none()
@@ -317,14 +315,15 @@ class UserRepository:
                     db_user_role = UserRole(role=role)
                     db_user_profile.user_roles.append(db_user_role)
         if db_user_profile.organization_id:
-            org_result = await self.session.execute(
+            org_result = await self.db.execute(
                 select(Organization).filter(
                     Organization.organization_id == db_user_profile.organization_id
                 )
             )
             org = org_result.scalar_one_or_none()
             db_user_profile.organization = org
-        self.session.add(db_user_profile)
+        self.db.add(db_user_profile)
+        await self.commit_to_db()
         return db_user_profile.user_profile_id
 
     @repo_handler
@@ -356,19 +355,21 @@ class UserRepository:
             await self.update_bceid_roles(user, new_roles, existing_roles_set)
         else:
             await self.update_idir_roles(user, new_roles, existing_roles_set)
-        self.session.add(user)
+        self.db.add(user)
+        await self.commit_to_db()
         return user
 
     @repo_handler
     async def delete_user(self, user: UserProfile) -> None:
-        await self.session.delete(user)
+        await self.db.delete(user)
+        await self.commit_to_db()
         logger.info(f"Deleted user with id: {user.user_profile_id}")
         return None
 
     # TODO: User History pagination implementation if needed
     @repo_handler
     async def get_user_history(self, user_id: int = None) -> List[UserHistorySchema]:
-        histories = await self.session.execute(
+        histories = await self.db.execute(
             select(UserLoginHistory)
             .join(
                 UserProfile,
