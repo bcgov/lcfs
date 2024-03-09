@@ -12,11 +12,11 @@ const TransferSummary = ({ transferData, formData }) => {
       <BCTypography variant="h6">{t('transfer:trnsSummary')}</BCTypography>
       <BCTypography mt={1} variant="body5">
         {t('transfer:complianceUnitsFrom')}
-        {`: ${transferData.from_organization.name}`}
+        {`: ${transferData.fromOrganization.name}`}
       </BCTypography>
       <BCTypography variant="body5">
         {t('transfer:complianceUnitsTo').trimEnd()}
-        {`: ${transferData.to_organization.name}`}
+        {`: ${transferData.toOrganization.name}`}
       </BCTypography>
       <BCTypography variant="body5">
         {t('transfer:numberOfUnitsToTrns')}
@@ -38,7 +38,7 @@ const TransferSummary = ({ transferData, formData }) => {
       </BCTypography>
       <BCTypography mt={2} variant="body5">
         {t('transfer:sendConfirmText')}
-        {`${transferData.to_organization.name}?`}
+        {`${transferData.toOrganization.name}?`}
       </BCTypography>
     </Stack>
   )
@@ -46,10 +46,10 @@ const TransferSummary = ({ transferData, formData }) => {
 
 TransferSummary.propTypes = {
   transferData: PropTypes.shape({
-    from_organization: PropTypes.shape({
+    fromOrganization: PropTypes.shape({
       name: PropTypes.string.isRequired,
     }).isRequired,
-    to_organization: PropTypes.shape({
+    toOrganization: PropTypes.shape({
       name: PropTypes.string.isRequired,
     }).isRequired,
   }).isRequired,
@@ -62,10 +62,10 @@ TransferSummary.propTypes = {
 
 TransferSummary.defaultProps = {
   transferData: {
-    from_organization: {
+    fromOrganization: {
       name: '',
     },
-    to_organization: {
+    toOrganization: {
       name: '',
     },
   },

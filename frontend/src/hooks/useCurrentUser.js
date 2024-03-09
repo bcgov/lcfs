@@ -68,11 +68,11 @@ export const useCurrentUser = () => {
   }
 
   const fullName = () => {
-    return query.data?.first_name + ' ' + query.data?.last_name
+    return query.data?.firstName + ' ' + query.data?.lastName
   }
 
   const sameOrganization = (orgId) => {
-    return query.data?.organization?.organization_id === orgId
+    return query.data?.organization?.organizationId === orgId
   }
 
   return {

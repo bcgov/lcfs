@@ -63,29 +63,29 @@ export const AddEditOrg = () => {
 
   useEffect(() => {
     if (isFetched && data) {
-      const shouldSyncNames = data.name === data.operating_name
-      const shouldSyncAddress = data.org_address?.street_address === data.org_attorney_address?.street_address
-        && data.org_address?.address_other === data.org_attorney_address?.address_other
-        && data.org_address?.city === data.org_attorney_address?.city
-        && data.org_address?.postalCode_zipCode === data.org_attorney_address?.postalCode_zipCode
+      const shouldSyncNames = data.name === data.operatingName
+      const shouldSyncAddress = data.orgAddress?.streetAddress === data.orgAttorneyAddress?.streetAddress
+        && data.orgAddress?.addressOther === data.orgAttorneyAddress?.addressOther
+        && data.orgAddress?.city === data.orgAttorneyAddress?.city
+        && data.orgAddress?.postalcodeZipcode === data.orgAttorneyAddress?.postalcodeZipcode
 
       reset({
         orgLegalName: data.name,
-        orgOperatingName: data.operating_name,
+        orgOperatingName: data.operatingName,
         orgEmailAddress: data.email,
         orgPhoneNumber: data.phone,
-        orgEDRMSRecord: data.edrms_record,
+        orgEDRMSRecord: data.edrmsRecord,
         orgRegForTransfers:
-          data.org_status.organization_status_id === 2 ? '2' : '1',
-        orgStreetAddress: data.org_address.street_address,
-        orgAddressOther: data.org_address.address_other,
-        orgCity: data.org_address.city,
-        orgPostalCodeZipCode: data.org_address.postalCode_zipCode,
-        orgAttorneyStreetAddress: data.org_attorney_address.street_address,
-        orgAttorneyAddressOther: data.org_attorney_address.address_other,
-        orgAttorneyCity: data.org_attorney_address.city,
+          data.orgStatus.organizationStatusId === 2 ? '2' : '1',
+        orgStreetAddress: data.orgAddress.streetAddress,
+        orgAddressOther: data.orgAddress.addressOther,
+        orgCity: data.orgAddress.city,
+        orgPostalCodeZipCode: data.orgAddress.postalcodeZipcode,
+        orgAttorneyStreetAddress: data.orgAttorneyAddress.streetAddress,
+        orgAttorneyAddressOther: data.orgAttorneyAddress.addressOther,
+        orgAttorneyCity: data.orgAttorneyAddress.city,
         orgAttorneyPostalCodeZipCode:
-          data.org_attorney_address.postalCode_zipCode
+          data.orgAttorneyAddress.postalcodeZipcode
       })
 
       setSameAsLegalName(shouldSyncNames);
@@ -143,31 +143,31 @@ export const AddEditOrg = () => {
   // Prepare payload and call mutate function
   const onSubmit = async (data) => {
     const payload = {
-      organization_id: orgID,
+      organizationId: orgID,
       name: data.orgLegalName,
-      operating_name: data.orgOperatingName,
+      operatingName: data.orgOperatingName,
       email: data.orgEmailAddress,
       phone: data.orgPhoneNumber,
-      edrms_record: data.orgEDRMSRecord,
-      organization_status_id: parseInt(data.orgRegForTransfers),
-      organization_type_id: parseInt(data.orgSupplierType),
+      edrmsRecord: data.orgEDRMSRecord,
+      organizationStatusId: parseInt(data.orgRegForTransfers),
+      organizationTypeId: parseInt(data.orgSupplierType),
       address: {
         name: data.orgOperatingName,
-        street_address: data.orgStreetAddress,
-        address_other: data.orgAddressOther || '',
+        streetAddress: data.orgStreetAddress,
+        addressOther: data.orgAddressOther || '',
         city: data.orgCity,
-        province_state: data.orgProvince || 'BC',
+        provinceState: data.orgProvince || 'BC',
         country: data.orgCountry || 'Canada',
-        postalCode_zipCode: data.orgPostalCodeZipCode
+        postalcodeZipcode: data.orgPostalCodeZipCode
       },
-      attorney_address: {
+      attorneyAddress: {
         name: data.orgOperatingName,
-        street_address: data.orgAttorneyStreetAddress,
-        address_other: data.orgAttorneyAddressOther || '',
+        streetAddress: data.orgAttorneyStreetAddress,
+        addressOther: data.orgAttorneyAddressOther || '',
         city: data.orgAttorneyCity,
-        province_state: data.orgAttorneyProvince || 'BC',
+        provinceState: data.orgAttorneyProvince || 'BC',
         country: data.orgAttorneyCountry || 'Canada',
-        postalCode_zipCode: data.orgAttorneyPostalCodeZipCode
+        postalcodeZipcode: data.orgAttorneyPostalCodeZipCode
       }
     }
 

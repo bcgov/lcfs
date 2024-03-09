@@ -105,7 +105,7 @@ class OrganizationsRepository:
         )
         total_count = count_query.unique().scalar_one_or_none()
         # Sort the query results
-        for order in pagination.sortOrders:
+        for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             query = query.order_by(
                 sort_method(

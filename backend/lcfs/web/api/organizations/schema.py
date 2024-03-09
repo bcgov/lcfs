@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel
+from lcfs.web.api.base import BaseSchema
 
 from lcfs.web.api.base import PaginationResponseSchema
 
@@ -24,7 +24,7 @@ class OrganizationTypeEnum(str, Enum):
     UTILITIES = "Utilities (local or public)"
 
 
-class OrganizationTypeBase(BaseModel):
+class OrganizationTypeBase(BaseSchema):
     organization_type_id: int
     org_type: OrganizationTypeEnum
     description: Optional[str] = None
@@ -48,7 +48,7 @@ class OrganizationStatusEnum(str, Enum):
     CANCELED = "Canceled"
 
 
-class OrganizationStatusBase(BaseModel):
+class OrganizationStatusBase(BaseSchema):
     organization_status_id: int
     status: OrganizationStatusEnum
     description: Optional[str] = None
@@ -66,7 +66,7 @@ class OrganizationStatusSchema(OrganizationStatusBase):
 # --------------------------------------
 
 
-class AddressBase(BaseModel):
+class AddressBase(BaseSchema):
     name: str
     street_address: str
     address_other: Optional[str] = None
@@ -116,7 +116,7 @@ class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
 # --------------------------------------
 
 
-class OrganizationBase(BaseModel):
+class OrganizationBase(BaseSchema):
     organization_id: Optional[int] = None
     name: str
     operating_name: str
@@ -137,7 +137,7 @@ class OrganizationSchema(OrganizationBase):
     org_status: Optional[OrganizationStatusSchema] = []
 
 
-class OrganizationListSchema(BaseModel):
+class OrganizationListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     organizations: List[OrganizationSchema]
 
@@ -147,7 +147,7 @@ class OrganizationCreateSchema(OrganizationBase):
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
 
-class OrganizationUpdateSchema(BaseModel):
+class OrganizationUpdateSchema(BaseSchema):
     name: Optional[str] = None
     status: Optional[int] = None
     type: Optional[int] = None
@@ -155,7 +155,7 @@ class OrganizationUpdateSchema(BaseModel):
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
 
 
-class OrganizationResponseSchema(BaseModel):
+class OrganizationResponseSchema(BaseSchema):
     name: str
     operating_name: str
     email: Optional[str] = None
@@ -169,7 +169,7 @@ class OrganizationResponseSchema(BaseModel):
         pass
 
 
-class OrganizationSummaryResponseSchema(BaseModel):
+class OrganizationSummaryResponseSchema(BaseSchema):
     organization_id: int
     name: Optional[str] = None
     balance: Optional[float] = None
@@ -177,10 +177,10 @@ class OrganizationSummaryResponseSchema(BaseModel):
     class Config(BaseConfig):
         pass
 
-class OrganizationCreateResponseSchema(BaseModel):
+class OrganizationCreateResponseSchema(BaseSchema):
     organization_id: int
 
-class OrganizationBalanceResponseSchema(BaseModel):
+class OrganizationBalanceResponseSchema(BaseSchema):
     name: str
     registered: bool
     organization_id: int

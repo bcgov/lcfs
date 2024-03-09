@@ -6,7 +6,7 @@ import { BrowserRouter as Router } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockCurrentUser = {
-  organization: { organization_id: 1, name: 'Current Organization' }
+  organization: { organizationId: 1, name: 'Current Organization' }
 }
 
 const mockOrganizations = [

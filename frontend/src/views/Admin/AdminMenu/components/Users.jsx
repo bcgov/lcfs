@@ -33,8 +33,8 @@ export const Users = () => {
     overlayNoRowsTemplate: t('admin:usersNotFound')
   }
   const defaultSortModel = [
-    { field: 'is_active', direction: 'desc' },
-    { field: 'first_name', direction: 'asc' }
+    { field: 'isActive', direction: 'desc' },
+    { field: 'firstName', direction: 'asc' }
   ]
   const navigate = useNavigate()
 
@@ -42,11 +42,11 @@ export const Users = () => {
     navigate(ROUTES.ADMIN_USERS_ADD)
   }
   const getRowId = useCallback((params) => {
-    return params.data.user_profile_id
+    return params.data.userProfileId
   }, [])
 
   const handleRowClicked = useCallback((params) => {
-    navigate(`${ROUTES.ADMIN_USERS}/${params.data.user_profile_id}`)
+    navigate(`${ROUTES.ADMIN_USERS}/${params.data.userProfileId}`)
   })
 
   const gridRef = useRef()

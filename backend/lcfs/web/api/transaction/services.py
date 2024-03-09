@@ -39,7 +39,7 @@ class TransactionsService:
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
-            filter_type = filter.filterType
+            filter_type = filter.filter_type
             field = get_field_for_filter(TransactionView, filter.field)
 
             conditions.append(
@@ -52,7 +52,7 @@ class TransactionsService:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
-        pagination.filters.append(FilterModel(field="status", filter="Draft", type="notEqual", filterType="text"))
+        pagination.filters.append(FilterModel(field="status", filter="Draft", type="notEqual", filter_type="text"))
         conditions = []
         pagination = validate_pagination(pagination)
         if pagination.filters and len(pagination.filters) > 0:
@@ -61,7 +61,7 @@ class TransactionsService:
         offset = (pagination.page - 1) * pagination.size if pagination.page > 0 else 0
         limit = pagination.size
 
-        transactions, total_count = await self.repo.get_transactions_paginated(offset, limit, conditions, pagination.sortOrders)
+        transactions, total_count = await self.repo.get_transactions_paginated(offset, limit, conditions, pagination.sort_orders)
 
         if not transactions:
             raise DataNotFoundException('Transactions not found')

@@ -36,7 +36,7 @@ export const ViewUser = () => {
   const { data, isLoading, isLoadingError } = hasRoles(roles.supplier)
     ? // eslint-disable-next-line react-hooks/rules-of-hooks
       useOrganizationUser(
-        orgID || currentUser?.organization.organization_id,
+        orgID || currentUser?.organization.organizationId,
         userID
       )
     : // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -66,7 +66,7 @@ export const ViewUser = () => {
       ) : (
         <>
           <BCTypography variant="h5" color="primary" mb={1}>
-            {data.first_name + ' ' + data.last_name}&nbsp;
+            {data.firstName + ' ' + data.lastName}&nbsp;
             <Role roles={[roles.administrator, roles.manage_users]}>
               <IconButton
                 aria-label="edit"
@@ -83,7 +83,7 @@ export const ViewUser = () => {
               {data.organization?.name || t('govOrg')}
             </BCTypography>
             <BCTypography variant="body4">
-              <strong>{t('admin:Email')}:</strong>&nbsp;{data.keycloak_email}
+              <strong>{t('admin:Email')}:</strong>&nbsp;{data.keycloakEmail}
             </BCTypography>
             <BCTypography variant="body4">
               <strong>{t('admin:WorkPhone')}:</strong>&nbsp;
@@ -91,7 +91,7 @@ export const ViewUser = () => {
             </BCTypography>
             <BCTypography variant="body4">
               <strong>{t('admin:MobilePhone')}:</strong>&nbsp;
-              {phoneNumberFormatter({ value: data.mobile_phone })}
+              {phoneNumberFormatter({ value: data.mobilePhone })}
             </BCTypography>
             <BCTypography variant="body4">
               <strong>{t('Status')}:</strong>&nbsp;
@@ -115,7 +115,7 @@ export const ViewUser = () => {
             gridKey="user-activity-grid"
             rowData={[]}
             gridOptions={gridOptions}
-            getRowId={(data) => data.user_profile_id}
+            getRowId={(data) => data.userProfileId}
           />
         </>
       )}

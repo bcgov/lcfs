@@ -36,7 +36,7 @@ export const organizationsColDefs = (t) => [
     field: 'status',
     headerName: t('org:orgColLabels.status'),
     width: 200,
-    valueGetter: (params) => params.data.org_status.status,
+    valueGetter: (params) => params.data.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
@@ -54,7 +54,7 @@ export const organizationsColDefs = (t) => [
 
 export const getUserColumnDefs = (t) => {
   const colDefs = usersColumnDefs(t).map((colDef) => {
-    if (colDef.field === 'is_active') {
+    if (colDef.field === 'isActive') {
       return {
         ...colDef,
         sortable: false,
@@ -72,7 +72,7 @@ export const getUserColumnDefs = (t) => {
 }
 
 export const usersColDefs = getUserColumnDefs(t)
-export const defaultSortModel = [{ field: 'first_name', direction: 'asc' }]
+export const defaultSortModel = [{ field: 'firstName', direction: 'asc' }]
 export const defaultFilterModel = [
-  { filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }
+  { filterType: 'text', type: 'equals', field: 'isActive', filter: 'Active' }
 ]

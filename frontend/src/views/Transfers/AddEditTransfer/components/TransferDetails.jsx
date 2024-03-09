@@ -27,7 +27,7 @@ const TransferDetails = () => {
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
   const organizations = orgData?.map((org) => ({
-    value: parseInt(org.organization_id),
+    value: parseInt(org.organizationId),
     label: org.name || t('common:unknown')
   }))
 

@@ -1,8 +1,8 @@
 from typing import Optional
-from pydantic import BaseModel
+from lcfs.web.api.base import BaseSchema
 
 
-class RoleSchema(BaseModel):
+class RoleSchema(BaseSchema):
     role_id: int
     name: Optional[str] = None
     description: Optional[str] = None

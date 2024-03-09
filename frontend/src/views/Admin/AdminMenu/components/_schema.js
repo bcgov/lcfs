@@ -9,20 +9,20 @@ import { useRoleList } from '@/hooks/useRole'
 
 export const usersColumnDefs = (t) => [
   {
-    colId: 'first_name',
-    field: 'first_name',
+    colId: 'firstName',
+    field: 'firstName',
     minWidth: 250,
     headerName: t('admin:userColLabels.userName'),
     cellRenderer: LinkRenderer,
     valueGetter: (params) =>
-      params.data.first_name + ' ' + params.data.last_name
+      params.data.firstName + ' ' + params.data.lastName
   },
   {
     colId: 'role',
     field: 'role',
     headerName: t('admin:userColLabels.role'),
     valueGetter: (params) =>
-      params.data.is_active
+      params.data.isActive
         ? params.data.roles.map((role) => role.name).join(', ')
         : '',
     flex: 1,
@@ -58,7 +58,7 @@ export const usersColumnDefs = (t) => [
   },
   {
     colId: 'email',
-    field: 'keycloak_email',
+    field: 'keycloakEmail',
     headerName: t('admin:userColLabels.email'),
     cellRenderer: LinkRenderer,
     width: 400
@@ -72,10 +72,10 @@ export const usersColumnDefs = (t) => [
     filter: 'agTextColumnFilter'
   },
   {
-    colId: 'is_active',
-    field: 'is_active',
+    colId: 'isActive',
+    field: 'isActive',
     headerName: t('admin:userColLabels.status'),
-    valueGetter: (params) => params.data.is_active,
+    valueGetter: (params) => params.data.isActive,
     filterParams: {
       textMatcher: (filter) => {
         return true
@@ -99,11 +99,11 @@ export const usersColumnDefs = (t) => [
     suppressMenu: false
   },
   {
-    colId: 'organization_id',
-    field: 'organization_id',
+    colId: 'organizationId',
+    field: 'organizationId',
     filter: 'agNumberColumnFilter',
     headerName: t('admin:OrgId'),
-    valueGetter: (params) => params.data.organization.organization_id,
+    valueGetter: (params) => params.data.organization.organizationId,
     hide: true
   }
 ]
@@ -118,7 +118,7 @@ export const usersDefaultColDef = {
 }
 
 export const idirUserDefaultFilter = [
-  { filterType: 'text', type: 'blank', field: 'organization_id', filter: '' }
+  { filterType: 'text', type: 'blank', field: 'organizationId', filter: '' }
 ]
 
 export const userActivityColDefs = [

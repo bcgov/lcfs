@@ -29,7 +29,6 @@ export const ViewOrganization = () => {
   const [showActive, setShowActive] = useState(true)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [gridSize, setGridSize] = useState({ height: '100%', width: '100%' })
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -44,11 +43,11 @@ export const ViewOrganization = () => {
     navigate(
       ROUTES.ORGANIZATIONS_EDIT.replace(
         ':orgID',
-        orgID || currentUser?.organization?.organization_id
+        orgID || currentUser?.organization?.organizationId
       ),
       {
         state: {
-          orgID: orgID || currentUser?.organization?.organization_id,
+          orgID: orgID || currentUser?.organization?.organizationId,
           isEditMode: true
         }
       }
@@ -89,24 +88,24 @@ export const ViewOrganization = () => {
       ? navigate(
           ROUTES.ORGANIZATION_VIEWUSER.replace(
             ':userID',
-            params.data.user_profile_id
+            params.data.userProfileId
           )
         )
       : navigate(
           ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
             ':userID',
-            params.data.user_profile_id
+            params.data.userProfileId
           )
         )
   )
-  const getRowId = useCallback((params) => params.data.user_profile_id)
+  const getRowId = useCallback((params) => params.data.userProfileId)
   const gridRef = useRef()
 
   useEffect(() => {
     if (gridRef.current) {
       // clear any previous filters
       localStorage.removeItem(`${gridKey}-filter`)
-      const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
+      const statusFilter = gridRef?.current?.api?.getFilterInstance('isActive')
       if (statusFilter) {
         statusFilter.setModel({
           type: 'equals',
@@ -163,7 +162,7 @@ export const ViewOrganization = () => {
               {t('org:operatingNameLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {orgData.operating_name || orgData.name}
+              {orgData.operatingName || orgData.name}
             </BCTypography>
             <BCTypography variant="label">
               {t('org:phoneNbrLabel')}:
@@ -186,15 +185,15 @@ export const ViewOrganization = () => {
               {t('org:serviceAddrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.org_address)}
+              {constructAddress(orgData.orgAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.org_attorney_address)}
+              {constructAddress(orgData.orgAttorneyAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {orgData.org_status.status === 'Registered'
+              {orgData.orgStatus.status === 'Registered'
                 ? 'Yes — A registered organization is able to transfer compliance units.'
                 : 'No — An organization must be registered to transfer compliance units.'}
             </BCTypography>
@@ -303,7 +302,7 @@ export const ViewOrganization = () => {
           apiEndpoint={apiRoutes.orgUsers
             .replace(
               ':orgID',
-              orgID || currentUser?.organization?.organization_id
+              orgID || currentUser?.organization?.organizationId
             )
             .concat(showActive ? '?status=Active' : '?status=Inactive')}
           apiData={'users'}
