@@ -377,7 +377,7 @@ export const ViewTransfer = () => {
             </Typography>
             <List>
               {demoData.transactionHistory.map((transaction) => (
-                <ListItem key={transaction.id} disablePadding>
+                <ListItem key={transaction.transactionID} disablePadding>
                   <BCBox mr={1} mb={1}>
                     <FontAwesomeIcon icon={faCircle} fontSize={6} />
                   </BCBox>

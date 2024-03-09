@@ -26,7 +26,7 @@ export const usersColumnDefs = (t) => [
         ? params.data.roles.map((role) => role.name).join(', ')
         : '',
     flex: 1,
-    width: 300,
+    minWidth: 300,
     sortable: false,
     suppressMenu: true,
     filterParams: {
@@ -61,7 +61,7 @@ export const usersColumnDefs = (t) => [
     field: 'keycloakEmail',
     headerName: t('admin:userColLabels.email'),
     cellRenderer: LinkRenderer,
-    width: 400
+    minWidth: 300
   },
   {
     colId: 'phone',
@@ -69,7 +69,8 @@ export const usersColumnDefs = (t) => [
     headerName: t('admin:userColLabels.phone'),
     cellRenderer: LinkRenderer,
     valueFormatter: phoneNumberFormatter,
-    filter: 'agTextColumnFilter'
+    filter: 'agTextColumnFilter',
+    minWidth: 120
   },
   {
     colId: 'isActive',
@@ -96,6 +97,7 @@ export const usersColumnDefs = (t) => [
       disableCloseOnSelect: false,
       multiple: false
     },
+    minWidth: 120,
     suppressMenu: false
   },
   {
