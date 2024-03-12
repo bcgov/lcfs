@@ -264,7 +264,7 @@ export const ViewTransfer = () => {
             primaryButtonAction: () =>
               updateTransfer({
                 comments: comment,
-                newStatus: 5,
+                newStatus: 6,
                 message: {
                   success: t('transfer:recordSuccessText'),
                   error: t('transfer:recordErrorText')
