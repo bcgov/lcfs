@@ -23,9 +23,9 @@ export const HeaderComponent = () => {
           variant="body1"
           align="right"
         >
-          {data?.organization.name || t('govOrg')}
+          {data?.organization?.name || t('govOrg')}
         </BCTypography>
-        {data?.organization.organizationId && (
+        {data?.organization?.organizationId && (
           <BCBox component="div" className="organization_balance">
             <BCBox
               component="div"
