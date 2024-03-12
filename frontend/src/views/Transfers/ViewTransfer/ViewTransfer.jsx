@@ -25,6 +25,7 @@ import { Role } from '@/components/Role'
 import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
+import SwapVertIcon from '@mui/icons-material/SwapVert';
 import {
   List,
   ListItem,
@@ -32,7 +33,9 @@ import {
   Step,
   StepLabel,
   Stepper,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material'
 // sub components
 import {
@@ -45,10 +48,14 @@ import { demoData } from '../components/demo'
 import { statuses } from '@/constants/statuses'
 
 export const ViewTransfer = () => {
+  const theme = useTheme()
+  const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
   const [modalData, setModalData] = useState(null)
   const { t } = useTranslation(['common', 'transfer'])
   const iconSizeStyle = {
-    fontSize: (theme) => `${theme.spacing(12)} !important`
+    fontSize: (theme) => `${theme.spacing(12)} !important`,
+    marginTop: '-28px',
+    marginBottom: '-25px'
   }
   const navigate = useNavigate()
   const { transferId } = useParams()
@@ -270,7 +277,8 @@ export const ViewTransfer = () => {
           >
             <Stepper
               activeStep={steps.indexOf(transferStatus)}
-              alternativeLabel
+              alternativeLabel={!isMobileSize}
+              orientation={isMobileSize ? 'vertical': 'horizontal'}
             >
               {steps.map((label, index) => {
                 const labelProps = {}
@@ -281,6 +289,7 @@ export const ViewTransfer = () => {
                   <Step
                     key={label}
                     completed={index < steps.indexOf(transferStatus)}
+                    sx={{ marginTop: isMobileSize ? '-24px': '0px' }}
                   >
                     <StepLabel {...labelProps}>{label}</StepLabel>
                   </Step>
@@ -289,7 +298,7 @@ export const ViewTransfer = () => {
             </Stepper>
           </BCBox>
           {/* Flow Representation of transaction */}
-          <Stack spacing={4} direction="row" justifyContent="center">
+          <Stack spacing={4} direction={{xs:"column", sm: "row"}} justifyContent="center">
             <OrganizationBadge
               organizationId={fromOrgId}
               organizationName={fromOrganization}
@@ -303,25 +312,29 @@ export const ViewTransfer = () => {
               pl={2}
             >
               <Typography variant="caption1" textAlign="center">
-                {quantity} {t('transfer:complianceUnits')}
+                {isMobileSize ? `$${decimalFormatter(totalValue)}` : `${quantity} ${t('transfer:complianceUnits')}`}
               </Typography>
               <BCBox
                 display="flex"
                 alignContent="center"
                 flexDirection="column"
-                pl={2}
+                alignItems="center"
+                py={1}
               >
-                <SyncAltIcon
-                  color="primary"
-                  sx={{
-                    ...iconSizeStyle,
-                    marginTop: '-20px',
-                    marginBottom: '-25px'
-                  }}
-                />
+                {isMobileSize ? (
+                  <SwapVertIcon
+                    color="primary"
+                    sx={{...iconSizeStyle}}
+                  />
+                ) : (
+                  <SyncAltIcon
+                    color="primary"
+                    sx={{...iconSizeStyle}}
+                  />
+                )}
               </BCBox>
               <Typography variant="caption1" textAlign="center">
-                ${decimalFormatter(totalValue)}
+                {!isMobileSize ? `$${decimalFormatter(totalValue)}` : `${quantity} ${t('transfer:complianceUnits')}`}
               </Typography>
             </Stack>
             <OrganizationBadge
