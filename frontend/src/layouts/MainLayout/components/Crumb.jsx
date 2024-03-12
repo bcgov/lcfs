@@ -65,6 +65,7 @@ const Crumb = () => {
           return isLast ? (
             <StyledBreadcrumb
               component={Typography}
+              sx={{ textTransform: 'none' }}
               label={
                 viewRoutesTitle[name] ||
                 name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')

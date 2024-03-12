@@ -66,14 +66,14 @@ export const ViewOrganization = () => {
   const getRowHeight = useCallback((params) => {
     const colWidth = params.api.getColumn('role').getActualWidth()
     const size = params.data.roles.length
-    return calculateRowHeight(colWidth, size-1)
+    return calculateRowHeight(colWidth, size - 1)
   }, [])
 
   const onColumnResized = useCallback((params) => {
     const colWidth = params.api.getColumn('role').getActualWidth()
     params.api.forEachNode((node) => {
       const size = node.data?.roles?.length
-      const rowHeight = calculateRowHeight(colWidth, size-1)
+      const rowHeight = calculateRowHeight(colWidth, size - 1)
       node.setRowHeight(rowHeight)
     })
   }, [])
@@ -134,7 +134,7 @@ export const ViewOrganization = () => {
           {alertMessage}
         </BCAlert>
       )}
-      <BCTypography variant="h5" color="primary">
+      <BCTypography variant="h5" color="primary" py={1}>
         {orgData.name}{' '}
         <Role roles={[roles.administrator]}>
           <IconButton
@@ -147,7 +147,7 @@ export const ViewOrganization = () => {
         </Role>
       </BCTypography>
       <BCBox p={3} bgColor={colors.grey[300]}>
-        <BCBox display="flex" gap={10}>
+        <BCBox display="flex" rowGap={2} columnGap={10} flexWrap="wrap">
           <BCBox
             display="grid"
             gridTemplateColumns="auto auto"
@@ -178,8 +178,9 @@ export const ViewOrganization = () => {
           <BCBox
             display="grid"
             gridTemplateColumns="auto auto"
-            gap={1}
-            alignItems="end"
+            columnGap={1}
+            rowGap={2}
+            alignItems="start"
           >
             <BCTypography variant="label">
               {t('org:serviceAddrLabel')}:

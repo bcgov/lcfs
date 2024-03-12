@@ -1,8 +1,8 @@
 export const numberFormatter = (params) => {
   if (params.value != null) {
-    return params.value.toLocaleString() // Use toLocaleString() to format numbers with commas
+    return parseInt(params.value).toLocaleString() // Use toLocaleString() to format numbers with commas
   } else if (params !== null) {
-    return params.toLocaleString()
+    return parseInt(params).toLocaleString()
   }
   return params.value
 }

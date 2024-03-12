@@ -67,11 +67,14 @@ export const AddPlainComment = ({
   )
 }
 
+AddPlainComment.defaultProps = {
+  isGovernmentUser: false
+}
 // Define PropTypes for the component
 AddPlainComment.propTypes = {
   toOrgId: PropTypes.any.isRequired,
   handleCommentChange: PropTypes.func.isRequired,
   comment: PropTypes.string.isRequired,
-  isGovernmentUser: PropTypes.bool.isRequired,
+  isGovernmentUser: PropTypes.bool,
   transferStatus: PropTypes.string.isRequired
 }

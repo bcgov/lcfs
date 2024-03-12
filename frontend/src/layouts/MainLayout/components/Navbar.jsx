@@ -35,8 +35,6 @@ export const Navbar = () => {
   return (
     <BCNavbar
       title={t('title')}
-      balance="50,000"
-      organizationName={currentUser?.organization?.name}
       routes={navMenuItems}
       beta={true}
       data-test="main-layout-navbar"
