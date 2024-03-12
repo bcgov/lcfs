@@ -22,6 +22,21 @@ const redBase = {
   iconColor: colors.error.main
 }
 
+export const plainContainedButton = (label) => ({
+  ...containedBase,
+  label
+})
+
+export const plainOutlinedButton = (label) => ({
+  ...outlineBase,
+  label
+})
+
+export const plainRedBaseButton = (label) => ({
+  ...redBase,
+  label
+})
+
 export const saveDraftButton = (label) => ({
   ...outlineBase,
   label,

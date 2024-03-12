@@ -67,7 +67,6 @@ export const Transactions = () => {
     // Determine if it's an edit scenario
     const isEditScenario = userOrgName === fromOrganization && status === statuses.draft
     const routeType = isEditScenario ? 'edit' : 'view'
-    console.log(isEditScenario, routeType, fromOrganization, userOrgName, status)
   
     // Select the appropriate route based on the transaction type and scenario
     const routeTemplate = routesMapping[transactionType]?.[routeType]
