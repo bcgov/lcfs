@@ -62,7 +62,6 @@ export const useCurrentUser = () => {
    *   }
    */
   const hasAnyRole = (...roleNames) => {
-    console.log(roleNames, query.data.roles)
     return roleNames.some((roleName) =>
       query.data?.roles?.some((role) => role.name === roleName)
     )
