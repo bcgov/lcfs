@@ -177,7 +177,7 @@ const BCDataGridServer = ({
   // Callback for grid sort changes.
   const onSortChanged = useCallback(() => {
     setPage(1)
-    setRowData([])
+    // setRowData([])
     gridRef.current.api.showLoadingOverlay()
     // forming the sortModel that fits with backend schema structure
     const sortTemp = gridRef?.current?.api
@@ -212,7 +212,7 @@ const BCDataGridServer = ({
     suppressScrollOnNewData: true,
     suppressCsvExport: false,
     // enableCellTextSelection: true, // enables text selection on the grid
-    ensureDomOrder: true,
+    // ensureDomOrder: true,
     onRowClicked: handleRowClicked
   }))
 

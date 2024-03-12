@@ -31,8 +31,8 @@ export const StatusRenderer = (props) => {
         sx={{ width: '100%', height: '100%' }}
       >
         <BCBadge
-          badgeContent={props.data.is_active ? 'active' : 'inactive'}
-          color={props.data.is_active ? 'success' : 'smoky'}
+          badgeContent={props.data.isActive ? 'active' : 'inactive'}
+          color={props.data.isActive ? 'success' : 'smoky'}
           variant="gradient"
           size="md"
           sx={
@@ -54,7 +54,7 @@ export const OrgStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = ['Registered', 'Unregistered', 'Suspended', 'Canceled']
   const statusColorArr = ['success', 'info', 'warning', 'error']
-  const statusIndex = statusArr.indexOf(props.data.org_status.status)
+  const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (
     <Link
       to={props.node?.id && location.pathname + '/' + props?.node?.id}
@@ -124,22 +124,22 @@ export const RoleRenderer = (props) => {
           p={1}
           useFlexGap
           flexWrap="wrap"
-          key={props.data.user_profile_id}
+          key={props.data.userProfileId}
         >
-          {props.data.is_active &&
+          {props.data.isActive &&
             props.data.roles
               .filter(
                 (r) => r.name !== roles.government && r.name !== roles.supplier
               )
               .map((role) => (
                 <BCBadge
-                  key={role.role_id}
+                  key={role.roleId}
                   sx={{
                     '& .MuiBadge-badge': { fontSize: '0.7rem' },
                     margin: '2px'
                   }}
                   badgeContent={role.name}
-                  color={role.is_government_role ? 'primary' : 'secondary'}
+                  color={role.isGovernmentRole ? 'primary' : 'secondary'}
                   variant="outlined"
                   size="md"
                 />
@@ -156,10 +156,10 @@ export const RoleSpanRenderer = (props) => (
       .filter((r) => r.name !== roles.government && r.name !== roles.supplier)
       .map((role) => (
         <BCBadge
-          key={role.role_id}
+          key={role.roleId}
           sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
           badgeContent={role.name}
-          color={role.is_government_role ? 'primary' : 'secondary'}
+          color={role.isGovernmentRole ? 'primary' : 'secondary'}
           variant="outlined"
           size="md"
         />

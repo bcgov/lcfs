@@ -109,6 +109,7 @@ async def get_organizations(
     service: OrganizationsService = Depends()
 ):
     '''Fetch a list of organizations'''
+
     return await service.get_organizations(pagination)
 
 

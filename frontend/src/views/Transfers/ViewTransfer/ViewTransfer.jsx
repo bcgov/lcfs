@@ -96,23 +96,23 @@ export const ViewTransfer = () => {
   })
   const { watch } = methods;
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
-  const currentStatus = transferData?.current_status.status
+  const currentStatus = transferData?.currentStatus.status
 
   const {
-    current_status: { status: transferStatus } = {},
-    to_organization: { name: toOrganization, organization_id: toOrgId } = {},
-    from_organization: {
+    currentStatus: { status: transferStatus } = {},
+    toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
+    fromOrganization: {
       name: fromOrganization,
-      organization_id: fromOrgId
+      organizationId: fromOrgId
     } = {},
     quantity,
     comments,
-    price_per_unit: pricePerUnit
+    pricePerUnit
   } = transferData || {}
 
   const totalValue = quantity * pricePerUnit
-  const isGovernmentUser = currentUser?.is_government_user
-  const currentUserOrgId = currentUser?.organization?.organization_id
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const currentUserOrgId = currentUser?.organization?.organizationId
 
   const steps = useMemo(() => {
     if (isFetched) {
@@ -213,7 +213,7 @@ export const ViewTransfer = () => {
         handler: (formData) =>
           updateTransfer({
             comments: comment,
-            newStatus: transferData?.current_status.transfer_status_id,
+            newStatus: transferData?.currentStatus.transferStatusId,
             message: {
               success: t('transfer:commentSaveSuccessText'),
               error: t('transfer:commentSaveErrorText')
@@ -228,7 +228,7 @@ export const ViewTransfer = () => {
         handler: (formData) =>
           updateTransfer({
             comments: comment,
-            newStatus: transferData?.current_status.transfer_status_id,
+            newStatus: transferData?.currentStatus.transferStatusId,
             message: {
               success: t('transfer:commentSaveSuccessText'),
               error: t('transfer:commentSaveErrorText')
@@ -377,7 +377,7 @@ export const ViewTransfer = () => {
             </Typography>
             <List>
               {demoData.transactionHistory.map((transaction) => (
-                <ListItem key={transaction.id} disablePadding>
+                <ListItem key={transaction.transactionID} disablePadding>
                   <BCBox mr={1} mb={1}>
                     <FontAwesomeIcon icon={faCircle} fontSize={6} />
                   </BCBox>
@@ -415,7 +415,7 @@ export const ViewTransfer = () => {
                 </Typography>
               </BCButton>
               {buttonClusterConfig[
-                transferId && transferData?.current_status.status
+                transferId && transferData?.currentStatus.status
               ]?.map((config) => (
                 <BCButton
                   key={config.label}

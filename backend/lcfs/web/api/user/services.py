@@ -53,7 +53,7 @@ class UserServices:
             raise DataNotFoundException("Export format not supported")
 
         exclude_government_users = FilterModel(
-            filterType="number",
+            filter_type="number",
             type="notBlank",
             field="organization_id",
             filter=None,

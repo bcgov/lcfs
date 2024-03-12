@@ -5,7 +5,7 @@ import { useCurrentUser } from './useCurrentUser'
 export const useOrganization = (orgID, options) => {
   const client = useApiService()
   const { data: currentUser } = useCurrentUser()
-  const id = orgID ?? currentUser?.organization?.organization_id
+  const id = orgID ?? currentUser?.organization?.organizationId
 
   return useQuery({
     queryKey: ['organization', id],

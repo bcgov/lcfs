@@ -1,9 +1,9 @@
 export const getStatus = ({ data }) => {
-  switch (data.transaction_type.type) {
+  switch (data.transactionType.type) {
     case 'Transfer':
-      return data.transfer_history_record.transfer_status.status
+      return data.transferHistoryRecord.transferStatus.status
     case 'Issuance':
-      return data.issuance_history_record.issuance_status.status
+      return data.issuanceHistoryRecord.issuanceStatus.status
     case 'Assessment':
       return ''
     case 'Initiative Agreement':

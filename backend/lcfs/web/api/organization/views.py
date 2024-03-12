@@ -52,7 +52,7 @@ async def get_org_users(
         - direction: the sorting direction ('asc' or 'desc')
     - filterModel: filterModel is an array of objects that specifies the filtering criteria for the users list.
         It has the following properties:
-        - filterType: the type of filtering to perform ('text', 'number', 'date', 'boolean')
+        - filter_type: the type of filtering to perform ('text', 'number', 'date', 'boolean')
         - type: the type of filter to apply ('equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'endsWith')
         - filter: the actual filter value
         - field: Database Field that needs filtering.

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from lcfs.web.api.base import BaseSchema
 from typing import Optional
 from datetime import date
 from enum import Enum
@@ -23,7 +23,7 @@ class TransferStatusEnum(str, Enum):
     Rescinded = "Rescinded"
 
 
-class TransferStatusSchema(BaseModel):
+class TransferStatusSchema(BaseSchema):
     transfer_status_id: int
     status: str
 
@@ -31,14 +31,14 @@ class TransferStatusSchema(BaseModel):
         from_attributes = True
 
 
-class TransferCategorySchema(BaseModel):
+class TransferCategorySchema(BaseSchema):
     category: str
 
     class Config:
         from_attributes = True
 
 
-class TransferOrganizationSchema(BaseModel):
+class TransferOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
 
@@ -46,7 +46,7 @@ class TransferOrganizationSchema(BaseModel):
         from_attributes = True
 
 
-class TransferCommentSchema(BaseModel):
+class TransferCommentSchema(BaseSchema):
     comment_id: int
     comment: Optional[str] = None
 
@@ -54,7 +54,7 @@ class TransferCommentSchema(BaseModel):
         from_attributes = True
 
 
-class TransferSchema(BaseModel):
+class TransferSchema(BaseSchema):
     transfer_id: int
     from_organization: TransferOrganizationSchema
     to_organization: TransferOrganizationSchema
@@ -71,7 +71,7 @@ class TransferSchema(BaseModel):
         from_attributes = True
 
 
-class TransferCreate(BaseModel):
+class TransferCreate(BaseSchema):
     from_organization_id: int
     to_organization_id: int
     agreement_date: str
@@ -84,12 +84,12 @@ class TransferCreate(BaseModel):
         from_attributes = True
 
 
-class TransferUpdate(BaseModel):
+class TransferUpdate(BaseSchema):
     current_status_id: int
     comments: Optional[str] = None
 
 
-class TransferHistory(BaseModel):
+class TransferHistory(BaseSchema):
     transfer_history_id: int
     transfer_id: int
 

@@ -6,13 +6,14 @@ import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
 
 export const organizationsColDefs = (t) => [
-  { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), cellRenderer: LinkRenderer, maxWidth: 800, flex: 1 },
+  { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), cellRenderer: LinkRenderer, minWidth: 400, flex: 1 },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',
     headerName: t('org:orgColLabels.complianceUnits'),
     valueFormatter: numberFormatter,
     cellRenderer: LinkRenderer,
+    width: 300,
     valueGetter: () => Math.round(Math.random() * (500000 - 100000) + 100000),
     // Temporary measures
     // filter: 'agNumberColumnFilter',
@@ -25,6 +26,7 @@ export const organizationsColDefs = (t) => [
     headerName: t('org:orgColLabels.inReserve'),
     valueFormatter: numberFormatter,
     valueGetter: () => Math.round(Math.random() * (100000 - 0)),
+    width: 300,
     cellRenderer: LinkRenderer,
     // Temporary measures
     // filter: 'agNumberColumnFilter',
@@ -35,8 +37,8 @@ export const organizationsColDefs = (t) => [
     colId: 'status',
     field: 'status',
     headerName: t('org:orgColLabels.status'),
-    width: 200,
-    valueGetter: (params) => params.data.org_status.status,
+    width: 300,
+    valueGetter: (params) => params.data.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
@@ -54,7 +56,7 @@ export const organizationsColDefs = (t) => [
 
 export const getUserColumnDefs = (t) => {
   const colDefs = usersColumnDefs(t).map((colDef) => {
-    if (colDef.field === 'is_active') {
+    if (colDef.field === 'isActive') {
       return {
         ...colDef,
         sortable: false,
@@ -72,7 +74,7 @@ export const getUserColumnDefs = (t) => {
 }
 
 export const usersColDefs = getUserColumnDefs(t)
-export const defaultSortModel = [{ field: 'first_name', direction: 'asc' }]
+export const defaultSortModel = [{ field: 'firstName', direction: 'asc' }]
 export const defaultFilterModel = [
-  { filterType: 'text', type: 'equals', field: 'is_active', filter: 'Active' }
+  { filterType: 'text', type: 'equals', field: 'isActive', filter: 'Active' }
 ]

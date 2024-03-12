@@ -5,11 +5,19 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, validator
+from pydantic.alias_generators import to_camel
 from logging import getLogger
+import re
 
 logger = getLogger("base")
 
+class BaseSchema(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
 
 def row_to_dict(row, schema):
     d = {}
@@ -21,22 +29,40 @@ def row_to_dict(row, schema):
     return d
 
 
-class SortOrder(BaseModel):
+class SortOrder(BaseSchema):
     field: str
     direction: str
+    
+    @classmethod
+    def validate_field(cls, value):
+        # Convert CamelCase to snake_case
+        return camel_to_snake(value)
+
+    @validator("field", pre=True)
+    def convert_field_to_snake(cls, value):
+        return cls.validate_field(value)
 
 
-class FilterModel(BaseModel):
-    filterType: str = Field(Query(default="text", alias="filter_type"))
+class FilterModel(BaseSchema):
+    filter_type: str = Field(Query(default="text", alias="filterType"))
     type: str = Field(Query(default="contains", alias="type"))
     filter: Any = Field(Query(default="", alias="filter"))
     field: str = Field(Query(default="", alias="field"))
 
+    @classmethod
+    def validate_field(cls, value):
+        # Convert CamelCase to snake_case
+        return camel_to_snake(value)
 
-class PaginationRequestSchema(BaseModel):
-    page: int = Field(Query(default=0, alias="page-number"))
-    size: int = Field(Query(default=20, alias="items-per-page"))
-    sortOrders: List[SortOrder] = Field(Query(default=[], alias="sort-order"))
+    @validator("field", pre=True)
+    def convert_field_to_snake(cls, value):
+        return cls.validate_field(value)
+
+
+class PaginationRequestSchema(BaseSchema):
+    page: int = Field(Query(default=0, alias="page"))
+    size: int = Field(Query(default=20, alias="size"))
+    sort_orders: List[SortOrder] = Field(Query(default=[], alias="sortOrders"))
     filters: List[FilterModel] = Field(Query(defautl=[], alias="filters"))
 
     class Config:
@@ -44,7 +70,7 @@ class PaginationRequestSchema(BaseModel):
         arbitrary_types_allowed = True
 
 
-class PaginationResponseSchema(BaseModel):
+class PaginationResponseSchema(BaseSchema):
     total: int
     page: int
     size: int
@@ -99,8 +125,8 @@ def validate_pagination(pagination: PaginationRequestSchema):
         pagination.page = 1
     if not pagination.size or pagination.size < 1:
         pagination.size = 10
-    if not pagination.sortOrders:
-        pagination.sortOrders = []
+    if not pagination.sort_orders:
+        pagination.sort_orders = []
     if not pagination.filters:
         pagination.filters = []
     return pagination
@@ -248,6 +274,10 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
             detail=f"Failed to apply filter conditions",
         )
 
+def camel_to_snake(name):
+    """Convert a camel case string to snake case."""
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 async def lcfs_cache_key_builder(
     func,

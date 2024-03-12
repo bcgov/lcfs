@@ -53,7 +53,7 @@ export const AddEditUser = ({ userType }) => {
     ? userID
       ? // eslint-disable-next-line react-hooks/rules-of-hooks
         useOrganizationUser(
-          orgID || currentUser?.organization.organization_id,
+          orgID || currentUser?.organization.organizationId,
           userID
         )
       : { undefined, isLoading: false, isFetched: false }
@@ -109,15 +109,15 @@ export const AddEditUser = ({ userType }) => {
             r !== roles.supplier.toLocaleLowerCase()
         )
       const userData = {
-        keycloakEmail: data?.keycloak_email,
+        keycloakEmail: data?.keycloakEmail,
         altEmail: data?.email || '',
         jobTitle: data?.title,
-        firstName: data?.first_name,
-        lastName: data?.last_name,
-        userName: data?.keycloak_username,
+        firstName: data?.firstName,
+        lastName: data?.lastName,
+        userName: data?.keycloakUsername,
         phone: data?.phone,
-        mobile: data?.mobile_phone,
-        status: data?.is_active ? 'active' : 'inactive',
+        mobile: data?.mobilePhone,
+        status: data?.isActive ? 'active' : 'inactive',
         readOnly: dataRoles
           .filter((r) => r === roles.read_only.toLocaleLowerCase())
           .join(''),
@@ -131,7 +131,7 @@ export const AddEditUser = ({ userType }) => {
           ? []
           : dataRoles
       }
-      if (data.is_government_user) {
+      if (data.isGovernmentUser) {
         userData.bceidRoles = []
         userData.readOnly = ''
       } else {
@@ -145,17 +145,17 @@ export const AddEditUser = ({ userType }) => {
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
-      user_profile_id: userID,
+      userProfileId: userID,
       title: data.jobTitle,
-      first_name: data.firstName,
-      last_name: data.lastName,
-      keycloak_username: data.userName,
-      keycloak_email: data.keycloakEmail,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      keycloakUsername: data.userName,
+      keycloakEmail: data.keycloakEmail,
       email: data.altEmail === '' ? null : data.altEmail,
       phone: data.phone,
-      mobile_phone: data.mobile,
-      is_active: data.status === 'active',
-      organization_id: orgID || currentUser.organization_id,
+      mobilePhone: data.mobile,
+      isActive: data.status === 'active',
+      organizationId: orgID || currentUser.organizationId,
       roles:
         data.status === 'active'
           ? [
@@ -181,7 +181,7 @@ export const AddEditUser = ({ userType }) => {
   const { mutate, isPending, isError } = useMutation({
     mutationFn: async (payload) => {
       if (hasRoles(roles.supplier)) {
-        const orgId = orgID || currentUser.organization.organization_id
+        const orgId = orgID || currentUser.organization.organizationId
         return userID
           ? await apiService.put(
               `/organization/${orgId}/users/${userID}`,

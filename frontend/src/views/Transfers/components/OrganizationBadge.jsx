@@ -27,8 +27,8 @@ export const OrganizationBadge = ({
             {['Submitted', 'Recommended'].includes(transferStatus) && (
               <Role roles={[roles.government]}>
                 <Typography variant="body4">
-                  Balance: {orgInfo?.total_balance.toLocaleString()} (
-                  {orgInfo?.reserved_balance.toLocaleString()})
+                  Balance: {orgInfo?.totalBalance.toLocaleString()} (
+                  {orgInfo?.reservedBalance.toLocaleString()})
                 </Typography>
                 <Typography variant="body4">
                   Registered: {orgInfo?.registered ? 'Yes' : 'No'}

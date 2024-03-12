@@ -69,7 +69,7 @@ export const AddEditTransfer = () => {
     resolver: yupResolver(AddEditTransferSchema),
     mode: 'onChange',
     defaultValues: {
-      fromOrganizationId: currentUser?.organization?.organization_id,
+      fromOrganizationId: currentUser?.organization?.organizationId,
       agreementDate: new Date().toISOString().split('T')[0],
       toOrganizationId: null,
       quantity: null,
@@ -80,8 +80,8 @@ export const AddEditTransfer = () => {
   })
   const { watch } = methods
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
-  const currentStatus = transferData?.current_status.status
-
+  const currentStatus = transferData?.currentStatus.status
+  
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -94,14 +94,14 @@ export const AddEditTransfer = () => {
     if (isFetched && transferData) {
       // Populate the form with fetched transfer data
       methods.reset({
-        fromOrganizationId: transferData.from_organization.organization_id,
-        toOrganizationId: transferData.to_organization.organization_id,
+        fromOrganizationId: transferData.fromOrganization.organizationId,
+        toOrganizationId: transferData.toOrganization.organizationId,
         quantity: transferData.quantity,
-        pricePerUnit: transferData.price_per_unit,
-        signingAuthorityDeclaration: transferData.signing_authority_declaration,
+        pricePerUnit: transferData.pricePerUnit,
+        signingAuthorityDeclaration: transferData.signingAuthorityDeclaration,
         comments: transferData.comments?.comment, // Assuming you only want the comment text
-        agreementDate: transferData.agreement_date
-          ? dateFormatter(transferData.agreement_date)
+        agreementDate: transferData.agreementDate
+          ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
       })
     }
@@ -160,30 +160,6 @@ export const AddEditTransfer = () => {
     }
   })
 
-  // // mutation to update the status and comments of a transfer
-  // // used in everything but draft transfers
-  // const {
-  //   mutate: updateTransfer,
-  //   isLoading: isUpdatingTransfer,
-  //   isError: isUpdateTransferError
-  // } = useMutation({
-  //   mutationFn: async ({ formData, newStatus }) =>
-  //     await apiService.put(`/transfers/${transferId}`, {
-  //       comments: formData.comments,
-  //       current_status_id: newStatus
-  //     }),
-  //   onSuccess: (_, variables) => {
-  //     navigate(TRANSACTIONS, {
-  //       state: {
-  //         message: variables.message.success,
-  //         severity: 'success'
-  //       }
-  //     })
-  //   },
-  //   onError: (error, variables) => {
-  //     console.error(variables.message.error, error)
-  //   }
-  // })
 
   // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {

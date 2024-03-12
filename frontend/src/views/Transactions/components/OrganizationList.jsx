@@ -26,7 +26,7 @@ const OrganizationList = ({ gridRef }) => {
     setOrg(val)
     setBalance(input.balance)
     gridRef?.current?.api.setFilterModel({
-      organization_id: {
+      organizationId: {
         filterType: 'number',
         type: 'equals',
         filter: input.id
@@ -70,7 +70,7 @@ const OrganizationList = ({ gridRef }) => {
           loading={isLoading}
           options={optionsList}
           getOptionLabel={(option) => option.name}
-          getOptionKey={(option) => option.organization_id}
+          getOptionKey={(option) => option.organizationId}
           onChange={onInputBoxChanged}
           sx={({ functions: { pxToRem }, palette: { primary, light } }) => ({
             width: 300,

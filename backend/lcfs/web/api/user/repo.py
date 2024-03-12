@@ -17,6 +17,7 @@ from lcfs.db.models.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
+    camel_to_snake,
     lcfs_cache_key_builder,
     apply_filter_conditions,
     get_field_for_filter,
@@ -37,7 +38,7 @@ class UserRepository:
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
-            filter_type = filter.filterType
+            filter_type = filter.filter_type
 
             if filter.field == "role":
                 field = get_field_for_filter(Role, "name")
@@ -253,7 +254,7 @@ class UserRepository:
         )
         total_count = len(query_result)
         # Sort the query results
-        for order in pagination.sortOrders:
+        for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "role":
                 order.field = get_field_for_filter(Role, "name")

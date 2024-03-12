@@ -1,16 +1,16 @@
 export const getOrganization = ({ data }, type) => {
-  switch (data.transaction_type.type) {
+  switch (data.transactionType.type) {
     case 'Transfer':
       if (type === 'to') {
-        return data.transfer_history_record.to_organization.name
+        return data.transferHistoryRecord.toOrganization.name
       }
       if (type === 'from') {
-        return data.transfer_history_record.from_organization.name
+        return data.transferHistoryRecord.fromOrganization.name
       }
       break
     case 'Issuance':
       if (type === 'to') {
-        return data.issuance_history_record.organization.name
+        return data.issuanceHistoryRecord.organization.name
       }
       if (type === 'from') {
         return 'BC Gov'
