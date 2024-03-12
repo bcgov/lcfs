@@ -35,7 +35,8 @@ class TransferServices:
         repo: TransferRepository = Depends(TransferRepository),
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
-        transaction_repo: TransactionRepository = Depends(TransactionRepository)
+        transaction_repo: TransactionRepository = Depends(
+            TransactionRepository)
     ) -> None:
         self.repo = repo
         self.request = request
@@ -83,8 +84,8 @@ class TransferServices:
         # Check if both the organizations are registered for transfer
         if from_org.org_status.status != OrgStatusEnum.Registered or to_org.org_status.status != OrgStatusEnum.Registered:
             raise HTTPException(status_code=406,
-                detail="One or more organizations are not registered for transfer"
-            )
+                                detail="One or more organizations are not registered for transfer"
+                                )
         # Create a new Comment instance
         new_comment = Comment(
             comment=transfer_data.comments) if transfer_data.comments else None
@@ -149,7 +150,8 @@ class TransferServices:
 
         # Check if both the organizations are registered for transfer before recording the transfer.
         if (
-            transfer_data.current_status_id == TransferStatusEnum.get_index(TransferStatusEnum.Recorded)
+            transfer_data.current_status_id == TransferStatusEnum.get_index(
+                TransferStatusEnum.Recorded)
             and (
                 transfer.from_organization.org_status.status != OrgStatusEnum.Registered
                 or transfer.to_organization.org_status.status
@@ -157,9 +159,9 @@ class TransferServices:
             )
         ):
             raise HTTPException(status_code=406,
-                detail="One or more organizations are not registered for transfer"
-            )
-        
+                                detail="One or more organizations are not registered for transfer"
+                                )
+
         self._update_comments(transfer, transfer_data)
 
         # Handle specific actions required when the transfer status changes
@@ -169,7 +171,6 @@ class TransferServices:
         updated_transfer = await self.repo.update_transfer(transfer)
         validated_model = TransferSchema.model_validate(updated_transfer)
         return validated_model
-
 
     async def handle_status_change(self, transfer, transfer_data):
         """Handle specific actions required when the transfer status changes."""
@@ -189,11 +190,11 @@ class TransferServices:
             # Handle transfer status updated to 'Declined'
             await self.decline_transfer(transfer)
 
-
     async def sign_and_send_from_supplier(self, transfer):
         """Create reserved transaction to reserve compliance units for sending organization."""
         user = self.request.user
-        has_signing_role = user_has_roles(user, ['SUPPLIER', 'SIGNING_AUTHORITY'])
+        has_signing_role = user_has_roles(
+            user, ['SUPPLIER', 'SIGNING_AUTHORITY'])
         if not has_signing_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
@@ -204,7 +205,6 @@ class TransferServices:
         )
         transfer.from_transaction = from_transaction
 
-
     async def director_record_transfer(self, transfer):
         """Confirm transaction for sending organization and create new transaction for receiving org."""
         user = self.request.user
@@ -214,12 +214,14 @@ class TransferServices:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         if transfer.from_transaction is None:
-            raise ServiceException(f"From transaction not found for transfer {transfer.transfer_id}. Contact support.")
-        
+            raise ServiceException(f"From transaction not found for transfer {
+                                   transfer.transfer_id}. Contact support.")
+
         confirm_result = await self.transaction_repo.confirm_transaction(transfer.from_transaction_id)
         if not confirm_result:
-            raise ServiceException(f"Failed to confirm transaction {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
-        
+            raise ServiceException(f"Failed to confirm transaction {
+                                   transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
+
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
             transaction_action=TransactionActionEnum.Adjustment,
@@ -228,13 +230,12 @@ class TransferServices:
         )
         transfer.to_transaction = to_transaction
 
-
     async def decline_transfer(self, transfer):
         """Release the reserved transaction when transfer is declined."""
         release_result = await self.transaction_repo.release_transaction(transfer.transaction_id)
         if not release_result:
-            raise ServiceException(f"Failed to release transaction {transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
-
+            raise ServiceException(f"Failed to release transaction {
+                                   transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
 
     def _update_comments(self, transfer, transfer_data):
         """Update the comments on a transfer record, if provided."""
