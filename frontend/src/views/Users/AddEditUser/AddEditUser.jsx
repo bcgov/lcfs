@@ -240,9 +240,9 @@ export const AddEditUser = ({ userType }) => {
       </Typography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)}>
         <FormProvider {...{ control, setValue }}>
-          <Grid2 container columnSpacing={2.5} rowSpacing={3.5}>
+          <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
             {/* Form fields */}
-            <Grid2 xs={12} md={5} lg={4}>
+            <Grid2 item xs={12} md={5} lg={4}>
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
                 {textFields.map((field) => (
                   <BCFormText
@@ -254,9 +254,35 @@ export const AddEditUser = ({ userType }) => {
                   />
                 ))}
               </Stack>
+            </Grid2>
+            <Grid2 item xs={12} md={7} lg={6}>
+              <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
+                <BCFormRadio
+                  control={control}
+                  name="status"
+                  label="Status"
+                  options={statusOptions(t)}
+                />
+                {hasRoles(roles.supplier) || orgName || orgID ? (
+                  <BCeIDSpecificRoleFields
+                    form={form}
+                    disabled={disabled}
+                    status={status}
+                    t={t}
+                  />
+                ) : (
+                  <IDIRSpecificRoleFields
+                    form={form}
+                    disabled={disabled}
+                    t={t}
+                  />
+                )}
+              </Stack>
+            </Grid2>
+            <Grid2 item xs={12} md={5} lg={4}>
               <Box
                 bgcolor={colors.background.grey}
-                px={3}
+                p={3}
                 display="flex"
                 justifyContent="space-between"
               >
@@ -305,30 +331,6 @@ export const AddEditUser = ({ userType }) => {
                   <Typography variant="button">{t('saveBtn')}</Typography>
                 </BCButton>
               </Box>
-            </Grid2>
-            <Grid2 xs={12} md={7} lg={6}>
-              <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
-                <BCFormRadio
-                  control={control}
-                  name="status"
-                  label="Status"
-                  options={statusOptions(t)}
-                />
-                {hasRoles(roles.supplier) || orgName || orgID ? (
-                  <BCeIDSpecificRoleFields
-                    form={form}
-                    disabled={disabled}
-                    status={status}
-                    t={t}
-                  />
-                ) : (
-                  <IDIRSpecificRoleFields
-                    form={form}
-                    disabled={disabled}
-                    t={t}
-                  />
-                )}
-              </Stack>
             </Grid2>
           </Grid2>
         </FormProvider>

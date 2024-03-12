@@ -7,11 +7,14 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { FormProvider, useForm } from 'react-hook-form'
 import SigningAuthority from '../components/SigningAuthority'
-import { 
-  rescindButton, 
-  declineButton, 
+import {
+  rescindButton,
+  declineButton,
   saveDraftButton,
-  submitButton 
+  submitButton,
+  plainContainedButton,
+  plainRedBaseButton,
+  plainOutlinedButton
 } from '../buttonConfigs'
 // constants
 import { roles } from '@/constants/roles'
@@ -25,6 +28,7 @@ import { Role } from '@/components/Role'
 import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
+import SwapVertIcon from '@mui/icons-material/SwapVert'
 import {
   List,
   ListItem,
@@ -32,7 +36,9 @@ import {
   Step,
   StepLabel,
   Stepper,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material'
 // sub components
 import {
@@ -45,10 +51,14 @@ import { demoData } from '../components/demo'
 import { statuses } from '@/constants/statuses'
 
 export const ViewTransfer = () => {
+  const theme = useTheme()
+  const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
   const [modalData, setModalData] = useState(null)
   const { t } = useTranslation(['common', 'transfer'])
   const iconSizeStyle = {
-    fontSize: (theme) => `${theme.spacing(12)} !important`
+    fontSize: (theme) => `${theme.spacing(12)} !important`,
+    marginTop: '-28px',
+    marginBottom: '-25px'
   }
   const navigate = useNavigate()
   const { transferId } = useParams()
@@ -90,11 +100,11 @@ export const ViewTransfer = () => {
   const methods = useForm({
     mode: 'onChange',
     defaultValues: {
-      signingAuthorityDeclaration: false,
+      signingAuthorityDeclaration: false
       // comments: ''
     }
   })
-  const { watch } = methods;
+  const { watch } = methods
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
   const currentStatus = transferData?.currentStatus.status
 
@@ -140,50 +150,61 @@ export const ViewTransfer = () => {
     Deleted: [],
     Sent: [
       // Conditionally include the declineButton if currentUserOrgId equals toOrgId
-      ...(currentUserOrgId === toOrgId && hasAnyRole(roles.transfers, roles.signing_authority) ? [{
-        ...declineButton(t('transfer:declineTransferBtn')),
-        handler: (formData) =>
-          setModalData({
-            primaryButtonAction: () =>
-              updateTransfer({
-                newStatus: 8,
-                message: {
-                  success: t('transfer:declineSuccessText'),
-                  error: t('transfer:declineErrorText'),
-                },
-              }),
-            primaryButtonText: t('transfer:declineTransferBtn'),
-            primaryButtonColor: 'error',
-            secondaryButtonText: t('cancelBtn'),
-            title: t('confirmation'),
-            content: t('transfer:declineConfirmText'),
-          }),
-      }] : []),
-      
+      ...(currentUserOrgId === toOrgId &&
+      hasAnyRole(roles.transfers, roles.signing_authority)
+        ? [
+            {
+              ...declineButton(t('transfer:declineTransferBtn')),
+              handler: (formData) =>
+                setModalData({
+                  primaryButtonAction: () =>
+                    updateTransfer({
+                      newStatus: 8,
+                      message: {
+                        success: t('transfer:declineSuccessText'),
+                        error: t('transfer:declineErrorText')
+                      }
+                    }),
+                  primaryButtonText: t('transfer:declineTransferBtn'),
+                  primaryButtonColor: 'error',
+                  secondaryButtonText: t('cancelBtn'),
+                  title: t('confirmation'),
+                  content: t('transfer:declineConfirmText')
+                })
+            }
+          ]
+        : []),
+
       // Conditionally include the rescindButton if currentUserOrgId equals fromOrgId
-      ...(currentUserOrgId === fromOrgId && hasRoles(roles.transfers, roles.signing_authority) ? [{
-        ...rescindButton(t('transfer:rescindTransferBtn')),
-        handler: (formData) =>
-          setModalData({
-            primaryButtonAction: () =>
-              updateTransfer({
-                newStatus: 9,
-                message: {
-                  success: t('transfer:rescindSuccessText'),
-                  error: t('transfer:rescindErrorText'),
-                },
-              }),
-            primaryButtonText: t('transfer:rescindTransferBtn'),
-            primaryButtonColor: 'error',
-            secondaryButtonText: t('cancelBtn'),
-            title: t('confirmation'),
-            content: t('transfer:rescindConfirmText'),
-          }),
-      }] : []),
+      ...(currentUserOrgId === fromOrgId &&
+      hasRoles(roles.transfers, roles.signing_authority)
+        ? [
+            {
+              ...rescindButton(t('transfer:rescindTransferBtn')),
+              handler: (formData) =>
+                setModalData({
+                  primaryButtonAction: () =>
+                    updateTransfer({
+                      newStatus: 9,
+                      message: {
+                        success: t('transfer:rescindSuccessText'),
+                        error: t('transfer:rescindErrorText')
+                      }
+                    }),
+                  primaryButtonText: t('transfer:rescindTransferBtn'),
+                  primaryButtonColor: 'error',
+                  secondaryButtonText: t('cancelBtn'),
+                  title: t('confirmation'),
+                  content: t('transfer:rescindConfirmText')
+                })
+            }
+          ]
+        : []),
 
       {
         ...submitButton(t('transfer:signAndSubmitBtn')),
-        disabled: !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
+        disabled:
+          !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
           setModalData({
             primaryButtonAction: () =>
@@ -196,14 +217,13 @@ export const ViewTransfer = () => {
                 }
               }),
             primaryButtonText: t('transfer:signAndSubmitBtn'),
-            primaryButtonColor: 'error',
+            primaryButtonColor: 'primary',
             secondaryButtonText: t('cancelBtn'),
             title: t('confirmation'),
-            content: t('transfer:submitConfirmText'),
+            content: t('transfer:submitConfirmText')
           })
         }
       }
-
     ],
     Rescinded: [],
     Declined: [],
@@ -223,7 +243,7 @@ export const ViewTransfer = () => {
       }
     ],
     Recommended: [
-      {
+      hasAnyRole(roles.analyst, roles.transfers) && {
         ...saveDraftButton(t('saveBtn')),
         handler: (formData) =>
           updateTransfer({
@@ -235,6 +255,28 @@ export const ViewTransfer = () => {
             }
           }),
         disabled: !isGovernmentUser
+      },
+      hasRoles(roles.director) && {
+        ...plainContainedButton(t('transfer:recordTransferBtn')),
+        disabled: false,
+        handler: (formData) => {
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                comments: comment,
+                newStatus: 6,
+                message: {
+                  success: t('transfer:recordSuccessText'),
+                  error: t('transfer:recordErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:recordTransferBtn'),
+            primaryButtonColor: 'primary',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:recordConfirmText')
+          })
+        }
       }
     ],
     Recorded: [],
@@ -255,7 +297,7 @@ export const ViewTransfer = () => {
           <Typography variant="h5" color="primary">
             {t('transfer:transferID')} {transferId}
           </Typography>
-          <Role roles={[roles.supplier]}>
+          {transferStatus !== 'Recorded' && <Role roles={[roles.supplier]}>
             <Typography variant="body4">
               {t('transfer:effectiveText')}
             </Typography>
@@ -263,14 +305,15 @@ export const ViewTransfer = () => {
             <Typography variant="body4">
               {t('transfer:considerationText')}
             </Typography>
-          </Role>
+          </Role>}
           <BCBox
             p={2}
             sx={{ width: '50%', alignContent: 'center', margin: 'auto' }}
           >
             <Stepper
               activeStep={steps.indexOf(transferStatus)}
-              alternativeLabel
+              alternativeLabel={!isMobileSize}
+              orientation={isMobileSize ? 'vertical' : 'horizontal'}
             >
               {steps.map((label, index) => {
                 const labelProps = {}
@@ -280,7 +323,8 @@ export const ViewTransfer = () => {
                 return (
                   <Step
                     key={label}
-                    completed={index < steps.indexOf(transferStatus)}
+                    completed={index <= steps.indexOf(transferStatus)}
+                    sx={{ marginTop: isMobileSize ? '-24px' : '0px' }}
                   >
                     <StepLabel {...labelProps}>{label}</StepLabel>
                   </Step>
@@ -289,7 +333,11 @@ export const ViewTransfer = () => {
             </Stepper>
           </BCBox>
           {/* Flow Representation of transaction */}
-          <Stack spacing={4} direction="row" justifyContent="center">
+          <Stack
+            spacing={4}
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="center"
+          >
             <OrganizationBadge
               organizationId={fromOrgId}
               organizationName={fromOrganization}
@@ -303,25 +351,27 @@ export const ViewTransfer = () => {
               pl={2}
             >
               <Typography variant="caption1" textAlign="center">
-                {quantity} {t('transfer:complianceUnits')}
+                {isMobileSize
+                  ? `$${decimalFormatter(totalValue)}`
+                  : `${quantity} ${t('transfer:complianceUnits')}`}
               </Typography>
               <BCBox
                 display="flex"
                 alignContent="center"
                 flexDirection="column"
-                pl={2}
+                alignItems="center"
+                py={1}
               >
-                <SyncAltIcon
-                  color="primary"
-                  sx={{
-                    ...iconSizeStyle,
-                    marginTop: '-20px',
-                    marginBottom: '-25px'
-                  }}
-                />
+                {isMobileSize ? (
+                  <SwapVertIcon color="primary" sx={{ ...iconSizeStyle }} />
+                ) : (
+                  <SyncAltIcon color="primary" sx={{ ...iconSizeStyle }} />
+                )}
               </BCBox>
               <Typography variant="caption1" textAlign="center">
-                ${decimalFormatter(totalValue)}
+                {!isMobileSize
+                  ? `$${decimalFormatter(totalValue)}`
+                  : `${quantity} ${t('transfer:complianceUnits')}`}
               </Typography>
             </Stack>
             <OrganizationBadge
@@ -387,14 +437,12 @@ export const ViewTransfer = () => {
             </List>
           </BCBox>
           -- demo data --
-
           {/* Signing Authority Confirmation */}
-          {currentStatus === statuses.sent &&
+          {currentStatus === statuses.sent && (
             <FormProvider {...methods}>
               <SigningAuthority />
             </FormProvider>
-          }
-
+          )}
           {/* Buttons */}
           <BCBox p={2} display="flex" justifyContent="flex-end">
             <Stack spacing={4} direction="row" justifyContent="center">
@@ -416,26 +464,29 @@ export const ViewTransfer = () => {
               </BCButton>
               {buttonClusterConfig[
                 transferId && transferData?.currentStatus.status
-              ]?.map((config) => (
-                <BCButton
-                  key={config.label}
-                  size="small"
-                  variant={config.variant}
-                  color={config.color}
-                  onClick={config.handler}
-                  startIcon={
-                    config.startIcon && (
-                      <FontAwesomeIcon
-                        icon={config.startIcon}
-                        className="small-icon"
-                      />
-                    )
-                  }
-                  disabled={config.disabled}
-                >
-                  {config.label}
-                </BCButton>
-              ))}
+              ]?.map(
+                (config) =>
+                  config && (
+                    <BCButton
+                      key={config.label}
+                      size="small"
+                      variant={config.variant}
+                      color={config.color}
+                      onClick={config.handler}
+                      startIcon={
+                        config.startIcon && (
+                          <FontAwesomeIcon
+                            icon={config.startIcon}
+                            className="small-icon"
+                          />
+                        )
+                      }
+                      disabled={config.disabled}
+                    >
+                      {config.label}
+                    </BCButton>
+                  )
+              )}
             </Stack>
           </BCBox>
         </BCBox>

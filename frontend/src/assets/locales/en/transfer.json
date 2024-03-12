@@ -53,5 +53,9 @@
   "declineTransferBtn": "Decline transfer",
   "declineConfirmText": "Are you sure you want to decline this transfer?",
   "declineSuccessText": "Transfer successfully declined.",
-  "declineErrorText": "Error declining transfer"
+  "declineErrorText": "Error declining transfer",
+  "recordTransferBtn": "Record transfer",
+  "recordConfirmText": "Are you sure you want to record this transfer?",
+  "recordSuccessText": "Transfer successfully recorded.",
+  "recordErrorText": "Error recording transfer"
 }
