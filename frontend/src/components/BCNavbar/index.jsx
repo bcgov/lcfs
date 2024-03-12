@@ -60,7 +60,8 @@ function BCNavbar(props) {
                   vertical: 'top',
                   horizontal: 'left'
                 }}
-                MenuListProps={{ style: { minWidth: '300px' } }}
+                sx={{'div': {minWidth: '200px'}}}
+                MenuListProps={{ style: { minWidth: '200px' } }}
               >
                 {routes.map((link) => (
                   <DefaultNavbarLink
