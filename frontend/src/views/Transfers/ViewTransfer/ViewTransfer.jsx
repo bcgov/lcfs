@@ -323,7 +323,7 @@ export const ViewTransfer = () => {
                 return (
                   <Step
                     key={label}
-                    completed={index < steps.indexOf(transferStatus) || transferStatus === 'Recorded'}
+                    completed={index <= steps.indexOf(transferStatus)}
                     sx={{ marginTop: isMobileSize ? '-24px' : '0px' }}
                   >
                     <StepLabel {...labelProps}>{label}</StepLabel>
