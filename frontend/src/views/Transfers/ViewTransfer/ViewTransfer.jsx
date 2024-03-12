@@ -297,7 +297,7 @@ export const ViewTransfer = () => {
           <Typography variant="h5" color="primary">
             {t('transfer:transferID')} {transferId}
           </Typography>
-          <Role roles={[roles.supplier]}>
+          {transferStatus !== 'Recorded' && <Role roles={[roles.supplier]}>
             <Typography variant="body4">
               {t('transfer:effectiveText')}
             </Typography>
@@ -305,7 +305,7 @@ export const ViewTransfer = () => {
             <Typography variant="body4">
               {t('transfer:considerationText')}
             </Typography>
-          </Role>
+          </Role>}
           <BCBox
             p={2}
             sx={{ width: '50%', alignContent: 'center', margin: 'auto' }}
