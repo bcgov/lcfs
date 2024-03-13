@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import List
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from datetime import datetime
 
 from lcfs.web.core.decorators import service_handler
@@ -13,7 +13,8 @@ from lcfs.db.models.Comment import Comment
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
-from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
+from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate, TransferStatusEnum
+from lcfs.db.models.OrganizationStatus import OrgStatusEnum
 
 logger = getLogger("transfer_service")
 
@@ -68,6 +69,11 @@ class TransferServices:
         if not from_org or not to_org:
             raise DataNotFoundException("One or more organizations not found")
 
+        # Check if both the organizations are registered for transfer
+        if from_org.org_status.status != OrgStatusEnum.Registered or to_org.org_status.status != OrgStatusEnum.Registered:
+            raise HTTPException(status_code=406,
+                detail="One or more organizations are not registered for transfer"
+            )
         # Create a new Comment instance
         new_comment = Comment(
             comment=transfer_data.comments) if transfer_data.comments else None
@@ -125,6 +131,18 @@ class TransferServices:
         if not transfer:
             raise DataNotFoundException(
                 f"Transfer with ID {transfer_id} not found")
+        # Check if both the organizations are registered for transfer before recording the transfer.
+        if (
+            transfer_data.current_status_id == TransferStatusEnum.get_index(TransferStatusEnum.Recorded)
+            and (
+                transfer.from_organization.org_status.status != OrgStatusEnum.Registered
+                or transfer.to_organization.org_status.status
+                != OrgStatusEnum.Registered
+            )
+        ):
+            raise HTTPException(status_code=406,
+                detail="One or more organizations are not registered for transfer"
+            )
 
         previous_status = transfer.current_status_id
         new_status = transfer_data.current_status_id

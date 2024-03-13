@@ -116,7 +116,7 @@ export const Transactions = () => {
         {t('txn:title')}
       </BCTypography>
       <Box display={'flex'} gap={2} mb={2}>
-        <Role roles={[roles.transfers]}>
+        {currentUser.organization?.orgStatus?.status === 'Registered' && <Role roles={[roles.transfers]}>
           <BCButton
             variant="contained"
             size="small"
@@ -126,7 +126,7 @@ export const Transactions = () => {
           >
             <BCTypography variant="subtitle2">{t('txn:newTransferBtn')}</BCTypography>
           </BCButton>
-        </Role>
+        </Role>}
         <DownloadButton
           onDownload={handleDownloadTransactions}
           isDownloading={isDownloadingTransactions}
