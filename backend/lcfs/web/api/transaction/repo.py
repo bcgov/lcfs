@@ -13,11 +13,12 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
 from lcfs.db.models.TransactionView import TransactionView
 from lcfs.db.models.TransactionStatusView import TransactionStatusView
+from lcfs.web.api.repo import BaseRepository
 
 
-class TransactionRepository:
+class TransactionRepository(BaseRepository):
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        self.db = db
+        super().__init__(db)
 
     @repo_handler
     async def get_transactions_paginated(self, offset: int, limit: int, conditions: list, sort_orders: list, organization_id: int = None):
@@ -177,7 +178,7 @@ class TransactionRepository:
          )
 
         self.db.add(new_transaction)
-        await self.db.commit()
+        await self.commit_to_db()
 
     @repo_handler
     async def reserve_transaction(self, transaction_id: int) -> bool:
@@ -195,7 +196,7 @@ class TransactionRepository:
             .where(Transaction.transaction_id == transaction_id)
             .values(transaction_action=TransactionActionEnum.Reserved)
         )
-        await self.db.commit()
+        await self.commit_to_db()
 
         # Check if the update statement affected any rows
         return result.rowcount > 0
@@ -216,7 +217,7 @@ class TransactionRepository:
             .where(Transaction.transaction_id == transaction_id)
             .values(transaction_action=TransactionActionEnum.Released)
         )
-        await self.db.commit()
+        await self.commit_to_db()
 
         # Check if the update statement affected any rows
         return result.rowcount > 0

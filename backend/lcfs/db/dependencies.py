@@ -1,7 +1,7 @@
 from functools import wraps
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Request
 from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -34,7 +34,7 @@ def get_db_session():
         session.close()
 
 
-async def get_async_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_async_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """
     Create and get database session.
     :yield: database session.
@@ -42,6 +42,10 @@ async def get_async_db_session() -> AsyncGenerator[AsyncSession, None]:
     session: AsyncSession = AsyncSession(async_engine)
 
     try:  # noqa: WPS501
+        if request.user != None:
+            # Inject user info into the sesstion from the request state 
+            # set by authentication middleware
+            session.info['user'] = request.user
         yield session
     finally:
         await session.commit()

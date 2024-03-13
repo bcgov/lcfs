@@ -3,6 +3,7 @@ from typing import Awaitable, Callable
 from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
+from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from redis import asyncio as aioredis
 

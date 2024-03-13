@@ -92,6 +92,14 @@ async def dbsession(
     )
     session = session_maker()
 
+    # Add test user info into the session
+    user_info = {
+        'user_profile_id': 1, 
+        'keycloak_username': 'test_user',
+        'organization_id': 1
+    }  # Mocked user ID
+    session.info['user'] = user_info
+
     try:
         yield session
     finally:
@@ -189,6 +197,7 @@ class MockAuthenticationBackend(AuthenticationBackend):
             user_profile_id=1,
             keycloak_username="mockuser",
             keycloak_email="test@test.com",
+            organization_id=1,
             email="test@test.com",
             first_name="Test",
             last_name="User",
