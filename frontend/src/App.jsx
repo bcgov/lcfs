@@ -72,15 +72,10 @@ const router = createBrowserRouter([
       {
         path: ROUTES.TRANSFERS_EDIT,
         element: <AddEditTransfer />,
-        handle: {
-          title: 'Edit Transfer',
-          crumb: () => `Edit Transfer`
-        }
       },
       {
         path: ROUTES.TRANSFERS_VIEW,
         element: <ViewTransfer />,
-        handle: { title: 'View Transfer' }
       },
       {
         path: ROUTES.ORGANIZATION,
@@ -191,17 +186,17 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ADMIN_USERS_ADD,
         element: <AddEditUser userType="idir" />,
-        handle: { title: 'Add Admin User' }
+        handle: { title: 'Add IDIR User' }
       },
       {
         path: ROUTES.ADMIN_USERS_VIEW,
         element: <ViewUser />,
-        handle: { title: 'View Admin User' }
+        handle: { title: 'View IDIR User' }
       },
       {
         path: ROUTES.ADMIN_USERS_EDIT,
         element: <AddEditUser userType="idir" />,
-        handle: { title: 'Edit Admin User' }
+        handle: { title: 'Edit IDIR User' }
       },
       {
         path: ROUTES.FUELCODES,

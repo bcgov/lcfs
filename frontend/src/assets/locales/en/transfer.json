@@ -1,7 +1,8 @@
 {
   "title": "Transfers",
   "transfers": " transfers ",
-  "transferID": "Transfer-ID:",
+  "transferID": "Transfer ID: ",
+  "editTransferID": "Edit Transfer ID: ",
   "editTransfer": "Edit Transfer",
   "newTransfer": "New Transfer",
   "effectiveText": "A transfer is not effective until it is recorded by the Director.",
