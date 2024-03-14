@@ -23,9 +23,6 @@ class Transaction(BaseModel, Auditable, EffectiveDates):
     transaction_action = Column(Enum(TransactionActionEnum, name="transaction_action_enum", create_type=True), comment="Action type for the transaction, e.g., Adjustment, Reserved, or Released.")
 
     organization = relationship('Organization', back_populates='transactions')
-    admin_adjustment_record = relationship('AdminAdjustment', back_populates='transaction')
-    initiative_agreement_record = relationship('InitiativeAgreement', back_populates='transaction')
-    transfer_record = relationship('Transfer', back_populates='transaction')
 
     def __repr__(self):
-        return self.compliance_units
+        return f"<Transaction(transaction_id={self.transaction_id}, transaction_action={self.transaction_action.name}, compliance_units={self.compliance_units})>"

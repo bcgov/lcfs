@@ -41,15 +41,16 @@ class TransactionStatusSchema(TransactionStatusBase):
     pass
 
 
-class TransactionTypeEnum(str, Enum):
-    adjustment = "Adjustment"
-    reserve = "Reserve"
-    release = "Release"
+class TransactionActionEnum(str, Enum):
+    Adjustment = "Adjustment"
+    Reserved = "Reserved"
+    Released = "Released"
 
 
-class TransactionTypeSchema(BaseSchema):
-    transaction_typ_id: int
-    type: TransactionTypeEnum
+class TransactionCreateSchema(BaseSchema):
+    transaction_action: TransactionActionEnum
+    compliance_units: int
+    organization_id: int
 
 
 class TransactionBaseSchema(BaseSchema):
@@ -57,11 +58,10 @@ class TransactionBaseSchema(BaseSchema):
 
     transaction_id: int
     compliance_units: int
-    transaction_type_id: int
     organization_id: int
+    transaction_action: TransactionActionEnum
 
     organization: Optional[OrganizationSummaryResponseSchema]
-    transaction_type: TransactionTypeSchema
 
 
 class TransactionViewSchema(BaseSchema):
