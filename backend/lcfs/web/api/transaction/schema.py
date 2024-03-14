@@ -66,7 +66,7 @@ class TransactionBaseSchema(BaseSchema):
 
 class TransactionViewSchema(BaseSchema):
     transaction_id: int
-    transaction_action: str
+    transaction_type: str
     from_organization: Optional[str]
     to_organization: str
     quantity: int
