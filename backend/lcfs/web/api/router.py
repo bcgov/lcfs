@@ -11,6 +11,7 @@ from lcfs.web.api import (
     organizations,
     transfer,
     transaction,
+    internal_comment
 )
 
 api_router = APIRouter()
@@ -31,4 +32,7 @@ api_router.include_router(
 )
 api_router.include_router(
     organization.router, prefix="/organization", tags=["organization"]
+)
+api_router.include_router(
+    internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
 )

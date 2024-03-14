@@ -24,6 +24,7 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
+import InternalComments from '@/components/InternalComments'
 import { Role } from '@/components/Role'
 import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -443,6 +444,10 @@ export const ViewTransfer = () => {
               <SigningAuthority />
             </FormProvider>
           )}
+          {/* Internal Comments */}
+          <Role roles={[roles.government]}>
+            <InternalComments entityType="transfer" entityId={transferId} />
+          </Role>
           {/* Buttons */}
           <BCBox p={2} display="flex" justifyContent="flex-end">
             <Stack spacing={4} direction="row" justifyContent="center">

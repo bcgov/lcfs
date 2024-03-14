@@ -28,6 +28,7 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     comments = relationship('Comment', back_populates='transfer')
     transfer_history_records = relationship('TransferHistory', back_populates='transfer')
     current_status = relationship('TransferStatus')
+    transfer_internal_comments = relationship('TransferInternalComment', back_populates='transfer')
 
     from_organization = relationship(
         'Organization', 
