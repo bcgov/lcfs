@@ -1,9 +1,4 @@
 import colors from '@/themes/base/colors'
-import {
-  faFloppyDisk,
-  faPencil,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
 
 const outlineBase = {
   variant: 'outlined',
@@ -22,46 +17,18 @@ const redBase = {
   iconColor: colors.error.main
 }
 
-export const plainContainedButton = (label) => ({
-  ...containedBase,
-  label
-})
-
-export const plainOutlinedButton = (label) => ({
-  ...outlineBase,
-  label
-})
-
-export const plainRedBaseButton = (label) => ({
+export const redOutlinedButton = (label, startIcon) => ({
   ...redBase,
-  label
+  label,
+  startIcon
 })
-
-export const saveDraftButton = (label) => ({
+export const outlinedButton = (label, startIcon) => ({
   ...outlineBase,
   label,
-  startIcon: faFloppyDisk
+  startIcon
 })
-export const submitButton = (label) => ({
+export const containedButton = (label, startIcon) => ({
   ...containedBase,
   label,
-  startIcon: faPencil
-})
-
-export const deleteDraftButton = (label) => ({
-  ...redBase,
-  label,
-  startIcon: faTrash
-})
-
-export const rescindButton = (label) => ({
-  ...redBase,
-  label,
-  startIcon: faTrash
-})
-
-export const declineButton = (label) => ({
-  ...redBase,
-  label,
-  startIcon: faTrash
+  startIcon
 })
