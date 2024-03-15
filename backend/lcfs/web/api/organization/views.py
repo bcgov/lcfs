@@ -15,6 +15,7 @@ from lcfs.db import dependencies
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
+from lcfs.db.models.UserProfile import UserProfile
 from lcfs.web.api.transaction.schema import TransactionListSchema
 from lcfs.web.api.user.services import UserServices
 from .services import OrganizationService
@@ -94,14 +95,13 @@ async def create_user(
     response: Response = None,
     user_create: UserCreateSchema = ...,
     user_service: UserServices = Depends(),
-) -> None:
+) -> UserProfile:
     """
     Endpoint to create a new user
     This endpoint creates a new user and returns the information of the created user.
     """
     user_create.organization_id = organization_id
-    user_id = await user_service.create_user(user_create)
-    return await user_service.get_user_by_id(user_id) if user_id else None
+    return await user_service.create_user(user_create)
 
 
 # TODO Check if security concern exists on user creating user in different org
