@@ -12,7 +12,6 @@ from lcfs.db.seeders.common.transfer_categories_seeder import seed_transfer_cate
 
 logger = logging.getLogger(__name__)
 
-
 async def seed_common():
     """
     Function to seed the database with common data.
