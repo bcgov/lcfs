@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, text
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Organization import Organization
 
@@ -16,7 +16,7 @@ async def seed_test_transfers(session):
         {
             "from_organization_id": 1,
             "to_organization_id": 2,
-            "current_status_id":1,
+            "current_status_id":2,
             "transfer_category_id":1,
             "agreement_date": datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
             "quantity": 100,
@@ -26,7 +26,7 @@ async def seed_test_transfers(session):
         {
             "from_organization_id": 2,
             "to_organization_id": 1,
-            "current_status_id":1,
+            "current_status_id":2,
             "transfer_category_id":1,
             "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
             "quantity": 50,
@@ -80,5 +80,8 @@ async def seed_test_transfers(session):
         except Exception as e:
             logger.error(f"Error occurred while seeding transfers: {e}")
             raise
-
+    
     await session.commit()
+
+    # Refresh the materialized view to include the new/updated transfers
+    await session.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate"))

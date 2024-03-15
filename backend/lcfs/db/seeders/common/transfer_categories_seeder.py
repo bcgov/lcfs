@@ -14,10 +14,14 @@ async def seed_transfer_categories(session: AsyncSession):
         session: The database session for committing the new records.
     """
     category_data = [
-        {'category': 'A', 'description': 'Reached within the last 6 months'},
-        {'category': 'B', 'description': 'Reached between 6 months to 1 year ago'},
-        {'category': 'C', 'description': 'Reached more than 1 year ago'},
-        {'category': 'D', 'description': 'Override based on value of price per credit'},
+        # {'category': 'A', 'description': 'Reached within the last 6 months'},
+        # {'category': 'B', 'description': 'Reached between 6 months to 1 year ago'},
+        # {'category': 'C', 'description': 'Reached more than 1 year ago'},
+        # {'category': 'D', 'description': 'Override based on value of price per credit'},
+        {'category': 'A'},
+        {'category': 'B'},
+        {'category': 'C'},
+        {'category': 'D'},
     ]
 
     try:

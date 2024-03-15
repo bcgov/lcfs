@@ -5,7 +5,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.web.api.transfer.services import TransferServices
 from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.web.api.organizations.repo import OrganizationRepository
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.tests.transfer.transfer_payloads import transfer_create_payload, transfer_update_payload, transfer_update_draft_payload, transfer_update_payload_2
 
 
@@ -16,7 +16,7 @@ def transfer_repo(dbsession):
 
 @pytest.fixture
 def org_repo(dbsession):
-    return OrganizationRepository(db=dbsession)
+    return OrganizationsRepository(db=dbsession)
 
 
 @pytest.fixture

@@ -13,15 +13,15 @@ async def seed_transfer_statuses(session):
     """
 
     transfer_statuses_to_seed = [
-        {"status": TransferStatusEnum.Draft, "description": "Draft"},
-        {"status": TransferStatusEnum.Deleted, "description": "Deleted"},
-        {"status": TransferStatusEnum.Sent, "description": "Sent"},
-        {"status": TransferStatusEnum.Submitted, "description": "Submitted"},
-        {"status": TransferStatusEnum.Recommended, "description": "Recommended"},
-        {"status": TransferStatusEnum.Recorded, "description": "Recorded"},
-        {"status": TransferStatusEnum.Refused, "description": "Refused"},
-        {"status": TransferStatusEnum.Declined, "description": "Declined"},
-        {"status": TransferStatusEnum.Rescinded, "description": "Rescinded"}
+        {"status": TransferStatusEnum.Draft},
+        {"status": TransferStatusEnum.Deleted},
+        {"status": TransferStatusEnum.Sent},
+        {"status": TransferStatusEnum.Submitted},
+        {"status": TransferStatusEnum.Recommended},
+        {"status": TransferStatusEnum.Recorded},
+        {"status": TransferStatusEnum.Refused},
+        {"status": TransferStatusEnum.Declined},
+        {"status": TransferStatusEnum.Rescinded}
     ]
 
     try:

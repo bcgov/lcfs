@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.api.repo import BaseRepository
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus
@@ -17,9 +18,9 @@ from lcfs.db.models.TransferHistory import TransferHistory
 logger = getLogger("transfer_repo")
 
 
-class TransferRepository:
+class TransferRepository(BaseRepository):
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        self.db = db
+        super().__init__(db)
 
     @repo_handler
     async def get_all_transfers(self) -> List[Transfer]:
@@ -72,7 +73,7 @@ class TransferRepository:
     async def create_transfer(self, transfer: Transfer) -> Transfer:
         '''Save a transfer and its associated comment in the database.'''
         self.db.add(transfer)
-        await self.db.flush()  # This saves both the transfer and the comment
+        await self.commit_to_db() # This saves both the transfer and the comment
         # No need to explicitly add and save the comment if it's properly associated with the transfer
         return transfer
 
@@ -98,7 +99,7 @@ class TransferRepository:
         # Assuming the transfer object has been modified in the service,
         # we just need to commit those changes.
         try:
-            await self.db.commit()
+            await self.commit_to_db()
             # Refresh the instance with updated data from the DB.
             await self.db.refresh(transfer)
             return transfer
@@ -123,5 +124,5 @@ class TransferRepository:
             transfer_status_id=transfer_status_id
         )
         self.db.add(new_history_record)
-        await self.db.flush()
+        await self.commit_to_db()
         return new_history_record
