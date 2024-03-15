@@ -40,6 +40,7 @@ import Comments from './components/Comments'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
 import TransferSummary from './components/TransferSummary'
+import { ROUTES } from '@/constants/routes'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -86,7 +87,7 @@ export const AddEditTransfer = () => {
   const { watch } = methods
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
   const currentStatus = transferData?.currentStatus.status
-  
+
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -164,7 +165,6 @@ export const AddEditTransfer = () => {
       console.error('Error updating transfer:', error)
     }
   })
-
 
   // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {
@@ -253,7 +253,9 @@ export const AddEditTransfer = () => {
       />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
-          {transferId ? t('transfer:editTransfer') : t('transfer:newTransfer')}
+          {transferId
+            ? t('transfer:editTransferID') + transferId
+            : t('transfer:newTransfer')}
         </BCTypography>
 
         <BCTypography variant="body4">
@@ -295,7 +297,7 @@ export const AddEditTransfer = () => {
                 <BCButton
                   variant="outlined"
                   color="dark"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}

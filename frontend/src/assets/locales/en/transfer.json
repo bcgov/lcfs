@@ -1,8 +1,8 @@
 {
   "title": "Transfers",
   "transfers": " transfers ",
-  "transferID": "Transfer-ID:",
-  "editTransfer": "Edit Transfer",
+  "transferID": "Transfer ID: ",
+  "editTransferID": "Edit transfer ID: ",
   "newTransfer": "New Transfer",
   "effectiveText": "A transfer is not effective until it is recorded by the Director.",
   "considerationText": "Transfers must indicate whether they are for consideration, and if so, the fair market value of the consideration in Canadian dollars per compliance unit.",
@@ -13,6 +13,7 @@
   "txnHistory": "Transaction History",
   "rescindTransferBtn": "Rescind Transfer",
   "rescindErrorText": "Error rescinding transfer",
+  "rescindSuccessText": "Transfer successfully rescinded.",
   "rescindConfirmText": "Are you sure you want to rescind this transfer?",
   "saveDraftBtn": "Save Draft",
   "signAndSendBtn": "Sign and send",
