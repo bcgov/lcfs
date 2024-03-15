@@ -142,8 +142,7 @@ async def create_user(
     Endpoint to create a new user
     This endpoint creates a new user and returns the information of the created user.
     """
-    user_id = await service.create_user(user_create)
-    return await service.get_user_by_id(user_id) if user_id else None
+    return await service.create_user(user_create)
 
 
 @router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)

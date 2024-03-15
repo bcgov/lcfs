@@ -93,11 +93,12 @@ async def dbsession(
     session = session_maker()
 
     # Add test user info into the session
-    user_info = {
-        'user_profile_id': 1, 
-        'keycloak_username': 'test_user',
-        'organization_id': 1
-    }  # Mocked user ID
+    user_info = UserProfile(
+        user_profile_id = 1,
+        keycloak_username = 'test_user',
+        organization_id = 1
+    )  # Mocked user ID
+
     session.info['user'] = user_info
 
     try:
