@@ -217,13 +217,13 @@ class TransferServices:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         if transfer.from_transaction is None:
-            raise ServiceException(f"From transaction not found for transfer {
-                                   transfer.transfer_id}. Contact support.")
+            raise ServiceException(f"From transaction not found for transfer \
+                                   {transfer.transfer_id}. Contact support.")
 
         confirm_result = await self.transaction_repo.confirm_transaction(transfer.from_transaction_id)
         if not confirm_result:
-            raise ServiceException(f"Failed to confirm transaction {
-                                   transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
+            raise ServiceException(f"Failed to confirm transaction \
+                                   {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
@@ -237,8 +237,8 @@ class TransferServices:
         """Release the reserved transaction when transfer is declined."""
         release_result = await self.transaction_repo.release_transaction(transfer.transaction_id)
         if not release_result:
-            raise ServiceException(f"Failed to release transaction {
-                                   transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
+            raise ServiceException(f"Failed to release transaction \
+                                   {transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
 
     def _update_comments(self, transfer, transfer_data):
         """Update the comments on a transfer record, if provided."""
