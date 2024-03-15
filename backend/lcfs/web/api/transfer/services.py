@@ -1,8 +1,7 @@
 from logging import getLogger
-from typing import List
-
-from fastapi import Depends, Request, HTTPException
 from datetime import datetime
+from typing import List
+from fastapi import Depends, Request, HTTPException
 
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
@@ -11,6 +10,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException, ServiceExceptio
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Comment import Comment
 from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.db.models.OrganizationStatus import OrgStatusEnum
 
 # services
 from lcfs.web.api.organizations.services import OrganizationsService
@@ -18,6 +18,7 @@ from lcfs.web.api.organizations.services import OrganizationsService
 # schema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
+from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate, TransferStatusEnum
 
 # repo
 from lcfs.web.api.organizations.repo import OrganizationsRepository
@@ -79,6 +80,11 @@ class TransferServices:
         if not from_org or not to_org:
             raise DataNotFoundException("One or more organizations not found")
 
+        # Check if both the organizations are registered for transfer
+        if from_org.org_status.status != OrgStatusEnum.Registered or to_org.org_status.status != OrgStatusEnum.Registered:
+            raise HTTPException(status_code=406,
+                detail="One or more organizations are not registered for transfer"
+            )
         # Create a new Comment instance
         new_comment = Comment(
             comment=transfer_data.comments) if transfer_data.comments else None
@@ -138,7 +144,21 @@ class TransferServices:
         """Updates an existing transfer record with new data."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
-            raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
+            raise DataNotFoundException(
+                f"Transfer with ID {transfer_id} not found")
+
+        # Check if both the organizations are registered for transfer before recording the transfer.
+        if (
+            transfer_data.current_status_id == TransferStatusEnum.get_index(TransferStatusEnum.Recorded)
+            and (
+                transfer.from_organization.org_status.status != OrgStatusEnum.Registered
+                or transfer.to_organization.org_status.status
+                != OrgStatusEnum.Registered
+            )
+        ):
+            raise HTTPException(status_code=406,
+                detail="One or more organizations are not registered for transfer"
+            )
         
         self._update_comments(transfer, transfer_data)
 
