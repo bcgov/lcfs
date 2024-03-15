@@ -270,7 +270,7 @@ export const ViewTransfer = () => {
             title: t('confirmation'),
             content: t('transfer:recommendConfirmText')
           }),
-        disabled: !hasRoles(roles.analyst)
+        disabled: !hasRoles(roles.analyst) || !recommendation
       }
     ],
     Recommended: [

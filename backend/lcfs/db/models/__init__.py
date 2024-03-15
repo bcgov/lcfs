@@ -2,16 +2,15 @@
 from pathlib import Path
 import pkgutil
 
-
 def load_all_models() -> None:
     """Load all models from this folder, loading specific models first."""
 
     # Models that need to be loaded first
     priority_models = [
-        'OrganizationStatus',
-        'Organization',
-        'UserProfile',
-        'Role'
+      'OrganizationStatus',
+      'Organization', 
+      'UserProfile', 
+      'Role'
     ]
 
     # Load priority models

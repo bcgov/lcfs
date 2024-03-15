@@ -12,7 +12,7 @@ export const Recommendation = ({ value, onChange, currentStatus }) => {
     enabled: !!transferId,
     retry: false
   })
-  console.log(transferData)
+
   return (
     <BCBox mt={2}>
       <Typography variant="h6" color="primary" mb={2}>
@@ -43,8 +43,7 @@ export const Recommendation = ({ value, onChange, currentStatus }) => {
       ) : (
         <Typography>
           The analyst has recommended that you to{' '}
-          <strong>{transferData.recommendationStatus.status}</strong> this
-          transfer.
+          <strong>{transferData.recommendation}</strong> this transfer.
         </Typography>
       )}
     </BCBox>

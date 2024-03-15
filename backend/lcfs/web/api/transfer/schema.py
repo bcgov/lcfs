@@ -74,7 +74,7 @@ class TransferSchema(BaseSchema):
     comments: Optional[TransferCommentSchema] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
-    recommendation: TransferRecommendationEnum = None
+    recommendation: Optional[TransferRecommendationEnum] = None
 
     class Config:
         extra = 'ignore'
