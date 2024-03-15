@@ -178,6 +178,7 @@ class TransactionRepository:
 
         self.db.add(new_transaction)
         await self.db.commit()
+        return new_transaction
 
     @repo_handler
     async def reserve_transaction(self, transaction_id: int) -> bool:
@@ -215,6 +216,27 @@ class TransactionRepository:
             update(Transaction)
             .where(Transaction.transaction_id == transaction_id)
             .values(transaction_action=TransactionActionEnum.Released)
+        )
+        await self.db.commit()
+
+        # Check if the update statement affected any rows
+        return result.rowcount > 0
+
+    @repo_handler
+    async def confirm_transaction(self, transaction_id: int) -> bool:
+        """
+        Attempt to confirm a transaction by updating its transaction_action to Adjustment.
+
+        Args:
+            transaction_id (int): The ID of the transaction to release.
+
+        Returns:
+            bool: True if the action was successfully applied, False otherwise.
+        """
+        result = await self.db.execute(
+            update(Transaction)
+            .where(Transaction.transaction_id == transaction_id)
+            .values(transaction_action=TransactionActionEnum.Adjustment)
         )
         await self.db.commit()
 

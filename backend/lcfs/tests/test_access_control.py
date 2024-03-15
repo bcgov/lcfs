@@ -38,5 +38,4 @@ async def test_endpoint_access_success(client: AsyncClient, fastapi_app: FastAPI
         "sortOrders": []
     }
     response = await client.post(url, json=pagination)
-    print(response)
     assert response.status_code == status.HTTP_200_OK

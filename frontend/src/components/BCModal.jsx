@@ -1,13 +1,16 @@
-import PropTypes from 'prop-types';
+import PropTypes from 'prop-types'
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton
+  IconButton,
+  Divider,
+  Box
 } from '@mui/material'
-import { Close } from '@mui/icons-material'
+import { Close, Warning } from '@mui/icons-material'
 import BCButton from './BCButton'
+import colors from '@/themes/base/colors'
 
 const BCModal = (props) => {
   const { open, onClose, data } = props
@@ -18,6 +21,7 @@ const BCModal = (props) => {
     primaryButtonText,
     primaryButtonAction,
     primaryButtonColor,
+    warningText,
     secondaryButtonText,
     secondaryButtonAction,
     secondaryButtonColor,
@@ -38,7 +42,22 @@ const BCModal = (props) => {
       >
         <Close />
       </IconButton>
-      <DialogContent dividers>{content}</DialogContent>
+      {warningText && (
+        <DialogContent>
+          <Box
+            bgcolor={colors.alerts.warning.background}
+            borderRadius={1}
+            p={1}
+            display={'flex'}
+            gap={1}
+          >
+            <Warning color="warning" fontSize={'medium'} />
+            {warningText}
+          </Box>
+        </DialogContent>
+      )}
+      <DialogContent>{content}</DialogContent>
+      <Divider />
       <DialogActions>
         <BCButton
           variant="outlined"
@@ -73,12 +92,12 @@ BCModal.propTypes = {
     secondaryButtonText: PropTypes.string,
     secondaryButtonAction: PropTypes.func,
     secondaryButtonColor: PropTypes.string,
-    customButtons: PropTypes.node,
-  }),
-};
+    customButtons: PropTypes.node
+  })
+}
 
 BCModal.defaultProps = {
-  data: null,
-};
+  data: null
+}
 
 export default BCModal

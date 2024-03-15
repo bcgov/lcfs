@@ -1,20 +1,29 @@
 from logging import getLogger
-from typing import List
-
-from fastapi import Depends, HTTPException, Request
 from datetime import datetime
+from typing import List
+from fastapi import Depends, Request, HTTPException
 
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
+# models
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.Comment import Comment
+from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.db.models.OrganizationStatus import OrgStatusEnum
 
+# services
+from lcfs.web.api.organizations.services import OrganizationsService
+
+# schema
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate
+from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate, TransferStatusEnum
+
+# repo
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
-from lcfs.web.api.transfer.schema import TransferSchema, TransferCreate, TransferUpdate, TransferStatusEnum
-from lcfs.db.models.OrganizationStatus import OrgStatusEnum
 
 logger = getLogger("transfer_service")
 
@@ -25,11 +34,13 @@ class TransferServices:
         request: Request = None,
         repo: TransferRepository = Depends(TransferRepository),
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
+        org_service: OrganizationsService = Depends(OrganizationsService),
         transaction_repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
         self.request = request
         self.org_repo = org_repo
+        self.org_service = org_service
         self.transaction_repo = transaction_repo
 
     @service_handler
@@ -45,7 +56,7 @@ class TransferServices:
 
     @service_handler
     async def get_transfer(self, transfer_id: int) -> TransferSchema:
-        '''Fetches a single transfer by its ID and converts it to a Pydantic model.'''
+        """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
             raise DataNotFoundException(
@@ -102,7 +113,7 @@ class TransferServices:
 
     @service_handler
     async def update_transfer_draft(self, transfer_id: int, transfer_data: TransferCreate) -> TransferSchema:
-        '''Updates an existing transfer record with new data.'''
+        """Updates an existing transfer record with new data."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
             raise DataNotFoundException(
@@ -124,13 +135,18 @@ class TransferServices:
         updated_transfer = await self.repo.update_transfer(transfer)
         return TransferSchema.model_validate(updated_transfer)
 
+    # --------------------------------------
+    # Update Transfer Methods
+    # --------------------------------------
+
     @service_handler
     async def update_transfer(self, transfer_id: int, transfer_data: TransferUpdate) -> TransferSchema:
-        '''Updates an existing transfer record with new data.'''
+        """Updates an existing transfer record with new data."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
             raise DataNotFoundException(
                 f"Transfer with ID {transfer_id} not found")
+
         # Check if both the organizations are registered for transfer before recording the transfer.
         if (
             transfer_data.current_status_id == TransferStatusEnum.get_index(TransferStatusEnum.Recorded)
@@ -143,29 +159,87 @@ class TransferServices:
             raise HTTPException(status_code=406,
                 detail="One or more organizations are not registered for transfer"
             )
+        
+        self._update_comments(transfer, transfer_data)
 
-        previous_status = transfer.current_status_id
+        # Handle specific actions required when the transfer status changes
+        if transfer_data.current_status_id != transfer.current_status_id:
+            await self.handle_status_change(transfer, transfer_data)
+
+        updated_transfer = await self.repo.update_transfer(transfer)
+        validated_model = TransferSchema.model_validate(updated_transfer)
+        return validated_model
+
+
+    async def handle_status_change(self, transfer, transfer_data):
+        """Handle specific actions required when the transfer status changes."""
         new_status = transfer_data.current_status_id
+        transfer.current_status_id = transfer_data.current_status_id
 
-        # Update transfer status
-        transfer.current_status_id = new_status
+        # Add a new transfer history record if the status has changed
+        await self.repo.add_transfer_history(transfer.transfer_id, new_status)
 
+        if new_status == 3:
+            # Handle signing and sending from supplier
+            await self.sign_and_send_from_supplier(transfer)
+        elif new_status == 6:
+            # Handle director recording transfer
+            await self.director_record_transfer(transfer)
+        elif new_status == 8:
+            # Handle transfer status updated to 'Declined'
+            await self.decline_transfer(transfer)
+
+
+    async def sign_and_send_from_supplier(self, transfer):
+        """Create reserved transaction to reserve compliance units for sending organization."""
+        user = self.request.user
+        has_signing_role = user_has_roles(user, ['SUPPLIER', 'SIGNING_AUTHORITY'])
+        if not has_signing_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+        from_transaction = await self.org_service.adjust_balance(
+            transaction_action=TransactionActionEnum.Reserved,
+            compliance_units=-transfer.quantity,  # Negative quantity for sending org
+            organization_id=transfer.from_organization_id
+        )
+        transfer.from_transaction = from_transaction
+
+
+    async def director_record_transfer(self, transfer):
+        """Confirm transaction for sending organization and create new transaction for receiving org."""
+        user = self.request.user
+        has_director_role = user_has_roles(user, ['GOVERNMENT', 'DIRECTOR'])
+
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+        if transfer.from_transaction is None:
+            raise ServiceException(f"From transaction not found for transfer {transfer.transfer_id}. Contact support.")
+        
+        confirm_result = await self.transaction_repo.confirm_transaction(transfer.from_transaction_id)
+        if not confirm_result:
+            raise ServiceException(f"Failed to confirm transaction {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
+        
+        # Create new transaction for receiving organization
+        to_transaction = await self.org_service.adjust_balance(
+            transaction_action=TransactionActionEnum.Adjustment,
+            compliance_units=transfer.quantity,  # Positive quantity for receiving org
+            organization_id=transfer.to_organization_id
+        )
+        transfer.to_transaction = to_transaction
+
+
+    async def decline_transfer(self, transfer):
+        """Release the reserved transaction when transfer is declined."""
+        release_result = await self.transaction_repo.release_transaction(transfer.transaction_id)
+        if not release_result:
+            raise ServiceException(f"Failed to release transaction {transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled.")
+
+
+    def _update_comments(self, transfer, transfer_data):
+        """Update the comments on a transfer record, if provided."""
         if transfer_data.comments:
             if transfer.comments:
                 transfer.comments.comment = transfer_data.comments
             else:
                 transfer.comments = Comment(comment=transfer_data.comments)
-
-        if new_status != previous_status:
-            # If the status has changed, add a new transfer history record
-            await self.repo.add_transfer_history(transfer_id, new_status)
-            
-            # Check if the status is being updated to 'Declined'
-            if new_status == 8:
-                release_result = await self.transaction_repo.release_transaction(transfer.transaction_id)
-                if not release_result:
-                    raise ServiceException(f"Failed to release transaction {transfer.transaction_id} for transfer {transfer_id}. Update cancelled.")
-
-        updated_transfer = await self.repo.update_transfer(transfer)
-
-        return TransferSchema.model_validate(updated_transfer)
