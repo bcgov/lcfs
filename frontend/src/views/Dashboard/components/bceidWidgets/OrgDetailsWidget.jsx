@@ -31,17 +31,17 @@ export const OrgDetailsWidget = () => {
                 {orgData?.name}
               </BCTypography>
               <BCTypography variant="body4" color="primary">
-                {orgData?.org_address.street_address}
+                {orgData?.orgAddress.streetAddress}
               </BCTypography>
               <BCTypography variant="body4" color="primary">
-                {orgData?.org_address.city}{' '}
-                {orgData?.org_address.province_state}
+                {orgData?.orgAddress.city}{' '}
+                {orgData?.orgAddress.provinceState}
               </BCTypography>
               <BCTypography variant="body4" color="primary">
-                {orgData?.org_address.country}
+                {orgData?.orgAddress.country}
               </BCTypography>
               <BCTypography variant="body4" color="primary">
-                {orgData?.org_address.postalCode_zipCode}
+                {orgData?.orgAddress.postalcodeZipcode}
               </BCTypography>
               <BCTypography mt={2} variant="body4" color="primary">
                 {orgData?.phone}

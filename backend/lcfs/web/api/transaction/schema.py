@@ -1,6 +1,7 @@
 from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
+from lcfs.web.api.base import BaseSchema
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
@@ -29,7 +30,7 @@ class TransactionStatusEnum(str, Enum):
     DECLINED = "Declined"
     RESCINDED = "Rescinded"
 
-class TransactionStatusBase(BaseModel):
+class TransactionStatusBase(BaseSchema):
     status: TransactionStatusEnum
     description: Optional[str] = None
 
@@ -40,30 +41,30 @@ class TransactionStatusSchema(TransactionStatusBase):
     pass
 
 
-class TransactionTypeEnum(str, Enum):
-    adjustment = "Adjustment"
-    reserve = "Reserve"
-    release = "Release"
+class TransactionActionEnum(str, Enum):
+    Adjustment = "Adjustment"
+    Reserved = "Reserved"
+    Released = "Released"
 
 
-class TransactionTypeSchema(BaseModel):
-    transaction_typ_id: int
-    type: TransactionTypeEnum
+class TransactionCreateSchema(BaseSchema):
+    transaction_action: TransactionActionEnum
+    compliance_units: int
+    organization_id: int
 
 
-class TransactionBaseSchema(BaseModel):
+class TransactionBaseSchema(BaseSchema):
     model_config = ConfigDict(from_attributes=True)
 
     transaction_id: int
     compliance_units: int
-    transaction_type_id: int
     organization_id: int
+    transaction_action: TransactionActionEnum
 
     organization: Optional[OrganizationSummaryResponseSchema]
-    transaction_type: TransactionTypeSchema
 
 
-class TransactionViewSchema(BaseModel):
+class TransactionViewSchema(BaseSchema):
     transaction_id: int
     transaction_type: str
     from_organization: Optional[str]
@@ -77,6 +78,6 @@ class TransactionViewSchema(BaseModel):
     class Config(BaseConfig):
         pass
 
-class TransactionListSchema(BaseModel):
+class TransactionListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     transactions: List[TransactionViewSchema]

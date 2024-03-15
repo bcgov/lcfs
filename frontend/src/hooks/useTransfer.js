@@ -19,7 +19,7 @@ export const useUpdateTransfer = (transferID, options) => {
     mutationFn: async ({ comments, newStatus }) => {
       await client.put(`/transfers/${transferID}`, {
         comments,
-        current_status_id: newStatus
+        currentStatusId: newStatus
       })
     }
   })

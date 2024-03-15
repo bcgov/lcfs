@@ -39,16 +39,15 @@ export const Transactions = () => {
     overlayNoRowsTemplate: t('txn:noTxnsFound')
   }
   const getRowId = useCallback((params) => {
-    return params.data.transaction_id + params.data.transaction_type
+    return params.data.transactionId + params.data.transactionType
   }, [])
 
-  const defaultSortModel = [{ field: 'create_date', direction: 'desc' }]
+  const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
 
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
-    // eslint-disable-next-line camelcase
-    const { transaction_id, transaction_type, from_organization, status } = params.data
+    const { transactionId, transactionType, fromOrganization, status } = params.data
     const userOrgName = currentUser?.organization?.name
   
     // Define routes mapping for transaction types
@@ -66,17 +65,16 @@ export const Transactions = () => {
     }
   
     // Determine if it's an edit scenario
-    const isEditScenario = userOrgName === from_organization && status === statuses.draft
+    const isEditScenario = userOrgName === fromOrganization && status === statuses.draft
     const routeType = isEditScenario ? 'edit' : 'view'
-    console.log(isEditScenario, routeType, from_organization, userOrgName, status)
   
     // Select the appropriate route based on the transaction type and scenario
-    const routeTemplate = routesMapping[transaction_type]?.[routeType]
+    const routeTemplate = routesMapping[transactionType]?.[routeType]
   
     if (routeTemplate) {
       navigate(
         // replace any matching query params by chaining these replace methods
-        routeTemplate.replace(':transactionId', transaction_id).replace(':transferId', transaction_id)
+        routeTemplate.replace(':transactionId', transactionId).replace(':transferId', transactionId)
       )
     } else {
       console.error('No route defined for this transaction type and scenario')
@@ -118,7 +116,7 @@ export const Transactions = () => {
         {t('txn:title')}
       </BCTypography>
       <Box display={'flex'} gap={2} mb={2}>
-        <Role roles={[roles.transfers]}>
+        {currentUser.organization?.orgStatus?.status === 'Registered' && <Role roles={[roles.transfers]}>
           <BCButton
             variant="contained"
             size="small"
@@ -128,7 +126,7 @@ export const Transactions = () => {
           >
             <BCTypography variant="subtitle2">{t('txn:newTransferBtn')}</BCTypography>
           </BCButton>
-        </Role>
+        </Role>}
         <DownloadButton
           onDownload={handleDownloadTransactions}
           isDownloading={isDownloadingTransactions}
@@ -144,7 +142,7 @@ export const Transactions = () => {
             hasRoles(roles.supplier)
               ? apiRoutes.orgTransactions.replace(
                   ':orgID',
-                  currentUser?.organization.organization_id
+                  currentUser?.organization.organizationId
                 )
               : apiRoutes.transactions
           }

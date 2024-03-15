@@ -10,9 +10,14 @@ import { TRANSACTIONS } from '@/constants/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
-import { convertObjectKeys, formatDateToISO } from '@/utils/formatters'
+import { convertObjectKeys, dateFormatter } from '@/utils/formatters'
 
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowLeft,
+  faFloppyDisk,
+  faPencil,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { Box } from '@mui/material'
@@ -22,19 +27,20 @@ import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import { roles } from '@/constants/roles'
 import {
-  deleteDraftButton,
-  saveDraftButton,
-  submitButton
+  containedButton,
+  outlinedButton,
+  redOutlinedButton
 } from '../buttonConfigs'
+import SigningAuthority from '../components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
 import AgreementDate from './components/AgreementDate'
 import Comments from './components/Comments'
-import SigningAuthority from '../components/SigningAuthority'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
 import TransferSummary from './components/TransferSummary'
-import { roles } from '@/constants/roles'
+import { ROUTES } from '@/constants/routes'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -42,7 +48,7 @@ export const AddEditTransfer = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { transferId } = useParams()
-  const { data: currentUser, hasRoles } = useCurrentUser()
+  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: transferData, isFetched } = useTransfer(transferId, {
     enabled: !!transferId,
     retry: false
@@ -69,7 +75,7 @@ export const AddEditTransfer = () => {
     resolver: yupResolver(AddEditTransferSchema),
     mode: 'onChange',
     defaultValues: {
-      fromOrganizationId: currentUser?.organization?.organization_id,
+      fromOrganizationId: currentUser?.organization?.organizationId,
       agreementDate: new Date().toISOString().split('T')[0],
       toOrganizationId: null,
       quantity: null,
@@ -78,10 +84,10 @@ export const AddEditTransfer = () => {
       comments: ''
     }
   })
-  const { watch } = methods;
+  const { watch } = methods
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
-  const currentStatus = transferData?.current_status.status
-  
+  const currentStatus = transferData?.currentStatus.status
+
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -94,14 +100,14 @@ export const AddEditTransfer = () => {
     if (isFetched && transferData) {
       // Populate the form with fetched transfer data
       methods.reset({
-        fromOrganizationId: transferData.from_organization.organization_id,
-        toOrganizationId: transferData.to_organization.organization_id,
+        fromOrganizationId: transferData.fromOrganization.organizationId,
+        toOrganizationId: transferData.toOrganization.organizationId,
         quantity: transferData.quantity,
-        pricePerUnit: transferData.price_per_unit,
-        signingAuthorityDeclaration: transferData.signing_authority_declaration,
+        pricePerUnit: transferData.pricePerUnit,
+        signingAuthorityDeclaration: transferData.signingAuthorityDeclaration,
         comments: transferData.comments?.comment, // Assuming you only want the comment text
-        agreementDate: transferData.agreement_date
-          ? new Date(transferData.agreement_date).toISOString().split('T')[0]
+        agreementDate: transferData.agreementDate
+          ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
       })
     }
@@ -110,7 +116,7 @@ export const AddEditTransfer = () => {
   const draftPayload = (form) => {
     form.fromOrganizationId = parseInt(form.fromOrganizationId)
     form.toOrganizationId = parseInt(form.toOrganizationId)
-    form.agreementDate = formatDateToISO(form.agreementDate)
+    form.agreementDate = dateFormatter(form.agreementDate)
     return convertObjectKeys(form)
   }
 
@@ -160,40 +166,21 @@ export const AddEditTransfer = () => {
     }
   })
 
-  // // mutation to update the status and comments of a transfer
-  // // used in everything but draft transfers
-  // const {
-  //   mutate: updateTransfer,
-  //   isLoading: isUpdatingTransfer,
-  //   isError: isUpdateTransferError
-  // } = useMutation({
-  //   mutationFn: async ({ formData, newStatus }) =>
-  //     await apiService.put(`/transfers/${transferId}`, {
-  //       comments: formData.comments,
-  //       current_status_id: newStatus
-  //     }),
-  //   onSuccess: (_, variables) => {
-  //     navigate(TRANSACTIONS, {
-  //       state: {
-  //         message: variables.message.success,
-  //         severity: 'success'
-  //       }
-  //     })
-  //   },
-  //   onError: (error, variables) => {
-  //     console.error(variables.message.error, error)
-  //   }
-  // })
-
   // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {
     New: [
-      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: createDraft },
-      { ...submitButton(t('transfer:signAndSendBtn')), disabled: true }
+      {
+        ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
+        handler: createDraft
+      },
+      {
+        ...containedButton(t('transfer:signAndSendBtn'), faPencil),
+        disabled: !hasAnyRole(roles.transfers, roles.signing_authority)
+      }
     ],
     Draft: [
       {
-        ...deleteDraftButton(t('transfer:deleteDraftBtn')),
+        ...redOutlinedButton(t('transfer:deleteDraftBtn'), faTrash),
         handler: (formData) =>
           setModalData({
             primaryButtonAction: () =>
@@ -212,10 +199,14 @@ export const AddEditTransfer = () => {
             content: t('transfer:deleteConfirmText')
           })
       },
-      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
       {
-        ...submitButton(t('transfer:signAndSendBtn')),
-        disabled: !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
+        ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
+        handler: updateDraft
+      },
+      {
+        ...containedButton(t('transfer:signAndSendBtn'), faPencil),
+        disabled:
+          !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
           setModalData({
             primaryButtonAction: () =>
@@ -262,7 +253,9 @@ export const AddEditTransfer = () => {
       />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
-          {transferId ? t('transfer:editTransfer') : t('transfer:newTransfer')}
+          {transferId
+            ? t('transfer:editTransferID') + transferId
+            : t('transfer:newTransfer')}
         </BCTypography>
 
         <BCTypography variant="body4">
@@ -280,9 +273,7 @@ export const AddEditTransfer = () => {
         <BCBox mt={5}>
           <ProgressBreadcrumb
             steps={['Draft', 'Sent', 'Submitted', 'Recorded']}
-            currentStep={
-              transferId ? currentStatus : null
-            }
+            currentStep={transferId ? currentStatus : null}
           />
         </BCBox>
 
@@ -298,17 +289,15 @@ export const AddEditTransfer = () => {
             <AgreementDate />
 
             <Comments />
-            
-            {currentStatus &&
-              <SigningAuthority />
-            }
+
+            {currentStatus && <SigningAuthority />}
 
             <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
               <Link>
                 <BCButton
                   variant="outlined"
                   color="dark"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}
@@ -319,29 +308,29 @@ export const AddEditTransfer = () => {
                   {t('common:backBtn')}
                 </BCButton>
               </Link>
-              {buttonClusterConfig[
-                transferId ? currentStatus : 'New'
-              ]?.map((config) => (
-                <Role key={config.label}>
-                  <BCButton
-                    size="small"
-                    variant={config.variant}
-                    color={config.color}
-                    onClick={methods.handleSubmit(config.handler)}
-                    startIcon={
-                      config.startIcon && (
-                        <FontAwesomeIcon
-                          icon={config.startIcon}
-                          className="small-icon"
-                        />
-                      )
-                    }
-                    disabled={config.disabled}
-                  >
-                    {config.label}
-                  </BCButton>
-                </Role>
-              ))}
+              {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
+                (config) => (
+                  <Role key={config.label}>
+                    <BCButton
+                      size="small"
+                      variant={config.variant}
+                      color={config.color}
+                      onClick={methods.handleSubmit(config.handler)}
+                      startIcon={
+                        config.startIcon && (
+                          <FontAwesomeIcon
+                            icon={config.startIcon}
+                            className="small-icon"
+                          />
+                        )
+                      }
+                      disabled={config.disabled}
+                    >
+                      {config.label}
+                    </BCButton>
+                  </Role>
+                )
+              )}
             </Box>
           </form>
         </FormProvider>

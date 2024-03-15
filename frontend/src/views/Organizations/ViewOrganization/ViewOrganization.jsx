@@ -18,12 +18,9 @@ import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
-import { phoneNumberFormatter } from '@/utils/formatters'
+import { calculateRowHeight, phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import {
-  defaultSortModel,
-  getUserColumnDefs
-} from './_schema'
+import { defaultSortModel, getUserColumnDefs } from './_schema'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 
@@ -46,11 +43,11 @@ export const ViewOrganization = () => {
     navigate(
       ROUTES.ORGANIZATIONS_EDIT.replace(
         ':orgID',
-        orgID || currentUser?.organization?.organization_id
+        orgID || currentUser?.organization?.organizationId
       ),
       {
         state: {
-          orgID: orgID || currentUser?.organization?.organization_id,
+          orgID: orgID || currentUser?.organization?.organizationId,
           isEditMode: true
         }
       }
@@ -66,6 +63,21 @@ export const ViewOrganization = () => {
     }
   }, [])
 
+  const getRowHeight = useCallback((params) => {
+    const colWidth = params.api.getColumn('role').getActualWidth()
+    const size = params.data.roles.length
+    return calculateRowHeight(colWidth, size - 1)
+  }, [])
+
+  const onColumnResized = useCallback((params) => {
+    const colWidth = params.api.getColumn('role').getActualWidth()
+    params.api.forEachNode((node) => {
+      const size = node.data?.roles?.length
+      const rowHeight = calculateRowHeight(colWidth, size - 1)
+      node.setRowHeight(rowHeight)
+    })
+  }, [])
+
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found',
     includeHiddenColumnsInQuickFilter: true
@@ -76,24 +88,24 @@ export const ViewOrganization = () => {
       ? navigate(
           ROUTES.ORGANIZATION_VIEWUSER.replace(
             ':userID',
-            params.data.user_profile_id
+            params.data.userProfileId
           )
         )
       : navigate(
           ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
             ':userID',
-            params.data.user_profile_id
+            params.data.userProfileId
           )
         )
   )
-  const getRowId = useCallback((params) => params.data.user_profile_id)
+  const getRowId = useCallback((params) => params.data.userProfileId)
   const gridRef = useRef()
 
   useEffect(() => {
     if (gridRef.current) {
       // clear any previous filters
       localStorage.removeItem(`${gridKey}-filter`)
-      const statusFilter = gridRef?.current?.api?.getFilterInstance('is_active')
+      const statusFilter = gridRef?.current?.api?.getFilterInstance('isActive')
       if (statusFilter) {
         statusFilter.setModel({
           type: 'equals',
@@ -122,7 +134,7 @@ export const ViewOrganization = () => {
           {alertMessage}
         </BCAlert>
       )}
-      <BCTypography variant="h5" color="primary">
+      <BCTypography variant="h5" color="primary" py={1}>
         {orgData.name}{' '}
         <Role roles={[roles.administrator]}>
           <IconButton
@@ -135,7 +147,7 @@ export const ViewOrganization = () => {
         </Role>
       </BCTypography>
       <BCBox p={3} bgColor={colors.grey[300]}>
-        <BCBox display="flex" gap={10}>
+        <BCBox display="flex" rowGap={2} columnGap={10} flexWrap="wrap">
           <BCBox
             display="grid"
             gridTemplateColumns="auto auto"
@@ -150,7 +162,7 @@ export const ViewOrganization = () => {
               {t('org:operatingNameLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {orgData.operating_name || orgData.name}
+              {orgData.operatingName || orgData.name}
             </BCTypography>
             <BCTypography variant="label">
               {t('org:phoneNbrLabel')}:
@@ -166,28 +178,29 @@ export const ViewOrganization = () => {
           <BCBox
             display="grid"
             gridTemplateColumns="auto auto"
-            gap={1}
-            alignItems="end"
+            columnGap={1}
+            rowGap={2}
+            alignItems="start"
           >
             <BCTypography variant="label">
               {t('org:serviceAddrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.org_address)}
+              {constructAddress(orgData.orgAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.org_attorney_address)}
+              {constructAddress(orgData.orgAttorneyAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {orgData.org_status.status === 'Registered'
+              {orgData.orgStatus.status === 'Registered'
                 ? 'Yes — A registered organization is able to transfer compliance units.'
                 : 'No — An organization must be registered to transfer compliance units.'}
             </BCTypography>
           </BCBox>
         </BCBox>
-        {!isCurrentUserLoading && hasRoles(roles.government) && (
+        {!isCurrentUserLoading && !hasRoles(roles.government) && (
           <BCBox mt={2}>
             <BCTypography variant="body4">
               Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>
@@ -290,7 +303,7 @@ export const ViewOrganization = () => {
           apiEndpoint={apiRoutes.orgUsers
             .replace(
               ':orgID',
-              orgID || currentUser?.organization?.organization_id
+              orgID || currentUser?.organization?.organizationId
             )
             .concat(showActive ? '?status=Active' : '?status=Inactive')}
           apiData={'users'}
@@ -303,6 +316,8 @@ export const ViewOrganization = () => {
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           enableResetButton={false}
+          getRowHeight={getRowHeight}
+          onColumnResized={onColumnResized}
         />
       </BCBox>
     </>

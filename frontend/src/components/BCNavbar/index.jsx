@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react'
-import { AppBar, Divider, useScrollTrigger } from '@mui/material'
-import DefaultNavbarMobile from '@/components/BCNavbar/components/DefaultNavbarMobile'
+import {
+  AppBar,
+  Divider,
+  useScrollTrigger,
+  useMediaQuery,
+  useTheme,
+  Menu
+} from '@mui/material'
+import PopupState, { bindMenu } from 'material-ui-popup-state'
+import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
 
 // BCGov Dashboard React base styles
-import breakpoints from '@/themes/base/breakpoints'
 import { PropTypes } from 'prop-types'
 import MenuBar from '@/components/BCNavbar/components/MenuBar'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
@@ -11,76 +17,69 @@ import BCBox from '@/components/BCBox'
 
 function BCNavbar(props) {
   const { routes } = props
+  const theme = useTheme()
+  const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
   const isScrolled = useScrollTrigger()
-  const [mobileNavbar, setMobileNavbar] = useState(false)
-  const [mobileView, setMobileView] = useState(false)
-  const openMobileNavbar = ({ currentTarget }) =>
-    setMobileNavbar(currentTarget.parentNode)
-  const closeMobileNavbar = () => setMobileNavbar(false)
-
-  useEffect(() => {
-    // A function that sets the display state for the DefaultNavbarMobile.
-    function displayMobileNavbar() {
-      if (window.innerWidth < breakpoints.values.xl) {
-        setMobileView(true)
-        setMobileNavbar(false)
-      } else {
-        setMobileView(false)
-        setMobileNavbar(false)
-      }
-    }
-
-    /** 
-     The event listener that's calling the displayMobileNavbar function when 
-     resizing the window.
-    */
-    window.addEventListener('resize', displayMobileNavbar)
-    // Call the displayMobileNavbar function to set the state with the initial value.
-    displayMobileNavbar()
-
-    // Remove event listener on cleanup
-    return () => {
-      window.removeEventListener('resize', displayMobileNavbar)
-    }
-  }, [])
 
   return (
     <BCBox py={0}>
-      <AppBar
-        postition="sticky"
-        data-test="bc-navbar"
-        component="nav"
-        sx={{ border: 'none' }}
-        color={isScrolled ? 'transparent' : 'inherit'}
-        elevation={isScrolled ? 5 : 0}
-      >
-        <HeaderBar
-          isScrolled={isScrolled}
-          data={props}
-          beta={props.beta}
-          mobileView={mobileView}
-          openMobileNavbar={openMobileNavbar}
-          mobileNavbar={mobileNavbar}
-        />
-        <Divider
-          orientation="vertical"
-          flexItem
-          sx={({ palette: { secondary } }) => ({
-            backgroundColor: secondary.main,
-            padding: '1px'
-          })}
-        />
-        {mobileView ? (
-          <DefaultNavbarMobile
-            open={mobileNavbar}
-            close={closeMobileNavbar}
-            light={true}
-            links={routes}
-          />
-        ) : (
-          <MenuBar isScrolled={isScrolled} routes={routes} data={props} />
+      <PopupState variant="popover" popupId="demo-popup-menu">
+        {(popupState) => (
+          <AppBar
+            postition="sticky"
+            data-test="bc-navbar"
+            component="nav"
+            sx={{ border: 'none' }}
+            color={isScrolled ? 'transparent' : 'inherit'}
+            elevation={isScrolled ? 5 : 0}
+          >
+            <HeaderBar
+              isScrolled={isScrolled}
+              data={props}
+              beta={props.beta}
+              isMobileView={isMobileView}
+              popupState={popupState}
+            />
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={({ palette: { secondary } }) => ({
+                backgroundColor: secondary.main,
+                padding: '1px'
+              })}
+            />
+            {isMobileView ? (
+              <Menu
+                px={0}
+                {...bindMenu(popupState)}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'center'
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'left'
+                }}
+                sx={{'div': {minWidth: '200px'}}}
+                MenuListProps={{ style: { minWidth: '200px' } }}
+              >
+                {routes.map((link) => (
+                  <DefaultNavbarLink
+                    key={link.name}
+                    onClick={popupState.close}
+                    icon={link.icon}
+                    name={link.name}
+                    route={link.route}
+                    light={true}
+                  />
+                ))}
+              </Menu>
+            ) : (
+              <MenuBar isScrolled={isScrolled} routes={routes} data={props} />
+            )}
+          </AppBar>
         )}
-      </AppBar>
+      </PopupState>
     </BCBox>
   )
 }

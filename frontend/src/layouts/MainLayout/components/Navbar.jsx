@@ -13,7 +13,7 @@ export const Navbar = () => {
   // Nav Links
   const navMenuItems = useMemo(
     () =>
-      currentUser.is_government_user
+      currentUser.isGovernmentUser
         ? // IDIR Routes
           [
             { name: t('Dashboard'), route: ROUTES.DASHBOARD },
@@ -35,8 +35,6 @@ export const Navbar = () => {
   return (
     <BCNavbar
       title={t('title')}
-      balance="50,000"
-      organizationName={currentUser?.organization?.name}
       routes={navMenuItems}
       beta={true}
       data-test="main-layout-navbar"

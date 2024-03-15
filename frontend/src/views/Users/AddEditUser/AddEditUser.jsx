@@ -53,7 +53,7 @@ export const AddEditUser = ({ userType }) => {
     ? userID
       ? // eslint-disable-next-line react-hooks/rules-of-hooks
         useOrganizationUser(
-          orgID || currentUser?.organization.organization_id,
+          orgID || currentUser?.organization.organizationId,
           userID
         )
       : { undefined, isLoading: false, isFetched: false }
@@ -70,7 +70,7 @@ export const AddEditUser = ({ userType }) => {
   const [disabled, setDisabled] = useState(false)
   const textFields = useMemo(
     () =>
-      hasRoles(roles.supplier) || orgName
+      hasRoles(roles.supplier) || orgName || userType === 'bceid'
         ? bceidTextFields(t)
         : idirTextFields(t),
     [hasRoles, orgName, t]
@@ -109,15 +109,15 @@ export const AddEditUser = ({ userType }) => {
             r !== roles.supplier.toLocaleLowerCase()
         )
       const userData = {
-        keycloakEmail: data?.keycloak_email,
+        keycloakEmail: data?.keycloakEmail,
         altEmail: data?.email || '',
         jobTitle: data?.title,
-        firstName: data?.first_name,
-        lastName: data?.last_name,
-        userName: data?.keycloak_username,
+        firstName: data?.firstName,
+        lastName: data?.lastName,
+        userName: data?.keycloakUsername,
         phone: data?.phone,
-        mobile: data?.mobile_phone,
-        status: data?.is_active ? 'active' : 'inactive',
+        mobile: data?.mobilePhone,
+        status: data?.isActive ? 'active' : 'inactive',
         readOnly: dataRoles
           .filter((r) => r === roles.read_only.toLocaleLowerCase())
           .join(''),
@@ -131,7 +131,7 @@ export const AddEditUser = ({ userType }) => {
           ? []
           : dataRoles
       }
-      if (data.is_government_user) {
+      if (data.isGovernmentUser) {
         userData.bceidRoles = []
         userData.readOnly = ''
       } else {
@@ -145,17 +145,17 @@ export const AddEditUser = ({ userType }) => {
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
-      user_profile_id: userID,
+      userProfileId: userID,
       title: data.jobTitle,
-      first_name: data.firstName,
-      last_name: data.lastName,
-      keycloak_username: data.userName,
-      keycloak_email: data.keycloakEmail,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      keycloakUsername: data.userName,
+      keycloakEmail: data.keycloakEmail,
       email: data.altEmail === '' ? null : data.altEmail,
       phone: data.phone,
-      mobile_phone: data.mobile,
-      is_active: data.status === 'active',
-      organization_id: orgID || currentUser.organization_id,
+      mobilePhone: data.mobile,
+      isActive: data.status === 'active',
+      organizationId: orgID || currentUser.organizationId,
       roles:
         data.status === 'active'
           ? [
@@ -181,7 +181,7 @@ export const AddEditUser = ({ userType }) => {
   const { mutate, isPending, isError } = useMutation({
     mutationFn: async (payload) => {
       if (hasRoles(roles.supplier)) {
-        const orgId = orgID || currentUser.organization.organization_id
+        const orgId = orgID || currentUser.organization.organizationId
         return userID
           ? await apiService.put(
               `/organization/${orgId}/users/${userID}`,
@@ -240,9 +240,9 @@ export const AddEditUser = ({ userType }) => {
       </Typography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)}>
         <FormProvider {...{ control, setValue }}>
-          <Grid2 container columnSpacing={2.5} rowSpacing={3.5}>
+          <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
             {/* Form fields */}
-            <Grid2 xs={12} md={5} lg={4}>
+            <Grid2 item xs={12} md={5} lg={4}>
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
                 {textFields.map((field) => (
                   <BCFormText
@@ -254,9 +254,35 @@ export const AddEditUser = ({ userType }) => {
                   />
                 ))}
               </Stack>
+            </Grid2>
+            <Grid2 item xs={12} md={7} lg={6}>
+              <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
+                <BCFormRadio
+                  control={control}
+                  name="status"
+                  label="Status"
+                  options={statusOptions(t)}
+                />
+                {hasRoles(roles.supplier) || orgName || orgID ? (
+                  <BCeIDSpecificRoleFields
+                    form={form}
+                    disabled={disabled}
+                    status={status}
+                    t={t}
+                  />
+                ) : (
+                  <IDIRSpecificRoleFields
+                    form={form}
+                    disabled={disabled}
+                    t={t}
+                  />
+                )}
+              </Stack>
+            </Grid2>
+            <Grid2 item xs={12} md={5} lg={4}>
               <Box
                 bgcolor={colors.background.grey}
-                px={3}
+                p={3}
                 display="flex"
                 justifyContent="space-between"
               >
@@ -305,30 +331,6 @@ export const AddEditUser = ({ userType }) => {
                   <Typography variant="button">{t('saveBtn')}</Typography>
                 </BCButton>
               </Box>
-            </Grid2>
-            <Grid2 xs={12} md={7} lg={6}>
-              <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
-                <BCFormRadio
-                  control={control}
-                  name="status"
-                  label="Status"
-                  options={statusOptions(t)}
-                />
-                {hasRoles(roles.supplier) || orgName ? (
-                  <BCeIDSpecificRoleFields
-                    form={form}
-                    disabled={disabled}
-                    status={status}
-                    t={t}
-                  />
-                ) : (
-                  <IDIRSpecificRoleFields
-                    form={form}
-                    disabled={disabled}
-                    t={t}
-                  />
-                )}
-              </Stack>
             </Grid2>
           </Grid2>
         </FormProvider>

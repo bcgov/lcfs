@@ -1,6 +1,7 @@
 from typing import Optional, List, Union
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr
+from lcfs.web.api.base import BaseSchema
 
 from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.role.schema import RoleSchema
@@ -15,7 +16,7 @@ Public - attributes present on public facing resources being returned from GET, 
 """
 
 
-class UserCreateSchema(BaseModel):
+class UserCreateSchema(BaseSchema):
     user_profile_id: Optional[int] = None
     title: str
     keycloak_username: str
@@ -34,7 +35,7 @@ class UserCreateSchema(BaseModel):
         from_attributes = True
 
 
-class UserBaseSchema(BaseModel):
+class UserBaseSchema(BaseSchema):
     """DTO for user values."""
 
     user_profile_id: int
@@ -67,12 +68,12 @@ class UserBaseSchema(BaseModel):
         return cls(roles=roles, is_government_user=is_government_user, **user_dict)
 
 
-class UsersSchema(BaseModel):
+class UsersSchema(BaseSchema):
     pagination: PaginationResponseSchema
     users: List[UserBaseSchema]
 
 
-class UserHistorySchema(BaseModel):
+class UserHistorySchema(BaseSchema):
     user_login_history_id: int
     keycloak_email: EmailStr
     external_username: str
@@ -83,6 +84,6 @@ class UserHistorySchema(BaseModel):
         from_attributes = True
 
 
-class UserHistories(BaseModel):
+class UserHistories(BaseSchema):
     pagination: PaginationResponseSchema
     history: List[UserHistorySchema]

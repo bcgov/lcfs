@@ -25,11 +25,11 @@ const TransferGraphic = () => {
 
   const quantity = parseInt(watch('quantity'))
   const creditsFrom = transferId
-    ? transferData?.from_organization.name
+    ? transferData?.fromOrganization.name
     : currentUser?.organization?.name
   const creditsTo =
     orgData.find(
-      (org) => parseInt(org.organization_id) === watch('toOrganizationId')
+      (org) => parseInt(org.organizationId) === watch('toOrganizationId')
     )?.name || ''
 
   const pricePerUnit = watch('pricePerUnit')

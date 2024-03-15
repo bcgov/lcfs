@@ -52,7 +52,7 @@ class OrganizationService:
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
-            filter_type = filter.filterType
+            filter_type = filter.filter_type
             field = get_field_for_filter(TransactionView, filter.field)
 
             conditions.append(
@@ -70,12 +70,12 @@ class OrganizationService:
         if (pagination.filters is None) or (len(pagination.filters) == 0):
             pagination.filters.append(
                 FilterModel(
-                    filterType="text", field="is_active", type="equals", filter=status
+                    filter_type="text", field="is_active", type="equals", filter=status
                 )
             )
         pagination.filters.append(
             FilterModel(
-                filterType="number",
+                filter_type="number",
                 field="organization_id",
                 type="equals",
                 filter=organization_id,
@@ -111,7 +111,7 @@ class OrganizationService:
 
         transactions, total_count = (
             await self.transaction_repo.get_transactions_paginated(
-                offset, limit, conditions, pagination.sortOrders, organization_id
+                offset, limit, conditions, pagination.sort_orders, organization_id
             )
         )
 

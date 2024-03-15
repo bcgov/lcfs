@@ -12,7 +12,7 @@ import Icon from '@mui/material/Icon'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-function DefaultNavbarLink({ icon, name, route, light }) {
+function DefaultNavbarLink({ icon, name, route, light, onClick }) {
   const [hover, setHover] = useState(false)
   return (
     <BCBox
@@ -43,6 +43,7 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={onClick}
     >
       {icon && (
         <Icon
@@ -78,7 +79,8 @@ DefaultNavbarLink.propTypes = {
   icon: PropTypes.string,
   name: PropTypes.string.isRequired,
   route: PropTypes.string.isRequired,
-  light: PropTypes.bool
+  light: PropTypes.bool,
+  onClick: PropTypes.func
 }
 
 export default DefaultNavbarLink

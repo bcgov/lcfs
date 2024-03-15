@@ -65,7 +65,7 @@ class OrganizationsService:
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
-            filter_type = filter.filterType
+            filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
@@ -421,7 +421,7 @@ class OrganizationsService:
                 raise ValueError("Cannot decrement available balance below zero.")
 
         # Create a new transaction record in the database
-        await self.transaction_repo.create_transaction(
+        return await self.transaction_repo.create_transaction(
             transaction_action,
             compliance_units,
             organization_id

@@ -32,7 +32,7 @@ export const Organizations = () => {
     overlayNoRowsTemplate: t('org:noOrgsFound')
   }
   const getRowId = useCallback((params) => {
-    return params.data.name
+    return params.data.organizationId
   }, [])
 
   const navigate = useNavigate()
@@ -42,7 +42,7 @@ export const Organizations = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
     navigate(
-      ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', params.data.organization_id)
+      ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', params.data.organizationId)
     )
   })
   const apiService = useApiService()
