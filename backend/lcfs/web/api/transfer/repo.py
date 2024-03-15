@@ -62,8 +62,7 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments),
-            selectinload(Transfer.recommendation_status)
+            selectinload(Transfer.comments)
         ).where(Transfer.transfer_id == transfer_id)
 
         result = await self.db.execute(query)

@@ -45,9 +45,10 @@ def roles_required(*required_roles):
                     status_code=403, detail="Insufficient permissions")
 
             orgId = kwargs.get("organization_id", None)
-            if (RoleEnum.SUPPLIER in user_roles and 
-                orgId and int(orgId) != user.organization_id):
-                raise HTTPException(status_code=403, detail="Insufficient permissions for this organization")
+            if (RoleEnum.SUPPLIER in user_roles and
+                    orgId and int(orgId) != user.organization_id):
+                raise HTTPException(
+                    status_code=403, detail="Insufficient permissions for this organization")
 
             return await func(request, *args, **kwargs)
 

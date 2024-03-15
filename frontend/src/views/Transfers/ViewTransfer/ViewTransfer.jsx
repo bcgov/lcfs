@@ -111,9 +111,7 @@ export const ViewTransfer = () => {
 
   useEffect(() => {
     if (isFetched && transferData) {
-      setRecommendation(
-        transferData.recommendationStatus.transferRecommendationStatusId
-      )
+      setRecommendation(transferData.recommendationStatus)
     }
   }, [transferData, isFetched])
 
@@ -260,7 +258,7 @@ export const ViewTransfer = () => {
             primaryButtonAction: () =>
               updateTransfer({
                 newStatus: 5,
-                recommendationStatusID: recommendation && +recommendation,
+                recommendation,
                 message: {
                   success: t('transfer:recommendSuccessText'),
                   error: t('transfer:recommendErrorText')

@@ -30,12 +30,12 @@ export const Recommendation = ({ value, onChange, currentStatus }) => {
           onChange={(e) => onChange(e.target.value)}
         >
           <FormControlLabel
-            value="1"
+            value="Record"
             control={<Radio />}
             label={t('transfer:recommendRecord')}
           />
           <FormControlLabel
-            value="2"
+            value="Refuse"
             control={<Radio />}
             label={t('transfer:recommendRefuse')}
           />

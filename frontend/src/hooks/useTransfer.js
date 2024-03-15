@@ -16,11 +16,11 @@ export const useUpdateTransfer = (transferID, options) => {
 
   return useMutation({
     ...options,
-    mutationFn: async ({ comments, newStatus, recommendationStatusID }) => {
+    mutationFn: async ({ comments, newStatus, recommendation }) => {
       await client.put(`/transfers/${transferID}`, {
         comments,
         currentStatusId: newStatus,
-        recommendationStatusId: recommendationStatusID
+        recommendation
       })
     }
   })

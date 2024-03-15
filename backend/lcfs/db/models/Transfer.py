@@ -1,7 +1,13 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean
+import enum
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+
+
+class TransferRecommendationEnum(enum.Enum):
+    Record = "Record"
+    Refuse = "Refuse"
 
 
 class Transfer(BaseModel, Auditable, EffectiveDates):
@@ -32,9 +38,8 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     signing_authority_declaration = Column(Boolean, default=False)
     current_status_id = Column(Integer, ForeignKey(
         'transfer_status.transfer_status_id'))
-    recommendation_status_id = Column(Integer, ForeignKey(
-        'transfer_recommendation_status.transfer_recommendation_status_id'
-    ))
+    recommendation = Column(Enum(TransferRecommendationEnum, name="transfer_recommendation_enum",
+                            create_type=True), comment="Analyst recommendation for the transfer.")
 
     # relationships
     transfer_category = relationship('TransferCategory')
@@ -42,7 +47,6 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     transfer_history_records = relationship(
         'TransferHistory', back_populates='transfer')
     current_status = relationship('TransferStatus')
-    recommendation_status = relationship('TransferRecommendationStatus')
 
     from_transaction = relationship(
         'Transaction',

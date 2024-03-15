@@ -27,6 +27,11 @@ class TransferStatusEnum(str, Enum):
         return list(cls).index(value) + 1
 
 
+class TransferRecommendationEnum(str, Enum):
+    Record = 'Record'
+    Refuse = 'Refuse'
+
+
 class TransferStatusSchema(BaseSchema):
     transfer_status_id: int
     status: str
@@ -58,14 +63,6 @@ class TransferCommentSchema(BaseSchema):
         from_attributes = True
 
 
-class TransferRecommendationStatusSchema(BaseSchema):
-    transfer_recommendation_status_id: int
-    status: str
-
-    class Config:
-        from_attributes = True
-
-
 class TransferSchema(BaseSchema):
     transfer_id: int
     from_organization: TransferOrganizationSchema
@@ -77,7 +74,7 @@ class TransferSchema(BaseSchema):
     comments: Optional[TransferCommentSchema] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
-    recommendation_status: Optional[TransferRecommendationStatusSchema] = None
+    recommendation: TransferRecommendationEnum = None
 
     class Config:
         extra = 'ignore'
@@ -100,7 +97,7 @@ class TransferCreate(BaseSchema):
 class TransferUpdate(BaseSchema):
     current_status_id: int
     comments: Optional[str] = None
-    recommendation_status_id: Optional[int] = None
+    recommendation: Optional[str] = None
 
 
 class TransferHistory(BaseSchema):

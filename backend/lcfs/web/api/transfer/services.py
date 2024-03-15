@@ -168,6 +168,9 @@ class TransferServices:
         if transfer_data.current_status_id != transfer.current_status_id:
             await self.handle_status_change(transfer, transfer_data)
 
+        if transfer_data.recommendation != transfer.recommendation:
+            transfer.recommendation = transfer_data.recommendation
+
         updated_transfer = await self.repo.update_transfer(transfer)
         validated_model = TransferSchema.model_validate(updated_transfer)
         return validated_model
