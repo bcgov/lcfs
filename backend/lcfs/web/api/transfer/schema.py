@@ -21,6 +21,10 @@ class TransferStatusEnum(str, Enum):
     Refused = "Refused"
     Declined = "Declined"
     Rescinded = "Rescinded"
+    
+    @classmethod
+    def get_index(cls, value):
+        return list(cls).index(value) + 1
 
 
 class TransferStatusSchema(BaseSchema):

@@ -1,35 +1,31 @@
-// hooks and configs
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
-import { decimalFormatter } from '@/utils/formatters'
-import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
-import { FormProvider, useForm } from 'react-hook-form'
-import SigningAuthority from '../components/SigningAuthority'
-import {
-  rescindButton,
-  declineButton,
-  saveDraftButton,
-  submitButton,
-  plainContainedButton,
-  plainRedBaseButton,
-  plainOutlinedButton
-} from '../buttonConfigs'
-// constants
-import { roles } from '@/constants/roles'
-import { TRANSACTIONS } from '@/constants/routes/routes'
-// mui icons & components
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import InternalComments from '@/components/InternalComments'
 import { Role } from '@/components/Role'
-import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
+import { roles } from '@/constants/roles'
+import { TRANSACTIONS } from '@/constants/routes/routes'
+import { statuses } from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
+import { decimalFormatter } from '@/utils/formatters'
+import {
+  AddPlainComment,
+  AttachmentList,
+  CommentList,
+  OrganizationBadge
+} from '@/views/Transfers/components'
+import {
+  faArrowLeft,
+  faCircle,
+  faFloppyDisk,
+  faPencil,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
+import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import {
   List,
   ListItem,
@@ -41,15 +37,17 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material'
-// sub components
+import { useMemo, useState } from 'react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
-  AddPlainComment,
-  AttachmentList,
-  CommentList,
-  OrganizationBadge
-} from '@/views/Transfers/components'
+  outlinedButton,
+  containedButton,
+  redOutlinedButton
+} from '../buttonConfigs'
+import SigningAuthority from '../components/SigningAuthority'
 import { demoData } from '../components/demo'
-import { statuses } from '@/constants/statuses'
 
 export const ViewTransfer = () => {
   const theme = useTheme()
@@ -155,7 +153,7 @@ export const ViewTransfer = () => {
       hasAnyRole(roles.transfers, roles.signing_authority)
         ? [
             {
-              ...declineButton(t('transfer:declineTransferBtn')),
+              ...redOutlinedButton(t('transfer:declineTransferBtn'), faTrash),
               handler: (formData) =>
                 setModalData({
                   primaryButtonAction: () =>
@@ -181,7 +179,7 @@ export const ViewTransfer = () => {
       hasRoles(roles.transfers, roles.signing_authority)
         ? [
             {
-              ...rescindButton(t('transfer:rescindTransferBtn')),
+              ...redOutlinedButton(t('transfer:rescindTransferBtn'), faTrash),
               handler: (formData) =>
                 setModalData({
                   primaryButtonAction: () =>
@@ -203,7 +201,7 @@ export const ViewTransfer = () => {
         : []),
 
       {
-        ...submitButton(t('transfer:signAndSubmitBtn')),
+        ...containedButton(t('transfer:signAndSubmitBtn'), faPencil),
         disabled:
           !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
@@ -230,7 +228,7 @@ export const ViewTransfer = () => {
     Declined: [],
     Submitted: [
       {
-        ...saveDraftButton(t('saveBtn')),
+        ...outlinedButton(t('saveBtn'), faFloppyDisk),
         handler: (formData) =>
           updateTransfer({
             comments: comment,
@@ -244,8 +242,32 @@ export const ViewTransfer = () => {
       }
     ],
     Recommended: [
-      hasAnyRole(roles.analyst, roles.transfers) && {
-        ...saveDraftButton(t('saveBtn')),
+      {
+        ...redOutlinedButton(t('transfer:refuseTransferBtn'))
+      },
+      {
+        ...outlinedButton(t('transfer:returnToAnalystBtn')),
+        handler: () =>
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                newStatus: 4,
+                message: {
+                  success: t('transfer:returnSuccessText'),
+                  error: t('transfer:returnErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:returnToAnalystBtn'),
+            primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:returnConfirmText'),
+            warningText: t('transfer:returnWarningText')
+          }),
+        disabled: !hasRoles(roles.director)
+      },
+      {
+        ...containedButton(t('transfer:recordTransferBtn')),
         handler: (formData) =>
           updateTransfer({
             comments: comment,
@@ -258,7 +280,7 @@ export const ViewTransfer = () => {
         disabled: !isGovernmentUser
       },
       hasRoles(roles.director) && {
-        ...plainContainedButton(t('transfer:recordTransferBtn')),
+        ...containedButton(t('transfer:recordTransferBtn')),
         disabled: false,
         handler: (formData) => {
           setModalData({
@@ -298,15 +320,17 @@ export const ViewTransfer = () => {
           <Typography variant="h5" color="primary">
             {t('transfer:transferID')} {transferId}
           </Typography>
-          {transferStatus !== 'Recorded' && <Role roles={[roles.supplier]}>
-            <Typography variant="body4">
-              {t('transfer:effectiveText')}
-            </Typography>
-            <br />
-            <Typography variant="body4">
-              {t('transfer:considerationText')}
-            </Typography>
-          </Role>}
+          {transferStatus !== 'Recorded' && (
+            <Role roles={[roles.supplier]}>
+              <Typography variant="body4">
+                {t('transfer:effectiveText')}
+              </Typography>
+              <br />
+              <Typography variant="body4">
+                {t('transfer:considerationText')}
+              </Typography>
+            </Role>
+          )}
           <BCBox
             p={2}
             sx={{ width: '50%', alignContent: 'center', margin: 'auto' }}

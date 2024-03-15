@@ -12,7 +12,8 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     transfer_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the org to org transfer record")
     from_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     to_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
-    transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
+    from_transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
+    to_transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
     agreement_date = Column(DateTime, comment="Agreement date of the transfer")
     transaction_effective_date = Column(DateTime, comment="transaction effective date")
     price_per_unit = Column(Integer, comment="Price per unit")
@@ -23,13 +24,21 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     signing_authority_declaration = Column(Boolean, default=False)
     current_status_id = Column(Integer, ForeignKey('transfer_status.transfer_status_id'))
 
-    transaction = relationship('Transaction')
+    # relationships
     transfer_category = relationship('TransferCategory')
     comments = relationship('Comment', back_populates='transfer')
     transfer_history_records = relationship('TransferHistory', back_populates='transfer')
     current_status = relationship('TransferStatus')
     transfer_internal_comments = relationship('TransferInternalComment', back_populates='transfer')
 
+    from_transaction = relationship(
+        'Transaction', 
+        foreign_keys=[from_transaction_id]
+    )
+    to_transaction = relationship(
+        'Transaction', 
+        foreign_keys=[to_transaction_id]
+    )
     from_organization = relationship(
         'Organization', 
         foreign_keys=[from_organization_id],

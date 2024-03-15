@@ -33,6 +33,17 @@ async def seed_test_transfers(session):
             "price_per_unit": 5.0,
             "signing_authority_declaration": True
         },
+        {
+            "from_organization_id": 2,
+            "to_organization_id": 1,
+            "current_status_id":3,
+            "transfer_category_id":1,
+            "from_transaction_id":2,
+            "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
+            "quantity": 50,
+            "price_per_unit": 5.0,
+            "signing_authority_declaration": True
+        },
     ]
 
     for transfer_data in transfers_to_seed:

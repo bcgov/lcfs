@@ -12,7 +12,12 @@ import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
 import { convertObjectKeys, dateFormatter } from '@/utils/formatters'
 
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowLeft,
+  faFloppyDisk,
+  faPencil,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { Box } from '@mui/material'
@@ -24,9 +29,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { roles } from '@/constants/roles'
 import {
-  deleteDraftButton,
-  saveDraftButton,
-  submitButton
+  containedButton,
+  outlinedButton,
+  redOutlinedButton
 } from '../buttonConfigs'
 import SigningAuthority from '../components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
@@ -35,6 +40,7 @@ import Comments from './components/Comments'
 import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
 import TransferSummary from './components/TransferSummary'
+import { ROUTES } from '@/constants/routes'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -81,7 +87,7 @@ export const AddEditTransfer = () => {
   const { watch } = methods
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
   const currentStatus = transferData?.currentStatus.status
-  
+
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -160,19 +166,21 @@ export const AddEditTransfer = () => {
     }
   })
 
-
   // configuration for the button cluster at the bottom. each key corresponds to the status of the transfer and displays the appropriate buttons with the approriate configuration
   const buttonClusterConfig = {
     New: [
-      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: createDraft },
       {
-        ...submitButton(t('transfer:signAndSendBtn')),
+        ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
+        handler: createDraft
+      },
+      {
+        ...containedButton(t('transfer:signAndSendBtn'), faPencil),
         disabled: !hasAnyRole(roles.transfers, roles.signing_authority)
       }
     ],
     Draft: [
       {
-        ...deleteDraftButton(t('transfer:deleteDraftBtn')),
+        ...redOutlinedButton(t('transfer:deleteDraftBtn'), faTrash),
         handler: (formData) =>
           setModalData({
             primaryButtonAction: () =>
@@ -191,9 +199,12 @@ export const AddEditTransfer = () => {
             content: t('transfer:deleteConfirmText')
           })
       },
-      { ...saveDraftButton(t('transfer:saveDraftBtn')), handler: updateDraft },
       {
-        ...submitButton(t('transfer:signAndSendBtn')),
+        ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
+        handler: updateDraft
+      },
+      {
+        ...containedButton(t('transfer:signAndSendBtn'), faPencil),
         disabled:
           !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
         handler: (formData) => {
@@ -242,7 +253,9 @@ export const AddEditTransfer = () => {
       />
       <BCBox mx={2}>
         <BCTypography variant="h5" color="primary">
-          {transferId ? t('transfer:editTransfer') : t('transfer:newTransfer')}
+          {transferId
+            ? t('transfer:editTransferID') + transferId
+            : t('transfer:newTransfer')}
         </BCTypography>
 
         <BCTypography variant="body4">
@@ -284,7 +297,7 @@ export const AddEditTransfer = () => {
                 <BCButton
                   variant="outlined"
                   color="dark"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
                   startIcon={
                     <FontAwesomeIcon
                       icon={faArrowLeft}

@@ -13,7 +13,6 @@ from lcfs.web.api.repo import BaseRepository
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus
 from lcfs.db.models.TransferCategory import TransferCategory
-from lcfs.db.models.Comment import Comment
 from lcfs.db.models.TransferHistory import TransferHistory
 
 logger = getLogger("transfer_repo")
@@ -57,6 +56,9 @@ class TransferRepository(BaseRepository):
         """
         query = select(Transfer).options(
             selectinload(Transfer.from_organization),
+            selectinload(Transfer.to_organization),
+            selectinload(Transfer.from_transaction),
+            selectinload(Transfer.to_transaction),
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),

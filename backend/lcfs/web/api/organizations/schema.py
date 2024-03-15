@@ -172,7 +172,10 @@ class OrganizationResponseSchema(BaseSchema):
 class OrganizationSummaryResponseSchema(BaseSchema):
     organization_id: int
     name: Optional[str] = None
-    balance: Optional[float] = None
+    operating_name: Optional[str] = None
+    total_balance: Optional[int] = None
+    reserved_balance: Optional[int] = None
+    org_status: Optional[OrganizationStatusSchema] = None
 
     class Config(BaseConfig):
         pass
