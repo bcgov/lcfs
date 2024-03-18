@@ -172,8 +172,9 @@ async def get_externally_registered_organizations(
     """
     return await service.get_externally_registered_organizations(org_id=request.user.organization_id)
 
+
 @router.get("/balances/{organization_id}", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
+@roles_required("Government", 'Supplier')
 @view_handler
 async def get_balances(
     request: Request,
