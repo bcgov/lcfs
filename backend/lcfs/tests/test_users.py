@@ -137,7 +137,7 @@ async def test_get_user_by_id(
     # Check the status code
     assert response.status_code == status.HTTP_200_OK
     # check the user_profile_id
-    assert response.json()["user_profile_id"] == 1
+    assert response.json()["userProfileId"] == 1
 
 
 @pytest.mark.anyio
