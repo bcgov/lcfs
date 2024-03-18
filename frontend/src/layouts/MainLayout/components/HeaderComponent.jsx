@@ -9,14 +9,22 @@ import { useTranslation } from 'react-i18next'
 export const HeaderComponent = () => {
   const { t } = useTranslation()
   const { data, isFetched } = useCurrentUser()
-  const [showBalance, setShowBalance] = useState(false)
+  const [showBalance, setShowBalance] = useState(
+    !!+sessionStorage.getItem('showBalance') || false
+  )
 
   const { data: orgBalance } = useOrganizationBalance(
     data.organization.organizationId
   )
 
   const toggleBalanceVisibility = () => {
-    setShowBalance(!showBalance) // Toggles the visibility of the balance
+    if (showBalance) {
+      sessionStorage.setItem('showBalance', '0')
+      setShowBalance(false)
+    } else {
+      sessionStorage.setItem('showBalance', '1')
+      setShowBalance(true)
+    }
   }
 
   return (
