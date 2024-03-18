@@ -51,7 +51,8 @@ export const useOrganizationUser = (orgID, userID, options) => {
 
   return useQuery({
     queryKey: ['organization-user'],
-    queryFn: async () => (await client.get(`/organization/${orgID}/users/${userID}`)).data,
+    queryFn: async () =>
+      (await client.get(`/organization/${orgID}/users/${userID}`)).data,
     ...options
   })
 }
@@ -61,7 +62,18 @@ export const useOrganizationBalance = (orgID, options) => {
 
   return useQuery({
     queryKey: ['organization-balance'],
-    queryFn: async () => (await client.get(`/organizations/balances/${orgID}`)).data,
+    queryFn: async () =>
+      (await client.get(`/organizations/balances/${orgID}`)).data,
+    ...options
+  })
+}
+export const useCurrentOrgBalance = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['current-org-balance'],
+    queryFn: async () =>
+      (await client.get(`/organizations/current/balances`)).data,
     ...options
   })
 }

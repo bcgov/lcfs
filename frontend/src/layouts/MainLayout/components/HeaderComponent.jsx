@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganizationBalance } from '@/hooks/useOrganization'
+import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import Icon from '@mui/material/Icon'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -13,9 +13,7 @@ export const HeaderComponent = () => {
     !!+sessionStorage.getItem('showBalance') || false
   )
 
-  const { data: orgBalance } = useOrganizationBalance(
-    data.organization.organizationId
-  )
+  const { data: orgBalance } = useCurrentOrgBalance()
 
   const toggleBalanceVisibility = () => {
     if (showBalance) {

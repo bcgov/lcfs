@@ -174,7 +174,7 @@ async def get_externally_registered_organizations(
 
 
 @router.get("/balances/{organization_id}", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government", 'Supplier')
+@roles_required("Government")
 @view_handler
 async def get_balances(
     request: Request,
@@ -190,6 +190,29 @@ async def get_balances(
 
     return OrganizationBalanceResponseSchema(
         organization_id=organization_id,
+        name=organization.name,
+        registered=True if organization.org_status.status == OrgStatusEnum.Registered else False,
+        total_balance=total_balance,
+        reserved_balance=reserved_balance,
+    )
+
+
+@router.get("/current/balances", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
+@view_handler
+async def get_balances(
+    request: Request,
+    service: OrganizationsService = Depends()
+):
+    """
+    Retrieve the total and reserved balances for a specific organization identified by its ID.
+    """
+    org_id = request.user.organization_id
+    total_balance = await service.calculate_total_balance(org_id)
+    reserved_balance = await service.calculate_reserved_balance(org_id)
+    organization = await service.get_organization(org_id)
+
+    return OrganizationBalanceResponseSchema(
+        organization_id=org_id,
         name=organization.name,
         registered=True if organization.org_status.status == OrgStatusEnum.Registered else False,
         total_balance=total_balance,
