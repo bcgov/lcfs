@@ -37,15 +37,17 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  outlinedButton,
   containedButton,
+  outlinedButton,
   redOutlinedButton
 } from '../buttonConfigs'
+import { Recommendation } from '../components/Recommendation'
 import SigningAuthority from '../components/SigningAuthority'
 import { demoData } from '../components/demo'
 
@@ -63,6 +65,8 @@ export const ViewTransfer = () => {
   const { transferId } = useParams()
   const { hasRoles, hasAnyRole } = useCurrentUser()
   const [comment, setComment] = useState('')
+  const [recommendation, setRecommendation] = useState(null)
+  const queryClient = useQueryClient()
   const handleCommentChange = (e) => {
     setComment(e.target.value)
   }
@@ -84,6 +88,7 @@ export const ViewTransfer = () => {
     isError: isUpdateTransferError
   } = useUpdateTransfer(transferId, {
     onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['transfer'] })
       navigate(TRANSACTIONS, {
         state: {
           message: variables.message.success,
@@ -104,6 +109,13 @@ export const ViewTransfer = () => {
     }
   })
   const { watch } = methods
+
+  useEffect(() => {
+    if (isFetched && transferData) {
+      setRecommendation(transferData.recommendationStatus)
+    }
+  }, [transferData, isFetched])
+
   const signingAuthorityDeclaration = watch('signingAuthorityDeclaration')
   const currentStatus = transferData?.currentStatus.status
 
@@ -239,6 +251,27 @@ export const ViewTransfer = () => {
             }
           }),
         disabled: !isGovernmentUser
+      },
+      {
+        ...containedButton(t('transfer:recommendBtn')),
+        handler: () =>
+          setModalData({
+            primaryButtonAction: () =>
+              updateTransfer({
+                newStatus: 5,
+                recommendation,
+                message: {
+                  success: t('transfer:recommendSuccessText'),
+                  error: t('transfer:recommendErrorText')
+                }
+              }),
+            primaryButtonText: t('transfer:recommendBtn'),
+            // primaryButtonColor: 'error',
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: t('transfer:recommendConfirmText')
+          }),
+        disabled: !hasRoles(roles.analyst) || !recommendation
       }
     ],
     Recommended: [
@@ -472,6 +505,14 @@ export const ViewTransfer = () => {
           <Role roles={[roles.government]}>
             <InternalComments entityType="transfer" entityId={transferId} />
           </Role>
+          {[statuses.submitted, statuses.recommended].includes(currentStatus) &&
+            hasAnyRole(roles.analyst, roles.director) && (
+              <Recommendation
+                value={recommendation}
+                onChange={setRecommendation}
+                currentStatus={currentStatus}
+              />
+            )}
           {/* Buttons */}
           <BCBox p={2} display="flex" justifyContent="flex-end">
             <Stack spacing={4} direction="row" justifyContent="center">

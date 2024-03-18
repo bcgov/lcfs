@@ -138,3 +138,37 @@ async def test_get_user_by_id(
     assert response.status_code == status.HTTP_200_OK
     # check the user_profile_id
     assert response.json()["user_profile_id"] == 1
+
+
+@pytest.mark.anyio
+async def test_create_user_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    # Setup mock roles for authorization
+    set_mock_user_roles(fastapi_app, ["Administrator"])
+
+    # Define the URL for the create user endpoint
+    url = fastapi_app.url_path_for("create_user")
+
+    # Define the payload for creating a new user
+    user_data = {
+        "title": "Mr.",
+        "keycloak_username": "testuser",
+        "keycloak_email": "testuser@example.com",
+        "email": "testuser@example.com",  # Optional, but provided for clarity
+        "phone": "1234567890",
+        "mobile_phone": "0987654321",
+        "first_name": "Test",
+        "last_name": "User",
+        "is_active": True,
+        "organization_id": None,
+        "roles": ["SUPPLIER"]
+    }
+
+    # Make the POST request to create a new user
+    response = await client.post(url, json=user_data)
+
+    # Check that the user creation was successful
+    assert response.status_code == status.HTTP_201_CREATED
+    created_user = response.json()
+    assert created_user["email"] == user_data["email"]
