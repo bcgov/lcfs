@@ -34,10 +34,16 @@ class TransactionRepository(BaseRepository):
         Returns:
             A tuple of (list of TransactionView instances, total count).
         """
-        # Start with a condition to exclude "Draft" transactions, but include them if they match the specific criteria
-        base_condition = TransactionView.status != "Draft"
-
         if organization_id:
+            # Start with a condition to exclude "Draft" transactions, but include them if they match the specific criteria
+            base_condition = and_(
+                TransactionView.status != "Draft",
+                or_(
+                    TransactionView.from_organization_id == organization_id,
+                    TransactionView.to_organization_id == organization_id
+                )
+            )
+
             # Include "Draft" transactions if organization_id matches from_organization_id
             draft_condition = and_(
                 TransactionView.from_organization_id == organization_id,
@@ -48,8 +54,8 @@ class TransactionRepository(BaseRepository):
             combined_condition = or_(base_condition, draft_condition)
             conditions.append(combined_condition)
         else:
-            # If no organization_id is provided, just use the base condition to exclude "Draft" transactions
-            conditions.append(base_condition)
+            # If no organization_id is provided, condition to exclude "Draft" transactions for gov users
+            conditions.append(TransactionView.status != "Draft")
 
         query = select(TransactionView).where(and_(*conditions))
 

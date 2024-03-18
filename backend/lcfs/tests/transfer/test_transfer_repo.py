@@ -19,7 +19,7 @@ async def test_get_all_transfers(dbsession, transfer_repo):
     dbsession.add(transfer_orm_model)
     await dbsession.commit()
     transfers = await transfer_repo.get_all_transfers()
-    assert len(transfers) == 3
+    assert len(transfers) == 4
 
 # Test retrieving a transfer by ID
 

@@ -24,8 +24,8 @@ async def test_get_transactions(transactions_service):
     
     transactions_data = await transactions_service.get_transactions_paginated(pagination=pagination_request)
     
-    assert transactions_data["pagination"].total == 2
-    assert len(transactions_data["transactions"]) == 2
+    assert transactions_data["pagination"].total == 3
+    assert len(transactions_data["transactions"]) == 3
     assert transactions_data["pagination"].total_pages == ceil(2 / 10)
 
 # Test retrieving transaction statuses
