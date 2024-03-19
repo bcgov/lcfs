@@ -4,7 +4,7 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { decimalFormatter, calculateTotalValue, dateFormatter } from '@/utils/formatters'
 
-const TransferSummary = ({ transferData, formData }) => {
+export const TransferSummary = ({ transferData, formData }) => {
   const { t } = useTranslation()
 
   return (
@@ -75,5 +75,3 @@ TransferSummary.defaultProps = {
     agreementDate: new Date(),
   },
 };
-
-export default TransferSummary

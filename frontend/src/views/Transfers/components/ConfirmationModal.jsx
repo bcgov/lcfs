@@ -4,7 +4,7 @@ import colors from '@/themes/base/colors'
 import { Box, Modal } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 
-const ConfirmationModal = ({ data, onClose }) => {
+export const ConfirmationModal = ({ data, onClose }) => {
   const { t } = useTranslation(['common'])
   if (!data) return null
   return (
@@ -48,5 +48,3 @@ const ConfirmationModal = ({ data, onClose }) => {
     </Modal>
   )
 }
-
-export default ConfirmationModal
