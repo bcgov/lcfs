@@ -2,6 +2,7 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
+import InternalComments from '@/components/InternalComments'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { TRANSACTIONS } from '@/constants/routes/routes'
@@ -500,6 +501,10 @@ export const ViewTransfer = () => {
               <SigningAuthority />
             </FormProvider>
           )}
+          {/* Internal Comments */}
+          <Role roles={[roles.government]}>
+            <InternalComments entityType="transfer" entityId={transferId} />
+          </Role>
           {[statuses.submitted, statuses.recommended].includes(currentStatus) &&
             hasAnyRole(roles.analyst, roles.director) && (
               <Recommendation

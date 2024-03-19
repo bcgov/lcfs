@@ -22,6 +22,7 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     comments = relationship('Comment', back_populates='initiative_agreement')
     initiative_agreement_history_records = relationship('InitiativeAgreementHistory', back_populates='initiative_agreement')
     current_status = relationship('InitiativeAgreementStatus')
+    initiative_agreement_internal_comments = relationship('InitiativeAgreementInternalComment', back_populates='initiative_agreement')
 
     def __repr__(self):
         return self.compliance_units
