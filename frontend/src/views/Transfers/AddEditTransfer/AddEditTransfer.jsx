@@ -41,6 +41,7 @@ import TransferDetails from './components/TransferDetails'
 import TransferGraphic from './components/TransferGraphic'
 import TransferSummary from './components/TransferSummary'
 import { ROUTES } from '@/constants/routes'
+import { useRegExtOrgs } from '@/hooks/useOrganization'
 
 export const AddEditTransfer = () => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -48,6 +49,7 @@ export const AddEditTransfer = () => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { transferId } = useParams()
+  const { data: orgData } = useRegExtOrgs()
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: transferData, isFetched } = useTransfer(transferId, {
     enabled: !!transferId,
@@ -122,13 +124,13 @@ export const AddEditTransfer = () => {
 
   // mutation to create a draft transfer
   const {
-    mutate: createDraft,
+    mutate: createTransfer,
     isLoading: isCreatingDraft,
     isError: isCreateDraftError
   } = useMutation({
     mutationFn: async (formData) => {
       const data = draftPayload(formData)
-      return await apiService.post('/transfers/', data)
+      return await apiService.post('/transfers', data)
     },
     onSuccess: () => {
       navigate(TRANSACTIONS, {
@@ -171,11 +173,37 @@ export const AddEditTransfer = () => {
     New: [
       {
         ...outlinedButton(t('transfer:saveDraftBtn'), faFloppyDisk),
-        handler: createDraft
+        handler: createTransfer
       },
       {
         ...containedButton(t('transfer:signAndSendBtn'), faPencil),
-        disabled: !hasAnyRole(roles.transfers, roles.signing_authority)
+        disabled: !hasAnyRole(roles.transfers, roles.signing_authority),
+        handler: (formData) => {
+          setModalData({
+            primaryButtonAction: () =>
+              createTransfer({
+                ...formData,
+                skipDraft: true
+              }),
+            primaryButtonText: t('transfer:signAndSendBtn'),
+            secondaryButtonText: t('cancelBtn'),
+            title: t('confirmation'),
+            content: (
+              <TransferSummary
+                transferData={{
+                  ...transferData,
+                  fromOrganization: currentUser.organization,
+                  toOrganization: orgData.find(
+                    (org) =>
+                      org.organizationId ===
+                      methods.getValues('toOrganizationId')
+                  )
+                }}
+                formData={formData}
+              />
+            )
+          })
+        }
       }
     ],
     Draft: [

@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.repo import BaseRepository
+from lcfs.web.api.transfer.schema import TransferSchema
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus
@@ -72,10 +73,12 @@ class TransferRepository(BaseRepository):
     @repo_handler
     async def create_transfer(self, transfer: Transfer) -> Transfer:
         '''Save a transfer and its associated comment in the database.'''
+
         self.db.add(transfer)
-        await self.commit_to_db() # This saves both the transfer and the comment
-        # No need to explicitly add and save the comment if it's properly associated with the transfer
-        return transfer
+
+        await self.commit_to_db()
+        await self.db.refresh(transfer, ['from_organization', 'to_organization', 'current_status', 'transfer_category'])
+        return TransferSchema.model_validate(transfer)
 
     @repo_handler
     async def get_transfer_status(self, transfer_status_id: int) -> TransferStatus:
