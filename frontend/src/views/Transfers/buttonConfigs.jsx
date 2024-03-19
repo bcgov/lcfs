@@ -216,7 +216,7 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             updateTransfer({
-              newStatus: 4,
+              newStatus: 7,
               message: {
                 success: t('transfer:refuseSuccessText'),
                 error: t('transfer:refuseErrorText')
@@ -257,7 +257,7 @@ export const buttonClusterConfigFn = ({
           primaryButtonAction: () =>
             updateTransfer({
               comments: comment,
-              newStatus: 6,
+              newStatus: 5,
               message: {
                 success: t('transfer:recommendSuccessText'),
                 error: t('transfer:recommendErrorText')
@@ -301,7 +301,7 @@ export const buttonClusterConfigFn = ({
         : [])
     ],
     Recommended: [
-      ...(isGovernmentUser
+      ...(isGovernmentUser && hasRoles(roles.director)
         ? [
             transferButtons.refuseTransfer,
             transferButtons.saveComment,
