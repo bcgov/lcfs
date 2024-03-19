@@ -15,12 +15,10 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTransfer, useUpdateTransfer } from '@/hooks/useTransfer'
 import { useApiService } from '@/services/useApiService'
 // icons and related components
-import { faArrowLeft, faCircle } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // mui components
 import {
-  List,
-  ListItem,
   Stack,
   Step,
   StepLabel,
@@ -38,22 +36,17 @@ import { Role } from '@/components/Role'
 // sub components
 import {
   convertObjectKeys,
-  decimalFormatter,
   dateFormatter
 } from '@/utils/formatters'
 import {
-  AddPlainComment,
   AgreementDate,
-  AttachmentList,
-  CommentList,
   Comments,
   TransferDetails,
-  TransferDetailsCard,
+  TransferView,
   TransferGraphic
 } from '@/views/Transfers/components'
 import { buttonClusterConfigFn, stepsConfigFn } from './buttonConfigs'
 import SigningAuthority from './components/SigningAuthority'
-import { demoData } from './components/demo'
 import { AddEditTransferSchema } from './_schema'
 
 export const AddEditViewTransfer = () => {
@@ -345,71 +338,20 @@ export const AddEditViewTransfer = () => {
                 <Comments />
               </>
             ) : (
-              <>
-                <TransferDetailsCard
-                  fromOrgId={fromOrgId}
-                  fromOrganization={fromOrganization}
-                  toOrgId={toOrgId}
-                  toOrganization={toOrganization}
-                  quantity={quantity}
-                  pricePerUnit={pricePerUnit}
-                  transferStatus={transferStatus}
-                  isGovernmentUser={isGovernmentUser}
-                />
-                {/* Transfer Details View only */}
-                <BCBox
-                  variant="outlined"
-                  p={2}
-                  mt={2}
-                  sx={{
-                    backgroundColor: 'transparent.main'
-                  }}
-                >
-                  <Typography variant="body4">
-                    <b>{fromOrganization}</b>
-                    {t('transfer:transfers')}
-                    <b>{quantity}</b>
-                    {t('transfer:complianceUnitsTo')} <b>{toOrganization}</b>
-                    {t('transfer:for')}
-                    <b>${decimalFormatter({ value: pricePerUnit })}</b>
-                    {t('transfer:complianceUnitsPerTvo')}
-                    <b>${decimalFormatter(totalValue)}</b> CAD.
-                  </Typography>
-                </BCBox>
-                -- demo data --
-                {/* Comments */}
-                <CommentList comments={demoData.comments} />
-                <AddPlainComment
-                  toOrgId={toOrgId}
-                  isGovernmentUser={isGovernmentUser}
-                  handleCommentChange={handleCommentChange}
-                  comment={comment}
-                  transferStatus={transferStatus}
-                />
-                -- demo data --
-                {/* List of attachments */}
-                <AttachmentList attachments={demoData.attachments} />
-                {/* Transaction History notes */}
-                -- demo data --
-                <BCBox mt={2}>
-                  <Typography variant="h6" color="primary">
-                    {t('transfer:txnHistory')}
-                  </Typography>
-                  <List>
-                    {demoData.transactionHistory.map((transaction) => (
-                      <ListItem key={transaction.transactionID} disablePadding>
-                        <BCBox mr={1} mb={1}>
-                          <FontAwesomeIcon icon={faCircle} fontSize={6} />
-                        </BCBox>
-                        <Typography variant="body4">
-                          {transaction.notes}
-                        </Typography>
-                      </ListItem>
-                    ))}
-                  </List>
-                </BCBox>
-                -- demo data --
-              </>
+              <TransferView
+                fromOrgId={fromOrgId}
+                fromOrganization={fromOrganization}
+                toOrgId={toOrgId}
+                toOrganization={toOrganization}
+                quantity={quantity}
+                pricePerUnit={pricePerUnit}
+                transferStatus={transferStatus}
+                isGovernmentUser={isGovernmentUser}
+                t={t}
+                totalValue={totalValue}
+                handleCommentChange={handleCommentChange}
+                comment={comment}
+              />
             )}
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
             {(!currentStatus ||
@@ -469,6 +411,3 @@ export const AddEditViewTransfer = () => {
     </>
   )
 }
-
-// Defining PropTypes for the component
-AddEditViewTransfer.propTypes = {}

@@ -4,9 +4,9 @@ export { CommentList } from './CommentList';
 export { AddPlainComment } from './AddPlainComment';
 export { AgreementDate } from './AgreementDate';
 export { Comments } from './Comments';
-export { ConfirmationModal } from './ConfirmationModal';
 export { LabelBox } from './LabelBox';
 export { TransferDetails } from './TransferDetails';
 export { TransferDetailsCard } from './TransferDetailsCard';
 export { TransferGraphic } from './TransferGraphic';
 export { TransferSummary } from './TransferSummary';
+export { TransferView } from './TransferView'

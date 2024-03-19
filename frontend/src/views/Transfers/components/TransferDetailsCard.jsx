@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import { Stack, Typography, useMediaQuery, useTheme } from '@mui/material'
@@ -75,3 +76,14 @@ export const TransferDetailsCard = ({
     </BCBox>
   )
 }
+
+TransferDetailsCard.propTypes = {
+  fromOrgId: PropTypes.number,
+  fromOrganization: PropTypes.string,
+  toOrgId: PropTypes.number,
+  toOrganization: PropTypes.string,
+  quantity: PropTypes.number,
+  pricePerUnit: PropTypes.number,
+  transferStatus: PropTypes.string,
+  isGovernmentUser: PropTypes.bool,
+};
