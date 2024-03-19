@@ -21,7 +21,7 @@ class TransferStatusEnum(str, Enum):
     Refused = "Refused"
     Declined = "Declined"
     Rescinded = "Rescinded"
-    
+
     @classmethod
     def get_index(cls, value):
         return list(cls).index(value) + 1
@@ -89,6 +89,7 @@ class TransferCreate(BaseSchema):
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[str] = None
+    skip_draft: Optional[bool] = False
 
     class Config:
         from_attributes = True

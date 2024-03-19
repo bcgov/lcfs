@@ -90,7 +90,10 @@ class TransferServices:
         new_comment = Comment(
             comment=transfer_data.comments) if transfer_data.comments else None
 
-        status = await self.repo.get_transfer_status(transfer_status_id=1)
+        transfer_status_id = 1
+        if transfer_data.skip_draft:
+            transfer_status_id = 3
+        status = await self.repo.get_transfer_status(transfer_status_id)
         category = await self.repo.get_transfer_category(transfer_category_id=1)
 
         transfer_model = Transfer(
@@ -106,11 +109,7 @@ class TransferServices:
             transfer_category=category
         )
 
-        # Persist the transfer model and its comment in the database
-        created_transfer = await self.repo.create_transfer(transfer_model)
-
-        # Convert the ORM model to a Pydantic model for the response
-        return TransferSchema.model_validate(created_transfer)
+        return await self.repo.create_transfer(transfer_model)
 
     @service_handler
     async def update_transfer_draft(self, transfer_id: int, transfer_data: TransferCreate) -> TransferSchema:
