@@ -283,7 +283,7 @@ export const buttonClusterConfigFn = ({
     Sent: [
       ...(currentUserOrgId === toOrgId &&
       hasAnyRole(roles.transfers, roles.signing_authority)
-        ? [transferButtons.declineTransfer, transferButtons.signAndSend]
+        ? [transferButtons.declineTransfer, transferButtons.signAndSubmit]
         : []),
       ...(currentUserOrgId === fromOrgId && hasRoles(roles.signing_authority)
         ? [transferButtons.rescindTransfer]
@@ -292,17 +292,22 @@ export const buttonClusterConfigFn = ({
     Rescinded: [],
     Declined: [],
     Submitted: [
-      transferButtons.saveComment,
-      transferButtons.recommendTransfer,
+      ...(isGovernmentUser
+        ? [transferButtons.saveComment, transferButtons.recommendTransfer]
+        : []),
       // Until the transfer is recorded, Org user has ability to rescind transfer
       ...(currentUserOrgId === fromOrgId && hasRoles(roles.signing_authority)
         ? [transferButtons.rescindTransfer]
         : [])
     ],
     Recommended: [
-      transferButtons.refuseTransfer,
-      transferButtons.saveComment,
-      transferButtons.recordTransfer,
+      ...(isGovernmentUser
+        ? [
+            transferButtons.refuseTransfer,
+            transferButtons.saveComment,
+            transferButtons.recordTransfer
+          ]
+        : []),
       // Until the transfer is recorded, Org user has ability to rescind transfer
       ...(currentUserOrgId === fromOrgId && hasRoles(roles.signing_authority)
         ? [transferButtons.rescindTransfer]
