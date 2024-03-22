@@ -28,3 +28,6 @@ cypress.env.json
 cypress/screenshots/
 cypress/videos/
 cypress/reports/
+
+# Vistest coverage folder
+/coverage
