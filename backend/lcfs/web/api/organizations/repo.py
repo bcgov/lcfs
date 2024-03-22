@@ -12,7 +12,7 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
-from lcfs.db.models.OrganizationStatus import OrganizationStatus
+from lcfs.db.models.OrganizationStatus import OrgStatusEnum, OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
 from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
@@ -197,7 +197,7 @@ class OrganizationsRepository(BaseRepository):
             select(Organization.organization_id).where(
                 and_(
                     Organization.organization_id == organization_id,
-                    Organization.organization_status_id == 2,
+                    OrganizationStatus.status == OrgStatusEnum.Registered
                 )
             )
         )

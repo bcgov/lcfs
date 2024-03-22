@@ -9,7 +9,7 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import { TransferSummary } from './components'
-import { TRANSFER_STATUS } from '@/constants/statuses'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { dateFormatter } from '@/utils/formatters'
 
 const outlineBase = {
@@ -101,7 +101,7 @@ export const buttonClusterConfigFn = ({
             fromOrganizationId: parseInt(formData.fromOrganizationId),
             toOrganizationId: parseInt(formData.toOrganizationId),
             agreementDate: formData.agreementDate.toISOString().split('T')[0],
-            currentStatus: TRANSFER_STATUS.DRAFT
+            currentStatus: TRANSFER_STATUSES.DRAFT
           }
         })
       }
@@ -115,7 +115,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUS.DELETED
+                currentStatus: TRANSFER_STATUSES.DELETED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.deleteDraftBtn'),
@@ -141,7 +141,7 @@ export const buttonClusterConfigFn = ({
                 agreementDate: formData.agreementDate
                   .toISOString()
                   .split('T')[0],
-                currentStatus: TRANSFER_STATUS.SENT
+                currentStatus: TRANSFER_STATUSES.SENT
               }
             }),
           primaryButtonText: t('transfer:actionBtns.signAndSendBtn'),
@@ -171,7 +171,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUS.SUBMITTED
+                currentStatus: TRANSFER_STATUSES.SUBMITTED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.signAndSubmitBtn'),
@@ -194,7 +194,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUS.DECLINED
+                currentStatus: TRANSFER_STATUSES.DECLINED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.declineTransferBtn'),
@@ -217,7 +217,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUS.RESCINDED
+                currentStatus: TRANSFER_STATUSES.RESCINDED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.rescindTransferBtn'),
@@ -249,7 +249,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUS.REFUSED
+                currentStatus: TRANSFER_STATUSES.REFUSED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.refuseTransferBtn'),
@@ -269,7 +269,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUS.RECORDED
+                currentStatus: TRANSFER_STATUSES.RECORDED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.recordTransferBtn'),
@@ -288,7 +288,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUS.RECOMMENDED
+                currentStatus: TRANSFER_STATUSES.RECOMMENDED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.recommendBtn'),
@@ -307,7 +307,7 @@ export const buttonClusterConfigFn = ({
               data: {
                 ...formData,
                 agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUS.SUBMITTED
+                currentStatus: TRANSFER_STATUSES.SUBMITTED
               }
             }),
           primaryButtonText: t('transfer:actionBtns.returnToAnalystBtn'),

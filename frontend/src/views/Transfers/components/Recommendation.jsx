@@ -1,5 +1,5 @@
 import BCBox from '@/components/BCBox'
-import { TRANSFER_STATUS } from '@/constants/statuses'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useTransfer } from '@/hooks/useTransfer'
 import { FormControlLabel, Radio, RadioGroup, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +18,7 @@ export const Recommendation = ({ value, onChange, currentStatus }) => {
       <Typography variant="h6" color="primary" mb={2}>
         {t('transfer:analystRecommend')}
       </Typography>
-      {currentStatus === TRANSFER_STATUS.SUBMITTED ? (
+      {currentStatus === TRANSFER_STATUSES.SUBMITTED ? (
         <RadioGroup
           row
           style={{

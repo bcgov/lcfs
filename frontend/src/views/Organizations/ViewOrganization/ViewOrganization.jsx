@@ -23,7 +23,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { defaultSortModel, getUserColumnDefs } from './_schema'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ORGANIZATION_STATUS } from '@/constants/statuses'
+import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 
 export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -195,7 +195,7 @@ export const ViewOrganization = () => {
             </BCTypography>
             <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {orgData.orgStatus.status === ORGANIZATION_STATUS.REGISTERED
+              {orgData.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED
                 ? 'Yes — A registered organization is able to transfer compliance units.'
                 : 'No — An organization must be registered to transfer compliance units.'}
             </BCTypography>

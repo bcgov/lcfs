@@ -10,7 +10,7 @@ import {
 } from 'react-router-dom'
 // constants
 import { TRANSACTIONS } from '@/constants/routes/routes'
-import { TRANSFER_STATUS } from '@/constants/statuses'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 // hooks
@@ -138,7 +138,7 @@ export const AddEditViewTransfer = () => {
   } = useCreateUpdateTransfer(currentUserOrgId, transferId, {
     onSuccess: (response, variables) => {
       setModalData(null)
-      if (response.data.currentStatus.status === TRANSFER_STATUS.DRAFT) {
+      if (response.data.currentStatus.status === TRANSFER_STATUSES.DRAFT) {
         navigate(
           ROUTES.TRANSFERS_EDIT.replace(
             ':transferId',
@@ -275,7 +275,7 @@ export const AddEditViewTransfer = () => {
         <Typography variant="h5" color="primary">
           {title}
         </Typography>
-        {transferStatus !== TRANSFER_STATUS.RECORDED && (
+        {transferStatus !== TRANSFER_STATUSES.RECORDED && (
           <Role roles={[roles.supplier]}>
             <Typography variant="body4">
               {t('transfer:effectiveText')}
@@ -345,9 +345,9 @@ export const AddEditViewTransfer = () => {
             )}
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
             {(!currentStatus ||
-              (currentStatus === TRANSFER_STATUS.DRAFT &&
+              (currentStatus === TRANSFER_STATUSES.DRAFT &&
                 currentUserOrgId === fromOrgId) ||
-              (currentStatus === TRANSFER_STATUS.SENT &&
+              (currentStatus === TRANSFER_STATUSES.SENT &&
                 currentUserOrgId === toOrgId)) &&
               hasAnyRole(roles.signing_authority) && <SigningAuthority />}
             {/* Buttons */}

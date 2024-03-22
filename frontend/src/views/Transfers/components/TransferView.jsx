@@ -10,7 +10,6 @@ import { Typography, List, ListItem } from '@mui/material'
 import { faCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { decimalFormatter } from '@/utils/formatters'
-import { demoData } from './demo'
 import { useTranslation } from 'react-i18next'
 
 export const TransferView = ({
@@ -59,9 +58,8 @@ export const TransferView = ({
           <b>${decimalFormatter(totalValue)}</b> CAD.
         </Typography>
       </BCBox>
-      -- demo data --
       {/* Comments */}
-      <CommentList comments={demoData.comments} />
+      {/* <CommentList comments={demoData.comments} /> */}
       <AddPlainComment
         toOrgId={toOrgId}
         isGovernmentUser={isGovernmentUser}
@@ -69,12 +67,10 @@ export const TransferView = ({
         comment={comment}
         transferStatus={transferStatus}
       />
-      -- demo data --
       {/* List of attachments */}
-      <AttachmentList attachments={demoData.attachments} />
+      {/* <AttachmentList attachments={demoData.attachments} /> */}
       {/* Transaction History notes */}
-      -- demo data --
-      <BCBox mt={2}>
+      {/* <BCBox mt={2}>
         <Typography variant="h6" color="primary">
           {t('transfer:txnHistory')}
         </Typography>
@@ -88,8 +84,7 @@ export const TransferView = ({
             </ListItem>
           ))}
         </List>
-      </BCBox>
-      -- demo data --
+      </BCBox> */}
     </>
   )
 }
