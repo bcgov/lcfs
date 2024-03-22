@@ -47,7 +47,8 @@ class TransferCategorySchema(BaseSchema):
         from_attributes = True
 
 
-class TransferHistoryOrgSchema(BaseSchema):
+class TransferOrganizationSchema(BaseSchema):
+    organization_id: int
     name: str
 
     class Config:
@@ -57,7 +58,7 @@ class TransferHistoryOrgSchema(BaseSchema):
 class TransferHistoryUserSchema(BaseSchema):
     first_name: str
     last_name: str
-    organization: TransferHistoryOrgSchema
+    organization: TransferOrganizationSchema
 
     class Config:
         from_attributes = True
@@ -67,14 +68,6 @@ class TransferHistorySchema(BaseSchema):
     create_date: datetime
     transfer_status: TransferStatusSchema
     user_profile: TransferHistoryUserSchema
-
-    class Config:
-        from_attributes = True
-
-
-class TransferOrganizationSchema(BaseSchema):
-    organization_id: int
-    name: str
 
     class Config:
         from_attributes = True
@@ -99,7 +92,7 @@ class TransferSchema(BaseSchema):
     comments: Optional[TransferCommentSchema] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
-    transfer_history: List[TransferHistorySchema]
+    transfer_history: Optional[List[TransferHistorySchema]]
     recommendation: Optional[TransferRecommendationEnum] = None
 
     class Config:
