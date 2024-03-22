@@ -155,15 +155,15 @@ export const AddEditViewTransfer = () => {
             }
           }
         )
+      } else if (transferData?.currentStatus?.status ===
+        response.data.currentStatus.status) {
+          setAlertMessage(t('transfer:actionMsgs.successText', {status: 'saved'}))
+          setAlertSeverity('success')
       } else {
         navigate(TRANSACTIONS, {
           state: {
             message: t('transfer:actionMsgs.successText', {
-              status:
-                transferData?.currentStatus?.status ===
-                response.data.currentStatus.status
-                  ? t('transfer:saved')
-                  : response.data.currentStatus.status.toLowerCase()
+              status: response.data.currentStatus.status.toLowerCase()
             }),
             severity: 'success'
           }
