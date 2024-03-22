@@ -355,6 +355,7 @@ export const AddEditViewTransfer = () => {
                 component="div"
                 direction={{ md: 'coloumn', lg: 'row' }}
                 justifyContent="flex-end"
+                mt={2}
                 gap={2}
                 spacing={2}>
                 <BCButton
