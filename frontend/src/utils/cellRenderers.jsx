@@ -53,8 +53,8 @@ export const StatusRenderer = (props) => {
 
 export const OrgStatusRenderer = (props) => {
   const location = useLocation()
-  const statusArr = Object.entries(ORGANIZATION_STATUS)
-  const statusColorArr = ['success', 'info', 'warning', 'error']
+  const statusArr = Object.values(ORGANIZATION_STATUS)
+  const statusColorArr = ['info', 'success', 'warning', 'error']
   const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (
     <Link

@@ -86,7 +86,7 @@ export const buttonClusterConfigFn = ({
     (org) => org?.organizationId === methods.getValues('toOrganizationId')
   )
   const fromOrgId = methods.getValues('fromOrganizationId')
-  const signingAuthorityDeclaration = methods.getValues(
+  const signingAuthorityDeclaration = methods.watch(
     'signingAuthorityDeclaration'
   )
   const comments = methods.getValues('comments')
