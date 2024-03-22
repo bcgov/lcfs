@@ -1,6 +1,7 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import { roles } from '@/constants/roles'
+import { ORGANIZATION_STATUS } from '@/constants/statuses'
 import { Stack } from '@mui/material'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -52,7 +53,7 @@ export const StatusRenderer = (props) => {
 
 export const OrgStatusRenderer = (props) => {
   const location = useLocation()
-  const statusArr = ['Registered', 'Unregistered', 'Suspended', 'Canceled']
+  const statusArr = Object.entries(ORGANIZATION_STATUS)
   const statusColorArr = ['success', 'info', 'warning', 'error']
   const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (

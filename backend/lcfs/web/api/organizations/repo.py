@@ -187,3 +187,18 @@ class OrganizationsRepository(BaseRepository):
             select(OrganizationAttorneyAddress)
             .where(OrganizationAttorneyAddress.organization_attorney_address_id == organization_attorney_address_id)
         )
+
+    @repo_handler
+    async def is_registered_for_transfer(self, organization_id: int):
+        """
+        Check if an organization is registered in the database.
+        """
+        result = await self.db.scalar(
+            select(Organization.organization_id).where(
+                and_(
+                    Organization.organization_id == organization_id,
+                    Organization.organization_status_id == 2,
+                )
+            )
+        )
+        return result is not None

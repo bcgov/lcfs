@@ -17,7 +17,7 @@ import {
   ViewOrganization
 } from './views/Organizations'
 import { Transactions } from './views/Transactions'
-import { ViewTransfer, AddEditTransfer } from './views/Transfers'
+import { AddEditViewTransfer } from './views/Transfers'
 import { AddEditUser } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
 import { Login } from './components/Login'
@@ -63,19 +63,30 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.TRANSFERS_ADD,
-        element: <AddEditTransfer />,
+        element: <AddEditViewTransfer />,
         handle: {
           title: 'New Transfer',
+          mode: 'add',
           crumb: () => 'New Transfer'
         }
       },
       {
         path: ROUTES.TRANSFERS_EDIT,
-        element: <AddEditTransfer />,
+        element: <AddEditViewTransfer />,
+        handle: {
+          title: 'Edit Transfer',
+          mode: 'edit',
+          crumb: () => 'Edit Transfer'
+        }
       },
       {
         path: ROUTES.TRANSFERS_VIEW,
-        element: <ViewTransfer />,
+        element: <AddEditViewTransfer />,
+        handle: {
+          title: 'View Transfer',
+          mode: 'view',
+          crumb: () => 'View Transfer'
+        }
       },
       {
         path: ROUTES.ORGANIZATION,

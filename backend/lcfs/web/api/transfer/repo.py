@@ -12,7 +12,7 @@ from lcfs.web.api.repo import BaseRepository
 from lcfs.web.api.transfer.schema import TransferSchema
 
 from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferStatus import TransferStatus
+from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.TransferHistory import TransferHistory
 
@@ -72,16 +72,24 @@ class TransferRepository(BaseRepository):
 
     @repo_handler
     async def create_transfer(self, transfer: Transfer) -> Transfer:
-        '''Save a transfer and its associated comment in the database.'''
-
+        """Save a transfer and its associated comment in the database."""
         self.db.add(transfer)
 
         await self.commit_to_db()
-        await self.db.refresh(transfer, ['from_organization', 'to_organization', 'current_status', 'transfer_category'])
+        await self.db.refresh(
+            transfer,
+            [
+                "from_organization",
+                "to_organization",
+                "current_status",
+                "transfer_category",
+                "comments",
+            ],
+        )
         return TransferSchema.model_validate(transfer)
 
     @repo_handler
-    async def get_transfer_status(self, transfer_status_id: int) -> TransferStatus:
+    async def get_transfer_status_by_id(self, transfer_status_id: int) -> TransferStatus:
         '''Fetch a single transfer status by transfer status id from the database'''
         return await self.db.scalar(
             select(TransferStatus).where(
@@ -95,20 +103,31 @@ class TransferRepository(BaseRepository):
             select(TransferCategory).where(
                 TransferCategory.transfer_category_id == transfer_category_id)
         )
+    
+    @repo_handler
+    async def get_transfer_status_by_name(self, transfer_status_name: str) -> TransferStatus:
+        '''Fetch a single transfer status by transfer status name from the database'''
+        return await self.db.scalar(
+            select(TransferStatus).where(
+                TransferStatus.status == getattr(TransferStatusEnum, transfer_status_name))
+        )
 
     @repo_handler
     async def update_transfer(self, transfer: Transfer) -> Transfer:
         """Persists the changes made to the Transfer object to the database."""
-        # Assuming the transfer object has been modified in the service,
-        # we just need to commit those changes.
-        try:
-            await self.commit_to_db()
-            # Refresh the instance with updated data from the DB.
-            await self.db.refresh(transfer)
-            return transfer
-        except Exception as e:
-            await self.db.rollback()  # Rollback in case of error
-            raise e
+        # self.db.add(transfer)
+        await self.commit_to_db()
+        await self.db.refresh(
+            transfer,
+            [
+                "from_organization",
+                "to_organization",
+                "current_status",
+                "transfer_category",
+                "comments",
+            ],
+        )
+        return transfer
 
     @repo_handler
     async def add_transfer_history(self, transfer_id: int, transfer_status_id: int) -> TransferHistory:

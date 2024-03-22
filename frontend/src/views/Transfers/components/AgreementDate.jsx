@@ -1,10 +1,10 @@
 import { Box, TextField, Typography } from '@mui/material'
 import { useFormContext } from 'react-hook-form'
-import LabelBox from './LabelBox'
+import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 import { dateFormatter } from '@/utils/formatters'
 
-const AgreementDate = () => {
+export const AgreementDate = () => {
   const { t } = useTranslation(['transfer'])
   const {
     register,
@@ -42,5 +42,3 @@ const AgreementDate = () => {
     </LabelBox>
   )
 }
-
-export default AgreementDate

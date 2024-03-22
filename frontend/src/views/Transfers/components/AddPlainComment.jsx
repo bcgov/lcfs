@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 // MUI Icons
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import LabelBox from '../AddEditTransfer/components/LabelBox'
+import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 

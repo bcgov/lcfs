@@ -3,7 +3,7 @@ import { Typography } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-const LabelBox = ({
+export const LabelBox = ({
   label,
   description,
   children,
@@ -46,5 +46,3 @@ LabelBox.propTypes = {
   labelVariant: PropTypes.string,
   descriptionVariant: PropTypes.string
 }
-
-export default LabelBox

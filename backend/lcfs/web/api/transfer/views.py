@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, Request, status
 from typing import List
+
+from lcfs.web.api.transfer.validation import TransferValidation
 from lcfs.db import dependencies
-from lcfs.web.api.transfer.schema import TransferCreate, TransferSchema, TransferUpdate
+from lcfs.web.api.transfer.schema import TransferCreateSchema, TransferSchema
 from lcfs.web.api.transfer.services import TransferServices
 from lcfs.web.core.decorators import roles_required, view_handler
 
@@ -28,38 +30,17 @@ async def get_transfer(
     return await service.get_transfer(transfer_id)
 
 
-@router.post("/", response_model=TransferSchema, status_code=status.HTTP_201_CREATED)
-@roles_required("SUPPLIER")
-@view_handler
-async def create_transfer(
-    request: Request,
-    transfer_data: TransferCreate,
-    service: TransferServices = Depends()
-):
-    """Endpoint to create a new transfer."""
-    return await service.create_transfer(transfer_data)
-
-
-@router.put("/{transfer_id}/draft", response_model=TransferSchema, status_code=status.HTTP_200_OK)
-@roles_required("SUPPLIER")
-@view_handler
-async def update_transfer_draft(
-    request: Request,
-    transfer_id: int,
-    transfer_data: TransferCreate,
-    service: TransferServices = Depends()
-):
-    """Endpoint to update an existing transfer."""
-    return await service.update_transfer_draft(transfer_id, transfer_data)
-
-
 @router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @view_handler
+@roles_required("Government")
 async def update_transfer(
     request: Request,
     transfer_id: int,
-    transfer_data: TransferUpdate,
-    service: TransferServices = Depends()
+    transfer_data: TransferCreateSchema,
+    service: TransferServices = Depends(),
+    validate: TransferValidation = Depends()
 ):
     """Endpoint to set an existing transfers status to 'Deleted'."""
-    return await service.update_transfer(transfer_id, transfer_data)
+    validate.update_transfer(request, transfer_data)
+    transfer_data.transfer_id = transfer_id
+    return await service.update_transfer(transfer_data)
