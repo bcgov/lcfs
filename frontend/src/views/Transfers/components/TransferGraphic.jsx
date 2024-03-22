@@ -1,4 +1,3 @@
-import React from 'react'
 import PropTypes from 'prop-types'
 import { useTheme, Box, Typography, Paper } from '@mui/material'
 
@@ -12,7 +11,7 @@ import { useRegExtOrgs } from '@/hooks/useOrganization'
 import { useParams } from 'react-router-dom'
 import { useTransfer } from '@/hooks/useTransfer'
 
-const TransferGraphic = () => {
+export const TransferGraphic = () => {
   const theme = useTheme()
 
   const { watch } = useFormContext()
@@ -151,5 +150,3 @@ TransferGraphic.defaultProps = {
   numberOfCredits: 0,
   totalValue: 0
 }
-
-export default TransferGraphic

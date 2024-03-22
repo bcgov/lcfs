@@ -81,15 +81,22 @@ class TransferSchema(BaseSchema):
         from_attributes = True
 
 
-class TransferCreate(BaseSchema):
+class TransferCreateSchema(BaseSchema):
+    transfer_id: Optional[int] = None
     from_organization_id: int
     to_organization_id: int
-    agreement_date: str
-    quantity: int
-    price_per_unit: int
-    signing_authority_declaration: bool
-    comments: Optional[str] = None
-    skip_draft: Optional[bool] = False
+    from_transaction_id:  Optional[int] = None
+    to_transaction_id: Optional[int] = None
+    agreement_date: Optional[date] = None
+    quantity: Optional[int] = None
+    price_per_unit: Optional[int] = None
+    signing_authority_declaration: Optional[bool] = None
+    comment_id: Optional[int] = None
+    comment: Optional[str] = None
+    transfer_category_id: Optional[int] = None
+    current_status_id: Optional[int] = None
+    current_status: Optional[str] = None
+    recommendation: Optional[Enum] = None
 
     class Config:
         from_attributes = True

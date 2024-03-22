@@ -16,7 +16,7 @@ import { Role } from '@/components/Role'
 import { transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
-import { statuses } from '@/constants/statuses'
+import { ORGANIZATION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -65,7 +65,7 @@ export const Transactions = () => {
     }
   
     // Determine if it's an edit scenario
-    const isEditScenario = userOrgName === fromOrganization && status === statuses.draft
+    const isEditScenario = userOrgName === fromOrganization && status === TRANSFER_STATUSES.DRAFT
     const routeType = isEditScenario ? 'edit' : 'view'
   
     // Select the appropriate route based on the transaction type and scenario
@@ -116,7 +116,7 @@ export const Transactions = () => {
         {t('txn:title')}
       </BCTypography>
       <Box display={'flex'} gap={2} mb={2}>
-        {currentUser.organization?.orgStatus?.status === 'Registered' && <Role roles={[roles.transfers]}>
+        {currentUser.organization?.orgStatus?.status === ORGANIZATION_STATUSES.REGISTERED && <Role roles={[roles.transfers]}>
           <BCButton
             variant="contained"
             size="small"
