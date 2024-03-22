@@ -1,6 +1,6 @@
 from lcfs.web.api.base import BaseSchema
-from typing import Optional
-from datetime import date
+from typing import Optional, List
+from datetime import date, datetime
 from enum import Enum
 
 
@@ -47,6 +47,31 @@ class TransferCategorySchema(BaseSchema):
         from_attributes = True
 
 
+class TransferHistoryOrgSchema(BaseSchema):
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class TransferHistoryUserSchema(BaseSchema):
+    first_name: str
+    last_name: str
+    organization: TransferHistoryOrgSchema
+
+    class Config:
+        from_attributes = True
+
+
+class TransferHistorySchema(BaseSchema):
+    create_date: datetime
+    transfer_status: TransferStatusSchema
+    user_profile: TransferHistoryUserSchema
+
+    class Config:
+        from_attributes = True
+
+
 class TransferOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
@@ -74,6 +99,7 @@ class TransferSchema(BaseSchema):
     comments: Optional[TransferCommentSchema] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
+    transfer_history: List[TransferHistorySchema]
     recommendation: Optional[TransferRecommendationEnum] = None
 
     class Config:

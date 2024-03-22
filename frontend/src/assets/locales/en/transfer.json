@@ -63,5 +63,18 @@
   "returnWarningText": "You are strongly encouraged to provide an explanation to the analyst as to why the transfer is being returned.",
   "analystRecommend": "Analyst recommendation to the director",
   "recommendRefuse": "Recommend refuse",
-  "recommendRecord": "Recommend record"
+  "recommendRecord": "Recommend record",
+  "recommendBtn": "Recommend",
+  "recommendSuccessText": "Transfer successfully recommended.",
+  "recommendErrorText": "Error recommending transfer",
+  "transferHistory": {
+    "Deleted": "Draft deleted",
+    "Sent": "Signed and sent",
+    "Submitted": "Signed and submitted",
+    "Recommended": "Recommended recording transfer",
+    "Recorded": "Recorded",
+    "Refused": "Refused",
+    "Declined": "Declined",
+    "Rescinded": "Rescinded"
+  }
 }

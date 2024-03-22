@@ -44,7 +44,7 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     # relationships
     transfer_category = relationship('TransferCategory')
     comments = relationship('Comment', back_populates='transfer')
-    transfer_history_records = relationship(
+    transfer_history = relationship(
         'TransferHistory', back_populates='transfer')
     current_status = relationship('TransferStatus')
 
