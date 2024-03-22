@@ -351,8 +351,12 @@ export const AddEditViewTransfer = () => {
                 currentUserOrgId === toOrgId)) &&
               hasAnyRole(roles.signing_authority) && <SigningAuthority />}
             {/* Buttons */}
-            <BCBox p={2} display="flex" justifyContent="flex-end">
-              <Stack spacing={4} direction="row" justifyContent="center">
+              <Stack
+                component="div"
+                direction={{ md: 'coloumn', lg: 'row' }}
+                justifyContent="flex-end"
+                gap={2}
+                spacing={2}>
                 <BCButton
                   variant="outlined"
                   color="primary"
@@ -394,7 +398,6 @@ export const AddEditViewTransfer = () => {
                     )
                 )}
               </Stack>
-            </BCBox>
           </form>
         </FormProvider>
       </BCBox>
