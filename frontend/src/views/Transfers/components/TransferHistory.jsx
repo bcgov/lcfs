@@ -2,7 +2,7 @@ import BCBox from '@/components/BCBox';
 import { List, ListItem, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
-function TransactionHistory({ transactionHistory }) {
+function TransferHistory({ transferHistory }) {
   const { t } = useTranslation(['transfer']);
 
   const getTransferStatusLabel = (status) => {
@@ -21,14 +21,14 @@ function TransactionHistory({ transactionHistory }) {
         {t('transfer:txnHistory')}
       </Typography>
       <List>
-        {transactionHistory?.map((txn, index) => (
-          <ListItem key={txn.transferId + index} disablePadding>
+        {transferHistory?.map((item, index) => (
+          <ListItem key={item.transferId + index} disablePadding>
             <Typography variant="body2" component="div">
-              <b>{getTransferStatusLabel(txn.transferStatus.status)}</b> <span> on </span>
-              {formatDate(txn.createDate)}
+              <b>{getTransferStatusLabel(item.transferStatus.status)}</b> <span> on </span>
+              {formatDate(item.createDate)}
               <span> by </span>
-              <strong> {txn.userProfile.firstName} {txn.userProfile.lastName}</strong> <span> of </span>
-              <strong> {txn.userProfile.organization.name} </strong>
+              <strong> {item.userProfile.firstName} {item.userProfile.lastName}</strong> <span> of </span>
+              <strong> {item.userProfile.organization.name} </strong>
             </Typography>
           </ListItem>
         ))}
@@ -37,4 +37,4 @@ function TransactionHistory({ transactionHistory }) {
   );
 }
 
-export default TransactionHistory;
+export default TransferHistory;

@@ -1,16 +1,13 @@
 import PropTypes from 'prop-types'
 import {
   TransferDetailsCard,
-  CommentList,
-  AttachmentList,
   AddPlainComment
 } from '.'
 import BCBox from '@/components/BCBox'
-import { Typography, List, ListItem } from '@mui/material'
-import { faCircle } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Typography } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
+import TransferHistory from './TransferHistory'
 
 export const TransferView = ({
   fromOrgId,
@@ -23,7 +20,8 @@ export const TransferView = ({
   isGovernmentUser,
   totalValue,
   handleCommentChange,
-  comment
+  comment,
+  transferHistory
 }) => {
   const { t } = useTranslation(['common', 'transfer'])
   return (
@@ -67,24 +65,12 @@ export const TransferView = ({
         comment={comment}
         transferStatus={transferStatus}
       />
+
       {/* List of attachments */}
       {/* <AttachmentList attachments={demoData.attachments} /> */}
+
       {/* Transaction History notes */}
-      {/* <BCBox mt={2}>
-        <Typography variant="h6" color="primary">
-          {t('transfer:txnHistory')}
-        </Typography>
-        <List>
-          {demoData.transactionHistory.map((transaction) => (
-            <ListItem key={transaction.transactionID} disablePadding>
-              <BCBox mr={1} mb={1}>
-                <FontAwesomeIcon icon={faCircle} fontSize={6} />
-              </BCBox>
-              <Typography variant="body4">{transaction.notes}</Typography>
-            </ListItem>
-          ))}
-        </List>
-      </BCBox> */}
+      <TransferHistory transferHistory={transferHistory}/>
     </>
   )
 }
