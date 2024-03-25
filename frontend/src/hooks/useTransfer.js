@@ -11,17 +11,26 @@ export const useTransfer = (transferID, options) => {
   })
 }
 
-
 export const useCreateUpdateTransfer = (orgId, transferId, options) => {
   const client = useApiService()
 
   return useMutation({
     ...options,
     mutationFn: async ({ data }) => {
+      if (orgId && transferId) {
+        return await client.put(
+          `organization/${orgId}/transfers/${transferId}`,
+          data
+        )
+      }
 
-      return orgId ? (transferId ?
-        await client.put(`organization/${orgId}/transfers/${transferId}`, data) : await client.post(`organization/${orgId}/transfers`, data)) :
-        await client.put(`transfers/${transferId}`, data)
+      if (orgId && !transferId) {
+        return await client.post(`organization/${orgId}/transfers`, data)
+      }
+
+      if (!orgId) {
+        return await client.put(`transfers/${transferId}`, data)
+      }
     }
   })
 }
