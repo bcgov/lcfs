@@ -421,7 +421,7 @@ class OrganizationsService:
                 raise ValueError("Cannot decrement available balance below zero.")
 
         # Create a new transaction record in the database
-        await self.transaction_repo.create_transaction(
+        return await self.transaction_repo.create_transaction(
             transaction_action,
             compliance_units,
             organization_id

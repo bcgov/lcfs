@@ -6,9 +6,8 @@ class BaseRepository:
         self.db = db
 
     async def commit_to_db(self):
-        user = self.db.info.get('user')
-        username = user['keycloak_username'] if user and 'keycloak_username' in user else 'no_user'
-        
+        user_info = self.db.info.get('user', {})
+        username = getattr(user_info, 'keycloak_username', 'no_user')
         for instance in self.db.new | self.db.dirty:
             if isinstance(instance, Auditable):
                 # Set create_user if it's not already set (for new records)

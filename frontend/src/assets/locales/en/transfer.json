@@ -1,8 +1,8 @@
 {
   "title": "Transfers",
   "transfers": " transfers ",
-  "transferID": "Transfer-ID:",
-  "editTransfer": "Edit Transfer",
+  "transferID": "Transfer ID: ",
+  "editTransferID": "Edit transfer ID: ",
   "newTransfer": "New Transfer",
   "effectiveText": "A transfer is not effective until it is recorded by the Director.",
   "considerationText": "Transfers must indicate whether they are for consideration, and if so, the fair market value of the consideration in Canadian dollars per compliance unit.",
@@ -13,6 +13,7 @@
   "txnHistory": "Transaction History",
   "rescindTransferBtn": "Rescind Transfer",
   "rescindErrorText": "Error rescinding transfer",
+  "rescindSuccessText": "Transfer successfully rescinded.",
   "rescindConfirmText": "Are you sure you want to rescind this transfer?",
   "saveDraftBtn": "Save Draft",
   "signAndSendBtn": "Sign and send",
@@ -57,5 +58,18 @@
   "recordTransferBtn": "Record transfer",
   "recordConfirmText": "Are you sure you want to record this transfer?",
   "recordSuccessText": "Transfer successfully recorded.",
-  "recordErrorText": "Error recording transfer"
+  "recordErrorText": "Error recording transfer",
+  "refuseTransferBtn": "Refuse transfer",
+  "returnToAnalystBtn": "Return to analyst",
+  "returnWarningText": "You are strongly encouraged to provide an explanation to the analyst as to why the transfer is being returned.",
+  "returnConfirmText": "Are you sure you want to return the transfer to the Analyst? This will change the status of the transfer back to Submitted.",
+  "returnSuccessText": "Transfer successfully returned.",
+  "returnErrorText": "Error returning transfer",
+  "analystRecommend": "Analyst recommendation to the director",
+  "recommendRefuse": "Recommend refuse",
+  "recommendRecord": "Recommend record",
+  "recommendBtn": "Recommend",
+  "recommendConfirmText": "Are you sure you want to recommend this transfer?",
+  "recommendSuccessText": "Transfer successfully recommended.",
+  "recommendErrorText": "Error recommending transfer"
 }

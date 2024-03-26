@@ -325,7 +325,7 @@ class UserRepository(BaseRepository):
             db_user_profile.organization = org
         self.db.add(db_user_profile)
         await self.commit_to_db()
-        return db_user_profile.user_profile_id
+        return db_user_profile
 
     @repo_handler
     async def update_user(

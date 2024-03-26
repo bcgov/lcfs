@@ -21,6 +21,15 @@ class TransferStatusEnum(str, Enum):
     Refused = "Refused"
     Declined = "Declined"
     Rescinded = "Rescinded"
+    
+    @classmethod
+    def get_index(cls, value):
+        return list(cls).index(value) + 1
+
+
+class TransferRecommendationEnum(str, Enum):
+    Record = 'Record'
+    Refuse = 'Refuse'
 
 
 class TransferStatusSchema(BaseSchema):
@@ -65,6 +74,7 @@ class TransferSchema(BaseSchema):
     comments: Optional[TransferCommentSchema] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
+    recommendation: Optional[TransferRecommendationEnum] = None
 
     class Config:
         extra = 'ignore'
@@ -87,6 +97,7 @@ class TransferCreate(BaseSchema):
 class TransferUpdate(BaseSchema):
     current_status_id: int
     comments: Optional[str] = None
+    recommendation: Optional[str] = None
 
 
 class TransferHistory(BaseSchema):

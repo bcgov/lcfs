@@ -23,7 +23,7 @@ logger = getLogger("organizations_repo")
 
 class OrganizationsRepository(BaseRepository):
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        self.db = db
+        super().__init__(db)
 
     @repo_handler
     async def get_organizations(self) -> List[Organization]:
