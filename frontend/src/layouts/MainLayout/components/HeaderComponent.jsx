@@ -10,7 +10,7 @@ export const HeaderComponent = () => {
   const { t } = useTranslation()
   const { data, isFetched } = useCurrentUser()
   const [showBalance, setShowBalance] = useState(
-    !!+sessionStorage.getItem('showBalance') || false
+    !!+sessionStorage.getItem('showBalance') || true
   )
 
   const { data: orgBalance } = useCurrentOrgBalance()
