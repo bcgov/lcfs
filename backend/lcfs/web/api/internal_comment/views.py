@@ -1,7 +1,7 @@
 from logging import getLogger
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, status, Request
+from fastapi import APIRouter, Body, Depends, status, Request, HTTPException
 from starlette import status
 
 from lcfs.db import dependencies
@@ -55,7 +55,7 @@ async def get_comments(
 
     Args:
         request (Request): The request object.
-        entity_type (str): The type of the entity ('transfer' or 'initiative_agreement').
+        entity_type (str): The type of the entity.
         entity_id (int): The ID of the entity.
         service (InternalCommentService, optional): The service handling the internal comment logic.
         
@@ -86,5 +86,23 @@ async def update_comment(
     Returns:
         InternalCommentResponseSchema: The updated internal comment.
     """
+    # Fetch the existing comment to check the creator
+    existing_comment = await service.get_internal_comment_by_id(internal_comment_id)
+
+    if not existing_comment:
+        raise HTTPException(
+            status_code=404,
+            detail="Internal comment not found."
+        )
+
     current_username = request.user.keycloak_username
-    return await service.update_internal_comment(current_username, internal_comment_id, comment_data.comment)
+    if existing_comment.create_user != current_username:
+        raise HTTPException(
+            status_code=403,
+            detail="User is not the creator of the comment."
+        )
+
+    return await service.update_internal_comment(
+        internal_comment_id,
+        comment_data.comment
+    )

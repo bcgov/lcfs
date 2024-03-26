@@ -12,19 +12,21 @@ class BaseConfig:
 # --------------------------------------
 # Internal Comment
 # --------------------------------------
-class EntityType(str, Enum):
-    transfer = "transfer"
-    initiative_agreement = "initiative_agreement"
+class EntityTypeEnum(str, Enum):
+    TRANSFER = "Transfer"
+    INITIATIVE_AGREEMENT = "InitiativeAgreement"
+    ADMIN_ADJUSTMENT = "AdminAdjustment"
+    ASSESSMENT = "Assessment"
 
-class AudienceScope(str, Enum):
-    director = "Director"
-    analyst = "Analyst"
+class AudienceScopeEnum(str, Enum):
+    DIRECTOR = "Director"
+    ANALYST = "Analyst"
 
 class InternalCommentCreateSchema(BaseSchema):
-    entity_type: EntityType
+    entity_type: EntityTypeEnum
     entity_id: int
     comment: str
-    audience_scope: AudienceScope
+    audience_scope: AudienceScopeEnum
 
 class InternalCommentUpdateSchema(BaseSchema):
     comment: Optional[str] = None
@@ -32,7 +34,7 @@ class InternalCommentUpdateSchema(BaseSchema):
 class InternalCommentResponseSchema(BaseSchema):
     internal_comment_id: int
     comment: str
-    audience_scope: AudienceScope
+    audience_scope: AudienceScopeEnum
     create_user: Optional[str]
     create_date: Optional[datetime]
     update_date: Optional[datetime]

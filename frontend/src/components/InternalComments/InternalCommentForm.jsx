@@ -12,7 +12,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
 const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCancel, isEditing = false }) => {
-  const { t } = useTranslation(['intComment'])
+  const { t } = useTranslation(['internalComment'])
   const [commentText, setCommentText] = useState(initialCommentText);
 
   useEffect(() => {
@@ -58,7 +58,7 @@ const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCance
           disabled={!commentText.trim()}
           sx={{ marginRight: 1 }}
         >
-          {isEditing ? t('intComment:saveChanges') : t('intComment:addComment')}
+          {isEditing ? t('internalComment:saveChanges') : t('internalComment:addComment')}
         </BCButton>
         {isEditing && (
           <BCButton
@@ -67,7 +67,7 @@ const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCance
             color="primary"
             onClick={onCancel}
           >
-            {t('intComment:cancel')}
+            {t('internalComment:cancel')}
           </BCButton>
         )}
       </BCBox>

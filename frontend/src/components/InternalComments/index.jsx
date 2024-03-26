@@ -11,7 +11,7 @@ import InternalCommentList from './InternalCommentList';
 import Loading from '@/components/Loading'
 
 const InternalComments = ({ entityType, entityId }) => {
-  const { t } = useTranslation(['intComment'])
+  const { t } = useTranslation(['internalComment'])
   const apiService = useApiService()
   const { hasAnyRole } = useCurrentUser()
   const [comments, setComments] = useState([]);
@@ -115,8 +115,8 @@ const InternalComments = ({ entityType, entityId }) => {
     }
   };
 
-  if (isLoading) return <Loading message={t('intComment:loadingComments')} />;
-  if (error) return <div>{t('intComment:errorLoadingComments')} {error}</div>;
+  if (isLoading) return <Loading message={t('internalComment:loadingComments')} />;
+  if (error) return <div>{t('internalComment:errorLoadingComments')} {error}</div>;
 
   return (
     <InternalCommentList

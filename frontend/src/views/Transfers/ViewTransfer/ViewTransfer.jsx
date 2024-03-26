@@ -446,7 +446,7 @@ export const ViewTransfer = () => {
           )}
           {/* Internal Comments */}
           <Role roles={[roles.government]}>
-            <InternalComments entityType="transfer" entityId={transferId} />
+            <InternalComments entityType="Transfer" entityId={transferId} />
           </Role>
           {/* Buttons */}
           <BCBox p={2} display="flex" justifyContent="flex-end">

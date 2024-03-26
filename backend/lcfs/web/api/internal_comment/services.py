@@ -63,7 +63,7 @@ class InternalCommentService:
         its type and ID.
 
         Args:
-            entity_type (str): The type of the associated entity ('transfer' or 'initiative_agreement').
+            entity_type (str): The type of the associated entity.
             entity_id (int): The ID of the associated entity.
 
         Returns:
@@ -73,18 +73,33 @@ class InternalCommentService:
         return [InternalCommentResponseSchema.from_orm(comment) for comment in comments]
 
     @service_handler
-    async def update_internal_comment(self, username, internal_comment_id: int, new_comment_text: str) -> InternalCommentResponseSchema:
+    async def get_internal_comment_by_id(
+        self, internal_comment_id: int
+    ) -> InternalCommentResponseSchema:
+        """
+        Retrieves a single internal comment by its ID.
+
+        Args:
+            internal_comment_id (int): The ID of the internal comment to be retrieved.
+
+        Returns:
+            InternalCommentResponseSchema: The internal comment as a data transfer object.
+        """
+        comment = await self.repo.get_internal_comment_by_id(internal_comment_id)
+        return InternalCommentResponseSchema.from_orm(comment)
+
+    @service_handler
+    async def update_internal_comment(self, internal_comment_id: int, new_comment_text: str) -> InternalCommentResponseSchema:
         """
         Updates the text of an existing internal comment, identified by its ID and the
         username of the comment creator.
 
         Args:
-            username (str): The username of the user who created the comment.
             internal_comment_id (int): The ID of the internal comment to be updated.
             new_comment_text (str): The new text to update the comment with.
 
         Returns:
             InternalCommentResponseSchema: The updated internal comment as a data transfer object.
         """
-        updated_comment = await self.repo.update_internal_comment(username, internal_comment_id, new_comment_text)
+        updated_comment = await self.repo.update_internal_comment(internal_comment_id, new_comment_text)
         return InternalCommentResponseSchema.model_validate(updated_comment)

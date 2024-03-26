@@ -51,11 +51,6 @@ class UserProfile(BaseModel, Auditable):
         foreign_keys=[NotificationMessage.related_user_profile_id],
         back_populates="related_user_profile",
     )
-    internal_comments = relationship(
-        "InternalComment",
-        primaryjoin="UserProfile.keycloak_username == foreign(InternalComment.create_user)",
-        backref="user_profile"
-    )
 
     @classmethod
     def form_user_profile(cls, user_profile, user_data):

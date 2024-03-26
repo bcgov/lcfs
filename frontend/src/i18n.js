@@ -5,7 +5,7 @@ import orgEn from '@/assets/locales/en/organization.json'
 import adminEn from '@/assets/locales/en/admin.json'
 import txnEn from '@/assets/locales/en/transaction.json'
 import transferEn from '@/assets/locales/en/transfer.json'
-import intCommentEn from '@/assets/locales/en/intComment.json'
+import internalCommentEn from '@/assets/locales/en/internalComment.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
 const resources = {
@@ -16,7 +16,7 @@ const resources = {
     org: orgEn,
     txn: txnEn,
     transfer: transferEn,
-    intComment: intCommentEn
+    internalComment: internalCommentEn
   }
 }
 

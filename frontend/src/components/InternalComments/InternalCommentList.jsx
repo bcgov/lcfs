@@ -14,7 +14,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
 const InternalCommentList = ({ comments, onAddComment, onEditComment, addCommentFormKey }) => {
-  const { t } = useTranslation(['intComment'])
+  const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const [editCommentId, setEditCommentId] = useState(null);
   const startEditing = (id) => setEditCommentId(id);
@@ -41,7 +41,7 @@ const InternalCommentList = ({ comments, onAddComment, onEditComment, addComment
         {isEdited && (
           <span>
             {' - ('}
-            <span style={{ color: 'red' }}>{t('intComment:edited')}</span>
+            <span style={{ color: 'red' }}>{t('internalComment:edited')}</span>
             {` ${formatDate(updateDate)})`}
           </span>
         )}
@@ -96,7 +96,7 @@ const InternalCommentList = ({ comments, onAddComment, onEditComment, addComment
             }}>
               {editCommentId === comment.internalCommentId ? (
                 <InternalCommentForm
-                  title={t('intComment:editComment')}
+                  title={t('internalComment:editComment')}
                   initialCommentText={comment.comment}
                   onSubmit={submitEdit}
                   onCancel={stopEditing}
@@ -111,7 +111,7 @@ const InternalCommentList = ({ comments, onAddComment, onEditComment, addComment
                         style={{ cursor: 'pointer', marginLeft: '10px', color: '#1976d2' }}
                         onClick={() => startEditing(comment.internalCommentId)}
                       >
-                        {t('intComment:edit')}
+                        {t('internalComment:edit')}
                       </span>
                     )}
                   </BCTypography>
@@ -130,8 +130,8 @@ const InternalCommentList = ({ comments, onAddComment, onEditComment, addComment
           <BCBox sx={{ backgroundColor: '#fff' }}  p={2}>
             <InternalCommentForm
               title={
-                (hasAnyRole(roles.analyst) && t('intComment:commentToDirector')) ||
-                (hasAnyRole(roles.director) && t('intComment:commentToAnalyst'))
+                (hasAnyRole(roles.analyst) && t('internalComment:commentToDirector')) ||
+                (hasAnyRole(roles.director) && t('internalComment:commentToAnalyst'))
               }
               onSubmit={onAddComment}
               key={addCommentFormKey}
