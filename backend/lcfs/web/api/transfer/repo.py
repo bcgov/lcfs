@@ -88,6 +88,7 @@ class TransferRepository(BaseRepository):
                 "current_status",
                 "transfer_category",
                 "comments",
+                "transfer_history"
             ],
         )
         return TransferSchema.model_validate(transfer)
@@ -129,12 +130,13 @@ class TransferRepository(BaseRepository):
                 "current_status",
                 "transfer_category",
                 "comments",
+                "transfer_history"
             ],
         )
         return transfer
 
     @repo_handler
-    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int) -> TransferHistory:
+    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int, user_profile_id: int) -> TransferHistory:
         """
         Adds a new record to the transfer history in the database.
 
@@ -148,7 +150,7 @@ class TransferRepository(BaseRepository):
         new_history_record = TransferHistory(
             transfer_id=transfer_id,
             transfer_status_id=transfer_status_id,
-            user_profile=self.request.user
+            user_profile_id=user_profile_id
         )
         self.db.add(new_history_record)
         await self.commit_to_db()
