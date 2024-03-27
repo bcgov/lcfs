@@ -27,8 +27,12 @@ function TransferHistory({ transferHistory }) {
               <b>{getTransferStatusLabel(item.transferStatus.status)}</b> <span> on </span>
               {formatDate(item.createDate)}
               <span> by </span>
-              <strong> {item.userProfile.firstName} {item.userProfile.lastName}</strong> <span> of </span>
-              <strong> {item.userProfile.organization.name} </strong>
+              <strong> {item.userProfile.firstName} {item.userProfile.lastName}</strong> 
+              {item.userProfile.organization &&
+                <>
+                  <span> of </span><strong> {item.userProfile.organization?.name} </strong>
+                </>
+              }
             </Typography>
           </ListItem>
         ))}

@@ -17,7 +17,8 @@ import { ROUTES } from '@/constants/routes'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTransfer, useCreateUpdateTransfer } from '@/hooks/useTransfer'
-import { useRegExtOrgs } from '@/hooks/useOrganization'
+import { useRegExtOrgs, useCurrentOrgBalance } from '@/hooks/useOrganization'
+
 // icons and related components
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -64,6 +65,8 @@ export const AddEditViewTransfer = () => {
   const [comment, setComment] = useState('')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [refreshBalanceTrigger, setRefreshBalanceTrigger] = useState(false);
+
   // Fetch current user details
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: toOrgData, isLoading: isToOrgDataLoading } = useRegExtOrgs()
@@ -99,6 +102,16 @@ export const AddEditViewTransfer = () => {
     (currentUser.organization?.organizationId ===
       transferData?.fromOrganization?.organizationId ||
       mode === 'add')
+
+  const { refetch } = useCurrentOrgBalance({
+    enabled: false, // Initially, do not automatically run the query
+  })
+  // useEffect to listen for changes to refreshBalanceTrigger
+  useEffect(() => {
+    // When refreshBalanceTrigger changes, call refetch to refresh org balance
+    refetch();
+  }, [refreshBalanceTrigger, refetch]);
+
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -160,6 +173,10 @@ export const AddEditViewTransfer = () => {
           setAlertMessage(t('transfer:actionMsgs.successText', {status: 'saved'}))
           setAlertSeverity('success')
       } else {
+        // Refresh the org balance before we redirect to the transactions page
+        // this way the balance in the header will be correct
+        setRefreshBalanceTrigger(prev => !prev)
+        // Navigate to the transactions list view
         navigate(TRANSACTIONS, {
           state: {
             message: t('transfer:actionMsgs.successText', {
