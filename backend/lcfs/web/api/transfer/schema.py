@@ -92,7 +92,7 @@ class TransferCreateSchema(BaseSchema):
     transfer_category_id: Optional[int] = None
     current_status_id: Optional[int] = None
     current_status: Optional[str] = None
-    recommendation: Optional[Enum] = None
+    recommendation: Optional[TransferRecommendationEnumSchema] = None
 
     class Config:
         from_attributes = True

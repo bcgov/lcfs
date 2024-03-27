@@ -51,6 +51,7 @@ import {
 import { buttonClusterConfigFn, stepsConfigFn } from './buttonConfigs'
 import SigningAuthority from './components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
+import { Recommendation } from './components/Recommendation'
 
 export const AddEditViewTransfer = () => {
   const theme = useTheme()
@@ -65,7 +66,7 @@ export const AddEditViewTransfer = () => {
   const [comment, setComment] = useState('')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [refreshBalanceTrigger, setRefreshBalanceTrigger] = useState(false);
+  const [refreshBalanceTrigger, setRefreshBalanceTrigger] = useState(false)
 
   // Fetch current user details
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
@@ -83,7 +84,8 @@ export const AddEditViewTransfer = () => {
       quantity: null,
       pricePerUnit: null,
       signingAuthorityDeclaration: false,
-      comments: ''
+      comments: '',
+      recommendation: null
     }
   })
 
@@ -104,13 +106,13 @@ export const AddEditViewTransfer = () => {
       mode === 'add')
 
   const { refetch } = useCurrentOrgBalance({
-    enabled: false, // Initially, do not automatically run the query
+    enabled: false // Initially, do not automatically run the query
   })
   // useEffect to listen for changes to refreshBalanceTrigger
   useEffect(() => {
     // When refreshBalanceTrigger changes, call refetch to refresh org balance
-    refetch();
-  }, [refreshBalanceTrigger, refetch]);
+    refetch()
+  }, [refreshBalanceTrigger, refetch])
 
   /**
    * Fetches and populates the form with existing transfer data for editing.
@@ -131,7 +133,8 @@ export const AddEditViewTransfer = () => {
         comments: transferData.comments?.comment, // Assuming you only want the comment text
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
-          : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
+          : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
+        recommendation: transferData.recommendation
       })
     }
   }, [isFetched, transferId])
@@ -168,14 +171,18 @@ export const AddEditViewTransfer = () => {
             }
           }
         )
-      } else if (transferData?.currentStatus?.status ===
-        response.data.currentStatus.status) {
-          setAlertMessage(t('transfer:actionMsgs.successText', {status: 'saved'}))
-          setAlertSeverity('success')
+      } else if (
+        transferData?.currentStatus?.status ===
+        response.data.currentStatus.status
+      ) {
+        setAlertMessage(
+          t('transfer:actionMsgs.successText', { status: 'saved' })
+        )
+        setAlertSeverity('success')
       } else {
         // Refresh the org balance before we redirect to the transactions page
         // this way the balance in the header will be correct
-        setRefreshBalanceTrigger(prev => !prev)
+        setRefreshBalanceTrigger((prev) => !prev)
         // Navigate to the transactions list view
         navigate(TRANSACTIONS, {
           state: {
@@ -201,7 +208,6 @@ export const AddEditViewTransfer = () => {
     setComment(e.target.value)
   }
 
-  const { watch } = methods
   const currentStatus = transferData?.currentStatus.status
 
   const {
@@ -362,6 +368,15 @@ export const AddEditViewTransfer = () => {
                 transferHistory={transferHistory}
               />
             )}
+
+            {[
+              TRANSFER_STATUSES.SUBMITTED,
+              TRANSFER_STATUSES.RECOMMENDED
+            ].includes(currentStatus) &&
+              hasAnyRole(roles.analyst, roles.director) && (
+                <Recommendation currentStatus={currentStatus} />
+              )}
+
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
             {(!currentStatus ||
               (currentStatus === TRANSFER_STATUSES.DRAFT &&
@@ -370,54 +385,55 @@ export const AddEditViewTransfer = () => {
                 currentUserOrgId === toOrgId)) &&
               hasAnyRole(roles.signing_authority) && <SigningAuthority />}
             {/* Buttons */}
-              <Stack
-                component="div"
-                direction={{ md: 'coloumn', lg: 'row' }}
-                justifyContent="flex-end"
-                mt={2}
-                gap={2}
-                spacing={2}>
-                <BCButton
-                  variant="outlined"
-                  color="primary"
-                  style={{
-                    gap: 8
-                  }}
-                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
+            <Stack
+              component="div"
+              direction={{ md: 'coloumn', lg: 'row' }}
+              justifyContent="flex-end"
+              mt={2}
+              gap={2}
+              spacing={2}
+            >
+              <BCButton
+                variant="outlined"
+                color="primary"
+                style={{
+                  gap: 8
+                }}
+                onClick={() => navigate(ROUTES.TRANSACTIONS)}
+              >
+                <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
+                <Typography
+                  variant="body4"
+                  sx={{ textTransform: 'capitalize' }}
                 >
-                  <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
-                  <Typography
-                    variant="body4"
-                    sx={{ textTransform: 'capitalize' }}
-                  >
-                    {t('backBtn')}
-                  </Typography>
-                </BCButton>
-                {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
-                  (config) =>
-                    config && (
-                      <Role key={config.label}>
-                        <BCButton
-                          size="small"
-                          variant={config.variant}
-                          color={config.color}
-                          onClick={methods.handleSubmit(config.handler)}
-                          startIcon={
-                            config.startIcon && (
-                              <FontAwesomeIcon
-                                icon={config.startIcon}
-                                className="small-icon"
-                              />
-                            )
-                          }
-                          disabled={config.disabled}
-                        >
-                          {config.label}
-                        </BCButton>
-                      </Role>
-                    )
-                )}
-              </Stack>
+                  {t('backBtn')}
+                </Typography>
+              </BCButton>
+              {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
+                (config) =>
+                  config && (
+                    <Role key={config.label}>
+                      <BCButton
+                        size="small"
+                        variant={config.variant}
+                        color={config.color}
+                        onClick={methods.handleSubmit(config.handler)}
+                        startIcon={
+                          config.startIcon && (
+                            <FontAwesomeIcon
+                              icon={config.startIcon}
+                              className="small-icon"
+                            />
+                          )
+                        }
+                        disabled={config.disabled}
+                      >
+                        {config.label}
+                      </BCButton>
+                    </Role>
+                  )
+              )}
+            </Stack>
           </form>
         </FormProvider>
       </BCBox>
