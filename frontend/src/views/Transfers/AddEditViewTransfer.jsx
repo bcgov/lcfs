@@ -196,7 +196,8 @@ export const AddEditViewTransfer = () => {
     } = {},
     quantity,
     comments,
-    pricePerUnit
+    pricePerUnit,
+    transferHistory
   } = transferData || {}
 
   const totalValue = quantity * pricePerUnit
@@ -341,6 +342,7 @@ export const AddEditViewTransfer = () => {
                 totalValue={totalValue}
                 handleCommentChange={handleCommentChange}
                 comment={comment}
+                transferHistory={transferHistory}
               />
             )}
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}

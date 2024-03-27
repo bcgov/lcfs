@@ -15,6 +15,7 @@ from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.TransferHistory import TransferHistory
+from lcfs.db.models.UserProfile import UserProfile
 
 logger = getLogger("transfer_repo")
 
@@ -63,7 +64,10 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments)
+            selectinload(Transfer.comments),
+            selectinload(Transfer.transfer_history)
+              .selectinload(TransferHistory.user_profile)
+                .selectinload(UserProfile.organization)
         ).where(Transfer.transfer_id == transfer_id)
 
         result = await self.db.execute(query)
@@ -84,6 +88,7 @@ class TransferRepository(BaseRepository):
                 "current_status",
                 "transfer_category",
                 "comments",
+                "transfer_history"
             ],
         )
         return TransferSchema.model_validate(transfer)
@@ -125,12 +130,13 @@ class TransferRepository(BaseRepository):
                 "current_status",
                 "transfer_category",
                 "comments",
+                "transfer_history"
             ],
         )
         return transfer
 
     @repo_handler
-    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int) -> TransferHistory:
+    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int, user_profile_id: int) -> TransferHistory:
         """
         Adds a new record to the transfer history in the database.
 
@@ -143,7 +149,8 @@ class TransferRepository(BaseRepository):
         """
         new_history_record = TransferHistory(
             transfer_id=transfer_id,
-            transfer_status_id=transfer_status_id
+            transfer_status_id=transfer_status_id,
+            user_profile_id=user_profile_id
         )
         self.db.add(new_history_record)
         await self.commit_to_db()

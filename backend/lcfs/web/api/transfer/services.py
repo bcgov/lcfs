@@ -97,7 +97,11 @@ class TransferServices:
 
         transfer = await self.repo.create_transfer(transfer)
         # Add a new transfer history record if the status has changed
-        await self.repo.add_transfer_history(transfer.transfer_id, current_status.transfer_status_id)
+        await self.repo.add_transfer_history(
+            transfer.transfer_id, 
+            current_status.transfer_status_id,
+            self.request.user.user_profile_id
+        )
         return transfer
 
     @service_handler
@@ -142,7 +146,11 @@ class TransferServices:
             if current_status == TransferStatusEnum.Declined:
                 await self.decline_transfer(transfer)    
             # Add a new transfer history record if the status has changed
-            await self.repo.add_transfer_history(transfer.transfer_id, current_status.transfer_status_id)
+            await self.repo.add_transfer_history(
+                transfer.transfer_id, 
+                current_status.transfer_status_id,
+                self.request.user.user_profile_id
+            )
 
         transfer.current_status = current_status
         return await self.repo.update_transfer(transfer)
