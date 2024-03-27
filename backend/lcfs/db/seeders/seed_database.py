@@ -1,9 +1,9 @@
 import sys
 import asyncio
-
 from lcfs.db.seeders.common_seeder import seed_common
 from lcfs.db.seeders.dev_seeder import seed_dev
 from lcfs.db.seeders.prod_seeder import seed_prod
+from lcfs.db.seeders.test_seeder import seed_test
 
 async def seed_database(environment):
     if environment == 'dev':
@@ -12,6 +12,9 @@ async def seed_database(environment):
     elif environment == 'prod':
         await seed_common()
         await seed_prod()
+    elif environment == 'test':
+        await seed_common()
+        await seed_test()
     else:
         raise ValueError("Unknown environment")
 

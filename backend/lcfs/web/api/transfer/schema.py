@@ -1,7 +1,8 @@
-from pydantic import BaseModel, constr
+from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
+
 
 class TransactionTypeEnum(str, Enum):
     administrative_adjustment = "Administrative Adjustment"
@@ -9,79 +10,126 @@ class TransactionTypeEnum(str, Enum):
     assessment = "Assessment"
     transfer = "Transfer"
 
+
 class TransferStatusEnum(str, Enum):
-    draft = "Draft"
-    deleted = "Deleted"
-    sent = "Sent"
-    submitted = "Submitted"
-    recommended = "Recommended"
-    recorded = "Recorded"
-    refused = "Refused"
-    declined = "Declined"
-    rescinded = "Rescinded"
+    Draft = "Draft"
+    Deleted = "Deleted"
+    Sent = "Sent"
+    Submitted = "Submitted"
+    Recommended = "Recommended"
+    Recorded = "Recorded"
+    Refused = "Refused"
+    Declined = "Declined"
+    Rescinded = "Rescinded"
 
-class TransferBase(BaseModel):
-    from_organization: int
-    to_organization: int
-    transaction_id: int
-    transaction_effective_date: Optional[datetime]
-    comment_id: Optional[int]
-    transfer_status: int
-    transfer_category: int
+    @classmethod
+    def get_index(cls, value):
+        return list(cls).index(value) + 1
 
-class Transfer(TransferBase):
-    transfer_id: int
+
+class TransferRecommendationEnum(str, Enum):
+    Record = 'Record'
+    Refuse = 'Refuse'
+
+
+class TransferStatusSchema(BaseSchema):
+    transfer_status_id: int
+    status: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
-class TransferHistory(TransferBase):
+class TransferCategorySchema(BaseSchema):
+    category: str
+
+    class Config:
+        from_attributes = True
+
+
+class TransferOrganizationSchema(BaseSchema):
+    organization_id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class TransferHistoryUserSchema(BaseSchema):
+    first_name: str
+    last_name: str
+    organization: TransferOrganizationSchema
+
+    class Config:
+        from_attributes = True
+
+
+class TransferHistorySchema(BaseSchema):
+    create_date: datetime
+    transfer_status: TransferStatusSchema
+    user_profile: TransferHistoryUserSchema
+
+    class Config:
+        from_attributes = True
+
+
+class TransferCommentSchema(BaseSchema):
+    comment_id: int
+    comment: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TransferSchema(BaseSchema):
+    transfer_id: int
+    from_organization: TransferOrganizationSchema
+    to_organization: TransferOrganizationSchema
+    agreement_date: date
+    quantity: int
+    price_per_unit: int
+    signing_authority_declaration: bool
+    comments: Optional[TransferCommentSchema] = None
+    current_status: TransferStatusSchema
+    transfer_category: TransferCategorySchema
+    transfer_history: Optional[List[TransferHistorySchema]]
+    recommendation: Optional[TransferRecommendationEnum] = None
+
+    class Config:
+        extra = 'ignore'
+        from_attributes = True
+
+
+class TransferCreateSchema(BaseSchema):
+    transfer_id: Optional[int] = None
+    from_organization_id: int
+    to_organization_id: int
+    from_transaction_id:  Optional[int] = None
+    to_transaction_id: Optional[int] = None
+    agreement_date: Optional[date] = None
+    quantity: Optional[int] = None
+    price_per_unit: Optional[int] = None
+    signing_authority_declaration: Optional[bool] = None
+    comment_id: Optional[int] = None
+    comment: Optional[str] = None
+    transfer_category_id: Optional[int] = None
+    current_status_id: Optional[int] = None
+    current_status: Optional[str] = None
+    recommendation: Optional[TransferRecommendationEnum] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TransferUpdate(BaseSchema):
+    current_status_id: int
+    comments: Optional[str] = None
+    recommendation: Optional[str] = None
+
+
+class TransferHistory(BaseSchema):
     transfer_history_id: int
     transfer_id: int
 
     class Config:
-        orm_mode = True
-
-
-class IssuanceSchema(BaseModel):
-    issuance_id: int
-    compliance_units: int
-    organization_id: int
-    transaction_effective_date: datetime
-    transaction_id: int
-    comment_id: Optional[int]
-
-class IssuanceHistorySchema(BaseModel):
-    issuance_history_id: int
-    compliance_units: int
-    issuance_id: int
-    organization_id: int
-    transaction_id: Optional[int]
-    transaction_effective_date: Optional[datetime]
-    comment_id: Optional[int]
-
-
-class TransactionSchema(BaseModel):
-    transaction_id: int
-    compliance_units: int
-    issuance_id: int
-    transfer_id: int
-    transaction_type: TransactionTypeEnum
-    organization: int
-
-class TransactionTypeSchema(BaseModel):
-    transaction_typ_id: int
-    type: TransactionTypeEnum
-
-class TransferStatusSchema(BaseModel):
-    transaction_status_id: int
-    status: TransferStatusEnum
-
-class CommentSchema(BaseModel):
-    comment_id: int
-    comment: str
-
-class CategorySchema(BaseModel):
-    category_id: int
-    category: str
+        from_attributes = True

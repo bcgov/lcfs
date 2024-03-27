@@ -2,14 +2,15 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { Icon, Toolbar } from '@mui/material'
+import { bindTrigger } from 'material-ui-popup-state'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 // Images & Icons
-import logoDark from '@/assets/images/gov3_bc_logo.png'
+import logoDark from '@/assets/images/logo-banner.svg'
 import logoLight from '@/assets/images/BCID_H_rgb_pos.png'
 
 const HeaderBar = (props) => {
-  const { isScrolled, mobileNavbar, mobileView, openMobileNavbar, data } = props
+  const { isScrolled, isMobileView, popupState, data } = props
 
   return (
     <Toolbar
@@ -34,7 +35,7 @@ const HeaderBar = (props) => {
           />
           <BCTypography
             component="span"
-            variant={mobileView ? 'h6' : 'h4'}
+            variant={isMobileView ? 'h6' : 'h4'}
             className="application_title"
             sx={{ display: 'flex', alignItems: 'center' }}
           >
@@ -46,7 +47,6 @@ const HeaderBar = (props) => {
                 color="secondary"
                 sx={{
                   marginTop: '-1em',
-                  textTransform: 'uppercase',
                   fontWeight: 600,
                   fontSize: '1.1rem',
                   marginLeft: '0.5em'
@@ -68,27 +68,31 @@ const HeaderBar = (props) => {
           React.cloneElement(data.headerRightPart, { data })}
       </BCBox>
       <BCBox
-        display={{ xs: 'inline-block', lg: 'none' }}
+        display={{ xs: 'inline-block', xl: 'none' }}
         lineHeight={0}
         py={1.5}
         pl={1.5}
         color="inherit"
         sx={{ cursor: 'pointer' }}
-        onClick={openMobileNavbar}
+        {...bindTrigger(popupState)}
       >
-        <Icon fontSize="default">{mobileNavbar ? 'close' : 'menu'}</Icon>
+        <Icon fontSize="default">{popupState.isOpen ? 'close' : 'menu'}</Icon>
       </BCBox>
     </Toolbar>
   )
 }
 
+HeaderBar.defaultProps = {
+  isScrolled: false,
+  isMobileView: false,
+  popupState: {},
+  data: {}
+}
+
 HeaderBar.propTypes = {
   isScrolled: PropTypes.bool,
-  showBalance: PropTypes.bool,
-  mobileNavbar: PropTypes.bool,
-  mobileView: PropTypes.bool,
-  toggleBalanceVisibility: PropTypes.func,
-  openMobileNavbar: PropTypes.func,
+  isMobileView: PropTypes.bool,
+  popupState: PropTypes.object,
   data: PropTypes.object
 }
 

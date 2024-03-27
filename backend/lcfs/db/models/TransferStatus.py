@@ -3,15 +3,15 @@ from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 import enum
 
 class TransferStatusEnum(enum.Enum):
-    draft = "Draft"     # Created by Org
-    deleted = "Deleted"     # Deleted by Org
-    sent = "Sent"     # Sent to Org
-    submitted = "Submitted" # Submitted to gov by organization..
-    recommended = "Recommended" # Analyst makes recommendation to record or refuse the transfer
-    recorded = "Recorded"   # Recorded - Approved by Director
-    refused = "Refused" # Refused - Declined by director
-    declined = "Declined" # Declined - declined by Organization
-    rescinded = "Rescinded" # Rescinded - Cancelled by Organization
+    Draft = "Draft"     # Created by Org
+    Deleted = "Deleted"     # Deleted by Org
+    Sent = "Sent"     # Sent to Org
+    Submitted = "Submitted" # Submitted to gov by organization..
+    Recommended = "Recommended" # Analyst makes recommendation to record or refuse the transfer
+    Recorded = "Recorded"   # Recorded - Approved by Director
+    Refused = "Refused" # Refused - Declined by director
+    Declined = "Declined" # Declined - declined by Organization
+    Rescinded = "Rescinded" # Rescinded - Cancelled by Organization
 
 class TransferStatus(BaseModel, Auditable, DisplayOrder):
 

@@ -11,10 +11,11 @@ class Comment(BaseModel, Auditable, EffectiveDates):
 
 
     comment_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for comment")
-    comment = Column(String(500), comment="Transfer category")
+    comment = Column(String(500), comment="Comment")
 
     transfer = relationship('Transfer', back_populates='comments')
-    issuance = relationship('Issuance', back_populates='comments')
+    admin_adjustment = relationship('AdminAdjustment', back_populates='comments')
+    initiative_agreement = relationship('InitiativeAgreement', back_populates='comments')
 
 
     def __repr__(self):

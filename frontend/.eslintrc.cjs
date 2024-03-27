@@ -23,6 +23,7 @@ module.exports = {
     ],
     'import/no-absolute-path': 0,
     'react/prop-types': 0,
-    'cypress/no-unnecessary-waiting': 0
+    'cypress/no-unnecessary-waiting': 0,
+    'no-unused-vars': 1
   }
 }

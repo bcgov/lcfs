@@ -53,6 +53,8 @@ BCBox.defaultProps = {
 BCBox.propTypes = {
   variant: PropTypes.oneOf([
     'contained',
+    'outlined',
+    'bordered',
     'gradient',
     'success',
     'warning',
@@ -73,6 +75,7 @@ BCBox.propTypes = {
     'error',
     'light',
     'dark',
+    'nav',
     'none'
   ])
 }

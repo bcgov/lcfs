@@ -17,7 +17,7 @@ services:
     restart: 'no'
     image: bitnami/redis:6.2.5
     environment:
-      ALLOW_EMPTY_PASSWORD: 'yes'
+      REDIS_PASSWORD: development_only
     ports:
       - '6379:6379'
     volumes:
@@ -42,6 +42,7 @@ services:
       LCFS_DB_BASE: lcfs
       LCFS_REDIS_HOST: redis
       LCFS_REDIS_PORT: 6379
+      LCFS_REDIS_PASSWORD: development_only
       LCFS_RELOAD: true
       APP_ENVIRONMENT: dev
     ports:

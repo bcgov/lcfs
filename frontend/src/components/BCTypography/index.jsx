@@ -63,6 +63,7 @@ BCTypography.propTypes = {
     'light',
     'dark',
     'text',
+    'link',
     'white'
   ]),
   fontWeight: PropTypes.oneOf([false, 'light', 'regular', 'medium', 'bold']),

@@ -8,8 +8,6 @@ import { useMemo } from 'react'
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
 export const BCTable = ({ columnDefs, rowData, ...rest }) => {
-  const sideBar = useMemo(() => ['filters', 'columns'], [])
-
   const defaultColDef = useMemo(
     () => ({
       resizable: true,
@@ -46,7 +44,7 @@ export const BCTable = ({ columnDefs, rowData, ...rest }) => {
         pagination
         paginationPageSize={10}
         domLayout="autoHeight"
-        sideBar={sideBar}
+        paginationPageSizeSelector={[10, 20, 50, 100]}
         {...rest}
       />
     </div>

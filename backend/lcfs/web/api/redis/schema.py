@@ -1,9 +1,9 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from lcfs.web.api.base import BaseSchema
 
 
-class RedisValueDTO(BaseModel):
+class RedisValueDTO(BaseSchema):
     """DTO for redis values."""
 
     key: str

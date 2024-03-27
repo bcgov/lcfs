@@ -8,12 +8,12 @@ from sqlalchemy import and_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.future import select
 from sqlalchemy.exc import NoResultFound
-from starlette.requests import Request
 from starlette.authentication import (
     AuthenticationBackend, AuthCredentials
 )
 from lcfs.settings import Settings
 from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.UserLoginHistory import UserLoginHistory
 from lcfs.services.keycloak.dependencies import _parse_external_username
 
@@ -28,6 +28,7 @@ class UserAuthentication(AuthenticationBackend):
         self.redis_pool = redis_pool
         self.jwks = None
         self.jwks_uri = None
+        self.test_keycloak_user = None
 
     async def refresh_jwk(self):
         # Try to get the JWKS data from Redis cache
@@ -79,55 +80,70 @@ class UserAuthentication(AuthenticationBackend):
         # Call the method to refresh the JWKs from the cache or the endpoint
         await self.refresh_jwk()
 
-        # Use PyJWKClient with the JWKS URI to get the signing key
-        jwks_client = jwt.PyJWKClient(self.jwks_uri)
-        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        if not self.test_keycloak_user:
+            # Use PyJWKClient with the JWKS URI to get the signing key
+            jwks_client = jwt.PyJWKClient(self.jwks_uri)
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
 
-        # Decode and validate the JWT token
-        try:
-            user_token = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256"],
-                audience=self.settings.keycloak_audience,
-                options={"verify_exp": True},
-            )
-        except jwt.ExpiredSignatureError as exc:
-            raise HTTPException(status_code=401, detail='Token has expired')
-        except (jwt.InvalidTokenError, jwt.DecodeError) as exc:
-            raise HTTPException(status_code=401, detail=str(exc))
+            # Decode and validate the JWT token
+            try:
+                user_token = jwt.decode(
+                    token,
+                    signing_key.key,
+                    algorithms=["RS256"],
+                    audience=self.settings.keycloak_audience,
+                    options={"verify_exp": True},
+                )
+            except jwt.ExpiredSignatureError as exc:
+                raise HTTPException(status_code=401, detail='Token has expired')
+            except (jwt.InvalidTokenError, jwt.DecodeError) as exc:
+                raise HTTPException(status_code=401, detail=str(exc))
+        else:
+            user_token = self.test_keycloak_user
 
         if 'preferred_username' in user_token:
             try:
                 async with self.async_session() as session:
                     result = await session.execute(
-                        select(UserProfile).options(joinedload(UserProfile.organization), joinedload(UserProfile.user_roles)).where(
+                        select(UserProfile)
+                        .options(joinedload(UserProfile.organization), 
+                                 joinedload(UserProfile.user_roles).joinedload(UserRole.role)).where(
                             UserProfile.keycloak_user_id == user_token['preferred_username'])
                     )
-                    user = result.unique().scalar_one()
+                    user = result.unique().scalar_one_or_none()
 
-                    await self.create_login_history(user_token, True, None, request.url.path)
-                    return AuthCredentials(["authenticated"]), user
+                    if user is None:
+                        # Handle the case where no user is found
+                        await self.create_login_history(user_token, False, None, request.url.path)
+                        pass
+                    # Check if the user is active
+                    elif not user.is_active:
+                        error_text = 'The account is currently inactive.'
+                        await self.create_login_history(user_token, False, error_text, request.url.path)
+                        raise HTTPException(status_code=401, detail=error_text)
+                    else:
+                        await self.create_login_history(user_token, True, None, request.url.path)
+                        return AuthCredentials(["authenticated"]), user
             
             except NoResultFound:
                 pass
 
-        external_username = _parse_external_username(user_token)
-
         if 'email' in user_token:
-            # Construct the query to find the user
-            user_query = select(UserProfile).options(joinedload(UserProfile.organization), joinedload(UserProfile.user_roles)).where(
-                and_(
+            user_query = (
+                select(UserProfile)
+                .options(
+                    joinedload(UserProfile.organization),
+                    joinedload(UserProfile.user_roles).joinedload(UserRole.role))
+                .where(
                     UserProfile.keycloak_email == user_token['email'],
-                    UserProfile.keycloak_username == external_username
+                    UserProfile.keycloak_username == _parse_external_username(user_token)
                 )
             )
-
-            # TODO may need to not use org id == 1 if gov no longer is organization in lcfs
+            # Check for Government or Supplier affiliation
             if user_token['identity_provider'] == 'idir':
-                user_query = user_query.where(UserProfile.organization_id == 1)
+                user_query = user_query.where(UserProfile.organization_id.is_(None))
             elif user_token['identity_provider'] == 'bceidbusiness':
-                user_query = user_query.where(UserProfile.organization_id != 1)
+                user_query = user_query.where(UserProfile.organization_id.isnot(None))
             else:
                 error_text = 'Unknown identity provider.'
                 await self.create_login_history(user_token, False, error_text, request.url.path)
@@ -135,9 +151,15 @@ class UserAuthentication(AuthenticationBackend):
 
             async with self.async_session() as session:
                 user_result = await session.execute(user_query)
-                user = user_result.unique().scalar_one()
+                user = user_result.unique().scalar_one_or_none()
                 if user is None:
                     error_text = 'No User with that configuration exists.'
+                    await self.create_login_history(user_token, False, error_text, request.url.path)
+                    raise HTTPException(status_code=401, detail=error_text)
+
+                 # Check if the user is active
+                if not user.is_active:
+                    error_text = 'The account is currently inactive.'
                     await self.create_login_history(user_token, False, error_text, request.url.path)
                     raise HTTPException(status_code=401, detail=error_text)
         else:
@@ -147,6 +169,7 @@ class UserAuthentication(AuthenticationBackend):
 
         await self.map_user_keycloak_id(user, user_token)
 
+        await self.create_login_history(user_token, True, None, request.url.path)
         return AuthCredentials(["authenticated"]), user
 
     async def map_user_keycloak_id(self, user_profile, user_token):
@@ -155,8 +178,6 @@ class UserAuthentication(AuthenticationBackend):
         """
         # Map the keycloak user id to the user for future login caching
         user_profile.keycloak_user_id = user_token['preferred_username']
-        # TODO may want to map keycloak display name to user as well
-        # user.display_name = user_token['display_name']
 
         # The merge method is used to merge the state of the given object into the current session
         # If the instance does not exist in the session, insert it.

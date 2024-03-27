@@ -28,7 +28,7 @@ const MenuBar = (props) => {
       <BCBox
         sx={{
           flexGrow: 1,
-          display: { xs: 'none', sm: 'flex' },
+          display: { xs: 'none', lg: 'flex' },
           flexDirection: 'row',
           margin: 0,
           padding: 0
@@ -55,7 +55,7 @@ const MenuBar = (props) => {
       </BCBox>
       <div className="animation start-home"></div>
       <BCBox
-        display={{ xs: 'none', lg: 'flex' }}
+        display={{ xs: 'none', xl: 'flex' }}
         m={0}
         py={1}
         flexDirection="row"

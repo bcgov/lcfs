@@ -29,27 +29,35 @@ def load_all_models() -> None:
             __import__(module.name)  # noqa: WPS421
 
 
-from . import OrganizationType
-from . import OrganizationStatus
-from . import OrganizationAddress
-from . import OrganizationAttorneyAddress
-from . import OrganizationStatus
-from . import OrganizationBalance
-from . import Organization
-from . import Role
-from . import UserProfile
-from . import UserRole
-from . import UserLoginHistory
-from . import Category
-from . import Comment
-from . import NotificationChannel
-from . import NotificationType
-from . import NotificationChannelSubscription
-from . import NotificationMessage
-from . import Transaction
-from . import TransactionType
-from . import Issuance
-from . import IssuanceHistory
-from . import Transfer
-from . import TransferHistory
-from . import TransferStatus
+# Explicit model imports
+from . import (
+    OrganizationType,
+    OrganizationStatus,
+    OrganizationAddress,
+    OrganizationAttorneyAddress,
+    OrganizationStatus,
+    OrganizationBalance,
+    Organization,
+    Role,
+    UserProfile,
+    UserRole,
+    UserLoginHistory,
+    TransferCategory,
+    Comment,
+    NotificationChannel,
+    NotificationType,
+    NotificationChannelSubscription,
+    NotificationMessage,
+    Transaction,
+    TransactionView,
+    TransactionStatusView,
+    AdminAdjustment,
+    AdminAdjustmentStatus,
+    AdminAdjustmentHistory,
+    InitiativeAgreement,
+    InitiativeAgreementStatus,
+    InitiativeAgreementHistory,
+    Transfer,
+    TransferHistory,
+    TransferStatus,
+)

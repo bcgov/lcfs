@@ -7,5 +7,5 @@ cd frontend
 # Running lint-staged for linting and formatting
 npx lint-staged --allow-empty
 
-# Run a subset of unit tests
-# npm run test:quick
+# Run unit tests
+npm run test

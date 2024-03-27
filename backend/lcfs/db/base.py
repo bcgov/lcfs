@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base, AbstractConcreteBase
-from sqlalchemy import String, Column, DateTime, Integer, Date, text, TIMESTAMP
+from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func
 from datetime import datetime
 
 Base = declarative_base()
@@ -16,7 +16,7 @@ class BaseModel(AbstractConcreteBase, Base):
         comment='Date and time (UTC) when the physical record was created in the database.')
     update_date = Column(TIMESTAMP(timezone=True),
                          server_default=text('now()'),
-                         onupdate=datetime.now,
+                         onupdate=func.now(),
                          comment='Date and time (UTC) when the physical record was updated in the'
                                  ' database. '
                                  'It will be the same as the create_date until the record is first '
