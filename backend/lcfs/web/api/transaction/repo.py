@@ -182,9 +182,10 @@ class TransactionRepository(BaseRepository):
             compliance_units = compliance_units,
             organization_id = organization_id
          )
-
         self.db.add(new_transaction)
         await self.commit_to_db()
+        await self.db.refresh(new_transaction, ['organization'])
+    
         return new_transaction
 
     @repo_handler
@@ -240,12 +241,27 @@ class TransactionRepository(BaseRepository):
         Returns:
             bool: True if the action was successfully applied, False otherwise.
         """
+        # Execute the update statement
         result = await self.db.execute(
             update(Transaction)
             .where(Transaction.transaction_id == transaction_id)
             .values(transaction_action=TransactionActionEnum.Adjustment)
         )
+        
+        # Commit the update to make it permanent
         await self.db.commit()
 
         # Check if the update statement affected any rows
-        return result.rowcount > 0
+        if result.rowcount > 0:
+            # Retrieve the updated transaction instance
+            query = select(Transaction).where(Transaction.transaction_id == transaction_id)
+            updated_transaction = await self.db.scalar(query)
+            
+            # If the transaction is found, refresh it and return True
+            if updated_transaction:
+                await self.db.refresh(updated_transaction)
+                # await self.db.refresh(updated_transaction.organization)
+                return True
+        # If no rows were affected or transaction could not be retrieved, return False
+        return False
+
