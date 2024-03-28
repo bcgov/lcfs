@@ -26,10 +26,11 @@ export const TransferDetails = () => {
   } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
-  const organizations = orgData?.map((org) => ({
-    value: parseInt(org.organizationId),
-    label: org.name || t('common:unknown')
-  })) || []
+  const organizations =
+    orgData?.map((org) => ({
+      value: parseInt(org.organizationId),
+      label: org.name || t('common:unknown')
+    })) || []
 
   const quantity = watch('quantity')
   const pricePerUnit = watch('pricePerUnit')

@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+import PropTypes from 'prop-types'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import { Stack, Typography, useMediaQuery, useTheme } from '@mui/material'
@@ -85,5 +85,5 @@ TransferDetailsCard.propTypes = {
   quantity: PropTypes.number,
   pricePerUnit: PropTypes.number,
   transferStatus: PropTypes.string,
-  isGovernmentUser: PropTypes.bool,
-};
+  isGovernmentUser: PropTypes.bool
+}
