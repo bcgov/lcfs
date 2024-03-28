@@ -84,7 +84,7 @@ class TransferServices:
                     comment=transfer.to_org_comment,
                 )
             )
-        if (transfer.current_status.status in [TransferStatusEnum.Recorded.value, TransferStatusEnum.Refused.value]):
+        if (transfer.current_status.status in [TransferStatusEnum.Recorded, TransferStatusEnum.Refused]):
             comments.append(
                 TransferCommentSchema(
                     name="Government of British Columbia",
@@ -156,7 +156,7 @@ class TransferServices:
                 transfer.signing_authority_declaration = transfer_data.signing_authority_declaration
                 transfer.from_org_comment = transfer_data.from_org_comment
         # update comments
-        elif transfer_data.current_status in [TransferStatusEnum.Submitted]:
+        elif status_has_changed and new_status.status == TransferStatusEnum.Submitted:
             transfer.to_org_comment = transfer_data.to_org_comment
         else:
             transfer.gov_comment = transfer_data.gov_comment
@@ -178,7 +178,7 @@ class TransferServices:
                 await self.director_record_transfer(transfer)
             elif new_status.status == TransferStatusEnum.Declined:
                 await self.decline_transfer(transfer)
-
+            new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
             # Add a new transfer history record to reflect the status change
             await self.repo.add_transfer_history(
                 transfer.transfer_id, 
