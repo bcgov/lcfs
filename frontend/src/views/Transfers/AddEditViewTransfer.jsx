@@ -85,7 +85,7 @@ export const AddEditViewTransfer = () => {
       signingAuthorityDeclaration: false,
       fromOrgComment: '',
       toOrgComment: '',
-      govComment: ''
+      govComment: '',
       recommendation: null
     }
   })
