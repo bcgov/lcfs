@@ -90,6 +90,9 @@ class TransferSchema(BaseSchema):
     price_per_unit: int
     signing_authority_declaration: bool
     comments: Optional[List[TransferCommentSchema]] = None
+    from_org_comment: Optional[str] = None
+    to_org_comment: Optional[str] = None
+    gov_comment: Optional[str] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
     transfer_history: Optional[List[TransferHistorySchema]]

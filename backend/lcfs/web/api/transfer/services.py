@@ -84,7 +84,7 @@ class TransferServices:
                     comment=transfer.to_org_comment,
                 )
             )
-        if (transfer.gov_comment != None and transfer.gov_comment != '' and self.request.user.organization is None):
+        if (transfer.current_status.status in [TransferStatusEnum.Recorded.value, TransferStatusEnum.Refused.value]):
             comments.append(
                 TransferCommentSchema(
                     name="Government of British Columbia",

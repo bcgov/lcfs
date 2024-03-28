@@ -1,5 +1,5 @@
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryCache } from '@tanstack/react-query'
 
 export const useTransfer = (transferID, options) => {
   const client = useApiService()
@@ -13,7 +13,7 @@ export const useTransfer = (transferID, options) => {
 
 export const useCreateUpdateTransfer = (orgId, transferId, options) => {
   const client = useApiService()
-
+  const queryCache = useQueryCache();
   return useMutation({
     ...options,
     mutationFn: async ({ data }) => {
@@ -31,6 +31,9 @@ export const useCreateUpdateTransfer = (orgId, transferId, options) => {
       if (!orgId) {
         return await client.put(`transfers/${transferId}`, data)
       }
+    },
+    onSettled: () => {
+      queryCache.invalidateQueries(['transfer', transferId])
     }
   })
 }
