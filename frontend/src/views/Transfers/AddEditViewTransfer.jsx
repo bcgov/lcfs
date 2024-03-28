@@ -230,30 +230,30 @@ export const AddEditViewTransfer = () => {
   } = transferData || {}
 
   useEffect(() => {
-    const statusArr = []
+    const statusSet = new Set()
     transferData?.transferHistory?.forEach((item) => {
-      statusArr.push(item.transferStatus.status)
+      statusSet.add(item.transferStatus.status)
     })
-    if (statusArr.length === 0) {
+    if (statusSet.length === 0) {
       setSteps(['Draft', 'Sent', 'Submitted', 'Recorded'])
     } else {
-      setSteps(statusArr)
-    }
-    if (!statusArr.includes(TRANSFER_STATUSES.SENT))
-      statusArr.push(TRANSFER_STATUSES.SENT)
-    if (
-      !statusArr.includes(TRANSFER_STATUSES.SUBMITTED) &&
-      !statusArr.includes(TRANSFER_STATUSES.DECLINED)
-    )
-      statusArr.push(TRANSFER_STATUSES.SUBMITTED)
-    if (
-      !statusArr.includes(TRANSFER_STATUSES.RECOMMENDED) &&
-      isGovernmentUser
-    ) {
-      statusArr.push(TRANSFER_STATUSES.RECOMMENDED)
-    }
-    if (currentStatus !== TRANSFER_STATUSES.RECORDED) {
-      statusArr.push(TRANSFER_STATUSES.RECORDED)
+      if (!statusSet.has(TRANSFER_STATUSES.SENT))
+        statusSet.add(TRANSFER_STATUSES.SENT)
+      if (
+        !statusSet.has(TRANSFER_STATUSES.SUBMITTED) &&
+        !statusSet.has(TRANSFER_STATUSES.DECLINED)
+      )
+        statusSet.add(TRANSFER_STATUSES.SUBMITTED)
+      if (
+        !statusSet.has(TRANSFER_STATUSES.RECOMMENDED) &&
+        isGovernmentUser
+      ) {
+        statusSet.add(TRANSFER_STATUSES.RECOMMENDED)
+      }
+      if (currentStatus !== TRANSFER_STATUSES.RECORDED) {
+        statusSet.add(TRANSFER_STATUSES.RECORDED)
+      }
+      setSteps(Array.from(statusSet))
     }
   }, [isGovernmentUser, transferData])
 
