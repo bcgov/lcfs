@@ -255,7 +255,7 @@ export const AddEditViewTransfer = () => {
       }
       setSteps(Array.from(statusSet))
     }
-  }, [isGovernmentUser, transferData])
+  }, [currentStatus, isGovernmentUser, transferData])
 
   const buttonClusterConfig = useMemo(
     () =>
