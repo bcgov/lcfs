@@ -8,14 +8,16 @@ import TransferHistory from './TransferHistory'
 import { Role } from '@/components/Role'
 import InternalComments from '@/components/InternalComments'
 import { roles } from '@/constants/roles'
+import {
+  TRANSFER_STATUSES,
+  getAllTerminalTransferStatuses
+} from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-export const TransferView = ({
-  transferId,
-  editorMode,
-  isGovernmentUser,
-  transferData
-}) => {
+export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])
+  const { data: currentUser, sameOrganization } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
   const {
     currentStatus: { status: transferStatus } = {},
     toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
@@ -64,7 +66,23 @@ export const TransferView = ({
       </BCBox>
       {/* Comments */}
       <CommentList comments={transferData?.comments} />
-      <Comments editorMode={editorMode} isGovernmentUser={isGovernmentUser} />
+      {!getAllTerminalTransferStatuses().includes(transferStatus) && (
+        <Comments
+          editorMode={editorMode}
+          isGovernmentUser={isGovernmentUser}
+          commentField={
+            (editorMode &&
+              (!transferStatus || transferStatus === TRANSFER_STATUSES.DRAFT) &&
+              sameOrganization(fromOrgId) &&
+              'fromOrgComment') ||
+            (isGovernmentUser && 'govComment') ||
+            (!isGovernmentUser &&
+              transferStatus === TRANSFER_STATUSES.SENT &&
+              sameOrganization(toOrgId) &&
+              'toOrgComment')
+          }
+        />
+      )}
 
       {/* Internal Comments */}
       <Role roles={[roles.government]}>

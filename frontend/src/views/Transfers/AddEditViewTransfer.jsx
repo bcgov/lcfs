@@ -401,7 +401,6 @@ export const AddEditViewTransfer = () => {
               <TransferView
                 transferId={transferId}
                 editorMode={editorMode}
-                isGovernmentUser={isGovernmentUser}
                 transferData={transferData}
               />
             )}
