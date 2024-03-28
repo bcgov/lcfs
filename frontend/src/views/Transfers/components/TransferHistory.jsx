@@ -20,13 +20,13 @@ function TransferHistory({ transferHistory }) {
   }
 
   return (
-    <BCBox mt={2}>
+    <BCBox mt={2} ml={2}>
       <Typography variant="h6" color="primary">
         {t('transfer:txnHistory')}
       </Typography>
-      <List>
+      <ul>
         {transferHistory?.map((item, index) => (
-          <ListItem key={item.transferStatus.transferStatusId + index} disablePadding>
+          <li key={item.transferStatus.transferStatusId + index}>
             <Typography variant="body2" component="div">
               <b>{getTransferStatusLabel(item.transferStatus.status)}</b>{' '}
               <span> on </span>
@@ -35,9 +35,9 @@ function TransferHistory({ transferHistory }) {
               <strong> {item.userProfile.firstName} {item.userProfile.lastName}</strong> <span> of </span>
               <strong> {item.userProfile.organization ? item.userProfile.organization.name : t('govOrg')} </strong>
             </Typography>
-          </ListItem>
+          </li>
         ))}
-      </List>
+      </ul>
     </BCBox>
   )
 }
