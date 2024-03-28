@@ -12,7 +12,7 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
-from lcfs.db.models.OrganizationStatus import OrganizationStatus
+from lcfs.db.models.OrganizationStatus import OrgStatusEnum, OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
 from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
@@ -187,3 +187,18 @@ class OrganizationsRepository(BaseRepository):
             select(OrganizationAttorneyAddress)
             .where(OrganizationAttorneyAddress.organization_attorney_address_id == organization_attorney_address_id)
         )
+
+    @repo_handler
+    async def is_registered_for_transfer(self, organization_id: int):
+        """
+        Check if an organization is registered in the database.
+        """
+        result = await self.db.scalar(
+            select(Organization.organization_id).where(
+                and_(
+                    Organization.organization_id == organization_id,
+                    OrganizationStatus.status == OrgStatusEnum.Registered
+                )
+            )
+        )
+        return result is not None

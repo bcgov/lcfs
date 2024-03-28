@@ -9,6 +9,9 @@ class TransferHistory(BaseModel, Auditable, EffectiveDates):
     transfer_history_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the transfer history record")
     transfer_id = Column(Integer, ForeignKey('transfer.transfer_id'))
     transfer_status_id = Column(Integer, ForeignKey('transfer_status.transfer_status_id'))
+    user_profile_id = Column(Integer, ForeignKey("user_profile.user_profile_id"), comment="Foreign key to user_profile")
 
-    transfer = relationship('Transfer', back_populates='transfer_history_records')
+    transfer = relationship('Transfer', back_populates='transfer_history')
     transfer_status = relationship('TransferStatus')
+    user_profile = relationship("UserProfile")
+

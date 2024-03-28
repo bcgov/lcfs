@@ -1,6 +1,7 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import { roles } from '@/constants/roles'
+import { getAllOrganizationStatuses } from '@/constants/statuses'
 import { Stack } from '@mui/material'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -52,8 +53,8 @@ export const StatusRenderer = (props) => {
 
 export const OrgStatusRenderer = (props) => {
   const location = useLocation()
-  const statusArr = ['Registered', 'Unregistered', 'Suspended', 'Canceled']
-  const statusColorArr = ['success', 'info', 'warning', 'error']
+  const statusArr = getAllOrganizationStatuses()
+  const statusColorArr = ['info', 'success', 'warning', 'error']
   const statusIndex = statusArr.indexOf(props.data.orgStatus.status)
   return (
     <Link
@@ -84,10 +85,30 @@ export const OrgStatusRenderer = (props) => {
 }
 
 export const TransactionStatusRenderer = (props) => {
-  const statusArr = ['Draft', 'Recommended', 'Sent', 'Submitted', 'Approved', 
-                     'Recorded', 'Refused', 'Deleted', 'Declined', 'Rescinded']
-  const statusColorArr = ['info', 'info', 'info', 'info', 'success', 
-                          'success', 'error', 'error', 'error', 'error']
+  const statusArr = [
+    'Draft',
+    'Recommended',
+    'Sent',
+    'Submitted',
+    'Approved',
+    'Recorded',
+    'Refused',
+    'Deleted',
+    'Declined',
+    'Rescinded'
+  ]
+  const statusColorArr = [
+    'info',
+    'info',
+    'info',
+    'info',
+    'success',
+    'success',
+    'error',
+    'error',
+    'error',
+    'error'
+  ]
   const statusIndex = statusArr.indexOf(props.data.status)
   return (
     <BCBox

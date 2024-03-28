@@ -16,9 +16,15 @@ from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
 from lcfs.db.models.UserProfile import UserProfile
+from lcfs.web.api.transfer.schema import (
+    TransferCreateSchema,
+    TransferSchema,
+)
 from lcfs.web.api.transaction.schema import TransactionListSchema
 from lcfs.web.api.user.services import UserServices
 from .services import OrganizationService
+from .validation import OrganizationValidation
+from lcfs.web.api.transfer.services import TransferServices
 
 
 logger = getLogger("organization_view")
@@ -147,3 +153,49 @@ async def get_transactions_paginated(
     """
     organization_id = request.user.organization.organization_id
     return await org_service.get_transactions_paginated(pagination, organization_id)
+
+
+@router.post(
+    "/{organization_id}/transfers",
+    response_model=TransferSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@roles_required("Supplier")
+@view_handler
+async def create_transfer(
+    request: Request,
+    organization_id: int,
+    transfer_create: TransferCreateSchema = ...,
+    transfer_service: TransferServices = Depends(),
+    validate: OrganizationValidation = Depends(),
+):
+    """
+    Endpoint to create a new transfer
+    This endpoint creates a new transfer and returns the information of the created transfer.
+    """
+    await validate.create_transfer(organization_id, transfer_create)
+    return await transfer_service.create_transfer(transfer_create)
+
+
+@router.put(
+    "/{organization_id}/transfers/{transfer_id}",
+    response_model=TransferSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@roles_required("Supplier")
+@view_handler
+async def update_transfer(
+    request: Request,
+    organization_id: int,
+    transfer_id: int,
+    transfer_create: TransferCreateSchema = ...,
+    transfer_service: TransferServices = Depends(),
+    validate: OrganizationValidation = Depends(),
+):
+    """
+    Endpoint to create a new transfer
+    This endpoint creates a new transfer and returns the information of the created transfer.
+    """
+    validate.update_transfer(organization_id, transfer_create)
+    transfer_create.transfer_id = transfer_id
+    return await transfer_service.update_transfer(transfer_create)

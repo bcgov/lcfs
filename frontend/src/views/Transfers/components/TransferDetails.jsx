@@ -12,10 +12,10 @@ import {
 import { useEffect, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import LabelBox from './LabelBox'
+import { LabelBox } from './LabelBox'
 import { calculateTotalValue } from '@/utils/formatters'
 
-const TransferDetails = () => {
+export const TransferDetails = () => {
   const { t } = useTranslation(['common', 'transfer', 'organization'])
   const [totalValue, setTotalValue] = useState(0.0)
   const {
@@ -26,10 +26,11 @@ const TransferDetails = () => {
   } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
-  const organizations = orgData?.map((org) => ({
-    value: parseInt(org.organizationId),
-    label: org.name || t('common:unknown')
-  }))
+  const organizations =
+    orgData?.map((org) => ({
+      value: parseInt(org.organizationId),
+      label: org.name || t('common:unknown')
+    })) || []
 
   const quantity = watch('quantity')
   const pricePerUnit = watch('pricePerUnit')
@@ -136,8 +137,8 @@ const TransferDetails = () => {
                   <MenuItem value="">
                     <em>{t('org:selectOrgLabel')}</em>
                   </MenuItem>
-                  {organizations.map((org) => (
-                    <MenuItem key={org.value} value={org.value}>
+                  {organizations.map((org, index) => (
+                    <MenuItem key={index} value={org.value}>
                       {org.label}
                     </MenuItem>
                   ))}
@@ -159,7 +160,9 @@ const TransferDetails = () => {
               style: { textAlign: 'right' }
             }}
             InputProps={{
-              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+              startAdornment: (
+                <InputAdornment position="start">$</InputAdornment>
+              )
             }}
             sx={{
               minWidth: '24rem',
@@ -185,5 +188,3 @@ const TransferDetails = () => {
     </BCBox>
   )
 }
-
-export default TransferDetails

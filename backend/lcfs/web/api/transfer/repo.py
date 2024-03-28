@@ -9,11 +9,13 @@ from sqlalchemy.orm import selectinload
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.repo import BaseRepository
+from lcfs.web.api.transfer.schema import TransferSchema
 
 from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferStatus import TransferStatus
+from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.TransferHistory import TransferHistory
+from lcfs.db.models.UserProfile import UserProfile
 
 logger = getLogger("transfer_repo")
 
@@ -62,7 +64,10 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments)
+            selectinload(Transfer.comments),
+            selectinload(Transfer.transfer_history)
+              .selectinload(TransferHistory.user_profile)
+                .selectinload(UserProfile.organization)
         ).where(Transfer.transfer_id == transfer_id)
 
         result = await self.db.execute(query)
@@ -71,14 +76,25 @@ class TransferRepository(BaseRepository):
 
     @repo_handler
     async def create_transfer(self, transfer: Transfer) -> Transfer:
-        '''Save a transfer and its associated comment in the database.'''
+        """Save a transfer and its associated comment in the database."""
         self.db.add(transfer)
-        await self.commit_to_db() # This saves both the transfer and the comment
-        # No need to explicitly add and save the comment if it's properly associated with the transfer
-        return transfer
+
+        await self.commit_to_db()
+        await self.db.refresh(
+            transfer,
+            [
+                "from_organization",
+                "to_organization",
+                "current_status",
+                "transfer_category",
+                "comments",
+                "transfer_history"
+            ],
+        )
+        return TransferSchema.model_validate(transfer)
 
     @repo_handler
-    async def get_transfer_status(self, transfer_status_id: int) -> TransferStatus:
+    async def get_transfer_status_by_id(self, transfer_status_id: int) -> TransferStatus:
         '''Fetch a single transfer status by transfer status id from the database'''
         return await self.db.scalar(
             select(TransferStatus).where(
@@ -92,23 +108,35 @@ class TransferRepository(BaseRepository):
             select(TransferCategory).where(
                 TransferCategory.transfer_category_id == transfer_category_id)
         )
+    
+    @repo_handler
+    async def get_transfer_status_by_name(self, transfer_status_name: str) -> TransferStatus:
+        '''Fetch a single transfer status by transfer status name from the database'''
+        return await self.db.scalar(
+            select(TransferStatus).where(
+                TransferStatus.status == getattr(TransferStatusEnum, transfer_status_name))
+        )
 
     @repo_handler
     async def update_transfer(self, transfer: Transfer) -> Transfer:
         """Persists the changes made to the Transfer object to the database."""
-        # Assuming the transfer object has been modified in the service,
-        # we just need to commit those changes.
-        try:
-            await self.commit_to_db()
-            # Refresh the instance with updated data from the DB.
-            await self.db.refresh(transfer)
-            return transfer
-        except Exception as e:
-            await self.db.rollback()  # Rollback in case of error
-            raise e
+        # self.db.add(transfer)
+        await self.commit_to_db()
+        await self.db.refresh(
+            transfer,
+            [
+                "from_organization",
+                "to_organization",
+                "current_status",
+                "transfer_category",
+                "comments",
+                "transfer_history"
+            ],
+        )
+        return transfer
 
     @repo_handler
-    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int) -> TransferHistory:
+    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int, user_profile_id: int) -> TransferHistory:
         """
         Adds a new record to the transfer history in the database.
 
@@ -121,7 +149,8 @@ class TransferRepository(BaseRepository):
         """
         new_history_record = TransferHistory(
             transfer_id=transfer_id,
-            transfer_status_id=transfer_status_id
+            transfer_status_id=transfer_status_id,
+            user_profile_id=user_profile_id
         )
         self.db.add(new_history_record)
         await self.commit_to_db()

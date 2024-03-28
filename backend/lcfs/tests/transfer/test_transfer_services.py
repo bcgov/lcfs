@@ -29,7 +29,7 @@ def transfer_service(transfer_repo, org_repo):
 @pytest.mark.anyio
 async def test_get_all_transfers(transfer_service):
     transfers = await transfer_service.get_all_transfers()
-    assert len(transfers) == 2
+    assert len(transfers) == 3
     assert transfers[0].transfer_id == 1
 
 # Test retrieving a transfer by ID

@@ -10,7 +10,7 @@ async def test_endpoint_success(client: AsyncClient, fastapi_app: FastAPI, set_m
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
-    assert response_data["keycloak_username"] == "mockuser"
+    assert response_data["keycloakUsername"] == "mockuser"
 
 
 @pytest.mark.anyio

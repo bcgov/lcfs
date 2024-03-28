@@ -1,10 +1,14 @@
-import PropTypes from 'prop-types';
+import PropTypes from 'prop-types'
 import { Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
-import { decimalFormatter, calculateTotalValue, dateFormatter } from '@/utils/formatters'
+import {
+  decimalFormatter,
+  calculateTotalValue,
+  dateFormatter
+} from '@/utils/formatters'
 
-const TransferSummary = ({ transferData, formData }) => {
+export const TransferSummary = ({ transferData, formData }) => {
   const { t } = useTranslation()
 
   return (
@@ -47,33 +51,31 @@ const TransferSummary = ({ transferData, formData }) => {
 TransferSummary.propTypes = {
   transferData: PropTypes.shape({
     fromOrganization: PropTypes.shape({
-      name: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired
     }).isRequired,
     toOrganization: PropTypes.shape({
-      name: PropTypes.string.isRequired,
-    }).isRequired,
+      name: PropTypes.string.isRequired
+    }).isRequired
   }).isRequired,
   formData: PropTypes.shape({
     quantity: PropTypes.number.isRequired,
     pricePerUnit: PropTypes.number.isRequired,
-    agreementDate: PropTypes.instanceOf(Date).isRequired,
+    agreementDate: PropTypes.instanceOf(Date).isRequired
   }).isRequired
-};
+}
 
 TransferSummary.defaultProps = {
   transferData: {
     fromOrganization: {
-      name: '',
+      name: ''
     },
     toOrganization: {
-      name: '',
-    },
+      name: ''
+    }
   },
   formData: {
     quantity: 0,
     pricePerUnit: 0,
-    agreementDate: new Date(),
-  },
-};
-
-export default TransferSummary
+    agreementDate: new Date()
+  }
+}
