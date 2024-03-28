@@ -3,7 +3,7 @@ import { List, ListItem, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 
 function TransferHistory({ transferHistory }) {
-  const { t } = useTranslation(['common', 'transfer']);
+  const { t } = useTranslation(['common', 'transfer'])
 
   const getTransferStatusLabel = (status) => {
     return t(`transfer:transferHistory.${status}`, 'Status not found')
@@ -20,24 +20,35 @@ function TransferHistory({ transferHistory }) {
   }
 
   return (
-    <BCBox mt={2} ml={2}>
+    <BCBox mt={2}>
       <Typography variant="h6" color="primary">
         {t('transfer:txnHistory')}
       </Typography>
-      <ul>
-        {transferHistory?.map((item, index) => (
-          <li key={item.transferStatus.transferStatusId + index}>
-            <Typography variant="body2" component="div">
-              <b>{getTransferStatusLabel(item.transferStatus.status)}</b>{' '}
-              <span> on </span>
-              {formatDate(item.createDate)}
-              <span> by </span>
-              <strong> {item.userProfile.firstName} {item.userProfile.lastName}</strong> <span> of </span>
-              <strong> {item.userProfile.organization ? item.userProfile.organization.name : t('govOrg')} </strong>
-            </Typography>
-          </li>
-        ))}
-      </ul>
+      <BCBox mt={1} ml={2}>
+        <ul>
+          {transferHistory?.map((item, index) => (
+            <li key={item.transferStatus.transferStatusId + index}>
+              <Typography variant="body2" component="div">
+                <b>{getTransferStatusLabel(item.transferStatus.status)}</b>{' '}
+                <span> on </span>
+                {formatDate(item.createDate)}
+                <span> by </span>
+                <strong>
+                  {' '}
+                  {item.userProfile.firstName} {item.userProfile.lastName}
+                </strong>{' '}
+                <span> of </span>
+                <strong>
+                  {' '}
+                  {item.userProfile.organization
+                    ? item.userProfile.organization.name
+                    : t('govOrg')}{' '}
+                </strong>
+              </Typography>
+            </li>
+          ))}
+        </ul>
+      </BCBox>
     </BCBox>
   )
 }
