@@ -24,7 +24,7 @@ function TransferHistory({ transferHistory }) {
       <Typography variant="h6" color="primary">
         {t('transfer:txnHistory')}
       </Typography>
-      <BCBox mt={1} ml={2}>
+      <BCBox m={2}>
         <ul>
           {transferHistory?.map((item, index) => (
             <li key={item.transferStatus.transferStatusId + index}>
