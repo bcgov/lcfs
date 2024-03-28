@@ -51,6 +51,7 @@ import { buttonClusterConfigFn } from './buttonConfigs'
 import SigningAuthority from './components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
 import { useQueryClient } from '@tanstack/react-query'
+import { Recommendation } from './components/Recommendation'
 
 export const AddEditViewTransfer = () => {
   const queryClient = useQueryClient()
@@ -85,6 +86,7 @@ export const AddEditViewTransfer = () => {
       fromOrgComment: '',
       toOrgComment: '',
       govComment: ''
+      recommendation: null
     }
   })
 
@@ -128,7 +130,8 @@ export const AddEditViewTransfer = () => {
         govComment: transferData.govComment,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
-          : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
+          : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
+        recommendation: transferData.recommendation
       })
     }
     if (isLoadingError || queryState.status === 'error') {
@@ -201,6 +204,7 @@ export const AddEditViewTransfer = () => {
       setAlertSeverity('error')
     }
   })
+
   const currentStatus = transferData?.currentStatus.status
 
   const {
@@ -384,6 +388,15 @@ export const AddEditViewTransfer = () => {
                 transferData={transferData}
               />
             )}
+
+            {[
+              TRANSFER_STATUSES.SUBMITTED,
+              TRANSFER_STATUSES.RECOMMENDED
+            ].includes(currentStatus) &&
+              hasAnyRole(roles.analyst, roles.director) && (
+                <Recommendation currentStatus={currentStatus} />
+              )}
+
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
             {(!currentStatus ||
               (currentStatus === TRANSFER_STATUSES.DRAFT &&
