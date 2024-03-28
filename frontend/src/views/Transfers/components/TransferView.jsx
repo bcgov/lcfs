@@ -5,6 +5,9 @@ import { Typography } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
 import TransferHistory from './TransferHistory'
+import { Role } from '@/components/Role'
+import InternalComments from '@/components/InternalComments'
+import { roles } from '@/constants/roles'
 
 export const TransferView = ({
   editorMode,
@@ -61,6 +64,11 @@ export const TransferView = ({
       {/* Comments */}
       <CommentList comments={transferData?.comments} />
       <Comments editorMode={editorMode} isGovernmentUser={isGovernmentUser} />
+
+      {/* Internal Comments */}
+      <Role roles={[roles.government]}>
+        <InternalComments entityType="Transfer" entityId={transferId} />
+      </Role>
 
       {/* List of attachments */}
       {/* <AttachmentList attachments={demoData.attachments} /> */}

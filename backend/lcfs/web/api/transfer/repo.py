@@ -60,14 +60,10 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.from_transaction),
             selectinload(Transfer.to_transaction),
-            selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.transfer_history)
-              .selectinload(TransferHistory.transfer_status),
-            selectinload(Transfer.transfer_history)
-              .selectinload(TransferHistory.user_profile)
-                .selectinload(UserProfile.organization)
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
         ).where(Transfer.transfer_id == transfer_id)
 
         result = await self.db.execute(query)
@@ -75,7 +71,7 @@ class TransferRepository(BaseRepository):
         return transfer
 
     @repo_handler
-    async def create_transfer(self, transfer: Transfer) -> Transfer:
+    async def create_transfer(self, transfer: Transfer) -> TransferSchema:
         """Save a transfer and its associated comment in the database."""
         self.db.add(transfer)
 
@@ -117,7 +113,7 @@ class TransferRepository(BaseRepository):
         )
 
     @repo_handler
-    async def update_transfer(self, transfer: Transfer) -> Transfer:
+    async def update_transfer(self, transfer: Transfer) -> TransferSchema:
         """Persists the changes made to the Transfer object to the database."""
         # self.db.add(transfer)
         await self.commit_to_db()
@@ -131,7 +127,7 @@ class TransferRepository(BaseRepository):
                 "transfer_history"
             ],
         )
-        return transfer
+        return TransferSchema.model_validate(transfer)
 
     @repo_handler
     async def add_transfer_history(self, transfer_id: int, transfer_status_id: int, user_profile_id: int) -> TransferHistory:
@@ -152,4 +148,15 @@ class TransferRepository(BaseRepository):
         )
         self.db.add(new_history_record)
         await self.commit_to_db()
+        await self.db.refresh(new_history_record)
         return new_history_record
+
+    @repo_handler
+    async def commit_refresh_transfer(self, transfer: Transfer) -> Transfer:
+        """
+        Commits and refreshes a transfer object in db session
+
+        """
+        await self.commit_to_db()
+        await self.db.refresh(transfer)
+        return transfer

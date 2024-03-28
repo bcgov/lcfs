@@ -351,4 +351,3 @@ export const buttonClusterConfigFn = ({
 
   return buttons
 }
-

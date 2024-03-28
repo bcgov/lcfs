@@ -4,30 +4,7 @@ from datetime import date, datetime
 from enum import Enum
 
 
-class TransactionTypeEnum(str, Enum):
-    administrative_adjustment = "Administrative Adjustment"
-    initiative_agreement = "Initiative Agreement"
-    assessment = "Assessment"
-    transfer = "Transfer"
-
-
-class TransferStatusEnum(str, Enum):
-    Draft = "Draft"
-    Deleted = "Deleted"
-    Sent = "Sent"
-    Submitted = "Submitted"
-    Recommended = "Recommended"
-    Recorded = "Recorded"
-    Refused = "Refused"
-    Declined = "Declined"
-    Rescinded = "Rescinded"
-
-    @classmethod
-    def get_index(cls, value):
-        return list(cls).index(value) + 1
-
-
-class TransferRecommendationEnum(str, Enum):
+class TransferRecommendationEnumSchema(str, Enum):
     Record = 'Record'
     Refuse = 'Refuse'
 
@@ -96,7 +73,7 @@ class TransferSchema(BaseSchema):
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
     transfer_history: Optional[List[TransferHistorySchema]]
-    recommendation: Optional[TransferRecommendationEnum] = None
+    recommendation: Optional[TransferRecommendationEnumSchema] = None
 
     class Config:
         extra = 'ignore'
@@ -119,7 +96,7 @@ class TransferCreateSchema(BaseSchema):
     transfer_category_id: Optional[int] = None
     current_status_id: Optional[int] = None
     current_status: Optional[str] = None
-    recommendation: Optional[TransferRecommendationEnum] = None
+    recommendation: Optional[TransferRecommendationEnumSchema] = None
 
     class Config:
         from_attributes = True

@@ -48,6 +48,7 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     transfer_history = relationship(
         'TransferHistory', back_populates='transfer')
     current_status = relationship('TransferStatus')
+    transfer_internal_comments = relationship('TransferInternalComment', back_populates='transfer')
 
     from_transaction = relationship(
         'Transaction',

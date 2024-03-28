@@ -8,6 +8,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException, ServiceExceptio
 
 # models
 from lcfs.db.models.Transfer import Transfer
+from lcfs.db.models.TransferStatus import TransferStatusEnum
 from lcfs.db.models.Comment import Comment
 from lcfs.db.models.Transaction import TransactionActionEnum
 
@@ -19,8 +20,7 @@ from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transfer.schema import (
     TransferCommentSchema,
     TransferSchema,
-    TransferCreateSchema,
-    TransferStatusEnum,
+    TransferCreateSchema
 )
 
 # repo
@@ -119,8 +119,8 @@ class TransferServices:
         transfer.transfer_category_id = 1
 
         transfer.current_status = current_status
-        if current_status == TransferStatusEnum.Sent:
-            await self.validate.sign_and_send_from_supplier(transfer)
+        if current_status.status == TransferStatusEnum.Sent:
+            await self.sign_and_send_from_supplier(transfer)
 
         transfer = await self.repo.create_transfer(transfer)
         # Add a new transfer history record if the status has changed
@@ -136,32 +136,25 @@ class TransferServices:
         self, transfer_data: TransferCreateSchema
     ) -> Transfer:
         """Updates an existing transfer record with new data."""
-        current_status = await self.repo.get_transfer_status_by_name(
-            transfer_data.current_status
-        )
+        new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
         transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
-        # if data not found
+
         if not transfer:
-            raise DataNotFoundException(
-                f"Transfer with id {transfer_data.transfer_id} not found"
-            )
+             raise DataNotFoundException(f"Transfer with id {transfer_data.transfer_id} not found")
+  
+        # Check if the new status is different from the current status of the transfer
+        status_has_changed = transfer.current_status != new_status
 
         # if the transfer status is Draft or Sent then update all the fields within the transfer
-        if (
-            transfer_data.current_status == TransferStatusEnum.Draft.value
-        ) or (  # if the status of the transfer is already sent then don't update other information
-            transfer.current_status != current_status
-            and transfer_data.current_status == TransferStatusEnum.Sent.value
-        ):
-            transfer.to_organization_id = transfer_data.to_organization_id
-            transfer.to_organization.oranization_id = transfer_data.to_organization_id
-            transfer.agreement_date = transfer_data.agreement_date
-            transfer.quantity = transfer_data.quantity
-            transfer.price_per_unit = transfer_data.price_per_unit
-            transfer.signing_authority_declaration = (
-                transfer_data.signing_authority_declaration
-            )
-            transfer.from_org_comment = transfer_data.from_org_comment
+        if transfer_data.current_status in [TransferStatusEnum.Draft.value, TransferStatusEnum.Sent.value]:
+            # Only update certain fields if the status is Draft or changing to Sent
+            if status_has_changed or transfer_data.current_status == TransferStatusEnum.Draft.value:
+                transfer.to_organization_id = transfer_data.to_organization_id
+                transfer.agreement_date = transfer_data.agreement_date
+                transfer.quantity = transfer_data.quantity
+                transfer.price_per_unit = transfer_data.price_per_unit
+                transfer.signing_authority_declaration = transfer_data.signing_authority_declaration
+                transfer.from_org_comment = transfer_data.from_org_comment
         # update comments
         elif transfer_data.current_status in [TransferStatusEnum.Submitted]:
             transfer.to_org_comment = transfer_data.to_org_comment
@@ -170,25 +163,33 @@ class TransferServices:
 
         if transfer_data.signing_authority_declaration == None:
             transfer.signing_authority_declaration = False
-        if transfer_data.recommendation != transfer.recommendation:
+
+        if transfer_data.recommendation and transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation
 
-        if (transfer.current_status != current_status):
-            if current_status == TransferStatusEnum.Sent:
+        # Update transfer history and handle status-specific actions if the status has changed
+        if status_has_changed:
+            print(f"Status change: {transfer.current_status.status} -> {new_status.status}")
+
+            # Matching the current status with enums directly is safer if they are comparable
+            if new_status.status == TransferStatusEnum.Sent:
                 await self.sign_and_send_from_supplier(transfer)
-            if current_status == TransferStatusEnum.Recorded:
+            elif new_status.status == TransferStatusEnum.Recorded:
                 await self.director_record_transfer(transfer)
-            if current_status == TransferStatusEnum.Declined:
-                await self.decline_transfer(transfer)    
-            # Add a new transfer history record if the status has changed
+            elif new_status.status == TransferStatusEnum.Declined:
+                await self.decline_transfer(transfer)
+
+            # Add a new transfer history record to reflect the status change
             await self.repo.add_transfer_history(
                 transfer.transfer_id, 
-                current_status.transfer_status_id,
+                new_status.transfer_status_id,
                 self.request.user.user_profile_id
             )
 
-        transfer.current_status = current_status
+        # Finally, update the transfer's status and save the changes
+        transfer.current_status = new_status
         return await self.repo.update_transfer(transfer)
+
 
     async def sign_and_send_from_supplier(self, transfer):
         """Create reserved transaction to reserve compliance units for sending organization."""
@@ -217,7 +218,7 @@ class TransferServices:
                 f"From transaction not found for transfer \
                                    {transfer.transfer_id}. Contact support."
             )
-
+        # Confirm transaction of sending organization
         confirm_result = await self.transaction_repo.confirm_transaction(
             transfer.from_transaction_id
         )
@@ -227,6 +228,8 @@ class TransferServices:
                                    {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
             )
 
+        await self.repo.commit_refresh_transfer(transfer)
+
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
             transaction_action=TransactionActionEnum.Adjustment,
@@ -234,6 +237,7 @@ class TransferServices:
             organization_id=transfer.to_organization_id,
         )
         transfer.to_transaction = to_transaction
+        await self.repo.commit_refresh_transfer(transfer)
 
     async def decline_transfer(self, transfer):
         """Release the reserved transaction when transfer is declined."""
