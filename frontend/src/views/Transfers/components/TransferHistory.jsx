@@ -32,12 +32,15 @@ function TransferHistory({ transferHistory }) {
               <span> on </span>
               {formatDate(item.createDate)}
               <span> by </span>
-              <strong>
+              <strong> 
                 {' '}
                 {item.userProfile.firstName} {item.userProfile.lastName}
               </strong>{' '}
-              <span> of </span>
-              <strong> {item.userProfile.organization.name} </strong>
+              {item.userProfile.organization &&
+                <>
+                  <span> of </span><strong> {item.userProfile.organization?.name} </strong>
+                </>
+              }
             </Typography>
           </ListItem>
         ))}
