@@ -395,6 +395,7 @@ export const AddEditViewTransfer = () => {
                 <Comments
                   editorMode={editorMode}
                   isGovernmentUser={isGovernmentUser}
+                  commentField={'fromOrgComment'}
                 />
               </>
             ) : (
