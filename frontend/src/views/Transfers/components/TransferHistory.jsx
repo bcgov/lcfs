@@ -3,7 +3,7 @@ import { List, ListItem, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 function TransferHistory({ transferHistory }) {
-  const { t } = useTranslation(['transfer']);
+  const { t } = useTranslation(['common', 'transfer']);
 
   const getTransferStatusLabel = (status) => {
     return t(`transfer:transferHistory.${status}`, "Status not found");
@@ -22,13 +22,13 @@ function TransferHistory({ transferHistory }) {
       </Typography>
       <List>
         {transferHistory?.map((item, index) => (
-          <ListItem key={item.transferId + index} disablePadding>
+          <ListItem key={item.transferStatus.transferStatusId + index} disablePadding>
             <Typography variant="body2" component="div">
               <b>{getTransferStatusLabel(item.transferStatus.status)}</b> <span> on </span>
               {formatDate(item.createDate)}
               <span> by </span>
               <strong> {item.userProfile.firstName} {item.userProfile.lastName}</strong> <span> of </span>
-              <strong> {item.userProfile.organization.name} </strong>
+              <strong> {item.userProfile.organization ? item.userProfile.organization.name : t('govOrg')} </strong>
             </Typography>
           </ListItem>
         ))}

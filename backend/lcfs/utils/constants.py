@@ -27,6 +27,7 @@ class LCFS_Constants:
     TO_ORG_TRANSFER_STATUSES = [
         TransferStatusEnum.Submitted.value,
         TransferStatusEnum.Declined.value,
+        TransferStatusEnum.Rescinded.value,
     ]
     GOV_TRANSFER_STATUSES = [
         TransferStatusEnum.Recommended.value,

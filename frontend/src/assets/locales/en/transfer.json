@@ -29,7 +29,8 @@
     "updatedText": "Draft transfer successfully updated.",
     "errorCreateText": "Error creating transfer",
     "errorUpdateText": "Error updating transfer",
-    "successText": "Transfer successfully {{status}}"
+    "successText": "Transfer successfully {{status}}",
+    "errorRetrieval": "Error retrieving the record"
   },
   "rescindConfirmText": "Are you sure you want to rescind this transfer?",
   "deleteConfirmText": "Are you sure you want to delete this draft?",
@@ -68,6 +69,7 @@
   "recommendSuccessText": "Transfer successfully recommended.",
   "recommendErrorText": "Error recommending transfer",
   "transferHistory": {
+    "Draft": "Created draft",
     "Deleted": "Draft deleted",
     "Sent": "Signed and sent",
     "Submitted": "Signed and submitted",

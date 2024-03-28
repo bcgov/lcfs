@@ -1,8 +1,5 @@
 import PropTypes from 'prop-types'
-import {
-  TransferDetailsCard,
-  AddPlainComment
-} from '.'
+import { TransferDetailsCard, Comments, CommentList } from '.'
 import BCBox from '@/components/BCBox'
 import { Typography } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
@@ -10,20 +7,25 @@ import { useTranslation } from 'react-i18next'
 import TransferHistory from './TransferHistory'
 
 export const TransferView = ({
-  fromOrgId,
-  fromOrganization,
-  toOrgId,
-  toOrganization,
-  quantity,
-  pricePerUnit,
-  transferStatus,
+  editorMode,
   isGovernmentUser,
-  totalValue,
-  handleCommentChange,
-  comment,
-  transferHistory
+  transferData
 }) => {
   const { t } = useTranslation(['common', 'transfer'])
+  const {
+    currentStatus: { status: transferStatus } = {},
+    toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
+    fromOrganization: {
+      name: fromOrganization,
+      organizationId: fromOrgId
+    } = {},
+    quantity,
+    pricePerUnit,
+    transferHistory
+  } = transferData || {}
+
+  const totalValue = quantity * pricePerUnit
+
   return (
     <>
       <TransferDetailsCard
@@ -57,20 +59,14 @@ export const TransferView = ({
         </Typography>
       </BCBox>
       {/* Comments */}
-      {/* <CommentList comments={demoData.comments} /> */}
-      <AddPlainComment
-        toOrgId={toOrgId}
-        isGovernmentUser={isGovernmentUser}
-        handleCommentChange={handleCommentChange}
-        comment={comment}
-        transferStatus={transferStatus}
-      />
+      <CommentList comments={transferData?.comments} />
+      <Comments editorMode={editorMode} isGovernmentUser={isGovernmentUser} />
 
       {/* List of attachments */}
       {/* <AttachmentList attachments={demoData.attachments} /> */}
 
       {/* Transaction History notes */}
-      <TransferHistory transferHistory={transferHistory}/>
+      <TransferHistory transferHistory={transferHistory} />
     </>
   )
 }

@@ -17,6 +17,7 @@ from lcfs.web.api.organizations.services import OrganizationsService
 # schema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transfer.schema import (
+    TransferCommentSchema,
     TransferSchema,
     TransferCreateSchema,
     TransferStatusEnum,
@@ -67,7 +68,35 @@ class TransferServices:
         if not transfer:
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
-        return TransferSchema.model_validate(transfer)
+        transfer_view = TransferSchema.model_validate(transfer)
+        comments: List[TransferCreateSchema] = []
+        if (transfer.from_org_comment != None and transfer.from_org_comment != ''):
+            comments.append(
+                TransferCommentSchema(
+                    name=transfer.from_organization.name,
+                    comment=transfer.from_org_comment,
+                )
+            )
+        if (transfer.to_org_comment != None and transfer.to_org_comment != ''):
+            comments.append(
+                TransferCommentSchema(
+                    name=transfer.to_organization.name,
+                    comment=transfer.to_org_comment,
+                )
+            )
+        if (transfer.gov_comment != None and transfer.gov_comment != '' and self.request.user.organization is None):
+            comments.append(
+                TransferCommentSchema(
+                    name="Government of British Columbia",
+                    comment=transfer.gov_comment,
+                )
+            )
+        transfer_view.comments = comments
+        # Hide Recommended status to organizations
+        if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value and self.request.user.organization is not None):
+            transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
+            transfer_view.transfer_history = list(filter(lambda history: history.transfer_status.status != TransferStatusEnum.Recommended.value, transfer_view.transfer_history))
+        return transfer_view
 
     @service_handler
     async def create_transfer(
@@ -81,10 +110,8 @@ class TransferServices:
         and handled by the @service_handler decorator.
         """
         transfer = Transfer(
-            **transfer_data.model_dump(exclude={"comment", "current_status"})
+            **transfer_data.model_dump(exclude={"current_status"})
         )
-        if transfer_data.comment:
-            transfer.comments = Comment(comment=transfer_data.comment)
         current_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
         )
@@ -107,7 +134,7 @@ class TransferServices:
     @service_handler
     async def update_transfer(
         self, transfer_data: TransferCreateSchema
-    ) -> TransferSchema:
+    ) -> Transfer:
         """Updates an existing transfer record with new data."""
         current_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
@@ -118,8 +145,7 @@ class TransferServices:
             raise DataNotFoundException(
                 f"Transfer with id {transfer_data.transfer_id} not found"
             )
-        if transfer_data.comment:
-            transfer.comments.comment = transfer_data.comment
+
         # if the transfer status is Draft or Sent then update all the fields within the transfer
         if (
             transfer_data.current_status == TransferStatusEnum.Draft.value
@@ -135,6 +161,15 @@ class TransferServices:
             transfer.signing_authority_declaration = (
                 transfer_data.signing_authority_declaration
             )
+            transfer.from_org_comment = transfer_data.from_org_comment
+        # update comments
+        elif transfer_data.current_status in [TransferStatusEnum.Submitted]:
+            transfer.to_org_comment = transfer_data.to_org_comment
+        else:
+            transfer.gov_comment = transfer_data.gov_comment
+
+        if transfer_data.signing_authority_declaration == None:
+            transfer.signing_authority_declaration = False
         if transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation
 

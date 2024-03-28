@@ -8,9 +8,9 @@ import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 
-export const Comments = () => {
+export const Comments = ({ editorMode, isGovernmentUser }) => {
   const { t } = useTranslation(['transfer'])
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   const { register } = useFormContext()
 
@@ -21,7 +21,11 @@ export const Comments = () => {
   return (
     <>
       <LabelBox
-        label={t('transfer:commentsLabel')}
+        label={
+          (editorMode && t('transfer:commentsLabel')) ||
+          (isGovernmentUser && t('transfer:govCommentLabel')) ||
+          (t('transfer:toOrgCommentLabel'))
+        }
         description={t('transfer:commentsDescText')}
       >
         <Box
@@ -38,7 +42,13 @@ export const Comments = () => {
 
         <Collapse in={isExpanded}>
           <TextField
-            {...register('comments')}
+            {...register(
+              editorMode
+                ? 'fromOrgComment'
+                : isGovernmentUser
+                  ? 'govComment'
+                  : 'toOrgComment'
+            )}
             multiline
             fullWidth
             rows={4}

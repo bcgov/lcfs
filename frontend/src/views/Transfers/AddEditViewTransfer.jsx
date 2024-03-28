@@ -47,11 +47,13 @@ import {
   TransferView,
   TransferGraphic
 } from '@/views/Transfers/components'
-import { buttonClusterConfigFn, stepsConfigFn } from './buttonConfigs'
+import { buttonClusterConfigFn } from './buttonConfigs'
 import SigningAuthority from './components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
+import { useQueryClient } from '@tanstack/react-query'
 
 export const AddEditViewTransfer = () => {
+  const queryClient = useQueryClient()
   const theme = useTheme()
   const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
   const [modalData, setModalData] = useState(null)
@@ -61,12 +63,12 @@ export const AddEditViewTransfer = () => {
   const mode = matches[matches.length - 1]?.handle?.mode
   const location = useLocation()
   const { transferId } = useParams()
-  const [comment, setComment] = useState('')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [steps, setSteps] = useState(['Draft', 'Sent', 'Submitted', 'Recorded'])
   // Fetch current user details
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
-  const { data: toOrgData, isLoading: isToOrgDataLoading } = useRegExtOrgs()
+  const { data: toOrgData } = useRegExtOrgs()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const currentUserOrgId = currentUser?.organization?.organizationId
 
@@ -80,7 +82,9 @@ export const AddEditViewTransfer = () => {
       quantity: null,
       pricePerUnit: null,
       signingAuthorityDeclaration: false,
-      comments: ''
+      fromOrgComment: '',
+      toOrgComment: '',
+      govComment: ''
     }
   })
 
@@ -88,11 +92,15 @@ export const AddEditViewTransfer = () => {
   const {
     data: transferData,
     isLoading: isTransferDataLoading,
-    isFetched
+    isFetched,
+    isLoadingError
   } = useTransfer(transferId, {
     enabled: !!transferId,
-    retry: false
+    retry: false,
+    staleTime: 0,
+    keepPreviousData: false
   })
+  const queryState = queryClient.getQueryState(['transfer', transferId])
   const editorMode =
     ['edit', 'add'].includes(mode) &&
     hasRoles(roles.transfers) &&
@@ -115,13 +123,23 @@ export const AddEditViewTransfer = () => {
         toOrganizationId: transferData.toOrganization.organizationId,
         quantity: transferData.quantity,
         pricePerUnit: transferData.pricePerUnit,
-        comments: transferData.comments?.comment, // Assuming you only want the comment text
+        fromOrgComment: transferData.fromOrgComment,
+        toOrgComment: transferData.toOrgComment,
+        govComment: transferData.govComment,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0] // Format date or use current date as fallback
       })
     }
-  }, [isFetched, transferId])
+    if (isLoadingError || queryState.status === 'error') {
+      setAlertMessage(
+        t('transfer:actionMsgs.errorRetrieval', {
+          transferId
+        })
+      )
+      setAlertSeverity('error')
+    }
+  }, [isFetched, transferId, isLoadingError, transferData, queryState])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -148,17 +166,21 @@ export const AddEditViewTransfer = () => {
             state: {
               message: t(
                 `transfer:actionMsgs.${
-                  transferId ? 'udpatedText' : 'createdText'
+                  transferId ? 'updatedText' : 'createdText'
                 }`
               ),
               severity: 'success'
             }
           }
         )
-      } else if (transferData?.currentStatus?.status ===
-        response.data.currentStatus.status) {
-          setAlertMessage(t('transfer:actionMsgs.successText', {status: 'saved'}))
-          setAlertSeverity('success')
+      } else if (
+        transferData?.currentStatus?.status ===
+        response.data.currentStatus.status
+      ) {
+        setAlertMessage(
+          t('transfer:actionMsgs.successText', { status: 'saved' })
+        )
+        setAlertSeverity('success')
       } else {
         navigate(TRANSACTIONS, {
           state: {
@@ -179,33 +201,41 @@ export const AddEditViewTransfer = () => {
       setAlertSeverity('error')
     }
   })
-
-  const handleCommentChange = (e) => {
-    setComment(e.target.value)
-  }
-
-  const { watch } = methods
   const currentStatus = transferData?.currentStatus.status
 
   const {
     currentStatus: { status: transferStatus } = {},
-    toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
-    fromOrganization: {
-      name: fromOrganization,
-      organizationId: fromOrgId
-    } = {},
-    quantity,
-    comments,
-    pricePerUnit,
-    transferHistory
+    toOrganization: { organizationId: toOrgId } = {},
+    fromOrganization: { organizationId: fromOrgId } = {}
   } = transferData || {}
 
-  const totalValue = quantity * pricePerUnit
-
-  const steps = useMemo(
-    () => stepsConfigFn(isFetched, isGovernmentUser, transferStatus),
-    [isFetched, isGovernmentUser, transferStatus]
-  )
+  useEffect(() => {
+    const statusArr = []
+    transferData?.transferHistory?.forEach((item) => {
+      statusArr.push(item.transferStatus.status)
+    })
+    if (statusArr.length === 0) {
+      setSteps(['Draft', 'Sent', 'Submitted', 'Recorded'])
+    } else {
+      setSteps(statusArr)
+    }
+    if (!statusArr.includes(TRANSFER_STATUSES.SENT))
+      statusArr.push(TRANSFER_STATUSES.SENT)
+    if (
+      !statusArr.includes(TRANSFER_STATUSES.SUBMITTED) &&
+      !statusArr.includes(TRANSFER_STATUSES.DECLINED)
+    )
+      statusArr.push(TRANSFER_STATUSES.SUBMITTED)
+    if (
+      !statusArr.includes(TRANSFER_STATUSES.RECOMMENDED) &&
+      isGovernmentUser
+    ) {
+      statusArr.push(TRANSFER_STATUSES.RECOMMENDED)
+    }
+    if (currentStatus !== TRANSFER_STATUSES.RECORDED) {
+      statusArr.push(TRANSFER_STATUSES.RECORDED)
+    }
+  }, [isGovernmentUser, transferData])
 
   const buttonClusterConfig = useMemo(
     () =>
@@ -252,10 +282,26 @@ export const AddEditViewTransfer = () => {
   }, [editorMode, mode, t, transferId])
 
   // Conditional rendering for loading
-  if (isTransferDataLoading)
+  if (transferId && (isTransferDataLoading || queryState.status === 'pending'))
     return <Loading message={t('transfer:loadingText')} />
   if (isUpdatingTransfer)
     return <Loading message={t('transfer:processingText')} />
+
+  if (
+    (isLoadingError && editorMode !== 'add') ||
+    queryState.status === 'error'
+  ) {
+    return (
+      <BCAlert
+        data-test="alert-box"
+        severity={alertSeverity}
+        dismissible={true}
+        delay={50000}
+      >
+        {alertMessage}
+      </BCAlert>
+    )
+  }
 
   return (
     <>
@@ -326,23 +372,16 @@ export const AddEditViewTransfer = () => {
                 <TransferGraphic />
                 <TransferDetails />
                 <AgreementDate />
-                <Comments />
+                <Comments
+                  editorMode={editorMode}
+                  isGovernmentUser={isGovernmentUser}
+                />
               </>
             ) : (
               <TransferView
-                fromOrgId={fromOrgId}
-                fromOrganization={fromOrganization}
-                toOrgId={toOrgId}
-                toOrganization={toOrganization}
-                quantity={quantity}
-                pricePerUnit={pricePerUnit}
-                transferStatus={transferStatus}
+                editorMode={editorMode}
                 isGovernmentUser={isGovernmentUser}
-                t={t}
-                totalValue={totalValue}
-                handleCommentChange={handleCommentChange}
-                comment={comment}
-                transferHistory={transferHistory}
+                transferData={transferData}
               />
             )}
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
@@ -353,54 +392,55 @@ export const AddEditViewTransfer = () => {
                 currentUserOrgId === toOrgId)) &&
               hasAnyRole(roles.signing_authority) && <SigningAuthority />}
             {/* Buttons */}
-              <Stack
-                component="div"
-                direction={{ md: 'coloumn', lg: 'row' }}
-                justifyContent="flex-end"
-                mt={2}
-                gap={2}
-                spacing={2}>
-                <BCButton
-                  variant="outlined"
-                  color="primary"
-                  style={{
-                    gap: 8
-                  }}
-                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
+            <Stack
+              component="div"
+              direction={{ md: 'coloumn', lg: 'row' }}
+              justifyContent="flex-end"
+              mt={2}
+              gap={2}
+              spacing={2}
+            >
+              <BCButton
+                variant="outlined"
+                color="primary"
+                style={{
+                  gap: 8
+                }}
+                onClick={() => navigate(ROUTES.TRANSACTIONS)}
+              >
+                <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
+                <Typography
+                  variant="body4"
+                  sx={{ textTransform: 'capitalize' }}
                 >
-                  <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
-                  <Typography
-                    variant="body4"
-                    sx={{ textTransform: 'capitalize' }}
-                  >
-                    {t('backBtn')}
-                  </Typography>
-                </BCButton>
-                {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
-                  (config) =>
-                    config && (
-                      <Role key={config.label}>
-                        <BCButton
-                          size="small"
-                          variant={config.variant}
-                          color={config.color}
-                          onClick={methods.handleSubmit(config.handler)}
-                          startIcon={
-                            config.startIcon && (
-                              <FontAwesomeIcon
-                                icon={config.startIcon}
-                                className="small-icon"
-                              />
-                            )
-                          }
-                          disabled={config.disabled}
-                        >
-                          {config.label}
-                        </BCButton>
-                      </Role>
-                    )
-                )}
-              </Stack>
+                  {t('backBtn')}
+                </Typography>
+              </BCButton>
+              {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
+                (config) =>
+                  config && (
+                    <Role key={config.label}>
+                      <BCButton
+                        size="small"
+                        variant={config.variant}
+                        color={config.color}
+                        onClick={methods.handleSubmit(config.handler)}
+                        startIcon={
+                          config.startIcon && (
+                            <FontAwesomeIcon
+                              icon={config.startIcon}
+                              className="small-icon"
+                            />
+                          )
+                        }
+                        disabled={config.disabled}
+                      >
+                        {config.label}
+                      </BCButton>
+                    </Role>
+                  )
+              )}
+            </Stack>
           </form>
         </FormProvider>
       </BCBox>
