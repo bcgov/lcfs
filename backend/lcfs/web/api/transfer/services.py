@@ -93,8 +93,9 @@ class TransferServices:
             )
         transfer_view.comments = comments
         # Hide Recommended status to organizations
-        if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value and self.request.user.organization is not None):
-            transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
+        if (self.request.user.organization is not None):
+            if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value):
+                transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
             transfer_view.transfer_history = list(filter(lambda history: history.transfer_status.status != TransferStatusEnum.Recommended.value, transfer_view.transfer_history))
         return transfer_view
 
