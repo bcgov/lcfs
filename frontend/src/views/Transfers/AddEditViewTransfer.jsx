@@ -353,6 +353,7 @@ export const AddEditViewTransfer = () => {
               </>
             ) : (
               <TransferView
+                transferId={transferId}
                 fromOrgId={fromOrgId}
                 fromOrganization={fromOrganization}
                 toOrgId={toOrgId}
