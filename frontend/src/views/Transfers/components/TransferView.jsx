@@ -10,6 +10,7 @@ import InternalComments from '@/components/InternalComments'
 import { roles } from '@/constants/roles'
 
 export const TransferView = ({
+  transferId,
   editorMode,
   isGovernmentUser,
   transferData
