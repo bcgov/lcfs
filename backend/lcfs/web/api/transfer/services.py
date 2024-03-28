@@ -70,7 +70,7 @@ class TransferServices:
 
         transfer_view = TransferSchema.model_validate(transfer)
         comments: List[TransferCreateSchema] = []
-        if (transfer.from_org_comment != None and transfer.from_org_comment != ''):
+        if (transfer.from_org_comment != None and transfer.from_org_comment != '' and transfer.current_status.status != TransferStatusEnum.Draft):
             comments.append(
                 TransferCommentSchema(
                     name=transfer.from_organization.name,

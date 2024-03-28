@@ -65,14 +65,13 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
         </Typography>
       </BCBox>
       {/* Comments */}
-      <CommentList comments={transferData?.comments} />
+      {transferData?.comments.length > 0 && <CommentList comments={transferData?.comments} />}
       {!getAllTerminalTransferStatuses().includes(transferStatus) && (
         <Comments
           editorMode={editorMode}
           isGovernmentUser={isGovernmentUser}
           commentField={
-            (editorMode &&
-              (!transferStatus || transferStatus === TRANSFER_STATUSES.DRAFT) &&
+            (transferStatus === TRANSFER_STATUSES.DRAFT &&
               sameOrganization(fromOrgId) &&
               'fromOrgComment') ||
             (isGovernmentUser && 'govComment') ||
