@@ -1,0 +1,32 @@
+name: Scheduled cleanup unused images
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
+# At 00:00 on Sunday.
+
+jobs:
+
+  cleanup-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: cleanup-images
+        run: |
+
+          search_string=$(oc -n d2bd59-dev describe deployment/lcfs-backend-dev | grep Image | awk -F '/' '{print $NF}')
+          oc_output=$(oc -n d2bd59-dev get imagetags | grep lcfs-backend | awk '{print $1}')
+
+          # Check if the oc command was successful
+          if [ $? -eq 0 ]; then
+              # Loop through each line in the oc output
+              while IFS= read -r line; do
+                  # Check if the line contains the search string
+                  if [[ "$line" != *"$search_string"* ]]; then
+                      oc -n d2bd59-dev delete imagetag/$line
+                  else
+                      echo "$search_string is being used"
+                  fi
+              done <<< "$oc_output"
+          else
+              echo "Error running 'oc' command."
+          fi
