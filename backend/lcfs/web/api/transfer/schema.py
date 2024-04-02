@@ -35,7 +35,7 @@ class TransferOrganizationSchema(BaseSchema):
 class TransferHistoryUserSchema(BaseSchema):
     first_name: str
     last_name: str
-    organization: Optional[TransferOrganizationSchema]
+    organization: Optional[TransferOrganizationSchema] = None
 
     class Config:
         from_attributes = True
@@ -51,7 +51,7 @@ class TransferHistorySchema(BaseSchema):
 
 
 class TransferCommentSchema(BaseSchema):
-    comment_id: int
+    name: str
     comment: Optional[str] = None
 
     class Config:
@@ -66,7 +66,10 @@ class TransferSchema(BaseSchema):
     quantity: int
     price_per_unit: int
     signing_authority_declaration: bool
-    comments: Optional[TransferCommentSchema] = None
+    comments: Optional[List[TransferCommentSchema]] = None
+    from_org_comment: Optional[str] = None
+    to_org_comment: Optional[str] = None
+    gov_comment: Optional[str] = None
     current_status: TransferStatusSchema
     transfer_category: TransferCategorySchema
     transfer_history: Optional[List[TransferHistorySchema]]
@@ -87,8 +90,9 @@ class TransferCreateSchema(BaseSchema):
     quantity: Optional[int] = None
     price_per_unit: Optional[int] = None
     signing_authority_declaration: Optional[bool] = None
-    comment_id: Optional[int] = None
-    comment: Optional[str] = None
+    from_org_comment: Optional[str] = None
+    to_org_comment: Optional[str] = None
+    gov_comment: Optional[str] = None
     transfer_category_id: Optional[int] = None
     current_status_id: Optional[int] = None
     current_status: Optional[str] = None

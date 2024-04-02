@@ -24,14 +24,11 @@ export const CommentList = ({ comments }) => (
         borderRadius: '5px'
       }}
     >
-      {comments?.map((comment) => (
-        <BCBox component="div" key={comment.commentID}>
+      {comments?.map((comment, idx) => (
+        <BCBox component="div" key={idx}>
           <ListItem alignItems="flex-start" sx={{ padding: '8px' }}>
             <ListItemAvatar>
-              <Avatar>
-                {comment.firstName.slice(0, 1)}
-                {comment.lastName.slice(0, 1)}
-              </Avatar>
+              <Avatar>{comment.name.slice(0, 1)}</Avatar>
             </ListItemAvatar>
             <ListItemText
               primary={
@@ -42,13 +39,8 @@ export const CommentList = ({ comments }) => (
                     variant="subtitle1"
                     color="text.primary"
                   >
-                    {comment.firstName +
-                      ' ' +
-                      comment.lastName +
-                      ', ' +
-                      comment.organization +
-                      ', ' +
-                      comment.addDate}
+                    {comment.name}
+                    {':'}
                   </Typography>
                 </>
               }
@@ -60,7 +52,7 @@ export const CommentList = ({ comments }) => (
                     variant="body4"
                     color="text.primary"
                   >
-                    {comment.message}
+                    {comment.comment}
                   </Typography>
                 </>
               }

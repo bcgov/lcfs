@@ -18,6 +18,7 @@ from lcfs.web.api.organizations.services import OrganizationsService
 # schema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transfer.schema import (
+    TransferCommentSchema,
     TransferSchema,
     TransferCreateSchema
 )
@@ -67,7 +68,36 @@ class TransferServices:
         if not transfer:
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
-        return TransferSchema.model_validate(transfer)
+        transfer_view = TransferSchema.model_validate(transfer)
+        comments: List[TransferCreateSchema] = []
+        if (transfer.from_org_comment != None and transfer.from_org_comment != '' and transfer.current_status.status != TransferStatusEnum.Draft):
+            comments.append(
+                TransferCommentSchema(
+                    name=transfer.from_organization.name,
+                    comment=transfer.from_org_comment,
+                )
+            )
+        if (transfer.to_org_comment != None and transfer.to_org_comment != ''):
+            comments.append(
+                TransferCommentSchema(
+                    name=transfer.to_organization.name,
+                    comment=transfer.to_org_comment,
+                )
+            )
+        if (transfer.current_status.status in [TransferStatusEnum.Recorded, TransferStatusEnum.Refused]):
+            comments.append(
+                TransferCommentSchema(
+                    name="Government of British Columbia",
+                    comment=transfer.gov_comment,
+                )
+            )
+        transfer_view.comments = comments
+        # Hide Recommended status to organizations
+        if (self.request.user.organization is not None):
+            if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value):
+                transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
+            transfer_view.transfer_history = list(filter(lambda history: history.transfer_status.status != TransferStatusEnum.Recommended.value, transfer_view.transfer_history))
+        return transfer_view
 
     @service_handler
     async def create_transfer(
@@ -81,10 +111,8 @@ class TransferServices:
         and handled by the @service_handler decorator.
         """
         transfer = Transfer(
-            **transfer_data.model_dump(exclude={"comment", "current_status"})
+            **transfer_data.model_dump(exclude={"current_status"})
         )
-        if transfer_data.comment:
-            transfer.comments = Comment(comment=transfer_data.comment)
         current_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
         )
@@ -107,20 +135,18 @@ class TransferServices:
     @service_handler
     async def update_transfer(
         self, transfer_data: TransferCreateSchema
-    ) -> TransferSchema:
+    ) -> Transfer:
         """Updates an existing transfer record with new data."""
         new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
         transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
 
         if not transfer:
-            raise DataNotFoundException(f"Transfer with id {transfer_data.transfer_id} not found")
-
-        if transfer_data.comment:
-            transfer.comments.comment = transfer_data.comment
-
+             raise DataNotFoundException(f"Transfer with id {transfer_data.transfer_id} not found")
+  
         # Check if the new status is different from the current status of the transfer
         status_has_changed = transfer.current_status != new_status
 
+        # if the transfer status is Draft or Sent then update all the fields within the transfer
         if transfer_data.current_status in [TransferStatusEnum.Draft.value, TransferStatusEnum.Sent.value]:
             # Only update certain fields if the status is Draft or changing to Sent
             if status_has_changed or transfer_data.current_status == TransferStatusEnum.Draft.value:
@@ -129,6 +155,15 @@ class TransferServices:
                 transfer.quantity = transfer_data.quantity
                 transfer.price_per_unit = transfer_data.price_per_unit
                 transfer.signing_authority_declaration = transfer_data.signing_authority_declaration
+                transfer.from_org_comment = transfer_data.from_org_comment
+        # update comments
+        elif status_has_changed and new_status.status == TransferStatusEnum.Submitted:
+            transfer.to_org_comment = transfer_data.to_org_comment
+        else:
+            transfer.gov_comment = transfer_data.gov_comment
+
+        if transfer_data.signing_authority_declaration == None:
+            transfer.signing_authority_declaration = False
 
         if transfer_data.recommendation and transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation
@@ -144,10 +179,10 @@ class TransferServices:
                 await self.director_record_transfer(transfer)
             elif new_status.status == TransferStatusEnum.Declined:
                 await self.decline_transfer(transfer)
-
+            new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
             # Add a new transfer history record to reflect the status change
             await self.repo.add_transfer_history(
-                transfer.transfer_id, 
+                transfer_data.transfer_id, 
                 new_status.transfer_status_id,
                 self.request.user.user_profile_id
             )
@@ -208,12 +243,12 @@ class TransferServices:
     async def decline_transfer(self, transfer):
         """Release the reserved transaction when transfer is declined."""
         release_result = await self.transaction_repo.release_transaction(
-            transfer.transaction_id
+            transfer.from_transaction_id
         )
         if not release_result:
             raise ServiceException(
                 f"Failed to release transaction \
-                                   {transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
+                                   {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
             )
 
     def _update_comments(self, transfer, transfer_data):

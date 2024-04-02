@@ -45,7 +45,7 @@ async def test_get_transfer(transfer_service, transfer_repo):
 @pytest.mark.anyio
 async def test_create_transfer(transfer_service, transfer_repo):
     created_transfer = await transfer_service.create_transfer(transfer_create_payload)
-    assert created_transfer.comments.comment == transfer_create_payload.comments
+    assert created_transfer.from_org_comment == transfer_create_payload.from_org_comment
 
 # Test updating an existing draft transfer
 

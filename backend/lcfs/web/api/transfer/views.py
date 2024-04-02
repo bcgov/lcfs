@@ -41,6 +41,6 @@ async def update_transfer(
     validate: TransferValidation = Depends()
 ):
     """Endpoint to set an existing transfers status to 'Deleted'."""
-    validate.update_transfer(request, transfer_data)
+    await validate.update_transfer(request, transfer_data)
     transfer_data.transfer_id = transfer_id
     return await service.update_transfer(transfer_data)

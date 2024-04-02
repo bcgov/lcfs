@@ -21,3 +21,7 @@ export const ORGANIZATION_STATUSES = {
 export function getAllOrganizationStatuses() {
   return Object.values(ORGANIZATION_STATUSES)
 }
+
+export function getAllTerminalTransferStatuses() {
+  return [TRANSFER_STATUSES.DECLINED, TRANSFER_STATUSES.DELETED, TRANSFER_STATUSES.RESCINDED, TRANSFER_STATUSES.REFUSED, TRANSFER_STATUSES.RECORDED]
+}

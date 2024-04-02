@@ -48,12 +48,14 @@ import {
   TransferView,
   TransferGraphic
 } from '@/views/Transfers/components'
-import { buttonClusterConfigFn, stepsConfigFn } from './buttonConfigs'
+import { buttonClusterConfigFn } from './buttonConfigs'
 import SigningAuthority from './components/SigningAuthority'
 import { AddEditTransferSchema } from './_schema'
+import { useQueryClient } from '@tanstack/react-query'
 import { Recommendation } from './components/Recommendation'
 
 export const AddEditViewTransfer = () => {
+  const queryClient = useQueryClient()
   const theme = useTheme()
   const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
   const [modalData, setModalData] = useState(null)
@@ -63,14 +65,13 @@ export const AddEditViewTransfer = () => {
   const mode = matches[matches.length - 1]?.handle?.mode
   const location = useLocation()
   const { transferId } = useParams()
-  const [comment, setComment] = useState('')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [steps, setSteps] = useState(['Draft', 'Sent', 'Submitted', 'Recorded'])
   const [refreshBalanceTrigger, setRefreshBalanceTrigger] = useState(false)
-
   // Fetch current user details
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
-  const { data: toOrgData, isLoading: isToOrgDataLoading } = useRegExtOrgs()
+  const { data: toOrgData } = useRegExtOrgs()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const currentUserOrgId = currentUser?.organization?.organizationId
 
@@ -84,7 +85,9 @@ export const AddEditViewTransfer = () => {
       quantity: null,
       pricePerUnit: null,
       signingAuthorityDeclaration: false,
-      comments: '',
+      fromOrgComment: '',
+      toOrgComment: '',
+      govComment: '',
       recommendation: null
     }
   })
@@ -93,11 +96,15 @@ export const AddEditViewTransfer = () => {
   const {
     data: transferData,
     isLoading: isTransferDataLoading,
-    isFetched
+    isFetched,
+    isLoadingError
   } = useTransfer(transferId, {
     enabled: !!transferId,
-    retry: false
+    retry: false,
+    staleTime: 0,
+    keepPreviousData: false
   })
+  const queryState = queryClient.getQueryState(['transfer', transferId])
   const editorMode =
     ['edit', 'add'].includes(mode) &&
     hasRoles(roles.transfers) &&
@@ -130,14 +137,24 @@ export const AddEditViewTransfer = () => {
         toOrganizationId: transferData.toOrganization.organizationId,
         quantity: transferData.quantity,
         pricePerUnit: transferData.pricePerUnit,
-        comments: transferData.comments?.comment, // Assuming you only want the comment text
+        fromOrgComment: transferData.fromOrgComment,
+        toOrgComment: transferData.toOrgComment,
+        govComment: transferData.govComment,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
         recommendation: transferData.recommendation
       })
     }
-  }, [isFetched, transferId])
+    if (isLoadingError || queryState.status === 'error') {
+      setAlertMessage(
+        t('transfer:actionMsgs.errorRetrieval', {
+          transferId
+        })
+      )
+      setAlertSeverity('error')
+    }
+  }, [isFetched, transferId, isLoadingError, transferData, queryState])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -164,7 +181,7 @@ export const AddEditViewTransfer = () => {
             state: {
               message: t(
                 `transfer:actionMsgs.${
-                  transferId ? 'udpatedText' : 'createdText'
+                  transferId ? 'updatedText' : 'createdText'
                 }`
               ),
               severity: 'success'
@@ -204,31 +221,41 @@ export const AddEditViewTransfer = () => {
     }
   })
 
-  const handleCommentChange = (e) => {
-    setComment(e.target.value)
-  }
-
   const currentStatus = transferData?.currentStatus.status
 
   const {
     currentStatus: { status: transferStatus } = {},
-    toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
-    fromOrganization: {
-      name: fromOrganization,
-      organizationId: fromOrgId
-    } = {},
-    quantity,
-    comments,
-    pricePerUnit,
-    transferHistory
+    toOrganization: { organizationId: toOrgId } = {},
+    fromOrganization: { organizationId: fromOrgId } = {}
   } = transferData || {}
 
-  const totalValue = quantity * pricePerUnit
-
-  const steps = useMemo(
-    () => stepsConfigFn(isFetched, isGovernmentUser, transferStatus),
-    [isFetched, isGovernmentUser, transferStatus]
-  )
+  useEffect(() => {
+    const statusSet = new Set()
+    transferData?.transferHistory?.forEach((item) => {
+      statusSet.add(item.transferStatus.status)
+    })
+    if (statusSet.length === 0) {
+      setSteps(['Draft', 'Sent', 'Submitted', 'Recorded'])
+    } else {
+      if (!statusSet.has(TRANSFER_STATUSES.SENT))
+        statusSet.add(TRANSFER_STATUSES.SENT)
+      if (
+        !statusSet.has(TRANSFER_STATUSES.SUBMITTED) &&
+        !statusSet.has(TRANSFER_STATUSES.DECLINED)
+      )
+        statusSet.add(TRANSFER_STATUSES.SUBMITTED)
+      if (!statusSet.has(TRANSFER_STATUSES.RECOMMENDED) && isGovernmentUser) {
+        statusSet.add(TRANSFER_STATUSES.RECOMMENDED)
+      }
+      if (
+        !statusSet.has(TRANSFER_STATUSES.REFUSED) &&
+        currentStatus !== TRANSFER_STATUSES.RECORDED
+      ) {
+        statusSet.add(TRANSFER_STATUSES.RECORDED)
+      }
+      setSteps(Array.from(statusSet))
+    }
+  }, [currentStatus, isGovernmentUser, transferData])
 
   const buttonClusterConfig = useMemo(
     () =>
@@ -275,10 +302,26 @@ export const AddEditViewTransfer = () => {
   }, [editorMode, mode, t, transferId])
 
   // Conditional rendering for loading
-  if (isTransferDataLoading)
+  if (transferId && (isTransferDataLoading || queryState.status === 'pending'))
     return <Loading message={t('transfer:loadingText')} />
   if (isUpdatingTransfer)
     return <Loading message={t('transfer:processingText')} />
+
+  if (
+    (isLoadingError && editorMode !== 'add') ||
+    queryState.status === 'error'
+  ) {
+    return (
+      <BCAlert
+        data-test="alert-box"
+        severity={alertSeverity}
+        dismissible={true}
+        delay={50000}
+      >
+        {alertMessage}
+      </BCAlert>
+    )
+  }
 
   return (
     <>
@@ -349,24 +392,17 @@ export const AddEditViewTransfer = () => {
                 <TransferGraphic />
                 <TransferDetails />
                 <AgreementDate />
-                <Comments />
+                <Comments
+                  editorMode={editorMode}
+                  isGovernmentUser={isGovernmentUser}
+                  commentField={'fromOrgComment'}
+                />
               </>
             ) : (
               <TransferView
                 transferId={transferId}
-                fromOrgId={fromOrgId}
-                fromOrganization={fromOrganization}
-                toOrgId={toOrgId}
-                toOrganization={toOrganization}
-                quantity={quantity}
-                pricePerUnit={pricePerUnit}
-                transferStatus={transferStatus}
-                isGovernmentUser={isGovernmentUser}
-                t={t}
-                totalValue={totalValue}
-                handleCommentChange={handleCommentChange}
-                comment={comment}
-                transferHistory={transferHistory}
+                editorMode={editorMode}
+                transferData={transferData}
               />
             )}
 

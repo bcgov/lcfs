@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { TransferDetailsCard, AddPlainComment } from '.'
+import { TransferDetailsCard, Comments, CommentList } from '.'
 import BCBox from '@/components/BCBox'
 import { Typography } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
@@ -8,23 +8,30 @@ import TransferHistory from './TransferHistory'
 import { Role } from '@/components/Role'
 import InternalComments from '@/components/InternalComments'
 import { roles } from '@/constants/roles'
+import {
+  TRANSFER_STATUSES,
+  getAllTerminalTransferStatuses
+} from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-export const TransferView = ({
-  transferId,
-  fromOrgId,
-  fromOrganization,
-  toOrgId,
-  toOrganization,
-  quantity,
-  pricePerUnit,
-  transferStatus,
-  isGovernmentUser,
-  totalValue,
-  handleCommentChange,
-  comment,
-  transferHistory
-}) => {
+export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])
+  const { data: currentUser, sameOrganization } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const {
+    currentStatus: { status: transferStatus } = {},
+    toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
+    fromOrganization: {
+      name: fromOrganization,
+      organizationId: fromOrgId
+    } = {},
+    quantity,
+    pricePerUnit,
+    transferHistory
+  } = transferData || {}
+
+  const totalValue = quantity * pricePerUnit
+
   return (
     <>
       <TransferDetailsCard
@@ -58,13 +65,23 @@ export const TransferView = ({
         </Typography>
       </BCBox>
       {/* Comments */}
-      <AddPlainComment
-        toOrgId={toOrgId}
-        isGovernmentUser={isGovernmentUser}
-        handleCommentChange={handleCommentChange}
-        comment={comment}
-        transferStatus={transferStatus}
-      />
+      {transferData?.comments.length > 0 && <CommentList comments={transferData?.comments} />}
+      {!getAllTerminalTransferStatuses().includes(transferStatus) && (
+        <Comments
+          editorMode={editorMode}
+          isGovernmentUser={isGovernmentUser}
+          commentField={
+            (transferStatus === TRANSFER_STATUSES.DRAFT &&
+              sameOrganization(fromOrgId) &&
+              'fromOrgComment') ||
+            (isGovernmentUser && 'govComment') ||
+            (!isGovernmentUser &&
+              transferStatus === TRANSFER_STATUSES.SENT &&
+              sameOrganization(toOrgId) &&
+              'toOrgComment')
+          }
+        />
+      )}
 
       {/* Internal Comments */}
       <Role roles={[roles.government]}>

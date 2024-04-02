@@ -114,7 +114,7 @@ async def test_get_internal_comments_transfer_success(dbsession, internal_commen
     # Add and commit user, transfer, and internal comment to the session
     dbsession.add(user_orm_model)
     dbsession.add(transaction_orm_model)
-    transfer_orm_model.transaction_id = transaction_orm_model.transaction_id
+    transfer_orm_model.transfer_id = transaction_orm_model.transaction_id
     dbsession.add(transfer_orm_model)
     dbsession.add(internal_comment_orm_model)
     await dbsession.commit()

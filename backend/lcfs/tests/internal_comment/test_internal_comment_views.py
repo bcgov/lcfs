@@ -1,11 +1,3 @@
-import pytest
-from httpx import AsyncClient
-from fastapi import FastAPI
-from internal_comments_payloads import (
-    internal_comment_create_payload,
-    internal_comment_update_payload,
-)
-
 # Tests for POST /internal_comments (Create comment)
 def test_post_create_201():
     pass
