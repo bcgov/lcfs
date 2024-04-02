@@ -28,7 +28,7 @@ export const usersColumnDefs = (t) => [
     flex: 1,
     minWidth: 300,
     sortable: false,
-    suppressMenu: true,
+    suppressHeaderMenuButton: true,
     filterParams: {
       textMatcher: (filter) => {
         const filterTextArray = filter.filterText.split(',')
@@ -44,8 +44,8 @@ export const usersColumnDefs = (t) => [
       suppressFilterButton: true
     },
     floatingFilterComponent: BCColumnSetFilter,
+    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
-      suppressFilterButton: true,
       apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
       // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
       params: "government_roles_only=true",
@@ -85,8 +85,8 @@ export const usersColumnDefs = (t) => [
     cellRenderer: StatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
+    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
-      suppressFilterButton: true,
       apiQuery: () => ({
         data: [
           { id: 1, name: t('admin:userColLabels.active') },
@@ -98,7 +98,7 @@ export const usersColumnDefs = (t) => [
       multiple: false
     },
     minWidth: 120,
-    suppressMenu: false
+    suppressHeaderMenuButton: false
   },
   {
     colId: 'organizationId',
@@ -116,7 +116,7 @@ export const usersDefaultColDef = {
   filter: true,
   minWidth: 300,
   floatingFilter: true, // enables the filter boxes under the header label
-  suppressMenu: true // suppresses the menu button appearing next to the Header Label
+  suppressHeaderMenuButton: true // suppresses the menu button appearing next to the Header Label
 }
 
 export const idirUserDefaultFilter = [

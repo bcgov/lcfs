@@ -45,31 +45,6 @@ export const containedButton = (label, startIcon) => ({
   startIcon
 })
 
-export const stepsConfigFn = (isFetched, isGovernmentUser, transferStatus) => {
-  if (isFetched) {
-    if (isGovernmentUser && transferStatus !== 'Refused') {
-      return ['Draft', 'Sent', 'Submitted', 'Recommended', 'Recorded']
-    }
-    switch (transferStatus) {
-      case 'Rescinded':
-        return ['Draft', 'Rescinded', 'Submitted', 'Recorded']
-      case 'Declined':
-        return ['Draft', 'Sent', 'Declined', 'Recorded']
-      case 'Refused': {
-        if (isGovernmentUser) {
-          return ['Draft', 'Sent', 'Submitted', 'Recommended', 'Refused']
-        }
-        return ['Draft', 'Sent', 'Submitted', 'Refused']
-      }
-      case 'Deleted':
-        return ['Draft', 'Deleted', 'Submitted', 'Recorded']
-      default:
-        return ['Draft', 'Sent', 'Submitted', 'Recorded']
-    }
-  }
-  return ['Draft', 'Sent', 'Submitted', 'Recorded']
-}
-
 export const buttonClusterConfigFn = ({
   toOrgData,
   hasRoles,
@@ -89,7 +64,6 @@ export const buttonClusterConfigFn = ({
   const signingAuthorityDeclaration = methods.watch(
     'signingAuthorityDeclaration'
   )
-  const comments = methods.getValues('comments')
 
   const transferButtons = {
     saveDraft: {

@@ -31,8 +31,8 @@ export const transactionsColDefs = (t) => [
     cellRenderer: TransactionStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
+    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
-      suppressFilterButton: true,
       apiOptionField: 'status',
       apiQuery: useTransactionStatuses,
       disableCloseOnSelect: false,

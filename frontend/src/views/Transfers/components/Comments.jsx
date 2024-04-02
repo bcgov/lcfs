@@ -8,9 +8,9 @@ import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 
-export const Comments = () => {
+export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
   const { t } = useTranslation(['transfer'])
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   const { register } = useFormContext()
 
@@ -19,33 +19,39 @@ export const Comments = () => {
   }
 
   return (
-    <>
-      <LabelBox
-        label={t('transfer:commentsLabel')}
-        description={t('transfer:commentsDescText')}
-      >
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          onClick={handleToggle}
-          sx={{ cursor: 'pointer' }}
+    commentField && (
+      <>
+        <LabelBox
+          label={
+            (editorMode && t('transfer:commentsLabel')) ||
+            (isGovernmentUser && t('transfer:govCommentLabel')) ||
+            t('transfer:toOrgCommentLabel')
+          }
+          description={t('transfer:commentsDescText')}
         >
-          <IconButton aria-label="expand comments">
-            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="space-between"
+            onClick={handleToggle}
+            sx={{ cursor: 'pointer' }}
+          >
+            <IconButton aria-label="expand comments">
+              {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          </Box>
 
-        <Collapse in={isExpanded}>
-          <TextField
-            {...register('comments')}
-            multiline
-            fullWidth
-            rows={4}
-            variant="outlined"
-          />
-        </Collapse>
-      </LabelBox>
-    </>
+          <Collapse in={isExpanded}>
+            <TextField
+              {...register(commentField)}
+              multiline
+              fullWidth
+              rows={4}
+              variant="outlined"
+            />
+          </Collapse>
+        </LabelBox>
+      </>
+    )
   )
 }

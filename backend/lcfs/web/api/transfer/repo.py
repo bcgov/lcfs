@@ -32,7 +32,8 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments)
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
         )
         result = await self.db.execute(query)
         transfers = result.scalars().all()
@@ -63,7 +64,6 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_transaction),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments),
             selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
             selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
         ).where(Transfer.transfer_id == transfer_id)
@@ -85,7 +85,6 @@ class TransferRepository(BaseRepository):
                 "to_organization",
                 "current_status",
                 "transfer_category",
-                "comments",
                 "transfer_history"
             ],
         )
@@ -127,7 +126,6 @@ class TransferRepository(BaseRepository):
                 "to_organization",
                 "current_status",
                 "transfer_category",
-                "comments",
                 "transfer_history"
             ],
         )
