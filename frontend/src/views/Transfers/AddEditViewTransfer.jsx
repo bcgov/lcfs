@@ -244,13 +244,13 @@ export const AddEditViewTransfer = () => {
         !statusSet.has(TRANSFER_STATUSES.DECLINED)
       )
         statusSet.add(TRANSFER_STATUSES.SUBMITTED)
-      if (
-        !statusSet.has(TRANSFER_STATUSES.RECOMMENDED) &&
-        isGovernmentUser
-      ) {
+      if (!statusSet.has(TRANSFER_STATUSES.RECOMMENDED) && isGovernmentUser) {
         statusSet.add(TRANSFER_STATUSES.RECOMMENDED)
       }
-      if (currentStatus !== TRANSFER_STATUSES.RECORDED) {
+      if (
+        !statusSet.has(TRANSFER_STATUSES.REFUSED) &&
+        currentStatus !== TRANSFER_STATUSES.RECORDED
+      ) {
         statusSet.add(TRANSFER_STATUSES.RECORDED)
       }
       setSteps(Array.from(statusSet))

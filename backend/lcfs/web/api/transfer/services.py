@@ -182,7 +182,7 @@ class TransferServices:
             new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
             # Add a new transfer history record to reflect the status change
             await self.repo.add_transfer_history(
-                transfer.transfer_id, 
+                transfer_data.transfer_id, 
                 new_status.transfer_status_id,
                 self.request.user.user_profile_id
             )
@@ -243,12 +243,12 @@ class TransferServices:
     async def decline_transfer(self, transfer):
         """Release the reserved transaction when transfer is declined."""
         release_result = await self.transaction_repo.release_transaction(
-            transfer.transaction_id
+            transfer.from_transaction_id
         )
         if not release_result:
             raise ServiceException(
                 f"Failed to release transaction \
-                                   {transfer.transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
+                                   {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
             )
 
     def _update_comments(self, transfer, transfer_data):
