@@ -32,6 +32,8 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
         )
         result = await self.db.execute(query)
         transfers = result.scalars().all()
