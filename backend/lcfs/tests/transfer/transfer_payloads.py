@@ -11,7 +11,6 @@ transfer_create_payload = TransferCreateSchema(
     agreement_date="2023-01-01",
     quantity=100,
     price_per_unit=10.0,
-    signing_authority_declaration=True,
     from_org_comment="Comments added by transferer organization"
 )
 
@@ -21,7 +20,6 @@ transfer_create_payload_2 = TransferCreateSchema(
     agreement_date="2024-03-03",
     quantity=300,
     price_per_unit=3.0,
-    signing_authority_declaration=True,
     from_org_comment="Comments added by transferer organization"
 )
 
@@ -33,7 +31,6 @@ transfer_update_payload = TransferCreateSchema(
     agreement_date="2023-02-02",
     quantity=50,
     price_per_unit=5.0,
-    signing_authority_declaration=True,
     from_org_comment="Comments added by transferer organization"
 )
 
@@ -44,7 +41,6 @@ transfer_update_draft_payload = TransferCreateSchema(
     agreement_date="2023-04-04",
     quantity=40,
     price_per_unit=4.0,
-    signing_authority_declaration=True,
     from_org_comment="Comments added by transferer organization"
 )
 
@@ -62,8 +58,7 @@ transfer_orm_model = Transfer(
     transfer_category_id=1,
     agreement_date=agreement_date,
     quantity=100,
-    price_per_unit=10.0,
-    signing_authority_declaration=True
+    price_per_unit=10.0
 )
 
 agreement_date = datetime.strptime("2024-02-02", "%Y-%m-%d").date()
@@ -74,8 +69,7 @@ transfer_orm_model_2 = Transfer(
     transfer_category_id=1,
     agreement_date=agreement_date,
     quantity=20,
-    price_per_unit=2.0,
-    signing_authority_declaration=True
+    price_per_unit=2.0
 )
 
 agreement_date = datetime.strptime("2024-02-02", "%Y-%m-%d").date()
@@ -86,6 +80,5 @@ transfer_orm_fields = {
     "transfer_category_id": 1,
     "agreement_date": agreement_date,
     "quantity": 20,
-    "price_per_unit": 2.0,
-    "signing_authority_declaration": True
+    "price_per_unit": 2.0
 }

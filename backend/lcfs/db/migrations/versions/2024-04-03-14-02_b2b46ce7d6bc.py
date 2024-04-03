@@ -1527,7 +1527,6 @@ def upgrade() -> None:
             comment="Comment from the government to organizations",
         ),
         sa.Column("transfer_category_id", sa.Integer(), nullable=True),
-        sa.Column("signing_authority_declaration", sa.Boolean(), nullable=True),
         sa.Column("current_status_id", sa.Integer(), nullable=True),
         sa.Column(
             "recommendation",

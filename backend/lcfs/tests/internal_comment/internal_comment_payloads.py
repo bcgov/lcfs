@@ -50,7 +50,6 @@ transfer_orm_model = Transfer(
     price_per_unit=100,
     quantity=500,
     transfer_category_id=1,
-    signing_authority_declaration=True,
     current_status_id=1
 )
 

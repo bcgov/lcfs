@@ -37,7 +37,6 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     gov_comment = Column(String(1500), comment="Comment from the government to organizations")
     transfer_category_id = Column(Integer, ForeignKey(
         'transfer_category.transfer_category_id'))
-    signing_authority_declaration = Column(Boolean, default=False)
     current_status_id = Column(Integer, ForeignKey(
         'transfer_status.transfer_status_id'))
     recommendation = Column(Enum(TransferRecommendationEnum, name="transfer_recommendation_enum",
