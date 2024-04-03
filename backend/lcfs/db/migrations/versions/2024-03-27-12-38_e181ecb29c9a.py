@@ -1,4 +1,4 @@
-"""empty message
+"""Add three comment columns
 
 Revision ID: e181ecb29c9a
 Revises: 0ad956decbc4

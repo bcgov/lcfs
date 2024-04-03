@@ -26,7 +26,7 @@ def upgrade() -> None:
         ),
     )
     op.create_foreign_key(
-        None,
+        "transfer_history_user_profile_id_fkey",
         "transfer_history",
         "user_profile",
         ["user_profile_id"],
@@ -35,5 +35,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(None, "transfer_history", type_="foreignkey")
+    op.drop_constraint("transfer_history_user_profile_id_fkey", "transfer_history", type_="foreignkey")
     op.drop_column("transfer_history", "user_profile_id")
