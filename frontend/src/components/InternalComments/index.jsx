@@ -68,7 +68,7 @@ const InternalComments = ({ entityType, entityId }) => {
       try {
         // const fetchedComments = await fetchComments(entityType, entityId);
         const response = await apiService.get(`/internal_comments/${entityType}/${entityId}`);
-        let fetchedComments = response.data;
+        const fetchedComments = response.data;
         const sortedComments = fetchedComments.sort((a, b) => b.internalCommentId - a.internalCommentId);
         setComments(sortedComments);
       } catch (err) {

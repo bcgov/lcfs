@@ -54,8 +54,13 @@ class TransactionRepository(BaseRepository):
             combined_condition = or_(base_condition, draft_condition)
             conditions.append(combined_condition)
         else:
-            # If no organization_id is provided, condition to exclude "Draft" transactions for gov users
-            conditions.append(TransactionView.status.not_in(["Draft"]))
+            # If no organization_id is provided, condition to exclude transactions for gov users
+            conditions.append(TransactionView.status.not_in([
+                "Draft", 
+                "Sent", 
+                "Deleted",
+                "Declined"
+            ]))
 
         query = select(TransactionView).where(and_(*conditions))
 

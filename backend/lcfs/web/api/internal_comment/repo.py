@@ -139,11 +139,6 @@ class InternalCommentRepository(BaseRepository):
             "full_name": full_name
         } for internal_comment, full_name in results]
 
-        if not comments_with_user_info:
-            raise DataNotFoundException(
-                f"No comments found for entity ID {entity_id} with type '{entity_type}'."
-            )
-
         return comments_with_user_info
     
     @repo_handler
