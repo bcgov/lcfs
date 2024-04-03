@@ -154,16 +154,12 @@ class TransferServices:
                 transfer.agreement_date = transfer_data.agreement_date
                 transfer.quantity = transfer_data.quantity
                 transfer.price_per_unit = transfer_data.price_per_unit
-                transfer.signing_authority_declaration = transfer_data.signing_authority_declaration
                 transfer.from_org_comment = transfer_data.from_org_comment
         # update comments
         elif status_has_changed and new_status.status == TransferStatusEnum.Submitted:
             transfer.to_org_comment = transfer_data.to_org_comment
         else:
             transfer.gov_comment = transfer_data.gov_comment
-
-        if transfer_data.signing_authority_declaration == None:
-            transfer.signing_authority_declaration = False
 
         if transfer_data.recommendation and transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation

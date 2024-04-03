@@ -9,6 +9,5 @@ test_transfer = {
     "transfer_category_id": 1,
     "agreement_date": agreement_date,
     "quantity": 100,
-    "price_per_unit": 10.0,
-    "signing_authority_declaration": True
+    "price_per_unit": 10.0
 }

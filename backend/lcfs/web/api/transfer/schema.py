@@ -65,7 +65,6 @@ class TransferSchema(BaseSchema):
     agreement_date: date
     quantity: int
     price_per_unit: int
-    signing_authority_declaration: bool
     comments: Optional[List[TransferCommentSchema]] = None
     from_org_comment: Optional[str] = None
     to_org_comment: Optional[str] = None
@@ -89,7 +88,6 @@ class TransferCreateSchema(BaseSchema):
     agreement_date: Optional[date] = None
     quantity: Optional[int] = None
     price_per_unit: Optional[int] = None
-    signing_authority_declaration: Optional[bool] = None
     from_org_comment: Optional[str] = None
     to_org_comment: Optional[str] = None
     gov_comment: Optional[str] = None

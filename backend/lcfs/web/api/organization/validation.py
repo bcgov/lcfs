@@ -35,26 +35,9 @@ class OrganizationValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
-        if (
-            transfer_create.current_status == TransferStatusEnum.Sent.value
-            and not transfer_create.signing_authority_declaration
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Should be declared by signing authority.",
-            )
         return
 
     def update_transfer(self, organization_id, transfer_create: TransferCreateSchema):
-        # check for signing authority declaration for sent and submitted transfer status.
-        if (
-            transfer_create.current_status == TransferStatusEnum.Sent.value
-            or transfer_create.current_status == TransferStatusEnum.Submitted.value
-        ) and not transfer_create.signing_authority_declaration:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Should be declared by signing authority.",
-            )
         if (
             transfer_create.from_organization_id == organization_id
             and transfer_create.current_status
