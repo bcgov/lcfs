@@ -332,21 +332,6 @@ def upgrade() -> None:
         comment="Stores internal comments with scope and related metadata.",
     )
     op.create_table(
-        "mv_transaction_aggregate",
-        sa.Column("transaction_id", sa.Integer(), nullable=False),
-        sa.Column("transaction_type", sa.String(), nullable=False),
-        sa.Column("from_organization_id", sa.Integer(), nullable=True),
-        sa.Column("from_organization", sa.String(), nullable=True),
-        sa.Column("to_organization_id", sa.Integer(), nullable=True),
-        sa.Column("to_organization", sa.String(), nullable=True),
-        sa.Column("quantity", sa.Integer(), nullable=True),
-        sa.Column("price_per_unit", sa.Float(), nullable=True),
-        sa.Column("status", sa.String(), nullable=True),
-        sa.Column("create_date", sa.String(), nullable=True),
-        sa.Column("update_date", sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint("transaction_id", "transaction_type"),
-    )
-    op.create_table(
         "notification_channel",
         sa.Column(
             "notification_channel_id", sa.Integer(), autoincrement=True, nullable=False
@@ -788,13 +773,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
         sa.UniqueConstraint("name"),
         comment="To hold all the available roles and  their descriptions.",
-    )
-    op.create_table(
-        "transaction_status_view",
-        sa.Column("status", sa.String(), nullable=False),
-        sa.Column("create_date", sa.String(), nullable=True),
-        sa.Column("update_date", sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint("status"),
     )
     op.create_table(
         "transfer_category",
@@ -1978,7 +1956,6 @@ def downgrade() -> None:
     op.drop_table("user_login_history")
     op.drop_table("transfer_status")
     op.drop_table("transfer_category")
-    op.drop_table("transaction_status_view")
     op.drop_table("role")
     op.drop_table("organization_type")
     op.drop_table("organization_status")
@@ -1986,7 +1963,6 @@ def downgrade() -> None:
     op.drop_table("organization_address")
     op.drop_table("notification_type")
     op.drop_table("notification_channel")
-    op.drop_table("mv_transaction_aggregate")
     op.drop_table("internal_comment")
     op.drop_table("initiative_agreement_status")
     op.drop_table("comment")
