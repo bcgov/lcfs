@@ -18,7 +18,7 @@ class TransferValidation:
         self.org_repo = org_repo
         self.request = request
 
-    async def update_transfer(self, request: Request, transfer_create: TransferCreateSchema):
+    async def governent_update_transfer(self, request: Request, transfer_create: TransferCreateSchema):
         # Ensure only the valid statuses are passed.
         if transfer_create.current_status not in LCFS_Constants.GOV_TRANSFER_STATUSES:
             raise HTTPException(

@@ -1,5 +1,5 @@
 // react and npm library components
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
@@ -74,6 +74,7 @@ export const AddEditViewTransfer = () => {
   const { data: toOrgData } = useRegExtOrgs()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const currentUserOrgId = currentUser?.organization?.organizationId
+  const alertRef = useRef()
 
   const methods = useForm({
     resolver: yupResolver(AddEditTransferSchema),
@@ -210,14 +211,21 @@ export const AddEditViewTransfer = () => {
           }
         })
       }
+      alertRef.current.triggerAlert()
     },
     onError: (_error, _variables) => {
-      setAlertMessage(
-        transferId
-          ? t('transfer:actionMsgs.errorUpdateText')
-          : t('transfer:actionMsgs.errorCreateText')
-      )
+      const errorMsg = _error.response.data?.detail
+      if (errorMsg) {
+        setAlertMessage(errorMsg)
+      } else {
+        setAlertMessage(
+          transferId
+            ? t('transfer:actionMsgs.errorUpdateText')
+            : t('transfer:actionMsgs.errorCreateText')
+        )
+      }
       setAlertSeverity('error')
+      alertRef.current.triggerAlert()
     }
   })
 
@@ -327,7 +335,7 @@ export const AddEditViewTransfer = () => {
     <>
       <div>
         {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
+          <BCAlert ref={alertRef} data-test="alert-box" severity={alertSeverity}>
             {alertMessage}
           </BCAlert>
         )}

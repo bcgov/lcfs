@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import PropTypes from 'prop-types'
 import Fade from '@mui/material/Fade'
 import {
@@ -11,16 +11,25 @@ import {
 import BCBox from '@/components/BCBox'
 import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 
-function BCAlert({ severity, dismissible, delay, children, ...rest }) {
+const BCAlert = forwardRef(({ severity, dismissible, delay, children, ...rest }, ref) => {
   const [alertStatus, setAlertStatus] = useState('mount')
+  const [triggerCount, setTriggerCount] = useState(0)
   const color = severity
 
   useEffect(() => {
+    setAlertStatus('mount')
     const timer = setTimeout(() => {
       setAlertStatus('fadeOut')
     }, delay)
     return () => clearTimeout(timer)
-  }, [])
+  }, [triggerCount, delay])
+
+  useImperativeHandle(ref, () => ({
+    triggerAlert: () => {
+      // Increment triggerCount to trigger re-render
+      setTriggerCount((prevCount) => prevCount + 1)
+    }
+  }))
 
   const handleAlertStatus = () => setAlertStatus('fadeOut')
 
@@ -58,7 +67,9 @@ function BCAlert({ severity, dismissible, delay, children, ...rest }) {
   }
 
   return null
-}
+})
+
+BCAlert.displayName = 'BCAlert'
 
 BCAlert.defaultProps = {
   severity: 'info',
