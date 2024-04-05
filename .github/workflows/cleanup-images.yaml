@@ -84,3 +84,12 @@ jobs:
             oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-backend | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete imagetag
           fi
           
+          echo "Cleaning up Completed pods on Dev except CrunchyDB pods"
+          oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get pods | grep Completed | grep -v crunchy | awk '{print $1}' | xargs oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev delete pod || true
+
+          echo "Cleaning up Complete and Failed builds on Tools"
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Complete | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Failed | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
+
+          echo "Cleaning up buildconfigs on Tools"
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get buildconfig | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete buildconfig || true          
