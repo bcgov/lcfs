@@ -1,29 +1,12 @@
-import BCBox from '@/components/BCBox'
-import BCTypography from '@/components/BCTypography'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCurrentOrgBalance } from '@/hooks/useOrganization'
-import Icon from '@mui/material/Icon'
-import { useState } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import BCTypography from '@/components/BCTypography'
+import SupplierBalance from './SupplierBalance' // Adjust the import path as necessary
 
 export const HeaderComponent = () => {
   const { t } = useTranslation()
   const { data, isFetched } = useCurrentUser()
-  const [showBalance, setShowBalance] = useState(
-    !!+sessionStorage.getItem('showBalance') || true
-  )
-
-  const { data: orgBalance } = useCurrentOrgBalance()
-
-  const toggleBalanceVisibility = () => {
-    if (showBalance) {
-      sessionStorage.setItem('showBalance', '0')
-      setShowBalance(false)
-    } else {
-      sessionStorage.setItem('showBalance', '1')
-      setShowBalance(true)
-    }
-  }
 
   return (
     isFetched && (
@@ -35,31 +18,7 @@ export const HeaderComponent = () => {
         >
           {data?.organization?.name || t('govOrg')}
         </BCTypography>
-        {data?.organization?.organizationId && orgBalance && (
-          <BCBox component="div" className="organization_balance">
-            <BCBox
-              component="div"
-              sx={{ display: 'inline-flex', alignItems: 'center' }}
-            >
-              <Icon
-                style={{
-                  fontSize: 20,
-                  cursor: 'pointer',
-                  margin: '5px'
-                }}
-                onClick={toggleBalanceVisibility}
-              >
-                {showBalance ? 'visibility' : 'visibility_off'}
-              </Icon>
-              <span>
-                {t('balance')}:{' '}
-                {showBalance
-                  ? `${orgBalance?.totalBalance} (${orgBalance?.reservedBalance})`
-                  : '****'}
-              </span>
-            </BCBox>
-          </BCBox>
-        )}
+        {data?.organization?.organizationId && <SupplierBalance />}
       </>
     )
   )

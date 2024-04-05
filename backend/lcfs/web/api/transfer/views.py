@@ -33,7 +33,7 @@ async def get_transfer(
 @router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @view_handler
 @roles_required("Government")
-async def update_transfer(
+async def government_update_transfer(
     request: Request,
     transfer_id: int,
     transfer_data: TransferCreateSchema,
@@ -41,6 +41,6 @@ async def update_transfer(
     validate: TransferValidation = Depends()
 ):
     """Endpoint to set an existing transfers status to 'Deleted'."""
-    await validate.update_transfer(request, transfer_data)
+    await validate.government_update_transfer(request, transfer_data)
     transfer_data.transfer_id = transfer_id
     return await service.update_transfer(transfer_data)

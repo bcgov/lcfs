@@ -53,7 +53,7 @@ export const AddEditUser = ({ userType }) => {
     ? userID
       ? // eslint-disable-next-line react-hooks/rules-of-hooks
         useOrganizationUser(
-          orgID || currentUser?.organization.organizationId,
+          orgID || currentUser?.organization?.organizationId,
           userID
         )
       : { undefined, isLoading: false, isFetched: false }
@@ -137,7 +137,7 @@ export const AddEditUser = ({ userType }) => {
       } else {
         userData.adminRole = []
         userData.idirRole = ''
-        setOrgName(data.organization.name)
+        setOrgName(data.organization?.name)
       }
       reset(userData)
     }
@@ -181,7 +181,7 @@ export const AddEditUser = ({ userType }) => {
   const { mutate, isPending, isError } = useMutation({
     mutationFn: async (payload) => {
       if (hasRoles(roles.supplier)) {
-        const orgId = orgID || currentUser.organization.organizationId
+        const orgId = orgID || currentUser.organization?.organizationId
         return userID
           ? await apiService.put(
               `/organization/${orgId}/users/${userID}`,
