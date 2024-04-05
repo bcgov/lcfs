@@ -214,6 +214,7 @@ export const AddEditViewTransfer = () => {
       alertRef.current.triggerAlert()
     },
     onError: (_error, _variables) => {
+      setModalData(null)
       const errorMsg = _error.response.data?.detail
       if (errorMsg) {
         setAlertMessage(errorMsg)
@@ -226,6 +227,8 @@ export const AddEditViewTransfer = () => {
       }
       setAlertSeverity('error')
       alertRef.current.triggerAlert()
+      // Scroll back to the top of the page
+      window.scrollTo(0, 0)
     }
   })
 
