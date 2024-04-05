@@ -1,5 +1,6 @@
 # transactions/repo.py
 
+from enum import Enum
 from typing import List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -11,10 +12,15 @@ from sqlalchemy import select, update, func, desc, asc, and_, case, or_
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
-from lcfs.db.models.TransactionView import TransactionView
+from lcfs.db.models.TransactionView import TransactionViewTypeEnum, TransactionView
 from lcfs.db.models.TransactionStatusView import TransactionStatusView
+from lcfs.db.models.TransferStatus import TransferStatus
 from lcfs.web.api.repo import BaseRepository
 
+class EntityType(Enum):
+    Government = 'Government'
+    Transferor = 'Transferor'
+    Transferee = 'Transferee'
 
 class TransactionRepository(BaseRepository):
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
@@ -23,46 +29,69 @@ class TransactionRepository(BaseRepository):
     @repo_handler
     async def get_transactions_paginated(self, offset: int, limit: int, conditions: list, sort_orders: list, organization_id: int = None):
         """
-        Fetch paginated, filtered, and sorted transactions.
+        Fetches paginated, filtered, and sorted transactions.
+        Adjusts visibility based on the requester's role: transferor, transferee, or government.
         
         Args:
             offset (int): Pagination offset.
             limit (int): Pagination limit.
             conditions (list): Filtering conditions.
             sort_orders (list): Sorting orders.
+            organization_id (int, optional): ID of the requesting organization; determines visibility rules. Defaults to government view if None.
         
         Returns:
             A tuple of (list of TransactionView instances, total count).
         """
-        if organization_id:
-            # Start with a condition to exclude "Draft" transactions, but include them if they match the specific criteria
-            base_condition = and_(
-                TransactionView.status != "Draft",
-                or_(
-                    TransactionView.from_organization_id == organization_id,
-                    TransactionView.to_organization_id == organization_id
-                )
-            )
+        query_conditions = []
 
-            # Include "Draft" transactions if organization_id matches from_organization_id
-            draft_condition = and_(
+        # Base condition for transaction type "Transfer"
+        transfer_type_condition = TransactionView.transaction_type == 'Transfer'
+
+        if organization_id is not None:
+            # Fetch visible statuses for both roles for "Transfer" transactions
+            visible_statuses_transferor = await self.get_visible_statuses(EntityType.Transferor)
+            visible_statuses_transferee = await self.get_visible_statuses(EntityType.Transferee)
+
+            # Construct role-specific conditions, applying them only to "Transfer" transactions
+            transferor_condition = and_(
+                transfer_type_condition,
                 TransactionView.from_organization_id == organization_id,
-                TransactionView.status == "Draft"
+                TransactionView.status.in_([status.value for status in visible_statuses_transferor])
             )
-            
-            # Combine the base condition with the draft inclusion condition
-            combined_condition = or_(base_condition, draft_condition)
-            conditions.append(combined_condition)
-        else:
-            # If no organization_id is provided, condition to exclude transactions for gov users
-            conditions.append(TransactionView.status.not_in([
-                "Draft", 
-                "Sent", 
-                "Deleted",
-                "Declined"
-            ]))
+            transferee_condition = and_(
+                transfer_type_condition,
+                TransactionView.to_organization_id == organization_id,
+                TransactionView.status.in_([status.value for status in visible_statuses_transferee])
+            )
 
-        query = select(TransactionView).where(and_(*conditions))
+            # For transactions that are not of type "Transfer", include them without visibility filtering
+            non_transfer_condition = and_(
+                TransactionView.transaction_type != 'Transfer',
+                TransactionView.to_organization_id == organization_id
+            )
+
+            # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions
+            combined_role_condition = or_(transferor_condition, transferee_condition, non_transfer_condition)
+            query_conditions.append(combined_role_condition)
+        else:
+            # Fetch visible statuses for government, but only for "Transfer" transactions
+            visible_statuses_government = await self.get_visible_statuses(EntityType.Government)
+            government_condition = and_(
+                transfer_type_condition,
+                TransactionView.status.in_([status.value for status in visible_statuses_government])
+            )
+
+            # Include non-"Transfer" transactions for government without applying visibility filtering
+            gov_non_transfer_condition = TransactionView.transaction_type != 'Transfer'
+
+            combined_government_condition = or_(government_condition, gov_non_transfer_condition)
+            query_conditions.append(combined_government_condition)
+
+        # Add additional conditions
+        if conditions:
+            query_conditions.extend(conditions)
+
+        query = select(TransactionView).where(and_(*query_conditions))
 
         # Apply sorting
         for order in sort_orders:
@@ -82,7 +111,6 @@ class TransactionRepository(BaseRepository):
         transactions = result.scalars().all()
 
         return transactions, total_count
-
 
     @repo_handler
     async def get_transaction_statuses(self) -> List[TransactionStatusView]:
@@ -270,3 +298,36 @@ class TransactionRepository(BaseRepository):
         # If no rows were affected or transaction could not be retrieved, return False
         return False
 
+    @repo_handler
+    async def get_visible_statuses(self, entity_type: EntityType) -> List[str]:
+        """
+        Fetches transaction statuses visible to the specified entity type.
+        
+        Args:
+            entity_type (EntityType): The entity type (transferor, transferee, government).
+        
+        Returns:
+            List[str]: Visible status strings for the entity.
+        
+        Raises:
+            ValueError: For invalid entity type.
+        """
+        # Map entity types to their corresponding conditions
+        conditions = {
+            EntityType.Transferor: TransferStatus.visible_to_transferor.is_(True),
+            EntityType.Transferee: TransferStatus.visible_to_transferee.is_(True),
+            EntityType.Government: TransferStatus.visible_to_government.is_(True),
+        }
+
+        # Fetch the condition for the given entity type
+        condition = conditions.get(entity_type)
+
+        # Ensure a valid entity type was provided
+        if condition is None:
+            raise ValueError(f"Invalid entity type: {entity_type}")
+
+        query = select(TransferStatus.status).where(condition)
+        result = await self.db.execute(query)
+
+        # Directly fetching string representations of the statuses
+        return [status[0] for status in result.fetchall()]

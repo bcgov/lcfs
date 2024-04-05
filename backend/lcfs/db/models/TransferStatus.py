@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Enum
+from sqlalchemy import Column, Integer, Enum, Boolean
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 import enum
 
@@ -20,3 +20,6 @@ class TransferStatus(BaseModel, Auditable, DisplayOrder):
 
     transfer_status_id = Column(Integer, primary_key=True, autoincrement=True)
     status = Column(Enum(TransferStatusEnum, name="transfer_type_enum", create_type=True), comment="Transfer Status")
+    visible_to_transferor = Column(Boolean, default=False, comment="Visibility for transferor entities")
+    visible_to_transferee = Column(Boolean, default=False, comment="Visibility for transferee entities")
+    visible_to_government = Column(Boolean, default=False, comment="Visibility for government entities")
