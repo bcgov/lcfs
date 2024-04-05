@@ -168,6 +168,7 @@ class OrganizationsRepository(BaseRepository):
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),
             )
+            .order_by(Organization.name)
         )
 
         # Execute the query
