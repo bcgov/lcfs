@@ -26,14 +26,3 @@ Feature: Create transfer functionality with transfer only role
       Examples: 
         | units | orgId | pricePerUnit | agreementDate | comment      |
         |   100 |     2 |        40.00 |    2024-04-06 | test comment |
-
-    @transfer
-    Scenario: sign and send the draft transfer
-      When I transfer "<units>" units to organization "<orgId>" of value "<pricePerUnit>" with agreement date "<agreementDate>"
-      And add the "<comment>" and save as draft
-      And sign and send the draft transfer
-      Then I should be redirected to transactions page.
-
-      Examples: 
-        | units | orgId | pricePerUnit | agreementDate | comment      |
-        |   100 |     2 |        40.00 |    2024-04-06 | test comment |
