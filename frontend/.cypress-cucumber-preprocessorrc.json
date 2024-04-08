@@ -1,0 +1,11 @@
+{
+  "e2e": {
+    "stepDefinitions": "cypress/e2e/Pages/[filepath].cy.js"
+  },
+  "component": {
+    "stepDefinitions": "src/[filepath].cy.js"
+  },
+  "html": {
+    "enabled": true
+  }
+}

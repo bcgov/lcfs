@@ -7,7 +7,7 @@ import { AdminLinksCard } from './components/idirWidgets/AdminLinksCard'
 
 export const Dashboard = () => {
   return (
-    <Box display="grid" gridTemplateColumns="1fr 3fr" gap={3}>
+    <Box display="grid" gridTemplateColumns="1fr 3fr" gap={3} data-test="dashboard-container">
       <Box display="flex" flexDirection="column" gap={3}>
         <Role roles={nonGovRoles}>
           <BCeIDBalance />

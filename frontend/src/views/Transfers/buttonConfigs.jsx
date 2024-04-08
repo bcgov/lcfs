@@ -68,6 +68,7 @@ export const buttonClusterConfigFn = ({
   const transferButtons = {
     saveDraft: {
       ...outlinedButton(t('transfer:actionBtns.saveDraftBtn'), faFloppyDisk),
+      id: "save-draft-btn",
       handler: (formData) => {
         createUpdateTransfer({
           data: {
@@ -82,6 +83,7 @@ export const buttonClusterConfigFn = ({
     },
     deleteDraft: {
       ...redOutlinedButton(t('transfer:actionBtns.deleteDraftBtn'), faTrash),
+      id: "delete-draft-btn",
       handler: (formData) => {
         setModalData({
           primaryButtonAction: () =>
@@ -104,7 +106,8 @@ export const buttonClusterConfigFn = ({
       ...containedButton(t('transfer:actionBtns.signAndSendBtn'), faPencil),
       disabled:
         !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
-      handler: (formData) => {
+      id: "sign-and-send-btn",
+        handler: (formData) => {
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
@@ -138,7 +141,8 @@ export const buttonClusterConfigFn = ({
       ...containedButton(t('transfer:actionBtns.signAndSubmitBtn'), faPencil),
       disabled:
         !hasRoles(roles.signing_authority) || !signingAuthorityDeclaration,
-      handler: (formData) => {
+      id: "sign-and-submit-btn",
+        handler: (formData) => {
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
@@ -161,6 +165,7 @@ export const buttonClusterConfigFn = ({
         t('transfer:actionBtns.declineTransferBtn'),
         faTrash
       ),
+      id: "decline-btn",
       handler: (formData) => {
         setModalData({
           primaryButtonAction: () =>
@@ -184,6 +189,7 @@ export const buttonClusterConfigFn = ({
         t('transfer:actionBtns.rescindTransferBtn'),
         faTrash
       ),
+      id: "rescind-btn",
       handler: (formData) => {
         setModalData({
           primaryButtonAction: () =>
@@ -204,6 +210,7 @@ export const buttonClusterConfigFn = ({
     },
     saveComment: {
       ...outlinedButton(t('saveBtn'), faFloppyDisk),
+      id: "save-comment-btn",
       handler: (formData) =>
         createUpdateTransfer({
           data: {
@@ -216,6 +223,7 @@ export const buttonClusterConfigFn = ({
     },
     refuseTransfer: {
       ...redOutlinedButton(t('transfer:actionBtns.refuseTransferBtn')),
+      id: "refuse-btn",
       handler: (formData) =>
         setModalData({
           primaryButtonAction: () =>
@@ -236,6 +244,7 @@ export const buttonClusterConfigFn = ({
     },
     recordTransfer: {
       ...containedButton(t('transfer:actionBtns.recordTransferBtn')),
+      id: "record-btn",
       handler: (formData) =>
         setModalData({
           primaryButtonAction: () =>
@@ -255,6 +264,7 @@ export const buttonClusterConfigFn = ({
     },
     recommendTransfer: {
       ...containedButton(t('transfer:actionBtns.recommendBtn')),
+      id: "recommend-btn",
       handler: (formData) =>
         setModalData({
           primaryButtonAction: () =>
@@ -274,6 +284,7 @@ export const buttonClusterConfigFn = ({
     },
     returnToAnalyst: {
       ...outlinedButton(t('transfer:actionBtns.returnToAnalystBtn')),
+      id: "return-to-analyst-btn",
       handler: (formData) =>
         setModalData({
           primaryButtonAction: () =>

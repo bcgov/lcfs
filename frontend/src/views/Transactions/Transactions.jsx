@@ -17,6 +17,7 @@ import { transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
+import OrganizationList from './components/OrganizationList'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -125,6 +126,7 @@ export const Transactions = () => {
           ORGANIZATION_STATUSES.REGISTERED && (
           <Role roles={[roles.transfers]}>
             <BCButton
+              id="new-transfer-button"
               variant="contained"
               size="small"
               color="primary"
@@ -152,6 +154,7 @@ export const Transactions = () => {
         />
       </Box>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+        <OrganizationList />
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={

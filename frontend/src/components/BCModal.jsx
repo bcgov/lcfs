@@ -61,6 +61,7 @@ const BCModal = (props) => {
       <DialogActions>
         <BCButton
           variant="outlined"
+          id={'modal-btn-' + secondaryButtonText.toLowerCase().replace(' ', '-')}
           color={secondaryButtonColor ?? 'dark'}
           onClick={secondaryButtonAction ?? onClose}
         >
@@ -69,6 +70,7 @@ const BCModal = (props) => {
         {customButtons}
         <BCButton
           variant="contained"
+          id={'modal-btn-' + primaryButtonText.toLowerCase().replace(' ', '-')}
           color={primaryButtonColor ?? 'primary'}
           autoFocus
           onClick={primaryButtonAction}

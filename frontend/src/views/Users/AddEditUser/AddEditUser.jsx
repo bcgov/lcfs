@@ -238,7 +238,7 @@ export const AddEditUser = ({ userType }) => {
         {userID ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to ${orgName}`}
       </Typography>
-      <form onSubmit={handleSubmit(onSubmit, onErrors)}>
+      <form onSubmit={handleSubmit(onSubmit, onErrors)} id={"user-form"}>
         <FormProvider {...{ control, setValue }}>
           <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
             {/* Form fields */}

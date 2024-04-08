@@ -17,6 +17,7 @@ export const BCeIDSpecificRoleFields = ({ form, disabled, t }) => {
         disabled={disabled}
       />
       <BCFormRadio
+        id={nonGovRoles[5].toLowerCase().replace(' ', '-')}
         control={control}
         name="readOnly"
         options={[
