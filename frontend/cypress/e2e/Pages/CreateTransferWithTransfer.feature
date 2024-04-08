@@ -10,7 +10,7 @@ Feature: Create transfer functionality with transfer only role
     Scenario: creating a draft transfer
       When I transfer "<units>" units to organization "<orgId>" of value "<pricePerUnit>" with agreement date "<agreementDate>"
       And add the "<comment>" and save as draft
-      Then I should use see a draft transfer with "<units>" units having cost of "<pricePerUnit>" per unit sent to organization "<orgId>".
+      Then I should see a draft transfer with "<units>" units having cost of "<pricePerUnit>" per unit sent to organization "<orgId>".
 
       Examples: 
         | units | orgId | pricePerUnit | agreementDate | comment      |

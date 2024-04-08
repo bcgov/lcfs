@@ -39,7 +39,7 @@ When("add the {string} and save as draft", (comment) => {
   cy.wait(1000)
 })
 
-Then("I should use see a draft transfer with {string} units having cost of {string} per unit sent to organization {string}.", (qty, pricePerUnit, orgId) => {
+Then("I should see a draft transfer with {string} units having cost of {string} per unit sent to organization {string}.", (qty, pricePerUnit, orgId) => {
   cy.url().should('match', /transfers\/edit\/\d+$/);
   // check for visible buttons
   cy.get('#delete-draft-btn').should('exist');
@@ -60,11 +60,22 @@ When("delete the transfer", () => {
 When("sign and send the draft transfer", () => {
   cy.get('#signing-authority-declaration').click();
   cy.get("#sign-and-send-btn").click()
+  cy.pause()
   cy.get('.MuiDialog-container').should('exist')
     .and('contain', 'Are you sure you want to sign and send this transfer to');
   cy.get('#modal-btn-sign-and-send').click()
-  cy.get('[data-test="alert-box"] .MuiBox-root').should('contain', 'Transfer successfully sent.')
-  cy.pause()
+  cy.wait(1000)
+  cy.get("[data-test='alert-box']").should('contain', 'Transfer successfully sent')
+})
+
+When("sign and send the transfer", () => {
+  cy.get('#signing-authority-declaration').click();
+  cy.get("#sign-and-send-btn").click()
+  cy.get('.MuiDialog-container').should('exist')
+    .and('contain', 'Are you sure you want to sign and send this transfer to');
+  cy.get('#modal-btn-sign-and-send').click()
+  cy.get("[data-test='alert-box'] .MuiBox-root").should('contain', 'Transfer successfully sent.')
+  cy.wait(1000)
 })
 
 Then("I should be redirected to transactions page.", () => {
