@@ -26,10 +26,11 @@ export const TransferDetails = () => {
   } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
-  const organizations = orgData?.map((org) => ({
-    value: parseInt(org.organizationId),
-    label: org.name || t('common:unknown')
-  })) || []
+  const organizations =
+    orgData?.map((org) => ({
+      value: parseInt(org.organizationId),
+      label: org.name || t('common:unknown')
+    })) || []
 
   const quantity = watch('quantity')
   const pricePerUnit = watch('pricePerUnit')
@@ -175,7 +176,7 @@ export const TransferDetails = () => {
             fontWeight="bold"
             component="span"
             color="primary"
-            data-testid="transfer-total-value"
+            data-test="transfer-total-value"
           >
             {`${totalValue.toLocaleString('en-CA', {
               style: 'currency',

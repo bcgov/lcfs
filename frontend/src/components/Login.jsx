@@ -1,16 +1,16 @@
 // Particle Images
-import waterdrop from '@/assets/images/particles/water-drop.png'
 import autumn1 from '@/assets/images/particles/autumn-fall-leaves.png'
 import autumn2 from '@/assets/images/particles/autumn-fall-leaves2.png'
-import snowflake1 from '@/assets/images/particles/snowflake.png'
-import snowflake2 from '@/assets/images/particles/snowflake2.png'
 import cherry1 from '@/assets/images/particles/cherry-blossom.png'
 import cherry2 from '@/assets/images/particles/cherry-blossom2.png'
+import snowflake1 from '@/assets/images/particles/snowflake.png'
+import snowflake2 from '@/assets/images/particles/snowflake2.png'
+import waterdrop from '@/assets/images/particles/water-drop.png'
 
 // Background Images
+import bgAutumnImage from '@/assets/images/backgrounds/autumn.jpg'
 import bgSpringImage from '@/assets/images/backgrounds/spring.jpg'
 import bgSummerImage from '@/assets/images/backgrounds/summer.jpg'
-import bgAutumnImage from '@/assets/images/backgrounds/autumn.jpg'
 import bgWinterImage from '@/assets/images/backgrounds/winter.jpg'
 
 import logoDark from '@/assets/images/logo-banner.svg'
@@ -18,15 +18,13 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
-import { Card, Alert } from '@mui/material'
+import { Alert, Card } from '@mui/material'
 import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
-import { Link, useLocation } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useLocation } from 'react-router-dom'
 import Snowfall from 'react-snowfall'
-import { logout } from '@/utils/keycloak'
-import { Logout } from '@/layouts/MainLayout/components/Logout'
 
 const currentDate = new Date()
 
@@ -131,6 +129,7 @@ export const Login = () => {
       width="100%"
       minHeight="100vh"
       sx={styles.loginBackground}
+      data-test="login"
     >
       <Snowfall
         wind={seasonImages[season].wind}
@@ -181,11 +180,7 @@ export const Login = () => {
                 </BCTypography>
               </BCBox>
               <BCBox pt={1} pb={3} px={3}>
-                {message && (
-                  <Alert severity={severity}>
-                    {message}
-                  </Alert>
-                )}
+                {message && <Alert severity={severity}>{message}</Alert>}
                 <BCBox component="form" role="form" data-test="login-container">
                   <BCBox mt={4} mb={1}>
                     <BCButton

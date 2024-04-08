@@ -7,7 +7,7 @@ import Grid from '@mui/material/Unstable_Grid2'
 // @mui custom components
 import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
-import RequireAuth from '@/components/RequireAuth'
+import { RequireAuth } from '@/components/RequireAuth'
 import { Navbar } from './components/Navbar'
 import DisclaimerBanner from '@/components/DisclaimerBanner'
 import Crumb from '@/layouts/MainLayout/components/Crumb'

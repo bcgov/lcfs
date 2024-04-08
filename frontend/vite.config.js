@@ -21,7 +21,20 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './testSetup.js'
+    setupFiles: './testSetup.js',
+
+    coverage: {
+      enabled: true,
+      reporter: ['html'],
+      include: ['src'],
+      exclude: [
+        'src/*.{jsx,js}',
+        'src/assets',
+        'src/constants',
+        'src/themes',
+        'src/tests'
+      ]
+    }
   },
   optimizeDeps: {
     include: ['@mui/material/Unstable_Grid2']

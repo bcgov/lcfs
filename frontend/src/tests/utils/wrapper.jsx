@@ -4,17 +4,21 @@ import { CssBaseline, ThemeProvider } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter as Router } from 'react-router-dom'
 
-const testQueryClient = new QueryClient({
+export const testQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 0,
+      retry: false
+    },
+    mutations: {
       retry: false
     }
-  },
-  logger: {
-    log: console.log,
-    warn: console.warn,
-    error: () => {}
   }
+  // logger: {
+  //   log: console.log,
+  //   warn: console.warn,
+  //   error: () => {}
+  // }
 })
 
 export const wrapper = ({ children }) => (

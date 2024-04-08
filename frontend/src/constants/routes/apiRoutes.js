@@ -6,11 +6,12 @@ export const apiRoutes = {
   orgUsers: '/organization/:orgID/users/list',
   transactions: '/transactions/',
   orgTransactions: '/organization/:orgID/transactions',
+  openapi: '/openapi.json/'
 }
 
 export const viewRoutesTitle = {
-  admin: "Administration",
-  "transfers": "Transactions",
-  "add-org": "Add organization",
-  "edit-org": "Edit organization"
+  admin: 'Administration',
+  transfers: 'Transactions',
+  'add-org': 'Add organization',
+  'edit-org': 'Edit organization'
 }

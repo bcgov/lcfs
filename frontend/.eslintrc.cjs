@@ -25,5 +25,8 @@ module.exports = {
     'react/prop-types': 0,
     'cypress/no-unnecessary-waiting': 0,
     'no-unused-vars': 1
+  },
+  globals: {
+    vi: true
   }
 }

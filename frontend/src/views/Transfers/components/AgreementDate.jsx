@@ -26,7 +26,7 @@ export const AgreementDate = () => {
       >
         <Typography variant="body2">{t('transfer:agrDateHeader')}</Typography>
         <TextField
-          data-testid="transfer-agreement-date"
+          data-test="transfer-agreement-date"
           {...register('agreementDate')}
           type="date"
           defaultValue={maxDate}

@@ -1,7 +1,6 @@
-import React from 'react'
+import DisclaimerBanner from '@/components/DisclaimerBanner'
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
-import DisclaimerBanner from './DisclaimerBanner'
+import { describe, expect, it } from 'vitest'
 
 describe('DisclaimerBanner', () => {
   it('renders the messages', () => {

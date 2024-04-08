@@ -320,7 +320,6 @@ export const AddEditUser = ({ userType }) => {
                   color="primary"
                   data-test="saveUser"
                   sx={{ ml: 2 }}
-                  data-testid="saveUser"
                   startIcon={
                     <FontAwesomeIcon
                       icon={faFloppyDisk}
