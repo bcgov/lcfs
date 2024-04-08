@@ -60,7 +60,6 @@ When("delete the transfer", () => {
 When("sign and send the draft transfer", () => {
   cy.get('#signing-authority-declaration').click();
   cy.get("#sign-and-send-btn").click()
-  cy.pause()
   cy.get('.MuiDialog-container').should('exist')
     .and('contain', 'Are you sure you want to sign and send this transfer to');
   cy.get('#modal-btn-sign-and-send').click()
