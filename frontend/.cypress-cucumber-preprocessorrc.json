@@ -1,9 +1,9 @@
 {
   "e2e": {
-    "stepDefinitions": "cypress/e2e/Pages/[filepath].cy.js"
+    "stepDefinitions": "cypress/e2e/Pages/**/*.cy.js"
   },
   "component": {
-    "stepDefinitions": "src/[filepath].cy.js"
+    "stepDefinitions": "cypress/[filepath].cy.js"
   },
   "html": {
     "enabled": true

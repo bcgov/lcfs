@@ -1,4 +1,4 @@
-Feature: Transfer Functionality
+Feature: Create transfer functionality with transfer only role
 
   Rule: Paths for Transferer Organization
 

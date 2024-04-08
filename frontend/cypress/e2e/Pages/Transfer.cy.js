@@ -61,8 +61,10 @@ When("sign and send the draft transfer", () => {
   cy.get('#signing-authority-declaration').click();
   cy.get("#sign-and-send-btn").click()
   cy.get('.MuiDialog-container').should('exist')
-    .and('contain', 'Are you sure you want to delete this draft?');
+    .and('contain', 'Are you sure you want to sign and send this transfer to');
   cy.get('#modal-btn-sign-and-send').click()
+  cy.get('[data-test="alert-box"] .MuiBox-root').should('contain', 'Transfer successfully sent.')
+  cy.pause()
 })
 
 Then("I should be redirected to transactions page.", () => {
@@ -72,6 +74,5 @@ Then("I should be redirected to transactions page.", () => {
 
 After(() => {
   // Code to run after all tests have completed
-  // For example, you can log a message indicating test completion
   console.log("All tests have completed.");
 });
