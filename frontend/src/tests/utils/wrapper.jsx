@@ -14,11 +14,6 @@ export const testQueryClient = new QueryClient({
       retry: false
     }
   }
-  // logger: {
-  //   log: console.log,
-  //   warn: console.warn,
-  //   error: () => {}
-  // }
 })
 
 export const wrapper = ({ children }) => (
