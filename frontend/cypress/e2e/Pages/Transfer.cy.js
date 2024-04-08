@@ -63,7 +63,7 @@ When("sign and send the draft transfer", () => {
   cy.get('.MuiDialog-container').should('exist')
     .and('contain', 'Are you sure you want to sign and send this transfer to');
   cy.get('#modal-btn-sign-and-send').click()
-  cy.wait(1000)
+  cy.wait(500)
   cy.get("[data-test='alert-box']").should('contain', 'Transfer successfully sent')
 })
 
@@ -73,8 +73,8 @@ When("sign and send the transfer", () => {
   cy.get('.MuiDialog-container').should('exist')
     .and('contain', 'Are you sure you want to sign and send this transfer to');
   cy.get('#modal-btn-sign-and-send').click()
-  cy.get("[data-test='alert-box'] .MuiBox-root").should('contain', 'Transfer successfully sent.')
-  cy.wait(1000)
+  cy.get("[data-test='alert-box'] .MuiBox-root").should('contain', 'Transfer successfully sent')
+  cy.wait(500)
 })
 
 Then("I should be redirected to transactions page.", () => {
