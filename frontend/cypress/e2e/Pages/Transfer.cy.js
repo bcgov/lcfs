@@ -2,9 +2,12 @@ import { After, Before, Given, When, Then } from '@badeball/cypress-cucumber-pre
 
 Given("I am on home page logged in as {string} user having roles", (userType, roles) => {
   // uncomment later.
-  // if (userType.includes("bceid")) {
-  //   cy.setBCeIDRoles(userType, roles)
-  // }
+  if (userType.includes("bceid")) {
+      cy.setBCeIDRoles(userType, roles)
+  }
+  cy.clearAllCookies()
+  cy.clearAllLocalStorage()
+  cy.clearAllSessionStorage()
   cy.visit('/')
   cy.getByDataTest('login-container').should('exist')
   // Login with the updated user
