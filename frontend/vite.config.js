@@ -32,7 +32,8 @@ export default defineConfig({
         'src/assets',
         'src/constants',
         'src/themes',
-        'src/tests'
+        'src/tests',
+        'src/stores'
       ]
     }
   },
