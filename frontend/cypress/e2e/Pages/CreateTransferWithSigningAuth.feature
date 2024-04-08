@@ -18,9 +18,9 @@ Feature: Create transfer functionality with "Signing authority" role
         |   100 |     2 |        40.00 |    2024-04-06 | test comment |
 
     @transfer
-    Scenario: sign and send the draft transfer
+    Scenario: sign and send the transfer
       When I transfer "<units>" units to organization "<orgId>" of value "<pricePerUnit>" with agreement date "<agreementDate>"
-      And sign and send the draft transfer
+      And sign and send the transfer
       Then I should be redirected to transactions page.
 
       Examples: 
