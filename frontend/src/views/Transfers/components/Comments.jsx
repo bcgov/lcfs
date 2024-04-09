@@ -43,6 +43,7 @@ export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
 
           <Collapse in={isExpanded}>
             <TextField
+              id="external-comments"
               {...register(commentField)}
               multiline
               fullWidth

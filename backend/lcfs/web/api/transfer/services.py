@@ -84,7 +84,7 @@ class TransferServices:
                     comment=transfer.to_org_comment,
                 )
             )
-        if (transfer.current_status.status in [TransferStatusEnum.Recorded, TransferStatusEnum.Refused]):
+        if (transfer.gov_comment != None and transfer.gov_comment != '' and transfer.current_status.status in [TransferStatusEnum.Recorded, TransferStatusEnum.Refused]):
             comments.append(
                 TransferCommentSchema(
                     name="Government of British Columbia",
@@ -156,7 +156,7 @@ class TransferServices:
                 transfer.price_per_unit = transfer_data.price_per_unit
                 transfer.from_org_comment = transfer_data.from_org_comment
         # update comments
-        elif status_has_changed and new_status.status == TransferStatusEnum.Submitted:
+        elif status_has_changed and new_status.status in [TransferStatusEnum.Submitted, TransferStatusEnum.Declined]:
             transfer.to_org_comment = transfer_data.to_org_comment
         else:
             transfer.gov_comment = transfer_data.gov_comment

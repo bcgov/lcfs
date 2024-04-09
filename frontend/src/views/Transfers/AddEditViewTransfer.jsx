@@ -338,7 +338,7 @@ export const AddEditViewTransfer = () => {
     <>
       <div>
         {alertMessage && (
-          <BCAlert ref={alertRef} data-test="alert-box" severity={alertSeverity}>
+          <BCAlert ref={alertRef} data-test="alert-box" severity={alertSeverity} delay={65000}>
             {alertMessage}
           </BCAlert>
         )}
@@ -462,6 +462,7 @@ export const AddEditViewTransfer = () => {
                   config && (
                     <Role key={config.label}>
                       <BCButton
+                        id={config.id}
                         size="small"
                         variant={config.variant}
                         color={config.color}
