@@ -64,6 +64,7 @@ class TransactionRepository(BaseRepository):
                 TransactionView.status.in_([status.value for status in visible_statuses_transferee])
             )
 
+            # TODO: Additional visibility checks needed for other transaction types.
             # For transactions that are not of type "Transfer", include them without visibility filtering
             non_transfer_condition = and_(
                 TransactionView.transaction_type != 'Transfer',
@@ -81,6 +82,7 @@ class TransactionRepository(BaseRepository):
                 TransactionView.status.in_([status.value for status in visible_statuses_government])
             )
 
+            # TODO: Additional visibility checks needed for other transaction types.
             # Include non-"Transfer" transactions for government without applying visibility filtering
             gov_non_transfer_condition = TransactionView.transaction_type != 'Transfer'
 
