@@ -74,6 +74,7 @@ export const TransferDetails = () => {
           </BCTypography>
           {` ${t('transfer:transfers')} `}
           <TextField
+            data-testid="quantity"
             {...register('quantity')}
             placeholder={t('common:quantity')}
             size="small"
@@ -102,6 +103,7 @@ export const TransferDetails = () => {
               displayEmpty
               render={({ field }) => (
                 <Select
+                  id="to-organization-id"
                   labelId="to-organization-select-label"
                   {...field}
                   error={!!errors.toOrganizationId}
@@ -149,6 +151,7 @@ export const TransferDetails = () => {
           </FormControl>
           {t('transfer:for')}
           <TextField
+            id="price-per-unit"
             {...register('pricePerUnit')}
             placeholder={t('transfer:fairMarketText')}
             size="small"

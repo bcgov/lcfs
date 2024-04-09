@@ -131,3 +131,4 @@ cython_debug/
 
 # local database file
 LCFS Local DB.session.sql
+frontend/cucumber-report.html

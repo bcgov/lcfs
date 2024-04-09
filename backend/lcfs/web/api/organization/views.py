@@ -16,6 +16,8 @@ from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
 from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.Transfer import Transfer
+from lcfs.db.models.TransferStatus import TransferStatusEnum
 from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
     TransferSchema,
@@ -152,7 +154,12 @@ async def get_transactions_paginated(
     Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
     """
     organization_id = request.user.organization.organization_id
-    return await org_service.get_transactions_paginated(pagination, organization_id)
+    paginated_transactions = await org_service.get_transactions_paginated(pagination, organization_id)
+    # for Organizations hide Recommended status.
+    for transaction in paginated_transactions['transactions']:
+        if transaction.status == TransferStatusEnum.Recommended.value:
+            transaction.status = TransferStatusEnum.Submitted.name
+    return paginated_transactions
 
 
 @router.post(
@@ -191,7 +198,7 @@ async def update_transfer(
     transfer_create: TransferCreateSchema = ...,
     transfer_service: TransferServices = Depends(),
     validate: OrganizationValidation = Depends(),
-):
+) -> Transfer:
     """
     Endpoint to create a new transfer
     This endpoint creates a new transfer and returns the information of the created transfer.

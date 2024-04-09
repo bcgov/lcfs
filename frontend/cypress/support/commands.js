@@ -16,9 +16,7 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
  * @param {string} username - Username
  * @param {string} password - Password
  */
-Cypress.Commands.add('login', (userType, username, password) => {
-  cy.visit('/')
-
+Cypress.Commands.add('loginWith', (userType, username, password) => {
   // Determine which login link to click based on user type
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
 
@@ -50,4 +48,30 @@ Cypress.Commands.add('logout', () => {
 
   // Verify successful logout
   cy.getByDataTest('login-container').should('exist')
+})
+
+
+Cypress.Commands.add('setBCeIDRoles', (userType, roles) => {
+  cy.session("idirLogin", () => {
+    cy.visit('/')
+    cy.getByDataTest('login-container').should('exist')
+    // Login as an IDIR user with Admin privileges.
+    cy.loginWith("idir", Cypress.env("admin_idir_username"), Cypress.env("admin_idir_password"))
+    cy.wait(5000)
+    // If BCeID user then update the roles using the IDIR user
+    cy.visit(`/organizations/${Cypress.env(`${userType}_id`)}/${Cypress.env(`${userType}_userId`)}/edit-user`)
+    const rolesToCheck = roles.raw()[0].map(role => role.toLowerCase().replace(/\s/g, '-'))
+    cy.get('input[type="checkbox"]').each(($checkbox) => {
+      const checkboxId = $checkbox.attr("id");
+      if (checkboxId && rolesToCheck.includes(checkboxId)) {
+        // If the checkbox ID is in the array, check the checkbox
+        cy.wrap($checkbox).check();
+      } else {
+        // If the checkbox ID is not in the array, uncheck the checkbox
+        cy.wrap($checkbox).uncheck();
+      }
+    })
+    cy.get('#user-form').submit()
+    cy.logout()
+  })
 })

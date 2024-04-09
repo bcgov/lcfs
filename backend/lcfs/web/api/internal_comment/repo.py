@@ -1,0 +1,207 @@
+from logging import getLogger
+from typing import List
+
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_, select, desc
+
+from lcfs.web.api.repo import BaseRepository
+from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.web.core.decorators import repo_handler
+
+from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.InternalComment import InternalComment
+from lcfs.db.models.TransferInternalComment import TransferInternalComment
+from lcfs.db.models.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
+
+from lcfs.web.api.internal_comment.schema import EntityTypeEnum
+
+from lcfs.web.api.user.repo import UserRepository
+
+
+logger = getLogger("internal_comment_repo")
+
+
+class InternalCommentRepository(BaseRepository):
+    """
+    Repository class for internal comments
+    """
+    def __init__(self, db: AsyncSession = Depends(get_async_db_session), user_repo: UserRepository = Depends()):
+        """
+        Initializes the repository with an asynchronous database session.
+
+        Args:
+            db (AsyncSession): Injected database session for executing asynchronous queries.
+        """
+        super().__init__(db)
+        self.user_repo = user_repo
+
+    @repo_handler
+    async def create_internal_comment(
+        self, internal_comment: InternalComment, entity_type: EntityTypeEnum, entity_id: int
+    ):
+        """
+        Creates a new internal comment and associates it with a transfer or initiative agreement entity.
+
+        Args:
+            internal_comment (InternalComment): The internal comment object to be added to the database.
+            entity_type (str): The type of entity the comment is associated with.
+            entity_id (int): The ID of the entity the comment is associated with.
+
+        Returns:
+            InternalComment: The newly created internal comment with additional information such as 'full_name'.
+        """
+        self.db.add(internal_comment)
+        await self.commit_to_db()
+        await self.db.refresh(internal_comment)
+
+        # Determine and create the appropriate entity association based on the provided entity type
+        if entity_type == EntityTypeEnum.TRANSFER:
+            association = TransferInternalComment(
+                transfer_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
+            )
+        elif entity_type == EntityTypeEnum.INITIATIVE_AGREEMENT:
+            association = InitiativeAgreementInternalComment(
+                initiative_agreement_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
+            )
+
+        # Add the association to the session and commit
+        self.db.add(association)
+        await self.commit_to_db()
+        await self.db.refresh(internal_comment)
+
+        # Update the internal comment with the creator's full name.
+        internal_comment.full_name = await self.user_repo.get_full_name(
+            internal_comment.create_user
+        )
+        return internal_comment
+
+    @repo_handler
+    async def get_internal_comments(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> List[dict]:
+        """
+        Retrieves a list of internal comments associated with a specific entity,
+        along with the full name of the user who created each comment.
+
+        Args:
+            entity_type (EntityTypeEnum): The type of entity to retrieve comments for.
+            entity_id (int): The ID of the entity to retrieve comments for.
+
+        Returns:
+            List[Dict[str, any]]: A list of dictionaries containing internal comment
+            information and the full name of the comment creator.
+
+        Raises:
+            DataNotFoundException: If no comments are found for the given entity.
+        """
+        # Mapping of entity types to their respective models and where conditions
+        entity_mapping = {
+            EntityTypeEnum.TRANSFER: (
+                TransferInternalComment,
+                TransferInternalComment.transfer_id
+            ),
+            EntityTypeEnum.INITIATIVE_AGREEMENT: (
+                InitiativeAgreementInternalComment,
+                InitiativeAgreementInternalComment.initiative_agreement_id
+            ),
+        }
+
+        # Get the specific model and where condition for the given entity_type
+        entity_model, where_condition = entity_mapping[entity_type]
+
+        # Construct the base query
+        base_query = select(
+            InternalComment,
+            (UserProfile.first_name + " " + UserProfile.last_name).label("full_name")
+        ).join(
+            entity_model,
+            entity_model.internal_comment_id == InternalComment.internal_comment_id
+        ).join(
+            UserProfile,
+            UserProfile.keycloak_username == InternalComment.create_user
+        ).where(
+            where_condition == entity_id
+        ).order_by(desc(InternalComment.internal_comment_id))
+
+        # Execute the query
+        results = await self.db.execute(base_query)
+
+        # Compile and return the list of internal comments with user info
+        comments_with_user_info = [{
+            "internal_comment_id": internal_comment.internal_comment_id,
+            "comment": internal_comment.comment,
+            "audience_scope": internal_comment.audience_scope,
+            "create_user": internal_comment.create_user,
+            "create_date": internal_comment.create_date,
+            "update_date": internal_comment.update_date,
+            "full_name": full_name
+        } for internal_comment, full_name in results]
+
+        return comments_with_user_info
+    
+    @repo_handler
+    async def get_internal_comment_by_id(self, internal_comment_id: int) -> InternalComment:
+        """
+        Fetches an internal comment by its ID.
+
+        Args:
+            internal_comment_id (int): The ID of the internal comment.
+
+        Returns:
+            InternalComment: The internal comment object if found.
+
+        Raises:
+            DataNotFoundException: If no internal comment with the given ID is found.
+        """
+        base_query = select(InternalComment).where(
+            InternalComment.internal_comment_id == internal_comment_id
+        )
+        result = await self.db.execute(base_query)
+        internal_comment = result.scalars().first()
+
+        if not internal_comment:
+            raise DataNotFoundException(
+                f"Internal comment with ID {internal_comment_id} not found."
+            )
+
+        return internal_comment
+
+    @repo_handler
+    async def update_internal_comment(
+        self, internal_comment_id: int, new_comment_text: str
+    ) -> InternalComment:
+        """
+        Updates the text of an existing internal comment.
+
+        Args:
+            internal_comment_id (int): The ID of the internal comment to update.
+            new_comment_text (str): The new text for the comment.
+
+        Returns:
+            InternalComment: The updated internal comment object.
+
+        Raises:
+            DataNotFoundException: If no internal comment matching the criteria is found.
+        """
+        statement = select(InternalComment).where(
+            InternalComment.internal_comment_id == internal_comment_id
+        )
+        result = await self.db.execute(statement)
+        internal_comment = result.scalars().first()
+
+        if not internal_comment:
+            raise DataNotFoundException(
+                f"Internal comment with ID {internal_comment_id} not found."
+            )
+
+        internal_comment.comment = new_comment_text
+        await self.commit_to_db()
+        await self.db.refresh(internal_comment)
+
+        # Updated the internal comment with the creator's full name.
+        internal_comment.full_name = await self.user_repo.get_full_name(
+            internal_comment.create_user
+        )
+        return internal_comment

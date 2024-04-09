@@ -1,4 +1,5 @@
 import asyncio
+import alembic_postgresql_enum
 from logging.config import fileConfig
 
 from alembic import context

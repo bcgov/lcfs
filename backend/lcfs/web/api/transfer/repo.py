@@ -15,6 +15,7 @@ from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.TransferCategory import TransferCategory
 from lcfs.db.models.TransferHistory import TransferHistory
+from lcfs.db.models.UserProfile import UserProfile
 
 logger = getLogger("transfer_repo")
 
@@ -31,7 +32,8 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments)
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
         )
         result = await self.db.execute(query)
         transfers = result.scalars().all()
@@ -60,10 +62,10 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.from_transaction),
             selectinload(Transfer.to_transaction),
-            selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.comments)
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
         ).where(Transfer.transfer_id == transfer_id)
 
         result = await self.db.execute(query)
@@ -71,7 +73,7 @@ class TransferRepository(BaseRepository):
         return transfer
 
     @repo_handler
-    async def create_transfer(self, transfer: Transfer) -> Transfer:
+    async def create_transfer(self, transfer: Transfer) -> TransferSchema:
         """Save a transfer and its associated comment in the database."""
         self.db.add(transfer)
 
@@ -83,7 +85,7 @@ class TransferRepository(BaseRepository):
                 "to_organization",
                 "current_status",
                 "transfer_category",
-                "comments",
+                "transfer_history"
             ],
         )
         return TransferSchema.model_validate(transfer)
@@ -113,7 +115,7 @@ class TransferRepository(BaseRepository):
         )
 
     @repo_handler
-    async def update_transfer(self, transfer: Transfer) -> Transfer:
+    async def update_transfer(self, transfer: Transfer) -> TransferSchema:
         """Persists the changes made to the Transfer object to the database."""
         # self.db.add(transfer)
         await self.commit_to_db()
@@ -124,13 +126,13 @@ class TransferRepository(BaseRepository):
                 "to_organization",
                 "current_status",
                 "transfer_category",
-                "comments",
+                "transfer_history"
             ],
         )
-        return transfer
+        return TransferSchema.model_validate(transfer)
 
     @repo_handler
-    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int) -> TransferHistory:
+    async def add_transfer_history(self, transfer_id: int, transfer_status_id: int, user_profile_id: int) -> TransferHistory:
         """
         Adds a new record to the transfer history in the database.
 
@@ -143,8 +145,20 @@ class TransferRepository(BaseRepository):
         """
         new_history_record = TransferHistory(
             transfer_id=transfer_id,
-            transfer_status_id=transfer_status_id
+            transfer_status_id=transfer_status_id,
+            user_profile_id=user_profile_id
         )
         self.db.add(new_history_record)
         await self.commit_to_db()
+        await self.db.refresh(new_history_record)
         return new_history_record
+
+    @repo_handler
+    async def commit_refresh_transfer(self, transfer: Transfer) -> Transfer:
+        """
+        Commits and refreshes a transfer object in db session
+
+        """
+        await self.commit_to_db()
+        await self.db.refresh(transfer)
+        return transfer

@@ -1,21 +1,19 @@
-import { defineConfig } from 'cypress'
-import vitePreprocessor from 'cypress-vite'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+import { defineConfig } from "cypress";
+import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
+import { addCucumberPreprocessorPlugin } from "@badeball/cypress-cucumber-preprocessor";
+import { createEsbuildPlugin } from "@badeball/cypress-cucumber-preprocessor/esbuild";
 
 export default defineConfig({
-  // Global configurations
-  reporter: 'mochawesome',
-  reporterOptions: {
-    reportDir: 'cypress/reports',
-    overwrite: false,
-    html: false,
-    json: true
-  },
   e2e: {
+    specPattern: "**/*.feature",
+    // Global configurations
+    reporter: 'mochawesome',
+    reporterOptions: {
+      reportDir: 'cypress/reports',
+      overwrite: false,
+      html: false,
+      json: true
+    },
     // Timeouts
     defaultCommandTimeout: 20000, // Time in milliseconds
     pageLoadTimeout: 20000, // Time in milliseconds
@@ -32,31 +30,18 @@ export default defineConfig({
 
     // Base URL for tests
     baseUrl: 'http://localhost:3000',
+    async setupNodeEvents(on, config) {
+      // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
+      await addCucumberPreprocessorPlugin(on, config);
 
-    // Node events and plugin configuration
-    setupNodeEvents(on, config) {
-      // Task for logging
-      on('task', {
-        log(message) {
-          console.log(message)
-          return null
-        }
-      })
       on(
-        'file:preprocessor',
-        vitePreprocessor({
-          configFile: path.resolve(__dirname, './vite.config.js'),
-          mode: 'development'
+        "file:preprocessor",
+        createBundler({
+          plugins: [createEsbuildPlugin(config)],
         })
-      )
-      on('before:browser:launch', (browser = {}, launchOptions) => {
-        if (browser.family === 'chromium' && browser.name !== 'electron') {
-          launchOptions.args.push('--incognito')
-        }
-        // Return the launchOptions with the '--incognito' flag
-        return launchOptions
-      })
-      return config
-    }
-  }
-})
+      );
+
+      return config;
+    },
+  },
+});

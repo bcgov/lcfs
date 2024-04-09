@@ -411,18 +411,19 @@ class OrganizationsService:
 
         # Check constraints based on transaction action
         if transaction_action == TransactionActionEnum.Reserved:
-            if compliance_units > available_balance:
+            if abs(compliance_units) > available_balance:
                 raise ValueError("Reserve amount cannot exceed available balance.")
         elif transaction_action == TransactionActionEnum.Released:
-            if compliance_units > reserved_balance:
+            if abs(compliance_units) > reserved_balance:
                 raise ValueError("Release amount cannot exceed reserved balance.")
         elif transaction_action == TransactionActionEnum.Adjustment and compliance_units < 0:
             if abs(compliance_units) > available_balance:
                 raise ValueError("Cannot decrement available balance below zero.")
 
         # Create a new transaction record in the database
-        return await self.transaction_repo.create_transaction(
+        new_transaction = await self.transaction_repo.create_transaction(
             transaction_action,
             compliance_units,
             organization_id
         )
+        return new_transaction

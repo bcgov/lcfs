@@ -26,6 +26,7 @@ const SigningAuthority = () => {
           control={
             <Checkbox
               {...register('signingAuthorityDeclaration')}
+              id="signing-authority-declaration"
               color="primary"
               defaultChecked={false}
             />

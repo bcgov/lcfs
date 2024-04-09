@@ -20,8 +20,7 @@ async def seed_test_transfers(session):
             "transfer_category_id":1,
             "agreement_date": datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
             "quantity": 100,
-            "price_per_unit": 10.0,
-            "signing_authority_declaration": True
+            "price_per_unit": 10.0
         },
         {
             "from_organization_id": 2,
@@ -30,8 +29,7 @@ async def seed_test_transfers(session):
             "transfer_category_id":1,
             "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
             "quantity": 50,
-            "price_per_unit": 5.0,
-            "signing_authority_declaration": True
+            "price_per_unit": 5.0
         },
         {
             "from_organization_id": 2,
@@ -41,8 +39,7 @@ async def seed_test_transfers(session):
             "from_transaction_id":2,
             "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
             "quantity": 50,
-            "price_per_unit": 5.0,
-            "signing_authority_declaration": True
+            "price_per_unit": 5.0
         },
     ]
 
@@ -64,8 +61,7 @@ async def seed_test_transfers(session):
                         Transfer.transfer_category_id == transfer_data["transfer_category_id"],
                         Transfer.agreement_date == transfer_data["agreement_date"],
                         Transfer.quantity == transfer_data["quantity"],
-                        Transfer.price_per_unit == transfer_data["price_per_unit"],
-                        Transfer.signing_authority_declaration == transfer_data["signing_authority_declaration"]
+                        Transfer.price_per_unit == transfer_data["price_per_unit"]
                     )
                 )
             )

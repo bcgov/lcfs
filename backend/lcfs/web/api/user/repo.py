@@ -382,3 +382,22 @@ class UserRepository(BaseRepository):
             )
         )
         return histories.all()
+
+    @repo_handler
+    async def get_full_name(self, username: str) -> str:
+        """
+        Fetches the full name of a user based on their username.
+
+        Args:
+            username (str): Username of the user whose full name is to be fetched.
+
+        Returns:
+            str: The full name of the user.
+        """
+        full_name_result = await self.db.execute(
+            select(
+                (UserProfile.first_name + " " + UserProfile.last_name).label("full_name")
+            ).where(UserProfile.keycloak_username == username)
+        )
+        return full_name_result.scalars().first()
+    

@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, Request
 from starlette import status
 
 from lcfs.web.api.organizations.repo import OrganizationsRepository
-from lcfs.db.models.TransferStatus import TransferStatusEnum
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transfer.schema import TransferCreateSchema
 from lcfs.utils.constants import LCFS_Constants
 
@@ -12,9 +12,19 @@ class OrganizationValidation:
         self,
         request: Request = None,
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
+        transaction_repo: TransactionRepository = Depends(TransactionRepository),
     ):
         self.org_repo = org_repo
         self.request = request
+        self.transaction_repo = transaction_repo
+
+    async def check_available_balance(self, organization_id, quantity):
+        available_balance = await self.transaction_repo.calculate_available_balance(organization_id)
+        if available_balance < quantity:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Organization does not have enough compliance units to create this transfer.",
+            )
 
     async def create_transfer(
         self, organization_id, transfer_create: TransferCreateSchema
@@ -35,26 +45,13 @@ class OrganizationValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
-        if (
-            transfer_create.current_status == TransferStatusEnum.Sent.value
-            and not transfer_create.signing_authority_declaration
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Should be declared by signing authority.",
-            )
+        # Before creation, check for available balance
+        await self.check_available_balance(organization_id, transfer_create.quantity)
         return
 
-    def update_transfer(self, organization_id, transfer_create: TransferCreateSchema):
-        # check for signing authority declaration for sent and submitted transfer status.
-        if (
-            transfer_create.current_status == TransferStatusEnum.Sent.value
-            or transfer_create.current_status == TransferStatusEnum.Submitted.value
-        ) and not transfer_create.signing_authority_declaration:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Should be declared by signing authority.",
-            )
+    async def update_transfer(self, organization_id, transfer_create: TransferCreateSchema):
+        # Before updating, check for available balance
+        await self.check_available_balance(organization_id, transfer_create.quantity)
         if (
             transfer_create.from_organization_id == organization_id
             and transfer_create.current_status

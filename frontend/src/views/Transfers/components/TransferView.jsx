@@ -1,31 +1,37 @@
 import PropTypes from 'prop-types'
-import {
-  TransferDetailsCard,
-  CommentList,
-  AttachmentList,
-  AddPlainComment
-} from '.'
+import { TransferDetailsCard, Comments, CommentList } from '.'
 import BCBox from '@/components/BCBox'
-import { Typography, List, ListItem } from '@mui/material'
-import { faCircle } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Typography } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
+import TransferHistory from './TransferHistory'
+import { Role } from '@/components/Role'
+import InternalComments from '@/components/InternalComments'
+import { roles } from '@/constants/roles'
+import {
+  TRANSFER_STATUSES,
+  getAllTerminalTransferStatuses
+} from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-export const TransferView = ({
-  fromOrgId,
-  fromOrganization,
-  toOrgId,
-  toOrganization,
-  quantity,
-  pricePerUnit,
-  transferStatus,
-  isGovernmentUser,
-  totalValue,
-  handleCommentChange,
-  comment
-}) => {
+export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])
+  const { data: currentUser, sameOrganization } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const {
+    currentStatus: { status: transferStatus } = {},
+    toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
+    fromOrganization: {
+      name: fromOrganization,
+      organizationId: fromOrgId
+    } = {},
+    quantity,
+    pricePerUnit,
+    transferHistory
+  } = transferData || {}
+
+  const totalValue = quantity * pricePerUnit
+
   return (
     <>
       <TransferDetailsCard
@@ -59,32 +65,34 @@ export const TransferView = ({
         </Typography>
       </BCBox>
       {/* Comments */}
-      {/* <CommentList comments={demoData.comments} /> */}
-      <AddPlainComment
-        toOrgId={toOrgId}
-        isGovernmentUser={isGovernmentUser}
-        handleCommentChange={handleCommentChange}
-        comment={comment}
-        transferStatus={transferStatus}
-      />
+      {transferData?.comments.length > 0 && <CommentList comments={transferData?.comments} />}
+      {!getAllTerminalTransferStatuses().includes(transferStatus) && (
+        <Comments
+          editorMode={editorMode}
+          isGovernmentUser={isGovernmentUser}
+          commentField={
+            (transferStatus === TRANSFER_STATUSES.DRAFT &&
+              sameOrganization(fromOrgId) &&
+              'fromOrgComment') ||
+            (isGovernmentUser && 'govComment') ||
+            (!isGovernmentUser &&
+              transferStatus === TRANSFER_STATUSES.SENT &&
+              sameOrganization(toOrgId) &&
+              'toOrgComment')
+          }
+        />
+      )}
+
+      {/* Internal Comments */}
+      <Role roles={[roles.government]}>
+        <InternalComments entityType="Transfer" entityId={transferId} />
+      </Role>
+
       {/* List of attachments */}
       {/* <AttachmentList attachments={demoData.attachments} /> */}
+
       {/* Transaction History notes */}
-      {/* <BCBox mt={2}>
-        <Typography variant="h6" color="primary">
-          {t('transfer:txnHistory')}
-        </Typography>
-        <List>
-          {demoData.transactionHistory.map((transaction) => (
-            <ListItem key={transaction.transactionID} disablePadding>
-              <BCBox mr={1} mb={1}>
-                <FontAwesomeIcon icon={faCircle} fontSize={6} />
-              </BCBox>
-              <Typography variant="body4">{transaction.notes}</Typography>
-            </ListItem>
-          ))}
-        </List>
-      </BCBox> */}
+      <TransferHistory transferHistory={transferHistory} />
     </>
   )
 }

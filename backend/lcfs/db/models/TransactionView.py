@@ -1,5 +1,11 @@
-from sqlalchemy import Column, Integer, String, Float
+import enum
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from lcfs.db.base import BaseModel
+
+class TransactionViewTypeEnum(enum.Enum):
+    Transfer = "Transfer"
+    InitiativeAgreement = "InitiativeAgreement"
+    AdminAdjustment = "AdminAdjustment"
 
 # This class represents a database view for transactions. It is intended to consolidate
 # and simplify access to various transaction-related data by providing a unified interface
@@ -25,5 +31,5 @@ class TransactionView(BaseModel):
     quantity = Column(Integer)
     price_per_unit = Column(Float)
     status = Column(String)
-    create_date = Column(String)
-    update_date = Column(String)
+    create_date = Column(DateTime)
+    update_date = Column(DateTime)

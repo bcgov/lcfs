@@ -1,0 +1,95 @@
+name: Scheduled cleanup unused images
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'
+# At 00:00 on Sunday.
+
+jobs:
+
+  cleanup-images:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
+
+      - name: cleanup-images
+        continue-on-error: true
+        run: |
+
+          #!/bin/bash
+
+          # This script will delete all image tags for both frontend and backend except the one being referenced
+
+          # The sample of search_string is lcfs-backend:0.2.0-20240403221450
+          # The sample of oc_output could include
+            # lcfs-backend:0.2.0-20240403210040
+            # lcfs-backend:0.2.0-20240403211844
+            # lcfs-backend:0.2.0-20240403221450
+          # The script will remove the first two image tags
+
+          delete_resources() {
+              local search_string="$1"
+              local oc_output="$2"
+              local namepace="$3"
+              
+              # Check if the oc_output is empty
+              if [ -z "$oc_output" ]; then
+                  echo "Error: No output provided."
+                  return 1
+              fi
+
+              # Loop through each line in the oc output
+              while IFS= read -r line; do
+                  # Check if the line contains the search string
+                  if [[ "$line" != *"$search_string"* ]]; then
+                      # Extract the name of the resource from the line
+                      resource_name=$(echo "$line" | awk '{print $1}')
+                      # Delete the resource
+                      oc -n "$namepace" delete imagetag/"$resource_name"
+                  fi
+              done <<< "$oc_output"
+          }
+
+          # Define the search string
+          search_string=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev describe deployment/lcfs-backend-dev | grep Image | awk -F '/' '{print $NF}')
+          # Run the oc command and store the output in a variable
+          oc_output=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get imagetags | grep lcfs-backend | awk '{print $1}')
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev"
+          echo "Will delete all lcfs-bakcend image tags in ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev except $search_string"
+          delete_resources "$search_string" "$oc_output" "$namespace"
+
+          # Define the search string
+          search_string=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev describe deployment/lcfs-frontend-dev | grep Image | awk -F '/' '{print $NF}')
+          # Run the oc command and store the output in a variable
+          oc_output=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get imagetags | grep lcfs-frontend | awk '{print $1}')
+          echo "Will delete all lcfs-frontend image tags in ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev except $search_string"
+          namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev"
+          delete_resources "$search_string" "$oc_output" "$namespace"
+          
+          echo "will delete images in tools env"
+          frontendimages=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-frontend | awk '{print $1}')
+          if [ ! -z "$frontendimages" ]; then
+            oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-frontend | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete imagetag 
+          fi
+
+          backendimages=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-backend | awk '{print $1}')
+          if [ ! -z "$backendimages" ]; then
+            oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-backend | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete imagetag
+          fi
+          
+          echo "Cleaning up Completed pods on Dev except CrunchyDB pods"
+          oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get pods | grep Completed | grep -v crunchy | awk '{print $1}' | xargs oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev delete pod || true
+
+          echo "Cleaning up Complete and Failed builds on Tools"
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Complete | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Failed | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
+
+          echo "Cleaning up buildconfigs on Tools"
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get buildconfig | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete buildconfig || true          

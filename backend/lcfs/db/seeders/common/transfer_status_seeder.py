@@ -13,15 +13,60 @@ async def seed_transfer_statuses(session):
     """
 
     transfer_statuses_to_seed = [
-        {"status": TransferStatusEnum.Draft},
-        {"status": TransferStatusEnum.Deleted},
-        {"status": TransferStatusEnum.Sent},
-        {"status": TransferStatusEnum.Submitted},
-        {"status": TransferStatusEnum.Recommended},
-        {"status": TransferStatusEnum.Recorded},
-        {"status": TransferStatusEnum.Refused},
-        {"status": TransferStatusEnum.Declined},
-        {"status": TransferStatusEnum.Rescinded}
+        {
+            "status": TransferStatusEnum.Draft,
+            "visible_to_transferor": True,
+            "visible_to_transferee": False,
+            "visible_to_government": False
+        },
+        {
+            "status": TransferStatusEnum.Deleted,
+            "visible_to_transferor": False,
+            "visible_to_transferee": False,
+            "visible_to_government": False
+        },
+        {
+            "status": TransferStatusEnum.Sent,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
+            "visible_to_government": False
+        },
+        {
+            "status": TransferStatusEnum.Submitted,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
+            "visible_to_government": True
+        },
+        {
+            "status": TransferStatusEnum.Recommended,
+            "visible_to_transferor": False,
+            "visible_to_transferee": False,
+            "visible_to_government": True
+        },
+        {
+            "status": TransferStatusEnum.Recorded,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
+            "visible_to_government": True
+        },
+        {
+            "status": TransferStatusEnum.Refused,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
+            "visible_to_government": True
+        },
+        {
+            "status": TransferStatusEnum.Declined,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
+            "visible_to_government": False
+        },
+        {
+            "status": TransferStatusEnum.Rescinded,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
+            "visible_to_government": True
+        }
     ]
 
     try:

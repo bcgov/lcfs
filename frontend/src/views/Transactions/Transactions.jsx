@@ -17,6 +17,7 @@ import { transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
+import OrganizationList from './components/OrganizationList'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -44,43 +45,48 @@ export const Transactions = () => {
 
   const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
 
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback((params) => {
-    const { transactionId, transactionType, fromOrganization, status } = params.data
-    const userOrgName = currentUser?.organization?.name
-  
-    // Define routes mapping for transaction types
-    const routesMapping = {
-      'Transfer': {
-        view: ROUTES.TRANSFERS_VIEW,
-        edit: ROUTES.TRANSFERS_EDIT
-      },
-      'Administrative Adjustment': {
-        view: ROUTES.TRANSACTIONS_VIEW, // TODO Replace once we develop this feature
-      },
-      'Initiative Agreement': {
-        view: ROUTES.TRANSACTIONS_VIEW, // TODO Replace once we develop this feature
-      }
-    }
-  
-    // Determine if it's an edit scenario
-    const isEditScenario = userOrgName === fromOrganization && status === TRANSFER_STATUSES.DRAFT
-    const routeType = isEditScenario ? 'edit' : 'view'
-  
-    // Select the appropriate route based on the transaction type and scenario
-    const routeTemplate = routesMapping[transactionType]?.[routeType]
-  
-    if (routeTemplate) {
-      navigate(
-        // replace any matching query params by chaining these replace methods
-        routeTemplate.replace(':transactionId', transactionId).replace(':transferId', transactionId)
-      )
-    } else {
-      console.error('No route defined for this transaction type and scenario')
-    }
-  }, [currentUser, navigate])
+  const handleRowClicked = useCallback(
+    (params) => {
+      const { transactionId, transactionType, fromOrganization, status } =
+        params.data
+      const userOrgName = currentUser?.organization?.name
 
+      // Define routes mapping for transaction types
+      const routesMapping = {
+        Transfer: {
+          view: ROUTES.TRANSFERS_VIEW,
+          edit: ROUTES.TRANSFERS_EDIT
+        },
+        'Administrative Adjustment': {
+          view: ROUTES.TRANSACTIONS_VIEW // TODO Replace once we develop this feature
+        },
+        'Initiative Agreement': {
+          view: ROUTES.TRANSACTIONS_VIEW // TODO Replace once we develop this feature
+        }
+      }
+
+      // Determine if it's an edit scenario
+      const isEditScenario =
+        userOrgName === fromOrganization && status === TRANSFER_STATUSES.DRAFT
+      const routeType = isEditScenario ? 'edit' : 'view'
+
+      // Select the appropriate route based on the transaction type and scenario
+      const routeTemplate = routesMapping[transactionType]?.[routeType]
+
+      if (routeTemplate) {
+        navigate(
+          // replace any matching query params by chaining these replace methods
+          routeTemplate
+            .replace(':transactionId', transactionId)
+            .replace(':transferId', transactionId)
+        )
+      } else {
+        console.error('No route defined for this transaction type and scenario')
+      }
+    },
+    [currentUser, navigate]
+  )
 
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
@@ -116,17 +122,29 @@ export const Transactions = () => {
         {t('txn:title')}
       </BCTypography>
       <Box display={'flex'} gap={2} mb={2}>
-        {currentUser.organization?.orgStatus?.status === ORGANIZATION_STATUSES.REGISTERED && <Role roles={[roles.transfers]}>
-          <BCButton
-            variant="contained"
-            size="small"
-            color="primary"
-            startIcon={<FontAwesomeIcon icon={faCirclePlus} className="small-icon" size="2x" />}
-            onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
-          >
-            <BCTypography variant="subtitle2">{t('txn:newTransferBtn')}</BCTypography>
-          </BCButton>
-        </Role>}
+        {currentUser.organization?.orgStatus?.status ===
+          ORGANIZATION_STATUSES.REGISTERED && (
+          <Role roles={[roles.transfers]}>
+            <BCButton
+              id="new-transfer-button"
+              variant="contained"
+              size="small"
+              color="primary"
+              startIcon={
+                <FontAwesomeIcon
+                  icon={faCirclePlus}
+                  className="small-icon"
+                  size="2x"
+                />
+              }
+              onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+            >
+              <BCTypography variant="subtitle2">
+                {t('txn:newTransferBtn')}
+              </BCTypography>
+            </BCButton>
+          </Role>
+        )}
         <DownloadButton
           onDownload={handleDownloadTransactions}
           isDownloading={isDownloadingTransactions}
@@ -136,6 +154,7 @@ export const Transactions = () => {
         />
       </Box>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+        <OrganizationList />
         <BCDataGridServer
           gridRef={gridRef}
           apiEndpoint={
