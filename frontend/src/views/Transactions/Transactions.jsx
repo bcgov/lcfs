@@ -10,7 +10,7 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box } from '@mui/material'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { transactionsColDefs } from './_schema'
@@ -26,6 +26,9 @@ export const Transactions = () => {
   const gridRef = useRef()
   const { data: currentUser, hasRoles } = useCurrentUser()
 
+  const [searchParams] = useSearchParams();
+  const highlightedId = searchParams.get('hid');
+
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
   const [alertMessage, setAlertMessage] = useState('')
@@ -39,7 +42,7 @@ export const Transactions = () => {
     overlayNoRowsTemplate: t('txn:noTxnsFound')
   }
   const getRowId = useCallback((params) => {
-    return params.data.transactionId + params.data.transactionType
+    return params.data.transactionType.toLowerCase() + '-' + params.data.transactionId
   }, [])
 
   const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
@@ -171,6 +174,7 @@ export const Transactions = () => {
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
+          highlightedRowId={highlightedId}
         />
       </BCBox>
     </>

@@ -202,7 +202,7 @@ export const AddEditViewTransfer = () => {
         // this way the balance in the header will be correct
         setRefreshBalanceTrigger((prev) => !prev)
         // Navigate to the transactions list view
-        navigate(TRANSACTIONS, {
+        navigate(TRANSACTIONS + `/?hid=transfer-${response.data.transferId}`, {
           state: {
             message: t('transfer:actionMsgs.successText', {
               status: response.data.currentStatus.status.toLowerCase()
@@ -219,16 +219,16 @@ export const AddEditViewTransfer = () => {
       if (errorMsg) {
         setAlertMessage(errorMsg)
       } else {
-        setAlertMessage(
-          transferId
-            ? t('transfer:actionMsgs.errorUpdateText')
-            : t('transfer:actionMsgs.errorCreateText')
-        )
-      }
-      setAlertSeverity('error')
-      alertRef.current.triggerAlert()
-      // Scroll back to the top of the page
-      window.scrollTo(0, 0)
+      setAlertMessage(
+        transferId
+          ? t('transfer:actionMsgs.errorUpdateText')
+          : t('transfer:actionMsgs.errorCreateText')
+      )
+    }
+    setAlertSeverity('error')
+    alertRef.current.triggerAlert()
+    // Scroll back to the top of the page
+    window.scrollTo(0, 0)
     }
   })
 
