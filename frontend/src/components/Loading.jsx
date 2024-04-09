@@ -15,9 +15,10 @@ const Loading = ({ message = 'Loading...' }) => {
         height: '100%',
         padding: '20px'
       }}
+      data-test="loading"
     >
       <CircularProgress aria-labelledby="loading" />
-      <Typography variant="subtitle1" sx={{ mt: 2 }}>
+      <Typography variant="subtitle1" sx={{ mt: 2 }} data-test="message">
         {message}
       </Typography>
     </Box>

@@ -179,7 +179,7 @@ export const TransferDetails = () => {
             fontWeight="bold"
             component="span"
             color="primary"
-            data-testid="transfer-total-value"
+            data-test="transfer-total-value"
           >
             {`${totalValue.toLocaleString('en-CA', {
               style: 'currency',

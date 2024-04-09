@@ -1,5 +1,5 @@
 import logo from '@/assets/images/gov3_bc_logo.png'
-import Logout from './Logout'
+import { Logout } from './Logout'
 
 const Header = () => {
   return (

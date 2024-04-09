@@ -1,4 +1,4 @@
-function getApiBaseUrl() {
+export function getApiBaseUrl() {
   // Split the hostname
   const hostnameParts = window.location.hostname.split('.')
 

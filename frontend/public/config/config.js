@@ -1,4 +1,4 @@
-window.lcfs_config = {
+export const config = {
   api_base: 'http://localhost:8000/api',
   keycloak: {
     REALM: 'standard',
@@ -9,3 +9,5 @@ window.lcfs_config = {
       'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
   }
 }
+
+export default window.lcfs_config = config

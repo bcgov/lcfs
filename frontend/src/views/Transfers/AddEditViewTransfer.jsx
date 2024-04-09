@@ -395,7 +395,7 @@ export const AddEditViewTransfer = () => {
         </BCBox>
         {/* Form Provider  */}
         <FormProvider {...methods}>
-          <form data-testid="new-transfer-form">
+          <form data-test="new-transfer-form">
             {editorMode ? (
               <>
                 {/* Only the org user with transfer role assigned and having same organization can add/edit a transfer */}
