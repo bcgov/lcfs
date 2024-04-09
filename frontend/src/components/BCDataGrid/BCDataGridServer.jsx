@@ -63,6 +63,7 @@ const BCDataGridServer = ({
   handleRowClicked,
   paginationPageSize,
   paginationPageSizeSelector,
+  highlightedRowId,
   ...others
 }) => {
   // State declarations
@@ -213,7 +214,12 @@ const BCDataGridServer = ({
     suppressCsvExport: false,
     // enableCellTextSelection: true, // enables text selection on the grid
     // ensureDomOrder: true,
-    onRowClicked: handleRowClicked
+    onRowClicked: handleRowClicked,
+    getRowStyle: highlightedRowId ? (params) => {
+      if (params.node.id === highlightedRowId) {
+        return { backgroundColor: '#fade81' };
+      }
+    } : undefined
   }))
 
   // Memorized default column definition parameters
