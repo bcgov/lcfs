@@ -23,13 +23,13 @@ When("I transfer {string} units to organization {string} of value {string} with 
   cy.get("#to-organization-id").click()
   cy.get(`[data-value="${orgId}"]`).click();
   cy.get("#price-per-unit").type(pricePerUnit);
-  cy.get("[data-testid='transfer-total-value']").invoke('text').then((text) => {
+  cy.get("[data-test='transfer-total-value']").invoke('text').then((text) => {
     expect(text).to.contain(`${(parseInt(qty) * parseFloat(pricePerUnit)).toLocaleString('en-CA', {
       style: 'currency',
       currency: 'CAD'
     })} CAD.`)
   })
-  cy.get("[data-testid='transfer-agreement-date-input']").type(agreementDate);
+  cy.get("[data-test='transfer-agreement-date']").type(agreementDate);
 })
 
 When("add the {string} and save as draft", (comment) => {
@@ -78,7 +78,7 @@ When("sign and send the transfer", () => {
 })
 
 Then("I should be redirected to transactions page.", () => {
-  cy.url().should('match', /transactions$/);
+  cy.url().should('match', /transactions\/\?hid=transfer-\d+$/);
 })
 
 
