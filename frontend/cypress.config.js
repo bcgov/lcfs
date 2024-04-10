@@ -5,7 +5,7 @@ import { createEsbuildPlugin } from "@badeball/cypress-cucumber-preprocessor/esb
 
 export default defineConfig({
   e2e: {
-    specPattern: "**/*.feature",
+    specPattern: ["**/*.feature", "**/*.cy.js"],
     // Global configurations
     reporter: 'mochawesome',
     reporterOptions: {

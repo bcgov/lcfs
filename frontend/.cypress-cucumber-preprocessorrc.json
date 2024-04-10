@@ -1,6 +1,6 @@
 {
   "e2e": {
-    "stepDefinitions": "cypress/e2e/Pages/**/*.cy.js"
+    "stepDefinitions": "cypress/e2e/Pages/**/*.test.js"
   },
   "component": {
     "stepDefinitions": "cypress/[filepath].cy.js"
