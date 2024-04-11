@@ -95,7 +95,7 @@ jobs:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,jig-patel,prv-proton,hamed-valiollahi
           minimum-approvals: 1
-          issue-title: "LCFS release-${{ env.VERSION }} Test Deployment"
+          issue-title: "LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test Deployment"
 
       - name: Tag LCFS images to Test
         run: |
