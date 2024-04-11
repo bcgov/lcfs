@@ -38,7 +38,7 @@ const InternalComments = ({ entityType, entityId }) => {
         audience_scope: getAudienceScope()
       };
       
-      const response = await apiService.post('/internal_comments', payload);
+      const response = await apiService.post('/internal_comments/', payload);
       return response.data;
     } catch (error) {
       console.error('Failed to add comment:', error);

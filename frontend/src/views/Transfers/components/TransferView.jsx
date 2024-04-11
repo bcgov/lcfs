@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import TransferHistory from './TransferHistory'
 import { Role } from '@/components/Role'
 import InternalComments from '@/components/InternalComments'
-import { roles } from '@/constants/roles'
+import { govRoles } from '@/constants/roles'
 import {
   TRANSFER_STATUSES,
   getAllTerminalTransferStatuses
@@ -84,7 +84,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
       )}
 
       {/* Internal Comments */}
-      <Role roles={[roles.government]}>
+      <Role roles={govRoles}>
         <InternalComments entityType="Transfer" entityId={transferId} />
       </Role>
 
