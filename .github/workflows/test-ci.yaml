@@ -38,7 +38,43 @@ jobs:
 
       - id: set-pre-release
         run: |
-          echo "PRE_RELEASE=$(oc -n ${{ env.DEV_NAMESPACE }} describe deployment/lcfs-frontend-dev | grep Image | awk -F '-' '{print $NF}')" >> $GITHUB_OUTPUT        
+          check_string() {
+              local string="$1"
+
+              if [ ${#string} -ne 14 ]; then
+                  echo "String length must be 14 characters"
+                  return 1
+              fi
+
+              if ! [[ $string =~ ^[0-9]+$ ]]; then
+                  echo "String can only contain numbers"
+                  return 1
+              fi
+
+              local year="${string:0:4}"
+              local month="${string:4:2}"
+              local day="${string:6:2}"
+              local hour="${string:8:2}"
+              local minute="${string:10:2}"
+              local second="${string:12:2}"
+
+              if ! date -d "$year-$month-$day $hour:$minute:$second" &> /dev/null; then
+                  echo "String format must be yyyymmddhhmmss"
+                  return 1
+              fi
+
+              return 0
+          }
+
+          input_string=$(oc -n ${{ env.DEV_NAMESPACE }} describe deployment/lcfs-frontend-dev | grep Image | awk -F '-' '{print $NF}')
+
+          echo "The retrieved pre-release number on Dev is $input_string "
+          if check_string "$input_string"; then
+              echo "It is valid"
+              echo "PRE_RELEASE=$input_string"
+          else
+              echo "It is not valid"
+          fi
 
   deploy-on-test:
 
