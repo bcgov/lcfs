@@ -72,8 +72,10 @@ jobs:
           if check_string "$input_string"; then
               echo "It is valid"
               echo "PRE_RELEASE=$input_string" >> $GITHUB_OUTPUT
+              exit 1
           else
               echo "It is not valid"
+              exit 1
           fi
 
   deploy-on-test:
@@ -88,45 +90,41 @@ jobs:
 
     steps:
 
-      - name: Show the retrieved pre-release number
+      - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
+        uses: trstringer/manual-approval@v1.6.0
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: AlexZorkin,kuanfandevops,jig-patel,prv-proton,hamed-valiollahi
+          minimum-approvals: 1
+          issue-title: "LCFS release-${{ env.VERSION }} Test Deployment"
+
+      - name: Tag LCFS images to Test
         run: |
-          echo "Retrieved pre-release is ${{ env.PRE_RELEASE }}"
+          oc tag ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
+          oc tag ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
 
-      # - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
-      #   uses: trstringer/manual-approval@v1.6.0
-      #   with:
-      #     secret: ${{ github.TOKEN }}
-      #     approvers: AlexZorkin,kuanfandevops,jig-patel,prv-proton,hamed-valiollahi
-      #     minimum-approvals: 1
-      #     issue-title: "LCFS release-${{ env.VERSION }} Test Deployment"
-
-      # - name: Tag LCFS images to Test
-      #   run: |
-      #     oc tag ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
-      #     oc tag ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
-
-      # - name: Checkout Manifest repository
-      #   uses: actions/checkout@v3
-      #   with:
-      #     repository: bcgov-c/tenant-gitops-d2bd59
-      #     ref: main
-      #     ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+      - name: Checkout Manifest repository
+        uses: actions/checkout@v3
+        with:
+          repository: bcgov-c/tenant-gitops-d2bd59
+          ref: main
+          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
       
-      # - name: Update frontend tag
-      #   uses: mikefarah/yq@v4.40.5
-      #   with:
-      #       cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-test.yaml
+      - name: Update frontend tag
+        uses: mikefarah/yq@v4.40.5
+        with:
+            cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-test.yaml
 
-      # - name: Update backend tag
-      #   uses: mikefarah/yq@v4.40.5
-      #   with:
-      #       cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-test.yaml
+      - name: Update backend tag
+        uses: mikefarah/yq@v4.40.5
+        with:
+            cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-test.yaml
 
-      # - name: GitHub Commit & Push
-      #   run: |
-      #     git config --global user.email "actions@github.com"
-      #     git config --global user.name "GitHub Actions"
-      #     git add lcfs/charts/lcfs-frontend/values-test.yaml
-      #     git add lcfs/charts/lcfs-backend/values-test.yaml
-      #     git commit -m "update the image tag to ${{ env.VERSION }}-${{ env.PRE_RELEASE }}"
-      #     git push
+      - name: GitHub Commit & Push
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add lcfs/charts/lcfs-frontend/values-test.yaml
+          git add lcfs/charts/lcfs-backend/values-test.yaml
+          git commit -m "Update the image tag to ${{ env.VERSION }}-${{ env.PRE_RELEASE }} on LCFS Test Environment"
+          git push
