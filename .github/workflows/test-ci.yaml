@@ -45,7 +45,7 @@ jobs:
     name: Deploy LCFS on Test
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [ set-pre-release, build ]
+    needs: [ set-pre-release]
 
     env:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
