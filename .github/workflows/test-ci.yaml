@@ -71,7 +71,7 @@ jobs:
           echo "The retrieved pre-release number on Dev is $input_string "
           if check_string "$input_string"; then
               echo "It is valid"
-              echo "PRE_RELEASE=$input_string"
+              echo "PRE_RELEASE=$input_string" >> $GITHUB_OUTPUT
           else
               echo "It is not valid"
           fi
