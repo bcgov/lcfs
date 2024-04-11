@@ -1,0 +1,94 @@
+## For each release, the value of workflow name, branches and VERSION need to be adjusted accordingly
+
+name: LCFS 0.2.0 Test CI
+
+on:
+  workflow_dispatch:
+
+env:
+  VERSION: 0.2.0
+  GIT_URL: https://github.com/bcgov/lcfs.git 
+  DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
+  TEST_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-test
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  set-pre-release:
+    name: Find Dev deployment pre-release number
+    runs-on: ubuntu-latest
+  
+    outputs:
+      output1: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
+    
+    steps:
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.DEV_NAMESPACE }}
+
+      - id: set-pre-release
+        run: |
+          echo "PRE_RELEASE=$(oc -n ${{ env.DEV_NAMESPACE }} describe deployment/lcfs-frontend-dev | grep Image | awk -F '-' '{print $NF}')" >> $GITHUB_OUTPUT        
+
+  deploy-on-test:
+
+    name: Deploy LCFS on Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [ set-pre-release, build ]
+
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
+
+    steps:
+
+      - name: Show the retrieved pre-release number
+        run: |
+          echo "Retrieved pre-release is ${{ env.PRE_RELEASE }}"
+
+      # - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
+      #   uses: trstringer/manual-approval@v1.6.0
+      #   with:
+      #     secret: ${{ github.TOKEN }}
+      #     approvers: AlexZorkin,kuanfandevops,jig-patel,prv-proton,hamed-valiollahi
+      #     minimum-approvals: 1
+      #     issue-title: "LCFS release-${{ env.VERSION }} Test Deployment"
+
+      # - name: Tag LCFS images to Test
+      #   run: |
+      #     oc tag ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
+      #     oc tag ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
+
+      # - name: Checkout Manifest repository
+      #   uses: actions/checkout@v3
+      #   with:
+      #     repository: bcgov-c/tenant-gitops-d2bd59
+      #     ref: main
+      #     ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+      
+      # - name: Update frontend tag
+      #   uses: mikefarah/yq@v4.40.5
+      #   with:
+      #       cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-test.yaml
+
+      # - name: Update backend tag
+      #   uses: mikefarah/yq@v4.40.5
+      #   with:
+      #       cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-test.yaml
+
+      # - name: GitHub Commit & Push
+      #   run: |
+      #     git config --global user.email "actions@github.com"
+      #     git config --global user.name "GitHub Actions"
+      #     git add lcfs/charts/lcfs-frontend/values-test.yaml
+      #     git add lcfs/charts/lcfs-backend/values-test.yaml
+      #     git commit -m "update the image tag to ${{ env.VERSION }}-${{ env.PRE_RELEASE }}"
+      #     git push
