@@ -72,7 +72,6 @@ jobs:
           if check_string "$input_string"; then
               echo "It is valid"
               echo "PRE_RELEASE=$input_string" >> $GITHUB_OUTPUT
-              exit 1
           else
               echo "It is not valid"
               exit 1
