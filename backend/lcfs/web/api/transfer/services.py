@@ -173,9 +173,12 @@ class TransferServices:
                 await self.sign_and_send_from_supplier(transfer)
             elif new_status.status == TransferStatusEnum.Recorded:
                 await self.director_record_transfer(transfer)
-            elif new_status.status == TransferStatusEnum.Declined or \
-              new_status.status == TransferStatusEnum.Rescinded:
-                await self.decline_or_rescind_transfer(transfer)
+            elif new_status.status in [
+                TransferStatusEnum.Declined,
+                TransferStatusEnum.Rescinded,
+                TransferStatusEnum.Refused
+            ]:
+                await self.cancel_transfer(transfer)
 
             new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
             # Add a new transfer history record to reflect the status change
@@ -238,8 +241,11 @@ class TransferServices:
         transfer.to_transaction = to_transaction
         await self.repo.commit_refresh_transfer(transfer)
 
-    async def decline_or_rescind_transfer(self, transfer):
-        """Release the reserved transaction when transfer is declined or rescinded."""
+    async def cancel_transfer(self, transfer):
+        """"
+        Handle the cancellation of a transfer by releasing reserved transactions.
+        This method is invoked when a transfer is declined, rescinded, or refused.
+        """
         release_result = await self.transaction_repo.release_transaction(
             transfer.from_transaction_id
         )
