@@ -238,7 +238,8 @@ export const buttonClusterConfigFn = ({
           primaryButtonColor: 'error',
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
-          content: t('transfer:refuseConfirmText')
+          content: t('transfer:refuseConfirmText'),
+          warningText: t('transfer:refuseWarningText')
         }),
       disabled: !hasRoles(roles.director)
     },

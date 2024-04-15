@@ -23,6 +23,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": 1
         },
         {
@@ -32,6 +34,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": 2
         },
         {
@@ -41,6 +45,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": 3
         },
         {
@@ -50,6 +56,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": None,
             "is_active": True
         },
@@ -60,6 +68,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": 2,
             "is_active": True
         },
@@ -70,6 +80,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": 3,
             "is_active": True
         },
@@ -80,6 +92,8 @@ async def seed_test_user_profiles(session):
             "title": "Developer",
             "phone": fake.phone_number(),
             "mobile_phone": fake.phone_number(),
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
             "organization_id": 3,
             "is_active": False
         },
