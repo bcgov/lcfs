@@ -1,22 +1,46 @@
 import BCBox from '@/components/BCBox'
-import { List, ListItem, Typography } from '@mui/material'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
+import { useTransfer } from '@/hooks/useTransfer'
+import { Typography } from '@mui/material'
+import dayjs from 'dayjs'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+import duration from 'dayjs/plugin/duration'
 import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router-dom'
+
+dayjs.extend(localizedFormat)
+dayjs.extend(duration)
 
 function TransferHistory({ transferHistory }) {
+  const { transferId } = useParams()
+  const { data: transferData } = useTransfer(transferId)
+
   const { t } = useTranslation(['common', 'transfer'])
 
   const getTransferStatusLabel = (status) => {
     return t(`transfer:transferHistory.${status}`, 'Status not found')
   }
 
-  // Format the date as Month Day, Year (e.g., March 22, 2024)
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+  const dateCutoffMonths = {
+    A: 6,
+    B: 12
+  }
+  const currentStatus = transferData?.currentStatus.status
+  const agreementDate = dayjs(transferData.agreementDate)
+  const today = dayjs().subtract(1, 'day')
+  const diff = dayjs.duration(today.diff(agreementDate))
+  const diffYears = diff.years()
+  const diffMonths = diff.months()
+  const diffDays = diff.days()
+
+  let category = 'A'
+  if (
+    (diffYears === 0 && diffMonths >= 6 && diffDays > 0) ||
+    (diffYears === 1 && diffMonths === 0 && diffDays === 0)
+  ) {
+    category = 'B'
+  } else if (diffYears >= 1) {
+    category = 'C'
   }
 
   return (
@@ -26,12 +50,45 @@ function TransferHistory({ transferHistory }) {
       </Typography>
       <BCBox m={2}>
         <ul>
+          {[
+            TRANSFER_STATUSES.SENT,
+            TRANSFER_STATUSES.SUBMITTED,
+            TRANSFER_STATUSES.RECOMMENDED,
+            TRANSFER_STATUSES.RECORDED
+          ].includes(currentStatus) && (
+            <li>
+              <Typography variant="body2" component="div">
+                <span>
+                  Date of written agreement reached between the two
+                  organizations: {agreementDate.format('LL')} (proposal falls
+                  under{' '}
+                  <strong>
+                    Category{' '}
+                    {transferData.transferCategory?.category ?? category}
+                  </strong>
+                  {!transferData.transferCategory?.category &&
+                    (category === 'A' || category === 'B') && (
+                      <>
+                        {' '}
+                        if approved by:{' '}
+                        <strong>
+                          {agreementDate
+                            .add(dateCutoffMonths[category], 'M')
+                            .format('LL')}
+                        </strong>
+                      </>
+                    )}
+                  )
+                </span>
+              </Typography>
+            </li>
+          )}
           {transferHistory?.map((item, index) => (
             <li key={item.transferStatus.transferStatusId + index}>
               <Typography variant="body2" component="div">
                 <b>{getTransferStatusLabel(item.transferStatus.status)}</b>{' '}
                 <span> on </span>
-                {formatDate(item.createDate)}
+                {dayjs(item.createDate).format('LL')}
                 <span> by </span>
                 <strong>
                   {' '}

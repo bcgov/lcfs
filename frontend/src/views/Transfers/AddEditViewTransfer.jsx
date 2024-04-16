@@ -1,5 +1,5 @@
 // react and npm library components
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,15 +9,15 @@ import {
   useParams
 } from 'react-router-dom'
 // constants
-import { TRANSACTIONS } from '@/constants/routes/routes'
-import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
+import { TRANSACTIONS } from '@/constants/routes/routes'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 // hooks
-import { yupResolver } from '@hookform/resolvers/yup'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTransfer, useCreateUpdateTransfer } from '@/hooks/useTransfer'
-import { useRegExtOrgs, useCurrentOrgBalance } from '@/hooks/useOrganization'
+import { useCurrentOrgBalance, useRegExtOrgs } from '@/hooks/useOrganization'
+import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
+import { yupResolver } from '@hookform/resolvers/yup'
 
 // icons and related components
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
@@ -33,10 +33,10 @@ import {
   useTheme
 } from '@mui/material'
 // reusable custom mui components
+import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
-import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 // sub components
@@ -45,14 +45,15 @@ import {
   AgreementDate,
   Comments,
   TransferDetails,
-  TransferView,
-  TransferGraphic
+  TransferGraphic,
+  TransferView
 } from '@/views/Transfers/components'
-import { buttonClusterConfigFn } from './buttonConfigs'
-import SigningAuthority from './components/SigningAuthority'
-import { AddEditTransferSchema } from './_schema'
 import { useQueryClient } from '@tanstack/react-query'
+import { AddEditTransferSchema } from './_schema'
+import { buttonClusterConfigFn } from './buttonConfigs'
+import { CategoryCheckbox } from './components/CategoryCheckbox'
 import { Recommendation } from './components/Recommendation'
+import SigningAuthority from './components/SigningAuthority'
 
 export const AddEditViewTransfer = () => {
   const queryClient = useQueryClient()
@@ -105,6 +106,7 @@ export const AddEditViewTransfer = () => {
     staleTime: 0,
     keepPreviousData: false
   })
+
   const queryState = queryClient.getQueryState(['transfer', transferId])
   const editorMode =
     ['edit', 'add'].includes(mode) &&
@@ -219,16 +221,16 @@ export const AddEditViewTransfer = () => {
       if (errorMsg) {
         setAlertMessage(errorMsg)
       } else {
-      setAlertMessage(
-        transferId
-          ? t('transfer:actionMsgs.errorUpdateText')
-          : t('transfer:actionMsgs.errorCreateText')
-      )
-    }
-    setAlertSeverity('error')
-    alertRef.current.triggerAlert()
-    // Scroll back to the top of the page
-    window.scrollTo(0, 0)
+        setAlertMessage(
+          transferId
+            ? t('transfer:actionMsgs.errorUpdateText')
+            : t('transfer:actionMsgs.errorCreateText')
+        )
+      }
+      setAlertSeverity('error')
+      alertRef.current.triggerAlert()
+      // Scroll back to the top of the page
+      window.scrollTo(0, 0)
     }
   })
 
@@ -338,7 +340,12 @@ export const AddEditViewTransfer = () => {
     <>
       <div>
         {alertMessage && (
-          <BCAlert ref={alertRef} data-test="alert-box" severity={alertSeverity} delay={65000}>
+          <BCAlert
+            ref={alertRef}
+            data-test="alert-box"
+            severity={alertSeverity}
+            delay={65000}
+          >
             {alertMessage}
           </BCAlert>
         )}
@@ -422,7 +429,10 @@ export const AddEditViewTransfer = () => {
               TRANSFER_STATUSES.RECOMMENDED
             ].includes(currentStatus) &&
               hasAnyRole(roles.analyst, roles.director) && (
-                <Recommendation currentStatus={currentStatus} />
+                <>
+                  <Recommendation currentStatus={currentStatus} />
+                  <CategoryCheckbox />
+                </>
               )}
 
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}

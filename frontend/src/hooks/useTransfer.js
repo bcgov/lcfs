@@ -13,7 +13,7 @@ export const useTransfer = (transferID, options) => {
 
 export const useCreateUpdateTransfer = (orgId, transferId, options) => {
   const client = useApiService()
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   return useMutation({
     ...options,
     mutationFn: async ({ data }) => {
@@ -31,6 +31,21 @@ export const useCreateUpdateTransfer = (orgId, transferId, options) => {
       if (!orgId) {
         return await client.put(`transfers/${transferId}`, data)
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['transfer', transferId])
+    }
+  })
+}
+
+export const useUpdateCategory = (transferId, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    ...options,
+    mutationFn: async (category) => {
+      return await client.put(`transfers/${transferId}/category`, category)
     },
     onSettled: () => {
       queryClient.invalidateQueries(['transfer', transferId])
