@@ -9,7 +9,7 @@ import {
   AsyncValidationEditor,
   DateEditor,
   ActionsRenderer,
-  AysncSuggestionEditor,
+  AysncSuggestionEditor
 } from '@/components/BCDataGrid/components'
 import { v4 as uuid } from 'uuid'
 import PropTypes from 'prop-types'
@@ -42,6 +42,7 @@ function BCDataGridEditor({
   columnDefs,
   defaultColDef,
   highlightedRowId,
+  className,
   ...others
 }) {
   // Define framework components for ag-grid
@@ -66,6 +67,8 @@ function BCDataGridEditor({
       suppressMovableColumns: true,
       suppressColumnMoveAnimation: false,
       rowSelection: 'single',
+      rowHeight: 45,
+      headerHeight: 40,
       animateRows: true,
       suppressPaginationPanel: true,
       suppressScrollOnNewData: true,
@@ -114,7 +117,7 @@ function BCDataGridEditor({
       <AgGridReact
         gridRef={gridRef}
         gridApi={gridApi}
-        className="ag-theme-alpine"
+        className={className}
         columnDefs={columnDefs}
         defaultColDef={defaultColDef}
         rowData={rowData}
@@ -148,6 +151,19 @@ function BCDataGridEditor({
   )
 }
 
+BCDataGridEditor.defaultProps = {
+  gridRef: null,
+  gridKey: `bcgrid-key-<unique-id>`,
+  gridOptions: {},
+  loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
+  defaultColDef: {},
+  className: 'ag-theme-alpine',
+  saveData: () => console.log('No save'),
+  rowData: [],
+  getRowNodeId: uuid(),
+  columnDefs: []
+}
+
 BCDataGridEditor.propTypes = {
   saveData: PropTypes.func.isRequired,
   onGridReady: PropTypes.func.isRequired,
@@ -159,9 +175,20 @@ BCDataGridEditor.propTypes = {
   gridRef: PropTypes.object.isRequired,
   columnDefs: PropTypes.array.isRequired,
   defaultColDef: PropTypes.object.isRequired,
-  highlightedRowId: PropTypes.string
+  highlightedRowId: PropTypes.string,
+  className: PropTypes.oneOf([
+    'ag-theme-alpine',
+    'ag-theme-alpine-dark',
+    'ag-theme-alpine-auto-dark',
+    'ag-theme-material',
+    'ag-theme-quartz',
+    'ag-theme-quartz-dark',
+    'ag-theme-quartz-auto-dark',
+    'ag-theme-balham',
+    'ag-theme-balham-dark',
+    'ag-theme-balham-auto-dark'
+  ])
 }
-
 BCDataGridEditor.defaultProps = {
   highlightedRowId: null
 }
