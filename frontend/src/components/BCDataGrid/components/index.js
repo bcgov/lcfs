@@ -2,7 +2,6 @@ export { AsyncValidationEditor } from './Editors/AsyncValidationEditor';
 export { AutocompleteEditor } from './Editors/AutocompleteEditor';
 export { DateEditor } from './Editors/DateEditor';
 export { ActionsRenderer } from './Renderers/ActionsRenderer';
-export { AddRowStatusBar } from './StatusBar/AddRowStatusBar';
 export { SimpleEditor } from './Editors/SimpleEditor';
 export { AysncSuggestionEditor } from './Editors/AysncSuggestionEditor'
 export { BCColumnSetFilter } from './Filters/BCColumnSetFilter'

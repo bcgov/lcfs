@@ -10,7 +10,6 @@ import {
   DateEditor,
   ActionsRenderer,
   AysncSuggestionEditor,
-  AddRowStatusBar
 } from '@/components/BCDataGrid/components'
 import { v4 as uuid } from 'uuid'
 import PropTypes from 'prop-types'
@@ -52,7 +51,6 @@ function BCDataGridEditor({
     autocompleteEditor: AutocompleteEditor,
     dateEditor: DateEditor,
     actionsRenderer: ActionsRenderer,
-    addRowStatusBar: AddRowStatusBar,
     aysncSuggestionEditor: AysncSuggestionEditor
   }
 
