@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, BigInteger, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -20,6 +20,18 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     phone = Column(String(50), comment="Organization's phone number")
     edrms_record = Column(
         String(100), comment="Organization's EDRMS record number")
+    total_balance = Column(
+        BigInteger,
+        server_default='0',
+        nullable=False,
+        comment="The total balance of compliance units for the specified organization."
+    )
+    reserved_balance = Column(
+        BigInteger,
+        server_default='0',
+        nullable=False,
+        comment="The reserved balance of compliance units for the specified organization."
+    )
 
     organization_status_id = Column(Integer, ForeignKey(
         'organization_status.organization_status_id'))

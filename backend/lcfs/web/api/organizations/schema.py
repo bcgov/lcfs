@@ -123,6 +123,8 @@ class OrganizationBase(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
+    total_balance: Optional[int]
+    reserved_balance: Optional[int]
     organization_status_id: int
     organization_type_id: int
 
