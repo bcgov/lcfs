@@ -4,7 +4,7 @@ import { TablePagination } from '@mui/material'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import { BCPaginationActions } from './BCPaginationActions'
 
-const BCPagination = ({
+export const BCPagination = ({
   total,
   page,
   handleChangePage,
@@ -83,4 +83,3 @@ BCPagination.propTypes = {
   rowsPerPageOptions: PropTypes.arrayOf(PropTypes.number)
 }
 
-export default BCPagination

@@ -1,0 +1,106 @@
+export const columnDefs = [
+  {
+    headerName: '',
+    cellRenderer: 'actionsRenderer',
+    checkboxSelection: true,
+    headerCheckboxSelection: true,
+    pinned: 'left',
+    field: 'checkobxBtn',
+    maxWidth: 100,
+    editable: false,
+  },
+  {
+    field: 'prefix',
+    headerName: 'Prefix (agSelectCellEditor)',
+    cellEditor: 'agSelectCellEditor',
+    cellEditorParams: { values: ['BCLCF', 'GEN'] }
+  },
+  {
+    field: 'feedstockTransportMode',
+    headerName: 'Feedstock Transport Mode (autocompleteEditor)',
+    cellEditor: 'autocompleteEditor',
+    cellEditorParams: {
+      options: ['Ethanol', 'Biodiesel', 'CNG', 'Electricity'],
+      multiple: true,
+      disableCloseOnSelect: true
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      const key = params.event.key
+      const gridShouldDoNothing = params.editing && key === 'Enter'
+      return gridShouldDoNothing
+    }
+  },
+  {
+    field: 'fuel',
+    headerName: 'Fuel (asyncValidationEditor)',
+    cellEditor: 'asyncValidationEditor',
+    cellEditorParams: {
+      condition: (value) =>
+        ['Ethanol', 'Biodiesel', 'CNG', 'Electricity'].includes(value),
+      debounceLimit: 250
+    }
+  },
+  {
+    field: 'company',
+    headerName: 'Company (async suggestion)',
+    cellEditor: 'aysncSuggestionEditor',
+    suppressKeyboardEvent: (params) => {
+      console.log('cell is editing: ' + params.editing)
+      console.log('keyboard event:', params.event)
+
+      // return true (to suppress) if editing and user hit Enter key
+      const key = params.event.key
+      const gridShouldDoNothing = params.editing && key === 'Enter'
+      return gridShouldDoNothing
+    },
+    minWidth: 300
+  },
+  {
+    field: 'applicationDate',
+    headerName: 'Application Date (DateEditor)',
+    cellEditor: 'dateEditor'
+  },
+  {
+    field: 'approvalDate',
+    headerName: 'Approval Date (agDateEditor)',
+    cellEditor: 'agDateStringCellEditor'
+  },
+  {
+    field: 'facilityNameplaceCapacity',
+    headerName: 'Facility Nameplace Capacity(agNumberEditor)',
+    cellEditor: 'agNumberCellEditor',
+    cellEditorParams: {
+      precision: 2,
+      step: 0.25,
+      showStepperButtons: true
+    }
+  },
+  {
+    field: 'feedstockLocation',
+    headerName: 'Feedstock Location (readOnly)',
+    editable: false
+  },
+  {
+    field: 'notes',
+    headerName: 'Notes (agLargeTextEditor)',
+    cellEditor: 'agLargeTextCellEditor',
+    cellEditorPopup: true,
+    cellEditorParams: {
+      rows: 5,
+      cols: 30
+    },
+    maxWidth: 300
+  }
+]
+
+export const defaultColDef = {
+  editable: true,
+  resizable: true,
+  filter: true,
+  floatingFilter: false,
+  sortable: false,
+  // flex: 1,
+  singleClickEdit: true
+  // suppressKeyboardEvent: (params) => params.editing
+}
