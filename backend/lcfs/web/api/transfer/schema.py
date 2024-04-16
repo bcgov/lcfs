@@ -18,6 +18,7 @@ class TransferStatusSchema(BaseSchema):
 
 
 class TransferCategorySchema(BaseSchema):
+    transfer_category_id: int
     category: str
 
     class Config:
@@ -70,7 +71,7 @@ class TransferSchema(BaseSchema):
     to_org_comment: Optional[str] = None
     gov_comment: Optional[str] = None
     current_status: TransferStatusSchema
-    transfer_category: TransferCategorySchema
+    transfer_category: Optional[TransferCategorySchema] = None
     transfer_history: Optional[List[TransferHistorySchema]]
     recommendation: Optional[TransferRecommendationEnumSchema] = None
 

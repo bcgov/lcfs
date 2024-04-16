@@ -1,6 +1,8 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 from fastapi import Depends, Request, HTTPException
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 from lcfs.web.api.transfer.validation import TransferValidation
 from lcfs.web.core.decorators import service_handler
@@ -9,6 +11,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException, ServiceExceptio
 # models
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatusEnum
+from lcfs.db.models.TransferCategory import TransferCategoryEnum
 from lcfs.db.models.Comment import Comment
 from lcfs.db.models.Transaction import TransactionActionEnum
 
@@ -20,7 +23,8 @@ from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transfer.schema import (
     TransferCommentSchema,
     TransferSchema,
-    TransferCreateSchema
+    TransferCreateSchema,
+    TransferCategorySchema
 )
 
 # repo
@@ -39,7 +43,8 @@ class TransferServices:
         repo: TransferRepository = Depends(TransferRepository),
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
-        transaction_repo: TransactionRepository = Depends(TransactionRepository),
+        transaction_repo: TransactionRepository = Depends(
+            TransactionRepository),
     ) -> None:
         self.validate = validate
         self.repo = repo
@@ -66,7 +71,8 @@ class TransferServices:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         if not transfer:
-            raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
+            raise DataNotFoundException(
+                f"Transfer with ID {transfer_id} not found")
 
         transfer_view = TransferSchema.model_validate(transfer)
         comments: List[TransferCreateSchema] = []
@@ -96,7 +102,8 @@ class TransferServices:
         if (self.request.user.organization is not None):
             if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value):
                 transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
-            transfer_view.transfer_history = list(filter(lambda history: history.transfer_status.status != TransferStatusEnum.Recommended.value, transfer_view.transfer_history))
+            transfer_view.transfer_history = list(filter(
+                lambda history: history.transfer_status.status != TransferStatusEnum.Recommended.value, transfer_view.transfer_history))
         return transfer_view
 
     @service_handler
@@ -117,7 +124,7 @@ class TransferServices:
             transfer_data.current_status
         )
         # TODO: Currenty by default category id is set to CATEGORY - A
-        transfer.transfer_category_id = 1
+        # transfer.transfer_category_id = 1
 
         transfer.current_status = current_status
         if current_status.status == TransferStatusEnum.Sent:
@@ -126,7 +133,7 @@ class TransferServices:
         transfer = await self.repo.create_transfer(transfer)
         # Add a new transfer history record if the status has changed
         await self.repo.add_transfer_history(
-            transfer.transfer_id, 
+            transfer.transfer_id,
             current_status.transfer_status_id,
             self.request.user.user_profile_id
         )
@@ -141,8 +148,9 @@ class TransferServices:
         transfer = await self.repo.get_transfer_by_id(transfer_data.transfer_id)
 
         if not transfer:
-             raise DataNotFoundException(f"Transfer with id {transfer_data.transfer_id} not found")
-  
+            raise DataNotFoundException(
+                f"Transfer with id {transfer_data.transfer_id} not found")
+
         # Check if the new status is different from the current status of the transfer
         status_has_changed = transfer.current_status != new_status
 
@@ -166,12 +174,14 @@ class TransferServices:
 
         # Update transfer history and handle status-specific actions if the status has changed
         if status_has_changed:
-            print(f"Status change: {transfer.current_status.status} -> {new_status.status}")
+            print(f"Status change: \
+                  {transfer.current_status.status} -> {new_status.status}")
 
             # Matching the current status with enums directly is safer if they are comparable
             if new_status.status == TransferStatusEnum.Sent:
                 await self.sign_and_send_from_supplier(transfer)
             elif new_status.status == TransferStatusEnum.Recorded:
+
                 await self.director_record_transfer(transfer)
             elif new_status.status in [
                 TransferStatusEnum.Declined,
@@ -183,7 +193,7 @@ class TransferServices:
             new_status = await self.repo.get_transfer_status_by_name(transfer_data.current_status)
             # Add a new transfer history record to reflect the status change
             await self.repo.add_transfer_history(
-                transfer_data.transfer_id, 
+                transfer_data.transfer_id,
                 new_status.transfer_status_id,
                 self.request.user.user_profile_id
             )
@@ -192,11 +202,11 @@ class TransferServices:
         transfer.current_status = new_status
         return await self.repo.update_transfer(transfer)
 
-
     async def sign_and_send_from_supplier(self, transfer):
         """Create reserved transaction to reserve compliance units for sending organization."""
         user = self.request.user
-        has_signing_role = user_has_roles(user, ["SUPPLIER", "SIGNING_AUTHORITY"])
+        has_signing_role = user_has_roles(
+            user, ["SUPPLIER", "SIGNING_AUTHORITY"])
         if not has_signing_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
@@ -207,8 +217,9 @@ class TransferServices:
         )
         transfer.from_transaction = from_transaction
 
-    async def director_record_transfer(self, transfer):
+    async def director_record_transfer(self, transfer: Transfer):
         """Confirm transaction for sending organization and create new transaction for receiving org."""
+
         user = self.request.user
         has_director_role = user_has_roles(user, ["GOVERNMENT", "DIRECTOR"])
 
@@ -220,10 +231,12 @@ class TransferServices:
                 f"From transaction not found for transfer \
                                    {transfer.transfer_id}. Contact support."
             )
+
         # Confirm transaction of sending organization
         confirm_result = await self.transaction_repo.confirm_transaction(
             transfer.from_transaction_id
         )
+
         if not confirm_result:
             raise ServiceException(
                 f"Failed to confirm transaction \
@@ -231,6 +244,21 @@ class TransferServices:
             )
 
         await self.repo.commit_refresh_transfer(transfer)
+
+        if not hasattr(transfer.transfer_category, 'category'):
+            today = datetime.now()
+
+            diff = relativedelta(today, transfer.agreement_date)
+
+            category = 'A'
+            if (diff.years == 0 and diff.months >= 6 and diff.days > 1) or (diff.years == 1 and diff.months == 0 and diff.days == 1):
+                category = 'B'
+            elif (diff.years >= 1):
+                category = 'C'
+
+            await self.update_category(transfer.transfer_id, category)
+
+            await self.repo.commit_refresh_transfer(transfer)
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
@@ -262,3 +290,26 @@ class TransferServices:
                 transfer.comments.comment = transfer_data.comments
             else:
                 transfer.comments = Comment(comment=transfer_data.comments)
+
+    def is_valid_category(self, category: str) -> bool:
+        return category in (item.value for item in TransferCategoryEnum)
+
+    @service_handler
+    async def update_category(
+        self, transfer_id: int, category: Optional[str] = None
+    ):
+        new_category = None
+
+        if category != None:
+            valid_category = self.is_valid_category(category)
+
+            if not valid_category:
+                raise ServiceException(f"Not a valid category")
+
+            new_category = await self.repo.get_transfer_category_by_name(category)
+
+        transfer = await self.repo.get_transfer_by_id(transfer_id)
+
+        transfer.transfer_category = new_category
+
+        return transfer

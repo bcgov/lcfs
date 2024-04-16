@@ -16,8 +16,12 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 // icons and typograhpy
 import BCBox from '@/components/BCBox'
+import { useLoadingStore } from '@/stores/useLoadingStore'
+import Loading from '@/components/Loading'
 
 export const MainLayout = () => {
+  const loading = useLoadingStore((state) => state.loading)
+
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
@@ -68,6 +72,7 @@ export const MainLayout = () => {
         </Grid>
       </Container>
       <Footer />
+      {loading && <Loading fixed />}
     </RequireAuth>
   )
 }

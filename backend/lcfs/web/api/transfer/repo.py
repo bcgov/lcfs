@@ -13,7 +13,7 @@ from lcfs.web.api.transfer.schema import TransferSchema
 
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
-from lcfs.db.models.TransferCategory import TransferCategory
+from lcfs.db.models.TransferCategory import TransferCategory, TransferCategoryEnum
 from lcfs.db.models.TransferHistory import TransferHistory
 from lcfs.db.models.UserProfile import UserProfile
 
@@ -32,8 +32,10 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_organization),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
-            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
+            selectinload(Transfer.transfer_history).selectinload(
+                TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(
+                TransferHistory.transfer_status)
         )
         result = await self.db.execute(query)
         transfers = result.scalars().all()
@@ -64,8 +66,10 @@ class TransferRepository(BaseRepository):
             selectinload(Transfer.to_transaction),
             selectinload(Transfer.current_status),
             selectinload(Transfer.transfer_category),
-            selectinload(Transfer.transfer_history).selectinload(TransferHistory.user_profile),
-            selectinload(Transfer.transfer_history).selectinload(TransferHistory.transfer_status)
+            selectinload(Transfer.transfer_history).selectinload(
+                TransferHistory.user_profile),
+            selectinload(Transfer.transfer_history).selectinload(
+                TransferHistory.transfer_status)
         ).where(Transfer.transfer_id == transfer_id)
 
         result = await self.db.execute(query)
@@ -105,13 +109,23 @@ class TransferRepository(BaseRepository):
             select(TransferCategory).where(
                 TransferCategory.transfer_category_id == transfer_category_id)
         )
-    
+
     @repo_handler
     async def get_transfer_status_by_name(self, transfer_status_name: str) -> TransferStatus:
         '''Fetch a single transfer status by transfer status name from the database'''
         return await self.db.scalar(
             select(TransferStatus).where(
                 TransferStatus.status == getattr(TransferStatusEnum, transfer_status_name))
+        )
+
+    @repo_handler
+    async def get_transfer_category_by_name(self, transfer_category_name: str) -> TransferCategory:
+        return await self.db.scalar(
+            select(TransferCategory).where(
+                TransferCategory.category == getattr(
+                    TransferCategoryEnum, transfer_category_name
+                )
+            )
         )
 
     @repo_handler
