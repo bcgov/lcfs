@@ -13,32 +13,39 @@ import {
   AddRowStatusBar
 } from '@/components/BCDataGrid/components'
 import { v4 as uuid } from 'uuid'
+import PropTypes from 'prop-types'
 
+/**
+ * BCDataGridEditor component is a customizable data grid editor using ag-grid.
+ * It provides features like adding new rows, deleting selected rows, and saving changes.
+ *
+ * @param {function} saveData - Function to save changes made to the grid.
+ * @param {function} onGridReady - Callback function invoked when the grid is initialized and ready.
+ * @param {object} gridApi - Reference to the ag-grid API.
+ * @param {object} columnApi - Reference to the ag-grid column API.
+ * @param {array} rowData - Data to be displayed in the grid.
+ * @param {string} gridKey - Unique key identifier for the grid.
+ * @param {function} getRowNodeId - Function to get the unique identifier for each row.
+ * @param {object} gridRef - Reference to the ag-grid instance.
+ * @param {array} columnDefs - Definitions for the columns in the grid.
+ * @param {object} defaultColDef - Default column definition for the grid.
+ * @param {string} highlightedRowId - ID of the row to be highlighted.
+ */
 function BCDataGridEditor({
   saveData,
   onGridReady,
-  gridOptions,
-  rowData,
   gridApi,
   columnApi,
+  rowData,
   gridKey,
   getRowNodeId,
-  defaultSortModel,
-  defaultFilterModel,
-  apiEndpoint,
-  apiData,
   gridRef,
-  className,
   columnDefs,
   defaultColDef,
-  getRowId,
-  handleGridKey,
-  handleRowClicked,
-  paginationPageSize,
-  paginationPageSizeSelector,
   highlightedRowId,
   ...others
 }) {
+  // Define framework components for ag-grid
   const frameworkComponents = {
     simpleEditor: SimpleEditor,
     asyncValidationEditor: AsyncValidationEditor,
@@ -49,46 +56,48 @@ function BCDataGridEditor({
     aysncSuggestionEditor: AysncSuggestionEditor
   }
 
-  // Memorized default ag-grid options
-  // For more details please refer https://ag-grid.com/javascript-data-grid/grid-options/
-  const defaultGridOptions = useMemo(() => ({
-    // enables undo / redo
-    undoRedoCellEditing: true,
-    // restricts the number of undo / redo steps to 5
-    undoRedoCellEditingLimit: 5,
-    reactiveCustomComponents: true,
-    overlayNoRowsTemplate: 'No rows found',
-    autoSizeStrategy: { type: 'fitCellContents' },
-    suppressDragLeaveHidesColumns: true,
-    suppressMovableColumns: true,
-    suppressColumnMoveAnimation: false,
-    rowSelection: 'single',
-    animateRows: true,
-    suppressPaginationPanel: true,
-    suppressScrollOnNewData: true,
-    suppressCsvExport: false,
-    components: frameworkComponents,
-    getRowStyle: highlightedRowId
-      ? (params) => {
-          if (params.node.id === highlightedRowId) {
-            return { backgroundColor: '#fade81' }
+  // Default ag-grid options
+  const defaultGridOptions = useMemo(
+    () => ({
+      undoRedoCellEditing: true,
+      undoRedoCellEditingLimit: 5,
+      reactiveCustomComponents: true,
+      overlayNoRowsTemplate: 'No rows found',
+      autoSizeStrategy: { type: 'fitCellContents' },
+      suppressDragLeaveHidesColumns: true,
+      suppressMovableColumns: true,
+      suppressColumnMoveAnimation: false,
+      rowSelection: 'single',
+      animateRows: true,
+      suppressPaginationPanel: true,
+      suppressScrollOnNewData: true,
+      suppressCsvExport: false,
+      components: frameworkComponents,
+      getRowStyle: highlightedRowId
+        ? (params) => {
+            if (params.node.id === highlightedRowId) {
+              return { backgroundColor: '#fade81' }
+            }
           }
-        }
-      : undefined
-  }))
+        : undefined
+    }),
+    [highlightedRowId]
+  )
 
+  // Function to add a new row
   const addRow = () => {
     const id = uuid()
     const emptyRow = { id }
     gridApi.applyTransaction({ add: [emptyRow] })
   }
 
+  // Function to delete selected row
   const deleteRow = () => {
     const selectedRows = gridApi.getSelectedRows()
-    // make 
     gridApi.applyTransaction({ remove: selectedRows })
   }
 
+  // Function called when cell value changes
   function onCellValueChanged(event) {
     console.log('onCellValueChanged', event)
     event.data.modified = true // Mark the entire row as modified
@@ -112,11 +121,9 @@ function BCDataGridEditor({
         defaultColDef={defaultColDef}
         rowData={rowData}
         getRowNodeId={getRowNodeId}
-        gridOptions={{ ...defaultGridOptions, ...gridOptions }}
+        gridOptions={{ ...defaultGridOptions }}
         onGridReady={onGridReady}
         frameworkComponents={frameworkComponents}
-        // editType="fullRow"
-        // suppressClickEdit
         domLayout="autoHeight"
         onCellValueChanged={onCellValueChanged}
         {...others}
@@ -141,6 +148,24 @@ function BCDataGridEditor({
       </BCBox>
     </BCBox>
   )
+}
+
+BCDataGridEditor.propTypes = {
+  saveData: PropTypes.func.isRequired,
+  onGridReady: PropTypes.func.isRequired,
+  gridApi: PropTypes.object.isRequired,
+  columnApi: PropTypes.object.isRequired,
+  rowData: PropTypes.array.isRequired,
+  gridKey: PropTypes.string.isRequired,
+  getRowNodeId: PropTypes.func.isRequired,
+  gridRef: PropTypes.object.isRequired,
+  columnDefs: PropTypes.array.isRequired,
+  defaultColDef: PropTypes.object.isRequired,
+  highlightedRowId: PropTypes.string
+}
+
+BCDataGridEditor.defaultProps = {
+  highlightedRowId: null
 }
 
 export default BCDataGridEditor
