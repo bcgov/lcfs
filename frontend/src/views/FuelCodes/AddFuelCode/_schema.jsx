@@ -7,7 +7,7 @@ export const columnDefs = [
     pinned: 'left',
     field: 'checkobxBtn',
     maxWidth: 100,
-    editable: false,
+    editable: false
   },
   {
     field: 'prefix',
@@ -26,9 +26,7 @@ export const columnDefs = [
     },
     suppressKeyboardEvent: (params) => {
       // return true (to suppress) if editing and user hit Enter key
-      const key = params.event.key
-      const gridShouldDoNothing = params.editing && key === 'Enter'
-      return gridShouldDoNothing
+      return params.editing && params.event.key === 'Enter'
     }
   },
   {
@@ -46,13 +44,8 @@ export const columnDefs = [
     headerName: 'Company (async suggestion)',
     cellEditor: 'aysncSuggestionEditor',
     suppressKeyboardEvent: (params) => {
-      console.log('cell is editing: ' + params.editing)
-      console.log('keyboard event:', params.event)
-
       // return true (to suppress) if editing and user hit Enter key
-      const key = params.event.key
-      const gridShouldDoNothing = params.editing && key === 'Enter'
-      return gridShouldDoNothing
+      return params.editing && params.event.key === 'Enter'
     },
     minWidth: 300
   },
