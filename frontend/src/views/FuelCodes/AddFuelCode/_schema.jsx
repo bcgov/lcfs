@@ -1,7 +1,21 @@
+import { v4 as uuid } from 'uuid'
+
+const duplicateRow = (props) => {
+  const selectedRows = props.api.getSelectedRows()[0]
+  const newRow = { ...selectedRows, id: uuid(), modified: true }
+  props.api.applyTransaction({
+    add: [newRow],
+    addIndex: props.rowIndex + 1
+  })
+}
+
 export const columnDefs = [
   {
     headerName: '',
     cellRenderer: 'actionsRenderer',
+    cellRendererParams: {
+      onDuplicate: duplicateRow
+    },
     checkboxSelection: true,
     headerCheckboxSelection: true,
     pinned: 'left',

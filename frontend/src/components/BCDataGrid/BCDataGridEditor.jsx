@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { AgGridReact } from '@ag-grid-community/react'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -86,17 +86,17 @@ function BCDataGridEditor({
   )
 
   // Function to add a new row
-  const addRow = () => {
+  const addRow = useCallback(() => {
     const id = uuid()
-    const emptyRow = { id }
+    const emptyRow = { id, modified: true }
     gridApi.applyTransaction({ add: [emptyRow] })
-  }
+  })
 
   // Function to delete selected row
-  const deleteRow = () => {
-    const selectedRows = gridApi.getSelectedRows()
-    gridApi.applyTransaction({ remove: selectedRows })
-  }
+  const deleteRow = useCallback((props) => {
+    const selectedData = columnApi?.api?.getSelectedRows()
+    gridApi?.applyTransaction({ remove: selectedData })
+  })
 
   // Function called when cell value changes
   function onCellValueChanged(event) {
@@ -143,7 +143,7 @@ function BCDataGridEditor({
             Add new row
           </BCButton>
           <BCButton variant="outlined" color="error" onClick={deleteRow}>
-            Delete selected row
+            Delete selected rows
           </BCButton>
         </Stack>
       </BCBox>
@@ -167,10 +167,9 @@ BCDataGridEditor.defaultProps = {
 BCDataGridEditor.propTypes = {
   saveData: PropTypes.func.isRequired,
   onGridReady: PropTypes.func.isRequired,
-  gridApi: PropTypes.object.isRequired,
-  columnApi: PropTypes.object.isRequired,
-  rowData: PropTypes.array.isRequired,
-  gridKey: PropTypes.string.isRequired,
+  gridApi: PropTypes.object,
+  columnApi: PropTypes.object,
+  rowData: PropTypes.array,
   getRowNodeId: PropTypes.func.isRequired,
   gridRef: PropTypes.object.isRequired,
   columnDefs: PropTypes.array.isRequired,
