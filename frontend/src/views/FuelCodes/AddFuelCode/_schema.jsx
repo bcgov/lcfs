@@ -10,6 +10,11 @@ export const columnDefs = [
     editable: false
   },
   {
+    field: 'id',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text'
+  },
+  {
     field: 'prefix',
     headerName: 'Prefix (agSelectCellEditor)',
     cellEditor: 'agSelectCellEditor',

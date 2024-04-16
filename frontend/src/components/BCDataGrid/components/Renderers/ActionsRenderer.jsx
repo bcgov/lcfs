@@ -1,13 +1,14 @@
 import QueueIcon from '@mui/icons-material/Queue'
 import IconButton from '@mui/material/IconButton'
 import { v4 as uuid } from 'uuid'
+import { useCallback } from 'react'
 
 export const ActionsRenderer = (props) => {
-  function duplicateRow(data) {
+  const duplicateRow = useCallback(() => {
     const selectedRows = props.api.getSelectedRows()[0]
     selectedRows.id = uuid()
     props.api.applyTransaction({ add: [selectedRows] })
-  }
+  })
 
   return (
     <div>
