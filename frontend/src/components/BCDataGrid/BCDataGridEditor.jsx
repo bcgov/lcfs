@@ -66,7 +66,7 @@ function BCDataGridEditor({
       suppressDragLeaveHidesColumns: true,
       suppressMovableColumns: true,
       suppressColumnMoveAnimation: false,
-      rowSelection: 'single',
+      rowSelection: 'multiple',
       rowHeight: 45,
       headerHeight: 40,
       animateRows: true,
