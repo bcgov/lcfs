@@ -11,8 +11,12 @@ import Crumb from '@/layouts/MainLayout/components/Crumb'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
+import { useLoadingStore } from '@/stores/useLoadingStore'
+import Loading from '@/components/Loading'
 
 export const MainLayout = () => {
+  const loading = useLoadingStore((state) => state.loading)
+
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
@@ -66,6 +70,7 @@ export const MainLayout = () => {
         </Container>
         <Footer />
       </BCBox>
+      {loading && <Loading fixed />}
     </RequireAuth>
   )
 }

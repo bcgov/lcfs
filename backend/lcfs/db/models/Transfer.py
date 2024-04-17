@@ -32,9 +32,12 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     price_per_unit = Column(Integer, comment="Price per unit")
     quantity = Column(Integer, comment="Quantity of units")
     # compliance_period = Column(Integer, )
-    from_org_comment = Column(String(1000), comment="Comment from the from-organization")
-    to_org_comment = Column(String(1000), comment="Comment from the to-organization")
-    gov_comment = Column(String(1500), comment="Comment from the government to organizations")
+    from_org_comment = Column(
+        String(1000), comment="Comment from the from-organization")
+    to_org_comment = Column(
+        String(1000), comment="Comment from the to-organization")
+    gov_comment = Column(
+        String(1500), comment="Comment from the government to organizations")
     transfer_category_id = Column(Integer, ForeignKey(
         'transfer_category.transfer_category_id'))
     current_status_id = Column(Integer, ForeignKey(
@@ -47,7 +50,8 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     transfer_history = relationship(
         'TransferHistory', back_populates='transfer')
     current_status = relationship('TransferStatus')
-    transfer_internal_comments = relationship('TransferInternalComment', back_populates='transfer')
+    transfer_internal_comments = relationship(
+        'TransferInternalComment', back_populates='transfer')
 
     from_transaction = relationship(
         'Transaction',

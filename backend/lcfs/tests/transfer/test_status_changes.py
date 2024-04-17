@@ -13,13 +13,6 @@ def transaction_repo(dbsession):
 def transfer_repo(dbsession):
     return TransferRepository(db=dbsession)
 
-@pytest.fixture
-async def add_models(dbsession):
-    async def _add(models):
-        dbsession.add_all(models)
-        await dbsession.commit()
-    return _add
-
 @pytest.mark.anyio
 async def test_update_transfer_recorded_forbidden(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
     set_mock_user_roles(fastapi_app, ["SUPPLIER"])

@@ -1,18 +1,18 @@
-import PropTypes from 'prop-types'
-import { TransferDetailsCard, Comments, CommentList } from '.'
 import BCBox from '@/components/BCBox'
-import { Typography } from '@mui/material'
-import { decimalFormatter } from '@/utils/formatters'
-import { useTranslation } from 'react-i18next'
-import TransferHistory from './TransferHistory'
-import { Role } from '@/components/Role'
 import InternalComments from '@/components/InternalComments'
+import { Role } from '@/components/Role'
 import { govRoles } from '@/constants/roles'
 import {
   TRANSFER_STATUSES,
   getAllTerminalTransferStatuses
 } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { decimalFormatter } from '@/utils/formatters'
+import { Typography } from '@mui/material'
+import PropTypes from 'prop-types'
+import { useTranslation } from 'react-i18next'
+import { CommentList, Comments, TransferDetailsCard } from '.'
+import TransferHistory from './TransferHistory'
 
 export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])
@@ -65,7 +65,9 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
         </Typography>
       </BCBox>
       {/* Comments */}
-      {transferData?.comments.length > 0 && <CommentList comments={transferData?.comments} />}
+      {transferData?.comments.length > 0 && (
+        <CommentList comments={transferData?.comments} />
+      )}
       {!getAllTerminalTransferStatuses().includes(transferStatus) && (
         <Comments
           editorMode={editorMode}

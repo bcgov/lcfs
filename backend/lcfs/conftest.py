@@ -83,31 +83,27 @@ async def dbsession(
     :param _engine: current engine.
     :yields: async session.
     """
-    connection = await _engine.connect()
-    trans = await connection.begin()
+    async with _engine.begin() as connection:
+        session_maker = async_sessionmaker(
+            connection,
+            expire_on_commit=False,
+        )
+        session = session_maker()
 
-    session_maker = async_sessionmaker(
-        connection,
-        expire_on_commit=False,
-    )
-    session = session_maker()
+        # Add test user info into the session
+        user_info = UserProfile(
+            user_profile_id=1,
+            keycloak_username='test_user',
+            organization_id=1
+        )  # Mocked user ID
 
-    # Add test user info into the session
-    user_info = UserProfile(
-        user_profile_id = 1,
-        keycloak_username = 'test_user',
-        organization_id = 1
-    )  # Mocked user ID
+        session.info['user'] = user_info
 
-    session.info['user'] = user_info
-
-    try:
-        yield session
-    finally:
-        await session.close()
-        await trans.rollback()
-        await connection.close()
-
+        try:
+            yield session
+        finally:
+            await session.rollback()
+            await session.close()
 
 @pytest.fixture
 async def fake_redis_pool() -> AsyncGenerator[ConnectionPool, None]:
@@ -245,3 +241,46 @@ def set_mock_user_roles():
         )
 
     return _set_mock_auth
+
+@pytest.fixture
+async def add_models(dbsession):
+    """
+    Fixture to add and flush a list of model instances to the database.
+
+    Args:
+        dbsession: The active database session for transaction management.
+    
+    Returns:
+        A function that takes a list of models and flushes them to the database. It includes
+        error handling to manage any exceptions that occur during database operations.
+    """
+    async def _add(models):
+        try:
+            dbsession.add_all(models)
+            await dbsession.flush()
+        except Exception as e:
+            logging.error("Error adding models to the database: %s", e)
+            await dbsession.rollback()
+            raise
+    return _add
+
+@pytest.fixture
+async def update_model(dbsession):
+    """
+    Fixture to update and flush a model instance to the database.
+
+    Args:
+        dbsession: The active database session for transaction management.
+    
+    Returns:
+        A function that takes a model instance, updates it in the database, and handles exceptions.
+    """
+    async def _update(model):
+        try:
+            dbsession.add(model)
+            await dbsession.flush()
+        except Exception as e:
+            logging.error("Error updating model in the database: %s", e)
+            await dbsession.rollback()
+            raise
+    return _update
