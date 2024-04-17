@@ -146,7 +146,8 @@ export const AddEditViewTransfer = () => {
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
-        recommendation: transferData.recommendation
+        recommendation: transferData.recommendation,
+        signingAuthorityDeclaration: methods.getValues().signingAuthorityDeclaration ?? false
       })
     }
     if (isLoadingError || queryState.status === 'error') {
