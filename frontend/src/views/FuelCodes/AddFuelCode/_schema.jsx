@@ -1,8 +1,7 @@
 import { v4 as uuid } from 'uuid'
 
 const duplicateRow = (props) => {
-  const selectedRows = props.api.getSelectedRows()[0]
-  const newRow = { ...selectedRows, id: uuid(), modified: true }
+  const newRow = { ...props.data, id: uuid(), modified: true }
   props.api.applyTransaction({
     add: [newRow],
     addIndex: props.rowIndex + 1
