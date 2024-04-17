@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react'
+import { forwardRef, useState, useMemo } from 'react'
 import { Box, TextField, Autocomplete, Grid } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { debounce } from 'lodash'
@@ -26,9 +26,13 @@ export const AysncSuggestionEditor = forwardRef(
       refetchOnWindowFocus: false // Prevent refetching on window focus
     })
 
-    const debouncedSetInputValue = debounce((newInputValue) => {
-      setInputValue(newInputValue)
-    }, 500)
+    const debouncedSetInputValue = useMemo(
+      (newInputValue) =>
+        debounce((newInputValue) => {
+          setInputValue(newInputValue)
+        }, 500),
+      [inputValue]
+    )
 
     const handleInputChange = (event, newInputValue) => {
       debouncedSetInputValue(newInputValue)

@@ -32,19 +32,22 @@ export const StatusRenderer = (props) => {
         sx={{ width: '100%', height: '100%' }}
       >
         <BCBadge
-          badgeContent={props.data.isActive ? 'active' : 'inactive'}
+          badgeContent={props.data.isActive ? 'Active' : 'Inactive'}
           color={props.data.isActive ? 'success' : 'smoky'}
           variant="gradient"
           size="md"
-          sx={
-            props.isView
-              ? { '& .MuiBadge-badge': { fontSize: '0.7rem' } }
-              : {
-                  display: 'flex',
-                  justifyContent: 'center',
-                  '& .MuiBadge-badge': { fontSize: '0.625rem' }
-                }
-          }
+          sx={{
+            ...(!props.isView
+              ? { display: 'flex', justifyContent: 'center' }
+              : {}),
+            '& .MuiBadge-badge': {
+              minWidth: '120px',
+              fontWeight: 'regular',
+              textTransform: 'capitalize',
+              fontSize: '0.875rem',
+              padding: '0.4em 0.6em'
+            }
+          }}
         />
       </BCBox>
     </Link>
@@ -75,7 +78,13 @@ export const OrgStatusRenderer = (props) => {
             variant="contained"
             size="lg"
             sx={{
-              '& .MuiBadge-badge': { minWidth: '120px', fontSize: '0.7rem' }
+              '& .MuiBadge-badge': {
+                minWidth: '120px',
+                fontWeight: 'regular',
+                textTransform: 'capitalize',
+                fontSize: '0.875rem',
+                padding: '0.4em 0.6em'
+              }
             }}
           />
         </BCBox>
@@ -123,7 +132,14 @@ export const TransactionStatusRenderer = (props) => {
         color={statusColorArr[statusIndex]}
         variant="contained"
         size="lg"
-        sx={{ '& .MuiBadge-badge': { minWidth: '120px', fontSize: '0.7rem' } }}
+        sx={{
+          '& .MuiBadge-badge': {
+            minWidth: '120px',
+            fontWeight: 'regular',
+            fontSize: '0.875rem',
+            padding: '0.4em 0.6em'
+          }
+        }}
       />
     </BCBox>
   )
@@ -156,7 +172,11 @@ export const RoleRenderer = (props) => {
                 <BCBadge
                   key={role.roleId}
                   sx={{
-                    '& .MuiBadge-badge': { fontSize: '0.7rem' },
+                    '& .MuiBadge-badge': {
+                      fontWeight: 'regular',
+                      fontSize: '0.9rem',
+                      padding: '0.4em 0.6em'
+                    },
                     margin: '2px'
                   }}
                   badgeContent={role.name}
@@ -178,7 +198,14 @@ export const RoleSpanRenderer = (props) => (
       .map((role) => (
         <BCBadge
           key={role.roleId}
-          sx={{ '& .MuiBadge-badge': { fontSize: '0.7rem' } }}
+          sx={{
+            '& .MuiBadge-badge': {
+              fontWeight: 'regular',
+              fontSize: '0.9rem',
+              padding: '0.4em 0.6em'
+            },
+            margin: '2px'
+          }}
           badgeContent={role.name}
           color={role.isGovernmentRole ? 'primary' : 'secondary'}
           variant="outlined"
