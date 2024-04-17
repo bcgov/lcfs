@@ -31,6 +31,7 @@ export const MainLayout = () => {
           component="main"
           maxWidth="lg"
           sx={{
+            padding: '1rem',
             flexGrow: 1,
             '@media (max-width: 920px)': {
               marginTop: '2rem'
@@ -39,7 +40,7 @@ export const MainLayout = () => {
           disableGutters
         >
           <Grid container spacing={2}>
-            <Grid item xs={12}>
+            <Grid item xs={12} mt={-2}>
               <Crumb />
             </Grid>
             <Grid item xs={12}>
