@@ -74,6 +74,15 @@ function BCDataGridEditor({
       suppressScrollOnNewData: true,
       suppressCsvExport: false,
       components: frameworkComponents,
+      onFirstDataRendered: (params) => {
+        params.api?.setFocusedCell(0, params.api?.getColumns()[2].getColId())
+
+        params.api?.startEditingCell({
+          rowIndex: 0,
+          colKey: params.api?.getColumns()[2].getColId()
+        })
+      },
+      // stopEditingWhenCellsLoseFocus: true,
       getRowStyle: highlightedRowId
         ? (params) => {
             if (params.node.id === highlightedRowId) {
@@ -127,6 +136,7 @@ function BCDataGridEditor({
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
         onCellValueChanged={onCellValueChanged}
+        editType={'fullRow'}
         {...others}
       />
       <BCBox
