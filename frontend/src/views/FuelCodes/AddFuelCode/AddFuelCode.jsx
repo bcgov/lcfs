@@ -18,6 +18,10 @@ export const AddFuelCode = () => {
       .then((res) => res.json())
       .then((data) => {
         setRowData(data.slice(0, 100))
+        if (data.length === 0) {
+          // if no data retrieved then add a single row with random key
+          setRowData([{ignore: '1'}])
+        }
       })
     params.api.sizeColumnsToFit()
   }
