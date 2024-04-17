@@ -125,5 +125,5 @@ export function calculateRowHeight(columnWidth, size) {
     return (height = 45)
   }
 
-  return height
+  return height + 22
 }
