@@ -1,7 +1,6 @@
 import {
   AppBar,
   Divider,
-  useScrollTrigger,
   useMediaQuery,
   useTheme,
   Menu
@@ -19,22 +18,20 @@ function BCNavbar(props) {
   const { routes } = props
   const theme = useTheme()
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
-  const isScrolled = useScrollTrigger()
 
   return (
     <BCBox py={0}>
       <PopupState variant="popover" popupId="demo-popup-menu">
         {(popupState) => (
           <AppBar
-            postition="sticky"
+            position="static"
             data-test="bc-navbar"
             component="nav"
             sx={{ border: 'none' }}
-            color={isScrolled ? 'transparent' : 'inherit'}
-            elevation={isScrolled ? 5 : 0}
+            color="inherit"
+            elevation={0}
           >
             <HeaderBar
-              isScrolled={isScrolled}
               data={props}
               beta={props.beta}
               isMobileView={isMobileView}
@@ -75,7 +72,7 @@ function BCNavbar(props) {
                 ))}
               </Menu>
             ) : (
-              <MenuBar isScrolled={isScrolled} routes={routes} data={props} />
+              <MenuBar routes={routes} data={props} />
             )}
           </AppBar>
         )}

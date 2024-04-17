@@ -6,7 +6,7 @@ import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
 
 const MenuBar = (props) => {
-  const { isScrolled, routes, data } = props
+  const { routes, data } = props
   return (
     <Toolbar
       className="nav"
@@ -14,11 +14,9 @@ const MenuBar = (props) => {
         palette: { transparent: transparentColor, white, secondary },
         functions: { rgba }
       }) => ({
-        backgroundColor: isScrolled
-          ? transparentColor.main
-          : rgba(secondary.nav, 1),
+        backgroundColor: rgba(secondary.nav, 1),
         backdropFilter: `saturate(200%) blur(30px)`,
-        color: isScrolled ? secondary.main : white.main,
+        color: white.main,
         maxHeight: '50px',
         display: { xs: 'none', sm: 'flex' }
       })}
@@ -40,7 +38,7 @@ const MenuBar = (props) => {
               icon={route.icon}
               name={route.name}
               route={route.route}
-              light={isScrolled}
+              light={false}
             />
             <Divider
               orientation="vertical"
@@ -67,7 +65,6 @@ const MenuBar = (props) => {
 }
 
 MenuBar.propTypes = {
-  isScrolled: PropTypes.bool,
   routes: PropTypes.array
 }
 

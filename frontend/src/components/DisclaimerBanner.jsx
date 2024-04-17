@@ -7,11 +7,13 @@ const DisclaimerBanner = ({ messages }) => {
     <Box
       sx={{
         backgroundColor: colors.background.grey,
-        color: colors.text.primary,
-        marginY: 2,
-        padding: 2,
+        color: colors.grey[700],
+        marginTop: 2,
+        marginBottom: 7,
+        padding: '15px 20px',
         fontSize: '14px',
-        border: `1px solid ${colors.borderDivider.nav}`
+        border: `1px solid ${colors.borderDivider.nav}`,
+        borderRadius: '6px'
       }}
     >
       {messages.map((message, index) => (
