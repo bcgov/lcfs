@@ -5,16 +5,13 @@ import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import { useScrollTrigger } from '@mui/material'
 
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { PropTypes } from 'prop-types'
 
-export const Logout = (props) => {
+export const Logout = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const { keycloak } = useKeycloak()
-  const isScrolled = useScrollTrigger()
 
   return (
     keycloak.authenticated && (
@@ -27,7 +24,7 @@ export const Logout = (props) => {
         {currentUser?.firstName && (
           <BCTypography
             variant="subtitle1"
-            color={isScrolled ? 'primary' : 'light'}
+            color="light"
             mx={1}
           >
             {currentUser?.firstName + ' ' + currentUser?.lastName}
@@ -37,9 +34,9 @@ export const Logout = (props) => {
           onClick={() => {
             logout()
           }}
-          color={isScrolled ? 'primary' : 'light'}
+          color="light"
           size="small"
-          variant={isScrolled ? 'contained' : 'outlined'}
+          variant="outlined"
           data-test="logout-button"
         >
           {t('logout')}
@@ -47,8 +44,4 @@ export const Logout = (props) => {
       </BCBox>
     )
   )
-}
-
-Logout.propTypes = {
-  isScrolled: PropTypes.bool
 }

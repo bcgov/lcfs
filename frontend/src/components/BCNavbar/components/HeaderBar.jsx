@@ -7,10 +7,9 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 // Images & Icons
 import logoDark from '@/assets/images/logo-banner.svg'
-import logoLight from '@/assets/images/BCID_H_rgb_pos.png'
 
 const HeaderBar = (props) => {
-  const { isScrolled, isMobileView, popupState, data } = props
+  const { isMobileView, popupState, data } = props
 
   return (
     <Toolbar
@@ -18,18 +17,16 @@ const HeaderBar = (props) => {
         palette: { transparent: transparentColor, white, primary },
         functions: { rgba }
       }) => ({
-        backgroundColor: isScrolled
-          ? transparentColor.main
-          : rgba(primary.nav, 1),
+        backgroundColor: rgba(primary.nav, 1),
         backdropFilter: `saturate(200%) blur(30px)`,
-        color: isScrolled ? primary.main : white.main,
+        color: white.main,
         width: '100%'
       })}
     >
       <BCBox sx={{ flexGrow: 1 }} component="div">
         <BCBox sx={{ display: 'flex', alignItems: 'center' }} className="logo">
           <img
-            src={isScrolled ? logoLight : logoDark}
+            src={logoDark}
             alt="BC Government"
             style={{ width: '160px', marginRight: '10px', height: 'auto' }}
           />
@@ -83,14 +80,12 @@ const HeaderBar = (props) => {
 }
 
 HeaderBar.defaultProps = {
-  isScrolled: false,
   isMobileView: false,
   popupState: {},
   data: {}
 }
 
 HeaderBar.propTypes = {
-  isScrolled: PropTypes.bool,
   isMobileView: PropTypes.bool,
   popupState: PropTypes.object,
   data: PropTypes.object
