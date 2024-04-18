@@ -21,7 +21,8 @@ from .schema import (
     OrganizationResponseSchema,
     OrganizationSummaryResponseSchema,
     OrganizationCreateResponseSchema,
-    OrganizationBalanceResponseSchema
+    OrganizationBalanceResponseSchema,
+    OrganizationUpdateSchema
 )
 
 
@@ -93,7 +94,7 @@ async def get_organization(
 async def update_organization(
     request: Request,
     organization_id: int,
-    organization_data: OrganizationCreateSchema,
+    organization_data: OrganizationUpdateSchema,
     service: OrganizationsService = Depends()
 ):
     '''Update an organizations data by id'''
