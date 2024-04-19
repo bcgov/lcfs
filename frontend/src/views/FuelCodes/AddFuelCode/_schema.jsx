@@ -20,7 +20,7 @@ export const columnDefs = [
     pinned: 'left',
     field: 'checkobxBtn',
     maxWidth: 100,
-    editable: false
+    editable: false,
   },
   {
     field: 'id',
@@ -92,17 +92,17 @@ export const columnDefs = [
     headerName: 'Feedstock Location (readOnly)',
     editable: false
   },
-  {
-    field: 'notes',
-    headerName: 'Notes (agLargeTextEditor)',
-    cellEditor: 'agLargeTextCellEditor',
-    cellEditorPopup: true,
-    cellEditorParams: {
-      rows: 5,
-      cols: 30
-    },
-    maxWidth: 300
-  }
+  // {
+  //   field: 'notes',
+  //   headerName: 'Notes (agLargeTextEditor)',
+  //   cellEditor: 'agLargeTextCellEditor',
+  //   cellEditorPopup: true,
+  //   cellEditorParams: {
+  //     rows: 5,
+  //     cols: 30
+  //   },
+  //   maxWidth: 300
+  // }
 ]
 
 export const defaultColDef = {
@@ -112,6 +112,10 @@ export const defaultColDef = {
   floatingFilter: false,
   sortable: false,
   // flex: 1,
-  singleClickEdit: true
+  singleClickEdit: true,
+  suppressKeyboardEvent: (params) => {
+    // return true (to suppress) if editing and user hit Enter key
+    return true
+  }
   // suppressKeyboardEvent: (params) => params.editing
 }

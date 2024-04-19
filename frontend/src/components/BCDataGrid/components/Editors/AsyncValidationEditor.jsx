@@ -9,7 +9,9 @@ export const AsyncValidationEditor = forwardRef(
     const [touched, setTouched] = useState(false)
 
     const debouncedInputVal = useDebounce(inputValue, props.debounceLimit)
-
+    // TODO: ability to show tool tip
+    // TODO: ability to show error message
+    // TODO: ability to perform both synchronous and asynhronous validations.
     function inputHandler(e) {
       setTouched(true)
       setInputValue(e.target.value)
@@ -18,8 +20,7 @@ export const AsyncValidationEditor = forwardRef(
     }
 
     useEffect(() => {
-      // random time between 0 and 1000ms
-      const timeout = Math.floor(Math.random() * props.debounceLimit)
+      const timeout = props.debounceLimit
 
       new Promise((resolve, reject) => {
         if (inputValue === '') {

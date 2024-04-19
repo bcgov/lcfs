@@ -11,6 +11,7 @@ import {
   ActionsRenderer,
   AysncSuggestionEditor
 } from '@/components/BCDataGrid/components'
+import DataGridLoading from '@/components/DataGridLoading'
 import { v4 as uuid } from 'uuid'
 import PropTypes from 'prop-types'
 
@@ -54,7 +55,8 @@ function BCDataGridEditor({
     actionsRenderer: ActionsRenderer,
     aysncSuggestionEditor: AysncSuggestionEditor
   }
-
+  // Memorized custom loading overlay component
+  const loadingOverlayComponent = useMemo(() => DataGridLoading)
   // Default ag-grid options
   const defaultGridOptions = useMemo(
     () => ({
@@ -124,6 +126,7 @@ function BCDataGridEditor({
       className="bc-grid-container"
     >
       <AgGridReact
+        gridKey={gridKey}
         gridRef={gridRef}
         gridApi={gridApi}
         className={className}
@@ -136,6 +139,7 @@ function BCDataGridEditor({
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
         onCellValueChanged={onCellValueChanged}
+        loadingOverlayComponent={loadingOverlayComponent}
         editType={'fullRow'}
         {...others}
       />
