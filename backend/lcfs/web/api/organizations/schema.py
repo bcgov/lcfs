@@ -123,6 +123,8 @@ class OrganizationBase(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
+    total_balance: Optional[int]
+    reserved_balance: Optional[int]
     organization_status_id: int
     organization_type_id: int
 
@@ -149,8 +151,12 @@ class OrganizationCreateSchema(OrganizationBase):
 
 class OrganizationUpdateSchema(BaseSchema):
     name: Optional[str] = None
-    status: Optional[int] = None
-    type: Optional[int] = None
+    operating_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    edrms_record: Optional[str] = None
+    organization_status_id: Optional[int] = None
+    organization_type_id: Optional[int] = None
     address: Optional[OrganizationAddressCreateSchema] = []
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
 

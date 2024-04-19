@@ -28,7 +28,7 @@ const BCModal = (props) => {
     customButtons
   } = data
   return (
-    <Dialog open={open} onClose={onClose}>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <IconButton
         aria-label="close"
@@ -52,7 +52,7 @@ const BCModal = (props) => {
             gap={1}
           >
             <Warning color="warning" fontSize={'medium'} />
-            {warningText}
+            <div dangerouslySetInnerHTML={{ __html: warningText }} />
           </Box>
         </DialogContent>
       )}

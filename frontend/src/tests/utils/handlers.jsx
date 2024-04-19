@@ -15,6 +15,16 @@ export const handlers = [
       lastName: 'Doe',
       roles: [{ name: 'Government' }]
     })
+  ),
+  http.put(api + apiRoutes.updateCategory, () =>
+    HttpResponse.json({
+      category: 'B'
+    })
+  ),
+  http.get(api + apiRoutes.getTransfer, () =>
+    HttpResponse.json({
+      transferCategory: null
+    })
   )
   // http.get(api + apiRoutes.openapi, () =>
   //   HttpResponse.json({ firstName: 'John', lastName: 'Doe' })

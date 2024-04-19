@@ -17,7 +17,7 @@ export const Recommendation = ({ currentStatus }) => {
   const { control } = useFormContext()
 
   return (
-    <BCBox mt={2}>
+    <BCBox my={2}>
       <Typography variant="h6" color="primary" mb={2}>
         {t('transfer:analystRecommend')}
       </Typography>

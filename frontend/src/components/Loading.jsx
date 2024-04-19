@@ -2,25 +2,43 @@ import PropTypes from 'prop-types'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import colors from '@/themes/base/colors'
+import borders from '@/themes/base/borders'
 
-const Loading = ({ message = 'Loading...' }) => {
+const Loading = ({ message = 'Loading...', fixed = false }) => {
   return (
     <Box
       className="text-center"
       sx={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100%',
-        padding: '20px'
+        height: '100vh',
+        width: '100vw',
+        zIndex: 99999,
+        position: fixed && 'fixed',
+        top: fixed && 0,
+        left: fixed && 0
       }}
       data-test="loading"
     >
-      <CircularProgress aria-labelledby="loading" />
-      <Typography variant="subtitle1" sx={{ mt: 2 }} data-test="message">
-        {message}
-      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: 'column',
+          border: fixed && `1px solid ${colors.primary.main}`,
+          borderRadius: fixed && borders.borderRadius.lg,
+          padding: fixed && '20px',
+          background: fixed && 'white'
+        }}
+      >
+        <CircularProgress aria-labelledby="loading" />
+        <Typography variant="subtitle1" sx={{ mt: 2 }} data-test="message">
+          {message}
+        </Typography>
+      </Box>
     </Box>
   )
 }

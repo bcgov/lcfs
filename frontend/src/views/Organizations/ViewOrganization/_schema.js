@@ -14,7 +14,7 @@ export const organizationsColDefs = (t) => [
     valueFormatter: numberFormatter,
     cellRenderer: LinkRenderer,
     width: 300,
-    valueGetter: () => Math.round(Math.random() * (500000 - 100000) + 100000),
+    valueGetter: (params) => params.data.totalBalance,
     // Temporary measures
     // filter: 'agNumberColumnFilter',
     filter: false,
@@ -25,7 +25,7 @@ export const organizationsColDefs = (t) => [
     field: 'reserve',
     headerName: t('org:orgColLabels.inReserve'),
     valueFormatter: numberFormatter,
-    valueGetter: () => Math.round(Math.random() * (100000 - 0)),
+    valueGetter: (params) => params.data.reservedBalance,
     width: 300,
     cellRenderer: LinkRenderer,
     // Temporary measures

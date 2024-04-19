@@ -68,7 +68,7 @@ function DefaultNavbarLink({ icon, name, route, light, onClick }) {
           }
         }}
       >
-        &nbsp;{name}
+        {name}
       </BCTypography>
     </BCBox>
   )

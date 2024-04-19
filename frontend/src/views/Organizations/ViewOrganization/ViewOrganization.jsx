@@ -5,7 +5,7 @@ import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
-import { IconButton } from '@mui/material'
+import { IconButton, Typography } from '@mui/material'
 // icons
 import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationBalance } from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
 import { calculateRowHeight, phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -40,6 +40,14 @@ export const ViewOrganization = () => {
     hasRoles
   } = useCurrentUser()
   const { data: orgData, isLoading } = useOrganization(orgID)
+
+  let orgBalance = {}
+  if (hasRoles(roles.government)) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    orgBalance = useOrganizationBalance(orgID)
+  }
+  const { data: orgBalaceInfo } = orgBalance
+
   const handleEditClick = () => {
     navigate(
       ROUTES.ORGANIZATIONS_EDIT.replace(
@@ -176,6 +184,15 @@ export const ViewOrganization = () => {
               {t('org:emailAddrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">{orgData.email}</BCTypography>
+            <Role roles={[roles.government]}>
+              <BCTypography variant="label">
+                {t('org:complianceUnitBalance')}:
+              </BCTypography>
+              <Typography variant="body4">
+                {orgBalaceInfo?.totalBalance.toLocaleString()} (
+                {orgBalaceInfo?.reservedBalance.toLocaleString()})
+              </Typography>
+            </Role>
           </BCBox>
           <BCBox
             display="grid"
