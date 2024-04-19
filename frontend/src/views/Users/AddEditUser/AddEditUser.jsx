@@ -80,7 +80,7 @@ export const AddEditUser = ({ userType }) => {
   const bceidRoles = watch('bceidRoles')
 
   useEffect(() => {
-    if (status !== 'active') {
+    if (status !== 'Active') {
       setDisabled(true)
     } else {
       setDisabled(false)
@@ -117,7 +117,7 @@ export const AddEditUser = ({ userType }) => {
         userName: data?.keycloakUsername,
         phone: data?.phone,
         mobile: data?.mobilePhone,
-        status: data?.isActive ? 'active' : 'inactive',
+        status: data?.isActive ? 'Active' : 'Inactive',
         readOnly: dataRoles
           .filter((r) => r === roles.read_only.toLocaleLowerCase())
           .join(''),
@@ -154,10 +154,10 @@ export const AddEditUser = ({ userType }) => {
       email: data.altEmail === '' ? null : data.altEmail,
       phone: data.phone,
       mobilePhone: data.mobile,
-      isActive: data.status === 'active',
+      isActive: data.status === 'Active',
       organizationId: orgID || currentUser.organizationId,
       roles:
-        data.status === 'active'
+        data.status === 'Active'
           ? [
               ...data.adminRole,
               ...(data.readOnly === '' ? data.bceidRoles : []),

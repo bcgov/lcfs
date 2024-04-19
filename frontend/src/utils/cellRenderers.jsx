@@ -32,7 +32,7 @@ export const StatusRenderer = (props) => {
         sx={{ width: '100%', height: '100%' }}
       >
         <BCBadge
-          badgeContent={props.data.isActive ? 'active' : 'inactive'}
+          badgeContent={props.data.isActive ? 'Active' : 'Inactive'}
           color={props.data.isActive ? 'success' : 'smoky'}
           variant="gradient"
           size="md"

@@ -100,7 +100,7 @@ export const defaultValues = {
   altEmail: '',
   phone: '',
   mobile: '',
-  status: 'active',
+  status: 'Active',
   adminRole: [],
   idirRole: '',
   bceidRoles: [],
@@ -110,11 +110,11 @@ export const defaultValues = {
 export const statusOptions = (t) => [
   {
     label: t('admin:userForm.activeLabel'),
-    value: 'active'
+    value: 'Active'
   },
   {
     label: t('admin:userForm.inactiveLabel'),
-    value: 'inactive'
+    value: 'Inactive'
   }
 ]
 
