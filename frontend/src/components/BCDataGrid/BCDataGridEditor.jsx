@@ -4,7 +4,6 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import { Stack } from '@mui/material'
 import {
-  SimpleEditor,
   AutocompleteEditor,
   AsyncValidationEditor,
   DateEditor,
@@ -48,7 +47,6 @@ function BCDataGridEditor({
 }) {
   // Define framework components for ag-grid
   const frameworkComponents = {
-    simpleEditor: SimpleEditor,
     asyncValidationEditor: AsyncValidationEditor,
     autocompleteEditor: AutocompleteEditor,
     dateEditor: DateEditor,
