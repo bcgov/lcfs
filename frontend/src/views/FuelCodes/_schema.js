@@ -1,0 +1,25 @@
+import { OrgStatusRenderer } from "@/utils/cellRenderers";
+
+export const fuelCodeColDefs = (t) => [
+  { field: "status", headerName: t("fuelCode:fuelCodeColLabels.status"), cellRenderer: OrgStatusRenderer },
+  { field: "prefix", headerName: t("fuelCode:fuelCodeColLabels.prefix") },
+  { field: "fuelCode", headerName: t("fuelCode:fuelCodeColLabels.fuelCode") },
+  { field: "company", headerName: t("fuelCode:fuelCodeColLabels.company") },
+  { field: "carbonIntensity", headerName: t("fuelCode:fuelCodeColLabels.carbonIntensity") },
+  { field: "edrms", headerName: t("fuelCode:fuelCodeColLabels.edrms") },
+  { field: "applicationDate", headerName: t("fuelCode:fuelCodeColLabels.applicationDate") },
+  { field: "approvalDate", headerName: t("fuelCode:fuelCodeColLabels.approvalDate") },
+  { field: "effectiveDate", headerName: t("fuelCode:fuelCodeColLabels.effectiveDate") },
+  { field: "expiryDate", headerName: t("fuelCode:fuelCodeColLabels.expiryDate") },
+  { field: "fuel", headerName: t("fuelCode:fuelCodeColLabels.fuel") },
+  { field: "feedstock", headerName: t("fuelCode:fuelCodeColLabels.feedstock") },
+  { field: "feedstockLocation", headerName: t("fuelCode:fuelCodeColLabels.feedstockLocation") },
+  { field: "misc", headerName: t("fuelCode:fuelCodeColLabels.misc") },
+  { field: "fuelProductionFacilityLocation", headerName: t("fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation") },
+  { field: "facilityNameplateCapacity", headerName: t("fuelCode:fuelCodeColLabels.facilityNameplateCapacity") },
+  { field: "feedstockTransportMode", headerName: t("fuelCode:fuelCodeColLabels.feedstockTransportMode") },
+  { field: "finishedFuelTransportMode", headerName: t("fuelCode:fuelCodeColLabels.finishedFuelTransportMode") },
+  { field: "formerCompany", headerName: t("fuelCode:fuelCodeColLabels.formerCompany") },
+  { field: "lastUpdated", headerName: t("fuelCode:fuelCodeColLabels.lastUpdated") },
+  { field: "notes", headerName: t("fuelCode:fuelCodeColLabels.notes") },
+]

@@ -9,6 +9,7 @@ import breakpoints from '@/themes/base/breakpoints'
 import BCBox from '@/components/BCBox'
 import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
 import { Users } from './components/Users'
+import { FuelCodes } from '@/views/FuelCodes'
 import {
   ADMIN_USERS,
   ADMIN_USERACTIVITY,
@@ -80,7 +81,7 @@ export function AdminMenu({ tabIndex }) {
         <>User activity</>
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={2} component="div" mx={-3}>
-        <>Fuel codes</>
+        <FuelCodes />
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
         <>Compliance reporting</>

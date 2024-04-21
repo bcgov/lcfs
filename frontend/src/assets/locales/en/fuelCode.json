@@ -1,0 +1,29 @@
+{
+  "newFuelCodeBtn": "New fuel code",
+  "noFuelCodesFound": "No fuel codes found",
+  "fuelCodeDownloadBtn": "Download as Excel",
+  "fuelCodeDownloadFailMsg": "Failed to download fuel code information.",
+  "fuelCodeColLabels": {
+    "status": "Status",
+    "prefix": "Prefix",
+    "fuelCode": "Fuel code",
+    "company": "Company",
+    "carbonIntensity": "Carbon intensity(gCO2E/MJ)",
+    "edrms": "EDRMS#",
+    "applicationDate": "Application date",
+    "approvalDate": "Approval date",
+    "effectiveDate": "Effective date",
+    "expiryDate": "Expiry date",
+    "fuel": "Fuel",
+    "feedstock": "Feedstock",
+    "feedstockLocation": "Feedstock location",
+    "misc": "Misc (e.g. CCS, EOR, waste steam, non rendered, etc.,)",
+    "fuelProductionFacilityLocation": "Fuel production facility location",
+    "facilityNameplateCapacity": "Facility nameplate capacity",
+    "feedstockTransportMode": "Feedstock transport mode",
+    "finishedFuelTransportMode": "Finished fuel transport mode",
+    "formerCompany": "Former company",
+    "lastUpdated": "Last updated",
+    "notes": "Notes"
+  }
+}
