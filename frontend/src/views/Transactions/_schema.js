@@ -1,6 +1,6 @@
 import { numberFormatter, currencyFormatter, dateFormatter } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/cellRenderers'
-import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
+import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 export const transactionsColDefs = (t) => [
@@ -38,7 +38,7 @@ export const transactionsColDefs = (t) => [
       disableCloseOnSelect: false,
       multiple: false
     },
-    suppressMenu: true,
+    suppressHeaderMenuButton: true,
     minWidth: 180
   },
   {

@@ -92,3 +92,5 @@ BCPaginationActions.propTypes = {
   rowsPerPage: PropTypes.number.isRequired,
   handleResetState: PropTypes.func
 }
+
+BCPaginationActions.displayName = 'BCPaginationActions'

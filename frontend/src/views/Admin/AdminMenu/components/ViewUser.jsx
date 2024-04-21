@@ -26,7 +26,7 @@ export const ViewUser = () => {
   const gridRef = useRef()
   const gridOptions = {
     overlayNoRowsTemplate: 'No previous user activities found',
-    suppressMenuHide: false,
+    suppressHeaderMenuButton: false,
     paginationPageSize: 20
   }
 

@@ -80,6 +80,7 @@ export const ViewOrganization = () => {
 
   const onColumnResized = useCallback((params) => {
     const colWidth = params.api.getColumn('role').getActualWidth()
+    params.api.resetRowHeights()
     params.api.forEachNode((node) => {
       const size = node.data?.roles?.length
       const rowHeight = calculateRowHeight(colWidth, size - 1)
