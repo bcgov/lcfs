@@ -15,7 +15,7 @@ import { useApiService } from '@/services/useApiService'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import DataGridLoading from '@/components/DataGridLoading'
-import BCPagination from './BCPagination'
+import { BCPagination } from './components'
 // Register the required AG Grid modules for row model and CSV export functionality
 ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
 
@@ -215,11 +215,13 @@ const BCDataGridServer = ({
     // enableCellTextSelection: true, // enables text selection on the grid
     // ensureDomOrder: true,
     onRowClicked: handleRowClicked,
-    getRowStyle: highlightedRowId ? (params) => {
-      if (params.node.id === highlightedRowId) {
-        return { backgroundColor: '#fade81' };
-      }
-    } : undefined
+    getRowStyle: highlightedRowId
+      ? (params) => {
+          if (params.node.id === highlightedRowId) {
+            return { backgroundColor: '#fade81' }
+          }
+        }
+      : undefined
   }))
 
   // Memorized default column definition parameters

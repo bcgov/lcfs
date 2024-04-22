@@ -24,7 +24,6 @@ export function getApiBaseUrl() {
         .join('.')}/api`
     }
   }
-  console.log(baseUrl)
   // Use getConfig to get 'api_base' from configuration or fallback to baseUrl
   return window.lcfs_config.api_base ?? baseUrl
 }

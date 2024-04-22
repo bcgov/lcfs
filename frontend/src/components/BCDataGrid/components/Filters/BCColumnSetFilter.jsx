@@ -7,7 +7,7 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox'
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
 const checkedIcon = <CheckBoxIcon fontSize="small" />
 
-const BCColumnSetFilter = forwardRef((props, ref) => {
+export const BCColumnSetFilter = forwardRef((props, ref) => {
   const { apiQuery, params } = props
   const { columnWidth } = props.column.colDef
   const [options, setOptions] = useState([])
@@ -145,5 +145,3 @@ BCColumnSetFilter.propTypes = {
   params: PropTypes.any, // any parameters that needs to be passed to apiQuery (React Query).
   disableCloseOnSelect: PropTypes.bool
 }
-
-export default BCColumnSetFilter

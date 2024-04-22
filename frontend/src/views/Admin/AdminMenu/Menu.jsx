@@ -9,7 +9,7 @@ import breakpoints from '@/themes/base/breakpoints'
 import BCBox from '@/components/BCBox'
 import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
 import { Users } from './components/Users'
-import { FuelCodes } from '@/views/FuelCodes'
+import { FuelCodes, AddFuelCode } from '@/views/FuelCodes'
 import {
   ADMIN_USERS,
   ADMIN_USERACTIVITY,
