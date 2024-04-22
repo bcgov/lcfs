@@ -4,7 +4,7 @@ import {
   RoleRenderer,
   StatusRenderer
 } from '@/utils/cellRenderers'
-import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
+import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useRoleList } from '@/hooks/useRole'
 
 export const usersColumnDefs = (t) => [

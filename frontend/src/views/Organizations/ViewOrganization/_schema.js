@@ -1,6 +1,6 @@
 import { numberFormatter } from '@/utils/formatters'
 import { LinkRenderer, OrgStatusRenderer } from '@/utils/cellRenderers'
-import BCColumnSetFilter from '@/components/BCDataGrid/BCColumnSetFilter'
+import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
@@ -50,7 +50,7 @@ export const organizationsColDefs = (t) => [
       disableCloseOnSelect: false,
       multiple: false
     },
-    suppressMenu: true
+    suppressHeaderMenuButton: true
   }
 ]
 
@@ -60,7 +60,7 @@ export const getUserColumnDefs = (t) => {
       return {
         ...colDef,
         sortable: false,
-        suppressMenu: true,
+        suppressHeaderMenuButton: true,
         floatingFilter: false
       }
     } else if (colDef.field === 'role') {
