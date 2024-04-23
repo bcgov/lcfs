@@ -126,23 +126,3 @@ def repo_handler(func):
             )
             raise DatabaseException
     return wrapper
-
-
-def transactional(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        db: AsyncSession = args[0].session
-        if not db:
-            raise HTTPException(
-                status_code=500, detail="Database session not available"
-            )
-
-        try:
-            result = None
-            async with db.begin():
-                result = await func(*args, **kwargs)
-            return result
-        except Exception:
-            raise
-
-    return wrapper

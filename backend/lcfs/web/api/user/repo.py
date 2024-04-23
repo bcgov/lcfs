@@ -15,7 +15,6 @@ from lcfs.db.models.UserLoginHistory import UserLoginHistory
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
-from lcfs.web.api.repo import BaseRepository
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     camel_to_snake,
@@ -27,9 +26,9 @@ from lcfs.web.api.base import (
 logger = getLogger("user_repo")
 
 
-class UserRepository(BaseRepository):
+class UserRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        super().__init__(db)
+        self.db = db
 
     def apply_filters(self, pagination, conditions):
         role_filter_present = False
@@ -324,7 +323,6 @@ class UserRepository(BaseRepository):
             org = org_result.scalar_one_or_none()
             db_user_profile.organization = org
         self.db.add(db_user_profile)
-        await self.commit_to_db()
         return db_user_profile
 
     @repo_handler
@@ -357,13 +355,11 @@ class UserRepository(BaseRepository):
         else:
             await self.update_idir_roles(user, new_roles, existing_roles_set)
         self.db.add(user)
-        await self.commit_to_db()
         return user
 
     @repo_handler
     async def delete_user(self, user: UserProfile) -> None:
         await self.db.delete(user)
-        await self.commit_to_db()
         logger.info(f"Deleted user with id: {user.user_profile_id}")
         return None
 

@@ -1,7 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
-from lcfs.db.dependencies import SessionLocal
 from lcfs.web.api.base import EntityResponse
 from lcfs.web.api.notification.schema import NotificationChannelSubscriptionRequest, NotificationMessageRequest
 from starlette import status

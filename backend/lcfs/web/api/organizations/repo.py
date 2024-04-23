@@ -6,7 +6,6 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, func, select, asc, desc, distinct
 
-from lcfs.web.api.repo import BaseRepository
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.Organization import Organization
@@ -15,15 +14,15 @@ from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddre
 from lcfs.db.models.OrganizationStatus import OrgStatusEnum, OrganizationStatus
 from lcfs.db.models.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema
+from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema, OrganizationResponseSchema
 
 
 logger = getLogger("organizations_repo")
 
 
-class OrganizationsRepository(BaseRepository):
+class OrganizationsRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        super().__init__(db)
+        self.db = db
 
     @repo_handler
     async def get_organizations(self) -> List[Organization]:
@@ -47,9 +46,9 @@ class OrganizationsRepository(BaseRepository):
         '''
 
         self.db.add(org_model)
-        await self.commit_to_db()
+        await self.db.flush()
         await self.db.refresh(org_model)
-        return OrganizationSchema.model_validate(org_model)
+        return OrganizationResponseSchema.model_validate(org_model)
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
