@@ -81,7 +81,7 @@ export function AdminMenu({ tabIndex }) {
         <>User activity</>
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={2} component="div" mx={-3}>
-        <FuelCodes/>
+        <FuelCodes />
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
         <>Compliance reporting</>
