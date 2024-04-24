@@ -83,6 +83,27 @@ const globals = {
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
   },
+  '.ag-theme-quartz': {
+    '--ag-borders': 'none',
+    '--ag-odd-row-background-color': rgba(light.main, 0.6),
+    '--ag-header-background-color': background.grey,
+    '--ag-font-size': pxToRem(16),
+    '--ag-color': rgba(dark.main, 0.9),
+    '--ag-font-family':
+      "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
+    '--ag-row-hover-color': rgba(background.secondary, 1)
+  },
+  '.ag-theme-quartz .ag-header-cell': {
+    fontWeight: 600,
+    color: grey[700]
+  },
+  '.ag-theme-quartz .ag-header-cell, .ag-theme-quartz .ag-cell': {
+    border: `1px solid ${grey[700]}`,
+    borderRadius: '4px'
+  },
+  '.ag-theme-quartz .ag-center-cols-viewport': {
+    minHeight: 'unset !important'
+  },
   '.ag-row-hover': {
     cursor: 'pointer'
   },

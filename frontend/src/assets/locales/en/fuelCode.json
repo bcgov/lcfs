@@ -3,6 +3,10 @@
   "noFuelCodesFound": "No fuel codes found",
   "fuelCodeDownloadBtn": "Download as Excel",
   "fuelCodeDownloadFailMsg": "Failed to download fuel code information.",
+  "fuelCodeLoadFailMsg": "Failed to load fuel code information.",
+  "newFuelCodeTitle": "Add new fuel code(s)",
+  "addRow": "Add row",
+  "rows": "rows",
   "fuelCodeColLabels": {
     "status": "Status",
     "prefix": "Prefix",

@@ -190,7 +190,7 @@ const router = createBrowserRouter([
         handle: { title: 'Fuel codes' }
       },
       {
-        path: ROUTES.ADMIN_FUELCODES_ADD,
+        path: ROUTES.ADMIN_FUEL_CODES_ADD,
         element: <AddFuelCode />,
         handle: { title: 'Add Fuel Code' }
       },

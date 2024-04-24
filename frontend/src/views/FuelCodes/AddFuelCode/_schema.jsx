@@ -1,108 +1,216 @@
 import { v4 as uuid } from 'uuid'
 
+// copy the desired columns to new row
 const duplicateRow = (props) => {
   const newRow = { ...props.data, id: uuid(), modified: true }
   props.api.applyTransaction({
     add: [newRow],
-    addIndex: props.rowIndex + 1
+    addIndex: props.node.rowIndex
   })
 }
 
-export const columnDefs = [
+export const fuelCodeColDefs = (t) => [
   {
-    headerName: '',
+    colId: 'action',
     cellRenderer: 'actionsRenderer',
     cellRendererParams: {
+      enableDuplicate: true,
+      enableEdit: true,
+      enableDelete: true,
       onDuplicate: duplicateRow
     },
-    checkboxSelection: true,
-    headerCheckboxSelection: true,
+    // checkboxSelection: true,
+    // headerCheckboxSelection: true,
+    // field: 'checkobxBtn',
     pinned: 'left',
-    field: 'checkobxBtn',
-    maxWidth: 100,
+    maxWidth: 140,
     editable: false,
+    filter: false
   },
   {
     field: 'id',
     cellEditor: 'agTextCellEditor',
-    cellDataType: 'text'
+    cellDataType: 'text',
+    hide: true
   },
   {
     field: 'prefix',
-    headerName: 'Prefix (agSelectCellEditor)',
+    headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     cellEditor: 'agSelectCellEditor',
-    cellEditorParams: { values: ['BCLCF', 'GEN'] }
+    cellEditorParams: { values: ['BCLCF'] }
   },
   {
-    field: 'feedstockTransportMode',
-    headerName: 'Feedstock Transport Mode (autocompleteEditor)',
-    cellEditor: 'autocompleteEditor',
-    cellEditorParams: {
-      options: ['Ethanol', 'Biodiesel', 'CNG', 'Electricity'],
-      multiple: true,
-      disableCloseOnSelect: true
-    },
-    suppressKeyboardEvent: (params) => {
-      // return true (to suppress) if editing and user hit Enter key
-      return params.editing && params.event.key === 'Enter'
-    }
-  },
-  {
-    field: 'fuel',
-    headerName: 'Fuel (asyncValidationEditor)',
-    cellEditor: 'asyncValidationEditor',
-    cellEditorParams: {
-      condition: (value) =>
-        ['Ethanol', 'Biodiesel', 'CNG', 'Electricity'].includes(value),
-      debounceLimit: 250
-    }
+    field: 'fuelCode',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
+    cellDataType: 'number',
+    editable: false,
+    valueGetter: (params) => 100.1 // TODO: change this for task #434
   },
   {
     field: 'company',
-    headerName: 'Company (async suggestion)',
-    cellEditor: 'aysncSuggestionEditor',
-    suppressKeyboardEvent: (params) => {
-      // return true (to suppress) if editing and user hit Enter key
-      return params.editing && params.event.key === 'Enter'
-    },
+    headerName: t('fuelCode:fuelCodeColLabels.company'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
     minWidth: 300
   },
   {
+    field: 'carbonIntensity',
+    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellEditor: 'agNumberCellEditor',
+    cellEditorParams: {
+      precision: 2,
+      showStepperButtons: false
+    }
+  },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text'
+  },
+  {
+    field: 'lastUpdated',
+    headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
+    minWidth: 180,
+    editable: false, // TODO: change as per #516
+    cellDataType: 'dateString',
+    valueGetter: (params) => {
+      return new Date().toLocaleDateString()
+    }
+  },
+  {
     field: 'applicationDate',
-    headerName: 'Application Date (DateEditor)',
+    headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
+    minWidth: 180,
+    suppressKeyboardEvent: true,
     cellEditor: 'dateEditor'
   },
   {
     field: 'approvalDate',
-    headerName: 'Approval Date (agDateEditor)',
-    cellEditor: 'agDateStringCellEditor'
+    headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+    minWidth: 180,
+    suppressKeyboardEvent: true,
+    cellEditor: 'dateEditor'
   },
   {
-    field: 'facilityNameplaceCapacity',
-    headerName: 'Facility Nameplace Capacity(agNumberEditor)',
-    cellEditor: 'agNumberCellEditor',
+    field: 'effectiveDate',
+    headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
+    minWidth: 180,
+    suppressKeyboardEvent: true,
+    cellEditor: 'dateEditor'
+  },
+  {
+    field: 'expiryDate',
+    headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
+    minWidth: 180,
+    suppressKeyboardEvent: true,
+    cellEditor: 'dateEditor'
+  },
+  {
+    field: 'fuel',
+    headerName: t('fuelCode:fuelCodeColLabels.fuel'),
+    cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
-      precision: 2,
-      step: 0.25,
-      showStepperButtons: true
-    }
+      values: [
+        'Biodiesel',
+        'CNG',
+        'Electricity',
+        'Ethanol',
+        'HDRD',
+        'Hydrogen',
+        'LNG',
+        'Other - gasoline category',
+        'Other diesel fuel',
+        'Other - diesel category',
+        'Alternative jet fuel',
+        'Other - jet fuel category',
+        'Propane',
+        'Renewable gasoline',
+        'Renewable naphtha',
+        'Fossil-derived diesel',
+        'Fossil-derived gasoline',
+        'Fossil-derived jet-fuel'
+      ]
+    }, // TODO: Implement dropdown by making api call
+    minWidth: 300
+  },
+  {
+    field: 'feedstock',
+    headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    minWidth: 300
   },
   {
     field: 'feedstockLocation',
-    headerName: 'Feedstock Location (readOnly)',
-    editable: false
+    headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    minWidth: 300
   },
-  // {
-  //   field: 'notes',
-  //   headerName: 'Notes (agLargeTextEditor)',
-  //   cellEditor: 'agLargeTextCellEditor',
-  //   cellEditorPopup: true,
-  //   cellEditorParams: {
-  //     rows: 5,
-  //     cols: 30
-  //   },
-  //   maxWidth: 300
-  // }
+  {
+    field: 'misc',
+    headerName: t('fuelCode:fuelCodeColLabels.misc'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    minWidth: 495
+  },
+  {
+    field: 'fuelProductionFacilityLocation',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    minWidth: 325 // TODO: handle in #486
+  },
+  {
+    field: 'facilityNameplateCapacity',
+    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
+    cellEditor: 'agNumberCellEditor',
+    cellEditorParams: {
+      precision: 0,
+      min: 0,
+      showStepperButtons: false
+    },
+    minWidth: 290
+  },
+  {
+    field: 'feedstockTransportMode',
+    headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
+    cellEditor: 'autocompleteEditor',
+    cellEditorParams: {
+      options: ['Truck', 'Rail', 'Marine', 'Adjacent', 'Pipeline'], // TODO: need to pull from backend
+      multiple: true,
+      disableCloseOnSelect: true
+    },
+    suppressKeyboardEvent: (params) => true,
+    minWidth: 300
+  },
+  {
+    field: 'finishedFuelTransportMode',
+    headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
+    cellEditor: 'autocompleteEditor',
+    cellEditorParams: {
+      options: ['Truck', 'Rail', 'Marine', 'Adjacent', 'Pipeline'], // TODO: need to pull from backend
+      multiple: true,
+      disableCloseOnSelect: true
+    },
+    suppressKeyboardEvent: (params) => true,
+    minWidth: 300
+  },
+  {
+    field: 'formerCompany',
+    headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    minWidth: 300
+  },
+  {
+    field: 'notes',
+    headerName: t('fuelCode:fuelCodeColLabels.notes'),
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    minWidth: 400
+  }
 ]
 
 export const defaultColDef = {
@@ -111,11 +219,5 @@ export const defaultColDef = {
   filter: true,
   floatingFilter: false,
   sortable: false,
-  // flex: 1,
-  singleClickEdit: true,
-  suppressKeyboardEvent: (params) => {
-    // return true (to suppress) if editing and user hit Enter key
-    return true
-  }
-  // suppressKeyboardEvent: (params) => params.editing
+  singleClickEdit: true
 }

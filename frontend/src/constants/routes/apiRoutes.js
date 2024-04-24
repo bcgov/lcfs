@@ -8,7 +8,8 @@ export const apiRoutes = {
   orgTransactions: '/organization/:orgID/transactions',
   openapi: '/openapi.json/',
   updateCategory: '/transfers/:transferId/category',
-  getTransfer: '/transfers/:transferId'
+  getTransfer: '/transfers/:transferId',
+  getFuelCode: '/fuelCodes/:fuelCodeId'
 }
 
 export const viewRoutesTitle = {

@@ -100,7 +100,8 @@ export const FuelCodes = () => {
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
-        my={1}
+        mt={1}
+        mb={2}
       >
         <Role roles={[roles.administrator]}>
           <BCButton
