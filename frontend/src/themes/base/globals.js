@@ -93,6 +93,9 @@ const globals = {
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
   },
+  '.ag-theme-quartz .ag-header-cell-label': {
+    justifyContent: "center"
+  },
   '.ag-theme-quartz .ag-header-cell': {
     fontWeight: 600,
     color: grey[700]

@@ -1,7 +1,7 @@
 {
   "newFuelCodeBtn": "New fuel code",
   "noFuelCodesFound": "No fuel codes found",
-  "fuelCodeDownloadBtn": "Download as Excel",
+  "fuelCodeDownloadBtn": "Download as excel",
   "fuelCodeDownloadFailMsg": "Failed to download fuel code information.",
   "fuelCodeLoadFailMsg": "Failed to load fuel code information.",
   "newFuelCodeTitle": "Add new fuel code(s)",

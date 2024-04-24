@@ -25,6 +25,7 @@ export const fuelCodeColDefs = (t) => [
     pinned: 'left',
     maxWidth: 140,
     editable: false,
+    suppressKeyboardEvent: true,
     filter: false
   },
   {
@@ -44,7 +45,7 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'number',
     editable: false,
-    valueGetter: (params) => 100.1 // TODO: change this for task #434
+    valueGetter: (params) => 100 + params.node.rowIndex / 10 // TODO: change this for task #434
   },
   {
     field: 'company',
@@ -60,7 +61,8 @@ export const fuelCodeColDefs = (t) => [
     cellEditorParams: {
       precision: 2,
       showStepperButtons: false
-    }
+    },
+    type: 'numericColumn'
   },
   {
     field: 'edrms',
@@ -109,9 +111,9 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'fuel',
     headerName: t('fuelCode:fuelCodeColLabels.fuel'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellEditorParams: {
-      values: [
+      options: [
         'Biodiesel',
         'CNG',
         'Electricity',
@@ -130,8 +132,15 @@ export const fuelCodeColDefs = (t) => [
         'Fossil-derived diesel',
         'Fossil-derived gasoline',
         'Fossil-derived jet-fuel'
-      ]
+      ],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false
     }, // TODO: Implement dropdown by making api call
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === 'Enter'
+    },
     minWidth: 300
   },
   {
@@ -166,6 +175,7 @@ export const fuelCodeColDefs = (t) => [
     field: 'facilityNameplateCapacity',
     headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
     cellEditor: 'agNumberCellEditor',
+    type: 'numericColumn',
     cellEditorParams: {
       precision: 0,
       min: 0,

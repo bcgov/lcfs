@@ -4,8 +4,8 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import BCBox from '@/components/BCBox'
 
-const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
-const checkedIcon = <CheckBoxIcon fontSize="small" />
+const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
+const checkedIcon = <CheckBoxIcon fontSize="medium" />
 
 export const AutocompleteEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
@@ -41,7 +41,8 @@ export const AutocompleteEditor = forwardRef(
           role="list-box"
           options={props.options}
           autoHighlight
-          size="small"
+          size="medium"
+          freeSolo={props.freeSolo}
           //   getOptionLabel={(option) => option}
           renderOption={(propsIn, option, { selected }) => {
             // Check if the current option is already selected
@@ -86,7 +87,7 @@ export const AutocompleteEditor = forwardRef(
               {...params}
               label="Select"
               variant="outlined"
-              size="small"
+              size="medium"
               inputProps={{
                 ...params.inputProps,
                 autoComplete: 'new-password' // disable autocomplete and autofill

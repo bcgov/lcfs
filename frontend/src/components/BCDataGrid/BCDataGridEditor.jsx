@@ -77,7 +77,7 @@ const BCDataGridEditor = ({
       suppressPaginationPanel: true,
       suppressScrollOnNewData: true,
       suppressCsvExport: false,
-      suppressClickEdit: true,
+      // suppressClickEdit: true,
       components: frameworkComponents,
       onFirstDataRendered: (params) => {
         params.api?.setFocusedCell(0, params.api?.getColumns()[2].getColId())
