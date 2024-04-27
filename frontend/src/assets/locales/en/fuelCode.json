@@ -30,5 +30,11 @@
     "formerCompany": "Former company",
     "lastUpdated": "Last updated",
     "notes": "Notes"
+  },
+  "validateMsg": {
+    "isRequired": "{{field}} is required",
+    "prefix": "Select valid prefix",
+    "fuel": "Select valid fuel",
+    "fuelCode": "Fuel code should be a valid number"
   }
 }

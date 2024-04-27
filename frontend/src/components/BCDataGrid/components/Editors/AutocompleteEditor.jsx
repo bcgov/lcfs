@@ -113,11 +113,11 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
 })
 
 AutocompleteEditor.propTypes = {
-  value: PropTypes.array.isRequired,
+  value: PropTypes.array,
   onValueChange: PropTypes.func.isRequired,
-  eventKey: PropTypes.string.isRequired,
-  rowIndex: PropTypes.number.isRequired,
-  column: PropTypes.object.isRequired,
+  eventKey: PropTypes.string,
+  rowIndex: PropTypes.number,
+  column: PropTypes.object,
   openOnFocus: PropTypes.bool,
   multiple: PropTypes.bool,
   disableCloseOnSelect: PropTypes.bool,

@@ -2,7 +2,7 @@
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
-import { Stack, Typography } from '@mui/material'
+import { Box, Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import Loading from '@/components/Loading'
 // Icons
@@ -10,7 +10,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // ag-grid
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
-import { fuelCodeColDefs, defaultColDef } from './_schema'
+import { fuelCodeColDefs, defaultColDef, fuelCodeSchema } from './_schema'
 import { AddRowsDropdownButton } from './AddRowsDropdownButton'
 // react components
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
@@ -32,6 +32,7 @@ export const AddFuelCode = () => {
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const gridRef = useRef(null)
+  const alertRef = useRef()
   const apiService = useApiService()
   const navigate = useNavigate()
   const location = useLocation()
@@ -86,6 +87,38 @@ export const AddFuelCode = () => {
     }
     params.api.sizeColumnsToFit()
   }
+
+  const validationHandler = useCallback((params) => {
+    fuelCodeSchema(t, optionsData)
+      .validate(params.data)
+      .then((data) => {
+        setAlertMessage(`Validated row # ${params.node.rowIndex + 1}`)
+        setAlertSeverity('success')
+        params.node.setData({
+          ...params.data,
+          isValid: true,
+          validationgMsg: ''
+        })
+      })
+      .catch((err) => {
+        setAlertMessage(err.errors[0])
+        setAlertSeverity('error')
+        params.node.setData({
+          ...params.data,
+          isValid: false,
+          validationgMsg: err.errors[0]
+        })
+      })
+    alertRef.current.triggerAlert()
+  })
+  const onRowEditingStarted = useCallback((params) => {
+    // perform initial validation
+    validationHandler(params)
+  })
+  const onRowEditingStopped = useCallback((params) => {
+    // peform final validation
+    validationHandler(params)
+  })
   const saveData = useCallback(() => {
     const allRowData = []
     gridApi.forEachNode((node) => allRowData.push(node.data))
@@ -96,9 +129,9 @@ export const AddFuelCode = () => {
 
   const statusBarcomponent = useMemo(() => {
     return (
-      <Stack direction="row" m={2}>
+      <Box component="div" m={2}>
         <AddRowsDropdownButton gridApi={gridApi} />
-      </Stack>
+      </Box>
     )
   })
 
@@ -110,7 +143,12 @@ export const AddFuelCode = () => {
       <Grid2 className="add-edit-fuel-code-container" mx={-1}>
         <div>
           {alertMessage && (
-            <BCAlert data-test="alert-box" severity={alertSeverity}>
+            <BCAlert
+              ref={alertRef}
+              data-test="alert-box"
+              severity={alertSeverity}
+              delay={5000}
+            >
               {alertMessage}
             </BCAlert>
           )}
@@ -136,6 +174,8 @@ export const AddFuelCode = () => {
             saveData={saveData}
             defaultStatusBar={false}
             statusBarcomponent={statusBarcomponent}
+            onRowEditingStarted={onRowEditingStarted}
+            onRowEditingStopped={onRowEditingStopped}
           />
         </BCBox>
         <Stack

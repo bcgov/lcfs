@@ -47,7 +47,9 @@ const BCDataGridEditor = ({
   highlightedRowId,
   className,
   defaultStatusBar,
-  ...others
+  onRowEditingStarted,
+  onRowEditingStopped,
+  ...props
 }) => {
   // Define framework components for ag-grid
   const frameworkComponents = {
@@ -82,7 +84,7 @@ const BCDataGridEditor = ({
       components: frameworkComponents,
       onFirstDataRendered: (params) => {
         params.api.startEditingCell({
-          rowIndex: params.node.rowIndex,
+          rowIndex: 0,
           colKey: params.api.getDisplayedCenterColumns()[0].colId
         })
       },
@@ -106,26 +108,28 @@ const BCDataGridEditor = ({
   })
 
   // Function to delete selected row
-  const deleteRow = useCallback((props) => {
+  const deleteRow = useCallback((params) => {
     const selectedData = columnApi?.api?.getSelectedRows()
     gridApi?.applyTransaction({ remove: selectedData })
   })
 
-  const onRowEditingStarted = useCallback((params) => {
+  const onRowEditingStartedHandler = useCallback((params) => {
     params.api.refreshCells({
       columns: ['action'],
       rowNodes: [params.node],
       force: true
     })
+    onRowEditingStarted(params)
   })
 
-  const onRowEditingStopped = useCallback((params) => {
+  const onRowEditingStoppedHandler = useCallback((params) => {
     // make an api call to perform auto-save after each row edits
     params.api.refreshCells({
       columns: ['action'],
       rowNodes: [params.node],
       force: true
     })
+    onRowEditingStopped(params)
   })
 
   // Function called when cell value changes
@@ -163,10 +167,10 @@ const BCDataGridEditor = ({
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
         onCellValueChanged={onCellValueChanged}
-        onRowEditingStopped={onRowEditingStopped}
-        onRowEditingStarted={onRowEditingStarted}
+        onRowEditingStopped={onRowEditingStoppedHandler}
+        onRowEditingStarted={onRowEditingStartedHandler}
         loadingOverlayComponent={loadingOverlayComponent}
-        {...others}
+        {...props}
       />
       <BCBox
         display="flex"
@@ -180,7 +184,7 @@ const BCDataGridEditor = ({
           overflow: 'hidden'
         }}
       >
-        {defaultStatusBar ? AgEditorStatusBar : others.statusBarcomponent}
+        {defaultStatusBar ? AgEditorStatusBar : props.statusBarcomponent}
       </BCBox>
     </>
   )

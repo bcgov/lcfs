@@ -8,7 +8,7 @@ import {
   Warning,
   DoneAll
 } from '@mui/icons-material'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export const ActionsRenderer = ({ onDuplicate, ...props }) => {
   const [validationMsg, setValidationMsg] = useState()
@@ -18,7 +18,7 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
 
   return (
     <Stack direction="row" spacing={0.1} m={0}>
-      {props.enableDuplicate && !isCurrentRowEditing && (
+      {props.data.isValid && props.enableDuplicate && !isCurrentRowEditing && (
         <Tooltip title="clone">
           <IconButton
             aria-label="copy the data to new row"
@@ -35,17 +35,23 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
           </IconButton>
         </Tooltip>
       )}
-      {props.enableDuplicate && isCurrentRowEditing && (
-        <Tooltip title={validationMsg}>
+      {!props.data.isValid && (
+        <Tooltip title={props.data.validationMsg}>
           <IconButton
             aria-label="shows sign for validation"
             data-testid="validation-sign"
           >
-            {validationMsg ? (
-              <Warning color="error" />
-            ) : (
-              <DoneAll color="success" />
-            )}
+            <Warning color="error" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.data.isValid && props.isCurrentRowEditing && (
+        <Tooltip title={'validation success'}>
+          <IconButton
+            aria-label="shows sign for validation"
+            data-testid="validation-sign"
+          >
+            <DoneAll color="success" />
           </IconButton>
         </Tooltip>
       )}

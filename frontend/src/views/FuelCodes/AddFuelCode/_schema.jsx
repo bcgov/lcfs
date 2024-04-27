@@ -1,4 +1,5 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
+import * as yup from 'yup'
 import { v4 as uuid } from 'uuid'
 
 // copy the desired columns to new row
@@ -7,22 +8,91 @@ const duplicateRow = (props) => {
     ...props.data,
     id: uuid(),
     modified: true,
-    fuelCode: 1000 + (props.node.rowIndex + 1) / 10
+    fuelCode: 1000 + (props.node?.rowIndex + 1) / 10
   }
   props.api.applyTransaction({
     add: [newRow],
-    addIndex: props.node.rowIndex + 1
+    addIndex: props.node?.rowIndex + 1
   })
+  props.api.stopEditing()
 }
 
 const onPrefixUpdate = (val, params) => {
   if (val === 'BCLCF') {
-    params.node.setData({
+    params.node?.setData({
       ...params.data,
-      fuelCode: 1000 + params.node.rowIndex / 10
+      fuelCode: 1000 + params.node?.rowIndex / 10
     })
   }
 }
+
+export const fuelCodeSchema = (t, optionsData) =>
+  yup.object().shape({
+    prefix: yup
+      .string()
+      .oneOf(
+        optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
+        t('fuelCode:validateMsg.prefix')
+      )
+      .required(
+        t('fuelCode:validateMsg.isRequired', {
+          field: t('fuelCode:fuelCodeColLabels.prefix')
+        })
+      ),
+    fuelCode: yup.number().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.fuelCode')
+      })
+    ),
+    company: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.company')
+      })
+    ),
+    carbonIntensity: yup.number().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.carbonIntensity')
+      })
+    ),
+    edrms: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.edrms')
+      })
+    ),
+    applicationDate: yup.date().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.applicationDate')
+      })
+    ),
+    fuel: yup
+      .string()
+      .oneOf(
+        optionsData.fuelTypes.map((obj) => obj.fuelType),
+        t('fuelCode:validateMsg.fuel')
+      )
+      .required(
+        t('fuelCode:validateMsg.isRequired', {
+          field: t('fuelCode:fuelCodeColLabels.fuel')
+        })
+      ),
+    feedstock: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.feedstock')
+      })
+    ),
+    feedstockLocation: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.feedstockLocation')
+      })
+    ),
+    fuelProductionFacilityLocation: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t(
+          'fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'
+        )
+      })
+    )
+  })
 
 export const fuelCodeColDefs = (t, optionsData) => [
   {
@@ -121,7 +191,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
     minWidth: 180,
     suppressKeyboardEvent: (params) => params.editing,
-    cellEditor: 'dateEditor'
+    cellEditor: 'dateEditor',
+    editable: false
   },
   {
     field: 'effectiveDate',
