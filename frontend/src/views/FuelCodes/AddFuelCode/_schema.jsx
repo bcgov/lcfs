@@ -1,3 +1,4 @@
+import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { v4 as uuid } from 'uuid'
 
 // copy the desired columns to new row
@@ -15,7 +16,7 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: 'actionsRenderer',
     cellRendererParams: {
       enableDuplicate: true,
-      enableEdit: true,
+      enableEdit: false,
       enableDelete: true,
       onDuplicate: duplicateRow
     },
@@ -23,9 +24,10 @@ export const fuelCodeColDefs = (t) => [
     // headerCheckboxSelection: true,
     // field: 'checkobxBtn',
     pinned: 'left',
-    maxWidth: 140,
+    maxWidth: 100,
     editable: false,
-    suppressKeyboardEvent: true,
+    suppressKeyboardEvent: (params) =>
+      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
     filter: false
   },
   {
@@ -43,9 +45,13 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'fuelCode',
     headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
+    valueGetter: (params) => {
+      return params.data.prefix === 'BCLCF'
+        ? 100 + params.node.rowIndex / 10
+        : 0 // TODO: change this for task #434
+    },
     cellDataType: 'number',
-    editable: false,
-    valueGetter: (params) => 100 + params.node.rowIndex / 10 // TODO: change this for task #434
+    editable: true
   },
   {
     field: 'company',
@@ -84,28 +90,28 @@ export const fuelCodeColDefs = (t) => [
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
     minWidth: 180,
-    suppressKeyboardEvent: true,
+    suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
     minWidth: 180,
-    suppressKeyboardEvent: true,
+    suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
     minWidth: 180,
-    suppressKeyboardEvent: true,
+    suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
   {
     field: 'expiryDate',
     headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
     minWidth: 180,
-    suppressKeyboardEvent: true,
+    suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
   {
@@ -133,13 +139,14 @@ export const fuelCodeColDefs = (t) => [
         'Fossil-derived gasoline',
         'Fossil-derived jet-fuel'
       ],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
     }, // TODO: Implement dropdown by making api call
     suppressKeyboardEvent: (params) => {
       // return true (to suppress) if editing and user hit Enter key
-      return params.editing && params.event.key === 'Enter'
+      return params.editing && params.event.key === KEY_ENTER
     },
     minWidth: 300
   },
@@ -190,9 +197,10 @@ export const fuelCodeColDefs = (t) => [
     cellEditorParams: {
       options: ['Truck', 'Rail', 'Marine', 'Adjacent', 'Pipeline'], // TODO: need to pull from backend
       multiple: true,
+      openOnFocus: true,
       disableCloseOnSelect: true
     },
-    suppressKeyboardEvent: (params) => true,
+    suppressKeyboardEvent: (params) => params.editing,
     minWidth: 300
   },
   {
@@ -202,9 +210,10 @@ export const fuelCodeColDefs = (t) => [
     cellEditorParams: {
       options: ['Truck', 'Rail', 'Marine', 'Adjacent', 'Pipeline'], // TODO: need to pull from backend
       multiple: true,
+      openOnFocus: true,
       disableCloseOnSelect: true
     },
-    suppressKeyboardEvent: (params) => true,
+    suppressKeyboardEvent: (params) => params.editing,
     minWidth: 300
   },
   {

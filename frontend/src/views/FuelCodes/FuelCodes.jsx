@@ -129,6 +129,7 @@ export const FuelCodes = () => {
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
+          className={'ag-theme-material'}
           gridRef={gridRef}
           apiEndpoint={'fuelCodes/'}
           apiData={'fuelCodes'}

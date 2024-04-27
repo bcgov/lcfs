@@ -71,6 +71,7 @@ const BCDataGridEditor = ({
       suppressMovableColumns: true,
       suppressColumnMoveAnimation: false,
       rowSelection: 'multiple',
+      editType: 'fullRow',
       rowHeight: 45,
       headerHeight: 40,
       animateRows: true,
@@ -80,11 +81,9 @@ const BCDataGridEditor = ({
       // suppressClickEdit: true,
       components: frameworkComponents,
       onFirstDataRendered: (params) => {
-        params.api?.setFocusedCell(0, params.api?.getColumns()[2].getColId())
-
-        params.api?.startEditingCell({
-          rowIndex: 0,
-          colKey: params.api?.getColumns()[2].getColId()
+        params.api.startEditingCell({
+          rowIndex: params.node.rowIndex,
+          colKey: params.api.getDisplayedCenterColumns()[0].colId
         })
       },
       // stopEditingWhenCellsLoseFocus: true,
@@ -130,8 +129,8 @@ const BCDataGridEditor = ({
   })
 
   // Function called when cell value changes
-  function onCellValueChanged(event) {
-    event.data.modified = true // Mark the entire row as modified
+  function onCellValueChanged(params) {
+    params.data.modified = true // Mark the entire row as modified
   }
 
   const AgEditorStatusBar = (
@@ -167,7 +166,6 @@ const BCDataGridEditor = ({
         onRowEditingStopped={onRowEditingStopped}
         onRowEditingStarted={onRowEditingStarted}
         loadingOverlayComponent={loadingOverlayComponent}
-        editType={'fullRow'}
         {...others}
       />
       <BCBox

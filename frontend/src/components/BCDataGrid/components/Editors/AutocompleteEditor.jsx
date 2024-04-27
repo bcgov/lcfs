@@ -3,6 +3,7 @@ import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import BCBox from '@/components/BCBox'
+import PropTypes from 'prop-types'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
 const checkedIcon = <CheckBoxIcon fontSize="medium" />
@@ -31,6 +32,7 @@ export const AutocompleteEditor = forwardRef(
         }}
       >
         <Autocomplete
+          openOnFocus={props.openOnFocus}
           value={selectedValues}
           onChange={(_, newValue) => updateValue(newValue)}
           multiple={props.multiple}
@@ -46,15 +48,16 @@ export const AutocompleteEditor = forwardRef(
           //   getOptionLabel={(option) => option}
           renderOption={(propsIn, option, { selected }) => {
             // Check if the current option is already selected
-            const isOptionSelected = value && value.includes(option)
+            const isOptionSelected = selectedValues && selectedValues.includes(option)
             return (
               <Box
                 component="li"
                 key={option}
                 className={
-                  selected || isOptionSelected
+                  (selected || isOptionSelected
                     ? 'ag-list-item ag-select-list-item selected'
-                    : 'ag-list-item ag-select-list-item'
+                    : 'ag-list-item ag-select-list-item') +
+                  ' ag-custom-component-popup'
                 }
                 role="option"
                 sx={{
@@ -74,6 +77,7 @@ export const AutocompleteEditor = forwardRef(
                     checkedIcon={checkedIcon}
                     style={{ marginRight: 8 }}
                     checked={selected || isOptionSelected}
+                    inputProps={{ 'aria-label': 'controlled' }}
                   />
                 )}
                 {option}
@@ -99,5 +103,25 @@ export const AutocompleteEditor = forwardRef(
     )
   }
 )
+
+AutocompleteEditor.propTypes = {
+  value: PropTypes.array.isRequired,
+  onValueChange: PropTypes.func.isRequired,
+  eventKey: PropTypes.string.isRequired,
+  rowIndex: PropTypes.number.isRequired,
+  column: PropTypes.object.isRequired,
+  openOnFocus: PropTypes.bool,
+  multiple: PropTypes.bool,
+  disableCloseOnSelect: PropTypes.bool,
+  options: PropTypes.array.isRequired,
+  freeSolo: PropTypes.bool
+}
+
+AutocompleteEditor.defaultProps = {
+  openOnFocus: true,
+  multiple: false,
+  disableCloseOnSelect: false,
+  freeSolo: false
+}
 
 AutocompleteEditor.displayName = 'AutocompleteEditor'
