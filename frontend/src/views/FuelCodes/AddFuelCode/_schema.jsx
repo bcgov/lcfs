@@ -3,11 +3,25 @@ import { v4 as uuid } from 'uuid'
 
 // copy the desired columns to new row
 const duplicateRow = (props) => {
-  const newRow = { ...props.data, id: uuid(), modified: true }
+  const newRow = {
+    ...props.data,
+    id: uuid(),
+    modified: true,
+    fuelCode: 1000 + (props.node.rowIndex + 1) / 10
+  }
   props.api.applyTransaction({
     add: [newRow],
-    addIndex: props.node.rowIndex
+    addIndex: props.node.rowIndex + 1
   })
+}
+
+const onPrefixUpdate = (val, params) => {
+  if (val === 'BCLCF') {
+    params.node.setData({
+      ...params.data,
+      fuelCode: 1000 + params.node.rowIndex / 10
+    })
+  }
 }
 
 export const fuelCodeColDefs = (t) => [
@@ -39,19 +53,28 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-    cellEditor: 'agSelectCellEditor',
-    cellEditorParams: { values: ['BCLCF'] }
+    cellEditor: 'autocompleteEditor',
+    cellEditorParams: {
+      onDynamicUpdate: onPrefixUpdate, // to alter any other column based on the value selected.
+      // (ensure valueGetter is not added to the column which you want to update dynamically)
+      options: ['BCLCF'],
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
+    },
+    cellDataType: 'text',
+    minWidth: 135
   },
   {
     field: 'fuelCode',
     headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
-    valueGetter: (params) => {
-      return params.data.prefix === 'BCLCF'
-        ? 100 + params.node.rowIndex / 10
-        : 0 // TODO: change this for task #434
-    },
     cellDataType: 'number',
-    editable: true
+    editable: false
   },
   {
     field: 'company',
