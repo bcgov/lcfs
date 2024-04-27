@@ -39,8 +39,8 @@ async def seed_transfer_statuses(session):
         },
         {
             "status": TransferStatusEnum.Recommended,
-            "visible_to_transferor": False,
-            "visible_to_transferee": False,
+            "visible_to_transferor": True,
+            "visible_to_transferee": True,
             "visible_to_government": True
         },
         {
