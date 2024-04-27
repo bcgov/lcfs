@@ -19,6 +19,6 @@ class FuelCodePrefixSchema(BaseSchema):
 
 
 class TableOptionsSchema(BaseSchema):
-    fuelTypes: List[FuelTypeSchema]
-    transportModes: List[TransportModeSchema]
-    fuelCodePrefixes: List[FuelCodePrefixSchema]
+    fuel_types: List[FuelTypeSchema]
+    transport_modes: List[TransportModeSchema]
+    fuel_code_prefixes: List[FuelCodePrefixSchema]

@@ -18,7 +18,7 @@ get_async_db = dependencies.get_async_db_session
 app = FastAPI()
 
 
-@router.get("/table_options", response_model=TableOptionsSchema, status_code=status.HTTP_200_OK)
+@router.get("/table-options", response_model=TableOptionsSchema, status_code=status.HTTP_200_OK)
 @roles_required("Government")
 @view_handler
 @cache(expire=60 * 60 * 24)  # cache for 24 hours

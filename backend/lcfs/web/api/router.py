@@ -39,5 +39,5 @@ api_router.include_router(
     internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
 )
 api_router.include_router(
-    fuel_code.router, prefix="/fuel_code", tags=["fuel_code"]
+    fuel_code.router, prefix="/fuel-code", tags=["fuel-code"]
 )

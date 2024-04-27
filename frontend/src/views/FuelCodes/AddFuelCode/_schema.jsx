@@ -24,7 +24,7 @@ const onPrefixUpdate = (val, params) => {
   }
 }
 
-export const fuelCodeColDefs = (t) => [
+export const fuelCodeColDefs = (t, optionsData) => [
   {
     colId: 'action',
     cellRenderer: 'actionsRenderer',
@@ -57,7 +57,7 @@ export const fuelCodeColDefs = (t) => [
     cellEditorParams: {
       onDynamicUpdate: onPrefixUpdate, // to alter any other column based on the value selected.
       // (ensure valueGetter is not added to the column which you want to update dynamically)
-      options: ['BCLCF'],
+      options: optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
       multiple: false, // ability to select multiple values from dropdown
       disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
       freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
@@ -142,31 +142,12 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.fuel'),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {
-      options: [
-        'Biodiesel',
-        'CNG',
-        'Electricity',
-        'Ethanol',
-        'HDRD',
-        'Hydrogen',
-        'LNG',
-        'Other - gasoline category',
-        'Other diesel fuel',
-        'Other - diesel category',
-        'Alternative jet fuel',
-        'Other - jet fuel category',
-        'Propane',
-        'Renewable gasoline',
-        'Renewable naphtha',
-        'Fossil-derived diesel',
-        'Fossil-derived gasoline',
-        'Fossil-derived jet-fuel'
-      ],
+      options: optionsData.fuelTypes.map((obj) => obj.fuelType),
       multiple: false, // ability to select multiple values from dropdown
       disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
       freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
       openOnFocus: true // this will open the dropdown on input focus
-    }, // TODO: Implement dropdown by making api call
+    },
     suppressKeyboardEvent: (params) => {
       // return true (to suppress) if editing and user hit Enter key
       return params.editing && params.event.key === KEY_ENTER
@@ -218,7 +199,7 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {
-      options: ['Truck', 'Rail', 'Marine', 'Adjacent', 'Pipeline'], // TODO: need to pull from backend
+      options: optionsData.transportModes.map((obj) => obj.transportMode),
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true
@@ -231,7 +212,7 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {
-      options: ['Truck', 'Rail', 'Marine', 'Adjacent', 'Pipeline'], // TODO: need to pull from backend
+      options: optionsData.transportModes.map((obj) => obj.transportMode),
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true

@@ -4,6 +4,10 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Loading from '@/components/Loading'
+// Icons
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // ag-grid
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { fuelCodeColDefs, defaultColDef } from './_schema'
@@ -14,6 +18,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 // services
 import { useApiService } from '@/services/useApiService'
+import { useFuelCodeOptions } from '@/hooks/useFuelCode'
 import { v4 as uuid } from 'uuid'
 // constants
 import { ROUTES, apiRoutes } from '@/constants/routes'
@@ -32,6 +37,7 @@ export const AddFuelCode = () => {
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelCode'])
   const { fuelCodeId } = useParams()
+  const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
 
   const gridOptions = useMemo(() => ({
     overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
@@ -96,38 +102,64 @@ export const AddFuelCode = () => {
     )
   })
 
+  if (isLoading) {
+    return <Loading />
+  }
   return (
-    <Grid2 className="add-edit-fuel-code-container" mx={-1}>
-      <div>
-        {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        )}
-      </div>
-      <div className="header">
-        <Typography variant="h5" color="primary">
-          {t('fuelCode:newFuelCodeTitle')}
-        </Typography>
-      </div>
-      <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-        <BCDataGridEditor
-          className="ag-theme-quartz"
-          getRowId={(params) => params.data.id}
-          gridRef={gridRef}
-          columnDefs={fuelCodeColDefs(t)}
-          defaultColDef={defaultColDef}
-          onGridReady={onGridReady}
-          rowData={rowData}
-          gridApi={gridApi}
-          columnApi={columnApi}
-          gridOptions={gridOptions}
-          getRowNodeId={(data) => data.id}
-          saveData={saveData}
-          defaultStatusBar={false}
-          statusBarcomponent={statusBarcomponent}
-        />
-      </BCBox>
-    </Grid2>
+    isFetched && (
+      <Grid2 className="add-edit-fuel-code-container" mx={-1}>
+        <div>
+          {alertMessage && (
+            <BCAlert data-test="alert-box" severity={alertSeverity}>
+              {alertMessage}
+            </BCAlert>
+          )}
+        </div>
+        <div className="header">
+          <Typography variant="h5" color="primary">
+            {t('fuelCode:newFuelCodeTitle')}
+          </Typography>
+        </div>
+        <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
+          <BCDataGridEditor
+            className="ag-theme-quartz"
+            getRowId={(params) => params.data.id}
+            gridRef={gridRef}
+            columnDefs={fuelCodeColDefs(t, optionsData)}
+            defaultColDef={defaultColDef}
+            onGridReady={onGridReady}
+            rowData={rowData}
+            gridApi={gridApi}
+            columnApi={columnApi}
+            gridOptions={gridOptions}
+            getRowNodeId={(data) => data.id}
+            saveData={saveData}
+            defaultStatusBar={false}
+            statusBarcomponent={statusBarcomponent}
+          />
+        </BCBox>
+        <Stack
+          direction={{ md: 'coloumn', lg: 'row' }}
+          spacing={{ xs: 2, sm: 2, md: 3 }}
+          useFlexGap
+          flexWrap="wrap"
+          m={2}
+        >
+          <BCButton
+            variant="contained"
+            size="medium"
+            color="primary"
+            startIcon={
+              <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
+            }
+            onClick={() => navigate(ROUTES.ADMIN_FUEL_CODES)}
+          >
+            <Typography variant="subtitle2">
+              {t('fuelCode:saveDraftBtn')}
+            </Typography>
+          </BCButton>
+        </Stack>
+      </Grid2>
+    )
   )
 }
