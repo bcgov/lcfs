@@ -9,7 +9,7 @@ import BCSansLightItalicTTF from '@bcgov/bc-sans/fonts/BCSans-LightItalic.woff2'
 import bceidImg from '@/assets/images/bceid.png'
 import loadingImg from '@/assets/images/logo_loading.svg'
 
-const { info, link, background, primary, light, dark, white, grey } = colors
+const { info, link, background, primary, light, dark, white, grey, error } = colors
 
 const bcSansRegular = {
   fontFamily: 'BCSans',
@@ -82,6 +82,63 @@ const globals = {
     '--ag-font-family':
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
+  },
+  '.ag-theme-material': {
+    '--ag-header-column-resize-handle-display': 'block',
+    '--ag-header-column-resize-handle-height': '30%',
+    '--ag-header-column-resize-handle-width': '2px',
+    '--ag-header-column-resize-handle-color': '#dde2eb',
+    '--ag-borders': `1px solid ${grey[700]}`,
+    '--ag-border-color': grey[700],
+    '--ag-odd-row-background-color': rgba(light.main, 0.6),
+    '--ag-header-background-color': background.grey,
+    '--ag-font-size': pxToRem(16),
+    '--ag-color': rgba(dark.main, 0.9),
+    '--ag-font-family':
+      "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
+    '--ag-row-hover-color': rgba(background.secondary, 1)
+  },
+  '.ag-theme-material .ag-grid-pagination-container': {
+    border: 'none',
+    borderBottom: `1px solid ${grey[700]}`
+  },
+  '.ag-theme-material .ag-floating-filter-input': {
+    backgroundColor: white.main
+  },
+  '.ag-theme-material .bc-column-set-filter .MuiOutlinedInput-notchedOutline': {
+    border: 'none',
+    borderBottom: '2px solid #495057'
+  },
+  '.ag-theme-quartz': {
+    '--ag-borders': 'none',
+    '--ag-odd-row-background-color': rgba(light.main, 0.6),
+    '--ag-header-background-color': background.grey,
+    '--ag-font-size': pxToRem(16),
+    '--ag-color': rgba(dark.main, 0.9),
+    '--ag-font-family':
+      "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
+    '--ag-row-hover-color': rgba(background.secondary, 1)
+  },
+  '.ag-theme-quartz .ag-header-cell-label': {
+    justifyContent: "center"
+  },
+  '.ag-theme-quartz .ag-cell:focus, .ag-input-field-input:focus, .ag-picker-field-wrapper:focus': {
+    borderRadius: '5px',
+    border: `2px solid ${error.main} !important`
+  },
+  '.ag-theme-quartz .ag-header-cell': {
+    fontWeight: 600,
+    color: grey[700]
+  },
+  '.ag-theme-quartz .ag-header-cell, .ag-theme-quartz .ag-cell': {
+    border: `1px solid ${grey[700]}`,
+    borderRadius: '4px'
+  },
+  '.ag-theme-material .ag-header-row,': {
+    borderTop: `1px solid ${grey[700]}`,
+  },
+  '.ag-theme-quartz .ag-center-cols-viewport': {
+    minHeight: 'unset !important'
   },
   '.ag-row-hover': {
     cursor: 'pointer'

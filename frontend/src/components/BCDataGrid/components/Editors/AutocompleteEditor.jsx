@@ -2,60 +2,91 @@ import { useState, forwardRef } from 'react'
 import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import BCBox from '@/components/BCBox'
+import PropTypes from 'prop-types'
 
-const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
-const checkedIcon = <CheckBoxIcon fontSize="small" />
+const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
+const checkedIcon = <CheckBoxIcon fontSize="medium" />
 
-export const AutocompleteEditor = forwardRef(
-  ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
-    const { columnWidth } = column.colDef
-    const [selectedValues, setSelectedValues] = useState(value)
-    const updateValue = (val) => {
-      setSelectedValues(val)
-      onValueChange(val)
+export const AutocompleteEditor = forwardRef((props, ref) => {
+  const { value, onValueChange } = props
+  const [selectedValues, setSelectedValues] = useState(value || [])
+  const updateValue = (val) => {
+    setSelectedValues(val)
+    onValueChange(val)
+    if (props.onDynamicUpdate) {
+      props.onDynamicUpdate(val, props)
     }
+  }
 
-    return (
+  return (
+    <BCBox
+      component="div"
+      aria-label="Select options from the drop down"
+      data-testid="ag-grid-editor-select-options"
+      sx={{
+        '& .MuiAutocomplete-inputRoot': {
+          padding: 0,
+          backgroundColor: '#fff',
+          '& .MuiOutlinedInput-notchedOutline': {
+            border: 'none'
+          }
+        }
+      }}
+    >
       <Autocomplete
+        sx={{
+          '.MuiOutlinedInput-root': {
+            padding: '2px 0px 2px 0px'
+          }
+        }}
+        openOnFocus={props.openOnFocus}
         value={selectedValues}
         onChange={(_, newValue) => updateValue(newValue)}
         multiple={props.multiple}
         disableCloseOnSelect={props.disableCloseOnSelect}
-        limitTags={2}
+        limitTags={3}
         id="bc-column-set-filter"
-        className="ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
+        className="ag-input-field ag-checkbox-input"
         role="list-box"
-        sx={{ width: columnWidth }}
         options={props.options}
         autoHighlight
-        size="small"
+        size="medium"
+        freeSolo={props.freeSolo}
         //   getOptionLabel={(option) => option}
         renderOption={(propsIn, option, { selected }) => {
           // Check if the current option is already selected
-          const isOptionSelected = value && value.includes(option)
+          const isOptionSelected =
+            selectedValues && selectedValues.includes(option)
           return (
             <Box
               component="li"
               key={option}
               className={
-                selected || isOptionSelected
+                (selected || isOptionSelected
                   ? 'ag-list-item ag-select-list-item selected'
-                  : 'ag-list-item ag-select-list-item'
+                  : 'ag-list-item ag-select-list-item') +
+                ' ag-custom-component-popup'
               }
               role="option"
-              sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
+              sx={{
+                border: 'none',
+                '& > img': { mr: 2, flexShrink: 0 }
+              }}
+              aria-label={`select ${option}`}
+              data-testid={`select-${option}`}
               {...propsIn}
             >
               {props.multiple && (
                 <Checkbox
                   color="primary"
-                  className="ag-set-filter-item-checkbox ag-labeled ag-label-align-right ag-checkbox ag-input-field"
                   role="presentation"
                   sx={{ border: '2px solid primary' }}
                   icon={icon}
                   checkedIcon={checkedIcon}
                   style={{ marginRight: 8 }}
                   checked={selected || isOptionSelected}
+                  inputProps={{ 'aria-label': 'controlled' }}
                 />
               )}
               {option}
@@ -64,12 +95,12 @@ export const AutocompleteEditor = forwardRef(
         }}
         renderInput={(params) => (
           <TextField
-            className="ag-text-field ag-input-field auto-select-filter"
+            className="ag-input-field ag-checkbox-input"
             role="presentation"
             {...params}
             label="Select"
             variant="outlined"
-            size="small"
+            size="medium"
             inputProps={{
               ...params.inputProps,
               autoComplete: 'new-password' // disable autocomplete and autofill
@@ -77,8 +108,28 @@ export const AutocompleteEditor = forwardRef(
           />
         )}
       />
-    )
-  }
-)
+    </BCBox>
+  )
+})
+
+AutocompleteEditor.propTypes = {
+  value: PropTypes.array.isRequired,
+  onValueChange: PropTypes.func.isRequired,
+  eventKey: PropTypes.string.isRequired,
+  rowIndex: PropTypes.number.isRequired,
+  column: PropTypes.object.isRequired,
+  openOnFocus: PropTypes.bool,
+  multiple: PropTypes.bool,
+  disableCloseOnSelect: PropTypes.bool,
+  options: PropTypes.array.isRequired,
+  freeSolo: PropTypes.bool
+}
+
+AutocompleteEditor.defaultProps = {
+  openOnFocus: true,
+  multiple: false,
+  disableCloseOnSelect: false,
+  freeSolo: false
+}
 
 AutocompleteEditor.displayName = 'AutocompleteEditor'

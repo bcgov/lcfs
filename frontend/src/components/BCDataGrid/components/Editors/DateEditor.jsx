@@ -1,4 +1,4 @@
-import { useState, forwardRef, useImperativeHandle } from 'react'
+import { useState, forwardRef } from 'react'
 import { format } from 'date-fns'
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
@@ -14,32 +14,6 @@ export const DateEditor = forwardRef(
       setSelectedDate(val)
       onValueChange(format(val, 'yyyy-MM-dd'))
     }
-
-    useImperativeHandle(ref, () => {
-      return {
-        getValue: () => {
-          let dateString = null
-          if (selectedDate) {
-            dateString = format(selectedDate, 'yyyy-MM-dd')
-          }
-          return dateString
-        },
-        isCancelAfterEnd: () => {
-          return !selectedDate
-        },
-        afterGuiAttached: () => {
-          if (!props.value) {
-            return
-          }
-          const [_, day, month, year] = props.value.match(
-            /(\d{2})\/(\d{2})\/(\d{4})/
-          )
-          const selectedDate = new Date(year, month - 1, day)
-          setSelectedDate(selectedDate)
-          onValueChange(selectedDate)
-        }
-      }
-    })
 
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
