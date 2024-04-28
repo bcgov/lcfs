@@ -113,6 +113,14 @@ const BCDataGridEditor = ({
     gridApi?.applyTransaction({ remove: selectedData })
   })
 
+  const cacheRowData = useCallback((params) => {
+    const allRowData = []
+    params.api.forEachNode((node) => {
+      allRowData.push(node.data)
+    })
+    localStorage.setItem(gridKey, JSON.stringify(allRowData))
+  })
+
   const onRowEditingStartedHandler = useCallback((params) => {
     params.api.refreshCells({
       columns: ['action'],
@@ -120,6 +128,7 @@ const BCDataGridEditor = ({
       force: true
     })
     onRowEditingStarted(params)
+    cacheRowData(params)
   })
 
   const onRowEditingStoppedHandler = useCallback((params) => {
@@ -130,6 +139,7 @@ const BCDataGridEditor = ({
       force: true
     })
     onRowEditingStopped(params)
+    cacheRowData(params)
   })
 
   // Function called when cell value changes

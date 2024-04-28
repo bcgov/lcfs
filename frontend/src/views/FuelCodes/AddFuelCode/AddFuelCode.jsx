@@ -27,7 +27,6 @@ export const AddFuelCode = () => {
   const [rowData, setRowData] = useState([])
   const [gridApi, setGridApi] = useState(null)
   const [columnApi, setColumnApi] = useState(null)
-  const [gridKey, setGridKey] = useState('add-fuel-code')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
 
@@ -40,6 +39,7 @@ export const AddFuelCode = () => {
   const { fuelCodeId } = useParams()
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
 
+  const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(() => ({
     overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
     autoSizeStrategy: {
@@ -73,9 +73,14 @@ export const AddFuelCode = () => {
     setColumnApi(params.columnApi)
 
     if (!fuelCodeId) {
-      const id = uuid()
-      const emptyRow = { id, modified: true }
-      setRowData([emptyRow])
+      const cachedRowData = JSON.parse(localStorage.getItem(gridKey))
+      if (cachedRowData && cachedRowData.length > 0) {
+        setRowData(cachedRowData)
+      } else {
+        const id = uuid()
+        const emptyRow = { id, modified: true }
+        setRowData([emptyRow])
+      }
     } else {
       try {
         const data = fetchData()
@@ -97,7 +102,7 @@ export const AddFuelCode = () => {
         params.node.setData({
           ...params.data,
           isValid: true,
-          validationgMsg: ''
+          validationMsg: ''
         })
       })
       .catch((err) => {
@@ -106,7 +111,7 @@ export const AddFuelCode = () => {
         params.node.setData({
           ...params.data,
           isValid: false,
-          validationgMsg: err.errors[0]
+          validationMsg: err.errors[0]
         })
       })
     alertRef.current.triggerAlert()
@@ -160,6 +165,7 @@ export const AddFuelCode = () => {
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCDataGridEditor
+            gridKey={gridKey}
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
@@ -167,6 +173,7 @@ export const AddFuelCode = () => {
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
+            setRowData={setRowData}
             gridApi={gridApi}
             columnApi={columnApi}
             gridOptions={gridOptions}

@@ -8,10 +8,8 @@ import {
   Warning,
   DoneAll
 } from '@mui/icons-material'
-import { useState } from 'react'
 
 export const ActionsRenderer = ({ onDuplicate, ...props }) => {
-  const [validationMsg, setValidationMsg] = useState()
   const isCurrentRowEditing = props.api
     .getEditingCells()
     .some((cell) => cell.rowIndex === props.node.rowIndex)
@@ -45,7 +43,7 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
           </IconButton>
         </Tooltip>
       )}
-      {props.data.isValid && props.isCurrentRowEditing && (
+      {(props.data.isValid === undefined || props.data.isValid) && isCurrentRowEditing && (
         <Tooltip title={'validation success'}>
           <IconButton
             aria-label="shows sign for validation"
