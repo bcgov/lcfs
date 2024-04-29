@@ -11,7 +11,8 @@ from lcfs.web.api import (
     organizations,
     transfer,
     transaction,
-    internal_comment
+    internal_comment,
+    fuel_code
 )
 
 api_router = APIRouter()
@@ -19,7 +20,8 @@ api_router.include_router(monitoring.router)
 api_router.include_router(
     transaction.router, prefix="/transactions", tags=["transactions"]
 )
-api_router.include_router(transfer.router, prefix="/transfers", tags=["transfers"])
+api_router.include_router(
+    transfer.router, prefix="/transfers", tags=["transfers"])
 api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(redis.router, prefix="/redis", tags=["redis"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
@@ -35,4 +37,7 @@ api_router.include_router(
 )
 api_router.include_router(
     internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
+)
+api_router.include_router(
+    fuel_code.router, prefix="/fuel_code", tags=["fuel_code"]
 )
