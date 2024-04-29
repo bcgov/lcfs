@@ -86,13 +86,13 @@ objects:
 
                           echo "==========> Removing expired backend images"
 
-                          runningBackendImageTag=$(oc -n $namespace describe dc/lcfs-backend-$env | grep Image | grep lcfs-backend | awk -F ':' '{print $4}') || true
+                          runningBackendImageTag=$(oc -n $namespace describe deployment/lcfs-backend-$env | grep Image | grep lcfs-backend | awk -F ':' '{print $4}') || true
                           
                           oc -n $namespace get imagetags | grep lcfs-backend | grep -v $runningBackendImageTag | awk '{print $1}' | xargs oc -n $namespace delete imagetag || true
 
                           echo "==========> Removing expired frontend images"
 
-                          runningFrontendImageTag=$(oc -n $namespace describe dc/lcfs-frontend-$env | grep Image | grep lcfs-backend | awk -F ':' '{print $4}') || true
+                          runningFrontendImageTag=$(oc -n $namespace describe deployment/lcfs-frontend-$env | grep Image | grep lcfs-backend | awk -F ':' '{print $4}') || true
                           
                           oc -n $namespace get imagetags | grep lcfs-frontend | grep -v $runningFrontendImageTag | awk '{print $1}' | xargs oc -n $namespace delete imagetag || true
 
