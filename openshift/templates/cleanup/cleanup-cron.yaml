@@ -92,11 +92,10 @@ objects:
 
                           echo "==========> Removing expired frontend images"
 
-                          runningFrontendImageTag=$(oc -n $namespace describe deployment/lcfs-frontend-$env | grep Image | grep lcfs-backend | awk -F ':' '{print $4}') || true
+                          runningFrontendImageTag=$(oc -n $namespace describe deployment/lcfs-frontend-$env | grep Image | grep lcfs-frontend | awk -F ':' '{print $4}') || true
                           
                           oc -n $namespace get imagetags | grep lcfs-frontend | grep -v $runningFrontendImageTag | awk '{print $1}' | xargs oc -n $namespace delete imagetag || true
-
-
+                          
                       done
 
               restartPolicy: OnFailure
