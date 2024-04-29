@@ -1,6 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useFuelCodeOptions = (params, options) => {
   const client = useApiService()
@@ -9,5 +9,23 @@ export const useFuelCodeOptions = (params, options) => {
     queryKey: ['fuel-code-options'],
     queryFn: async () => (await client.get(path)).data,
     ...options
+  })
+}
+
+export const useAddFuelCodes = (options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...options,
+    mutationFn: async ({ data }) => {
+      // Check if data is an array and isValid is true for all rows
+      if (!Array.isArray(data) || !data.every(item => item.isValid)) {
+        throw new Error('Validation failed: All fuel codes must be valid.');
+      }
+      await client.post(apiRoutes.addFuelCodes, data)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['fuel-codes'])
+    }
   })
 }

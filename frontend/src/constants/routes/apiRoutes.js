@@ -9,8 +9,9 @@ export const apiRoutes = {
   openapi: '/openapi.json/',
   updateCategory: '/transfers/:transferId/category',
   getTransfer: '/transfers/:transferId',
-  getFuelCode: '/fuel-code/:fuelCodeId',
-  fuelCodeOptions: '/fuel-code/table-options'
+  getFuelCode: '/fuel-codes/:fuelCodeId',
+  fuelCodeOptions: '/fuel-codes/table-options',
+  addFuelCodes: '/fuel-codes/save-fuel-codes'
 }
 
 export const viewRoutesTitle = {

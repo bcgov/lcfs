@@ -5,7 +5,7 @@
   "fuelCodeDownloadFailMsg": "Failed to download fuel code information.",
   "fuelCodeLoadFailMsg": "Failed to load fuel code information.",
   "newFuelCodeTitle": "Add new fuel code(s)",
-  "saveDraftBtn": "Save draft code(s)",
+  "saveDraftBtn": "Save draft code",
   "addRow": "Add row",
   "rows": "rows",
   "fuelCodeColLabels": {

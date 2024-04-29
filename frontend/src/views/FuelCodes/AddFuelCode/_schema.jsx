@@ -186,14 +186,14 @@ export const fuelCodeColDefs = (t, optionsData) => [
     suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
-  {
-    field: 'approvalDate',
-    headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    minWidth: 180,
-    suppressKeyboardEvent: (params) => params.editing,
-    cellEditor: 'dateEditor',
-    editable: false
-  },
+  // {
+  //   field: 'approvalDate',
+  //   headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+  //   minWidth: 180,
+  //   suppressKeyboardEvent: (params) => params.editing,
+  //   cellEditor: 'dateEditor',
+  //   editable: false
+  // },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
@@ -303,7 +303,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
     headerName: t('fuelCode:fuelCodeColLabels.notes'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    minWidth: 400
+    minWidth: 600
   }
 ]
 

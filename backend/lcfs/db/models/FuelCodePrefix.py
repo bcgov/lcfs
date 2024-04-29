@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Text
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
+from sqlalchemy.orm import relationship
 
 
 class FuelCodePrefix(BaseModel, Auditable, DisplayOrder):
@@ -10,3 +11,5 @@ class FuelCodePrefix(BaseModel, Auditable, DisplayOrder):
     fuel_code_prefix_id = Column(
         Integer, primary_key=True, autoincrement=True)
     prefix = Column(Text, nullable=False)
+
+    fuel_codes = relationship('FuelCode', back_populates='fuel_code_prefix')
