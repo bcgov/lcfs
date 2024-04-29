@@ -56,34 +56,28 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     facility_nameplate_capacity = Column(
         Integer, nullable=True, comment="Nameplate capacity"
     )
-    feedstock_transport_mode_id = Column(
-        Integer,
-        ForeignKey("transport_mode.transport_mode_id"),
-        comment="Feedstock transport mode",
-    )
-    finished_fuel_transport_mode_id = Column(
-        Integer,
-        ForeignKey("transport_mode.transport_mode_id"),
-        comment="Finished fuel transport mode",
-    )
     former_company = Column(String(500), nullable=True, comment="Former company")
     notes = Column(String(1000), nullable=True, comment="Notes")
 
-    # relationships for the fuel code
-    fuel_code_status = relationship("FuelCodeStatus", back_populates="fuel_codes", lazy="joined")
+    # Define the relationships
+    fuel_code_status = relationship(
+        "FuelCodeStatus", back_populates="fuel_codes", lazy="joined"
+    )
     fuel_code_prefix = relationship(
         "FuelCodePrefix", back_populates="fuel_codes", lazy="joined"
     )
-    fuel_code_type = relationship("FuelType", back_populates="fuel_codes", lazy="joined")
-    feedstock_transport_mode = relationship(
-        "TransportMode",
-        foreign_keys=[feedstock_transport_mode_id],
-        back_populates="feedstock_fuel_codes",
-        lazy="joined",
+    fuel_code_type = relationship(
+        "FuelType", back_populates="fuel_codes", lazy="joined"
     )
-    finished_fuel_transport_mode = relationship(
-        "TransportMode",
-        foreign_keys=[finished_fuel_transport_mode_id],
-        back_populates="finished_fuel_codes",
-        lazy="joined",
+    
+    feedstock_fuel_transport_modes = relationship(
+        "FeedstockFuelTransportMode",
+        back_populates="feedstock_fuel_code",
+        primaryjoin="FuelCode.fuel_code_id == FeedstockFuelTransportMode.fuel_code_id",
+    )
+
+    finished_fuel_transport_modes = relationship(
+        "FinishedFuelTransportMode",
+        back_populates="finished_fuel_code",
+        primaryjoin="FuelCode.fuel_code_id == FinishedFuelTransportMode.fuel_code_id",
     )

@@ -50,4 +50,4 @@ async def get_fuel_codes(
     service: FuelCodeServices = Depends(),
 ):
     """Endpoint to get list of fuel codes with pagination options"""
-    return await service.get_fuel_codes()
+    return await service.get_fuel_codes(pagination)

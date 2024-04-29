@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, Text
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
-from lcfs.db.models.FuelCode import FuelCode
 from sqlalchemy.orm import relationship
 
 
@@ -12,16 +11,15 @@ class TransportMode(BaseModel, Auditable, DisplayOrder):
     transport_mode_id = Column(Integer, primary_key=True, autoincrement=True)
     transport_mode = Column(Text, nullable=False)
 
-    # Relationship with feedstock_transport_mode
-    feedstock_fuel_codes = relationship(
-        "FuelCode",
-        back_populates="feedstock_transport_mode",
-        foreign_keys=[FuelCode.feedstock_transport_mode_id],
+    # Define relationships
+    feedstock_fuel_transport_modes = relationship(
+        "FeedstockFuelTransportMode",
+        back_populates="feedstock_fuel_transport_mode",
+        primaryjoin="TransportMode.transport_mode_id == FeedstockFuelTransportMode.transport_mode_id"
     )
 
-    # Relationship with finished_fuel_transport_mode
-    finished_fuel_codes = relationship(
-        "FuelCode",
+    finished_fuel_transport_modes = relationship(
+        "FinishedFuelTransportMode",
         back_populates="finished_fuel_transport_mode",
-        foreign_keys=[FuelCode.finished_fuel_transport_mode_id],
+        primaryjoin="TransportMode.transport_mode_id == FinishedFuelTransportMode.transport_mode_id"
     )

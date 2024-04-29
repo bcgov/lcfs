@@ -1,8 +1,8 @@
-"""Fuel Code Table creation
+"""Fuel code and related tables creation
 
-Revision ID: 045a09ad64cd
+Revision ID: 6e08afd00978
 Revises: a1c6c67c49c6
-Create Date: 2024-04-29 06:44:40.259612
+Create Date: 2024-04-29 14:43:47.390529
 
 """
 import sqlalchemy as sa
@@ -10,7 +10,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = "045a09ad64cd"
+revision = "6e08afd00978"
 down_revision = "a1c6c67c49c6"
 branch_labels = None
 depends_on = None
@@ -149,18 +149,6 @@ def upgrade() -> None:
             comment="Nameplate capacity",
         ),
         sa.Column(
-            "feedstock_transport_mode_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Feedstock transport mode",
-        ),
-        sa.Column(
-            "finished_fuel_transport_mode_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Finished fuel transport mode",
-        ),
-        sa.Column(
             "former_company",
             sa.String(length=500),
             nullable=True,
@@ -206,14 +194,6 @@ def upgrade() -> None:
             comment="The calendar date the value is no longer valid.",
         ),
         sa.ForeignKeyConstraint(
-            ["feedstock_transport_mode_id"],
-            ["transport_mode.transport_mode_id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["finished_fuel_transport_mode_id"],
-            ["transport_mode.transport_mode_id"],
-        ),
-        sa.ForeignKeyConstraint(
             ["fuel_status_id"],
             ["fuel_code_status.fuel_code_status_id"],
         ),
@@ -227,6 +207,118 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("fuel_code_id"),
         comment="Contains a list of all of fuel codes",
+    )
+    op.create_table(
+        "feedstock_fuel_transport_mode",
+        sa.Column(
+            "feedstock_fuel_transport_mode_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier",
+        ),
+        sa.Column(
+            "fuel_code_id", sa.Integer(), nullable=True, comment="Fuel code identifier"
+        ),
+        sa.Column(
+            "transport_mode_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Transport mode identifier",
+        ),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_code_id"], ["fuel_code.fuel_code_id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["transport_mode_id"],
+            ["transport_mode.transport_mode_id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("feedstock_fuel_transport_mode_id"),
+        sa.UniqueConstraint("fuel_code_id", "transport_mode_id"),
+        comment="Contains a list of transport modes associated with feedstock fuel",
+    )
+    op.create_table(
+        "finished_fuel_transport_mode",
+        sa.Column(
+            "finished_fuel_transport_mode_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier",
+        ),
+        sa.Column(
+            "fuel_code_id", sa.Integer(), nullable=True, comment="Fuel code identifier"
+        ),
+        sa.Column(
+            "transport_mode_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Transport mode identifier",
+        ),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_code_id"], ["fuel_code.fuel_code_id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["transport_mode_id"],
+            ["transport_mode.transport_mode_id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("finished_fuel_transport_mode_id"),
+        sa.UniqueConstraint("fuel_code_id", "transport_mode_id"),
+        comment="Contains a list of transport modes associated with finished fuel",
     )
     op.alter_column(
         "fuel_code_prefix",
@@ -303,6 +395,8 @@ def downgrade() -> None:
         type_=sa.VARCHAR(length=50),
         existing_nullable=False,
     )
+    op.drop_table("finished_fuel_transport_mode")
+    op.drop_table("feedstock_fuel_transport_mode")
     op.drop_table("fuel_code")
     op.drop_table("fuel_code_status")
     sa.Enum("Draft", "Approved", "Deleted", name="fuel_code_status_enum").drop(
