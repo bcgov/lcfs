@@ -5,7 +5,6 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, select, desc
 
-from lcfs.web.api.repo import BaseRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -23,7 +22,7 @@ from lcfs.web.api.user.repo import UserRepository
 logger = getLogger("internal_comment_repo")
 
 
-class InternalCommentRepository(BaseRepository):
+class InternalCommentRepository:
     """
     Repository class for internal comments
     """
@@ -34,7 +33,7 @@ class InternalCommentRepository(BaseRepository):
         Args:
             db (AsyncSession): Injected database session for executing asynchronous queries.
         """
-        super().__init__(db)
+        self.db = db
         self.user_repo = user_repo
 
     @repo_handler
@@ -53,7 +52,7 @@ class InternalCommentRepository(BaseRepository):
             InternalComment: The newly created internal comment with additional information such as 'full_name'.
         """
         self.db.add(internal_comment)
-        await self.commit_to_db()
+        await self.db.flush()
         await self.db.refresh(internal_comment)
 
         # Determine and create the appropriate entity association based on the provided entity type
@@ -68,13 +67,14 @@ class InternalCommentRepository(BaseRepository):
 
         # Add the association to the session and commit
         self.db.add(association)
-        await self.commit_to_db()
-        await self.db.refresh(internal_comment)
 
         # Update the internal comment with the creator's full name.
         internal_comment.full_name = await self.user_repo.get_full_name(
             internal_comment.create_user
         )
+        
+        await self.db.flush()
+        await self.db.refresh(internal_comment)
         return internal_comment
 
     @repo_handler
@@ -197,7 +197,7 @@ class InternalCommentRepository(BaseRepository):
             )
 
         internal_comment.comment = new_comment_text
-        await self.commit_to_db()
+        await self.db.flush()
         await self.db.refresh(internal_comment)
 
         # Updated the internal comment with the creator's full name.
