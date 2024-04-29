@@ -243,7 +243,7 @@ class TransferServices:
                                    {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
             )
 
-        await self.repo.commit_refresh_transfer(transfer)
+        await self.repo.refresh_transfer(transfer)
 
         if not hasattr(transfer.transfer_category, 'category'):
             today = datetime.now()
@@ -258,7 +258,7 @@ class TransferServices:
 
             await self.update_category(transfer.transfer_id, category)
 
-            await self.repo.commit_refresh_transfer(transfer)
+        await self.repo.refresh_transfer(transfer)
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
@@ -267,7 +267,8 @@ class TransferServices:
             organization_id=transfer.to_organization_id,
         )
         transfer.to_transaction = to_transaction
-        await self.repo.commit_refresh_transfer(transfer)
+
+        await self.repo.refresh_transfer(transfer)
 
     async def cancel_transfer(self, transfer):
         """"

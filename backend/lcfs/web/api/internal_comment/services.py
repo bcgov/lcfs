@@ -32,7 +32,7 @@ class InternalCommentService:
             request (Request, optional): The current HTTP request. Defaults to None.
             repo (InternalCommentRepository): The repository instance for internal comment operations.
         """
-        self.request = request,
+        self.request = request
         self.repo = repo
 
     @service_handler
@@ -48,7 +48,12 @@ class InternalCommentService:
         Returns:
             InternalCommentResponseSchema: The created internal comment as a data transfer object.
         """
-        comment = InternalComment(comment=data.comment, audience_scope=data.audience_scope)
+        username = self.request.user.keycloak_username
+        comment = InternalComment(
+            comment=data.comment, 
+            audience_scope=data.audience_scope, 
+            create_user=username
+        )
         created_comment = await self.repo.create_internal_comment(
             comment, data.entity_type, data.entity_id
         )

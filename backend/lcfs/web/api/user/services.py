@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
-from lcfs.web.core.decorators import service_handler, transactional
+from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
     FilterModel,
@@ -44,7 +44,6 @@ class UserServices:
         self.session = session
 
     @service_handler
-    @transactional
     async def export_users(self, export_format) -> StreamingResponse:
         """
         Prepares a list of users in a file that is downloadable
@@ -114,7 +113,6 @@ class UserServices:
         )
 
     @service_handler
-    @transactional
     async def get_all_users(self, pagination: PaginationRequestSchema) -> UsersSchema:
         """
         Get all users
@@ -133,7 +131,6 @@ class UserServices:
         )
 
     @service_handler
-    @transactional
     async def get_user_by_id(self, user_id: int) -> UserBaseSchema:
         """
         Get user info by ID
@@ -144,7 +141,6 @@ class UserServices:
         return UserBaseSchema.model_validate(user)
 
     @service_handler
-    @transactional
     async def create_user(self, user_create: UserCreateSchema) -> UserBaseSchema:
         """
         Create a new user
@@ -154,7 +150,6 @@ class UserServices:
         return user
 
     @service_handler
-    @transactional
     async def update_user(
         self, user_create: UserCreateSchema, user_id: int
     ) -> UserProfile:
@@ -169,7 +164,6 @@ class UserServices:
         return user
 
     @service_handler
-    @transactional
     async def delete_user(self, user_id: int) -> None:
         """
         Delete only if the user has never logged in to the system.
@@ -184,7 +178,6 @@ class UserServices:
         return None
 
     @service_handler
-    @transactional
     async def get_user_roles(self, user_id: int) -> List[dict]:
         """
         Get user roles
@@ -195,7 +188,6 @@ class UserServices:
         return [RoleSchema.model_validate(role.to_dict()) for role in user.user_roles]
 
     @service_handler
-    @transactional
     async def get_user_history(self, user_id: str) -> List[UserHistorySchema]:
         """
         Get user activities

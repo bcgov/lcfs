@@ -8,7 +8,6 @@ from sqlalchemy.orm import selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.api.repo import BaseRepository
 from lcfs.web.api.transfer.schema import TransferSchema
 
 from lcfs.db.models.Transfer import Transfer
@@ -20,9 +19,9 @@ from lcfs.db.models.UserProfile import UserProfile
 logger = getLogger("transfer_repo")
 
 
-class TransferRepository(BaseRepository):
+class TransferRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        super().__init__(db)
+        self.db = db
 
     @repo_handler
     async def get_all_transfers(self) -> List[Transfer]:
@@ -80,19 +79,18 @@ class TransferRepository(BaseRepository):
     async def create_transfer(self, transfer: Transfer) -> TransferSchema:
         """Save a transfer and its associated comment in the database."""
         self.db.add(transfer)
+        await self.db.flush()  # Ensures IDs and relationships are populated
+        await self.db.refresh(transfer, [
+            "from_organization",
+            "to_organization",
+            "current_status",
+            "transfer_category",
+            "transfer_history"
+        ])  # Ensures that all specified relations are up-to-date
 
-        await self.commit_to_db()
-        await self.db.refresh(
-            transfer,
-            [
-                "from_organization",
-                "to_organization",
-                "current_status",
-                "transfer_category",
-                "transfer_history"
-            ],
-        )
-        return TransferSchema.model_validate(transfer)
+        # Convert to schema
+        transfer_schema = TransferSchema.from_orm(transfer)
+        return transfer_schema
 
     @repo_handler
     async def get_transfer_status_by_id(self, transfer_status_id: int) -> TransferStatus:
@@ -131,8 +129,7 @@ class TransferRepository(BaseRepository):
     @repo_handler
     async def update_transfer(self, transfer: Transfer) -> TransferSchema:
         """Persists the changes made to the Transfer object to the database."""
-        # self.db.add(transfer)
-        await self.commit_to_db()
+        await self.db.flush()
         await self.db.refresh(
             transfer,
             [
@@ -163,16 +160,14 @@ class TransferRepository(BaseRepository):
             user_profile_id=user_profile_id
         )
         self.db.add(new_history_record)
-        await self.commit_to_db()
-        await self.db.refresh(new_history_record)
+        await self.db.flush()
         return new_history_record
 
     @repo_handler
-    async def commit_refresh_transfer(self, transfer: Transfer) -> Transfer:
+    async def refresh_transfer(self, transfer: Transfer) -> Transfer:
         """
         Commits and refreshes a transfer object in db session
 
         """
-        await self.commit_to_db()
         await self.db.refresh(transfer)
         return transfer

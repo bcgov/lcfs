@@ -144,7 +144,14 @@ class OrganizationListSchema(BaseSchema):
     organizations: List[OrganizationSchema]
 
 
-class OrganizationCreateSchema(OrganizationBase):
+class OrganizationCreateSchema(BaseSchema):
+    name: str
+    operating_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    edrms_record: Optional[str] = None
+    organization_status_id: int
+    organization_type_id: int
     address: OrganizationAddressCreateSchema
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
@@ -167,7 +174,7 @@ class OrganizationResponseSchema(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
-    org_status: OrganizationStatusSchema
+    org_status: Optional[OrganizationStatusSchema] = []
     org_address: Optional[OrganizationAddressSchema] = []
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
 
