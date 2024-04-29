@@ -11,7 +11,8 @@ export const apiRoutes = {
   getTransfer: '/transfers/:transferId',
   getFuelCode: '/fuel-codes/:fuelCodeId',
   fuelCodeOptions: '/fuel-codes/table-options',
-  addFuelCodes: '/fuel-codes/save-fuel-codes'
+  addFuelCodes: '/fuel-codes/save-fuel-codes',
+  getFuelCodes: '/fuel-codes/list'
 }
 
 export const viewRoutesTitle = {

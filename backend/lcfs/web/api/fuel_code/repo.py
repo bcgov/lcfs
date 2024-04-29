@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.FuelType import FuelType
 from lcfs.db.models.TransportMode import TransportMode
 from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.FeedstockFuelTransportMode import FeedstockFuelTransportMode
+from lcfs.db.models.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.web.api.base import PaginationRequestSchema, fuel_code_list_cache_key_builder
 from lcfs.web.api.fuel_code.schema import FuelCodeSchema
 from lcfs.db.models.FuelCode import FuelCode
@@ -58,19 +60,26 @@ class FuelCodeRepository:
             List[FuelCodeSchema]: A list of fuel codes matching the query.
         """
         conditions = []
+        # setup pagination
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        limit = pagination.size
         # Construct the select query with options for eager loading
         query = select(FuelCode).options(
             joinedload(FuelCode.fuel_code_status),
             joinedload(FuelCode.fuel_code_prefix),
             joinedload(FuelCode.fuel_code_type),
-            joinedload(FuelCode.feedstock_fuel_transport_modes),
-            joinedload(FuelCode.finished_fuel_transport_modes)
+            joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                FeedstockFuelTransportMode.feedstock_fuel_transport_mode
+            ),
+            joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                FinishedFuelTransportMode.finished_fuel_transport_mode
+            ),
         )
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
         total_count = (await self.db.execute(count_query)).scalar()
 
         # Execute the main query to retrieve all fuel codes
-        result = await self.db.execute(query)
+        result = await self.db.execute(query.offset(offset).limit(limit))
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count

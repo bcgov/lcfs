@@ -20,7 +20,7 @@ import { useApiService } from '@/services/useApiService'
 import { fuelCodeColDefs } from './_schema'
 import withRole from '@/utils/withRole'
 // Constants
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { roles } from '@/constants/roles'
 
 export const FuelCodes = () => {
@@ -131,7 +131,7 @@ export const FuelCodes = () => {
         <BCDataGridServer
           className={'ag-theme-material'}
           gridRef={gridRef}
-          apiEndpoint={'fuelCodes/'}
+          apiEndpoint={apiRoutes.getFuelCodes}
           apiData={'fuelCodes'}
           columnDefs={fuelCodeColDefs(t)}
           gridKey={gridKey}
