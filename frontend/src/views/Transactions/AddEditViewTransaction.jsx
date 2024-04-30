@@ -64,11 +64,11 @@ export const AddEditViewTransaction = () => {
   const title = useMemo(() => {
     const typeKey = transactionType === TransactionTypes.INITIATIVE_AGREEMENT ? 'initiativeAgreementId' : 'adminAdjustmentId';
     
-    if (!editorMode) return t(`txn:${typeKey}`) + transactionId;
+    if (!editorMode) return t(`txn:${typeKey}`) + ' ' + transactionId;
     switch (mode) {
       case 'add': return t('txn:newTransaction');
       case 'edit':
-      default: return t(`txn:${typeKey}`) + transactionId;
+      default: return t(`txn:${typeKey}`) + ' ' + transactionId;
     }
   }, [editorMode, mode, t, transactionId, transactionType]);
 

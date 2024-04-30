@@ -97,7 +97,7 @@ export const TransactionDetails = () => {
                           {t('txn:initiativeAgreement')}
                         </BCTypography>
                       }
-                      sx={{ marginRight: 4 }}
+                      sx={{ alignItems: 'center', marginRight: 8 }}
                     />
                     <FormControlLabel
                       value="administrativeAdjustment"
@@ -109,6 +109,7 @@ export const TransactionDetails = () => {
                           {t('txn:administrativeAdjustment')}
                         </BCTypography>
                       }
+                      sx={{ alignItems: 'center' }}
                     />
                   </RadioGroup>
                 )}
@@ -191,7 +192,7 @@ export const TransactionDetails = () => {
               {selectedOrgId && (
                 <BCBox mt={2}>
                   <BCTypography variant="body2">
-                    {t('txn:complianceBalance')}: {displayBalance()}
+                    {t('txn:complianceBalance')} {displayBalance()}
                   </BCTypography>
                 </BCBox>
               )}
