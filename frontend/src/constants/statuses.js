@@ -31,3 +31,7 @@ export const FUEL_CODE_STATUSES = {
   APPROVED: 'Approved',
   DELETED: 'Deleted'
 }
+
+export function getAllFuelCodeStatuses() {
+  return Object.values(FUEL_CODE_STATUSES)
+}
