@@ -84,3 +84,30 @@ class FuelCodeSchema(BaseSchema):
 class FuelCodesSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]
     pagination: PaginationResponseSchema
+
+
+class FuelCodeCreateSchema(BaseSchema):
+    id: Optional[str] = None
+    status: str
+    prefix: str
+    fuel_code: float
+    company: str
+    carbon_intensity: float
+    edrms: str
+    last_updated: date
+    application_date: date
+    approval_date: Optional[date] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    fuel: str = None  # Fuel Type
+    feedstock: str
+    feedstock_location: str
+    feedstock_misc: Optional[str] = None
+    fuel_production_facility_location: str
+    facility_nameplate_capacity: Optional[int] = None
+    feedstock_transport_mode: Optional[List[str]] = None
+    finished_fuel_transport_mode: Optional[List[str]] = None
+    former_company: Optional[str] = None
+    notes: Optional[str] = None
+    is_valid: Optional[bool] = False
+    validation_msg:  Optional[str] = None

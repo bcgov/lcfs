@@ -60,6 +60,7 @@ class FuelCodeRepository:
             List[FuelCodeSchema]: A list of fuel codes matching the query.
         """
         conditions = []
+        # TODO: Filtering and Sorting logic needs to be added.
         # setup pagination
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
@@ -83,3 +84,16 @@ class FuelCodeRepository:
         result = await self.db.execute(query.offset(offset).limit(limit))
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
+
+    @repo_handler
+    async def save_fuel_codes(self, fuel_codes: List[FuelCode]) -> str:
+        """
+        Saves fuel codes to the database.
+
+        Args:
+            fuel_codes (List[FuelCodeSchema]): A list of fuel codes to be saved.
+        """
+        self.db.add_all(fuel_codes)
+        await self.db.flush()
+
+        return "fuel codes added successfully"
