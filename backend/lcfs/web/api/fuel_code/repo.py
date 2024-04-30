@@ -7,7 +7,6 @@ from lcfs.db.dependencies import get_async_db_session
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.web.api.repo import BaseRepository
 from lcfs.db.models.FuelType import FuelType
 from lcfs.db.models.TransportMode import TransportMode
 from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
@@ -17,9 +16,9 @@ from lcfs.web.core.decorators import repo_handler
 logger = getLogger("fuel_code_repo")
 
 
-class FuelCodeRepository(BaseRepository):
+class FuelCodeRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
-        super().__init__(db)
+        self.db = db
 
     @repo_handler
     async def get_fuel_types(self) -> List[FuelType]:
