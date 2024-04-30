@@ -115,6 +115,7 @@ export const TransactionDetails = () => {
                 )}
               >
               </Controller>
+              {renderError('txnType')}
             </Grid>
 
             <Grid item lg={4} md={7} xs={12}>
