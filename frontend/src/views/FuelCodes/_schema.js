@@ -1,7 +1,7 @@
 import {
   LinkRenderer,
   FuelCodeStatusRenderer,
-  CommonArrayRenderer,
+  CommonArrayRenderer
 } from '@/utils/cellRenderers'
 
 export const fuelCodeColDefs = (t) => [
@@ -14,60 +14,84 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-    valueGetter: (params) => params.data.fuelCodePrefix.prefix
+    valueGetter: (params) => params.data.fuelCodePrefix.prefix,
+    cellRenderer: LinkRenderer
   },
-  { field: 'fuelCode', headerName: t('fuelCode:fuelCodeColLabels.fuelCode') },
+  {
+    field: 'fuelCode',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
+    cellRenderer: LinkRenderer
+  },
   {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
+    cellRenderer: LinkRenderer,
     minWidth: 300
   },
   {
     field: 'carbonIntensity',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellRenderer: LinkRenderer,
     type: 'numericColumn'
   },
-  { field: 'edrms', headerName: t('fuelCode:fuelCodeColLabels.edrms') },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellRenderer: LinkRenderer
+  },
   {
     field: 'applicationDate',
-    headerName: t('fuelCode:fuelCodeColLabels.applicationDate')
+    headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
+    cellRenderer: LinkRenderer
   },
   {
     field: 'approvalDate',
-    headerName: t('fuelCode:fuelCodeColLabels.approvalDate')
+    headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+    cellRenderer: LinkRenderer
   },
   {
     field: 'effectiveDate',
-    headerName: t('fuelCode:fuelCodeColLabels.effectiveDate')
+    headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
+    cellRenderer: LinkRenderer
   },
   {
     field: 'expirationDate',
-    headerName: t('fuelCode:fuelCodeColLabels.expiryDate')
+    headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
+    cellRenderer: LinkRenderer
   },
   {
     field: 'fuel',
     headerName: t('fuelCode:fuelCodeColLabels.fuel'),
+    cellRenderer: LinkRenderer,
     valueGetter: (params) => params.data.fuelCodeType.fuelType
   },
-  { field: 'feedstock', headerName: t('fuelCode:fuelCodeColLabels.feedstock') },
+  {
+    field: 'feedstock',
+    headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
+    cellRenderer: LinkRenderer
+  },
   {
     field: 'feedstockLocation',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
+    cellRenderer: LinkRenderer,
     minWidth: 300
   },
   {
     field: 'feedstockMisc',
     headerName: t('fuelCode:fuelCodeColLabels.misc'),
+    cellRenderer: LinkRenderer,
     minWidth: 495
   },
   {
     field: 'fuelProductionFacilityLocation',
     headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'),
+    cellRenderer: LinkRenderer,
     minWidth: 325
   },
   {
     field: 'facilityNameplateCapacity',
     headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
+    cellRenderer: LinkRenderer,
     minWidth: 290,
     type: 'numericColumn'
   },
@@ -94,15 +118,18 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'formerCompany',
     headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
+    cellRenderer: LinkRenderer,
     minWidth: 300
   },
   {
     field: 'lastUpdated',
-    headerName: t('fuelCode:fuelCodeColLabels.lastUpdated')
+    headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
+    cellRenderer: LinkRenderer
   },
   {
     field: 'notes',
     headerName: t('fuelCode:fuelCodeColLabels.notes'),
+    cellRenderer: LinkRenderer,
     minWidth: 600
   }
 ]
