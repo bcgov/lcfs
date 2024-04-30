@@ -144,6 +144,7 @@ export const AddFuelCode = () => {
   const { mutate: addFuelCodes, isLoading: isAddFuelCodeLoading } =
     useAddFuelCodes({
       onSuccess: () => {
+        localStorage.removeItem(gridKey)
         navigate(ROUTES.ADMIN_FUEL_CODES, {
           state: {
             message: t('fuelCode:fuelCodeAddSuccessMsg'),
@@ -212,7 +213,7 @@ export const AddFuelCode = () => {
               ref={alertRef}
               data-test="alert-box"
               severity={alertSeverity}
-              delay={10000}
+              delay={5000}
             >
               {alertMessage}
             </BCAlert>
