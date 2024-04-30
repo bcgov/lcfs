@@ -68,5 +68,6 @@ from . import (
     FuelCodeStatus,
     FuelType,
     FeedstockFuelTransportMode,
-    FinishedFuelTransportMode
+    FinishedFuelTransportMode,
+    TransportMode,
 )
