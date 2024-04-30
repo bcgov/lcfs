@@ -56,6 +56,7 @@ from . import (
     AdminAdjustment,
     AdminAdjustmentStatus,
     AdminAdjustmentHistory,
+    AdminAdjustmentInternalComment,
     InitiativeAgreement,
     InitiativeAgreementStatus,
     InitiativeAgreementHistory,

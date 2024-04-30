@@ -22,6 +22,7 @@ class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
     comments = relationship('Comment', back_populates='admin_adjustment')
     admin_adjustment_history_records = relationship('AdminAdjustmentHistory', back_populates='admin_adjustment')
     current_status = relationship('AdminAdjustmentStatus')
+    admin_adjustment_internal_comments = relationship('AdminAdjustmentInternalComment', back_populates='admin_adjustment')
 
     def __repr__(self):
         return self.compliance_units

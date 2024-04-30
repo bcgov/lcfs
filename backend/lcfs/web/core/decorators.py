@@ -75,10 +75,7 @@ def view_handler(func):
         except Exception as e:
             file_path = inspect.getfile(func)
             func_name = func.__name__
-            logger.error(
-                f"View error in \
-                    {func_name} (file: {file_path}) - {str(e)}"
-            )
+            logger.error(f"View error in {func_name} (file: {file_path}) - {e}", exc_info=True)
             raise HTTPException(
                 status_code=500, detail=f"Internal Server Error")
     return wrapper
@@ -99,10 +96,7 @@ def service_handler(func):
         except Exception as e:
             file_path = inspect.getfile(func)
             func_name = func.__name__
-            logger.error(
-                f"Service error in \
-                    {func_name} (file: {file_path}) - {str(e)}"
-            )
+            logger.error(f"Service error in {func_name} (file: {file_path}) - {e}", exc_info=True)
             raise ServiceException
     return wrapper
 
@@ -121,8 +115,6 @@ def repo_handler(func):
         except Exception as e:
             file_path = inspect.getfile(func)
             func_name = func.__name__
-            logger.error(
-                f"Repo error in {func_name} (file: {file_path}) - {str(e)}"
-            )
+            logger.error(f"Repo error in {func_name} (file: {file_path}) - {e}", exc_info=True)
             raise DatabaseException
     return wrapper

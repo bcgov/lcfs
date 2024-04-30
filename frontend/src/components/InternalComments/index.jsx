@@ -18,6 +18,7 @@ const InternalComments = ({ entityType, entityId }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [addCommentKey, setAddCommentKey] = useState(0);
+  const showAddCommentBtn = entityId === null ? false : true;
 
   // Determines the audience scope for a new comment based on the user's roles.
   const getAudienceScope = () => {
@@ -63,6 +64,9 @@ const InternalComments = ({ entityType, entityId }) => {
 
   // Loads comments for the specified entity when component mounts or entityId changes.
   useEffect(() => {
+    if (!showAddCommentBtn)
+      return;
+
     const loadComments = async () => {
       setIsLoading(true);
       try {
@@ -124,13 +128,17 @@ const InternalComments = ({ entityType, entityId }) => {
       onAddComment={handleAddComment}
       onEditComment={handleEditComment}
       addCommentFormKey={addCommentKey}
+      showAddCommentBtn={showAddCommentBtn}
     />
   );
 };
 
 InternalComments.propTypes = {
   entityType: PropTypes.string.isRequired,
-  entityId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  entityId: PropTypes.oneOfType([
+    PropTypes.number,
+    PropTypes.oneOf([null])
+  ])
 };
 
 export default InternalComments;
