@@ -83,7 +83,9 @@ class FuelCodeRepository:
         total_count = (await self.db.execute(count_query)).scalar()
 
         # Execute the main query to retrieve all fuel codes
-        result = await self.db.execute(query.offset(offset).limit(limit))
+        result = await self.db.execute(
+            query.offset(offset).limit(limit).order_by(FuelCode.create_date.desc())
+        )
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
 
