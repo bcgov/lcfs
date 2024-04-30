@@ -5,6 +5,8 @@
   "fuelCodeDownloadFailMsg": "Failed to download fuel code information.",
   "fuelCodeLoadFailMsg": "Failed to load fuel code information.",
   "newFuelCodeTitle": "Add new fuel code(s)",
+  "fuelCodeAddSuccessMsg": "Fuel code(s) added successfully.",
+  "fuelCodeAddFailMsg": "Failed to add fuel code(s).",
   "saveDraftBtn": "Save draft code",
   "addRow": "Add row",
   "rows": "rows",

@@ -3,21 +3,21 @@ from typing import List
 
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
-from fastapi_cache.decorator import cache
 
-from sqlalchemy import select, update, func, desc, asc, and_, case, or_
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from lcfs.db.models.FuelType import FuelType
 from lcfs.db.models.TransportMode import TransportMode
 from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.FinishedFuelTransportMode import FinishedFuelTransportMode
-from lcfs.web.api.base import PaginationRequestSchema, fuel_code_list_cache_key_builder
-from lcfs.web.api.fuel_code.schema import FuelCodeSchema
+from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
 from lcfs.db.models.FuelCode import FuelCode
+from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.fuel_code.schema import FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
-from sqlalchemy.orm import joinedload
 
 logger = getLogger("fuel_code_repo")
 
@@ -42,11 +42,13 @@ class FuelCodeRepository:
         return (await self.db.execute(select(FuelCodePrefix))).scalars().all()
 
     @repo_handler
-    # @cache(
-    #     expire=3600 * 24,
-    #     key_builder=fuel_code_list_cache_key_builder,
-    #     namespace="users",
-    # )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
+    async def get_fuel_status_by_status(self, status: str) -> FuelCodeStatus:
+        """Get fuel status by name"""
+        return (
+            await self.db.execute(select(FuelCodeStatus).filter_by(status=status))
+        ).scalar()
+
+    @repo_handler
     async def get_fuel_codes_paginated(
         self, pagination: PaginationRequestSchema
     ) -> List[FuelCodeSchema]:

@@ -202,7 +202,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
     cellEditor: 'dateEditor'
   },
   {
-    field: 'expiryDate',
+    field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
     minWidth: 180,
     suppressKeyboardEvent: (params) => params.editing,
@@ -240,7 +240,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
     minWidth: 300
   },
   {
-    field: 'misc',
+    field: 'feedstockMisc',
     headerName: t('fuelCode:fuelCodeColLabels.misc'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',

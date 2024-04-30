@@ -77,28 +77,10 @@ class FuelCodeServices:
             ],
         )
 
-    def convert_to_model(self, fuel_code: FuelCodeCreateSchema) -> None:
+    async def convert_to_model(self, fuel_code: FuelCodeCreateSchema) -> FuelCode:
         """
         converts data from FuelCodeCreateSchema to FuelCode data model to store into database.
         """
-        feedstock_fuel_transport_modes: FeedstockFuelTransportMode = []
-
-        feedstock_fuel_transport_modes = []
-        for item in fuel_code.feedstock_transport_mode:
-            transport_mode = TransportMode(transport_mode=item)
-            feedstock_fuel_transport_modes.append(
-                FeedstockFuelTransportMode(feedstock_fuel_transport_mode=transport_mode)
-            )
-        finished_fuel_transport_modes = []
-        for item in fuel_code.finished_fuel_transport_mode:
-            transport_mode = TransportMode(transport_mode=item)
-            finished_fuel_transport_modes.append(
-                FinishedFuelTransportMode(finished_fuel_transport_mode=transport_mode)
-            )
-
-        fuel_code_status = FuelCodeStatus(status=FuelCodeStatusEnum[fuel_code.status])
-        fuel_code_prefix = FuelCodePrefix(prefix=fuel_code.prefix)
-        fuel_code_type = FuelType(fuel_type=fuel_code.fuel)
         fc = FuelCode(
             **fuel_code.model_dump(
                 exclude={
@@ -107,6 +89,8 @@ class FuelCodeServices:
                     "fuel",
                     "feedstock_transport_mode",
                     "finished_fuel_transport_mode",
+                    "feedstock_fuel_transport_modes",
+                    "finished_fuel_transport_modes",
                     "status",
                     "is_valid",
                     "validation_msg",
@@ -114,24 +98,34 @@ class FuelCodeServices:
                 }
             )
         )
-        fc.feedstock_fuel_transport_modes = feedstock_fuel_transport_modes
-        fc.finished_fuel_transport_modes = finished_fuel_transport_modes
-        fc.fuel_code_status = fuel_code_status
-        fc.fuel_code_prefix = fuel_code_prefix
-        fc.fuel_code_type = fuel_code_type
+        fc.fuel_code_status = await self.repo.get_fuel_status_by_status(
+            fuel_code.status
+        )
         fc.fuel_code = str(fuel_code.fuel_code)
+        fc.feedstock_fuel_transport_modes = [
+            FeedstockFuelTransportMode(
+                fuel_code_id=fc.fuel_code_id,
+                transport_mode_id=item.transport_mode_id,
+            )
+            for item in fuel_code.feedstock_fuel_transport_modes
+        ]
+        fc.finished_fuel_transport_modes = [
+            FinishedFuelTransportMode(
+                fuel_code_id=fc.fuel_code_id,
+                transport_mode_id=item.transport_mode_id,
+            )
+            for item in fuel_code.finished_fuel_transport_modes
+        ]
         return fc
 
     @service_handler
-    async def save_fuel_codes(
-        self, fuel_codes: List[FuelCodeCreateSchema]
-    ) -> str:
+    async def save_fuel_codes(self, fuel_codes: List[FuelCodeCreateSchema]) -> str:
         """
         Saves the list of fuel codes.
         """
-        logger.info(f"Saving {len(fuel_codes)} fuel codes")
+        logger.info(f"Saving {len(fuel_codes)} fuel code(s)")
         fuel_code_models = []
         for fuel_code in fuel_codes:
-            fuel_code_models.append(self.convert_to_model(fuel_code))
+            fuel_code_models.append(await self.convert_to_model(fuel_code))
         if len(fuel_code_models) > 0:
             return await self.repo.save_fuel_codes(fuel_code_models)

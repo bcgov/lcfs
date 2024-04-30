@@ -24,7 +24,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         comment="Prefix ID",
     )
-    fuel_code = Column(String(50), nullable=False, comment="Fuel code")
+    fuel_code = Column(String(20), nullable=False, comment="Fuel code")
     company = Column(String(500), nullable=False, comment="Company name")
     carbon_intensity = Column(
         Numeric(precision=10, scale=2, asdecimal=True), nullable=False

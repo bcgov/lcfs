@@ -18,10 +18,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 // services
 import { useApiService } from '@/services/useApiService'
-import { useFuelCodeOptions } from '@/hooks/useFuelCode'
+import { useFuelCodeOptions, useAddFuelCodes } from '@/hooks/useFuelCode'
 import { v4 as uuid } from 'uuid'
 // constants
 import { ROUTES, apiRoutes } from '@/constants/routes'
+import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
 export const AddFuelCode = () => {
   const [rowData, setRowData] = useState([])
@@ -140,7 +141,66 @@ export const AddFuelCode = () => {
     )
   })
 
-  if (isLoading) {
+  const { mutate: addFuelCodes, isLoading: isAddFuelCodeLoading } =
+    useAddFuelCodes({
+      onSuccess: () => {
+        navigate(ROUTES.ADMIN_FUEL_CODES, {
+          state: {
+            message: t('fuelCode:fuelCodeAddSuccessMsg'),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        setAlertMessage(t('fuelCode:fuelCodeAddFailMsg') + ' ' + error)
+        setAlertSeverity('error')
+        alertRef.current.triggerAlert()
+      }
+    })
+
+  const getTransportModeIds = useCallback((transportMode) => {
+    const transportModeIds = []
+    if (transportMode) {
+      transportMode.forEach((transportMode) => {
+        transportModeIds.push({
+          fuelCodeId: null,
+          transportModeId: optionsData.transportModes.find(
+            (elm) => elm.transportMode === transportMode
+          ).transportModeId
+        })
+      })
+    }
+    return transportModeIds
+  })
+
+  const handleSaveDraftCodes = useCallback(() => {
+    const allRowData = []
+    gridApi.forEachNode((node) => {
+      // get status_id, prefix_id, fuel_type_id
+      // transport_mode_id for feedstock and finished fuels
+      const data = {
+        ...node.data,
+        lastUpdated: new Date().toLocaleDateString(),
+        status: FUEL_CODE_STATUSES.DRAFT,
+        prefix_id: optionsData.fuelCodePrefixes.find(
+          (elm) => elm.prefix === node.data.prefix
+        ).fuelCodePrefixId,
+        fuelTypeId: optionsData.fuelTypes.find(
+          (elm) => elm.fuelType === node.data.fuel
+        ).fuelTypeId,
+        feedstockFuelTransportModes: [
+          ...getTransportModeIds(node.data.feedstockTransportMode)
+        ],
+        finishedFuelTransportModes: [
+          ...getTransportModeIds(node.data.finishedFuelTransportMode)
+        ]
+      }
+      allRowData.push(data)
+    })
+    addFuelCodes({ data: allRowData })
+  })
+
+  if (isLoading || isAddFuelCodeLoading) {
     return <Loading />
   }
   return (
@@ -152,7 +212,7 @@ export const AddFuelCode = () => {
               ref={alertRef}
               data-test="alert-box"
               severity={alertSeverity}
-              delay={5000}
+              delay={10000}
             >
               {alertMessage}
             </BCAlert>
@@ -199,7 +259,7 @@ export const AddFuelCode = () => {
             startIcon={
               <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
             }
-            onClick={() => navigate(ROUTES.ADMIN_FUEL_CODES)}
+            onClick={handleSaveDraftCodes}
           >
             <Typography variant="subtitle2">
               {t('fuelCode:saveDraftBtn')}

@@ -30,14 +30,14 @@ class FeedstockFuelTransportModeSchema(BaseSchema):
     feedstock_fuel_transport_mode_id: Optional[int] = None
     fuel_code_id: Optional[int] = None
     transport_mode_id: Optional[int] = None
-    feedstock_fuel_transport_mode: TransportModeSchema
+    feedstock_fuel_transport_mode: Optional[TransportModeSchema] = None
 
 
 class FinishedFuelTransportModeSchema(BaseSchema):
     finished_fuel_transport_mode_id: Optional[int] = None
     fuel_code_id: Optional[int] = None
     transport_mode_id: Optional[int] = None
-    finished_fuel_transport_mode: TransportModeSchema
+    finished_fuel_transport_mode: Optional[TransportModeSchema] = None
 
 
 class FuelCodePrefixSchema(BaseSchema):
@@ -62,6 +62,8 @@ class FuelCodeSchema(BaseSchema):
     last_updated: date
     application_date: date
     approval_date: Optional[date] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
     fuel_type_id: int
     feedstock: str
     feedstock_location: str
@@ -73,12 +75,8 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
     fuel_code_type: Optional[FuelTypeSchema] = None
-    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
-        None
-    )
-    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
-        None
-    )
+    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = None
+    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = None
 
 
 class FuelCodesSchema(BaseSchema):
@@ -88,8 +86,10 @@ class FuelCodesSchema(BaseSchema):
 
 class FuelCodeCreateSchema(BaseSchema):
     id: Optional[str] = None
+    fuel_code_id: Optional[int] = None
     status: str
     prefix: str
+    prefix_id: int
     fuel_code: float
     company: str
     carbon_intensity: float
@@ -100,6 +100,7 @@ class FuelCodeCreateSchema(BaseSchema):
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
     fuel: str = None  # Fuel Type
+    fuel_type_id: int
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
@@ -107,7 +108,13 @@ class FuelCodeCreateSchema(BaseSchema):
     facility_nameplate_capacity: Optional[int] = None
     feedstock_transport_mode: Optional[List[str]] = None
     finished_fuel_transport_mode: Optional[List[str]] = None
+    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
+        None
+    )
+    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
+        None
+    )
     former_company: Optional[str] = None
     notes: Optional[str] = None
     is_valid: Optional[bool] = False
-    validation_msg:  Optional[str] = None
+    validation_msg: Optional[str] = None
