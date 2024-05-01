@@ -289,9 +289,8 @@ class TransactionRepository:
             .where(Transaction.transaction_id == transaction_id)
             .values(transaction_action=TransactionActionEnum.Adjustment)
         )
-
         # Commit the update to make it permanent
-        await self.db.commit()
+        # await self.db.commit()
 
         # Check if the update statement affected any rows
         if result.rowcount > 0:
