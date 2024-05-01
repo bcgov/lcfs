@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, select, desc
+from sqlalchemy import select, desc
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -13,6 +13,7 @@ from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.InternalComment import InternalComment
 from lcfs.db.models.TransferInternalComment import TransferInternalComment
 from lcfs.db.models.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
+from lcfs.db.models.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
 
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 
@@ -41,7 +42,7 @@ class InternalCommentRepository:
         self, internal_comment: InternalComment, entity_type: EntityTypeEnum, entity_id: int
     ):
         """
-        Creates a new internal comment and associates it with a transfer or initiative agreement entity.
+        Creates a new internal comment and associates it with a transfer, initiative agreement or admin adjustment entity.
 
         Args:
             internal_comment (InternalComment): The internal comment object to be added to the database.
@@ -64,6 +65,10 @@ class InternalCommentRepository:
             association = InitiativeAgreementInternalComment(
                 initiative_agreement_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
             )
+        elif entity_type == EntityTypeEnum.ADMIN_ADJUSTMENT:
+            association = AdminAdjustmentInternalComment(
+                admin_adjustment_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
+            )
 
         # Add the association to the session and commit
         self.db.add(association)
@@ -72,7 +77,7 @@ class InternalCommentRepository:
         internal_comment.full_name = await self.user_repo.get_full_name(
             internal_comment.create_user
         )
-        
+
         await self.db.flush()
         await self.db.refresh(internal_comment)
         return internal_comment
@@ -105,6 +110,10 @@ class InternalCommentRepository:
             EntityTypeEnum.INITIATIVE_AGREEMENT: (
                 InitiativeAgreementInternalComment,
                 InitiativeAgreementInternalComment.initiative_agreement_id
+            ),
+            EntityTypeEnum.ADMIN_ADJUSTMENT: (
+                AdminAdjustmentInternalComment,
+                AdminAdjustmentInternalComment.admin_adjustment_id
             ),
         }
 
@@ -140,7 +149,7 @@ class InternalCommentRepository:
         } for internal_comment, full_name in results]
 
         return comments_with_user_info
-    
+
     @repo_handler
     async def get_internal_comment_by_id(self, internal_comment_id: int) -> InternalComment:
         """

@@ -16,6 +16,14 @@ export const TRANSFER_RECOMMENDATION = {
   REFUSE: 'Refuse'
 }
 
+export const TRANSACTION_STATUSES = {
+  NEW: 'New', // Limited only for frontend
+  DRAFT: 'Draft',
+  RECOMMENDED: 'Recommended',
+  APPROVED: 'Approved',
+  DELETED: 'Deleted'
+}
+
 export const ORGANIZATION_STATUSES = {
   UNREGISTERED: 'Unregistered',
   REGISTERED: 'Registered',

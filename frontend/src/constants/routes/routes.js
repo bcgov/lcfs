@@ -2,7 +2,9 @@ export const DASHBOARD = '/'
 export const LOGIN = '/login'
 
 export const TRANSACTIONS = '/transactions'
-export const TRANSACTIONS_VIEW = `${TRANSACTIONS}/:transactionID`
+export const TRANSACTIONS_ADD = `${TRANSACTIONS}/add`
+export const TRANSACTIONS_EDIT = `${TRANSACTIONS}/edit/:transactionId`
+export const TRANSACTIONS_VIEW = `${TRANSACTIONS}/:transactionId`
 
 export const TRANSFERS = '/transfers'
 export const TRANSFERS_ADD = `${TRANSFERS}/add`

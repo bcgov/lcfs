@@ -11,7 +11,7 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
-const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCancel, isEditing = false }) => {
+const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCancel, isEditing = false, showAddCommentBtn = true }) => {
   const { t } = useTranslation(['internalComment'])
   const [commentText, setCommentText] = useState(initialCommentText);
 
@@ -50,16 +50,18 @@ const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCance
         formats={['bold', 'italic', 'list', 'bullet']}
       />
       <BCBox sx={{ marginTop: 1 }}>
-        <BCButton
-          size="small"
-          variant="contained"
-          color="primary"
-          onClick={() => onSubmit(commentText)}
-          disabled={!commentText.trim()}
-          sx={{ marginRight: 1 }}
-        >
-          {isEditing ? t('internalComment:saveChanges') : t('internalComment:addComment')}
-        </BCButton>
+        {showAddCommentBtn && (
+          <BCButton
+            size="small"
+            variant="contained"
+            color="primary"
+            onClick={() => onSubmit(commentText)}
+            disabled={!commentText.trim()}
+            sx={{ marginRight: 1 }}
+          >
+            {isEditing ? t('internalComment:saveChanges') : t('internalComment:addComment')}
+          </BCButton>
+        )}
         {isEditing && (
           <BCButton
             size="small"
