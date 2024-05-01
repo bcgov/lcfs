@@ -20,7 +20,7 @@ export const useAddFuelCodes = (options) => {
     mutationFn: async ({ data }) => {
       // Check if data is an array and isValid is true for all rows
       if (!Array.isArray(data) || !data.every(item => item.isValid)) {
-        throw new Error('Validation failed: All fuel codes must be valid.');
+        throw new Error('All fuel codes must be validated before saving.');
       }
       await client.post(apiRoutes.addFuelCodes, data)
     },

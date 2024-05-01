@@ -145,6 +145,9 @@ const globals = {
   '.ag-theme-quartz .ag-center-cols-viewport': {
     minHeight: 'unset !important'
   },
+  '.ag-theme-quartz .ag-cell-not-inline-editing .ag-cell:focus': {
+    border: `2px solid ${primary.main}`
+  },
   '.ag-theme-material .ag-row-hover': {
     cursor: 'pointer'
   },
@@ -168,7 +171,7 @@ const globals = {
     justifyContent: 'flex-start'
   },
   '#bc-column-set-filter-listbox, #organizations-listbox, .MuiMenu-list': {
-    '& > li:hover, & > li:focus': {
+    '& > li:hover, & > li:focus, & > li:blur': {
       backgroundColor: primary.light,
       color: white.main
     }
@@ -202,7 +205,7 @@ const globals = {
     height: '1rem'
   },
   '#bc-column-set-filter-listbox, #organizations-listbox': {
-    '& > li:hover, & > li:focus': {
+    '& > li:hover, & > li:focus, & > li:blur': {
       backgroundColor: primary.light,
       color: white.main
     }

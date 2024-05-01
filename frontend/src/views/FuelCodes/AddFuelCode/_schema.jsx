@@ -1,6 +1,8 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
+import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import * as yup from 'yup'
 import { v4 as uuid } from 'uuid'
+import { Typography } from '@mui/material'
 
 // copy the desired columns to new row
 const duplicateRow = (props) => {
@@ -122,6 +124,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     cellEditor: 'autocompleteEditor',
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditorParams: {
       onDynamicUpdate: onPrefixUpdate, // to alter any other column based on the value selected.
       // (ensure valueGetter is not added to the column which you want to update dynamically)
@@ -170,7 +175,13 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'lastUpdated',
     headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
+    maxWidth: 180,
     minWidth: 180,
+    cellRenderer: (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    ),
     editable: false, // TODO: change as per #516
     cellDataType: 'dateString',
     valueGetter: (params) => {
@@ -180,7 +191,13 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
+    maxWidth: 180,
     minWidth: 180,
+    cellRenderer: (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    ),
     suppressKeyboardEvent: (params) =>
       params.editing &&
       (params.event.key === KEY_ENTER || params.event.key === KEY_TAB),
@@ -189,7 +206,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
   // {
   //   field: 'approvalDate',
   //   headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+  //   maxWidth: 180,
   //   minWidth: 180,
+  // cellRenderer: (params) => <Typography variant="body4">{params.value ? params.value : "YYYY-MM-DD"}</Typography>,
   //   suppressKeyboardEvent: (params) => params.editing,
   //   cellEditor: 'dateEditor',
   //   editable: false
@@ -197,14 +216,26 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
+    maxWidth: 180,
     minWidth: 180,
+    cellRenderer: (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    ),
     suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
+    maxWidth: 180,
     minWidth: 180,
+    cellRenderer: (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    ),
     suppressKeyboardEvent: (params) => params.editing,
     cellEditor: 'dateEditor'
   },
@@ -212,6 +243,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
     field: 'fuel',
     headerName: t('fuelCode:fuelCodeColLabels.fuel'),
     cellEditor: 'autocompleteEditor',
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditorParams: {
       options: optionsData.fuelTypes.map((obj) => obj.fuelType),
       multiple: false, // ability to select multiple values from dropdown
@@ -269,6 +303,15 @@ export const fuelCodeColDefs = (t, optionsData) => [
     field: 'feedstockTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     cellEditor: 'autocompleteEditor',
+    cellRenderer: (params) =>
+      params.value ? (
+        <CommonArrayRenderer {...params} />
+      ) : (
+        <Typography variant="body4">Select</Typography>
+      ),
+    cellRendererParams: {
+      disableLink: true
+    },
     cellEditorParams: {
       options: optionsData.transportModes.map((obj) => obj.transportMode),
       multiple: true,
@@ -276,12 +319,21 @@ export const fuelCodeColDefs = (t, optionsData) => [
       disableCloseOnSelect: true
     },
     suppressKeyboardEvent: (params) => params.editing,
-    minWidth: 300
+    minWidth: 325
   },
   {
     field: 'finishedFuelTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: 'autocompleteEditor',
+    cellRenderer: (params) =>
+      params.value ? (
+        <CommonArrayRenderer {...params} />
+      ) : (
+        <Typography variant="body4">Select</Typography>
+      ),
+    cellRendererParams: {
+      disableLink: true
+    },
     cellEditorParams: {
       options: optionsData.transportModes.map((obj) => obj.transportMode),
       multiple: true,
@@ -289,7 +341,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       disableCloseOnSelect: true
     },
     suppressKeyboardEvent: (params) => params.editing,
-    minWidth: 300
+    minWidth: 325
   },
   {
     field: 'formerCompany',

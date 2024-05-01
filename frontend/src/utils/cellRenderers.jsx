@@ -136,39 +136,54 @@ export const FuelCodeStatusRenderer = (props) => {
 
 export const CommonArrayRenderer = (props) => {
   const location = useLocation()
-  return (
+  const options = Array.isArray(props.value)
+    ? props.value
+    : props.value.split(',')
+  const chipContent = (
+    <Stack
+      component="div"
+      sx={{
+        width: '100%',
+        height: '80%',
+        marginTop: '0.2em',
+        display: 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center'
+      }}
+      direction="row"
+      spacing={1}
+    >
+      {options.map((mode) => (
+        <BCBadge
+          key={mode}
+          badgeContent={mode}
+          color="#f1f9ee"
+          variant="contained"
+          size="lg"
+          sx={{
+            '& .MuiBadge-badge': {
+              borderRadius: '16px',
+              backgroundColor: '#606060',
+              color: '#fff',
+              // border: '0.5px solid black',
+              marginRight: '0.4em',
+              fontWeight: 'regular',
+              fontSize: '0.875rem',
+              padding: '0.4em 0.6em'
+            }
+          }}
+        />
+      ))}
+    </Stack>
+  )
+  return props.disableLink ? (
+    chipContent
+  ) : (
     <Link
       to={props.node?.id && location.pathname + '/' + props?.node?.id}
       style={{ color: '#000' }}
     >
-      <BCBox
-        component="div"
-        sx={{
-          width: '100%',
-          height: '100%'
-        }}
-      >
-        {props.value.map((mode) => (
-          <BCBadge
-            key={mode}
-            badgeContent={mode}
-            color="#f1f9ee"
-            variant="contained"
-            size="lg"
-            sx={{
-              '& .MuiBadge-badge': {
-                backgroundColor: '#f1f9ee',
-                color: '#000',
-                border: '0.5px solid black',
-                marginRight: '0.4em',
-                fontWeight: 'regular',
-                fontSize: '0.875rem',
-                padding: '0.4em 0.6em'
-              }
-            }}
-          />
-        ))}
-      </BCBox>
+      {chipContent}
     </Link>
   )
 }

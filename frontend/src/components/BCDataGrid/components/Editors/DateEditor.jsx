@@ -18,7 +18,14 @@ export const DateEditor = forwardRef(
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
-          style={{ width: '100%', margin: 0, padding: '6px 10px' }}
+          style={{
+            width: '100%',
+            margin: 0,
+            padding: '6px 10px',
+            '.Mui-error .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'primary'
+            }
+          }}
           margin="normal"
           id="date-picker-dialog"
           format="yyyy-MM-dd"
@@ -26,7 +33,7 @@ export const DateEditor = forwardRef(
           onChange={updateValue}
           variant="inline"
           disableToolbar
-          placeholder={'Enter ' + column.colId}
+          {...props.dateparams}
         />
       </LocalizationProvider>
     )

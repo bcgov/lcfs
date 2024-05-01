@@ -1,5 +1,13 @@
 import { useState, forwardRef } from 'react'
-import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
+import {
+  Autocomplete,
+  TextField,
+  Box,
+  Checkbox,
+  Chip,
+  Typography,
+  Stack
+} from '@mui/material'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import BCBox from '@/components/BCBox'
@@ -18,6 +26,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
       props.onDynamicUpdate(val, props)
     }
   }
+  const limitTags = props.limitTags || 2
 
   return (
     <BCBox
@@ -42,7 +51,8 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         onChange={(_, newValue) => updateValue(newValue)}
         multiple={props.multiple}
         disableCloseOnSelect={props.disableCloseOnSelect}
-        limitTags={3}
+        limitTags={limitTags}
+        id="bc-column-set-filter"
         className="bc-column-set-filter ag-input-field ag-checkbox-input"
         role="list-box"
         options={props.options}
@@ -102,6 +112,30 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
             }}
           />
         )}
+        renderTags={(value, getTagProps) => {
+          const numTags = value.length
+
+          return (
+            <Stack direction="row" spacing={1}>
+              {value
+                .slice(0, limitTags)
+                .map(
+                  (option, index) =>
+                    index < limitTags && (
+                      <Chip
+                        component="span"
+                        {...getTagProps({ index })}
+                        key={option}
+                        label={option}
+                      />
+                    )
+                )}
+              {numTags > limitTags && (
+                <Chip label={` +${numTags - 2}`} size="small" />
+              )}
+            </Stack>
+          )
+        }}
       />
     </BCBox>
   )
