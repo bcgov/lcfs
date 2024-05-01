@@ -1,5 +1,5 @@
 import BCBox from '@/components/BCBox'
-import { TRANSFER_STATUSES } from '@/constants/statuses'
+import { TRANSFER_STATUSES, TRANSFER_RECOMMENDATION } from '@/constants/statuses'
 import { useTransfer } from '@/hooks/useTransfer'
 import { Typography } from '@mui/material'
 import dayjs from 'dayjs'
@@ -18,7 +18,16 @@ function TransferHistory({ transferHistory }) {
   const { t } = useTranslation(['common', 'transfer'])
 
   const getTransferStatusLabel = (status) => {
-    return t(`transfer:transferHistory.${status}`, 'Status not found')
+    const basePath = 'transfer:transferHistory';
+    const statusNotFound = 'Status not found';
+  
+    if (status === TRANSFER_STATUSES.RECOMMENDED) {
+      const recommendation = transferData.recommendation === TRANSFER_RECOMMENDATION.RECORD
+        ? 'RecommendedRecord' : 'RecommendedRefuse';
+      return t(`${basePath}.${recommendation}`);
+    }
+    
+    return t(`${basePath}.${status}`, statusNotFound);
   }
 
   const dateCutoffMonths = {
