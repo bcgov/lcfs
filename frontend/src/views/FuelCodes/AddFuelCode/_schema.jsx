@@ -87,9 +87,7 @@ export const fuelCodeSchema = (t, optionsData) =>
     ),
     fuelProductionFacilityLocation: yup.string().required(
       t('fuelCode:validateMsg.isRequired', {
-        field: t(
-          'fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'
-        )
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation')
       })
     )
   })
@@ -183,7 +181,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
     minWidth: 180,
-    suppressKeyboardEvent: (params) => params.editing,
+    suppressKeyboardEvent: (params) =>
+      params.editing &&
+      (params.event.key === KEY_ENTER || params.event.key === KEY_TAB),
     cellEditor: 'dateEditor'
   },
   // {

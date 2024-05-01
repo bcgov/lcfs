@@ -9,7 +9,7 @@ import BCSansLightItalicTTF from '@bcgov/bc-sans/fonts/BCSans-LightItalic.woff2'
 import bceidImg from '@/assets/images/bceid.png'
 import loadingImg from '@/assets/images/logo_loading.svg'
 
-const { info, link, background, primary, light, dark, white, grey, error } = colors
+const { info, link, background, primary, light, dark, white, grey } = colors
 
 const bcSansRegular = {
   fontFamily: 'BCSans',
@@ -109,8 +109,9 @@ const globals = {
     border: 'none',
     borderBottom: '2px solid #495057'
   },
+  // editor theme for ag-grid quertz theme
   '.ag-theme-quartz': {
-    '--ag-borders': 'none',
+    '--ag-borders': `2px solid ${primary.main} !important`,
     '--ag-odd-row-background-color': rgba(light.main, 0.6),
     '--ag-header-background-color': background.grey,
     '--ag-font-size': pxToRem(16),
@@ -120,11 +121,15 @@ const globals = {
     '--ag-row-hover-color': rgba(background.secondary, 1)
   },
   '.ag-theme-quartz .ag-header-cell-label': {
-    justifyContent: "center"
+    justifyContent: 'center'
   },
-  '.ag-theme-quartz .ag-cell:focus, .ag-input-field-input:focus, .ag-picker-field-wrapper:focus': {
-    borderRadius: '5px',
-    border: `2px solid ${error.main} !important`
+  '.ag-theme-quartz .ag-cell-inline-editing .ag-cell:focus, .ag-input-field-input:focus, .ag-picker-field-wrapper:focus':
+    {
+      borderRadius: '2px',
+      border: `2px solid ${primary.main} !important`
+    },
+  '.ag-theme-quartz .ag-row-editing': {
+    '--ag-row-hover-color': white.main
   },
   '.ag-theme-quartz .ag-header-cell': {
     fontWeight: 600,
@@ -135,12 +140,12 @@ const globals = {
     borderRadius: '4px'
   },
   '.ag-theme-material .ag-header-row,': {
-    borderTop: `1px solid ${grey[700]}`,
+    borderTop: `1px solid ${grey[700]}`
   },
   '.ag-theme-quartz .ag-center-cols-viewport': {
     minHeight: 'unset !important'
   },
-  '.ag-row-hover': {
+  '.ag-theme-material .ag-row-hover': {
     cursor: 'pointer'
   },
   '.ag-overlay-loading-center-box': {
@@ -150,9 +155,9 @@ const globals = {
     margin: '0 auto'
   },
   '.ag-header-cell-filtered, .ag-header-cell-sorted-asc, .ag-header-cell-sorted-desc':
-  {
-    backgroundColor: rgba(dark.main, 0.1)
-  },
+    {
+      backgroundColor: rgba(dark.main, 0.1)
+    },
   '.ag-header-cell-sorted-asc': {
     borderTop: `2px solid ${primary.main}`
   },
@@ -160,7 +165,7 @@ const globals = {
     borderBottom: `2px solid ${primary.main}`
   },
   '.ag-paging-panel': {
-    'justifyContent': 'flex-start'
+    justifyContent: 'flex-start'
   },
   '#bc-column-set-filter-listbox, #organizations-listbox, .MuiMenu-list': {
     '& > li:hover, & > li:focus': {
@@ -175,7 +180,7 @@ const globals = {
     width: '60px'
   },
   '.MuiPaper-elevation': {
-    border: `1.2px solid ${grey[500]}`,
+    border: `1.2px solid ${grey[500]}`
   },
   '.bceid-name': {
     textIndent: '-9999px',

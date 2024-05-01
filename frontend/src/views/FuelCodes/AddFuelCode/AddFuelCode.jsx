@@ -79,7 +79,7 @@ export const AddFuelCode = () => {
         setRowData(cachedRowData)
       } else {
         const id = uuid()
-        const emptyRow = { id, modified: true }
+        const emptyRow = { id }
         setRowData([emptyRow])
       }
     } else {
@@ -119,10 +119,14 @@ export const AddFuelCode = () => {
   })
   const onRowEditingStarted = useCallback((params) => {
     // perform initial validation
-    validationHandler(params)
+    if (params.data.modified && params.data.isValid) validationHandler(params)
   })
   const onRowEditingStopped = useCallback((params) => {
     // peform final validation
+    params.node.setData({
+      ...params.data,
+      modified: true
+    })
     validationHandler(params)
   })
   const saveData = useCallback(() => {
@@ -174,7 +178,9 @@ export const AddFuelCode = () => {
     return transportModeIds
   })
 
-  const handleSaveDraftCodes = useCallback(() => {
+  const handleSaveDraftCodes = useCallback((params) => {
+    validationHandler(params)
+    gridApi.stopEditing(false)
     const allRowData = []
     gridApi.forEachNode((node) => {
       // get status_id, prefix_id, fuel_type_id

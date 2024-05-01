@@ -26,11 +26,8 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
       data-testid="ag-grid-editor-select-options"
       sx={{
         '& .MuiAutocomplete-inputRoot': {
-          padding: 0,
-          backgroundColor: '#fff',
-          '& .MuiOutlinedInput-notchedOutline': {
-            border: 'none'
-          }
+          paddingBottom: '2.5px',
+          backgroundColor: '#fff'
         }
       }}
     >
@@ -46,8 +43,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         multiple={props.multiple}
         disableCloseOnSelect={props.disableCloseOnSelect}
         limitTags={3}
-        id="bc-column-set-filter"
-        className="ag-input-field ag-checkbox-input"
+        className="bc-column-set-filter ag-input-field ag-checkbox-input"
         role="list-box"
         options={props.options}
         autoHighlight
@@ -70,7 +66,6 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
               }
               role="option"
               sx={{
-                border: 'none',
                 '& > img': { mr: 2, flexShrink: 0 }
               }}
               aria-label={`select ${option}`}
