@@ -11,6 +11,11 @@ export const TRANSFER_STATUSES = {
   RESCINDED: 'Rescinded'
 }
 
+export const TRANSFER_RECOMMENDATION = {
+  RECORD: 'Record',
+  REFUSE: 'Refuse'
+}
+
 export const TRANSACTION_STATUSES = {
   NEW: 'New', // Limited only for frontend
   DRAFT: 'Draft',
