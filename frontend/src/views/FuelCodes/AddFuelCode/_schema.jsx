@@ -316,6 +316,10 @@ export const fuelCodeColDefs = (t, optionsData) => [
     headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
     minWidth: 325 // TODO: handle in #486
   },
   {
