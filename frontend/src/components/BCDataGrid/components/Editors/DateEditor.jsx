@@ -5,7 +5,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 
 export const DateEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
-    const [selectedDate, setSelectedDate] = useState(new Date(value))
+    const [selectedDate, setSelectedDate] = useState(value ? new Date(value) : undefined)
 
     const updateValue = (val) => {
       if (val) {
@@ -30,7 +30,7 @@ export const DateEditor = forwardRef(
           onChange={updateValue}
           variant="inline"
           disableToolbar
-          {...props.dateparams}
+          // {...props.dateparams}
         />
       </LocalizationProvider>
     )
