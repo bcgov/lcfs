@@ -141,7 +141,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
       return params.editing && params.event.key === KEY_ENTER
     },
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     cellDataType: 'text',
     minWidth: 135
@@ -158,7 +159,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     minWidth: 300
   },
@@ -171,7 +173,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       showStepperButtons: false
     },
     cellStyle: (params) => {
-      if (!params.value) return { borderColor: 'red' }
+      if (params.data.modified && !params.value) return { borderColor: 'red' }
     },
     type: 'numericColumn'
   },
@@ -180,7 +182,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
     headerName: t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     cellDataType: 'text'
   },
@@ -214,7 +217,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
       params.editing &&
       (params.event.key === KEY_ENTER || params.event.key === KEY_TAB),
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     cellEditor: 'dateEditor'
   },
@@ -273,7 +277,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
       return params.editing && params.event.key === KEY_ENTER
     },
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     minWidth: 300
   },
@@ -283,7 +288,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     minWidth: 300
   },
@@ -293,7 +299,8 @@ export const fuelCodeColDefs = (t, optionsData) => [
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
-      if (!params.value || params.value === '') return { borderColor: 'red' }
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
     },
     minWidth: 300
   },

@@ -24,7 +24,7 @@ export const AddRowsDropdownButton = ({ gridApi }) => {
   const handleAddRows = (option) => {
     const rows = []
     while (option > 0) {
-      rows.push({ id: uuid(), modified: true })
+      rows.push({ id: uuid() })
       option--
     }
     gridApi?.applyTransaction({ add: rows })
