@@ -35,7 +35,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
       data-testid="ag-grid-editor-select-options"
       sx={{
         '& .MuiAutocomplete-inputRoot': {
-          paddingBottom: '2.5px',
+          paddingBottom: '3px',
           backgroundColor: '#fff'
         }
       }}

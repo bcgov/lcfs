@@ -18,13 +18,10 @@ export const DateEditor = forwardRef(
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
+          className="ag-grid-date-editor ag-input-field"
           style={{
             width: '100%',
             margin: 0,
-            padding: '6px 10px',
-            '.Mui-error .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'primary'
-            }
           }}
           margin="normal"
           id="date-picker-dialog"

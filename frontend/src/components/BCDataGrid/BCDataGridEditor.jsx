@@ -64,7 +64,7 @@ const BCDataGridEditor = ({
   // Tab to next editable cell - Keyboard navigation
   const tabToNextCell = useCallback((params) => {
     const previousCell = params.previousCellDef
-const lastRowIndex = previousCell.rowIndex
+    const lastRowIndex = previousCell.rowIndex
     let nextRowIndex = lastRowIndex + 1
     const renderedRowCount = rowData.length
 
@@ -155,11 +155,7 @@ const lastRowIndex = previousCell.rowIndex
 
   const onRowEditingStoppedHandler = useCallback((params) => {
     // make an api call to perform auto-save after each row edits
-    params.api.refreshCells({
-      columns: ['action'],
-      rowNodes: [params.node],
-      force: true
-    })
+    params.api.redrawRows({ rowwNodes: params.node })
     onRowEditingStopped(params)
     cacheRowData(params)
   })

@@ -111,22 +111,22 @@ const globals = {
   },
   // editor theme for ag-grid quertz theme
   '.ag-theme-quartz': {
-    '--ag-borders': `2px solid ${primary.main} !important`,
-    '--ag-odd-row-background-color': rgba(light.main, 0.6),
+    '--ag-borders': `0.5px solid ${grey[400]} !important`,
+    '--ag-input-focus-border-color': primary.main,
     '--ag-header-background-color': background.grey,
     '--ag-font-size': pxToRem(16),
     '--ag-color': rgba(dark.main, 0.9),
     '--ag-font-family':
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
-    '--ag-row-hover-color': rgba(background.secondary, 1)
+    '--ag-row-hover-color': rgba(background.secondary, 1),
+    '--ag-background-color': white.main
   },
   '.ag-theme-quartz .ag-header-cell-label': {
     justifyContent: 'center'
   },
   '.ag-theme-quartz .ag-cell-inline-editing .ag-cell:focus, .ag-input-field-input:focus, .ag-picker-field-wrapper:focus':
     {
-      borderRadius: '2px',
-      border: `2px solid ${primary.main} !important`
+      border: `1px solid ${primary.main} !important`
     },
   '.ag-theme-quartz .ag-row-editing': {
     '--ag-row-hover-color': white.main
@@ -135,18 +135,27 @@ const globals = {
     fontWeight: 600,
     color: grey[700]
   },
-  '.ag-theme-quartz .ag-header-cell, .ag-theme-quartz .ag-cell': {
-    border: `1px solid ${grey[700]}`,
-    borderRadius: '4px'
+  '.ag-theme-quartz .ag-header-cell, .ag-theme-quartz .ag-cell, .ag-theme-quartz .MuiOutlinedInput-notchedOutline':
+    {
+      border: `0.5px solid ${grey[500]}`,
+      borderRadius: '4px'
+    },
+  '.ag-theme-quartz .ag-grid-date-editor input': {
+    paddingBottom: '8px'
   },
-  '.ag-theme-material .ag-header-row,': {
-    borderTop: `1px solid ${grey[700]}`
+  '.ag-theme-quartz .ag-grid-date-editor': {
+    width: '100%',
+    height: '100%'
   },
   '.ag-theme-quartz .ag-center-cols-viewport': {
     minHeight: 'unset !important'
   },
-  '.ag-theme-quartz .ag-cell-not-inline-editing .ag-cell:focus': {
-    border: `2px solid ${primary.main}`
+  '.ag-theme-quartz .ag-cell-focus:not(.ag-cell-range-selected, .ag-cell-inline-editing):focus-within':
+    {
+      border: `2px solid ${link.focus}`
+    },
+  '.ag-theme-material .ag-header-row,': {
+    borderTop: `1px solid ${grey[700]}`
   },
   '.ag-theme-material .ag-row-hover': {
     cursor: 'pointer'

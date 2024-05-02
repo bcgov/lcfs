@@ -151,7 +151,7 @@ export const CommonArrayRenderer = (props) => {
         alignItems: 'center'
       }}
       direction="row"
-      spacing={1}
+      spacing={0}
     >
       {options.map((mode) => (
         <BCBadge
@@ -165,10 +165,9 @@ export const CommonArrayRenderer = (props) => {
               borderRadius: '16px',
               backgroundColor: '#606060',
               color: '#fff',
-              // border: '0.5px solid black',
               marginRight: '0.4em',
               fontWeight: 'regular',
-              fontSize: '0.875rem',
+              fontSize: '0.8rem',
               padding: '0.4em 0.6em'
             }
           }}
