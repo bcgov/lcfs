@@ -187,9 +187,9 @@ export const AddFuelCode = () => {
       // transport_mode_id for feedstock and finished fuels
       const data = {
         ...node.data,
-        lastUpdated: new Date().toLocaleDateString(),
+        lastUpdated: new Date().toISOString().split('T')[0],
         status: FUEL_CODE_STATUSES.DRAFT,
-        prefix_id: optionsData.fuelCodePrefixes.find(
+        prefixId: optionsData.fuelCodePrefixes.find(
           (elm) => elm.prefix === node.data.prefix
         ).fuelCodePrefixId,
         fuelTypeId: optionsData.fuelTypes.find(
