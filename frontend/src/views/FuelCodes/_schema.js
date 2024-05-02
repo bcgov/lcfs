@@ -98,7 +98,7 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'feedstockTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
-    minWidth: 300,
+    minWidth: 335,
     valueGetter: (params) =>
       params.data.feedstockFuelTransportModes.map(
         (item) => item.feedstockFuelTransportMode.transportMode
@@ -108,7 +108,7 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'finishedFuelTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
-    minWidth: 300,
+    minWidth: 335,
     valueGetter: (params) =>
       params.data.finishedFuelTransportModes.map(
         (item) => item.finishedFuelTransportMode.transportMode
