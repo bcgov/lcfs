@@ -73,17 +73,15 @@ export const ViewOrganization = () => {
   }, [])
 
   const getRowHeight = useCallback((params) => {
-    const colWidth = params.api.getColumn('role').getActualWidth()
-    const size = params.data.roles.length
-    return calculateRowHeight(colWidth, size - 1)
+    const actualWidth = params.api.getColumn('role').getActualWidth()
+    return calculateRowHeight(actualWidth, params.data?.roles)
   }, [])
 
   const onColumnResized = useCallback((params) => {
-    const colWidth = params.api.getColumn('role').getActualWidth()
+    const actualWidth = params.api.getColumn('role').getActualWidth()
     params.api.resetRowHeights()
     params.api.forEachNode((node) => {
-      const size = node.data?.roles?.length
-      const rowHeight = calculateRowHeight(colWidth, size - 1)
+      const rowHeight = calculateRowHeight(actualWidth, node.data?.roles)
       node.setRowHeight(rowHeight)
     })
   }, [])
