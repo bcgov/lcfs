@@ -1,23 +1,120 @@
-import QueueIcon from '@mui/icons-material/Queue'
-import IconButton from '@mui/material/IconButton'
+import { IconButton, Tooltip, Stack } from '@mui/material'
+import {
+  Edit,
+  Delete,
+  Save,
+  Cancel,
+  Queue,
+  Warning,
+  DoneAll
+} from '@mui/icons-material'
 
-
-export const ActionsRenderer = (props) => {
+export const ActionsRenderer = ({ onDuplicate, ...props }) => {
+  const isCurrentRowEditing = props.api
+    .getEditingCells()
+    .some((cell) => cell.rowIndex === props.node.rowIndex)
 
   return (
-    <div>
-      <IconButton
-        aria-label="duplicate"
-        color="primary"
-        onClick={() => props.onDuplicate(props)}
-      >
-        <QueueIcon
-          sx={{
-            transform: 'scaleX(-1)'
-          }}
-        />
-      </IconButton>
-    </div>
+    <Stack direction="row" spacing={0.1} m={0}>
+      {props.data.isValid && props.enableDuplicate && !isCurrentRowEditing && (
+        <Tooltip title="clone">
+          <IconButton
+            aria-label="copy the data to new row"
+            data-testid="duplicate-button"
+            color="primary"
+            // in order to retain the ability to copy only specific columns this functionality is presented to individual components to code
+            onClick={() => onDuplicate(props)}
+          >
+            <Queue
+              sx={{
+                transform: 'scaleX(-1)'
+              }}
+            />
+          </IconButton>
+        </Tooltip>
+      )}
+      {!props.data.isValid && props.data.modified && (
+        <Tooltip title={props.data.validationMsg}>
+          <IconButton
+            aria-label="shows sign for validation"
+            data-testid="validation-sign"
+          >
+            <Warning color="error" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {(props.data.isValid === undefined || props.data.isValid) &&
+        isCurrentRowEditing &&
+        props.data.modified && (
+          <Tooltip title={'validation success'}>
+            <IconButton
+              aria-label="shows sign for validation"
+              data-testid="validation-sign"
+            >
+              <DoneAll color="success" />
+            </IconButton>
+          </Tooltip>
+        )}
+      {props.enableEdit && !isCurrentRowEditing && (
+        <Tooltip title="Edit">
+          <IconButton
+            aria-label="edit row"
+            data-testid="edit-button"
+            color="primary"
+            onClick={() => {
+              return props.api.startEditingCell({
+                rowIndex: props.node.rowIndex,
+                colKey: props.api.getDisplayedCenterColumns()[2].colId
+              })
+            }}
+          >
+            <Edit />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.enableDelete && !isCurrentRowEditing && (
+        <Tooltip title="Delete">
+          <IconButton
+            aria-label="delete row"
+            data-testid="delete-button"
+            color="error"
+            onClick={() => {
+              props.api.applyTransaction({ remove: [props.node.data] })
+            }}
+          >
+            <Delete />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.enableEdit && isCurrentRowEditing && (
+        <Tooltip title="Save">
+          <IconButton
+            aria-label="save modified data"
+            data-testid="save-🏗 "
+            color="success"
+            onClick={() => {
+              props.api.stopEditing(false)
+            }}
+          >
+            <Save />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.enableEdit && isCurrentRowEditing && (
+        <Tooltip title="Cancel">
+          <IconButton
+            aria-label="cancel modification"
+            data-testid="cancel-button"
+            color="error"
+            onClick={() => {
+              props.api.stopEditing(true)
+            }}
+          >
+            <Cancel />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Stack>
   )
 }
 ActionsRenderer.displayName = 'ActionsRenderer'

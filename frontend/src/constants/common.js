@@ -1,0 +1,10 @@
+export const KEY_LEFT = 'ArrowLeft';
+export const KEY_UP = 'ArrowUp';
+export const KEY_RIGHT = 'ArrowRight';
+export const KEY_DOWN = 'ArrowDown';
+export const KEY_ENTER = 'Enter';
+export const KEY_TAB = 'Tab';
+export const KEY_PAGE_UP = 'PageUp';
+export const KEY_PAGE_DOWN = 'PageDown';
+export const KEY_PAGE_HOME = 'Home';
+export const KEY_PAGE_END = 'End';

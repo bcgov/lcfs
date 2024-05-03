@@ -6,6 +6,7 @@ import { ModuleRegistry } from '@ag-grid-community/core'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-alpine.css'
+import '@ag-grid-community/styles/ag-theme-material.css'
 // react components
 import { PropTypes } from 'prop-types'
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -256,7 +257,7 @@ const BCDataGridServer = ({
         display: 'flex',
         flexDirection: 'column'
       }}
-      className="bc-grid-container"
+      className={`bc-grid-container ${className}`}
     >
       <AgGridReact
         gridKey={gridKey} // This will force the grid to re-render
@@ -279,6 +280,7 @@ const BCDataGridServer = ({
        * so it looks similar to the one provided by ag-grid by default
        */}
       <BCBox
+        className="ag-grid-pagination-container"
         display="flex"
         justifyContent="flex-start"
         variant="outlined"
@@ -321,7 +323,7 @@ BCDataGridServer.defaultProps = {
   defaultColDef: {},
   enableResetButton: false,
   enableCopyButton: true,
-  className: 'ag-theme-alpine'
+  className: 'ag-theme-material'
 }
 
 BCDataGridServer.propTypes = {
