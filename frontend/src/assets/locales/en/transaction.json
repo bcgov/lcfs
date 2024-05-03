@@ -21,5 +21,10 @@
   "complianceUnitsTo": "Compliance Units To",
   "numberOfUnits": "Number of Units",
   "valuePerUnit": "Value Per Unit",
-  "status": "Status"
+  "status": "Status",
+  "allOrganizations": "All organizations",
+  "complianceBalance": "Compliance balance",
+  "inReserve": "in reserve",
+  "showTransactionsInvolve": "Show transactions involving",
+  "selectOrganizationName": "Select organization name"
 }

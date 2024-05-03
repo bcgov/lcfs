@@ -21,7 +21,7 @@ from lcfs.web.api.base import (
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
 from lcfs.db.models.OrganizationAddress import OrganizationAddress
-from lcfs.db.models.OrganizationStatus import OrganizationStatus
+from lcfs.db.models.OrganizationStatus import OrganizationStatus, OrgStatusEnum
 from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
 from lcfs.db.models.Organization import Organization
 from lcfs.db.models.Transaction import TransactionActionEnum
@@ -33,7 +33,8 @@ from .schema import (
     OrganizationSchema,
     OrganizationListSchema,
     OrganizationCreateSchema,
-    OrganizationSummaryResponseSchema
+    OrganizationSummaryResponseSchema,
+    OrganizationStatusSchema
 )
 
 
@@ -275,40 +276,34 @@ class OrganizationsService:
         return types
 
     @service_handler
-    async def get_organization_names(self) -> List[OrganizationSummaryResponseSchema]:
-        """
-        handles fetching all organization names
-        """
-        results = await self.repo.get_organization_names()
-        names = []
+    async def get_organization_names(self, only_registered: bool = False, order_by=('name', 'asc')) -> List[OrganizationSummaryResponseSchema]:
+        '''
+        Fetches all organization names and their detailed information, formatted as per OrganizationSummaryResponseSchema.
+        
+        Parameters:
+            only_registered (bool): If true, fetches only registered organizations.
+            order_by (tuple): Tuple containing the field name to sort by and the direction ('asc' or 'desc').
 
-        for id, name in results:
-            names.append(
-                OrganizationSummaryResponseSchema.model_validate(
-                    {
-                        "name": name,
-                        "organization_id": id,
-                        # TODO: implement balance query
-                        "balance": random.randint(0, 9),
-                    }
-                )
+        Returns:
+            List[OrganizationSummaryResponseSchema]: List of organizations with their summary information.
+        '''
+        conditions = []
+        if only_registered:
+            conditions.append(OrganizationStatus.status == OrgStatusEnum.Registered)
+
+        # The order_by tuple directly specifies both the sort field and direction
+        organization_data = await self.repo.get_organization_names(conditions, order_by)
+
+        return [
+            OrganizationSummaryResponseSchema(
+                organization_id=org["organization_id"],
+                name=org["name"],
+                operating_name=org["operating_name"],
+                total_balance=org["total_balance"],
+                reserved_balance=org["reserved_balance"]
             )
-
-        if len(names) == 0:
-            raise DataNotFoundException("No organization names found")
-
-        # TODO: Implement for All Organizations and Balance calculation for it.
-        names.append(
-            OrganizationSummaryResponseSchema.model_validate(
-                {
-                    "organization_id": 0,
-                    "name": "All Organizations",
-                    "balance": 0,
-                }
-            )
-        )
-
-        return names
+            for org in organization_data
+        ]
 
     @service_handler
     async def get_externally_registered_organizations(

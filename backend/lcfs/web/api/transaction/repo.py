@@ -28,7 +28,7 @@ class TransactionRepository:
         self.db = db
 
     @repo_handler
-    async def get_transactions_paginated(self, offset: int, limit: int, conditions: list, sort_orders: list, organization_id: int = None):
+    async def get_transactions_paginated(self, offset: int, limit: int, conditions: list = [], sort_orders: list = [], organization_id: int = None):
         """
         Fetches paginated, filtered, and sorted transactions.
         Adjusts visibility based on the requester's role: transferor, transferee, or government.
@@ -43,7 +43,7 @@ class TransactionRepository:
         Returns:
             A tuple of (list of TransactionView instances, total count).
         """
-        query_conditions = []
+        query_conditions = conditions
 
         # Base condition for transaction type "Transfer"
         transfer_type_condition = TransactionView.transaction_type == 'Transfer'
