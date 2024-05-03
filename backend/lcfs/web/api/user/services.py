@@ -141,13 +141,13 @@ class UserServices:
         return UserBaseSchema.model_validate(user)
 
     @service_handler
-    async def create_user(self, user_create: UserCreateSchema) -> UserBaseSchema:
+    async def create_user(self, user_create: UserCreateSchema) -> str:
         """
         Create a new user
         """
         user = await self.repo.create_user(user_create)
         await FastAPICache.clear(namespace="users")
-        return user
+        return "User created successfully"
 
     @service_handler
     async def update_user(
