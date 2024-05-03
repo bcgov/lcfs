@@ -82,7 +82,7 @@ export const AddEditViewTransfer = () => {
     mode: 'onChange',
     defaultValues: {
       fromOrganizationId: currentUser?.organization?.organizationId,
-      agreementDate: new Date().toISOString().split('T')[0],
+      agreementDate: '',
       toOrganizationId: null,
       quantity: null,
       pricePerUnit: null,
