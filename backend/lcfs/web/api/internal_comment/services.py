@@ -50,8 +50,8 @@ class InternalCommentService:
         """
         username = self.request.user.keycloak_username
         comment = InternalComment(
-            comment=data.comment, 
-            audience_scope=data.audience_scope, 
+            comment=data.comment,
+            audience_scope=data.audience_scope,
             create_user=username
         )
         created_comment = await self.repo.create_internal_comment(

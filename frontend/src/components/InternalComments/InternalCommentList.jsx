@@ -13,7 +13,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-const InternalCommentList = ({ comments, onAddComment, onEditComment, addCommentFormKey }) => {
+const InternalCommentList = ({ comments, onAddComment, onEditComment, addCommentFormKey, showAddCommentBtn = true }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const [editCommentId, setEditCommentId] = useState(null);
@@ -135,6 +135,7 @@ const InternalCommentList = ({ comments, onAddComment, onEditComment, addComment
               }
               onSubmit={onAddComment}
               key={addCommentFormKey}
+              showAddCommentBtn={showAddCommentBtn}
             />
           </BCBox>
         )}

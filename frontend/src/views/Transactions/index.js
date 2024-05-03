@@ -1,2 +1,2 @@
 export { Transactions } from './Transactions'
-export { ViewTransaction } from './ViewTransaction/ViewTransaction'
+export { AddEditViewTransaction } from './AddEditViewTransaction'

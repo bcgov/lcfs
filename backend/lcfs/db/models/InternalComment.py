@@ -23,3 +23,4 @@ class InternalComment(BaseModel, Auditable):
     # Relationships
     transfer_internal_comments = relationship('TransferInternalComment', back_populates='internal_comment')
     initiative_agreement_internal_comments = relationship('InitiativeAgreementInternalComment', back_populates='internal_comment')
+    admin_adjustment_internal_comments = relationship('AdminAdjustmentInternalComment', back_populates='internal_comment')

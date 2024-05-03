@@ -156,6 +156,26 @@ export const Transactions = () => {
             </BCButton>
           </Role>
         )}
+        <Role roles={[roles.analyst]}>
+          <BCButton
+            id="new-transaction-button"
+            variant="contained"
+            size="small"
+            color="primary"
+            startIcon={
+              <FontAwesomeIcon
+                icon={faCirclePlus}
+                className="small-icon"
+                size="2x"
+              />
+            }
+            onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
+          >
+            <BCTypography variant="subtitle2">
+              {t('txn:newTransactionBtn')}
+            </BCTypography>
+          </BCButton>
+        </Role>
         <DownloadButton
           onDownload={handleDownloadTransactions}
           isDownloading={isDownloadingTransactions}
