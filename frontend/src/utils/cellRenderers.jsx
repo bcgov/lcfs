@@ -250,9 +250,9 @@ export const RoleRenderer = (props) => {
       <BCBox sx={{ width: '100%', height: '100%' }}>
         <Stack
           component="div"
-          direction={{ md: 'coloumn', lg: 'row' }}
+          direction={{ lg: 'row' }}
           spacing={0}
-          p={1}
+          p={0.5}
           useFlexGap
           flexWrap="wrap"
           key={props.data.userProfileId}
