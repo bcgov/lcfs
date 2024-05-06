@@ -29,7 +29,7 @@ export const AgreementDate = () => {
           data-test="transfer-agreement-date"
           {...register('agreementDate')}
           type="date"
-          defaultValue={maxDate}
+          placeholder="yyyy-mm-dd"
           inputProps={{
             max: maxDate,
             'data-testid': 'transfer-agreement-date-input'
