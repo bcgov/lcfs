@@ -32,7 +32,7 @@ const MenuBar = (props) => {
           padding: 0
         }}
       >
-        {routes.map((route) => (
+        {routes.map((route, index) => (
           <React.Fragment key={route.name}>
             <DefaultNavbarLink
               icon={route.icon}
@@ -40,14 +40,16 @@ const MenuBar = (props) => {
               route={route.route}
               light={false}
             />
-            <Divider
-              orientation="vertical"
-              variant="middle"
-              flexItem
-              sx={({ palette: { secondary } }) => ({
-                backgroundColor: secondary.main
-              })}
-            />
+            {index !== routes.length - 1 && (
+              <Divider
+                orientation="vertical"
+                variant="middle"
+                flexItem
+                sx={({ palette: { secondary } }) => ({
+                  backgroundColor: secondary.main
+                })}
+              />
+            )}
           </React.Fragment>
         ))}
       </BCBox>

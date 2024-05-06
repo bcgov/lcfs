@@ -7,7 +7,7 @@ import Loading from '@/components/Loading';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCurrentOrgBalance } from '@/hooks/useOrganization';
 
-export const BCeIDBalance = () => {
+export const OrgBalanceCard = () => {
   const { t } = useTranslation(['org']);
   const { data: currentUser, isLoading: isUserLoading, isError: isUserError } = useCurrentUser();
   const { data: orgBalance, isLoading: isBalanceLoading, isError: isBalanceError } = useCurrentOrgBalance();
