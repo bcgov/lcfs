@@ -102,7 +102,7 @@ async def test_transactions_in_submitted_status_are_visible_to_all_entities(dbse
     assert total_count_gov == 1
 
 @pytest.mark.anyio
-async def test_transactions_in_recommended_status_are_visible_to_government_only(dbsession, transaction_repo):
+async def test_transactions_in_recommended_status_are_visible_to_all_entities(dbsession, transaction_repo):
     dbsession.add_all([
         recommended_transfer_orm
     ])
@@ -115,11 +115,11 @@ async def test_transactions_in_recommended_status_are_visible_to_government_only
     transactions_transferee, total_count_transferee = await transaction_repo.get_transactions_paginated(0, 10, conditions, sort_orders, 2)
     transactions_gov, total_count_gov = await transaction_repo.get_transactions_paginated(0, 10, conditions, sort_orders)
     
-    assert len(transactions_transferor) == 0
-    assert total_count_transferor == 0
+    assert len(transactions_transferor) == 1
+    assert total_count_transferor == 1
 
-    assert len(transactions_transferee) == 0
-    assert total_count_transferee == 0
+    assert len(transactions_transferee) == 1
+    assert total_count_transferee == 1
 
     assert len(transactions_gov) == 1
     assert total_count_gov == 1
@@ -272,6 +272,7 @@ async def test_get_visible_statuses_for_transferor(dbsession, transaction_repo):
         TransferStatusEnum.Draft,
         TransferStatusEnum.Sent,
         TransferStatusEnum.Submitted,
+        TransferStatusEnum.Recommended,
         TransferStatusEnum.Recorded,
         TransferStatusEnum.Refused,
         TransferStatusEnum.Declined,
@@ -287,6 +288,7 @@ async def test_get_visible_statuses_for_transferee(dbsession, transaction_repo):
     expected_statuses = [
         TransferStatusEnum.Sent,
         TransferStatusEnum.Submitted,
+        TransferStatusEnum.Recommended,
         TransferStatusEnum.Recorded,
         TransferStatusEnum.Refused,
         TransferStatusEnum.Declined,
