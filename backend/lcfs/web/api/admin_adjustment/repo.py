@@ -33,8 +33,8 @@ class AdminAdjustmentRepository:
         """
         Fetches the Admin Adjustment status by its name.
         """
-        query = await self.session.execute(
-            select(AdminAdjustmentStatus).where(AdminAdjustmentStatus.status_name == status_name)
+        query = await self.db.execute(
+            select(AdminAdjustmentStatus).where(AdminAdjustmentStatus.status == status_name)
         )
         status = query.scalars().first()
         

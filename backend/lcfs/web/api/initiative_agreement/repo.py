@@ -31,7 +31,7 @@ class InitiativeAgreementRepository:
 
     async def get_initiative_agreement_status_by_name(self, status_name: str) -> InitiativeAgreementStatus:
         query = await self.db.execute(
-            select(InitiativeAgreementStatus).where(InitiativeAgreementStatus.status_name == status_name)
+            select(InitiativeAgreementStatus).where(InitiativeAgreementStatus.status == status_name)
         )
         status = query.scalars().first()
         
