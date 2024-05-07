@@ -14,9 +14,9 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
 
     // Determine the route based on transaction type
     if (transactionType === ADMIN_ADJUSTMENT) {
-      editRoute = ROUTES.ADMIN_ADJUSTMENT_EDIT.replace(':transactionId', response.data.transactionId)
+      editRoute = ROUTES.ADMIN_ADJUSTMENT_EDIT.replace(':transactionId', response.data.adminAdjustmentId)
     } else if (transactionType === INITIATIVE_AGREEMENT) {
-      editRoute = ROUTES.INITIATIVE_AGREEMENT_EDIT.replace(':transactionId', response.data.transactionId)
+      editRoute = ROUTES.INITIATIVE_AGREEMENT_EDIT.replace(':transactionId', response.data.initiativeAgreementId)
     }
 
     if (status === TRANSACTION_STATUSES.DRAFT) {

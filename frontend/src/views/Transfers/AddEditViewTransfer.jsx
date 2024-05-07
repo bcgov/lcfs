@@ -158,7 +158,7 @@ export const AddEditViewTransfer = () => {
       )
       setAlertSeverity('error')
     }
-  }, [isFetched, transferId, isLoadingError, transferData, queryState])
+  }, [isFetched, transferId, isLoadingError, transferData, queryState, methods, t])
 
   useEffect(() => {
     if (location.state?.message) {

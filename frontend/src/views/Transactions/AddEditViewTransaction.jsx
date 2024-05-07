@@ -31,6 +31,7 @@ import {
   Comments,
   TransactionDetails
 } from '@/views/Transactions/components'
+import { useQueryClient } from '@tanstack/react-query'
 import { AddEditTransactionSchema } from './_schema.yup'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
@@ -40,6 +41,7 @@ export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
 export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
 
 export const AddEditViewTransaction = () => {
+  const queryClient = useQueryClient()
   const theme = useTheme()
   const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
   const { t } = useTranslation(['common', 'adminadjustment', 'initiativeagreement', 'transaction'])
@@ -58,11 +60,17 @@ export const AddEditViewTransaction = () => {
 
   const { handleSuccess, handleError } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef)
 
-  const { mutate: createUpdateAdminAdjustment } = useCreateUpdateAdminAdjustment(transactionId, {
-    onSuccess: (response, variables) => handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
-    onError: (error) => handleError(error, transactionId, ADMIN_ADJUSTMENT)
-  })
-  const { mutate: createUpdateInitiativeAgreement } = useCreateUpdateInitiativeAgreement(transactionId, {
+  const { 
+    mutate: createUpdateAdminAdjustment,
+    isLoading: isUpdatingAdminAdjustment,
+   } = useCreateUpdateAdminAdjustment(transactionId, {
+      onSuccess: (response, variables) => handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
+      onError: (error) => handleError(error, transactionId, ADMIN_ADJUSTMENT)
+    })
+  const { 
+    mutate: createUpdateInitiativeAgreement,
+    isLoading: isUpdatingInitiativeAgreement,
+   } = useCreateUpdateInitiativeAgreement(transactionId, {
     onSuccess: (response, variables) => handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
     onError: (error) => handleError(error, transactionId, INITIATIVE_AGREEMENT)
   })
@@ -77,16 +85,15 @@ export const AddEditViewTransaction = () => {
   })
 
   const txnType = methods.watch('txnType')
-  console.log(txnType)
 
   useEffect(() => {
     const path = window.location.pathname
 
     // Set transactionType based on URL path if not in 'add' mode
     if (mode !== 'add') {
-      if (path.includes('adminAdjustment')) {
+      if (path.includes('admin-adjustment')) {
         methods.setValue('txnType', ADMIN_ADJUSTMENT)
-      } else if (path.includes('initiativeAgreement')) {
+      } else if (path.includes('initiative-agreement')) {
         methods.setValue('txnType', INITIATIVE_AGREEMENT)
       }
     }
@@ -106,7 +113,15 @@ export const AddEditViewTransaction = () => {
     isLoading: isTransactionDataLoading,
     isFetched,
     isLoadingError
-  } = transactionId && txnType ? transactionDataHook(transactionId, { enabled: !!transactionId }) : { data: null, isLoading: false, isFetched: false, isLoadingError: false }
+  } = transactionDataHook(transactionId, { 
+    enabled: !!transactionId,
+    retry: false,
+    staleTime: 0,
+    keepPreviousData: false
+  })
+
+  const stateId = txnType === ADMIN_ADJUSTMENT ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
+  const queryState = queryClient.getQueryState([stateId, transactionId])
 
   useEffect(() => {
     if (transactionId && isFetched && transactionData) {
@@ -120,11 +135,11 @@ export const AddEditViewTransaction = () => {
           : new Date().toISOString().split('T')[0]
       })
     }
-    if (isLoadingError) {
+    if (isLoadingError || queryState.status === 'error') {
       setAlertMessage(t(`${txnType}:actionMsgs.errorRetrieval`, { transactionId }))
       setAlertSeverity('error')
     }
-  }, [isFetched, transactionId, transactionData, isLoadingError, txnType, methods, t])
+  }, [isFetched, transactionId, transactionData, isLoadingError, queryState, txnType, methods, t])
 
   const title = useMemo(() => {
     if (!editorMode) {
@@ -141,7 +156,6 @@ export const AddEditViewTransaction = () => {
     }
   }, [editorMode, mode, t, transactionId, txnType])
   
-
   const currentStatus = transactionData?.currentStatus?.status
 
   useEffect(() => {
@@ -150,7 +164,7 @@ export const AddEditViewTransaction = () => {
       statusSet.add(item.status)
     })
 
-    if (statusSet.size === 0) {
+    if (statusSet?.size === 0) {
       setSteps(['Draft', 'Recommended', 'Approved'])
     } else {
       if (!statusSet.has(TRANSACTION_STATUSES.RECOMMENDED))
@@ -177,6 +191,28 @@ export const AddEditViewTransaction = () => {
 
   if (transactionId && isTransactionDataLoading)
     return <Loading message={t(`${txnType}:loadingText`)} />
+
+  // Conditional rendering for loading
+  if (transactionId && (isTransactionDataLoading || queryState.status === 'pending'))
+    return <Loading message={t('transfer:loadingText')} />
+  if (isUpdatingAdminAdjustment || isUpdatingInitiativeAgreement)
+    return <Loading message={t('transfer:processingText')} />
+
+  if (
+    (isLoadingError && editorMode !== 'add') ||
+    queryState.status === 'error'
+  ) {
+    return (
+      <BCAlert
+        data-test="alert-box"
+        severity={alertSeverity}
+        dismissible={true}
+        delay={50000}
+      >
+        {alertMessage}
+      </BCAlert>
+    )
+  }
 
   return (
     <FormProvider {...methods}>
@@ -236,7 +272,7 @@ export const AddEditViewTransaction = () => {
         />
 
         {/* Internal Comments */}
-        {mode !== 'add' &&
+        {/* {mode !== 'add' &&
           <BCBox mt={4}>
             <Typography variant="h6" color="primary">
               {t(`txn:internalCommentsOptional`)}
@@ -247,7 +283,7 @@ export const AddEditViewTransaction = () => {
               </Role>
             </BCBox>
           </BCBox>
-        }
+        } */}
 
         {/* Buttons */}
         <Stack

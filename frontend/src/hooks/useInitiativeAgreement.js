@@ -1,11 +1,12 @@
 import { useApiService } from '@/services/useApiService'
+import { INITIATIVE_AGREEMENT } from '@/views/Transactions/AddEditViewTransaction'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useInitiativeAgreement = (initiativeAgreementID, options) => {
   const client = useApiService()
 
   return useQuery({
-    queryKey: ['initiativeAgreement', initiativeAgreementID],
+    queryKey: [INITIATIVE_AGREEMENT, initiativeAgreementID],
     queryFn: async () => (await client.get(`/initiative_agreements/${initiativeAgreementID}`)).data,
     ...options
   })
@@ -24,7 +25,7 @@ export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId, option
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['initiativeAgreement', initiativeAgreementId])
+      queryClient.invalidateQueries([INITIATIVE_AGREEMENT, initiativeAgreementId])
     }
   })
 }

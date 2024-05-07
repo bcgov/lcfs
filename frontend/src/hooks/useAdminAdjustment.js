@@ -1,11 +1,12 @@
 import { useApiService } from '@/services/useApiService'
+import { ADMIN_ADJUSTMENT } from '@/views/Transactions/AddEditViewTransaction'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useAdminAdjustment = (adminAdjustmentID, options) => {
   const client = useApiService()
 
   return useQuery({
-    queryKey: ['adminAdjustments', adminAdjustmentID],
+    queryKey: [ADMIN_ADJUSTMENT, adminAdjustmentID],
     queryFn: async () => (await client.get(`/admin_adjustments/${adminAdjustmentID}`)).data,
     ...options
   })
@@ -24,7 +25,7 @@ export const useCreateUpdateAdminAdjustment = (adminAdjustmentId, options) => {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['adminAdjustments', adminAdjustmentId])
+      queryClient.invalidateQueries([ADMIN_ADJUSTMENT, adminAdjustmentId])
     }
   })
 }
