@@ -1,10 +1,8 @@
-// hooks
 import { useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
 import { ROUTES } from '@/constants/routes'
 import withRole from '@/utils/withRole'
 import { useTranslation } from 'react-i18next'
-// mui components
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import { List, ListItemButton } from '@mui/material'

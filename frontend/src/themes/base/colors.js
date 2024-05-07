@@ -54,7 +54,7 @@ const colors = {
     grey: '#f2f2f2',
     nav: '#38598a', // Used for Nav bar
     opaque: 'transparent',
-    paper: '#F3F6F9',
+    paper: '#fff',
     secondary: '#fade81',
     primary: '#002663'
   },

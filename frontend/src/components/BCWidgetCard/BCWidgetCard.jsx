@@ -22,7 +22,7 @@ function BCWidgetCard({ color, title, content, style }) {
           bgColor={color}
           color={color === 'light' ? 'dark' : 'white'}
           coloredShadow={color}
-          borderRadius="lg"
+          borderRadius="md"
           display="flex"
           justifyContent="left"
           alignItems="center"
@@ -31,7 +31,7 @@ function BCWidgetCard({ color, title, content, style }) {
           height="40px"
           mt={-3}
         >
-          <BCTypography variant="subtitle1" fontWeight="light" color="inherit">
+          <BCTypography variant="subtitle2" fontWeight="light" color="inherit">
             {title}
           </BCTypography>
         </BCBox>
