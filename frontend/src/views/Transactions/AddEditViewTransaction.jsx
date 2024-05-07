@@ -1,12 +1,14 @@
-import { useState, useMemo } from 'react';
-import { useMatches, useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMatches, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { FormProvider, useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { roles, govRoles } from '@/constants/roles';
+import { roles, govRoles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { ROUTES } from '@/constants/routes'
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useAdminAdjustment, useCreateUpdateAdminAdjustment } from '@/hooks/useAdminAdjustment'
+import { useInitiativeAgreement, useCreateUpdateInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
 import {
   useTheme,
   Stack,
@@ -15,103 +17,206 @@ import {
   Step,
   StepLabel,
   Stepper
-} from '@mui/material';
+} from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
-import BCBox from '@/components/BCBox';
+import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
+import Loading from '@/components/Loading'
 import InternalComments from '@/components/InternalComments'
+import BCAlert from '@/components/BCAlert'
+import BCModal from '@/components/BCModal'
+import { dateFormatter } from '@/utils/formatters'
 import {
   Comments,
-  TransactionDetails,
+  TransactionDetails
 } from '@/views/Transactions/components'
-import { AddEditTransactionSchema } from './_schema.yup';
+import { AddEditTransactionSchema } from './_schema.yup'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
+import { useTransactionMutation } from './transactionMutation'
 
-// Component handles the transaction view for adding or editing
+export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
+export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
+
 export const AddEditViewTransaction = () => {
   const theme = useTheme()
   const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
-  const { t } = useTranslation(['common', 'txn']);
-  const matches = useMatches();
+  const { t } = useTranslation(['common', 'adminadjustment', 'initiativeagreement', 'transaction'])
+  const matches = useMatches()
   const navigate = useNavigate()
+  const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const mode = matches[matches.length - 1]?.handle?.mode;
-  const { transactionId } = useParams();
-  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser();
+  const mode = matches[matches.length - 1]?.handle?.mode
+  const { transactionId } = useParams()
+  const { data: currentUser, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const TransactionTypes = {
-    ADMIN_ADJUSTMENT: 'AdminAdjustment',
-    INITIATIVE_AGREEMENT: 'InitiativeAgreement'
-  };
-  const [transactionType, setTransactionType] = useState(TransactionTypes.INITIATIVE_AGREEMENT);
   const [steps, setSteps] = useState(['Draft', 'Recommended', 'Approved'])
-  const transferStatus = ''
+  const alertRef = useRef()
+  const [alertMessage, setAlertMessage] = useState('')
+  const [alertSeverity, setAlertSeverity] = useState('info')
+
+  const { handleSuccess, handleError } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef)
+
+  const { mutate: createUpdateAdminAdjustment } = useCreateUpdateAdminAdjustment(transactionId, {
+    onSuccess: (response, variables) => handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
+    onError: (error) => handleError(error, transactionId, ADMIN_ADJUSTMENT)
+  })
+  const { mutate: createUpdateInitiativeAgreement } = useCreateUpdateInitiativeAgreement(transactionId, {
+    onSuccess: (response, variables) => handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
+    onError: (error) => handleError(error, transactionId, INITIATIVE_AGREEMENT)
+  })
 
   const methods = useForm({
     resolver: yupResolver(AddEditTransactionSchema),
     mode: 'onChange',
     defaultValues: {
-      toOrgComment: '',
+      txnType: '',
+      govComment: ''
     }
-  });
+  })
 
-  // Editor mode is active when user has the required roles and the mode is 'add' or 'edit'.
+  const txnType = methods.watch('txnType')
+  console.log(txnType)
+
+  useEffect(() => {
+    const path = window.location.pathname
+
+    // Set transactionType based on URL path if not in 'add' mode
+    if (mode !== 'add') {
+      if (path.includes('adminAdjustment')) {
+        methods.setValue('txnType', ADMIN_ADJUSTMENT)
+      } else if (path.includes('initiativeAgreement')) {
+        methods.setValue('txnType', INITIATIVE_AGREEMENT)
+      }
+    }
+
+    if (location.state?.message) {
+      setAlertMessage(location.state.message)
+      setAlertSeverity(location.state.severity || 'info')
+    }
+  }, [location.state, mode, methods])
+
   const editorMode = ['edit', 'add'].includes(mode) && hasAnyRole(roles.analyst, roles.director)
 
-  // Memoized title depends on mode and user permissions.
-  const title = useMemo(() => {
-    const typeKey = transactionType === TransactionTypes.INITIATIVE_AGREEMENT ? 'initiativeAgreementId' : 'adminAdjustmentId';
-    
-    if (!editorMode) return t(`txn:${typeKey}`) + ' ' + transactionId;
-    switch (mode) {
-      case 'add': return t('txn:newTransaction');
-      case 'edit':
-      default: return t(`txn:${typeKey}`) + ' ' + transactionId;
+  // Conditionally fetch data if in edit mode and txnType is set
+  const transactionDataHook = txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement
+  const {
+    data: transactionData,
+    isLoading: isTransactionDataLoading,
+    isFetched,
+    isLoadingError
+  } = transactionId && txnType ? transactionDataHook(transactionId, { enabled: !!transactionId }) : { data: null, isLoading: false, isFetched: false, isLoadingError: false }
+
+  useEffect(() => {
+    if (transactionId && isFetched && transactionData) {
+      methods.reset({
+        txnType,
+        govComment: transactionData.govComment,
+        toOrganizationId: transactionData.toOrganizationId || '',
+        complianceUnits: transactionData.complianceUnits || '',
+        transactionEffectiveDate: transactionData.transactionEffectiveDate
+          ? dateFormatter(transactionData.transactionEffectiveDate)
+          : new Date().toISOString().split('T')[0]
+      })
     }
-  }, [editorMode, mode, t, transactionId, transactionType]);
+    if (isLoadingError) {
+      setAlertMessage(t(`${txnType}:actionMsgs.errorRetrieval`, { transactionId }))
+      setAlertSeverity('error')
+    }
+  }, [isFetched, transactionId, transactionData, isLoadingError, txnType, methods, t])
+
+  const title = useMemo(() => {
+    if (!editorMode) {
+      // For view mode
+      return `${t(`${txnType}:${txnType}View`)} ${transactionId}`
+    }
+    // For add and edit modes
+    switch (mode) {
+      case 'add':
+        return t('txn:newTransaction')
+      case 'edit':
+      default:
+        return `${t(`${txnType}:${txnType}Edit`)} ${transactionId}`
+    }
+  }, [editorMode, mode, t, transactionId, txnType])
+  
+
+  const currentStatus = transactionData?.currentStatus?.status
+
+  useEffect(() => {
+    const statusSet = new Set()
+    transactionData?.history?.forEach((item) => {
+      statusSet.add(item.status)
+    })
+
+    if (statusSet.size === 0) {
+      setSteps(['Draft', 'Recommended', 'Approved'])
+    } else {
+      if (!statusSet.has(TRANSACTION_STATUSES.RECOMMENDED))
+        statusSet.add(TRANSACTION_STATUSES.RECOMMENDED)
+      if (!statusSet.has(TRANSACTION_STATUSES.APPROVED) && currentStatus !== TRANSACTION_STATUSES.DELETED) {
+        statusSet.add(TRANSACTION_STATUSES.APPROVED)
+      }
+      setSteps(Array.from(statusSet))
+    }
+  }, [currentStatus, transactionData])
 
   const buttonClusterConfig = useMemo(
-    () =>
-      buttonClusterConfigFn({
+    () => buttonClusterConfigFn({
         transactionId,
+        transactionType: txnType,
         methods,
-        t
+        t,
+        setModalData,
+        createUpdateAdminAdjustment,
+        createUpdateInitiativeAgreement
       }),
-    [
-      transactionId,
-      methods,
-      t
-    ]
+    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement]
   )
 
-  return <>
+  if (transactionId && isTransactionDataLoading)
+    return <Loading message={t(`${txnType}:loadingText`)} />
+
+  return (
     <FormProvider {...methods}>
+      <div>
+        {alertMessage && (
+          <BCAlert
+            ref={alertRef}
+            data-test="alert-box"
+            severity={alertSeverity}
+            delay={65000}
+          >
+            {alertMessage}
+          </BCAlert>
+        )}
+      </div>
+      <BCModal
+        open={!!modalData}
+        onClose={() => setModalData(null)}
+        data={modalData}
+      />
       <BCBox>
         {/* Header section */}
-        <Typography variant="h5" color="primary">
-        {title}
-        </Typography>
+        <Typography variant="h5" color="primary">{title}</Typography>
 
         {/* Progress bar */}
         <BCBox sx={{ margin: 'auto', justifyContent: 'center', width: '60%', paddingY: 2 }}>
           <Stepper
-            activeStep={steps.indexOf(transferStatus)}
+            activeStep={steps.indexOf(currentStatus)}
             alternativeLabel={!isMobileSize}
             orientation={isMobileSize ? 'vertical' : 'horizontal'}
           >
             {steps.map((label, index) => {
               const labelProps = {}
-              if (
-                ['Refused', 'Deleted'].includes(label)
-              ) {
+              if (['Refused', 'Deleted'].includes(label)) {
                 labelProps.error = true
               }
               return (
                 <Step
                   key={label}
-                  completed={index <= steps.indexOf(transferStatus)}
+                  completed={index <= steps.indexOf(currentStatus)}
                 >
                   <StepLabel {...labelProps}>{label}</StepLabel>
                 </Step>
@@ -127,25 +232,27 @@ export const AddEditViewTransaction = () => {
         <Comments
           editorMode={editorMode}
           isGovernmentUser={isGovernmentUser}
-          commentField={'toOrgComment'}
+          commentField={'govComment'}
         />
 
         {/* Internal Comments */}
-        <BCBox mt={4}>
-          <Typography variant="h6" color="primary">
-            {t('txn:internalCommentsOptional')}
-          </Typography>
-          <BCBox>
-            <Role roles={govRoles}>
-              <InternalComments entityType={transactionType} entityId={transactionId ?? null} />
-            </Role>
+        {mode !== 'add' &&
+          <BCBox mt={4}>
+            <Typography variant="h6" color="primary">
+              {t(`txn:internalCommentsOptional`)}
+            </Typography>
+            <BCBox>
+              <Role roles={govRoles}>
+                <InternalComments entityType={txnType} entityId={transactionId ?? null} />
+              </Role>
+            </BCBox>
           </BCBox>
-        </BCBox>
+        }
 
         {/* Buttons */}
         <Stack
           component="div"
-          direction={{ md: 'coloumn', lg: 'row' }}
+          direction={{ md: 'column', lg: 'row' }}
           justifyContent="flex-end"
           mt={2}
           gap={2}
@@ -154,20 +261,15 @@ export const AddEditViewTransaction = () => {
           <BCButton
             variant="outlined"
             color="primary"
-            style={{
-              gap: 8
-            }}
+            style={{ gap: 8 }}
             onClick={() => navigate(ROUTES.TRANSACTIONS)}
           >
             <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
-            <Typography
-              variant="body4"
-              sx={{ textTransform: 'capitalize' }}
-            >
+            <Typography variant="body4" sx={{ textTransform: 'capitalize' }}>
               {t('backBtn')}
             </Typography>
           </BCButton>
-          {buttonClusterConfig[transactionId ? transferStatus : TRANSACTION_STATUSES.NEW]?.map(
+          {buttonClusterConfig[transactionId ? currentStatus : TRANSACTION_STATUSES.NEW]?.map(
             (config) =>
               config && (
                 <Role key={config.label}>
@@ -195,5 +297,5 @@ export const AddEditViewTransaction = () => {
         </Stack>
       </BCBox>
     </FormProvider>
-  </>
+  )
 }

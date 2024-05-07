@@ -12,7 +12,6 @@ from lcfs.web.exception.exceptions import DataNotFoundException, ServiceExceptio
 from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatusEnum
 from lcfs.db.models.TransferCategory import TransferCategoryEnum
-from lcfs.db.models.Comment import Comment
 from lcfs.db.models.Transaction import TransactionActionEnum
 
 # services
@@ -283,14 +282,6 @@ class TransferServices:
                 f"Failed to release transaction \
                                    {transfer.from_transaction_id} for transfer {transfer.transfer_id}. Update cancelled."
             )
-
-    def _update_comments(self, transfer, transfer_data):
-        """Update the comments on a transfer record, if provided."""
-        if transfer_data.comments:
-            if transfer.comments:
-                transfer.comments.comment = transfer_data.comments
-            else:
-                transfer.comments = Comment(comment=transfer_data.comments)
 
     def is_valid_category(self, category: str) -> bool:
         return category in (item.value for item in TransferCategoryEnum)

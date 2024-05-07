@@ -37,7 +37,7 @@ export const TransactionDetails = () => {
   const currentDate = new Date()
   const maxDate = dateFormatter(currentDate)
 
-  const selectedOrgId = watch('organizationId');
+  const selectedOrgId = watch('toOrganizationId');
   const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId);
 
   // Fetching organizartion balance
@@ -139,12 +139,12 @@ export const TransactionDetails = () => {
                 }}
               >
                 <Controller
-                  name="organizationId"
+                  name="toOrganizationId"
                   // control={control} // Note: control needs to be passed down from the parent component
                   displayEmpty
                   render={({ field }) => (
                     <Select
-                      id="organization-id"
+                      id="to-organization-id"
                       labelId="organization-select-label"
                       {...field}
                       error={!!errors.toOrganizationId}
@@ -188,7 +188,7 @@ export const TransactionDetails = () => {
                     </Select>
                   )}
                 />
-                {renderError('organizationId')}
+                {renderError('toOrganizationId')}
               </FormControl>
               {selectedOrgId && (
                 <BCBox mt={2}>
@@ -225,7 +225,7 @@ export const TransactionDetails = () => {
                 </InputLabel>
                 <TextField
                   data-test="txn-effective-date"
-                  {...register('effectiveDate')}
+                  {...register('transactionEffectiveDate')}
                   type="date"
                   defaultValue={maxDate}
                   inputProps={{
@@ -233,8 +233,8 @@ export const TransactionDetails = () => {
                     'data-testid': 'txn-effective-date-input'
                   }}
                   size="small"
-                  error={!!errors.effectiveDate}
-                  helperText={errors.effectiveDate?.message}
+                  error={!!errors.transactionEffectiveDate}
+                  helperText={errors.transactionEffectiveDate?.message}
                 />
               </BCBox>
             </Grid>

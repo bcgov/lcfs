@@ -11,6 +11,12 @@ export const TRANSFERS_ADD = `${TRANSFERS}/add`
 export const TRANSFERS_EDIT = `${TRANSFERS}/edit/:transferId`
 export const TRANSFERS_VIEW = `${TRANSFERS}/:transferId`
 
+export const TRANSACTION_ADD = '/transaction/add'
+export const ADMIN_ADJUSTMENT_VIEW = '/admin-adjustment/:transactionId'
+export const ADMIN_ADJUSTMENT_EDIT = '/admin-adjustment/edit/:transactionId'
+export const INITIATIVE_AGREEMENT_VIEW = '/initiative-agreement/:transactionId'
+export const INITIATIVE_AGREEMENT_EDIT = '/initiative-agreement/edit/:transactionId'
+
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`
 export const ORGANIZATION_VIEWUSER = `${ORGANIZATION}/:userID`
