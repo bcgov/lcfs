@@ -1,7 +1,10 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import { roles } from '@/constants/roles'
-import { getAllOrganizationStatuses } from '@/constants/statuses'
+import {
+  getAllFuelCodeStatuses,
+  getAllOrganizationStatuses
+} from '@/constants/statuses'
 import { Stack } from '@mui/material'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -92,6 +95,97 @@ export const OrgStatusRenderer = (props) => {
     </Link>
   )
 }
+export const FuelCodeStatusRenderer = (props) => {
+  const location = useLocation()
+  const statusArr = getAllFuelCodeStatuses()
+  const statusColorArr = ['info', 'success', 'error']
+  const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
+  return (
+    <Link
+      to={props.node?.id && location.pathname + '/' + props?.node?.id}
+      style={{ color: '#000' }}
+    >
+      <BCBox sx={{ width: '100%', height: '100%' }}>
+        <BCBox
+          mt={1}
+          sx={{
+            display: 'flex',
+            justifyContent: 'center'
+          }}
+        >
+          <BCBadge
+            badgeContent={statusArr[statusIndex]}
+            color={statusColorArr[statusIndex]}
+            variant="contained"
+            size="lg"
+            sx={{
+              '& .MuiBadge-badge': {
+                minWidth: '120px',
+                fontWeight: 'regular',
+                textTransform: 'capitalize',
+                fontSize: '0.875rem',
+                padding: '0.4em 0.6em'
+              }
+            }}
+          />
+        </BCBox>
+      </BCBox>
+    </Link>
+  )
+}
+
+export const CommonArrayRenderer = (props) => {
+  const location = useLocation()
+  const options = Array.isArray(props.value)
+    ? props.value
+    : props.value.split(',')
+  const chipContent = (
+    <Stack
+      component="div"
+      sx={{
+        width: '100%',
+        height: '80%',
+        marginTop: '0.2em',
+        display: 'flex',
+        justifyContent: 'flex-start',
+        alignItems: 'center'
+      }}
+      direction="row"
+      spacing={0}
+    >
+      {options.map((mode) => (
+        <BCBadge
+          key={mode}
+          badgeContent={mode}
+          color="#f1f9ee"
+          variant="contained"
+          size="lg"
+          sx={{
+            '& .MuiBadge-badge': {
+              borderRadius: '16px',
+              backgroundColor: '#606060',
+              color: '#fff',
+              marginRight: '0.4em',
+              fontWeight: 'regular',
+              fontSize: '0.8rem',
+              padding: '0.4em 0.6em'
+            }
+          }}
+        />
+      ))}
+    </Stack>
+  )
+  return props.disableLink ? (
+    chipContent
+  ) : (
+    <Link
+      to={props.node?.id && location.pathname + '/' + props?.node?.id}
+      style={{ color: '#000' }}
+    >
+      {chipContent}
+    </Link>
+  )
+}
 
 export const TransactionStatusRenderer = (props) => {
   const statusArr = [
@@ -156,9 +250,9 @@ export const RoleRenderer = (props) => {
       <BCBox sx={{ width: '100%', height: '100%' }}>
         <Stack
           component="div"
-          direction={{ md: 'coloumn', lg: 'row' }}
+          direction={{ lg: 'row' }}
           spacing={0}
-          p={1}
+          p={0.5}
           useFlexGap
           flexWrap="wrap"
           key={props.data.userProfileId}

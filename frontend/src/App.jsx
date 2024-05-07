@@ -214,9 +214,9 @@ const router = createBrowserRouter([
         handle: { title: 'Fuel codes' }
       },
       {
-        path: ROUTES.ADMIN_FUELCODES_ADD,
+        path: ROUTES.ADMIN_FUEL_CODES_ADD,
         element: <AddFuelCode />,
-        handle: { title: 'Add Fuel Code' }
+        handle: { title: 'Add fuel code' }
       },
       {
         path: ROUTES.ADMIN_COMPLIANCE_REPORTING,
@@ -241,7 +241,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.FUELCODES,
         element: <FuelCodes />,
-        handle: { title: 'Fuel Codes' }
+        handle: { title: 'Fuel codes' }
       },
       {
         path: ROUTES.FUELCODES_ADD,

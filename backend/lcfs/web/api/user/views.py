@@ -82,7 +82,7 @@ async def get_users(
     service: UserServices = Depends(),
 ) -> UsersSchema:
     """
-    Enpoint to get information of all users for ag-grid in the UI
+    Endpoint to get information of all users for ag-grid in the UI
 
     Pagination Request Schema:
     - page: offset/ page indicates the pagination of rows for the users list

@@ -63,4 +63,11 @@ from . import (
     Transfer,
     TransferHistory,
     TransferStatus,
+    FuelCode,
+    FuelCodePrefix,
+    FuelCodeStatus,
+    FuelType,
+    FeedstockFuelTransportMode,
+    FinishedFuelTransportMode,
+    TransportMode,
 )

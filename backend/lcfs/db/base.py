@@ -1,6 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base, AbstractConcreteBase
 from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func
-from datetime import datetime
 
 Base = declarative_base()
 

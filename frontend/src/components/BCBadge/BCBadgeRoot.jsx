@@ -106,7 +106,7 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
   // styles for the badge with no children and container={false}
   const standAloneStyles = () => ({
     position: 'static',
-    marginLeft: pxToRem(8),
+    // marginLeft: pxToRem(8),
     transform: 'none',
     fontSize: pxToRem(9)
   })

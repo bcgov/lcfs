@@ -38,3 +38,13 @@ export function getAllOrganizationStatuses() {
 export function getAllTerminalTransferStatuses() {
   return [TRANSFER_STATUSES.DECLINED, TRANSFER_STATUSES.DELETED, TRANSFER_STATUSES.RESCINDED, TRANSFER_STATUSES.REFUSED, TRANSFER_STATUSES.RECORDED]
 }
+
+export const FUEL_CODE_STATUSES = {
+  DRAFT: 'Draft',
+  APPROVED: 'Approved',
+  DELETED: 'Deleted'
+}
+
+export function getAllFuelCodeStatuses() {
+  return Object.values(FUEL_CODE_STATUSES)
+}

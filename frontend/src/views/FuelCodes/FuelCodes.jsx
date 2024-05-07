@@ -20,7 +20,7 @@ import { useApiService } from '@/services/useApiService'
 import { fuelCodeColDefs } from './_schema'
 import withRole from '@/utils/withRole'
 // Constants
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { roles } from '@/constants/roles'
 
 export const FuelCodes = () => {
@@ -100,7 +100,8 @@ export const FuelCodes = () => {
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
-        my={1}
+        mt={1}
+        mb={2}
       >
         <Role roles={[roles.administrator]}>
           <BCButton
@@ -128,8 +129,9 @@ export const FuelCodes = () => {
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
+          className={'ag-theme-material'}
           gridRef={gridRef}
-          apiEndpoint={'fuelCodes/'}
+          apiEndpoint={apiRoutes.getFuelCodes}
           apiData={'fuelCodes'}
           columnDefs={fuelCodeColDefs(t)}
           gridKey={gridKey}

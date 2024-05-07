@@ -69,8 +69,7 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       onChange={onInputBoxChanged}
       isOptionEqualToValue={(option, value) => option.name === value.name}
       limitTags={1}
-      id="bc-column-set-filter"
-      className="ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
+      className="bc-column-set-filter ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
       role="list-box"
       sx={{ width: columnWidth }}
       options={options}

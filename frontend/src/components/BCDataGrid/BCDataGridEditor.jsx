@@ -12,6 +12,8 @@ import {
 } from '@/components/BCDataGrid/components'
 import DataGridLoading from '@/components/DataGridLoading'
 import { v4 as uuid } from 'uuid'
+import '@ag-grid-community/styles/ag-grid.css'
+import '@ag-grid-community/styles/ag-theme-quartz.css'
 import PropTypes from 'prop-types'
 
 /**
@@ -30,8 +32,9 @@ import PropTypes from 'prop-types'
  * @param {object} defaultColDef - Default column definition for the grid.
  * @param {string} highlightedRowId - ID of the row to be highlighted.
  */
-function BCDataGridEditor({
+const BCDataGridEditor = ({
   saveData,
+  gridOptions,
   onGridReady,
   gridApi,
   columnApi,
@@ -43,8 +46,11 @@ function BCDataGridEditor({
   defaultColDef,
   highlightedRowId,
   className,
-  ...others
-}) {
+  defaultStatusBar,
+  onRowEditingStarted,
+  onRowEditingStopped,
+  ...props
+}) => {
   // Define framework components for ag-grid
   const frameworkComponents = {
     asyncValidationEditor: AsyncValidationEditor,
@@ -55,6 +61,27 @@ function BCDataGridEditor({
   }
   // Memorized custom loading overlay component
   const loadingOverlayComponent = useMemo(() => DataGridLoading)
+  // Tab to next editable cell - Keyboard navigation
+  const tabToNextCell = useCallback((params) => {
+    const previousCell = params.previousCellDef
+    const lastRowIndex = previousCell.rowIndex
+    let nextRowIndex = lastRowIndex + 1
+    const renderedRowCount = rowData.length
+
+    if (nextRowIndex < renderedRowCount) {
+      nextRowIndex = lastRowIndex + 1
+    } else {
+      nextRowIndex = 0
+    }
+
+    const result = {
+      rowIndex: nextRowIndex,
+      column: previousCell.column,
+      floating: previousCell.floating
+    }
+
+    return result
+  })
   // Default ag-grid options
   const defaultGridOptions = useMemo(
     () => ({
@@ -67,19 +94,20 @@ function BCDataGridEditor({
       suppressMovableColumns: true,
       suppressColumnMoveAnimation: false,
       rowSelection: 'multiple',
+      editType: 'fullRow',
       rowHeight: 45,
       headerHeight: 40,
       animateRows: true,
+      tabToNextCell,
       suppressPaginationPanel: true,
       suppressScrollOnNewData: true,
       suppressCsvExport: false,
+      // suppressClickEdit: true,
       components: frameworkComponents,
       onFirstDataRendered: (params) => {
-        params.api?.setFocusedCell(0, params.api?.getColumns()[2].getColId())
-
-        params.api?.startEditingCell({
+        params.api.startEditingCell({
           rowIndex: 0,
-          colKey: params.api?.getColumns()[2].getColId()
+          colKey: params.api.getDisplayedCenterColumns()[0].colId
         })
       },
       // stopEditingWhenCellsLoseFocus: true,
@@ -97,32 +125,62 @@ function BCDataGridEditor({
   // Function to add a new row
   const addRow = useCallback(() => {
     const id = uuid()
-    const emptyRow = { id, modified: true }
+    const emptyRow = { id }
     gridApi.applyTransaction({ add: [emptyRow] })
   })
 
   // Function to delete selected row
-  const deleteRow = useCallback((props) => {
+  const deleteRow = useCallback((params) => {
     const selectedData = columnApi?.api?.getSelectedRows()
     gridApi?.applyTransaction({ remove: selectedData })
   })
 
+  const cacheRowData = useCallback((params) => {
+    const allRowData = []
+    params.api.forEachNode((node) => {
+      allRowData.push(node.data)
+    })
+    localStorage.setItem(gridKey, JSON.stringify(allRowData))
+  })
+
+  const onRowEditingStartedHandler = useCallback((params) => {
+    params.api.refreshCells({
+      columns: ['action'],
+      rowNodes: [params.node],
+      force: true
+    })
+    onRowEditingStarted(params)
+    cacheRowData(params)
+  })
+
+  const onRowEditingStoppedHandler = useCallback((params) => {
+    // make an api call to perform auto-save after each row edits
+    params.api.redrawRows({ rowwNodes: params.node })
+    onRowEditingStopped(params)
+    cacheRowData(params)
+  })
+
   // Function called when cell value changes
-  function onCellValueChanged(event) {
-    console.log('onCellValueChanged', event)
-    event.data.modified = true // Mark the entire row as modified
+  function onCellValueChanged(params) {
+    params.data.modified = true // Mark the entire row as modified
   }
 
+  const AgEditorStatusBar = (
+    <Stack spacing={2} direction="row" m={2}>
+      <BCButton variant="contained" color="primary" onClick={saveData}>
+        Save changes
+      </BCButton>
+      <BCButton variant="outlined" color="primary" onClick={addRow}>
+        Add new row
+      </BCButton>
+      <BCButton variant="outlined" color="error" onClick={deleteRow}>
+        Delete selected rows
+      </BCButton>
+    </Stack>
+  )
+
   return (
-    <BCBox
-      sx={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-      className="bc-grid-container"
-    >
+    <>
       <AgGridReact
         gridKey={gridKey}
         gridRef={gridRef}
@@ -132,61 +190,48 @@ function BCDataGridEditor({
         defaultColDef={defaultColDef}
         rowData={rowData}
         getRowNodeId={getRowNodeId}
-        gridOptions={{ ...defaultGridOptions }}
+        gridOptions={{ ...defaultGridOptions, ...gridOptions }}
         onGridReady={onGridReady}
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
         onCellValueChanged={onCellValueChanged}
+        onRowEditingStopped={onRowEditingStoppedHandler}
+        onRowEditingStarted={onRowEditingStartedHandler}
         loadingOverlayComponent={loadingOverlayComponent}
-        editType={'fullRow'}
-        {...others}
+        {...props}
       />
       <BCBox
         display="flex"
         justifyContent="flex-start"
         variant="outlined"
-        sx={{ maxHeight: '4.5rem', position: 'relative' }}
+        sx={{
+          maxHeight: '4.5rem',
+          position: 'relative',
+          border: 'none',
+          borderRadius: '0px 0px 4px 4px',
+          overflow: 'hidden'
+        }}
       >
-        <Stack spacing={2} direction="row" m={2}>
-          <BCButton variant="contained" color="primary" onClick={saveData}>
-            Save changes
-          </BCButton>
-          <BCButton variant="outlined" color="primary" onClick={addRow}>
-            Add new row
-          </BCButton>
-          <BCButton variant="outlined" color="error" onClick={deleteRow}>
-            Delete selected rows
-          </BCButton>
-        </Stack>
+        {defaultStatusBar ? AgEditorStatusBar : props.statusBarcomponent}
       </BCBox>
-    </BCBox>
+    </>
   )
 }
 
-BCDataGridEditor.defaultProps = {
-  gridRef: null,
-  gridKey: `bcgrid-key-<unique-id>`,
-  gridOptions: {},
-  loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
-  defaultColDef: {},
-  className: 'ag-theme-alpine',
-  saveData: () => console.log('No save'),
-  rowData: [],
-  getRowNodeId: uuid(),
-  columnDefs: []
-}
-
 BCDataGridEditor.propTypes = {
-  saveData: PropTypes.func.isRequired,
+  saveData: PropTypes.func,
+  defaultStatusBar: PropTypes.bool,
+  statusBarcomponent: PropTypes.node,
   onGridReady: PropTypes.func.isRequired,
   gridApi: PropTypes.object,
   columnApi: PropTypes.object,
   rowData: PropTypes.array,
-  getRowNodeId: PropTypes.func.isRequired,
+  getRowNodeId: PropTypes.func,
   gridRef: PropTypes.object.isRequired,
   columnDefs: PropTypes.array.isRequired,
   defaultColDef: PropTypes.object.isRequired,
   highlightedRowId: PropTypes.string,
+  // if using different theme, then ensure it is imported.
   className: PropTypes.oneOf([
     'ag-theme-alpine',
     'ag-theme-alpine-dark',
@@ -201,7 +246,16 @@ BCDataGridEditor.propTypes = {
   ])
 }
 BCDataGridEditor.defaultProps = {
-  highlightedRowId: null
+  highlightedRowId: null,
+  gridRef: null,
+  gridKey: `bcgrid-key-<unique-id>`,
+  defaultStatusBar: true,
+  statusBarcomponent: null,
+  gridApi: null,
+  columnApi: null,
+  loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
+  className: 'ag-theme-quartz',
+  getRowNodeId: uuid()
 }
 
 export default BCDataGridEditor
