@@ -83,7 +83,7 @@ async def seed_fuel_types(session):
             "fossil_derived": True
         },
         {
-            "fuel_type": 'Fossil-derived jet-fuel',
+            "fuel_type": 'Fossil-derived jet fuel',
             "fossil_derived": True
         },
     ]

@@ -69,7 +69,9 @@ export const fuelCodeSchema = (t, optionsData) =>
     fuel: yup
       .string()
       .oneOf(
-        optionsData.fuelTypes.map((obj) => obj.fuelType),
+        optionsData.fuelTypes
+          .filter((fuel) => !fuel.fossilDerived)
+          .map((obj) => obj.fuelType),
         t('fuelCode:validateMsg.fuel')
       )
       .required(
@@ -266,7 +268,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditorParams: {
-      options: optionsData.fuelTypes.map((obj) => obj.fuelType),
+      options: optionsData.fuelTypes
+        .filter((fuel) => !fuel.fossilDerived)
+        .map((obj) => obj.fuelType),
       multiple: false, // ability to select multiple values from dropdown
       disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
       freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
