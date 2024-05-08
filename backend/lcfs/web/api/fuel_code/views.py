@@ -20,6 +20,9 @@ from lcfs.db import dependencies
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.api.fuel_code.schema import (
+    AdditionalCarbonIntensitySchema,
+    EnergyDensitySchema,
+    EnergyEffectivenessRatioSchema,
     FuelCodeCreateSchema,
     FuelCodesSchema,
     TableOptionsSchema,
@@ -72,3 +75,45 @@ async def save_fuel_codes(
 ) -> str:
     """Endpoint to save fuel codes"""
     return await service.save_fuel_codes(fuel_codes)
+
+
+@router.get(
+    "/energy-densities",
+    response_model=List[EnergyDensitySchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler
+async def get_energy_densities(
+    request: Request,
+    service: FuelCodeServices = Depends(),
+):
+    """Endpoint to get energy densities"""
+    return await service.get_energy_densities()
+
+
+@router.get(
+    "/energy-effectiveness-ratios",
+    response_model=List[EnergyEffectivenessRatioSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler
+async def get_energy_effectiveness_ratios(
+    request: Request,
+    service: FuelCodeServices = Depends(),
+):
+    """Endpoint to get energy effectiveness ratios (EER)"""
+    return await service.get_energy_effectiveness_ratios()
+
+
+@router.get(
+    "/additional-carbon-intensities",
+    response_model=List[AdditionalCarbonIntensitySchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler
+async def get_use_of_a_carbon_intensities(
+    request: Request,
+    service: FuelCodeServices = Depends(),
+):
+    """Endpoint to get UCI's"""
+    return await service.get_use_of_a_carbon_intensities()
