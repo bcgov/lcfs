@@ -20,20 +20,26 @@ function DefaultNavbarLink({ icon, name, route, light, onClick }) {
       className="NavLink"
       to={route}
       mx={1}
-      p={1}
+      mt={-0.1}
+      mb={-1}
+      py={1}
+      px={2}
       display="flex"
       alignItems="center"
       sx={({ transitions }) => ({
         cursor: 'pointer',
         userSelect: 'none',
-        minHeight: '2.5rem',
-        paddingBottom: '14px',
+        minHeight: '2.7rem',
+        paddingBottom: '15px',
         '&:hover': {
-          backgroundColor: hover ? 'rgba(0, 0, 0, 0.3)' : 'transparent'
+          borderBottom: '6px solid #38598a',
+          backgroundColor: hover ? 'rgba(0, 0, 0, 0.3)' : 'transparent',
+          paddingBottom: '9px',
         },
         '&.active': {
           borderBottom: '3px solid #fcc219',
-          backgroundColor: 'rgba(0, 0, 0, 0.3)'
+          backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          paddingBottom: '12px',
         },
         transform: 'translateX(0)',
         transition: transitions.create('transform', {
@@ -64,7 +70,7 @@ function DefaultNavbarLink({ icon, name, route, light, onClick }) {
           width: '100%',
           lineHeight: 0,
           '&:hover': {
-            textDecoration: 'underline'
+            textDecoration: 'none'
           }
         }}
       >

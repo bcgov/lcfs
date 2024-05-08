@@ -9,7 +9,7 @@ import { isNumeric } from '@/utils/formatters'
 const StyledBreadcrumb = styled(Chip)(({ theme }) => {
   const backgroundColor =
     theme.palette.mode === 'light'
-      ? theme.palette.grey[200]
+      ? theme.palette.common.white
       : theme.palette.grey[800]
   return {
     backgroundColor,

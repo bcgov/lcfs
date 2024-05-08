@@ -1,10 +1,8 @@
-// hooks
 import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useNavigate } from 'react-router-dom'
 import withRole from '@/utils/withRole'
 import { useTranslation } from 'react-i18next'
-// mui components
 import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack, List, ListItemButton } from '@mui/material'
@@ -13,7 +11,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 
-export const OrgDetailsWidget = () => {
+export const OrgDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
   const { data: orgData, isLoading: orgLoading } = useOrganization()
   const navigate = useNavigate()
@@ -95,6 +93,6 @@ export const OrgDetailsWidget = () => {
 }
 
 const AllowedRoles = [roles.transfers]
-const OrgDetailsWidgetWithRole = withRole(OrgDetailsWidget, AllowedRoles)
+const OrgDetailsWidgetWithRole = withRole(OrgDetailsCard, AllowedRoles)
 
 export default OrgDetailsWidgetWithRole
