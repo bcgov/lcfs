@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from lcfs.db import dependencies
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
-from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema
+from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema, AdminAdjustmentUpdateSchema
 from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
 from lcfs.web.core.decorators import roles_required, view_handler
 
@@ -18,19 +18,17 @@ async def get_admin_adjustment(
     return await service.get_admin_adjustment(admin_adjustment_id)
 
 
-@router.put("/{admin_adjustment_id}", response_model=AdminAdjustmentSchema, status_code=status.HTTP_200_OK)
+@router.put("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_200_OK)
 @view_handler
 @roles_required("Government")
 async def update_admin_adjustment(
     request: Request,
-    admin_adjustment_id: int,
-    admin_adjustment_data: AdminAdjustmentCreateSchema,
+    admin_adjustment_data: AdminAdjustmentUpdateSchema = ...,
     service: AdminAdjustmentServices = Depends(),
     validate: AdminAdjustmentValidation = Depends()
 ):
     """Endpoint to update an existing admin adjustment."""
-    await validate.validate_admin_adjustment(request, admin_adjustment_data)
-    admin_adjustment_data.admin_adjustment_id = admin_adjustment_id
+    await validate.validate_admin_adjustment_update(request, admin_adjustment_data)
     return await service.update_admin_adjustment(admin_adjustment_data)
 
 
@@ -40,9 +38,9 @@ async def update_admin_adjustment(
 async def create_admin_adjustment(
     request: Request,
     admin_adjustment_create: AdminAdjustmentCreateSchema = ...,
-    admin_adjustment_service: AdminAdjustmentServices = Depends(),
+    service: AdminAdjustmentServices = Depends(),
     validate: AdminAdjustmentValidation = Depends(),
 ):
     """Endpoint to create a new admin adjustment."""
-    await validate.validate_admin_adjustment(request, admin_adjustment_create)
-    return await admin_adjustment_service.create_admin_adjustment(admin_adjustment_create)
+    await validate.validate_admin_adjustment_create(request, admin_adjustment_create)
+    return await service.create_admin_adjustment(admin_adjustment_create)

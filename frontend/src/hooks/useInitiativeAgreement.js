@@ -1,3 +1,4 @@
+import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { INITIATIVE_AGREEMENT } from '@/views/Transactions/AddEditViewTransaction'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,7 +8,7 @@ export const useInitiativeAgreement = (initiativeAgreementID, options) => {
 
   return useQuery({
     queryKey: [INITIATIVE_AGREEMENT, initiativeAgreementID],
-    queryFn: async () => (await client.get(`/initiative_agreements/${initiativeAgreementID}`)).data,
+    queryFn: async () => (await client.get(`${apiRoutes.initiativeAgreements}${initiativeAgreementID}`)).data,
     ...options
   })
 }
@@ -19,9 +20,9 @@ export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId, option
     ...options,
     mutationFn: async ({ data }) => {
       if (initiativeAgreementId) {
-        return await client.put(`initiative_agreements/${initiativeAgreementId}`, data)
+        return await client.put(apiRoutes.initiativeAgreements, data)
       } else {
-        return await client.post('initiative_agreements', data)
+        return await client.post(apiRoutes.initiativeAgreements, data)
       }
     },
     onSettled: () => {

@@ -1,3 +1,4 @@
+import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/AddEditViewTransaction'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -7,7 +8,7 @@ export const useAdminAdjustment = (adminAdjustmentID, options) => {
 
   return useQuery({
     queryKey: [ADMIN_ADJUSTMENT, adminAdjustmentID],
-    queryFn: async () => (await client.get(`/admin_adjustments/${adminAdjustmentID}`)).data,
+    queryFn: async () => (await client.get(`${apiRoutes.adminAdjustments}${adminAdjustmentID}`)).data,
     ...options
   })
 }
@@ -19,9 +20,10 @@ export const useCreateUpdateAdminAdjustment = (adminAdjustmentId, options) => {
     ...options,
     mutationFn: async ({ data }) => {
       if (adminAdjustmentId) {
-        return await client.put(`admin_adjustments/${adminAdjustmentId}`, data)
+        data.adminAdjustmentId = adminAdjustmentId
+        return await client.put(apiRoutes.adminAdjustments, data)
       } else {
-        return await client.post('admin_adjustments/', data)
+        return await client.post(apiRoutes.adminAdjustments, data)
       }
     },
     onSettled: () => {

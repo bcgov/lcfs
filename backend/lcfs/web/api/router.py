@@ -44,8 +44,8 @@ api_router.include_router(
     fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"]
 )
 api_router.include_router(
-    admin_adjustment.router, prefix="/admin_adjustments", tags=["admin_adjustments"]
+    admin_adjustment.router, prefix="/admin-adjustments", tags=["admin_adjustments"]
 )
 api_router.include_router(
-    initiative_agreement.router, prefix="/initiative_agreements", tags=["initiative_agreements"]
+    initiative_agreement.router, prefix="/initiative-agreements", tags=["initiative_agreements"]
 )

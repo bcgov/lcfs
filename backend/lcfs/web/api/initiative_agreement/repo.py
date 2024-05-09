@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatus
+from lcfs.db.models.InitiativeAgreementHistory import InitiativeAgreementHistory
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema
 
 from lcfs.db.dependencies import get_async_db_session
@@ -20,6 +21,10 @@ class InitiativeAgreementRepository:
         query = select(InitiativeAgreement).options(
             selectinload(InitiativeAgreement.to_organization),
             selectinload(InitiativeAgreement.current_status),
+            selectinload(InitiativeAgreement.history).selectinload(
+                InitiativeAgreementHistory.user_profile),
+            selectinload(InitiativeAgreement.history).selectinload(
+                InitiativeAgreementHistory.initiative_agreement_status)
         ).where(InitiativeAgreement.initiative_agreement_id == initiative_agreement_id)
         result = await self.db.execute(query)
         return result.scalars().first()
@@ -28,6 +33,11 @@ class InitiativeAgreementRepository:
     async def create_initiative_agreement(self, initiative_agreement: InitiativeAgreement) -> InitiativeAgreement:
         self.db.add(initiative_agreement)
         await self.db.flush()
+        await self.db.refresh(initiative_agreement, [
+            "to_organization",
+            "current_status",
+            "history",
+        ])  # Ensures that all specified relations are up-to-date
         return initiative_agreement
 
     @repo_handler
@@ -47,3 +57,30 @@ class InitiativeAgreementRepository:
             raise DataNotFoundException(f"Initiative Agreement status '{status_name}' not found")
         
         return status
+
+    @repo_handler
+    async def add_initiative_agreement_history(
+        self, 
+        initiative_agreement_id: int, 
+        initiative_agreement_status_id: int, 
+        user_profile_id: int
+    ) -> InitiativeAgreementHistory:
+        """
+        Adds a new record to the initiative agreement history in the database.
+
+        Args:
+            initiative_agreement_id (int): The ID of the initiative agreement to which this history record relates.
+            initiative_agreement_status_id (int): The status ID that describes the current state of the initiative agreement.
+            user_profile_id (int): The ID of the user who made the change.
+
+        Returns:
+            InitiativeAgreementHistory: The newly created initiative agreement history record.
+        """
+        new_history_record = InitiativeAgreementHistory(
+            initiative_agreement_id=initiative_agreement_id,
+            initiative_agreement_status_id=initiative_agreement_status_id,
+            user_profile_id=user_profile_id
+        )
+        self.db.add(new_history_record)
+        await self.db.flush()
+        return new_history_record

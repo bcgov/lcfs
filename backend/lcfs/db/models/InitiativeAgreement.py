@@ -19,7 +19,7 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
 
     to_organization = relationship('Organization', back_populates='initiative_agreements')
     transaction = relationship('Transaction')
-    initiative_agreement_history_records = relationship('InitiativeAgreementHistory', back_populates='initiative_agreement')
+    history = relationship('InitiativeAgreementHistory', back_populates='initiative_agreement')
     current_status = relationship('InitiativeAgreementStatus')
     initiative_agreement_internal_comments = relationship('InitiativeAgreementInternalComment', back_populates='initiative_agreement')
 

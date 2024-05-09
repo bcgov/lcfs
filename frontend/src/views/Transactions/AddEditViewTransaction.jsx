@@ -104,7 +104,6 @@ export const AddEditViewTransaction = () => {
     }
   }, [location.state, mode, methods])
 
-  const editorMode = ['edit', 'add'].includes(mode) && hasAnyRole(roles.analyst, roles.director)
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook = txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement
@@ -114,7 +113,7 @@ export const AddEditViewTransaction = () => {
     isFetched,
     isLoadingError
   } = transactionDataHook(transactionId, { 
-    enabled: !!transactionId,
+    enabled: !!transactionId && !!txnType,
     retry: false,
     staleTime: 0,
     keepPreviousData: false
@@ -142,22 +141,21 @@ export const AddEditViewTransaction = () => {
   }, [isFetched, transactionId, transactionData, isLoadingError, queryState, txnType, methods, t])
 
   const title = useMemo(() => {
-    if (!editorMode) {
-      // For view mode
-      return `${t(`${txnType}:${txnType}View`)} ${transactionId}`
-    }
-    // For add and edit modes
     switch (mode) {
       case 'add':
         return t('txn:newTransaction')
       case 'edit':
+        return `Edit ${t(`${txnType}:${txnType}`)} ${transactionId}`
       default:
-        return `${t(`${txnType}:${txnType}Edit`)} ${transactionId}`
+        return `${t(`${txnType}:${txnType}`)} ${transactionId}`
     }
-  }, [editorMode, mode, t, transactionId, txnType])
+  }, [mode, t, transactionId, txnType])
   
   const currentStatus = transactionData?.currentStatus?.status
+  const isDraft = currentStatus === TRANSACTION_STATUSES.DRAFT
+  const isEditable = (mode === 'add' || (mode === 'edit' && isDraft)) && hasAnyRole(roles.analyst, roles.director);
 
+  // TODO fix the steps on delete
   useEffect(() => {
     const statusSet = new Set()
     transactionData?.history?.forEach((item) => {
@@ -198,16 +196,13 @@ export const AddEditViewTransaction = () => {
   if (isUpdatingAdminAdjustment || isUpdatingInitiativeAgreement)
     return <Loading message={t('transfer:processingText')} />
 
-  if (
-    (isLoadingError && editorMode !== 'add') ||
-    queryState.status === 'error'
-  ) {
+  if (isLoadingError || queryState.status === 'error') {
     return (
       <BCAlert
         data-test="alert-box"
         severity={alertSeverity}
         dismissible={true}
-        delay={50000}
+        delay={10000}
       >
         {alertMessage}
       </BCAlert>
@@ -262,12 +257,14 @@ export const AddEditViewTransaction = () => {
         </BCBox>
 
         {/* Transaction Details */}
-        <TransactionDetails />
+        <TransactionDetails 
+          transactionId={transactionId}
+          isEditable={isEditable}
+        />
 
         {/* Comments */}
         <Comments
-          editorMode={editorMode}
-          isGovernmentUser={isGovernmentUser}
+          isEditable={isEditable}
           commentField={'govComment'}
         />
 

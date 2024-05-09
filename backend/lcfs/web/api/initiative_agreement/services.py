@@ -1,14 +1,20 @@
 # initiative_agreement/services.py
-from fastapi import Depends
+from fastapi import Depends, Request
 from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatusEnum
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema, InitiativeAgreementSchema
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
 
 class InitiativeAgreementServices:
-    def __init__(self, repo: InitiativeAgreementRepository = Depends(InitiativeAgreementRepository)):
+    def __init__(
+        self, 
+        repo: InitiativeAgreementRepository = Depends(InitiativeAgreementRepository),
+        request: Request = None,
+    ) -> None:
         self.repo = repo
+        self.request = request
 
     @service_handler
     async def get_initiative_agreement(self, initiative_agreement_id: int) -> InitiativeAgreementSchema:
@@ -30,18 +36,24 @@ class InitiativeAgreementServices:
         # Check if the status has changed
         status_has_changed = initiative_agreement.current_status != new_status
 
-        # Update other fields
         for field, value in initiative_agreement_data.dict(exclude_unset=True).items():
-            setattr(initiative_agreement, field, value)
+            if field != 'current_status':  # Skip the current_status field
+                setattr(initiative_agreement, field, value)
 
-        # Update status
+        # Handle the current_status field separately
         if status_has_changed:
             initiative_agreement.current_status = new_status
-            # TODO create history records on future status changes
 
         # Save the updated initiative agreement
         updated_initiative_agreement = await self.repo.update_initiative_agreement(initiative_agreement)
         
+        if status_has_changed:
+            await self.repo.add_initiative_agreement_history(
+                initiative_agreement.initiative_agreement_id,
+                new_status.initiative_agreement_status_id,
+                self.request.user.user_profile_id
+            )
+            
         return InitiativeAgreementSchema.from_orm(updated_initiative_agreement)
 
     @service_handler
@@ -62,5 +74,13 @@ class InitiativeAgreementServices:
         initiative_agreement.current_status = current_status
 
         initiative_agreement = await self.repo.create_initiative_agreement(initiative_agreement)
+
+        # If we skip draft on create and recommend then add history record
+        if current_status.status == InitiativeAgreementStatusEnum.Recommended:
+              await self.repo.add_initiative_agreement_history(
+                  initiative_agreement.initiative_agreement_id,
+                  current_status.initiative_agreement_status_id,
+                  self.request.user.user_profile_id
+              )
 
         return initiative_agreement

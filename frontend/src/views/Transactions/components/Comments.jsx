@@ -6,7 +6,7 @@ import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 
-export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
+export const Comments = ({commentField, isEditable}) => {
   const { t } = useTranslation(['txn'])
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -40,6 +40,7 @@ export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
               multiline
               fullWidth
               rows={4}
+              disabled={!isEditable}
               variant="outlined"
             />
           </Collapse>

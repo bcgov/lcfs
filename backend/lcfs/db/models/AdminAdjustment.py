@@ -19,7 +19,7 @@ class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
 
     to_organization = relationship('Organization', back_populates='admin_adjustments')
     transaction = relationship('Transaction')
-    admin_adjustment_history_records = relationship('AdminAdjustmentHistory', back_populates='admin_adjustment')
+    history = relationship('AdminAdjustmentHistory', back_populates='admin_adjustment')
     current_status = relationship('AdminAdjustmentStatus')
     admin_adjustment_internal_comments = relationship('AdminAdjustmentInternalComment', back_populates='admin_adjustment')
 

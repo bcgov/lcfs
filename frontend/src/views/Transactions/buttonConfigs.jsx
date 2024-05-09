@@ -85,7 +85,7 @@ export const buttonClusterConfigFn = ({
           primaryButtonColor: 'error',
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
-          content: t(`${transactionType}.deleteConfirmText`)
+          content: t(`${transactionType}:deleteDraftConfirmText`)
         })
       }
     },
@@ -95,12 +95,21 @@ export const buttonClusterConfigFn = ({
       ),
       id: 'recommend-btn',
       handler: (formData) => {
-        const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
-        mutationFn({
-          data: {
-            ...formData,
-            currentStatus: TRANSACTION_STATUSES.RECOMMENDED
-          }
+        setModalData({
+          primaryButtonAction: () => {
+            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            mutationFn({
+              data: {
+                ...formData,
+                currentStatus: TRANSACTION_STATUSES.RECOMMENDED
+              }
+            })
+          },
+          primaryButtonText: t(`txn:actionBtns.recommendBtn`),
+          primaryButtonColor: 'primary',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t(`${transactionType}:recommendConfirmText`)
         })
       }
     },
@@ -110,12 +119,21 @@ export const buttonClusterConfigFn = ({
       ),
       id: 'approve-btn',
       handler: (formData) => {
-        const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
-        mutationFn({
-          data: {
-            ...formData,
-            currentStatus: TRANSACTION_STATUSES.APPROVED
-          }
+        setModalData({
+          primaryButtonAction: () => {
+            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            mutationFn({
+              data: {
+                ...formData,
+                currentStatus: TRANSACTION_STATUSES.APPROVED
+              }
+            })
+          },
+          primaryButtonText: t(`txn:actionBtns.approveBtn`),
+          primaryButtonColor: 'primary',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t(`${transactionType}:approveConfirmText`)
         })
       }
     },

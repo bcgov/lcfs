@@ -12,6 +12,8 @@ class InitiativeAgreementHistory(BaseModel, Auditable, EffectiveDates):
     initiative_agreement_history_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the initiative agreement history record")
     initiative_agreement_id = Column(Integer, ForeignKey('initiative_agreement.initiative_agreement_id'))
     initiative_agreement_status_id = Column(Integer, ForeignKey('initiative_agreement_status.initiative_agreement_status_id'))
+    user_profile_id = Column(Integer, ForeignKey("user_profile.user_profile_id"), comment="Foreign key to user_profile")
 
-    initiative_agreement = relationship('InitiativeAgreement', back_populates='initiative_agreement_history_records')
+    initiative_agreement = relationship('InitiativeAgreement', back_populates='history')
     initiative_agreement_status = relationship('InitiativeAgreementStatus')
+    user_profile = relationship("UserProfile")

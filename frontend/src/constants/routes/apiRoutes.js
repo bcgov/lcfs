@@ -6,13 +6,15 @@ export const apiRoutes = {
   orgUsers: '/organization/:orgID/users/list',
   transactions: '/transactions/',
   orgTransactions: '/organization/:orgID/transactions',
+  adminAdjustments: '/admin-adjustments/',
+  initiativeAgreements: '/initiative-agreements/',
   openapi: '/openapi.json/',
   updateCategory: '/transfers/:transferId/category',
   getTransfer: '/transfers/:transferId',
   getFuelCode: '/fuel-codes/:fuelCodeId',
   fuelCodeOptions: '/fuel-codes/table-options',
   addFuelCodes: '/fuel-codes/save-fuel-codes',
-  getFuelCodes: '/fuel-codes/list'
+  getFuelCodes: '/fuel-codes/list',
 }
 
 export const viewRoutesTitle = {

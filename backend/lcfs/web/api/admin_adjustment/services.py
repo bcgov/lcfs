@@ -1,13 +1,19 @@
-from fastapi import Depends
+from fastapi import Depends, Request
 from lcfs.db.models.AdminAdjustment import AdminAdjustment
-from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema
+from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
+from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema, AdminAdjustmentUpdateSchema
 from lcfs.web.api.admin_adjustment.repo import AdminAdjustmentRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
 
 class AdminAdjustmentServices:
-    def __init__(self, repo: AdminAdjustmentRepository = Depends(AdminAdjustmentRepository)):
+    def __init__(
+        self, 
+        repo: AdminAdjustmentRepository = Depends(AdminAdjustmentRepository),
+        request: Request = None,
+    ) -> None:
         self.repo = repo
+        self.request = request
 
     @service_handler
     async def get_admin_adjustment(self, admin_adjustment_id: int) -> AdminAdjustmentSchema:
@@ -16,29 +22,36 @@ class AdminAdjustmentServices:
         return AdminAdjustmentSchema.from_orm(admin_adjustment)
 
     @service_handler
-    async def update_admin_adjustment(self, admin_adjustment_data: AdminAdjustmentSchema) -> AdminAdjustmentSchema:
+    async def update_admin_adjustment(
+        self, admin_adjustment_data: AdminAdjustmentUpdateSchema
+    ) -> AdminAdjustmentSchema:
         """Update an existing admin adjustment."""
         admin_adjustment = await self.repo.get_admin_adjustment_by_id(admin_adjustment_data.admin_adjustment_id)
         if not admin_adjustment:
             raise DataNotFoundException(f"Admin Adjustment with ID {admin_adjustment_data.admin_adjustment_id} not found.")
         
-        # Handle status change
         new_status = await self.repo.get_admin_adjustment_status_by_name(admin_adjustment_data.current_status)
-        
         # Check if the status has changed
         status_has_changed = admin_adjustment.current_status != new_status
         
         # Update other fields
         for field, value in admin_adjustment_data.dict(exclude_unset=True).items():
-            setattr(admin_adjustment, field, value)
+            if field != 'current_status':  # Skip the current_status field
+                setattr(admin_adjustment, field, value) 
 
-        # Update status
+        # Handle the current_status field separately
         if status_has_changed:
             admin_adjustment.current_status = new_status
-            # TODO create history records on future status changes
 
         # Pass updated object to repository for saving
         updated_admin_adjustment = await self.repo.update_admin_adjustment(admin_adjustment)
+
+        if status_has_changed:
+            await self.repo.add_admin_adjustment_history(
+                admin_adjustment.admin_adjustment_id,
+                new_status.admin_adjustment_status_id,
+                self.request.user.user_profile_id
+            )
 
         return AdminAdjustmentSchema.from_orm(updated_admin_adjustment)
 
@@ -63,5 +76,12 @@ class AdminAdjustmentServices:
 
         # Save the admin adjustment
         admin_adjustment = await self.repo.create_admin_adjustment(admin_adjustment)
+        
+        if current_status.status == AdminAdjustmentStatusEnum.Recommended:
+            await self.repo.add_admin_adjustment_history(
+                admin_adjustment.admin_adjustment_id,
+                current_status.admin_adjustment_status_id,
+                self.request.user.user_profile_id
+            )
 
-        return admin_adjustment
+        return AdminAdjustmentSchema.from_orm(admin_adjustment)

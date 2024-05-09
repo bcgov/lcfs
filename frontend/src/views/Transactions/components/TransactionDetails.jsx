@@ -17,8 +17,9 @@ import {
 import { dateFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
+import Loading from '@/components/Loading';
 
-export const TransactionDetails = () => {
+export const TransactionDetails = ({transactionId, isEditable}) => {
   const { t } = useTranslation(['txn']);
   
   const {
@@ -71,6 +72,10 @@ export const TransactionDetails = () => {
     )
   }
 
+  if (!orgData || orgData.length === 0) {
+    return <Loading message={t('txn:loadingBalance')} />;
+  }
+
   return (
     <BCBox mb={4}>
       <LabelBox>
@@ -90,7 +95,10 @@ export const TransactionDetails = () => {
                     <FormControlLabel
                       value="initiativeAgreement"
                       control={
-                        <Radio data-test="txn-type-initiative-agreement" />
+                        <Radio 
+                          data-test="txn-type-initiative-agreement" 
+                          disabled={!!transactionId || !isEditable}
+                        />
                       }
                       label={
                         <BCTypography variant="body3">
@@ -102,7 +110,10 @@ export const TransactionDetails = () => {
                     <FormControlLabel
                       value="administrativeAdjustment"
                       control={
-                        <Radio data-test="txn-type-administrative-adjustment" />
+                        <Radio
+                          data-test="txn-type-administrative-adjustment"
+                          disabled={!!transactionId || !isEditable}
+                        />
                       }
                       label={
                         <BCTypography variant="body3">
@@ -150,6 +161,7 @@ export const TransactionDetails = () => {
                       error={!!errors.toOrganizationId}
                       helperText={errors.toOrganizationId?.message}
                       displayEmpty
+                      disabled={!isEditable}
                       MenuProps={{
                         sx: {
                           marginTop: '0 !important'
@@ -208,6 +220,7 @@ export const TransactionDetails = () => {
                   data-test="compliance-units"
                   {...register('complianceUnits')}
                   type="text"
+                  disabled={!isEditable}
                   error={!!errors.complianceUnits}
                   helperText={errors.complianceUnits?.message}
                 />
@@ -228,6 +241,7 @@ export const TransactionDetails = () => {
                   {...register('transactionEffectiveDate')}
                   type="date"
                   defaultValue={maxDate}
+                  disabled={!isEditable}
                   inputProps={{
                     max: maxDate,
                     'data-testid': 'txn-effective-date-input'
