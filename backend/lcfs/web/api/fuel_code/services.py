@@ -2,6 +2,7 @@ from logging import getLogger
 import math
 from typing import List
 from fastapi import Depends
+from datetime import datetime
 
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import service_handler
@@ -129,3 +130,55 @@ class FuelCodeServices:
             fuel_code_models.append(await self.convert_to_model(fuel_code))
         if len(fuel_code_models) > 0:
             return await self.repo.save_fuel_codes(fuel_code_models)
+
+    @service_handler
+    async def get_fuel_code(self, fuel_code_id: int):
+        return await self.repo.get_fuel_code(fuel_code_id)
+
+    async def get_fuel_code_status(self, fuel_code_status: str) -> FuelCodeStatus:
+        return (await self.repo.get_fuel_code_status(fuel_code_status))
+
+    @service_handler
+    async def update_fuel_code(self, fuel_code_id: int, fuel_code_data: FuelCodeCreateSchema):
+        fuel_code = await self.get_fuel_code(fuel_code_id)
+        if not fuel_code:
+            raise ValueError("Fuel code not found")
+
+        for field, value in fuel_code_data.model_dump(exclude={'feedstock_fuel_transport_modes', 'finished_fuel_transport_modes'}).items():
+            setattr(fuel_code, field, value)
+
+        fuel_code.feedstock_fuel_transport_modes.clear()
+        if fuel_code_data.feedstock_fuel_transport_modes:
+            for mode in fuel_code_data.feedstock_fuel_transport_modes:
+
+                transport_mode = await self.repo.get_transport_mode(mode.transport_mode_id)
+
+                feedstock_mode = FeedstockFuelTransportMode(
+                    fuel_code_id=fuel_code.fuel_code_id,
+                    transport_mode_id=transport_mode.transport_mode_id
+                )
+
+                fuel_code.feedstock_fuel_transport_modes.append(feedstock_mode)
+
+        fuel_code.finished_fuel_transport_modes.clear()
+        if fuel_code_data.finished_fuel_transport_modes:
+            for mode in fuel_code_data.finished_fuel_transport_modes:
+
+                transport_mode = await self.repo.get_transport_mode(mode.transport_mode_id)
+
+                finished_mode = FinishedFuelTransportMode(
+                    fuel_code_id=fuel_code.fuel_code_id,
+                    transport_mode_id=transport_mode.transport_mode_id
+                )
+
+                fuel_code.finished_fuel_transport_modes.append(finished_mode)
+
+        if fuel_code_data.status == 'Approved':
+            fuel_code.fuel_status_id = (await self.get_fuel_code_status(fuel_code_data.status)).fuel_code_status_id
+            fuel_code.approval_date = datetime.now()
+
+        return await self.repo.update_fuel_code(fuel_code)
+
+    @service_handler
+    async def delete_fuel_code(self, fuel_code_id: int):
+        return await self.repo.delete_fuel_code(fuel_code_id)

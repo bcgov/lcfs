@@ -8,6 +8,8 @@
   "fuelCodeAddSuccessMsg": "Fuel code(s) added successfully.",
   "fuelCodeAddFailMsg": "Failed to add fuel code(s).",
   "saveDraftBtn": "Save draft code",
+  "deleteFuelCodeBtn": "Delete Code",
+  "approveFuelCodeBtn": "Approve Code",
   "addRow": "Add row",
   "rows": "rows",
   "fuelCodeColLabels": {

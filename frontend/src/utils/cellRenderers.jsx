@@ -157,7 +157,7 @@ export const CommonArrayRenderer = (props) => {
         <BCBadge
           key={mode}
           badgeContent={mode}
-          color="#f1f9ee"
+          color="light"
           variant="contained"
           size="lg"
           sx={{

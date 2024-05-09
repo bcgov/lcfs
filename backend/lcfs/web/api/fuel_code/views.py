@@ -23,6 +23,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateSchema,
     FuelCodesSchema,
     TableOptionsSchema,
+    FuelCodeSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 
@@ -72,3 +73,34 @@ async def save_fuel_codes(
 ) -> str:
     """Endpoint to save fuel codes"""
     return await service.save_fuel_codes(fuel_codes)
+
+
+@router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
+@view_handler
+async def get_fuel_code(
+    request: Request,
+    fuel_code_id: int,
+    service: FuelCodeServices = Depends(),
+) -> FuelCodeSchema:
+    return await service.get_fuel_code(fuel_code_id)
+
+
+@router.put("/{fuel_code_id}", status_code=status.HTTP_200_OK)
+@view_handler
+async def update_fuel_code(
+    request: Request,
+    fuel_code_id: int,
+    fuel_code_data: FuelCodeCreateSchema,
+    service: FuelCodeServices = Depends(),
+):
+    return await service.update_fuel_code(fuel_code_id, fuel_code_data)
+
+
+@router.delete("/{fuel_code_id}", status_code=status.HTTP_200_OK)
+@view_handler
+async def delete_fuel_code(
+    request: Request,
+    fuel_code_id: int,
+    service: FuelCodeServices = Depends()
+):
+    return await service.delete_fuel_code(fuel_code_id)

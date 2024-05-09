@@ -149,14 +149,18 @@ const BCDataGridEditor = ({
       rowNodes: [params.node],
       force: true
     })
-    onRowEditingStarted(params)
+    if (onRowEditingStarted) {
+      onRowEditingStarted(params)
+    }
     cacheRowData(params)
   })
 
   const onRowEditingStoppedHandler = useCallback((params) => {
     // make an api call to perform auto-save after each row edits
     params.api.redrawRows({ rowwNodes: params.node })
-    onRowEditingStopped(params)
+    if (onRowEditingStopped) {
+      onRowEditingStopped(params)
+    }
     cacheRowData(params)
   })
 

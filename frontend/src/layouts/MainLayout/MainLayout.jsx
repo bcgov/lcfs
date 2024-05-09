@@ -44,10 +44,10 @@ export const MainLayout = () => {
           disableGutters
         >
           <Grid container spacing={2}>
-            <Grid item xs={12} mt={-2}>
+            <Grid item="true" xs={12} mt={-2}>
               <Crumb />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item="true" xs={12}>
               <BCBox
                 elevation={5}
                 sx={{
@@ -58,7 +58,7 @@ export const MainLayout = () => {
                 <Outlet />
               </BCBox>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item="true" xs={12}>
               <DisclaimerBanner
                 messages={[
                   t('layout.disclaimer.part1'),
