@@ -1,6 +1,7 @@
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from datetime import date, datetime
+from datetime import date
+from pydantic import validator
 from enum import Enum
 
 
@@ -45,6 +46,68 @@ class FuelCodePrefixSchema(BaseSchema):
     prefix: str
 
 
+class UOMSchema(BaseSchema):
+    uom_id: int
+    name: str
+    description: Optional[str]
+
+
+class EndUseTypeSchema(BaseSchema):
+    end_use_type_id: int
+    type: str
+    sub_type: Optional[str]
+
+
+class EnergyDensitySchema(BaseSchema):
+    energy_density_id: int
+    density: float
+
+    fuel_type_id: int
+    fuel_type: Optional[FuelTypeSchema]
+    uom_id: int
+    uom: Optional[UOMSchema]
+
+    @validator("density", pre=True, always=True)
+    def quantize_density(cls, value):
+        return round(value, 2)
+
+
+class FuelCategorySchema(BaseSchema):
+    fuel_category_id: int
+    category: str
+    description: Optional[str]
+
+
+class EnergyEffectivenessRatioSchema(BaseSchema):
+    eer_id: int
+    fuel_category_id: int
+    fuel_category: Optional[FuelCategorySchema]
+    fuel_type_id: int
+    fuel_type: Optional[FuelTypeSchema]
+    end_use_type_id: Optional[int]
+    end_use_type: Optional[EndUseTypeSchema]
+    ratio: float
+
+    @validator("ratio", pre=True, always=True)
+    def quantize_ratio(cls, value):
+        return round(value, 2)
+
+
+class AdditionalCarbonIntensitySchema(BaseSchema):
+    additional_uci_id: int
+    fuel_type_id: Optional[int]
+    fuel_type: Optional[FuelTypeSchema]
+    end_use_type_id: Optional[int]
+    end_use_type: Optional[EndUseTypeSchema]
+    uom_id: Optional[int]
+    uom: Optional[UOMSchema]
+    intensity: float
+
+    @validator("intensity", pre=True, always=True)
+    def quantize_intensity(cls, value):
+        return round(value, 2)
+
+
 class TableOptionsSchema(BaseSchema):
     fuel_types: List[FuelTypeSchema]
     transport_modes: List[TransportModeSchema]
@@ -75,8 +138,12 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
     fuel_code_type: Optional[FuelTypeSchema] = None
-    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = None
-    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = None
+    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
+        None
+    )
+    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
+        None
+    )
 
 
 class FuelCodesSchema(BaseSchema):
