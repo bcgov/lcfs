@@ -43,7 +43,7 @@
   "cards": {
     "feedback": {
       "title": "We want to hear from you",
-      "email": "We are always stiving to<br />improve LCFS.<br />Please send your<br />suggestions and feedback to:<br /><a href=\"mailto:lcfs@gov.bc.ca\" aria-label=\"Please send your suggestions and feedback to lcfs@gov.bc.ca\">lcfs@gov.bc.ca</a>"
+      "email": "We are always striving to<br />improve LCFS.<br />Please send your<br />suggestions and feedback to:<br /><a href=\"mailto:lcfs@gov.bc.ca\" aria-label=\"Please send your suggestions and feedback to lcfs@gov.bc.ca\">lcfs@gov.bc.ca</a>"
     },
     "website": {
       "title": "Low Carbon Fuel Standard",
