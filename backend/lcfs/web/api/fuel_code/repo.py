@@ -67,6 +67,7 @@ class FuelCodeRepository:
         """
         conditions = []
         # TODO: Filtering and Sorting logic needs to be added.
+        delete_status = await self.get_fuel_status_by_status('Deleted')
         # setup pagination
         offset = 0 if (pagination.page < 1) else (
             pagination.page - 1) * pagination.size
@@ -82,7 +83,7 @@ class FuelCodeRepository:
             joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                 FinishedFuelTransportMode.finished_fuel_transport_mode
             ),
-        )
+        ).where(FuelCode.fuel_status_id != delete_status.fuel_code_status_id)
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
         total_count = (await self.db.execute(count_query)).scalar()

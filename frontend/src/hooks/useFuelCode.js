@@ -50,7 +50,6 @@ export const useUpdateFuelCode = (fuelCodeID, options) => {
   return useMutation({
     ...options,
     mutationFn: async (data) => {
-      console.log(data)
       return await client.put(
         apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID),
         data

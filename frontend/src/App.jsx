@@ -251,7 +251,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ADMIN_FUEL_CODES_VIEW,
         element: <ViewFuelCode />,
-        handle: { title: 'Edit Fuel Code' }
+        handle: { title: 'Fuel Code' }
       },
       {
         path: ROUTES.FILESUBMISSION,
