@@ -13,6 +13,9 @@ from lcfs.db.models.TransportMode import TransportMode
 from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.EnergyDensity import EnergyDensity
+from lcfs.db.models.EnergyEffectivenessRatio import EnergyEffectivenessRatio
+from lcfs.db.models.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
 from lcfs.db.models.FuelCode import FuelCode
 from lcfs.web.api.base import PaginationRequestSchema
@@ -51,6 +54,56 @@ class FuelCodeRepository:
         return (
             await self.db.execute(select(FuelCodeStatus).filter_by(status=status))
         ).scalar()
+
+    @repo_handler
+    async def get_energy_densities(self) -> List[EnergyDensity]:
+        """Get all energy densities"""
+        return (
+            (
+                await self.db.execute(
+                    select(EnergyDensity).options(
+                        joinedload(EnergyDensity.fuel_type),
+                        joinedload(EnergyDensity.uom),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_energy_effectiveness_ratios(self) -> List[EnergyEffectivenessRatio]:
+        """Get all energy effectiveness ratios"""
+        return (
+            (
+                await self.db.execute(
+                    select(EnergyEffectivenessRatio).options(
+                        joinedload(EnergyEffectivenessRatio.fuel_category),
+                        joinedload(EnergyEffectivenessRatio.fuel_type),
+                        joinedload(EnergyEffectivenessRatio.end_use_type),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_use_of_a_carbon_intensities(self) -> List[AdditionalCarbonIntensity]:
+        """Get all use of a carbon intensities (UCI)"""
+        return (
+            (
+                await self.db.execute(
+                    select(AdditionalCarbonIntensity).options(
+                        joinedload(AdditionalCarbonIntensity.end_use_type),
+                        joinedload(AdditionalCarbonIntensity.fuel_type),
+                        joinedload(AdditionalCarbonIntensity.uom),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     @repo_handler
     async def get_fuel_codes_paginated(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { numberFormatter } from '@/utils/formatters'
 import BCBox from '@/components/BCBox'
@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 const SupplierBalance = () => {
   const { t } = useTranslation()
   const [showBalance, setShowBalance] = useState(
-    !!+sessionStorage.getItem('showBalance') || true
+    !!+sessionStorage.getItem('showBalance') || false
   )
 
   // Update sessionStorage when showBalance changes
