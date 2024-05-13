@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 
 export const Comments = ({commentField, isEditable}) => {
   const { t } = useTranslation(['txn'])
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   const { register } = useFormContext()
 

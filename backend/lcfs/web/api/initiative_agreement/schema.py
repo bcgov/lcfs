@@ -16,6 +16,12 @@ class HistoryUserSchema(BaseSchema):
     class Config:
         from_attributes = True
 
+class OrganizationSchema(BaseSchema):
+    name: str
+
+    class Config:
+        from_attributes = True
+
 class InitiativeAgreementHistorySchema(BaseSchema):
     create_date: datetime
     initiative_agreement_status: InitiativeAgreementStatusSchema
@@ -27,7 +33,7 @@ class InitiativeAgreementHistorySchema(BaseSchema):
 class InitiativeAgreementBaseSchema(BaseSchema):
     compliance_units: int
     current_status: InitiativeAgreementStatusSchema
-    transaction_effective_date: date
+    transaction_effective_date: Optional[date] = None
     to_organization_id: int
     gov_comment: Optional[str] = None
 
@@ -42,6 +48,7 @@ class InitiativeAgreementBaseSchema(BaseSchema):
 
 class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     initiative_agreement_id: int
+    to_organization: OrganizationSchema
     history: Optional[List[InitiativeAgreementHistorySchema]]
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):

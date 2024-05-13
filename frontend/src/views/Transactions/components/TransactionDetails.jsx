@@ -19,7 +19,7 @@ import { useFormContext, Controller } from 'react-hook-form'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
 import Loading from '@/components/Loading';
 
-export const TransactionDetails = ({transactionId, isEditable}) => {
+export const TransactionDetails = ({ transactionId, isEditable }) => {
   const { t } = useTranslation(['txn']);
   
   const {
@@ -81,7 +81,7 @@ export const TransactionDetails = ({transactionId, isEditable}) => {
       <LabelBox>
         <BCBox m={1}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid item xs={12} style={{ display: transactionId ? 'none' : 'block' }}>
               <Controller
                 name="txnType"
                 defaultValue=""
@@ -240,7 +240,7 @@ export const TransactionDetails = ({transactionId, isEditable}) => {
                   data-test="txn-effective-date"
                   {...register('transactionEffectiveDate')}
                   type="date"
-                  defaultValue={maxDate}
+                  defaultValue={null}
                   disabled={!isEditable}
                   inputProps={{
                     max: maxDate,
@@ -248,7 +248,7 @@ export const TransactionDetails = ({transactionId, isEditable}) => {
                   }}
                   size="small"
                   error={!!errors.transactionEffectiveDate}
-                  helperText={errors.transactionEffectiveDate?.message}
+                  helperText={errors.transactionEffectiveDate ? errors.transactionEffectiveDate.message : ''}
                 />
               </BCBox>
             </Grid>

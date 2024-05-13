@@ -29,7 +29,9 @@ import BCModal from '@/components/BCModal'
 import { dateFormatter } from '@/utils/formatters'
 import {
   Comments,
-  TransactionDetails
+  TransactionDetails,
+  TransactionView,
+  TransactionHistory
 } from '@/views/Transactions/components'
 import { useQueryClient } from '@tanstack/react-query'
 import { AddEditTransactionSchema } from './_schema.yup'
@@ -51,7 +53,7 @@ export const AddEditViewTransaction = () => {
   const [modalData, setModalData] = useState(null)
   const mode = matches[matches.length - 1]?.handle?.mode
   const { transactionId } = useParams()
-  const { data: currentUser, hasAnyRole } = useCurrentUser()
+  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const [steps, setSteps] = useState(['Draft', 'Recommended', 'Approved'])
   const alertRef = useRef()
@@ -79,12 +81,13 @@ export const AddEditViewTransaction = () => {
     resolver: yupResolver(AddEditTransactionSchema),
     mode: 'onChange',
     defaultValues: {
-      txnType: '',
-      govComment: ''
+      txnType: null,
+      toOrganizationId: null,
+      complianceUnits: null,
+      transactionEffectiveDate: null,
+      govComment: null,
     }
   })
-
-  const txnType = methods.watch('txnType')
 
   useEffect(() => {
     const path = window.location.pathname
@@ -104,6 +107,7 @@ export const AddEditViewTransaction = () => {
     }
   }, [location.state, mode, methods])
 
+  const txnType = methods.watch('txnType')
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook = txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement
@@ -131,7 +135,7 @@ export const AddEditViewTransaction = () => {
         complianceUnits: transactionData.complianceUnits || '',
         transactionEffectiveDate: transactionData.transactionEffectiveDate
           ? dateFormatter(transactionData.transactionEffectiveDate)
-          : new Date().toISOString().split('T')[0]
+          : null
       })
     }
     if (isLoadingError || queryState.status === 'error') {
@@ -155,36 +159,43 @@ export const AddEditViewTransaction = () => {
   const isDraft = currentStatus === TRANSACTION_STATUSES.DRAFT
   const isEditable = (mode === 'add' || (mode === 'edit' && isDraft)) && hasAnyRole(roles.analyst, roles.director);
 
-  // TODO fix the steps on delete
   useEffect(() => {
-    const statusSet = new Set()
+    // Initialize an array to collect the statuses from the transaction history
+    const statusArray = [];
+    statusArray.push(TRANSACTION_STATUSES.DRAFT);
+
+    // Iterate over the transaction history to collect statuses
     transactionData?.history?.forEach((item) => {
-      statusSet.add(item.status)
-    })
+      const status = txnType === ADMIN_ADJUSTMENT ? item.adminAdjustmentStatus.status :
+        item.initiativeAgreementStatus.status
+      statusArray.push(status);
+    });
 
-    if (statusSet?.size === 0) {
-      setSteps(['Draft', 'Recommended', 'Approved'])
-    } else {
-      if (!statusSet.has(TRANSACTION_STATUSES.RECOMMENDED))
-        statusSet.add(TRANSACTION_STATUSES.RECOMMENDED)
-      if (!statusSet.has(TRANSACTION_STATUSES.APPROVED) && currentStatus !== TRANSACTION_STATUSES.DELETED) {
-        statusSet.add(TRANSACTION_STATUSES.APPROVED)
-      }
-      setSteps(Array.from(statusSet))
+    if (!statusArray.includes(TRANSACTION_STATUSES.RECOMMENDED)) {
+      statusArray.push(TRANSACTION_STATUSES.RECOMMENDED);
     }
-  }, [currentStatus, transactionData])
-
+    if (!statusArray.includes(TRANSACTION_STATUSES.APPROVED)) {
+      statusArray.push(TRANSACTION_STATUSES.APPROVED);
+    }
+  
+  
+    // Set the steps to the collected statuses ensuring to maintain their order and uniqueness
+    setSteps([...new Set(statusArray)]);
+  
+  }, [currentStatus, transactionData, txnType]);
+  
   const buttonClusterConfig = useMemo(
     () => buttonClusterConfigFn({
         transactionId,
         transactionType: txnType,
         methods,
+        hasRoles,
         t,
         setModalData,
         createUpdateAdminAdjustment,
         createUpdateInitiativeAgreement
       }),
-    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement]
+    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles]
   )
 
   if (transactionId && isTransactionDataLoading)
@@ -255,12 +266,18 @@ export const AddEditViewTransaction = () => {
             })}
           </Stepper>
         </BCBox>
-
+        
         {/* Transaction Details */}
-        <TransactionDetails 
-          transactionId={transactionId}
-          isEditable={isEditable}
-        />
+        {isEditable ? (
+          <TransactionDetails
+            isEditable={isEditable}
+            transactionId={transactionId}
+          />
+        ) : (
+          <TransactionView
+            transaction={transactionData}
+          />
+        )}
 
         {/* Comments */}
         <Comments
@@ -281,6 +298,11 @@ export const AddEditViewTransaction = () => {
             </BCBox>
           </BCBox>
         } */}
+
+        {/* Transaction History */}
+        {transactionId &&
+          <TransactionHistory transactionHistory={transactionData?.history} />
+        }
 
         {/* Buttons */}
         <Stack

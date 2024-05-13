@@ -20,6 +20,7 @@ export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId, option
     ...options,
     mutationFn: async ({ data }) => {
       if (initiativeAgreementId) {
+        data.initiativeAgreementId = initiativeAgreementId
         return await client.put(apiRoutes.initiativeAgreements, data)
       } else {
         return await client.post(apiRoutes.initiativeAgreements, data)

@@ -2,6 +2,7 @@ import colors from '@/themes/base/colors'
 import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from './AddEditViewTransaction'
+import { roles } from '@/constants/roles'
 
 const outlineBase = {
   variant: 'outlined',
@@ -42,6 +43,7 @@ export const buttonClusterConfigFn = ({
   transactionId,
   transactionType,
   methods,
+  hasRoles,
   t,
   setModalData,
   createUpdateAdminAdjustment,
@@ -135,7 +137,8 @@ export const buttonClusterConfigFn = ({
           title: t('confirmation'),
           content: t(`${transactionType}:approveConfirmText`)
         })
-      }
+      },
+      disabled: !hasRoles(roles.director)
     },
     deleteTransaction: {
       ...redOutlinedButton(

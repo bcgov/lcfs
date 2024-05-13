@@ -16,6 +16,12 @@ class HistoryUserSchema(BaseSchema):
     class Config:
         from_attributes = True
 
+class OrganizationSchema(BaseSchema):
+    name: str
+
+    class Config:
+        from_attributes = True
+
 class AdminAdjustmentHistorySchema(BaseSchema):
     create_date: datetime
     admin_adjustment_status: AdminAdjustmentStatusSchema
@@ -27,7 +33,7 @@ class AdminAdjustmentHistorySchema(BaseSchema):
 class AdminAdjustmentBaseSchema(BaseSchema):
     compliance_units: int
     current_status: AdminAdjustmentStatusSchema
-    transaction_effective_date: date
+    transaction_effective_date: Optional[date] = None
     to_organization_id: int
     gov_comment: Optional[str] = None
 
@@ -36,6 +42,7 @@ class AdminAdjustmentBaseSchema(BaseSchema):
 
 class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):
     admin_adjustment_id: int
+    to_organization: OrganizationSchema
     history: Optional[List[AdminAdjustmentHistorySchema]]
 
 class AdminAdjustmentCreateSchema(AdminAdjustmentBaseSchema):

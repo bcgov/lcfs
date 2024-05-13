@@ -82,3 +82,12 @@ class AdminAdjustmentRepository:
         self.db.add(new_history_record)
         await self.db.flush()
         return new_history_record
+
+    @repo_handler
+    async def refresh_admin_adjustment(self, admin_adjustment: AdminAdjustment) -> AdminAdjustment:
+        """
+        Commits and refreshes an administrative adjustment object in db session
+
+        """
+        await self.db.refresh(admin_adjustment)
+        return admin_adjustment

@@ -13,7 +13,12 @@ export const AddEditTransactionSchema = Yup.object({
             : schema;
         })
         .required('Compliance units is required'),
-    effectiveDate: Yup.date()
-        .max(new Date(), 'Effective Date cannot be in the future'),
+    transactionEffectiveDate: Yup.string()
+        .transform((value, originalValue) => {
+          // Check if the original value is an empty string and return null
+          return originalValue === '' ? null : new Date(value).toISOString().split('T')[0];
+        })
+        .max(new Date(), 'Effective Date cannot be in the future')
+        .nullable().default(null),
     toOrgComment: Yup.string()
 })

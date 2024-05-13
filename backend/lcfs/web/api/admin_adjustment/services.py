@@ -1,18 +1,24 @@
-from fastapi import Depends, Request
+from datetime import datetime
+from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
 from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema, AdminAdjustmentUpdateSchema
 from lcfs.web.api.admin_adjustment.repo import AdminAdjustmentRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.web.api.organizations.services import OrganizationsService
 
 class AdminAdjustmentServices:
     def __init__(
         self, 
         repo: AdminAdjustmentRepository = Depends(AdminAdjustmentRepository),
+        org_service: OrganizationsService = Depends(OrganizationsService),
         request: Request = None,
     ) -> None:
         self.repo = repo
+        self.org_service = org_service
         self.request = request
 
     @service_handler
@@ -42,6 +48,9 @@ class AdminAdjustmentServices:
         # Handle the current_status field separately
         if status_has_changed:
             admin_adjustment.current_status = new_status
+            # If approving transaction, issue compliance units by Director
+            if new_status.status == AdminAdjustmentStatusEnum.Approved:
+                await self.director_approve_admin_adjustment(admin_adjustment)
 
         # Pass updated object to repository for saving
         updated_admin_adjustment = await self.repo.update_admin_adjustment(admin_adjustment)
@@ -52,7 +61,6 @@ class AdminAdjustmentServices:
                 new_status.admin_adjustment_status_id,
                 self.request.user.user_profile_id
             )
-
         return AdminAdjustmentSchema.from_orm(updated_admin_adjustment)
 
     @service_handler
@@ -85,3 +93,30 @@ class AdminAdjustmentServices:
             )
 
         return AdminAdjustmentSchema.from_orm(admin_adjustment)
+
+
+    async def director_approve_admin_adjustment(self, admin_adjustment: AdminAdjustment):
+        """Create ledger transaction for approved admin adjustment"""
+
+        user = self.request.user
+        has_director_role = user_has_roles(user, ["GOVERNMENT", "DIRECTOR"])
+
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+        
+        if admin_adjustment.transaction != None:
+            raise HTTPException(status_code=403, detail="Transaction already exists.")
+
+        # Create new transaction for receiving organization
+        to_transaction = await self.org_service.adjust_balance(
+            transaction_action=TransactionActionEnum.Adjustment,
+            compliance_units=admin_adjustment.compliance_units,
+            organization_id=admin_adjustment.to_organization_id,
+        )
+        admin_adjustment.transaction = to_transaction
+
+        # Set effective date to today if the analyst left it blank
+        if admin_adjustment.transaction_effective_date == None:
+            admin_adjustment.transaction_effective_date = datetime.now().date().isoformat()
+
+        await self.repo.refresh_admin_adjustment(admin_adjustment)

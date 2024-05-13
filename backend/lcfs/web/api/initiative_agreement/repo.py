@@ -42,9 +42,9 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def update_initiative_agreement(self, initiative_agreement: InitiativeAgreement) -> InitiativeAgreement:
-        initiative_agreement = self.db.merge(initiative_agreement)
+        merged_initiative_agreement = await self.db.merge(initiative_agreement)
         await self.db.flush()
-        return initiative_agreement
+        return merged_initiative_agreement
 
     @repo_handler
     async def get_initiative_agreement_status_by_name(self, status_name: str) -> InitiativeAgreementStatus:
@@ -84,3 +84,12 @@ class InitiativeAgreementRepository:
         self.db.add(new_history_record)
         await self.db.flush()
         return new_history_record
+
+    @repo_handler
+    async def refresh_initiative_agreement(self, initiative_agreement: InitiativeAgreement) -> InitiativeAgreement:
+        """
+        Commits and refreshes an initiative agreement object in db session
+
+        """
+        await self.db.refresh(initiative_agreement)
+        return initiative_agreement

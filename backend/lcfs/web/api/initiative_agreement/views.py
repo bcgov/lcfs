@@ -16,7 +16,7 @@ async def get_initiative_agreement(
     """Endpoint to fetch an initiative agreement by its ID."""
     return await service.get_initiative_agreement(initiative_agreement_id)
 
-@router.put("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema, status_code=status.HTTP_200_OK)
+@router.put("/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_200_OK)
 @view_handler
 @roles_required("Government")
 async def update_initiative_agreement(

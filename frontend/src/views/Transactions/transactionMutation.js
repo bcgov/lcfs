@@ -55,7 +55,6 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
   const handleError = (_error, transactionId, transactionType) => {
     setModalData(null);
     const errorMsg = _error.response?.data?.detail || t(`${transactionType}:actionMsgs.error${transactionId ? 'Update' : 'Create'}Text`);
-    
     setAlertMessage(errorMsg);
     setAlertSeverity('error');
     alertRef.current.triggerAlert();

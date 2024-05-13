@@ -11,7 +11,7 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
 
     initiative_agreement_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the initiative_agreement")
     compliance_units = Column(BigInteger, comment="Compliance Units")
-    transaction_effective_date = Column(DateTime, comment='Transaction effective date')
+    transaction_effective_date = Column(DateTime, nullable=True, comment='Transaction effective date')
     gov_comment = Column(String(1500), comment="Comment from the government to organization")
     to_organization_id = Column(Integer, ForeignKey('organization.organization_id'))
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'))
