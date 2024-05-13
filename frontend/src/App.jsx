@@ -155,14 +155,14 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATIONS_ADDUSER,
         element: <AddEditUser userType="bceid" />,
-        handle: { title: 'Add Organization User' }
+        handle: { title: 'New user' }
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEWUSER,
         element: <ViewUser userType="bceid" />,
         handle: {
           crumb: () => 'Users',
-          title: 'View Organization User'
+          title: 'View user'
         }
       },
       {
@@ -170,7 +170,7 @@ const router = createBrowserRouter([
         element: <AddEditUser userType="bceid" />,
         handle: {
           crumb: () => 'Users',
-          title: 'Edit Organization User'
+          title: 'Edit user'
         }
       },
       {

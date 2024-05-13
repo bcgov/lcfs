@@ -87,7 +87,8 @@ const Crumb = () => {
                 key={name}
                 component={Link}
                 label={
-                  (isNumeric(name) && name === userID && 'User profile') ||
+                  (isNumeric(name) && name === userID && pathnames[index+1] === "edit-user" && 'User profile') ||
+                  (isNumeric(name) && name === orgID && 'Organization profile') ||
                   viewRoutesTitle[name] ||
                   name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
                 }
