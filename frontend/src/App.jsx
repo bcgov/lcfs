@@ -115,12 +115,12 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATION,
         element: <ViewOrganization />,
-        handle: { title: 'View Organization' }
+        handle: { title: 'Organization' }
       },
       {
         path: ROUTES.ORGANIZATION_ADDUSER,
         element: <AddEditUser />,
-        handle: { title: 'Add User' }
+        handle: { title: 'New User' }
       },
       {
         path: ROUTES.ORGANIZATION_VIEWUSER,
@@ -226,17 +226,17 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ADMIN_USERS_ADD,
         element: <AddEditUser userType="idir" />,
-        handle: { title: 'Add IDIR User' }
+        handle: { title: 'Add user' }
       },
       {
         path: ROUTES.ADMIN_USERS_VIEW,
         element: <ViewUser />,
-        handle: { title: 'View IDIR User' }
+        handle: { title: 'View user' }
       },
       {
         path: ROUTES.ADMIN_USERS_EDIT,
         element: <AddEditUser userType="idir" />,
-        handle: { title: 'Edit IDIR User' }
+        handle: { title: 'Edit user' }
       },
       {
         path: ROUTES.FUELCODES,
