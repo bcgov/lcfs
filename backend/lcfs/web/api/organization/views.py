@@ -9,6 +9,7 @@ from fastapi import (
     status,
     Request,
 )
+from fastapi.responses import StreamingResponse
 from starlette import status
 
 from lcfs.db import dependencies
@@ -161,6 +162,18 @@ async def get_transactions_paginated(
             transaction.status = TransferStatusEnum.Submitted.name
     return paginated_transactions
 
+@router.get("/{organization_id}/transactions/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@roles_required("Supplier")
+@view_handler
+async def export_transactions(
+    request: Request,
+    format: str = Query(default="xls", description="File export format"),
+    service: OrganizationService = Depends(),
+):
+    """
+    Endpoint to export information of all transactions for a specific organization
+    """
+    return await service.export_transactions(format)
 
 @router.post(
     "/{organization_id}/transfers",

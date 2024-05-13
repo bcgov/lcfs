@@ -61,8 +61,8 @@ function BCNavbar(props) {
                   vertical: 'top',
                   horizontal: 'left'
                 }}
-                sx={{'div': {minWidth: '200px'}}}
-                MenuListProps={{ style: { minWidth: '200px' } }}
+                sx={{'div': {minWidth: '300px'}}}
+                MenuListProps={{ style: { minWidth: '300px' } }}
               >
                 {routes.map((link) => (
                   <DefaultNavbarLink
@@ -72,6 +72,7 @@ function BCNavbar(props) {
                     name={link.name}
                     route={link.route}
                     light={true}
+                    isMobileView={isMobileView}
                   />
                 ))}
               </Menu>
