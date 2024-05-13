@@ -4,9 +4,9 @@
     "txnId": "Txn Id",
     "compliancePeriod": "Compliance period",
     "type": "Type",
-    "organizationFrom": "Compliance units from",
-    "organizationTo": "Compliance units to",
-    "quantity": "Number of units",
+    "organizationFrom": "From",
+    "organizationTo": "To",
+    "quantity": "Units",
     "pricePerUnit": "Value per unit",
     "status": "Status",
     "updateDate": "Latest Update"
