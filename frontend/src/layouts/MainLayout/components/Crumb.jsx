@@ -1,5 +1,5 @@
 import { Breadcrumbs, Typography } from '@mui/material'
-import { useLocation, Link, useMatches } from 'react-router-dom'
+import { useLocation, Link, useMatches, useParams } from 'react-router-dom'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
 import { viewRoutesTitle } from '@/constants/routes/apiRoutes'
 import { emphasize, styled } from '@mui/material/styles'
@@ -19,7 +19,6 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
     fontSize: theme.typography.pxToRem(16),
     borderRadius: theme.borders.borderRadius.xl,
     padding: theme.spacing(1.8, 1),
-    textTransform: 'capitalize',
     '&:hover, &:focus': {
       backgroundColor: emphasize(backgroundColor, 0.06)
     },
@@ -33,6 +32,7 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 const Crumb = () => {
   const location = useLocation()
   const matches = useMatches()
+  const { userID, orgID } = useParams()
   const pathnames = location.pathname.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
 
@@ -87,6 +87,8 @@ const Crumb = () => {
                 key={name}
                 component={Link}
                 label={
+                  (isNumeric(name) && name === userID && pathnames[index+1] === "edit-user" && 'User profile') ||
+                  (isNumeric(name) && name === orgID && 'Organization profile') ||
                   viewRoutesTitle[name] ||
                   name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
                 }

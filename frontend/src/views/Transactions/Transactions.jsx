@@ -27,8 +27,8 @@ export const Transactions = () => {
   const gridRef = useRef()
   const { data: currentUser, hasRoles } = useCurrentUser()
 
-  const [searchParams] = useSearchParams();
-  const highlightedId = searchParams.get('hid');
+  const [searchParams] = useSearchParams()
+  const highlightedId = searchParams.get('hid')
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -47,7 +47,7 @@ export const Transactions = () => {
   }, [])
 
   const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
-  const [selectedOrgId, setSelectedOrgId] = useState(null);
+  const [selectedOrgId, setSelectedOrgId] = useState(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(

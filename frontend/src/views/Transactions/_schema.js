@@ -14,6 +14,7 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.quantity'),
     valueFormatter: numberFormatter,
     minWidth: 140,
+    width: 140,
     type: 'rightAligned'
   },
   {
@@ -21,7 +22,7 @@ export const transactionsColDefs = (t) => [
     field: 'pricePerUnit',
     headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: currencyFormatter,
-    width: 170,
+    width: 190,
     type: 'rightAligned'
   },
   {
@@ -39,14 +40,15 @@ export const transactionsColDefs = (t) => [
       multiple: false
     },
     suppressHeaderMenuButton: true,
-    minWidth: 180
+    minWidth: 180,
+    width: 180
   },
   {
     colId: 'updateDate',
     field: 'updateDate',
     headerName: t('txn:txnColLabels.updateDate'),
     valueFormatter: dateFormatter,
-    width: 170,
+    width: 190,
   },
 ];
 
