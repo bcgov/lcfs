@@ -1,6 +1,5 @@
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema
-from lcfs.db.models.Role import RoleEnum
 
 
 class RoleSchema(BaseSchema):
@@ -10,8 +9,6 @@ class RoleSchema(BaseSchema):
     display_order: Optional[int] = None
     is_government_role: bool
 
-    class Config:
-        from_attributes = True
 
 
 def user_has_roles(user, desired_role_names: List[str]) -> bool:
