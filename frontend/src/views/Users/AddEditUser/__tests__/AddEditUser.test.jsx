@@ -78,10 +78,8 @@ describe('AddEditUser component', () => {
     await typeAndValidateTextBox('Phone (optional)', '555-555-5555')
     await typeAndValidateTextBox('Mobile phone (optional)', '555-555-5555')
 
-    // You can also check for specific elements within the form if needed
-    expect(
-      container.querySelector('[data-test="saveUser"]')
-    ).toBeInTheDocument()
+    const saveButton = screen.getByRole('button', { name: /save/i })
+    userEvent.click(saveButton)
   })
   it('renders the form to add BCeID user', async () => {
     const { container } = render(<AddEditUser userType="bceid" />, { wrapper })
@@ -103,10 +101,8 @@ describe('AddEditUser component', () => {
     await typeAndValidateTextBox('Phone (optional)', '555-555-5555')
     await typeAndValidateTextBox('Mobile phone (optional)', '555-555-5555')
 
-    // You can also check for specific elements within the form if needed
-    expect(
-      container.querySelector('[data-test="saveUser"]')
-    ).toBeInTheDocument()
+    const saveButton = screen.getByRole('button', { name: /save/i })
+    userEvent.click(saveButton)
   })
   it('validates user form', async () => {
     render(<AddEditUser />, { wrapper })
