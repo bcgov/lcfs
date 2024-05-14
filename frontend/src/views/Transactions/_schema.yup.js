@@ -15,10 +15,20 @@ export const AddEditTransactionSchema = Yup.object({
         .required('Compliance units is required'),
     transactionEffectiveDate: Yup.string()
         .transform((value, originalValue) => {
-          // Check if the original value is an empty string and return null
-          return originalValue === '' ? null : new Date(value).toISOString().split('T')[0];
+          // If the original value is an empty string, return null
+          if (originalValue === '' || originalValue == null) {
+            return null
+          }
+          const date = new Date(value)
+          return date.toISOString().split('T')[0]
         })
-        .max(new Date(), 'Effective Date cannot be in the future')
-        .nullable().default(null),
+        .test('is-valid-date', 'Effective Date cannot be in the future', function (value) {
+          if (value === null) {
+            return true; // null is allowed
+          }
+          return new Date(value) <= new Date();
+        })
+        .nullable()
+        .default(null),
     toOrgComment: Yup.string()
 })

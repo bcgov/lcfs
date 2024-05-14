@@ -157,32 +157,35 @@ export const AddEditViewTransaction = () => {
   
   const currentStatus = transactionData?.currentStatus?.status
   const isDraft = currentStatus === TRANSACTION_STATUSES.DRAFT
-  const isEditable = (mode === 'add' || (mode === 'edit' && isDraft)) && hasAnyRole(roles.analyst, roles.director);
+  const isEditable = (mode === 'add' || (mode === 'edit' && isDraft)) && hasAnyRole(roles.analyst, roles.director)
 
   useEffect(() => {
-    // Initialize an array to collect the statuses from the transaction history
-    const statusArray = [];
-    statusArray.push(TRANSACTION_STATUSES.DRAFT);
+    const updateSteps = () => {
+      // Initialize an array to collect the statuses from the transaction history
+      const statusArray = []
+      statusArray.push(TRANSACTION_STATUSES.DRAFT)
 
-    // Iterate over the transaction history to collect statuses
-    transactionData?.history?.forEach((item) => {
-      const status = txnType === ADMIN_ADJUSTMENT ? item.adminAdjustmentStatus.status :
-        item.initiativeAgreementStatus.status
-      statusArray.push(status);
-    });
+      // Iterate over the transaction history to collect statuses
+      transactionData?.history?.forEach((item) => {
+        const status = txnType === ADMIN_ADJUSTMENT ? item.adminAdjustmentStatus.status :
+          item.initiativeAgreementStatus.status
+        statusArray.push(status)
+      })
 
-    if (!statusArray.includes(TRANSACTION_STATUSES.RECOMMENDED)) {
-      statusArray.push(TRANSACTION_STATUSES.RECOMMENDED);
+      if (!statusArray.includes(TRANSACTION_STATUSES.RECOMMENDED)) {
+        statusArray.push(TRANSACTION_STATUSES.RECOMMENDED)
+      }
+      if (!statusArray.includes(TRANSACTION_STATUSES.APPROVED)) {
+        statusArray.push(TRANSACTION_STATUSES.APPROVED)
+      }
+
+      // Set the steps to the collected statuses ensuring to maintain their order and uniqueness
+      setSteps([...new Set(statusArray)])
     }
-    if (!statusArray.includes(TRANSACTION_STATUSES.APPROVED)) {
-      statusArray.push(TRANSACTION_STATUSES.APPROVED);
-    }
-  
-  
-    // Set the steps to the collected statuses ensuring to maintain their order and uniqueness
-    setSteps([...new Set(statusArray)]);
-  
-  }, [currentStatus, transactionData, txnType]);
+
+    updateSteps()
+  }, [currentStatus, transactionData, txnType])
+
   
   const buttonClusterConfig = useMemo(
     () => buttonClusterConfigFn({
