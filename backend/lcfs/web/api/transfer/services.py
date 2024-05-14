@@ -98,8 +98,8 @@ class TransferServices:
                 )
             )
         transfer_view.comments = comments
-        # Hide Recommended status to organizations
-        if (self.request.user.organization is not None):
+        # Hide Recommended status to organizations or if the transfer is returned to analyst by the director and it is in Submitted status
+        if (self.request.user.organization is not None or transfer_view.current_status.status == TransferStatusEnum.Submitted.value):
             if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value):
                 transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
             transfer_view.transfer_history = list(filter(
@@ -168,7 +168,10 @@ class TransferServices:
             transfer.to_org_comment = transfer_data.to_org_comment
         else:
             transfer.gov_comment = transfer_data.gov_comment
-
+        # if the transfer is returned back to analyst by the director or the transfer is recommended once again to the director then don't store the history.
+        re_recommended = any(history.transfer_status.status == TransferStatusEnum.Recommended for history in transfer.transfer_history)
+        if (new_status.status == TransferStatusEnum.Submitted and transfer.current_status.status == TransferStatusEnum.Recommended) or re_recommended:
+            status_has_changed = False
         if transfer_data.recommendation and transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation
 
