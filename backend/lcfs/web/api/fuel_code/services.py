@@ -10,6 +10,7 @@ from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.db.models.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.FuelCode import FuelCode
+from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
 from lcfs.web.api.fuel_code.schema import (
     AdditionalCarbonIntensitySchema,
     EnergyDensitySchema,
@@ -131,7 +132,6 @@ class FuelCodeServices:
             return await self.repo.save_fuel_codes(fuel_code_models)
 
     @service_handler
-
     async def get_fuel_code(self, fuel_code_id: int):
         return await self.repo.get_fuel_code(fuel_code_id)
 
