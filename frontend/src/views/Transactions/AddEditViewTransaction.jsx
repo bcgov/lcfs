@@ -91,6 +91,8 @@ export const AddEditViewTransaction = () => {
 
   useEffect(() => {
     const path = window.location.pathname
+    console.log("{PATHNAME}")
+    console.log(path)
 
     // Set transactionType based on URL path if not in 'add' mode
     if (mode !== 'add') {
