@@ -24,6 +24,7 @@ from lcfs.web.api.transfer.schema import (
     TransferSchema,
 )
 from lcfs.web.api.transaction.schema import TransactionListSchema
+from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.api.user.services import UserServices
 from .services import OrganizationService
 from .validation import OrganizationValidation
@@ -139,7 +140,7 @@ async def update_user(
 
 
 @router.post(
-    "/{organization_id}/transactions",
+    "/transactions",
     response_model=TransactionListSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -162,18 +163,19 @@ async def get_transactions_paginated(
             transaction.status = TransferStatusEnum.Submitted.name
     return paginated_transactions
 
-@router.get("/{organization_id}/transactions/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.get("/transactions/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Supplier")
 @view_handler
 async def export_transactions(
     request: Request,
     format: str = Query(default="xls", description="File export format"),
-    service: OrganizationService = Depends(),
+    txn_service: TransactionsService = Depends(),
 ):
     """
     Endpoint to export information of all transactions for a specific organization
     """
-    return await service.export_transactions(format)
+    organization_id = request.user.organization.organization_id
+    return await txn_service.export_transactions(format, organization_id)
 
 @router.post(
     "/{organization_id}/transfers",

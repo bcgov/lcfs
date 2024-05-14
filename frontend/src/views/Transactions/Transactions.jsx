@@ -95,7 +95,7 @@ export const Transactions = () => {
   // Determine the appropriate API endpoint
   const getApiEndpoint = useCallback(() => {
     if (hasRoles(roles.supplier)) {
-      return apiRoutes.orgTransactions.replace(':orgID', currentUser?.organization?.organizationId);
+      return apiRoutes.orgTransactions;
     } else if (selectedOrgId) {
       return apiRoutes.filteredTransactionsByOrg.replace(':orgID', selectedOrgId);
     }
@@ -108,10 +108,10 @@ export const Transactions = () => {
     try {
       const endpoint = getApiEndpoint();
       await apiService.download(`${endpoint}/export`);
-      isDownloadingTransactions(false)
+      setIsDownloadingTransactions(false)
     } catch (error) {
       console.error('Error downloading transactions information:', error)
-      isDownloadingTransactions(false)
+      setIsDownloadingTransactions(false)
       setAlertMessage('Failed to download transactions information.')
       setAlertSeverity('error')
     }

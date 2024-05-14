@@ -6,7 +6,7 @@ export const apiRoutes = {
   orgUsers: '/organization/:orgID/users/list',
   transactions: '/transactions',
   filteredTransactionsByOrg: '/transactions/:orgID',
-  orgTransactions: '/organization/:orgID/transactions',
+  orgTransactions: '/organization/transactions',
   openapi: '/openapi.json/',
   updateCategory: '/transfers/:transferId/category',
   getTransfer: '/transfers/:transferId',
