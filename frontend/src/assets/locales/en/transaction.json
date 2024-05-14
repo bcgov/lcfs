@@ -1,7 +1,7 @@
 {
   "title": "Transactions",
   "txnColLabels": {
-    "txnId": "Txn Id",
+    "txnId": "Txn d",
     "compliancePeriod": "Compliance period",
     "type": "Type",
     "organizationFrom": "From",
