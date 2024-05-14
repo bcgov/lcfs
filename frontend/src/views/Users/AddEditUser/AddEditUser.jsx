@@ -238,7 +238,7 @@ export const AddEditUser = ({ userType }) => {
         {userID ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to ${orgName}`}
       </Typography>
-      <form onSubmit={handleSubmit(onSubmit, onErrors)} id={"user-form"}>
+      <form onSubmit={handleSubmit(onSubmit, onErrors)} id={'user-form'}>
         <FormProvider {...{ control, setValue }}>
           <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
             {/* Form fields */}
@@ -246,6 +246,7 @@ export const AddEditUser = ({ userType }) => {
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
                 {textFields.map((field) => (
                   <BCFormText
+                    data-test={field.name}
                     key={field.name}
                     control={control}
                     label={field.label}
@@ -261,6 +262,7 @@ export const AddEditUser = ({ userType }) => {
                   control={control}
                   name="status"
                   label="Status"
+                  data-test="status"
                   options={statusOptions(t)}
                 />
                 {hasRoles(roles.supplier) || orgName || orgID ? (
@@ -290,6 +292,7 @@ export const AddEditUser = ({ userType }) => {
                   variant="outlined"
                   size="medium"
                   color="primary"
+                  data-test="back-btn"
                   sx={{
                     backgroundColor: 'white.main'
                   }}

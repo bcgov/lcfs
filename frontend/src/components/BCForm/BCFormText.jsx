@@ -24,6 +24,7 @@ export const BCFormText = ({ name, control, label, optional }) => {
             </Typography>
           </InputLabel>
           <TextField
+            id={name}
             helperText={error ? error.message : null}
             size="medium"
             error={!!error}
