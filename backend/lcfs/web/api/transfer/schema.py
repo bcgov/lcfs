@@ -2,6 +2,7 @@ from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
+from pydantic import ConfigDict
 
 
 class TransferRecommendationEnumSchema(str, Enum):
@@ -13,24 +14,18 @@ class TransferStatusSchema(BaseSchema):
     transfer_status_id: int
     status: str
 
-    class Config:
-        from_attributes = True
 
 
 class TransferCategorySchema(BaseSchema):
     transfer_category_id: int
     category: str
 
-    class Config:
-        from_attributes = True
 
 
 class TransferOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
 
-    class Config:
-        from_attributes = True
 
 
 class TransferHistoryUserSchema(BaseSchema):
@@ -38,8 +33,6 @@ class TransferHistoryUserSchema(BaseSchema):
     last_name: str
     organization: Optional[TransferOrganizationSchema] = None
 
-    class Config:
-        from_attributes = True
 
 
 class TransferHistorySchema(BaseSchema):
@@ -47,16 +40,12 @@ class TransferHistorySchema(BaseSchema):
     transfer_status: TransferStatusSchema
     user_profile: TransferHistoryUserSchema
 
-    class Config:
-        from_attributes = True
 
 
 class TransferCommentSchema(BaseSchema):
     name: str
     comment: Optional[str] = None
 
-    class Config:
-        from_attributes = True
 
 
 class TransferSchema(BaseSchema):
@@ -72,12 +61,9 @@ class TransferSchema(BaseSchema):
     gov_comment: Optional[str] = None
     current_status: TransferStatusSchema
     transfer_category: Optional[TransferCategorySchema] = None
-    transfer_history: Optional[List[TransferHistorySchema]]
+    transfer_history: Optional[List[TransferHistorySchema]] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
-
-    class Config:
-        extra = 'ignore'
-        from_attributes = True
+    model_config = ConfigDict(extra='ignore', from_attributes=True)
 
 
 class TransferCreateSchema(BaseSchema):
@@ -97,8 +83,6 @@ class TransferCreateSchema(BaseSchema):
     current_status: Optional[str] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
 
-    class Config:
-        from_attributes = True
 
 
 class TransferUpdate(BaseSchema):
@@ -111,5 +95,3 @@ class TransferHistory(BaseSchema):
     transfer_history_id: int
     transfer_id: int
 
-    class Config:
-        from_attributes = True

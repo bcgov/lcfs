@@ -34,8 +34,6 @@ class TransactionStatusBase(BaseSchema):
     status: TransactionStatusEnum
     description: Optional[str] = None
 
-    class Config(BaseConfig):
-        pass
 
 class TransactionStatusSchema(TransactionStatusBase):
     pass
@@ -61,22 +59,20 @@ class TransactionBaseSchema(BaseSchema):
     organization_id: int
     transaction_action: TransactionActionEnum
 
-    organization: Optional[OrganizationSummaryResponseSchema]
+    organization: Optional[OrganizationSummaryResponseSchema] = None
 
 
 class TransactionViewSchema(BaseSchema):
     transaction_id: int
     transaction_type: str
-    from_organization: Optional[str]
+    from_organization: Optional[str] = None
     to_organization: str
     quantity: int
-    price_per_unit: Optional[float]
+    price_per_unit: Optional[float] = None
     status: str
     create_date: datetime
     update_date: datetime
 
-    class Config(BaseConfig):
-        pass
 
 class TransactionListSchema(BaseSchema):
     pagination: PaginationResponseSchema

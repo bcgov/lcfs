@@ -14,6 +14,6 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
     fossil_derived = Column(Boolean, default=False)
 
     fuel_codes = relationship('FuelCode',  back_populates='fuel_code_type')
-    energy_density = relationship('EnergyDensity')
+    energy_density = relationship('EnergyDensity', back_populates='fuel_type')
     energy_effectiveness_ratio = relationship('EnergyEffectivenessRatio', back_populates='fuel_type')
     additional_carbon_intensity = relationship('AdditionalCarbonIntensity')
