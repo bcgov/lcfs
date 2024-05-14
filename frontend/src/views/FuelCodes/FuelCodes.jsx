@@ -2,21 +2,21 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { Role } from '@/components/Role'
-import { Stack, Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { DownloadButton } from '@/components/DownloadButton'
-import { useApiService } from '@/services/useApiService'
-import withRole from '@/utils/withRole'
-import { fuelCodeColDefs } from './_schema'
+import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useApiService } from '@/services/useApiService'
+import withRole from '@/utils/withRole'
+import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Stack, Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { fuelCodeColDefs } from './_schema'
 
 export const FuelCodes = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
@@ -58,24 +58,25 @@ export const FuelCodes = () => {
     }
   }))
 
-  const getRowId = useCallback((params) => {
+  const getRowId = (params) => {
     return params.data.fuelCodeId
-  }, [])
+  }
 
-  const handleGridKey = useCallback(() => {
+  const handleGridKey = () => {
     // setGridKey(`fuel-codes-grid-${uuid()}`)
     setGridKey(`fuel-codes-grid-<unique-id>`)
-  }, [])
+  }
 
-  const handleRowClicked = useCallback((params) => {
+  const handleRowClicked = (params) => {
     if (!isAuthorized) return
+    console.log(isAuthorized)
     navigate(
       ROUTES.ADMIN_FUEL_CODES_VIEW.replace(
         ':fuelCodeID',
         params.data.fuelCodeId
       )
     )
-  })
+  }
 
   const handleDownloadFuelCodes = async () => {
     setIsDownloadingFuelCodes(true)
