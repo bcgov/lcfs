@@ -17,15 +17,15 @@ export const Logout = () => {
     keycloak.authenticated && (
       <BCBox
         display="flex"
-        alignItems="right"
+        alignItems="center"
         justifyContent="space-around"
-        mr={2}
+        mr={3}
       >
         {currentUser?.firstName && (
           <BCTypography
             variant="subtitle1"
             color="light"
-            mx={1}
+            mx={3}
           >
             {currentUser?.firstName + ' ' + currentUser?.lastName}
           </BCTypography>

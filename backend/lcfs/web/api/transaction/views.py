@@ -18,13 +18,14 @@ router = APIRouter()
 @view_handler
 async def get_transactions_paginated(
     request: Request,
+    organization_id: int = None,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: TransactionsService = Depends(),
 ):
     """
     Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
     """
-    return await service.get_transactions_paginated(pagination)
+    return await service.get_transactions_paginated(pagination, organization_id)
 
 
 @router.get(

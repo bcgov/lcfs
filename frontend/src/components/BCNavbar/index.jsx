@@ -27,7 +27,11 @@ function BCNavbar(props) {
             position="static"
             data-test="bc-navbar"
             component="nav"
-            sx={{ border: 'none' }}
+            sx={{
+              border: 'none',
+              borderBottom: '5px solid',
+              borderColor: '#dadada'
+            }}
             color="inherit"
             elevation={0}
           >

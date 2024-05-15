@@ -1,5 +1,6 @@
-from sqlalchemy.ext.declarative import declarative_base, AbstractConcreteBase
-from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func
+from sqlalchemy.ext.declarative import AbstractConcreteBase
+from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func, Boolean
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
@@ -48,5 +49,11 @@ class EffectiveDates(Base):
 
     effective_date = Column(Date, nullable=True,
                             comment='The calendar date the value became valid.')
+    effective_status = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        comment="True if the value is currently valid, False if it is no longer valid.",
+    )
     expiration_date = Column(Date, nullable=True,
                              comment='The calendar date the value is no longer valid.')

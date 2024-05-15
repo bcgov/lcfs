@@ -9,14 +9,14 @@ import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box } from '@mui/material'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES, TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
+import { roles, govRoles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 
 export const Transactions = () => {
@@ -27,8 +27,8 @@ export const Transactions = () => {
   const gridRef = useRef()
   const { data: currentUser, hasRoles } = useCurrentUser()
 
-  const [searchParams] = useSearchParams();
-  const highlightedId = searchParams.get('hid');
+  const [searchParams] = useSearchParams()
+  const highlightedId = searchParams.get('hid')
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -47,6 +47,7 @@ export const Transactions = () => {
   }, [])
 
   const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
+  const [selectedOrgId, setSelectedOrgId] = useState(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(
@@ -111,6 +112,19 @@ export const Transactions = () => {
       setAlertSeverity('error')
     }
   }
+
+  const apiEndpoint = useMemo(() => {
+    if (hasRoles(roles.supplier)) {
+      return apiRoutes.orgTransactions.replace(
+        ':orgID',
+        currentUser?.organization?.organizationId
+      )
+    }
+    if (selectedOrgId) {
+      return `${apiRoutes.transactions}?organization_id=${selectedOrgId}`
+    }
+    return apiRoutes.transactions
+  }, [currentUser, hasRoles, selectedOrgId])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -184,17 +198,13 @@ export const Transactions = () => {
         />
       </Box>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <OrganizationList />
+        <Role roles={govRoles}>
+          <OrganizationList onOrgChange={setSelectedOrgId} />
+        </Role>
         <BCDataGridServer
+          key={selectedOrgId || 'all'}
           gridRef={gridRef}
-          apiEndpoint={
-            hasRoles(roles.supplier)
-              ? apiRoutes.orgTransactions.replace(
-                  ':orgID',
-                  currentUser?.organization.organizationId
-                )
-              : apiRoutes.transactions
-          }
+          apiEndpoint={apiEndpoint}
           apiData={'transactions'}
           columnDefs={transactionsColDefs(t)}
           gridKey={gridKey}

@@ -70,4 +70,10 @@ from . import (
     FeedstockFuelTransportMode,
     FinishedFuelTransportMode,
     TransportMode,
+    AdditionalCarbonIntensity,
+    EndUseType,
+    EnergyDensity,
+    EnergyEffectivenessRatio,
+    FuelCategory,
+    UnitOfMeasure,
 )

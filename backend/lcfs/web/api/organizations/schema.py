@@ -29,8 +29,6 @@ class OrganizationTypeBase(BaseSchema):
     org_type: OrganizationTypeEnum
     description: Optional[str] = None
 
-    class Config(BaseConfig):
-        pass
 
 
 class OrganizationTypeSchema(OrganizationTypeBase):
@@ -53,8 +51,6 @@ class OrganizationStatusBase(BaseSchema):
     status: OrganizationStatusEnum
     description: Optional[str] = None
 
-    class Config(BaseConfig):
-        pass
 
 
 class OrganizationStatusSchema(OrganizationStatusBase):
@@ -82,6 +78,8 @@ class AddressBase(BaseSchema):
 
 class OrganizationAddressBase(AddressBase):
 
+    # TODO[pydantic]: The `Config` class inherits from another class, please create the `model_config` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
     class Config(BaseConfig):
         pass
 
@@ -100,6 +98,8 @@ class OrganizationAddressCreateSchema(OrganizationAddressBase):
 
 class OrganizationAttorneyAddressBase(AddressBase):
 
+    # TODO[pydantic]: The `Config` class inherits from another class, please create the `model_config` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
     class Config(BaseConfig):
         pass
 
@@ -123,13 +123,11 @@ class OrganizationBase(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
-    total_balance: Optional[int]
-    reserved_balance: Optional[int]
+    total_balance: Optional[int] = None
+    reserved_balance: Optional[int] = None
     organization_status_id: int
     organization_type_id: int
 
-    class Config(BaseConfig):
-        pass
 
 
 class OrganizationSchema(OrganizationBase):
@@ -178,8 +176,6 @@ class OrganizationResponseSchema(BaseSchema):
     org_address: Optional[OrganizationAddressSchema] = []
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
 
-    class Config(BaseConfig):
-        pass
 
 
 class OrganizationSummaryResponseSchema(BaseSchema):
@@ -190,8 +186,6 @@ class OrganizationSummaryResponseSchema(BaseSchema):
     reserved_balance: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = None
 
-    class Config(BaseConfig):
-        pass
 
 class OrganizationCreateResponseSchema(BaseSchema):
     organization_id: int

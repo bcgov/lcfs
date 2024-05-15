@@ -1,0 +1,536 @@
+{
+  "fuel_types": [
+    {
+      "fuel_type_id": 1,
+      "fuel_type": "Biodiesel",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 2,
+      "fuel_type": "CNG",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 3,
+      "fuel_type": "Electricity",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 4,
+      "fuel_type": "Ethanol",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 5,
+      "fuel_type": "HDRD",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 6,
+      "fuel_type": "Hydrogen",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 7,
+      "fuel_type": "LNG",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 8,
+      "fuel_type": "Other - gasoline category",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 9,
+      "fuel_type": "Other diesel fuel",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 10,
+      "fuel_type": "Other - diesel category",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 11,
+      "fuel_type": "Alternative jet fuel",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 12,
+      "fuel_type": "Other - jet fuel category",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 13,
+      "fuel_type": "Propane",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 14,
+      "fuel_type": "Renewable gasoline",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 15,
+      "fuel_type": "Renewable naphtha",
+      "fossil_derived": false
+    },
+    {
+      "fuel_type_id": 16,
+      "fuel_type": "Fossil-derived diesel",
+      "fossil_derived": true
+    },
+    {
+      "fuel_type_id": 17,
+      "fuel_type": "Fossil-derived gasoline",
+      "fossil_derived": true
+    },
+    {
+      "fuel_type_id": 18,
+      "fuel_type": "Fossil-derived jet fuel",
+      "fossil_derived": true
+    }
+  ],
+  "fuel_code_prefixes": [
+    {
+      "prefix": "BCLCF"
+    }
+  ],
+  "fuel_code_statuses": [
+    {
+      "status": "Draft",
+      "description": "Initial state of the fuel code",
+      "display_order": 1
+    },
+    {
+      "status": "Approved",
+      "description": "Fuel code has been approved",
+      "display_order": 2
+    },
+    {
+      "status": "Deleted",
+      "description": "Fuel code has been deleted",
+      "display_order": 3
+    }
+  ],
+  "transport_modes": [
+    {
+      "transport_mode": "Truck"
+    },
+    {
+      "transport_mode": "Rail"
+    },
+    {
+      "transport_mode": "Marine"
+    },
+    {
+      "transport_mode": "Adjacent"
+    },
+    {
+      "transport_mode": "Pipeline"
+    }
+  ],
+  "fuel_categories": [
+    {
+      "fuel_category_id": 1,
+      "category": "Gasoline",
+      "description": "Gasoline"
+    },
+    {
+      "fuel_category_id": 2,
+      "category": "Diesel",
+      "description": "Diesel"
+    },
+    {
+      "fuel_category_id": 3,
+      "category": "Jet fuel",
+      "description": "Jet fuel"
+    }
+  ],
+  "end_use_types": [
+    {
+      "end_use_type_id": 1,
+      "type": "Light duty motor vehicles"
+    },
+    {
+      "end_use_type_id": 2,
+      "type": "Other or unknown"
+    },
+    {
+      "end_use_type_id": 3,
+      "type": "Fuel cell vehicle"
+    },
+    {
+      "end_use_type_id": 4,
+      "type": "Battery bus"
+    },
+    {
+      "end_use_type_id": 5,
+      "type": "Battery truck"
+    },
+    {
+      "end_use_type_id": 6,
+      "type": "Cargo handling equipment"
+    },
+    {
+      "end_use_type_id": 7,
+      "type": "Fixed guiderail"
+    },
+    {
+      "end_use_type_id": 8,
+      "type": "Ground support equipment"
+    },
+    {
+      "end_use_type_id": 9,
+      "type": "Heavy forklift"
+    },
+    {
+      "end_use_type_id": 10,
+      "type": "Shore power"
+    },
+    {
+      "end_use_type_id": 11,
+      "type": "Trolley bus"
+    },
+    {
+      "end_use_type_id": 12,
+      "type": "Compression-ignition engine"
+    },
+    {
+      "end_use_type_id": 13,
+      "type": "Other"
+    },
+    {
+      "end_use_type_id": 14,
+      "type": "Marine",
+      "sub_type": "General"
+    },
+    {
+      "end_use_type_id": 15,
+      "type": "Marine",
+      "sub_type": "Operated within 51 to 75% of load range"
+    },
+    {
+      "end_use_type_id": 16,
+      "type": "Marine",
+      "sub_type": "Operated within 76 to 100% of load range"
+    },
+    {
+      "end_use_type_id": 17,
+      "type": "Marine, w/ methane slip reduction kit",
+      "sub_type": "General"
+    },
+    {
+      "end_use_type_id": 18,
+      "type": "Marine, w/ methane slip reduction kit",
+      "sub_type": "Operated within 51 to 75% of load range"
+    },
+    {
+      "end_use_type_id": 19,
+      "type": "Marine, w/ methane slip reduction kit",
+      "sub_type": "Operated within 76 to 100% of load range"
+    },
+    {
+      "end_use_type_id": 20,
+      "type": "Unknown"
+    }
+  ],
+  "unit_of_measures": [
+    {
+      "uom_id": 1,
+      "name": "MJ/L",
+      "description": "Megajoules per litre"
+    },
+    {
+      "uom_id": 2,
+      "name": "MJ/kWh",
+      "description": "Megajoules per kilowatt hour"
+    },
+    {
+      "uom_id": 3,
+      "name": "MJ/m3",
+      "description": "Megajoules per cubic metre"
+    },
+    {
+      "uom_id": 4,
+      "name": "MJ/kg",
+      "description": "Megajoules per kilogram"
+    },
+    {
+      "uom_id": 5,
+      "name": "gCO2e/MJ",
+      "description": "grams of carbon dioxide equivalent per megajoule"
+    }
+  ],
+  "ucis": [
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 14,
+      "intensity": 27.3
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 15,
+      "intensity": 17.8
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 16,
+      "intensity": 12.2
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 17,
+      "intensity": 10.6
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 18,
+      "intensity": 8.4
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 19,
+      "intensity": 8.0
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 20,
+      "intensity": 27.3
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "intensity": 0
+    },
+    {
+      "uom_id": 5,
+      "intensity": 0
+    }
+  ],
+  "eers": [
+    {
+      "fuel_category_id": 1,
+      "fuel_type_id": 2,
+      "end_use_type_id": 3,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 1,
+      "fuel_type_id": 3,
+      "end_use_type_id": 1,
+      "ratio": 3.5
+    },
+    {
+      "fuel_category_id": 1,
+      "fuel_type_id": 3,
+      "end_use_type_id": 2,
+      "ratio": 1.0
+    },
+    {
+      "fuel_category_id": 1,
+      "fuel_type_id": 6,
+      "end_use_type_id": 3,
+      "ratio": 2.4
+    },
+    {
+      "fuel_category_id": 1,
+      "fuel_type_id": 6,
+      "end_use_type_id": 2,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 1,
+      "fuel_type_id": 13,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 2,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 4,
+      "ratio": 3.8
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 5,
+      "ratio": 3.2
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 6,
+      "ratio": 2.5
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 7,
+      "ratio": 2.9
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 8,
+      "ratio": 2.5
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 9,
+      "ratio": 3.9
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 14,
+      "ratio": 2.5
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 10,
+      "ratio": 2.8
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 11,
+      "ratio": 2.4
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 2,
+      "ratio": 1.0
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 6,
+      "end_use_type_id": 3,
+      "ratio": 1.8
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 6,
+      "end_use_type_id": 2,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 12,
+      "ratio": 1.0
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 2,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 2,
+      "fuel_type_id": 13,
+      "ratio": 0.9
+    },
+    {
+      "fuel_category_id": 3,
+      "fuel_type_id": 3,
+      "ratio": 2.5
+    },
+    {
+      "fuel_category_id": 3,
+      "fuel_type_id": 11,
+      "ratio": 1.0
+    }
+  ],
+  "energy_densities": [
+    {
+      "fuel_type_id": 17,
+      "uom_id": 1,
+      "density": 34.69
+    },
+    {
+      "fuel_type_id": 4,
+      "uom_id": 1,
+      "density": 23.58
+    },
+    {
+      "fuel_type_id": 14,
+      "uom_id": 1,
+      "density": 34.69
+    },
+    {
+      "fuel_type_id": 15,
+      "uom_id": 1,
+      "density": 34.51
+    },
+    {
+      "fuel_type_id": 16,
+      "uom_id": 1,
+      "density": 38.65
+    },
+    {
+      "fuel_type_id": 1,
+      "uom_id": 1,
+      "density": 35.40
+    },
+    {
+      "fuel_type_id": 5,
+      "uom_id": 1,
+      "density": 37.89
+    },
+    {
+      "fuel_type_id": 9,
+      "uom_id": 1,
+      "density": 36.51
+    },
+    {
+      "fuel_type_id": 18,
+      "uom_id": 1,
+      "density": 37.40
+    },
+    {
+      "fuel_type_id": 11,
+      "uom_id": 1,
+      "density": 36.00
+    },
+    {
+      "fuel_type_id": 3,
+      "uom_id": 2,
+      "density": 3.60
+    },
+    {
+      "fuel_type_id": 6,
+      "uom_id": 2,
+      "density": 141.76
+    },
+    {
+      "fuel_type_id": 13,
+      "uom_id": 1,
+      "density": 25.62
+    },
+    {
+      "fuel_type_id": 2,
+      "uom_id": 3,
+      "density": 38.27
+    },
+    {
+      "fuel_type_id": 7,
+      "uom_id": 4,
+      "density": 53.54
+    }
+  ]
+}
