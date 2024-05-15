@@ -191,3 +191,31 @@ class FuelCodeRepository:
     async def delete_fuel_code(self, fuel_code_id: int):
 
         await self.db.execute(update(FuelCode).where(FuelCode.fuel_code_id == fuel_code_id).values(fuel_status_id=3))
+
+    async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
+        subquery = (
+            select(
+                func.max(FuelCode.fuel_code).label('latest_code')
+            )
+            .group_by(func.split_part(FuelCode.fuel_code, '.', 1))
+            .subquery()
+        )
+
+        query = (
+            select(FuelCode)
+            .join(subquery, FuelCode.fuel_code == subquery.c.latest_code)
+            .options(
+                joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                    FeedstockFuelTransportMode.feedstock_fuel_transport_mode
+                ),
+                joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                    FinishedFuelTransportMode.finished_fuel_transport_mode
+                ),
+            )
+        )
+
+        result = await self.db.execute(query)
+
+        return result.unique().scalars().all()
+
+        # return [FuelCodeSchema.from_orm(fuel_code) for fuel_code in fuel_codes]

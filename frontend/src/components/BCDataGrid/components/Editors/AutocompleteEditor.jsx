@@ -59,6 +59,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         autoHighlight
         size="medium"
         freeSolo={props.freeSolo}
+        autoSelect={props.autoSelect}
         getOptionLabel={(option) => option}
         renderOption={(propsIn, option, { selected }) => {
           // Check if the current option is already selected

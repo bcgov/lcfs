@@ -181,9 +181,7 @@ export const AddFuelCode = () => {
     gridApi.stopEditing(false)
     const allRowData = []
     gridApi.forEachNode(async (row) => {
-      console.log(row.rowIndex)
       await validationHandler(row)
-
       const data = {
         ...row.data,
         lastUpdated: new Date().toISOString().split('T')[0],
