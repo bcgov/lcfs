@@ -198,5 +198,3 @@ class FuelCodeRepository:
             next_fuel_codes.append({**fuel_code_dict, 'fuel_code': next_code})
 
         return next_fuel_codes
-
-        # return [FuelCodeSchema.from_orm(fuel_code) for fuel_code in fuel_codes]
