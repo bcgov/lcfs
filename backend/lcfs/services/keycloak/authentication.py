@@ -4,7 +4,7 @@ import jwt
 from redis.asyncio import Redis
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.future import select
 from sqlalchemy.exc import NoResultFound
@@ -101,14 +101,18 @@ class UserAuthentication(AuthenticationBackend):
         else:
             user_token = self.test_keycloak_user
 
-        if 'preferred_username' in user_token:
+        # Normalize the username and email to lowercase
+        preferred_username = user_token.get('preferred_username', '').lower()
+        email = user_token.get('email', '').lower()
+
+        if preferred_username:
             try:
                 async with self.async_session() as session:
                     result = await session.execute(
                         select(UserProfile)
                         .options(joinedload(UserProfile.organization), 
                                  joinedload(UserProfile.user_roles).joinedload(UserRole.role)).where(
-                            UserProfile.keycloak_user_id == user_token['preferred_username'])
+                            func.lower(UserProfile.keycloak_user_id) == preferred_username)
                     )
                     user = result.unique().scalar_one_or_none()
 
@@ -128,15 +132,15 @@ class UserAuthentication(AuthenticationBackend):
             except NoResultFound:
                 pass
 
-        if 'email' in user_token:
+        if email:
             user_query = (
                 select(UserProfile)
                 .options(
                     joinedload(UserProfile.organization),
                     joinedload(UserProfile.user_roles).joinedload(UserRole.role))
                 .where(
-                    UserProfile.keycloak_email == user_token['email'],
-                    UserProfile.keycloak_username == _parse_external_username(user_token)
+                    func.lower(UserProfile.keycloak_email) == email,
+                    func.lower(UserProfile.keycloak_username) == _parse_external_username(user_token)
                 )
             )
             # Check for Government or Supplier affiliation
@@ -194,9 +198,9 @@ class UserAuthentication(AuthenticationBackend):
         """
         # We only want to create a user_login_history when the current user is fetched
         if path == '/api/users/current':
-            email = user_token.get('email', '')
+            email = user_token.get('email', '').lower()
             username = _parse_external_username(user_token)
-            preferred_username = user_token.get('preferred_username', '')
+            preferred_username = user_token.get('preferred_username', '').lower()
             login_history = UserLoginHistory(
                 keycloak_email=email,
                 external_username=username,
