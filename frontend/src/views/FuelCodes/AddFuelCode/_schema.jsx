@@ -118,7 +118,7 @@ const autoFill = ({ fuelCodeValue, latestFuelCodes }, params) => {
       feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
         (mode) => mode.feedstockFuelTransportMode.transportMode
       ),
-      finishedTransportMode: fuelCodeData.finishedFuelTransportModes.map(
+      finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
         (mode) => mode.finishedFuelTransportMode.transportMode
       ),
       formerCompany: fuelCodeData.formerCompany
@@ -126,7 +126,7 @@ const autoFill = ({ fuelCodeValue, latestFuelCodes }, params) => {
   }
 
   params.node?.setData(data)
-  params.api.refreshCells()
+  // params.api.refreshCells()
 }
 
 export const fuelCodeColDefs = (t, optionsData) => [
