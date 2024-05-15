@@ -182,6 +182,21 @@ class FuelCodeRepository:
 
         result = await self.db.execute(query)
 
-        return result.unique().scalars().all()
+        fuel_codes = result.unique().scalars().all()
+
+        next_fuel_codes = []
+
+        for fuel_code in fuel_codes:
+            base_code, version = fuel_code.fuel_code.rsplit('.', 1)
+            next_version = str(int(version) + 1)
+            next_code = f"{base_code}.{next_version}"
+
+            fuel_code_pydantic = FuelCodeSchema.from_orm(fuel_code)
+
+            fuel_code_dict = fuel_code_pydantic.dict()
+
+            next_fuel_codes.append({**fuel_code_dict, 'fuel_code': next_code})
+
+        return next_fuel_codes
 
         # return [FuelCodeSchema.from_orm(fuel_code) for fuel_code in fuel_codes]
