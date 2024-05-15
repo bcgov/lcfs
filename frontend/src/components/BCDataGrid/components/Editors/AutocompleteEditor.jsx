@@ -59,7 +59,8 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         autoHighlight
         size="medium"
         freeSolo={props.freeSolo}
-        //   getOptionLabel={(option) => option}
+        autoSelect={props.autoSelect}
+        getOptionLabel={(option) => option}
         renderOption={(propsIn, option, { selected }) => {
           // Check if the current option is already selected
           const isOptionSelected =
@@ -142,7 +143,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
 })
 
 AutocompleteEditor.propTypes = {
-  value: PropTypes.array,
+  value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   onValueChange: PropTypes.func.isRequired,
   eventKey: PropTypes.string,
   rowIndex: PropTypes.number,

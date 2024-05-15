@@ -96,6 +96,39 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
+const autoFill = ({ fuelCodeValue, latestFuelCodes }, params) => {
+  const fuelCodeData = latestFuelCodes.find(
+    (fuelCode) => fuelCode.fuelCode === fuelCodeValue
+  )
+  let data = {
+    ...params.data
+  }
+  if (fuelCodeData) {
+    console.log(fuelCodeData)
+    data = {
+      ...params.data,
+      prefix: fuelCodeData.prefix,
+      company: fuelCodeData.company,
+      fuel: fuelCodeData.fuelCodeType.fuelType,
+      feedstock: fuelCodeData.feedstock,
+      feedstockLocation: fuelCodeData.feedstockLocation,
+      feedstockMisc: fuelCodeData.feedstockMisc,
+      fuelProductionFacilityLocation:
+        fuelCodeData.fuelProductionFacilityLocation,
+      feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
+        (mode) => mode.feedstockFuelTransportMode.transportMode
+      ),
+      finishedTransportMode: fuelCodeData.finishedFuelTransportModes.map(
+        (mode) => mode.finishedFuelTransportMode.transportMode
+      ),
+      formerCompany: fuelCodeData.formerCompany
+    }
+  }
+
+  params.node?.setData(data)
+  params.api.refreshCells()
+}
+
 export const fuelCodeColDefs = (t, optionsData) => [
   {
     colId: 'action',
@@ -152,8 +185,23 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'fuelCode',
     headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
-    cellDataType: 'number',
-    editable: false
+    cellDataType: 'text',
+    cellEditor: 'autocompleteEditor',
+    editable: true,
+    cellEditorParams: {
+      onDynamicUpdate: (fuelCodeValue, params) =>
+        autoFill(
+          { fuelCodeValue, latestFuelCodes: optionsData.latestFuelCodes },
+          params
+        ),
+      autoSelect: true,
+      options: optionsData.latestFuelCodes.map((obj) => obj.fuelCode),
+      optionLabel: 'fuelCode',
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: true,
+      openOnFocus: true
+    }
   },
   {
     field: 'company',

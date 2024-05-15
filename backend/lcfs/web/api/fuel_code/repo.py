@@ -117,7 +117,8 @@ class FuelCodeRepository:
         conditions = []
         # TODO: Filtering and Sorting logic needs to be added.
         # setup pagination
-        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
         # Construct the select query with options for eager loading
         query = select(FuelCode).options(
@@ -137,7 +138,8 @@ class FuelCodeRepository:
 
         # Execute the main query to retrieve all fuel codes
         result = await self.db.execute(
-            query.offset(offset).limit(limit).order_by(FuelCode.create_date.desc())
+            query.offset(offset).limit(limit).order_by(
+                FuelCode.create_date.desc())
         )
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
@@ -154,3 +156,32 @@ class FuelCodeRepository:
         await self.db.flush()
 
         return "fuel codes added successfully"
+
+    @repo_handler
+    async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
+        subquery = (
+            select(
+                func.max(FuelCode.fuel_code).label('latest_code')
+            )
+            .group_by(func.split_part(FuelCode.fuel_code, '.', 1))
+            .subquery()
+        )
+
+        query = (
+            select(FuelCode)
+            .join(subquery, FuelCode.fuel_code == subquery.c.latest_code)
+            .options(
+                joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
+                    FeedstockFuelTransportMode.feedstock_fuel_transport_mode
+                ),
+                joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
+                    FinishedFuelTransportMode.finished_fuel_transport_mode
+                ),
+            )
+        )
+
+        result = await self.db.execute(query)
+
+        return result.unique().scalars().all()
+
+        # return [FuelCodeSchema.from_orm(fuel_code) for fuel_code in fuel_codes]

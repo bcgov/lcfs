@@ -94,29 +94,29 @@ export const AddFuelCode = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const validationHandler = useCallback((params) => {
-    fuelCodeSchema(t, optionsData)
-      .validate(params.data)
-      .then((data) => {
-        setAlertMessage(`Validated row # ${params.node.rowIndex + 1}`)
-        setAlertSeverity('success')
-        params.node.setData({
-          ...params.data,
-          isValid: true,
-          validationMsg: ''
-        })
+  const validationHandler = async (row) => {
+    try {
+      await fuelCodeSchema(t, optionsData).validate(row.data)
+      setAlertMessage(`Validated fuel code`)
+      setAlertSeverity('success')
+      row.setData({
+        ...row.data,
+        isValid: true,
+        validationMsg: ''
       })
-      .catch((err) => {
-        setAlertMessage(err.errors[0])
-        setAlertSeverity('error')
-        params.node.setData({
-          ...params.data,
-          isValid: false,
-          validationMsg: err.errors[0]
-        })
+      alertRef.current?.triggerAlert()
+    } catch (err) {
+      setAlertMessage(err.errors[0])
+      setAlertSeverity('error')
+      row.setData({
+        ...row.data,
+        isValid: false,
+        validationMsg: err.errors[0]
       })
-    alertRef.current.triggerAlert()
-  })
+      alertRef.current?.triggerAlert()
+      throw new Error()
+    }
+  }
   const onRowEditingStarted = useCallback((params) => {
     // perform initial validation
     if (params.data.modified && params.data.isValid) validationHandler(params)
@@ -133,7 +133,6 @@ export const AddFuelCode = () => {
     const allRowData = []
     gridApi.forEachNode((node) => allRowData.push(node.data))
     const modifiedRows = allRowData.filter((row) => row.modified)
-    console.log(modifiedRows)
     // Add your API call to save modified rows here
   }, [])
 
@@ -178,34 +177,35 @@ export const AddFuelCode = () => {
     return transportModeIds
   })
 
-  const handleSaveDraftCodes = useCallback((params) => {
-    validationHandler(params)
+  const handleSaveDraftCodes = async (params) => {
     gridApi.stopEditing(false)
     const allRowData = []
-    gridApi.forEachNode((node) => {
-      // get status_id, prefix_id, fuel_type_id
-      // transport_mode_id for feedstock and finished fuels
+    gridApi.forEachNode(async (row) => {
+      console.log(row.data)
+      await validationHandler(row)
       const data = {
-        ...node.data,
+        ...row.data,
         lastUpdated: new Date().toISOString().split('T')[0],
-        status: FUEL_CODE_STATUSES.DRAFT,
         prefixId: optionsData.fuelCodePrefixes.find(
-          (elm) => elm.prefix === node.data.prefix
+          (elm) => elm.prefix === row.data.prefix
         ).fuelCodePrefixId,
         fuelTypeId: optionsData.fuelTypes.find(
-          (elm) => elm.fuelType === node.data.fuel
+          (elm) => elm.fuelType === row.data.fuel
         ).fuelTypeId,
         feedstockFuelTransportModes: [
-          ...getTransportModeIds(node.data.feedstockTransportMode)
+          ...getTransportModeIds(row.data.feedstockTransportMode)
         ],
         finishedFuelTransportModes: [
-          ...getTransportModeIds(node.data.finishedFuelTransportMode)
-        ]
+          ...getTransportModeIds(row.data.finishedFuelTransportMode)
+        ],
+        fuelCodeId: null,
+        status: FUEL_CODE_STATUSES.DRAFT
       }
       allRowData.push(data)
     })
+
     addFuelCodes({ data: allRowData })
-  })
+  }
 
   if (isLoading || isAddFuelCodeLoading) {
     return <Loading />

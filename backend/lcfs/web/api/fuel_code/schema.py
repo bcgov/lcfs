@@ -108,12 +108,6 @@ class AdditionalCarbonIntensitySchema(BaseSchema):
         return round(value, 2)
 
 
-class TableOptionsSchema(BaseSchema):
-    fuel_types: List[FuelTypeSchema]
-    transport_modes: List[TransportModeSchema]
-    fuel_code_prefixes: List[FuelCodePrefixSchema]
-
-
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_status_id: Optional[int] = None
@@ -144,6 +138,13 @@ class FuelCodeSchema(BaseSchema):
     finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
         None
     )
+
+
+class TableOptionsSchema(BaseSchema):
+    fuel_types: List[FuelTypeSchema]
+    transport_modes: List[TransportModeSchema]
+    fuel_code_prefixes: List[FuelCodePrefixSchema]
+    latest_fuel_codes: List[FuelCodeSchema]
 
 
 class FuelCodesSchema(BaseSchema):

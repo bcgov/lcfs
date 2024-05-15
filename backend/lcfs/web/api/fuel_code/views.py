@@ -25,6 +25,7 @@ from lcfs.web.api.fuel_code.schema import (
     EnergyEffectivenessRatioSchema,
     FuelCodeCreateSchema,
     FuelCodesSchema,
+    FuelCodeSchema,
     TableOptionsSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema
@@ -117,3 +118,16 @@ async def get_use_of_a_carbon_intensities(
 ):
     """Endpoint to get UCI's"""
     return await service.get_use_of_a_carbon_intensities()
+
+
+# @router.get(
+#     "/latest-fuel-codes",
+#     response_model=List[FuelCodeSchema],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler
+# async def get_latest_fuel_codes(
+#     request: Request,
+#     service: FuelCodeServices = Depends()
+# ):
+#     return await service.get_latest_fuel_codes()
