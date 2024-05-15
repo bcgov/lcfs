@@ -1,7 +1,7 @@
 """issuance field updates
 
 Revision ID: 0985f23b0f0c
-Revises: 6e08afd00978
+Revises: f141c1431961
 Create Date: 2024-05-13 15:36:40.362106
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "0985f23b0f0c"
-down_revision = "6e08afd00978"
+down_revision = "f141c1431961"
 branch_labels = None
 depends_on = None
 
