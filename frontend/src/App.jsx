@@ -9,7 +9,7 @@ import {
 } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
-import { FuelCodes, AddFuelCode } from './views/FuelCodes'
+import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
 import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
@@ -247,6 +247,11 @@ const router = createBrowserRouter([
         path: ROUTES.FUELCODES_ADD,
         element: <AddFuelCode />,
         handle: { title: 'Add Fuel Code' }
+      },
+      {
+        path: ROUTES.ADMIN_FUEL_CODES_VIEW,
+        element: <ViewFuelCode />,
+        handle: { title: 'Fuel Code' }
       },
       {
         path: ROUTES.FILESUBMISSION,

@@ -1,33 +1,40 @@
-// mui components
-import BCButton from '@/components/BCButton'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { Stack, Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
-// Icons
+import { roles } from '@/constants/roles'
+import { ROUTES, apiRoutes } from '@/constants/routes'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useApiService } from '@/services/useApiService'
+import withRole from '@/utils/withRole'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// react components
+import { Stack, Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-// Services
-import { DownloadButton } from '@/components/DownloadButton'
-import { useApiService } from '@/services/useApiService'
-// import { v4 as uuid } from 'uuid'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
-import withRole from '@/utils/withRole'
-// Constants
-import { ROUTES, apiRoutes } from '@/constants/routes'
-import { roles } from '@/constants/roles'
 
 export const FuelCodes = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`fuel-codes-grid`)
+  const [searchParams] = useSearchParams()
+  const highlightedId = searchParams.get('hid')
+
+  const { data: currentUser } = useCurrentUser()
+
+  const userRoles = currentUser?.roles?.map((role) => role.name) || []
+
+  const isAuthorized = [
+    roles.analyst,
+    roles.compliance_manager,
+    roles.director
+  ].some((role) => userRoles.includes(role))
 
   const gridRef = useRef()
   const apiService = useApiService()
@@ -51,23 +58,25 @@ export const FuelCodes = () => {
     }
   }))
 
-  const getRowId = useCallback((params) => {
+  const getRowId = (params) => {
     return params.data.fuelCodeId
-  }, [])
+  }
 
-  const handleGridKey = useCallback(() => {
+  const handleGridKey = () => {
     // setGridKey(`fuel-codes-grid-${uuid()}`)
     setGridKey(`fuel-codes-grid-<unique-id>`)
-  }, [])
+  }
 
-  const handleRowClicked = useCallback((params) => {
+  const handleRowClicked = (params) => {
+    if (!isAuthorized) return
+    console.log(isAuthorized)
     navigate(
       ROUTES.ADMIN_FUEL_CODES_VIEW.replace(
         ':fuelCodeID',
         params.data.fuelCodeId
       )
     )
-  })
+  }
 
   const handleDownloadFuelCodes = async () => {
     setIsDownloadingFuelCodes(true)
@@ -140,6 +149,7 @@ export const FuelCodes = () => {
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
+          highlightedRowId={highlightedId}
         />
       </BCBox>
     </Grid2>

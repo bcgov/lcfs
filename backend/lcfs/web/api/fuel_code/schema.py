@@ -157,7 +157,7 @@ class FuelCodeCreateSchema(BaseSchema):
     status: str
     prefix: str
     prefix_id: int
-    fuel_code: float
+    fuel_code: str
     company: str
     carbon_intensity: float
     edrms: str
