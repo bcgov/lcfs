@@ -222,7 +222,3 @@ class FuelCodeServices:
             AdditionalCarbonIntensitySchema.model_validate(value)
             for value in additional_carbon_intensities
         ]
-
-    # @service_handler
-    # async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
-    #     return await self.repo.get_latest_fuel_codes()
