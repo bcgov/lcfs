@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useMatches, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -202,13 +202,13 @@ export const AddEditViewTransaction = () => {
   )
 
   if (transactionId && isTransactionDataLoading)
-    return <Loading message={t(`${txnType}:loadingText`)} />
+    return <Loading message={t('txn:loadingText')} />
 
   // Conditional rendering for loading
   if (transactionId && (isTransactionDataLoading || queryState.status === 'pending'))
-    return <Loading message={t('transfer:loadingText')} />
+    return <Loading message={t('txn:loadingText')} />
   if (isUpdatingAdminAdjustment || isUpdatingInitiativeAgreement)
-    return <Loading message={t('transfer:processingText')} />
+    return <Loading message={t('txn:processingText')} />
 
   if (isLoadingError || queryState.status === 'error') {
     return (

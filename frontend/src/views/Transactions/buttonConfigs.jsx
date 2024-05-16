@@ -72,11 +72,11 @@ export const buttonClusterConfigFn = ({
         faTrash
       ),
       id: 'delete-draft-btn',
-      handler: (formData) => {
+      handler: async (formData) => {
         setModalData({
-          primaryButtonAction: () => {
+          primaryButtonAction: async () => {
             const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
-            mutationFn({
+            await mutationFn({
               data: {
                 ...formData,
                 currentStatus: TRANSACTION_STATUSES.DELETED
@@ -96,11 +96,11 @@ export const buttonClusterConfigFn = ({
         t(`txn:actionBtns.recommendBtn`),
       ),
       id: 'recommend-btn',
-      handler: (formData) => {
+      handler: async (formData) => {
         setModalData({
-          primaryButtonAction: () => {
+          primaryButtonAction: async () => {
             const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
-            mutationFn({
+            await mutationFn({
               data: {
                 ...formData,
                 currentStatus: TRANSACTION_STATUSES.RECOMMENDED
@@ -120,11 +120,11 @@ export const buttonClusterConfigFn = ({
         t(`txn:actionBtns.approveBtn`),
       ),
       id: 'approve-btn',
-      handler: (formData) => {
+      handler: async (formData) => {
         setModalData({
-          primaryButtonAction: () => {
+          primaryButtonAction: async () => {
             const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
-            mutationFn({
+            await mutationFn({
               data: {
                 ...formData,
                 currentStatus: TRANSACTION_STATUSES.APPROVED
@@ -146,11 +146,11 @@ export const buttonClusterConfigFn = ({
         faTrash
       ),
       id: 'delete-btn',
-      handler: (formData) => {
+      handler: async (formData) => {
         setModalData({
-          primaryButtonAction: () => {
+          primaryButtonAction: async () => {
             const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
-            mutationFn({
+            await mutationFn({
               data: {
                 ...formData,
                 currentStatus: TRANSACTION_STATUSES.DELETED

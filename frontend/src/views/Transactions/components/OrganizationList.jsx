@@ -15,7 +15,7 @@ const OrganizationList = ({ onOrgChange }) => {
     if (!isLoading) {
       const formattedData = data.map(org => ({
         ...org,
-        label: `${org.name} - ${t('txn:complianceBalance')}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: org.reservedBalance })} ${t('txn:inReserve')})`
+        label: `${org.name} - ${t('txn:complianceBalance')} ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: org.reservedBalance })} ${t('txn:inReserve')})`
       }));
 
       setOptionsList([
@@ -23,7 +23,7 @@ const OrganizationList = ({ onOrgChange }) => {
         ...formattedData
       ]);
     }
-  }, [data, isLoading])
+  }, [data, isLoading, t])
 
   const onInputBoxChanged = (event, input) => {
     if (!input || input.name === t('txn:allOrganizations')) {
