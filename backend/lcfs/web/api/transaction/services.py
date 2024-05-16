@@ -53,7 +53,7 @@ class TransactionsService:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
-        pagination.filters.append(FilterModel(field="status", filter="Draft", type="notEqual", filter_type="text"))
+        # pagination.filters.append(FilterModel(field="status", filter="Draft", type="notEqual", filter_type="text"))
         conditions = []
         pagination = validate_pagination(pagination)
         if pagination.filters and len(pagination.filters) > 0:

@@ -15,8 +15,8 @@ import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { ORGANIZATION_STATUSES, TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles, govRoles } from '@/constants/roles'
-import { ORGANIZATION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
 import OrganizationList from './components/OrganizationList'
 
 export const Transactions = () => {
@@ -62,17 +62,24 @@ export const Transactions = () => {
           view: ROUTES.TRANSFERS_VIEW,
           edit: ROUTES.TRANSFERS_EDIT
         },
-        'Administrative Adjustment': {
-          view: ROUTES.TRANSACTIONS_VIEW // TODO Replace once we develop this feature
+        'AdminAdjustment': {
+          view: ROUTES.ADMIN_ADJUSTMENT_VIEW,
+          edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
         },
-        'Initiative Agreement': {
-          view: ROUTES.TRANSACTIONS_VIEW // TODO Replace once we develop this feature
+        'InitiativeAgreement': {
+          view: ROUTES.INITIATIVE_AGREEMENT_VIEW,
+          edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
         }
       }
 
       // Determine if it's an edit scenario
-      const isEditScenario =
-        userOrgName === fromOrganization && status === TRANSFER_STATUSES.DRAFT
+      const isEditScenario = (
+        (userOrgName === fromOrganization && status === TRANSFER_STATUSES.DRAFT) ||
+        (!fromOrganization && (
+          status === TRANSACTION_STATUSES.DRAFT
+        ))
+      );
+
       const routeType = isEditScenario ? 'edit' : 'view'
 
       // Select the appropriate route based on the transaction type and scenario

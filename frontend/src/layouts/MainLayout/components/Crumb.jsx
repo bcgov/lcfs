@@ -1,7 +1,6 @@
 import { Breadcrumbs, Typography } from '@mui/material'
 import { useLocation, Link, useMatches, useParams } from 'react-router-dom'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
-import { viewRoutesTitle } from '@/constants/routes/apiRoutes'
 import { emphasize, styled } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
 import { isNumeric } from '@/utils/formatters'
@@ -36,6 +35,16 @@ const Crumb = () => {
   const pathnames = location.pathname.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
 
+  // Mapping for custom breadcrumb labels and routes
+  const customBreadcrumbs = {
+    'admin': { label: 'Administration', route: '/admin' },
+    'transfers': { label: 'Transactions', route: '/transactions' },
+    'add-org': { label: 'Add organization', route: '/add-org' },
+    'edit-org': { label: 'Edit organization', route: '/edit-org' },
+    'initiative-agreement': { label: 'Transactions', route: '/transactions' },
+    'admin-adjustment': { label: 'Transactions', route: '/transactions' }
+  }
+
   return (
     <>
       <Breadcrumbs
@@ -63,8 +72,11 @@ const Crumb = () => {
           />
         )}
         {pathnames.map((name, index) => {
-          const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
           const isLast = index === pathnames.length - 1
+          const customCrumb = customBreadcrumbs[name] || {}
+          const routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
+          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+
           return isLast ? (
             <StyledBreadcrumb
               component={Typography}
@@ -74,9 +86,7 @@ const Crumb = () => {
                   ? title
                   : isNumeric(name)
                     ? 'ID: ' + name
-                    : viewRoutesTitle[name] ||
-                      name.charAt(0).toUpperCase() +
-                        name.slice(1).replace('-', ' ')
+                    : displayName
               }
               key={name}
             />
@@ -87,10 +97,9 @@ const Crumb = () => {
                 key={name}
                 component={Link}
                 label={
-                  (isNumeric(name) && name === userID && pathnames[index+1] === "edit-user" && 'User profile') ||
+                  (isNumeric(name) && name === userID && pathnames[index + 1] === "edit-user" && 'User profile') ||
                   (isNumeric(name) && name === orgID && 'Organization profile') ||
-                  viewRoutesTitle[name] ||
-                  name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+                  displayName
                 }
                 sx={{
                   cursor: 'pointer',

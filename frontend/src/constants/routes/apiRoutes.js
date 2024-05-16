@@ -6,6 +6,8 @@ export const apiRoutes = {
   orgUsers: '/organization/:orgID/users/list',
   transactions: '/transactions/',
   orgTransactions: '/organization/:orgID/transactions',
+  adminAdjustments: '/admin-adjustments/',
+  initiativeAgreements: '/initiative-agreements/',
   openapi: '/openapi.json/',
   updateCategory: '/transfers/:transferId/category',
   getTransfer: '/transfers/:transferId',
@@ -14,11 +16,4 @@ export const apiRoutes = {
   addFuelCodes: '/fuel-codes/save-fuel-codes',
   getFuelCodes: '/fuel-codes/list',
   updateFuelCode: '/fuel-codes/:fuelCodeId'
-}
-
-export const viewRoutesTitle = {
-  admin: 'Administration',
-  transfers: 'Transactions',
-  'add-org': 'Add organization',
-  'edit-org': 'Edit organization'
 }

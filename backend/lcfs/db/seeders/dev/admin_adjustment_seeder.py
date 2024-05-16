@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from sqlalchemy import select
 from lcfs.db.models.AdminAdjustment import AdminAdjustment
 
@@ -12,17 +13,20 @@ async def seed_admin_adjustments(session):
         session: The database session for committing the new records.
     """
 
+    # Define a standard date for transaction_effective_date
+    transaction_effective_date = datetime(2023, 1, 1)
+
     admin_adjustments_to_seed = [
-        {'compliance_units': 50000, 'to_organization_id': 1, 'transaction_id': 1},
-        {'compliance_units': 50000, 'to_organization_id': 2, 'transaction_id': 2},
-        {'compliance_units': 50000, 'to_organization_id': 3, 'transaction_id': 3},
-        {'compliance_units': 50000, 'to_organization_id': 4, 'transaction_id': 4},
-        {'compliance_units': 50000, 'to_organization_id': 5, 'transaction_id': 5},
-        {'compliance_units': 50000, 'to_organization_id': 6, 'transaction_id': 6},
-        {'compliance_units': 50000, 'to_organization_id': 7, 'transaction_id': 7},
-        {'compliance_units': 50000, 'to_organization_id': 8, 'transaction_id': 8},
-        {'compliance_units': 50000, 'to_organization_id': 9, 'transaction_id': 9},
-        {'compliance_units': 50000, 'to_organization_id': 10, 'transaction_id': 10}
+        {'compliance_units': 50000, 'to_organization_id': 1, 'transaction_id': 1, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 2, 'transaction_id': 2, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 3, 'transaction_id': 3, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 4, 'transaction_id': 4, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 5, 'transaction_id': 5, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 6, 'transaction_id': 6, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 7, 'transaction_id': 7, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 8, 'transaction_id': 8, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 9, 'transaction_id': 9, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date},
+        {'compliance_units': 50000, 'to_organization_id': 10, 'transaction_id': 10, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date}
     ]
 
     try:
@@ -31,7 +35,7 @@ async def seed_admin_adjustments(session):
             exists = await session.execute(
                 select(AdminAdjustment).where(
                     AdminAdjustment.transaction_id ==
-                        admin_adjustment_data["transaction_id"]
+                    admin_adjustment_data["transaction_id"]
                 )
             )
             if not exists.scalars().first():

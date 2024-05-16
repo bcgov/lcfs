@@ -257,6 +257,46 @@ const router = createBrowserRouter([
         path: ROUTES.FILESUBMISSION,
         element: <FileSubmissions />,
         handle: { title: 'File Submissions' }
+      },
+      {
+        path: ROUTES.TRANSACTION_ADD,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'New Transaction',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.ADMIN_ADJUSTMENT_VIEW,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Admin Adjustment',
+          mode: 'view'
+        }
+      },
+      {
+        path: ROUTES.ADMIN_ADJUSTMENT_EDIT,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Edit Admin Adjustment',
+          mode: 'edit'
+        }
+      },
+      {
+        path: ROUTES.INITIATIVE_AGREEMENT_VIEW,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Initiative Agreement',
+          mode: 'view'
+        }
+      },
+      {
+        path: ROUTES.INITIATIVE_AGREEMENT_EDIT,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Edit Initiative Agreement',
+          mode: 'edit'
+        }
       }
     ]
   },
