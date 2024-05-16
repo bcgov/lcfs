@@ -2,7 +2,8 @@ import pytest
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.tests.transfer.transfer_payloads import transfer_orm_model, transfer_orm_model_2, transfer_orm_fields
 from lcfs.db.models.Transfer import Transfer
-from datetime import datetime
+from lcfs.db.models.TransferHistory import TransferHistory
+from sqlalchemy import select, and_
 
 
 @pytest.fixture
@@ -67,3 +68,50 @@ async def test_update_transfer(dbsession, transfer_repo):
 
     # Assert the updated state
     assert added_transfer.current_status_id == 2
+
+
+@pytest.mark.anyio
+async def test_add_update_transfer_history(dbsession, transfer_repo):
+    # Create and add a new transfer
+    new_transfer = Transfer(**transfer_orm_fields)
+    dbsession.add(new_transfer)
+    await dbsession.commit()
+    # Retrieve the added transfer
+    added_transfer = await transfer_repo.get_transfer_by_id(new_transfer.transfer_id)
+
+    # Create and add a new transfer history for above transfer
+    await transfer_repo.add_transfer_history(
+        transfer_id=added_transfer.transfer_id,
+        transfer_status_id=added_transfer.current_status_id,
+        user_profile_id=1,
+    )
+    await dbsession.refresh(added_transfer)
+    # Retrieve the added transfer history
+    added_history = await dbsession.scalar(
+        select(TransferHistory).where(
+            and_(
+                TransferHistory.transfer_id == added_transfer.transfer_id,
+                TransferHistory.transfer_status_id == added_transfer.current_status_id,
+            )
+        )
+    )
+
+    # Check whether history record is added.
+    assert added_history is not None
+    # Update the transfer history
+    await transfer_repo.update_transfer_history(
+        transfer_id=added_transfer.transfer_id,
+        transfer_status_id=added_transfer.current_status_id,
+        user_profile_id=2,
+    )
+    updated_history = await dbsession.scalar(
+        select(TransferHistory).where(
+            and_(
+                TransferHistory.transfer_id == added_transfer.transfer_id,
+                TransferHistory.transfer_status_id == added_transfer.current_status_id,
+            )
+        )
+    )
+    # Check whether history record is updated.
+    assert updated_history is not None
+    assert updated_history.user_profile_id == 2
