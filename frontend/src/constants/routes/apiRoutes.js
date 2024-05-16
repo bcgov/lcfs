@@ -17,10 +17,3 @@ export const apiRoutes = {
   getFuelCodes: '/fuel-codes/list',
   updateFuelCode: '/fuel-codes/:fuelCodeId'
 }
-
-export const viewRoutesTitle = {
-  admin: 'Administration',
-  transfers: 'Transactions',
-  'add-org': 'Add organization',
-  'edit-org': 'Edit organization'
-}

@@ -263,8 +263,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'New Transaction',
-          mode: 'add',
-          crumb: () => 'New Transaction'
+          mode: 'add'
         }
       },
       {
@@ -272,8 +271,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Admin Adjustment',
-          mode: 'view',
-          crumb: () => 'Admin Adjustment'
+          mode: 'view'
         }
       },
       {
@@ -281,8 +279,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Edit Admin Adjustment',
-          mode: 'edit',
-          crumb: () => 'Edit Admin Adjustment'
+          mode: 'edit'
         }
       },
       {
@@ -290,8 +287,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Initiative Agreement',
-          mode: 'view',
-          crumb: () => 'Initiative Agreement'
+          mode: 'view'
         }
       },
       {
@@ -299,8 +295,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Edit Initiative Agreement',
-          mode: 'edit',
-          crumb: () => 'Edit Initiative Agreement'
+          mode: 'edit'
         }
       }
     ]
