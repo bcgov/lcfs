@@ -167,6 +167,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
     },
+    tooltipValueGetter: (p) => "select the next fuel code version"
   },
   {
     field: 'company',
