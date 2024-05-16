@@ -133,9 +133,10 @@ export const AddFuelCode = () => {
       const fuelCodeData = optionsData.latestFuelCodes.find(
         (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
       )
+
       params.node?.setData({
         ...params.data,
-        prefix: 'BCLCF',
+        prefix: fuelCodeData.fuelCodePrefix.prefix,
         company: fuelCodeData.company,
         fuel: fuelCodeData.fuelCodeType.fuelType,
         feedstock: fuelCodeData.feedstock,
@@ -175,7 +176,7 @@ export const AddFuelCode = () => {
       })
     }
   }, [fuelCodeChanged])
-  
+
   const statusBarcomponent = useMemo(() => {
     return (
       <Box component="div" m={2}>
