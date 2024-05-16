@@ -10,7 +10,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // ag-grid
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
-import { addEditSchema } from '../_schema'
+import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
 import { AddRowsDropdownButton } from './AddRowsDropdownButton'
 // react components
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
@@ -97,7 +97,7 @@ export const AddFuelCode = () => {
 
   const validationHandler = async (row) => {
     try {
-      await addEditSchema.fuelCodeSchema(t, optionsData).validate(row.data)
+      await fuelCodeSchema(t, optionsData).validate(row.data)
       setAlertMessage(`Validated fuel code`)
       setAlertSeverity('success')
       row.setData({
@@ -276,8 +276,8 @@ export const AddFuelCode = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={addEditSchema.fuelCodeColDefs(t, optionsData)}
-            defaultColDef={addEditSchema.defaultColDef}
+            columnDefs={fuelCodeColDefs(t, optionsData)}
+            defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
             setRowData={setRowData}
