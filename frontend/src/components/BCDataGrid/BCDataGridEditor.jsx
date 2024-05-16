@@ -63,6 +63,7 @@ const BCDataGridEditor = ({
   const loadingOverlayComponent = useMemo(() => DataGridLoading)
   // Tab to next editable cell - Keyboard navigation
   const tabToNextCell = useCallback((params) => {
+    params.event.preventDefault()
     return params.nextCellPosition
   })
   // Default ag-grid options
