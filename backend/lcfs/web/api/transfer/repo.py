@@ -3,8 +3,9 @@ from typing import List
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
+from datetime import datetime
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -14,7 +15,6 @@ from lcfs.db.models.Transfer import Transfer
 from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
 from lcfs.db.models.TransferCategory import TransferCategory, TransferCategoryEnum
 from lcfs.db.models.TransferHistory import TransferHistory
-from lcfs.db.models.UserProfile import UserProfile
 
 logger = getLogger("transfer_repo")
 
@@ -162,6 +162,33 @@ class TransferRepository:
         self.db.add(new_history_record)
         await self.db.flush()
         return new_history_record
+
+    @repo_handler
+    async def update_transfer_history(self, transfer_id: int, transfer_status_id: int, user_profile_id: int) -> TransferHistory:
+        """
+        Updates a transfer history record in the database.
+
+        Args:
+            transfer_id (int): The ID of the transfer to which this history record relates.
+            transfer_status_id (int): The status ID that describes the current state of the transfer.
+
+        Returns:
+            TransferHistory: updated transfer history record.
+        """
+        existing_history = await self.db.scalar(
+            select(TransferHistory).where(
+                and_(
+                    TransferHistory.transfer_id == transfer_id,
+                    TransferHistory.transfer_status_id == transfer_status_id,
+                )
+            )
+        )
+        existing_history.create_date = datetime.now()
+        existing_history.update_date = datetime.now()
+        existing_history.user_profile_id = user_profile_id
+        self.db.add(existing_history)
+        await self.db.flush()
+        return existing_history
 
     @repo_handler
     async def refresh_transfer(self, transfer: Transfer) -> Transfer:
