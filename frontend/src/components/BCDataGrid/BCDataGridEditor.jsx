@@ -78,6 +78,7 @@ const BCDataGridEditor = ({
       suppressColumnMoveAnimation: false,
       rowSelection: 'multiple',
       editType: 'fullRow',
+      enableBrowserTooltips: true,
       rowHeight: 45,
       headerHeight: 40,
       animateRows: true,
