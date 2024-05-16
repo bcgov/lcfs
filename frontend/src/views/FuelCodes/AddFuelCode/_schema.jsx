@@ -19,15 +19,6 @@ const duplicateRow = (props) => {
   props.api.stopEditing()
 }
 
-const onPrefixUpdate = (val, params) => {
-  if (val === 'BCLCF') {
-    params.node?.setData({
-      ...params.data,
-      fuelCode: 1000 + params.node?.rowIndex / 10
-    })
-  }
-}
-
 export const fuelCodeSchema = (t, optionsData) =>
   yup.object().shape({
     prefix: yup
@@ -96,38 +87,6 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
-const autoFill = ({ fuelCodeValue, latestFuelCodes }, params) => {
-  const fuelCodeData = latestFuelCodes.find(
-    (fuelCode) => fuelCode.fuelCode === fuelCodeValue
-  )
-  let data = {
-    ...params.data
-  }
-  if (fuelCodeData) {
-    console.log(fuelCodeData)
-    data = {
-      ...params.data,
-      prefix: fuelCodeData.prefix,
-      company: fuelCodeData.company,
-      fuel: fuelCodeData.fuelCodeType.fuelType,
-      feedstock: fuelCodeData.feedstock,
-      feedstockLocation: fuelCodeData.feedstockLocation,
-      feedstockMisc: fuelCodeData.feedstockMisc,
-      fuelProductionFacilityLocation:
-        fuelCodeData.fuelProductionFacilityLocation,
-      feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
-        (mode) => mode.feedstockFuelTransportMode.transportMode
-      ),
-      finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
-        (mode) => mode.finishedFuelTransportMode.transportMode
-      ),
-      formerCompany: fuelCodeData.formerCompany
-    }
-  }
-
-  params.node?.setData(data)
-  // params.api.refreshCells()
-}
 
 export const fuelCodeColDefs = (t, optionsData) => [
   {
@@ -163,7 +122,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditorParams: {
-      onDynamicUpdate: onPrefixUpdate, // to alter any other column based on the value selected.
+      // onDynamicUpdate: onPrefixUpdate, // to alter any other column based on the value selected.
       // (ensure valueGetter is not added to the column which you want to update dynamically)
       options: optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
       multiple: false, // ability to select multiple values from dropdown
@@ -186,22 +145,28 @@ export const fuelCodeColDefs = (t, optionsData) => [
     field: 'fuelCode',
     headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'text',
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditor: 'autocompleteEditor',
-    editable: true,
     cellEditorParams: {
-      onDynamicUpdate: (fuelCodeValue, params) =>
-        autoFill(
-          { fuelCodeValue, latestFuelCodes: optionsData.latestFuelCodes },
-          params
-        ),
-      autoSelect: true,
+      onDynamicUpdate: (params) => params.api.redrawRows({ rowNodes: [params.node] }),
+      // autoSelect: true,
       options: optionsData.latestFuelCodes.map((obj) => obj.fuelCode),
       optionLabel: 'fuelCode',
       multiple: false,
       disableCloseOnSelect: false,
-      freeSolo: true,
+      freeSolo: false, // whether to allow free text or restrict to only options selection
       openOnFocus: true
-    }
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
+    },
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
   },
   {
     field: 'company',

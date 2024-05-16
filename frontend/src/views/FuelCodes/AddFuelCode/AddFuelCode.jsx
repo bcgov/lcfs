@@ -30,6 +30,7 @@ export const AddFuelCode = () => {
   const [columnApi, setColumnApi] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [fuelCodeChanged, setFuelCodeChanged] = useState({ changed: false })
 
   const gridRef = useRef(null)
   const alertRef = useRef()
@@ -127,7 +128,37 @@ export const AddFuelCode = () => {
       ...params.data,
       modified: true
     })
-    validationHandler(params)
+    const focusedCell = params.api.getFocusedCell()
+    if (focusedCell.column.colId === 'fuelCode') {
+      const fuelCodeData = optionsData.latestFuelCodes.find(
+        (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
+      )
+      params.node?.setData({
+        ...params.data,
+        prefix: 'BCLCF',
+        company: fuelCodeData.company,
+        fuel: fuelCodeData.fuelCodeType.fuelType,
+        feedstock: fuelCodeData.feedstock,
+        feedstockLocation: fuelCodeData.feedstockLocation,
+        feedstockMisc: fuelCodeData.feedstockMisc,
+        fuelProductionFacilityLocation:
+          fuelCodeData.fuelProductionFacilityLocation,
+        feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
+          (mode) => mode.feedstockFuelTransportMode.transportMode
+        ),
+        finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
+          (mode) => mode.finishedFuelTransportMode.transportMode
+        ),
+        formerCompany: fuelCodeData.formerCompany
+      })
+      setFuelCodeChanged({ changed: true, rowIndex: focusedCell.rowIndex })
+      params.api.startEditingCell({
+        rowIndex: focusedCell.rowIndex,
+        colKey: 'company'
+      })
+    } else {
+      validationHandler(params)
+    }
   })
   const saveData = useCallback(() => {
     const allRowData = []
@@ -136,6 +167,15 @@ export const AddFuelCode = () => {
     // Add your API call to save modified rows here
   }, [])
 
+  useEffect(() => {
+    if (fuelCodeChanged.changed) {
+      gridApi.startEditingCell({
+        rowIndex: fuelCodeChanged.rowIndex,
+        colKey: 'company'
+      })
+    }
+  }, [fuelCodeChanged])
+  
   const statusBarcomponent = useMemo(() => {
     return (
       <Box component="div" m={2}>
