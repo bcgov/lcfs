@@ -152,7 +152,7 @@ class TransferServices:
 
         # Check if the new status is different from the current status of the transfer
         status_has_changed = transfer.current_status != new_status
-        re_recommended = any(history.transfer_status.status == TransferStatusEnum.Recommended for history in transfer.transfer_history)
+        re_recommended = any(history.transfer_status.status == TransferStatusEnum.Recommended for history in transfer.transfer_history) and new_status.status == TransferStatusEnum.Recommended
         # if the transfer status is Draft or Sent then update all the fields within the transfer
         if transfer_data.current_status in [TransferStatusEnum.Draft.value, TransferStatusEnum.Sent.value]:
             # Only update certain fields if the status is Draft or changing to Sent
@@ -172,7 +172,7 @@ class TransferServices:
         if transfer_data.recommendation and transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation
         # Update existing history record
-        if re_recommended and new_status.status == TransferStatusEnum.Recommended:
+        if re_recommended:
             transfer.current_status = await self.repo.update_transfer_history(
                 transfer_id=transfer.transfer_id,
                 transfer_status_id=new_status.transfer_status_id,
