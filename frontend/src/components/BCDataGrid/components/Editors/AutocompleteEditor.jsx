@@ -5,7 +5,6 @@ import {
   Box,
   Checkbox,
   Chip,
-  Typography,
   Stack
 } from '@mui/material'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
