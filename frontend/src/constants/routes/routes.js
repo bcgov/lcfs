@@ -11,6 +11,12 @@ export const TRANSFERS_ADD = `${TRANSFERS}/add`
 export const TRANSFERS_EDIT = `${TRANSFERS}/edit/:transferId`
 export const TRANSFERS_VIEW = `${TRANSFERS}/:transferId`
 
+export const TRANSACTION_ADD = '/transaction/add'
+export const ADMIN_ADJUSTMENT_VIEW = '/admin-adjustment/:transactionId'
+export const ADMIN_ADJUSTMENT_EDIT = '/admin-adjustment/edit/:transactionId'
+export const INITIATIVE_AGREEMENT_VIEW = '/initiative-agreement/:transactionId'
+export const INITIATIVE_AGREEMENT_EDIT = '/initiative-agreement/edit/:transactionId'
+
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`
 export const ORGANIZATION_VIEWUSER = `${ORGANIZATION}/:userID`
@@ -38,7 +44,7 @@ export const ADMIN_USERS_EDIT = `${ADMIN_USERS_VIEW}/edit-user`
 export const ADMIN_USERACTIVITY = `${ADMIN}/user-activity`
 export const ADMIN_FUEL_CODES = `${ADMIN}/fuel-codes`
 export const ADMIN_FUEL_CODES_VIEW = `${ADMIN_FUEL_CODES}/:fuelCodeID`
-export const ADMIN_FUEL_CODES_EDIT = `${ADMIN_FUEL_CODES_VIEW}/edit-fuel-code`
+export const ADMIN_FUEL_CODES_EDIT = `${ADMIN_FUEL_CODES_VIEW}/edit`
 export const ADMIN_FUEL_CODES_ADD = `${ADMIN_FUEL_CODES}/add-fuel-code`
 export const ADMIN_COMPLIANCE_REPORTING = `${ADMIN}/compliance-reporting`
 

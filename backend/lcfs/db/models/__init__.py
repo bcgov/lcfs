@@ -43,7 +43,6 @@ from . import (
     UserRole,
     UserLoginHistory,
     TransferCategory,
-    Comment,
     InternalComment,
     NotificationChannel,
     NotificationType,

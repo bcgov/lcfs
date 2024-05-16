@@ -12,7 +12,9 @@ from lcfs.web.api import (
     transfer,
     transaction,
     internal_comment,
-    fuel_code
+    fuel_code,
+    admin_adjustment,
+    initiative_agreement
 )
 
 api_router = APIRouter()
@@ -40,4 +42,10 @@ api_router.include_router(
 )
 api_router.include_router(
     fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"]
+)
+api_router.include_router(
+    admin_adjustment.router, prefix="/admin-adjustments", tags=["admin_adjustments"]
+)
+api_router.include_router(
+    initiative_agreement.router, prefix="/initiative-agreements", tags=["initiative_agreements"]
 )

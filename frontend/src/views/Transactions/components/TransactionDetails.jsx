@@ -17,8 +17,9 @@ import {
 import { dateFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
+import Loading from '@/components/Loading';
 
-export const TransactionDetails = () => {
+export const TransactionDetails = ({ transactionId, isEditable }) => {
   const { t } = useTranslation(['txn']);
   
   const {
@@ -37,7 +38,7 @@ export const TransactionDetails = () => {
   const currentDate = new Date()
   const maxDate = dateFormatter(currentDate)
 
-  const selectedOrgId = watch('organizationId');
+  const selectedOrgId = watch('toOrganizationId');
   const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId);
 
   // Fetching organizartion balance
@@ -71,12 +72,16 @@ export const TransactionDetails = () => {
     )
   }
 
+  if (!orgData || orgData.length === 0) {
+    return <Loading message={t('txn:loadingBalance')} />;
+  }
+
   return (
     <BCBox mb={4}>
       <LabelBox>
         <BCBox m={1}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid item xs={12} style={{ display: transactionId ? 'none' : 'block' }}>
               <Controller
                 name="txnType"
                 defaultValue=""
@@ -90,7 +95,10 @@ export const TransactionDetails = () => {
                     <FormControlLabel
                       value="initiativeAgreement"
                       control={
-                        <Radio data-test="txn-type-initiative-agreement" />
+                        <Radio 
+                          data-test="txn-type-initiative-agreement" 
+                          disabled={!!transactionId || !isEditable}
+                        />
                       }
                       label={
                         <BCTypography variant="body3">
@@ -102,7 +110,10 @@ export const TransactionDetails = () => {
                     <FormControlLabel
                       value="administrativeAdjustment"
                       control={
-                        <Radio data-test="txn-type-administrative-adjustment" />
+                        <Radio
+                          data-test="txn-type-administrative-adjustment"
+                          disabled={!!transactionId || !isEditable}
+                        />
                       }
                       label={
                         <BCTypography variant="body3">
@@ -139,17 +150,18 @@ export const TransactionDetails = () => {
                 }}
               >
                 <Controller
-                  name="organizationId"
+                  name="toOrganizationId"
                   // control={control} // Note: control needs to be passed down from the parent component
                   displayEmpty
                   render={({ field }) => (
                     <Select
-                      id="organization-id"
+                      id="to-organization-id"
                       labelId="organization-select-label"
                       {...field}
                       error={!!errors.toOrganizationId}
                       helperText={errors.toOrganizationId?.message}
                       displayEmpty
+                      disabled={!isEditable}
                       MenuProps={{
                         sx: {
                           marginTop: '0 !important'
@@ -188,7 +200,7 @@ export const TransactionDetails = () => {
                     </Select>
                   )}
                 />
-                {renderError('organizationId')}
+                {renderError('toOrganizationId')}
               </FormControl>
               {selectedOrgId && (
                 <BCBox mt={2}>
@@ -208,6 +220,7 @@ export const TransactionDetails = () => {
                   data-test="compliance-units"
                   {...register('complianceUnits')}
                   type="text"
+                  disabled={!isEditable}
                   error={!!errors.complianceUnits}
                   helperText={errors.complianceUnits?.message}
                 />
@@ -225,16 +238,17 @@ export const TransactionDetails = () => {
                 </InputLabel>
                 <TextField
                   data-test="txn-effective-date"
-                  {...register('effectiveDate')}
+                  {...register('transactionEffectiveDate')}
                   type="date"
-                  defaultValue={maxDate}
+                  defaultValue={null}
+                  disabled={!isEditable}
                   inputProps={{
                     max: maxDate,
                     'data-testid': 'txn-effective-date-input'
                   }}
                   size="small"
-                  error={!!errors.effectiveDate}
-                  helperText={errors.effectiveDate?.message}
+                  error={!!errors.transactionEffectiveDate}
+                  helperText={errors.transactionEffectiveDate ? errors.transactionEffectiveDate.message : ''}
                 />
               </BCBox>
             </Grid>

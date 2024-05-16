@@ -1,7 +1,7 @@
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date
-from pydantic import validator
+from pydantic import Field, field_validator
 from enum import Enum
 
 
@@ -49,25 +49,25 @@ class FuelCodePrefixSchema(BaseSchema):
 class UOMSchema(BaseSchema):
     uom_id: int
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
 
 
 class EndUseTypeSchema(BaseSchema):
     end_use_type_id: int
     type: str
-    sub_type: Optional[str]
+    sub_type: Optional[str] = None
 
 
 class EnergyDensitySchema(BaseSchema):
     energy_density_id: int
-    density: float
+    density: float = Field(..., pre=True, always=True)
 
     fuel_type_id: int
-    fuel_type: Optional[FuelTypeSchema]
+    fuel_type: Optional[FuelTypeSchema] = None
     uom_id: int
-    uom: Optional[UOMSchema]
+    uom: Optional[UOMSchema] = None
 
-    @validator("density", pre=True, always=True)
+    @field_validator("density")
     def quantize_density(cls, value):
         return round(value, 2)
 
@@ -75,35 +75,35 @@ class EnergyDensitySchema(BaseSchema):
 class FuelCategorySchema(BaseSchema):
     fuel_category_id: int
     category: str
-    description: Optional[str]
+    description: Optional[str] = None
 
 
 class EnergyEffectivenessRatioSchema(BaseSchema):
     eer_id: int
     fuel_category_id: int
-    fuel_category: Optional[FuelCategorySchema]
+    fuel_category: Optional[FuelCategorySchema] = None
     fuel_type_id: int
-    fuel_type: Optional[FuelTypeSchema]
-    end_use_type_id: Optional[int]
-    end_use_type: Optional[EndUseTypeSchema]
-    ratio: float
+    fuel_type: Optional[FuelTypeSchema] = None
+    end_use_type_id: Optional[int] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+    ratio: float = Field(..., pre=True, always=True)
 
-    @validator("ratio", pre=True, always=True)
+    @field_validator("ratio")
     def quantize_ratio(cls, value):
         return round(value, 2)
 
 
 class AdditionalCarbonIntensitySchema(BaseSchema):
     additional_uci_id: int
-    fuel_type_id: Optional[int]
-    fuel_type: Optional[FuelTypeSchema]
-    end_use_type_id: Optional[int]
-    end_use_type: Optional[EndUseTypeSchema]
-    uom_id: Optional[int]
-    uom: Optional[UOMSchema]
-    intensity: float
+    fuel_type_id: Optional[int] = None
+    fuel_type: Optional[FuelTypeSchema] = None
+    end_use_type_id: Optional[int] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+    uom_id: Optional[int] = None
+    uom: Optional[UOMSchema] = None
+    intensity: float = Field(..., pre=True, always=True)
 
-    @validator("intensity", pre=True, always=True)
+    @field_validator("intensity")
     def quantize_intensity(cls, value):
         return round(value, 2)
 
@@ -157,7 +157,7 @@ class FuelCodeCreateSchema(BaseSchema):
     status: str
     prefix: str
     prefix_id: int
-    fuel_code: float
+    fuel_code: str
     company: str
     carbon_intensity: float
     edrms: str

@@ -23,7 +23,7 @@ const OrganizationList = ({ onOrgChange }) => {
         ...formattedData
       ]);
     }
-  }, [data, isLoading])
+  }, [data, isLoading, t])
 
   const onInputBoxChanged = (event, input) => {    
     if (!input || input.name === t('txn:allOrganizations')) {

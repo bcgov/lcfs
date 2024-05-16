@@ -8,6 +8,14 @@ import {
 import { Stack } from '@mui/material'
 import { Link, useLocation } from 'react-router-dom'
 
+export const TextRenderer = (props) => {
+  return (
+    <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+      {props.valueFormatted || props.value}
+    </BCBox>
+  )
+}
+
 export const LinkRenderer = (props) => {
   const location = useLocation()
   return (
@@ -133,6 +141,38 @@ export const FuelCodeStatusRenderer = (props) => {
     </Link>
   )
 }
+export const FuelCodeStatusTextRenderer = (props) => {
+  const statusArr = getAllFuelCodeStatuses()
+  const statusColorArr = ['info', 'success', 'error']
+  const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
+  return (
+    <BCBox sx={{ width: '100%', height: '100%' }}>
+      <BCBox
+        mt={1}
+        sx={{
+          display: 'flex',
+          justifyContent: 'center'
+        }}
+      >
+        <BCBadge
+          badgeContent={statusArr[statusIndex]}
+          color={statusColorArr[statusIndex]}
+          variant="contained"
+          size="lg"
+          sx={{
+            '& .MuiBadge-badge': {
+              minWidth: '120px',
+              fontWeight: 'regular',
+              textTransform: 'capitalize',
+              fontSize: '0.875rem',
+              padding: '0.4em 0.6em'
+            }
+          }}
+        />
+      </BCBox>
+    </BCBox>
+  )
+}
 
 export const CommonArrayRenderer = (props) => {
   const location = useLocation()
@@ -157,7 +197,7 @@ export const CommonArrayRenderer = (props) => {
         <BCBadge
           key={mode}
           badgeContent={mode}
-          color="#f1f9ee"
+          color="light"
           variant="contained"
           size="lg"
           sx={{

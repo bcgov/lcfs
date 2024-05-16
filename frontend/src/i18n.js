@@ -7,6 +7,8 @@ import fuelCodeEn from '@/assets/locales/en/fuelCode.json'
 import txnEn from '@/assets/locales/en/transaction.json'
 import transferEn from '@/assets/locales/en/transfer.json'
 import internalCommentEn from '@/assets/locales/en/internalComment.json'
+import adminAdjustmentEn from '@/assets/locales/en/adminAdjustment.json'
+import initiativeAgreementEn from '@/assets/locales/en/initiativeAgreement.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
 const resources = {
@@ -18,7 +20,9 @@ const resources = {
     org: orgEn,
     txn: txnEn,
     transfer: transferEn,
-    internalComment: internalCommentEn
+    internalComment: internalCommentEn,
+    administrativeAdjustment: adminAdjustmentEn,
+    initiativeAgreement: initiativeAgreementEn,
   }
 }
 

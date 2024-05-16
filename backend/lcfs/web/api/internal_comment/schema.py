@@ -35,10 +35,8 @@ class InternalCommentResponseSchema(BaseSchema):
     internal_comment_id: int
     comment: str
     audience_scope: AudienceScopeEnum
-    create_user: Optional[str]
-    create_date: Optional[datetime]
-    update_date: Optional[datetime]
+    create_user: Optional[str] = None
+    create_date: Optional[datetime] = None
+    update_date: Optional[datetime] = None
     full_name: Optional[str] = None
 
-    class Config(BaseConfig):
-        pass

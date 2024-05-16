@@ -7,18 +7,14 @@ export const apiRoutes = {
   transactions: '/transactions',
   filteredTransactionsByOrg: '/transactions/:orgID',
   orgTransactions: '/organization/transactions',
+  adminAdjustments: '/admin-adjustments/',
+  initiativeAgreements: '/initiative-agreements/',
   openapi: '/openapi.json/',
   updateCategory: '/transfers/:transferId/category',
   getTransfer: '/transfers/:transferId',
   getFuelCode: '/fuel-codes/:fuelCodeId',
   fuelCodeOptions: '/fuel-codes/table-options',
   addFuelCodes: '/fuel-codes/save-fuel-codes',
-  getFuelCodes: '/fuel-codes/list'
-}
-
-export const viewRoutesTitle = {
-  admin: 'Administration',
-  transfers: 'Transactions',
-  'add-org': 'Add organization',
-  'edit-org': 'Edit organization'
+  getFuelCodes: '/fuel-codes/list',
+  updateFuelCode: '/fuel-codes/:fuelCodeId'
 }

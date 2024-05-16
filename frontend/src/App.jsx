@@ -9,7 +9,7 @@ import {
 } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
-import { FuelCodes, AddFuelCode } from './views/FuelCodes'
+import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
 import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
@@ -249,9 +249,54 @@ const router = createBrowserRouter([
         handle: { title: 'Add Fuel Code' }
       },
       {
+        path: ROUTES.ADMIN_FUEL_CODES_VIEW,
+        element: <ViewFuelCode />,
+        handle: { title: 'Fuel Code' }
+      },
+      {
         path: ROUTES.FILESUBMISSION,
         element: <FileSubmissions />,
         handle: { title: 'File Submissions' }
+      },
+      {
+        path: ROUTES.TRANSACTION_ADD,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'New Transaction',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.ADMIN_ADJUSTMENT_VIEW,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Admin Adjustment',
+          mode: 'view'
+        }
+      },
+      {
+        path: ROUTES.ADMIN_ADJUSTMENT_EDIT,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Edit Admin Adjustment',
+          mode: 'edit'
+        }
+      },
+      {
+        path: ROUTES.INITIATIVE_AGREEMENT_VIEW,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Initiative Agreement',
+          mode: 'view'
+        }
+      },
+      {
+        path: ROUTES.INITIATIVE_AGREEMENT_EDIT,
+        element: <AddEditViewTransaction />,
+        handle: {
+          title: 'Edit Initiative Agreement',
+          mode: 'edit'
+        }
       }
     ]
   },

@@ -12,6 +12,8 @@ class AdminAdjustmentHistory(BaseModel, Auditable, EffectiveDates):
     admin_adjustment_history_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the admin_adjustment history record")
     admin_adjustment_id = Column(Integer, ForeignKey('admin_adjustment.admin_adjustment_id'))
     admin_adjustment_status_id = Column(Integer, ForeignKey('admin_adjustment_status.admin_adjustment_status_id'))
+    user_profile_id = Column(Integer, ForeignKey("user_profile.user_profile_id"), comment="Foreign key to user_profile")
 
-    admin_adjustment = relationship('AdminAdjustment', back_populates='admin_adjustment_history_records')
+    admin_adjustment = relationship('AdminAdjustment', back_populates='history')
     admin_adjustment_status = relationship('AdminAdjustmentStatus')
+    user_profile = relationship("UserProfile")

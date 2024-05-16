@@ -49,14 +49,16 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     feedstock_location = Column(
         String(1000), nullable=False, comment="Feedstock location"
     )
-    feedstock_misc = Column(String(500), nullable=True, comment="Feedstock misc")
+    feedstock_misc = Column(String(500), nullable=True,
+                            comment="Feedstock misc")
     fuel_production_facility_location = Column(
         String(1000), nullable=False, comment="Location of the fuel production"
     )
     facility_nameplate_capacity = Column(
         Integer, nullable=True, comment="Nameplate capacity"
     )
-    former_company = Column(String(500), nullable=True, comment="Former company")
+    former_company = Column(String(500), nullable=True,
+                            comment="Former company")
     notes = Column(String(1000), nullable=True, comment="Notes")
 
     # Define the relationships
@@ -69,15 +71,17 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     fuel_code_type = relationship(
         "FuelType", back_populates="fuel_codes", lazy="joined"
     )
-    
+
     feedstock_fuel_transport_modes = relationship(
         "FeedstockFuelTransportMode",
         back_populates="feedstock_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FeedstockFuelTransportMode.fuel_code_id",
+        cascade="all, delete, delete-orphan"
     )
 
     finished_fuel_transport_modes = relationship(
         "FinishedFuelTransportMode",
         back_populates="finished_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FinishedFuelTransportMode.fuel_code_id",
+        cascade="all, delete, delete-orphan"
     )

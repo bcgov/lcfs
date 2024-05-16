@@ -12,7 +12,7 @@ from sqlalchemy import select, update, func, desc, asc, and_, case, or_
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
-from lcfs.db.models.TransactionView import TransactionViewTypeEnum, TransactionView
+from lcfs.db.models.TransactionView import TransactionView
 from lcfs.db.models.TransactionStatusView import TransactionStatusView
 from lcfs.db.models.TransferStatus import TransferStatus
 
@@ -67,11 +67,11 @@ class TransactionRepository:
                     [status.value for status in visible_statuses_transferee])
             )
 
-            # TODO: Additional visibility checks needed for other transaction types.
-            # For transactions that are not of type "Transfer", include them without visibility filtering
+            # Conditions for non-transfer transactions, only "Approved" for suppliers
             non_transfer_condition = and_(
                 TransactionView.transaction_type != 'Transfer',
-                TransactionView.to_organization_id == organization_id
+                TransactionView.to_organization_id == organization_id,
+                TransactionView.status == 'Approved' # This status includes InitiativeAgreement and AdminAdjustment
             )
 
             # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions
@@ -79,21 +79,14 @@ class TransactionRepository:
                 transferor_condition, transferee_condition, non_transfer_condition)
             query_conditions.append(combined_role_condition)
         else:
-            # Fetch visible statuses for government, but only for "Transfer" transactions
-            visible_statuses_government = await self.get_visible_statuses(EntityType.Government)
-            government_condition = and_(
+            # Government view should see all non-transfer transactions regardless of status
+            gov_transfer_condition = and_(
                 transfer_type_condition,
-                TransactionView.status.in_(
-                    [status.value for status in visible_statuses_government])
+                TransactionView.status.in_([status.value for status in await self.get_visible_statuses(EntityType.Government)])
             )
-
-            # TODO: Additional visibility checks needed for other transaction types.
-            # Include non-"Transfer" transactions for government without applying visibility filtering
             gov_non_transfer_condition = TransactionView.transaction_type != 'Transfer'
 
-            combined_government_condition = or_(
-                government_condition, gov_non_transfer_condition)
-            query_conditions.append(combined_government_condition)
+            query_conditions.append(or_(gov_transfer_condition, gov_non_transfer_condition))
 
         # Add additional conditions
         if conditions:
@@ -129,8 +122,11 @@ class TransactionRepository:
         Returns:
             List[TransactionStatusView]: A list of TransactionStatusView objects containing the basic transaction status details.
         """
-        query = select(TransactionStatusView).order_by(
-            asc(TransactionStatusView.status)).distinct()
+        query = select(TransactionStatusView).distinct(
+            TransactionStatusView.status
+        ).order_by(
+            asc(TransactionStatusView.status)
+        )
         status_results = await self.db.execute(query)
         return status_results.scalars().all()
 

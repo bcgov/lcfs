@@ -23,7 +23,8 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: currencyFormatter,
     width: 190,
-    type: 'rightAligned'
+    type: 'rightAligned',
+    valueGetter: (params) => params.data.pricePerUnit || '-'
   },
   {
     colId: 'status',

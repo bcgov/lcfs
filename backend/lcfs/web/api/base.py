@@ -5,7 +5,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
 
-from pydantic import BaseModel, Field, ConfigDict, validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
 from logging import getLogger
 import re
@@ -38,7 +38,7 @@ class SortOrder(BaseSchema):
         # Convert CamelCase to snake_case
         return camel_to_snake(value)
 
-    @validator("field", pre=True)
+    @field_validator("field")
     def convert_field_to_snake(cls, value):
         return cls.validate_field(value)
 
@@ -54,7 +54,7 @@ class FilterModel(BaseSchema):
         # Convert CamelCase to snake_case
         return camel_to_snake(value)
 
-    @validator("field", pre=True)
+    @field_validator("field")
     def convert_field_to_snake(cls, value):
         return cls.validate_field(value)
 
@@ -64,10 +64,7 @@ class PaginationRequestSchema(BaseSchema):
     size: int = Field(Query(default=20, alias="size"))
     sort_orders: List[SortOrder] = Field(Query(default=[], alias="sortOrders"))
     filters: List[FilterModel] = Field(Query(defautl=[], alias="filters"))
-
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
 class PaginationResponseSchema(BaseSchema):
@@ -75,10 +72,7 @@ class PaginationResponseSchema(BaseSchema):
     page: int
     size: int
     total_pages: int
-
-    class Config:
-        from_attributes = True
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
 @deprecated("Use Pagination Request and Response schemas instead")
@@ -92,23 +86,18 @@ class EntityResponse(BaseModel):
     total_pages: int = 1
     data: Any = {}
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {set: lambda v: list(v)}
-        json_schema_extra = {
-            "example": {
-                "status": 200,
-                "message": "Success",
-                "error": {},
-                "total": 0,
-                "page": 1,
-                "size": 10,
-                "total_pages": 1,
-                "data": [],
-            }
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, arbitrary_types_allowed=True, json_schema_extra={
+        "example": {
+            "status": 200,
+            "message": "Success",
+            "error": {},
+            "total": 0,
+            "page": 1,
+            "size": 10,
+            "total_pages": 1,
+            "data": [],
         }
+    })
 
 
 def validate_pagination(pagination: PaginationRequestSchema):
