@@ -59,8 +59,16 @@ export const AddEditViewTransaction = () => {
   const alertRef = useRef()
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [txnType, setTxnType] = useState(null);
 
-  const { handleSuccess, handleError } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef)
+  const { handleSuccess, handleError } = useTransactionMutation(
+    t, 
+    setAlertMessage, 
+    setAlertSeverity, 
+    setModalData, 
+    alertRef,
+    queryClient
+  )
 
   const { 
     mutate: createUpdateAdminAdjustment,
@@ -96,8 +104,10 @@ export const AddEditViewTransaction = () => {
     if (mode !== 'add') {
       if (path.includes('admin-adjustment')) {
         methods.setValue('txnType', ADMIN_ADJUSTMENT)
+        setTxnType(ADMIN_ADJUSTMENT)
       } else if (path.includes('initiative-agreement')) {
         methods.setValue('txnType', INITIATIVE_AGREEMENT)
+        setTxnType(INITIATIVE_AGREEMENT)
       }
     }
 
@@ -105,9 +115,7 @@ export const AddEditViewTransaction = () => {
       setAlertMessage(location.state.message)
       setAlertSeverity(location.state.severity || 'info')
     }
-  }, [location.state, mode, methods])
-
-  const txnType = methods.watch('txnType')
+  }, [location.state, mode, methods, txnType])
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook = txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement
@@ -120,7 +128,8 @@ export const AddEditViewTransaction = () => {
     enabled: !!transactionId && !!txnType,
     retry: false,
     staleTime: 0,
-    keepPreviousData: false
+    cacheTime: 0,
+    keepPreviousData: false,
   })
 
   const stateId = txnType === ADMIN_ADJUSTMENT ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
@@ -137,12 +146,14 @@ export const AddEditViewTransaction = () => {
           ? dateFormatter(transactionData.transactionEffectiveDate)
           : null
       })
+    } else {
+      queryClient.invalidateQueries([txnType, transactionId]) // Invalidate and refetch if data is not fetched
     }
     if (isLoadingError || queryState.status === 'error') {
       setAlertMessage(t(`${txnType}:actionMsgs.errorRetrieval`, { transactionId }))
       setAlertSeverity('error')
     }
-  }, [isFetched, transactionId, transactionData, isLoadingError, queryState, txnType, methods, t])
+  }, [isFetched, transactionId, transactionData, isLoadingError, queryState, txnType, methods, t, queryClient])
 
   const title = useMemo(() => {
     switch (mode) {
