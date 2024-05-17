@@ -1,6 +1,7 @@
 import * as Yup from 'yup'
 import { govRoles, nonGovRoles, roles } from '@/constants/roles'
 
+const phoneRegExp = /^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})?$/
 // Schema for form validation
 export const userInfoSchema = Yup.object({
   firstName: Yup.string().required('First name is required.'),
@@ -8,11 +9,17 @@ export const userInfoSchema = Yup.object({
   jobTitle: Yup.string().required('Job title is required.'),
   userName: Yup.string().required('User name is required'),
   keycloakEmail: Yup.string()
-    .required('Email Address is required.')
-    .email('Please enter a valid Email Address.'),
-  altEmail: Yup.string().optional(),
-  phone: Yup.string().optional(),
-  mobilePhone: Yup.string().optional().nullable(),
+    .required('Email address is required.')
+    .email('Please enter a valid email address.'),
+  altEmail: Yup.string()
+    .email('Please enter a valid email address.')
+    .optional(),
+  phone: Yup.string()
+    .matches(phoneRegExp, 'Phone number is not valid')
+    .nullable(true),
+  mobilePhone: Yup.string()
+    .matches(phoneRegExp, 'Phone number is not valid')
+    .nullable(true),
   status: Yup.string(),
   adminRole: Yup.array(),
   idirRole: Yup.string(),

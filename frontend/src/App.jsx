@@ -9,7 +9,7 @@ import {
 } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
-import { FuelCodes, AddFuelCode } from './views/FuelCodes'
+import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
 import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
@@ -115,12 +115,12 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATION,
         element: <ViewOrganization />,
-        handle: { title: 'View Organization' }
+        handle: { title: 'Organization' }
       },
       {
         path: ROUTES.ORGANIZATION_ADDUSER,
         element: <AddEditUser />,
-        handle: { title: 'Add User' }
+        handle: { title: 'New User' }
       },
       {
         path: ROUTES.ORGANIZATION_VIEWUSER,
@@ -155,14 +155,14 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATIONS_ADDUSER,
         element: <AddEditUser userType="bceid" />,
-        handle: { title: 'Add Organization User' }
+        handle: { title: 'New user' }
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEWUSER,
         element: <ViewUser userType="bceid" />,
         handle: {
           crumb: () => 'Users',
-          title: 'View Organization User'
+          title: 'View user'
         }
       },
       {
@@ -170,7 +170,7 @@ const router = createBrowserRouter([
         element: <AddEditUser userType="bceid" />,
         handle: {
           crumb: () => 'Users',
-          title: 'Edit Organization User'
+          title: 'Edit user'
         }
       },
       {
@@ -226,17 +226,17 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ADMIN_USERS_ADD,
         element: <AddEditUser userType="idir" />,
-        handle: { title: 'Add IDIR User' }
+        handle: { title: 'Add user' }
       },
       {
         path: ROUTES.ADMIN_USERS_VIEW,
         element: <ViewUser />,
-        handle: { title: 'View IDIR User' }
+        handle: { title: 'View user' }
       },
       {
         path: ROUTES.ADMIN_USERS_EDIT,
         element: <AddEditUser userType="idir" />,
-        handle: { title: 'Edit IDIR User' }
+        handle: { title: 'Edit user' }
       },
       {
         path: ROUTES.FUELCODES,
@@ -249,6 +249,11 @@ const router = createBrowserRouter([
         handle: { title: 'Add Fuel Code' }
       },
       {
+        path: ROUTES.ADMIN_FUEL_CODES_VIEW,
+        element: <ViewFuelCode />,
+        handle: { title: 'Fuel Code' }
+      },
+      {
         path: ROUTES.FILESUBMISSION,
         element: <FileSubmissions />,
         handle: { title: 'File Submissions' }
@@ -258,8 +263,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'New Transaction',
-          mode: 'add',
-          crumb: () => 'New Transaction'
+          mode: 'add'
         }
       },
       {
@@ -267,8 +271,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Admin Adjustment',
-          mode: 'view',
-          crumb: () => 'Admin Adjustment'
+          mode: 'view'
         }
       },
       {
@@ -276,8 +279,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Edit Admin Adjustment',
-          mode: 'edit',
-          crumb: () => 'Edit Admin Adjustment'
+          mode: 'edit'
         }
       },
       {
@@ -285,8 +287,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Initiative Agreement',
-          mode: 'view',
-          crumb: () => 'Initiative Agreement'
+          mode: 'view'
         }
       },
       {
@@ -294,8 +295,7 @@ const router = createBrowserRouter([
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Edit Initiative Agreement',
-          mode: 'edit',
-          crumb: () => 'Edit Initiative Agreement'
+          mode: 'edit'
         }
       }
     ]

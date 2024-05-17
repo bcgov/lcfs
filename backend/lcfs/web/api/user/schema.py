@@ -31,8 +31,6 @@ class UserCreateSchema(BaseSchema):
     organization: Optional[OrganizationSummaryResponseSchema] = None
     roles: Optional[List[str]] = []
 
-    class Config:
-        from_attributes = True
 
 
 class UserBaseSchema(BaseSchema):
@@ -52,8 +50,6 @@ class UserBaseSchema(BaseSchema):
     roles: Optional[List[RoleSchema]] = None
     is_government_user: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
 
     @classmethod
     def model_validate(cls, user_profile):
@@ -80,8 +76,6 @@ class UserHistorySchema(BaseSchema):
     is_login_successful: bool
     login_error_message: Optional[str] = None
 
-    class Config:
-        from_attributes = True
 
 
 class UserHistories(BaseSchema):

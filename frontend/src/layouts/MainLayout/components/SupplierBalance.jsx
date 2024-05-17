@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { numberFormatter } from '@/utils/formatters'
 import BCBox from '@/components/BCBox'

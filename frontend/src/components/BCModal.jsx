@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import {
   Dialog,
@@ -6,7 +7,7 @@ import {
   DialogActions,
   IconButton,
   Divider,
-  Box
+  Box,
 } from '@mui/material'
 import { Close, Warning } from '@mui/icons-material'
 import BCButton from './BCButton'
@@ -14,7 +15,14 @@ import colors from '@/themes/base/colors'
 
 const BCModal = (props) => {
   const { open, onClose, data } = props
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    setIsLoading(false)
+  }, [open])
+
   if (!data) return null
+
   const {
     content,
     title,
@@ -27,6 +35,14 @@ const BCModal = (props) => {
     secondaryButtonColor,
     customButtons
   } = data
+
+  const handlePrimaryButtonClick = async () => {
+    // Blocks repeat clicks of the button
+    if(isLoading) { return }
+    setIsLoading(true)
+    await primaryButtonAction()
+  }
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{title}</DialogTitle>
@@ -73,7 +89,8 @@ const BCModal = (props) => {
           id={'modal-btn-' + primaryButtonText.toLowerCase().replaceAll(' ', '-')}
           color={primaryButtonColor ?? 'primary'}
           autoFocus
-          onClick={primaryButtonAction}
+          onClick={handlePrimaryButtonClick}
+          isLoading={isLoading}
         >
           {primaryButtonText}
         </BCButton>
@@ -91,6 +108,7 @@ BCModal.propTypes = {
     primaryButtonText: PropTypes.string.isRequired,
     primaryButtonAction: PropTypes.func.isRequired,
     primaryButtonColor: PropTypes.string,
+    warningText: PropTypes.string,
     secondaryButtonText: PropTypes.string,
     secondaryButtonAction: PropTypes.func,
     secondaryButtonColor: PropTypes.string,

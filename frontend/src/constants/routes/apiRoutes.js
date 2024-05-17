@@ -15,11 +15,5 @@ export const apiRoutes = {
   fuelCodeOptions: '/fuel-codes/table-options',
   addFuelCodes: '/fuel-codes/save-fuel-codes',
   getFuelCodes: '/fuel-codes/list',
-}
-
-export const viewRoutesTitle = {
-  admin: 'Administration',
-  transfers: 'Transactions',
-  'add-org': 'Add organization',
-  'edit-org': 'Edit organization'
+  updateFuelCode: '/fuel-codes/:fuelCodeId'
 }

@@ -1,7 +1,6 @@
 import { Breadcrumbs, Typography } from '@mui/material'
-import { useLocation, Link, useMatches } from 'react-router-dom'
+import { useLocation, Link, useMatches, useParams } from 'react-router-dom'
 import { NavigateNext as NavigateNextIcon } from '@mui/icons-material'
-import { viewRoutesTitle } from '@/constants/routes/apiRoutes'
 import { emphasize, styled } from '@mui/material/styles'
 import Chip from '@mui/material/Chip'
 import { isNumeric } from '@/utils/formatters'
@@ -9,7 +8,7 @@ import { isNumeric } from '@/utils/formatters'
 const StyledBreadcrumb = styled(Chip)(({ theme }) => {
   const backgroundColor =
     theme.palette.mode === 'light'
-      ? theme.palette.grey[200]
+      ? theme.palette.common.white
       : theme.palette.grey[800]
   return {
     backgroundColor,
@@ -19,7 +18,6 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
     fontSize: theme.typography.pxToRem(16),
     borderRadius: theme.borders.borderRadius.xl,
     padding: theme.spacing(1.8, 1),
-    textTransform: 'capitalize',
     '&:hover, &:focus': {
       backgroundColor: emphasize(backgroundColor, 0.06)
     },
@@ -33,8 +31,19 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 const Crumb = () => {
   const location = useLocation()
   const matches = useMatches()
+  const { userID, orgID } = useParams()
   const pathnames = location.pathname.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
+
+  // Mapping for custom breadcrumb labels and routes
+  const customBreadcrumbs = {
+    'admin': { label: 'Administration', route: '/admin' },
+    'transfers': { label: 'Transactions', route: '/transactions' },
+    'add-org': { label: 'Add organization', route: '/add-org' },
+    'edit-org': { label: 'Edit organization', route: '/edit-org' },
+    'initiative-agreement': { label: 'Transactions', route: '/transactions' },
+    'admin-adjustment': { label: 'Transactions', route: '/transactions' }
+  }
 
   return (
     <>
@@ -63,8 +72,11 @@ const Crumb = () => {
           />
         )}
         {pathnames.map((name, index) => {
-          const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
           const isLast = index === pathnames.length - 1
+          const customCrumb = customBreadcrumbs[name] || {}
+          const routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
+          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+
           return isLast ? (
             <StyledBreadcrumb
               component={Typography}
@@ -74,9 +86,7 @@ const Crumb = () => {
                   ? title
                   : isNumeric(name)
                     ? 'ID: ' + name
-                    : viewRoutesTitle[name] ||
-                      name.charAt(0).toUpperCase() +
-                        name.slice(1).replace('-', ' ')
+                    : displayName
               }
               key={name}
             />
@@ -87,8 +97,9 @@ const Crumb = () => {
                 key={name}
                 component={Link}
                 label={
-                  viewRoutesTitle[name] ||
-                  name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+                  (isNumeric(name) && name === userID && pathnames[index + 1] === "edit-user" && 'User profile') ||
+                  (isNumeric(name) && name === orgID && 'Organization profile') ||
+                  displayName
                 }
                 sx={{
                   cursor: 'pointer',

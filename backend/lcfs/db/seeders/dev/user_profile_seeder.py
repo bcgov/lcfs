@@ -218,7 +218,31 @@ async def seed_user_profiles(session):
             "is_active": True,
             "first_name": "Kailee",
             "last_name": "Douglas",
-        }
+        },
+        {
+            "keycloak_email": "alasdair.ring@gov.bc.ca",
+            "keycloak_username": "AIRING",
+            "email": "alasdair.ring@gov.bc.ca",
+            "title": "Product Owner",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "Al",
+            "last_name": "Ring",
+        },
+        {
+            "keycloak_email": "rebekah.ford@gov.bc.ca",
+            "keycloak_username": "RRFORD",
+            "email": "rebekah.ford@gov.bc.ca",
+            "title": "Scrum Master",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "Rebekah",
+            "last_name": "Ford",
+        },
     ]
 
     try:

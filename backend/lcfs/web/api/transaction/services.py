@@ -3,6 +3,7 @@
 from typing import List, Dict, Any
 from fastapi import Depends
 from math import ceil
+from sqlalchemy import or_
 
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
@@ -48,11 +49,11 @@ class TransactionsService:
             )
 
     @service_handler
-    async def get_transactions_paginated(self, pagination: PaginationRequestSchema = {}) -> List[TransactionViewSchema]:
+    async def get_transactions_paginated(self, pagination: PaginationRequestSchema = {}, organization_id: int = None) -> List[TransactionViewSchema]:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
-        # pagination.filters.append(FilterModel(field="status", filter="Draft", type="notEqual", filter_type="text"))
+        pagination.filters.append(FilterModel(field="status", filter="Deleted", type="notEqual", filter_type="text"))
         conditions = []
         pagination = validate_pagination(pagination)
         if pagination.filters and len(pagination.filters) > 0:
@@ -60,6 +61,13 @@ class TransactionsService:
 
         offset = (pagination.page - 1) * pagination.size if pagination.page > 0 else 0
         limit = pagination.size
+
+        if organization_id:
+            org_conditions = or_(
+                TransactionView.from_organization_id == organization_id,
+                TransactionView.to_organization_id == organization_id
+            )
+            conditions.append(org_conditions)
 
         transactions, total_count = await self.repo.get_transactions_paginated(offset, limit, conditions, pagination.sort_orders)
 

@@ -97,8 +97,8 @@ class TransferServices:
                 )
             )
         transfer_view.comments = comments
-        # Hide Recommended status to organizations
-        if (self.request.user.organization is not None):
+        # Hide Recommended status to organizations or if the transfer is returned to analyst by the director and it is in Submitted status
+        if (self.request.user.organization is not None or transfer_view.current_status.status == TransferStatusEnum.Submitted.value):
             if (transfer_view.current_status.status == TransferStatusEnum.Recommended.value):
                 transfer_view.current_status = await self.repo.get_transfer_status_by_name(TransferStatusEnum.Submitted.value)
             transfer_view.transfer_history = list(filter(
@@ -152,7 +152,7 @@ class TransferServices:
 
         # Check if the new status is different from the current status of the transfer
         status_has_changed = transfer.current_status != new_status
-
+        re_recommended = any(history.transfer_status.status == TransferStatusEnum.Recommended for history in transfer.transfer_history) and new_status.status == TransferStatusEnum.Recommended
         # if the transfer status is Draft or Sent then update all the fields within the transfer
         if transfer_data.current_status in [TransferStatusEnum.Draft.value, TransferStatusEnum.Sent.value]:
             # Only update certain fields if the status is Draft or changing to Sent
@@ -165,12 +165,19 @@ class TransferServices:
         # update comments
         elif status_has_changed and new_status.status in [TransferStatusEnum.Submitted, TransferStatusEnum.Declined]:
             transfer.to_org_comment = transfer_data.to_org_comment
-        else:
-            transfer.gov_comment = transfer_data.gov_comment
-
+        transfer.gov_comment = transfer_data.gov_comment
+        # if the transfer is returned back to analyst by the director then don't store the history.
+        if (new_status.status == TransferStatusEnum.Submitted and transfer.current_status.status == TransferStatusEnum.Recommended) or re_recommended:
+            status_has_changed = False
         if transfer_data.recommendation and transfer_data.recommendation != transfer.recommendation:
             transfer.recommendation = transfer_data.recommendation
-
+        # Update existing history record
+        if re_recommended:
+            transfer.current_status = await self.repo.update_transfer_history(
+                transfer_id=transfer.transfer_id,
+                transfer_status_id=new_status.transfer_status_id,
+                user_profile_id=self.request.user.user_profile_id,
+            )
         # Update transfer history and handle status-specific actions if the status has changed
         if status_has_changed:
             print(f"Status change: \

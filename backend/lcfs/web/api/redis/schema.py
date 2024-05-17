@@ -7,4 +7,4 @@ class RedisValueDTO(BaseSchema):
     """DTO for redis values."""
 
     key: str
-    value: Optional[str]  # noqa: WPS110
+    value: Optional[str] = None  # noqa: WPS110

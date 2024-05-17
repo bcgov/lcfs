@@ -1,6 +1,8 @@
-from lcfs.web.api.base import BaseSchema, validator
+from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
+from pydantic import field_validator
+
 
 class InitiativeAgreementStatusSchema(BaseSchema):
     initiative_agreement_status_id: int
@@ -37,7 +39,7 @@ class InitiativeAgreementBaseSchema(BaseSchema):
     to_organization_id: int
     gov_comment: Optional[str] = None
 
-    @validator('compliance_units')
+    @field_validator('compliance_units')
     def validate_compliance_units(cls, v):
         if v <= 0:
             raise ValueError('compliance_units must be positive')

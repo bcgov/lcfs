@@ -145,14 +145,45 @@ class OrganizationsRepository:
         return result.scalars().all()
 
     @repo_handler
-    async def get_organization_names(self):
+    async def get_organization_names(self, conditions=None, order_by=('name', 'asc')):
         '''
-        Get all available names for organizations from the database.
+        Fetches organization names and details based on provided conditions and dynamic ordering.
+
+        Parameters:
+            conditions (list): SQLAlchemy conditions to filter the query.
+            order_by (tuple): A tuple containing the field name as the first element and the sorting direction ('asc' or 'desc')
+                            as the second element. Ensures the field exists on the model to prevent errors.
+
+        Returns:
+            List of dictionaries with organization details including ID, names, balances, and status.
         '''
-        result = await self.db.execute(
-            select(Organization.organization_id, Organization.name)
-        )
-        return result.unique().all()
+        query = select(Organization).join(OrganizationStatus)
+
+        if conditions:
+            query = query.filter(*conditions)
+
+        # Apply dynamic ordering
+        if order_by:
+            field_name, direction = order_by
+            if hasattr(Organization, field_name):  # Ensure the field is valid
+                order_function = asc if direction.lower() == 'asc' else desc
+                query = query.order_by(order_function(getattr(Organization, field_name)))
+            else:
+                raise ValueError(f"Invalid ordering field specified: {field_name}")
+
+        result = await self.db.execute(query)
+        organizations = result.scalars().all()
+
+        return [
+            {
+                "organization_id": org.organization_id,
+                "name": org.name,
+                "operating_name": org.operating_name,
+                "total_balance": org.total_balance,
+                "reserved_balance": org.reserved_balance
+            }
+            for org in organizations
+        ]
 
     @repo_handler
     async def get_externally_registered_organizations(self, conditions):

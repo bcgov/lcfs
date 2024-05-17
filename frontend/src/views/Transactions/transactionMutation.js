@@ -1,10 +1,11 @@
-// transactionMutations.js
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from './AddEditViewTransaction'
+import { TRANSACTIONS } from '@/constants/routes/routes'
+import { useQueryClient } from '@tanstack/react-query'
 
-export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, setModalData, alertRef) => {
+export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient) => {
   const navigate = useNavigate()
 
   // Helper function to determine routes based on transaction type and ID
@@ -30,7 +31,12 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
     setModalData(null)
     const status = response.data.currentStatus.status
     const idField = transactionType === ADMIN_ADJUSTMENT ? 'adminAdjustmentId' : 'initiativeAgreementId'
-    const { editRoute, viewRoute } = getTransactionRoutes(transactionType, response.data[idField])
+    const idPrefix = transactionType === ADMIN_ADJUSTMENT ? 'adminadjustment-' : 'initiativeagreement-'
+    const txnId = response.data[idField]
+    const { editRoute, viewRoute } = getTransactionRoutes(transactionType, txnId)
+
+    // Invalidate relevant queries
+    queryClient.invalidateQueries([transactionType, transactionId]);
 
     // Set the message and state for navigating
     const message = t(`${transactionType}:actionMsgs.${transactionId ? 'updatedText' : 'createdText'}`)
@@ -40,8 +46,18 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
 
     if (status === TRANSACTION_STATUSES.DRAFT) {
       navigate(editRoute, navigateState)
-    } else if (status === TRANSACTION_STATUSES.RECOMMENDED) {
-      navigate(viewRoute, navigateState)
+    } else if (status === TRANSACTION_STATUSES.RECOMMENDED ||
+      status === TRANSACTION_STATUSES.APPROVED) {
+      navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
+        state: {
+          message: t(`${transactionType}:actionMsgs.successText`, {
+            status: response.data.currentStatus.status.toLowerCase()
+          }),
+          severity: 'success'
+        }
+      })
+    } else if (status === TRANSACTION_STATUSES.DELETED) {
+      navigate(TRANSACTIONS, {})
     } else {
       setAlertMessage(t(`${transactionType}:actionMsgs.successText`, { status: 'saved' }))
       setAlertSeverity('success')

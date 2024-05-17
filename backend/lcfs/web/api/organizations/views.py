@@ -142,14 +142,17 @@ async def get_organization_types(
     return await service.get_organization_types()
 
 
-@router.get(
-    "/names/", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK
-)
-@cache(expire=60 * 60)  # cache for 1 hour
+@router.get("/names/", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
+@cache(expire=1)  # cache for 1 hour
 @view_handler
 async def get_organization_names(service: OrganizationsService = Depends()):
     '''Fetch all organization names'''
-    return await service.get_organization_names()
+
+    # Set the default sorting order
+    order_by = ('name', 'asc')
+
+    # Call the service with only_registered set to True to fetch only registered organizations
+    return await service.get_organization_names(True, order_by)
 
 
 @router.get("/registered/external", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
