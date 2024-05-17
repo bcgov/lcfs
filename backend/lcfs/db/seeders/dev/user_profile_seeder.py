@@ -221,7 +221,7 @@ async def seed_user_profiles(session):
         },
         {
             "keycloak_email": "alasdair.ring@gov.bc.ca",
-            "keycloak_username": "ALRING",
+            "keycloak_username": "AIRING",
             "email": "alasdair.ring@gov.bc.ca",
             "title": "Product Owner",
             "phone": "1234567890",
