@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "69834c45d1dd"
-down_revision = "f141c1431961"
+down_revision = "0985f23b0f0c"
 branch_labels = None
 depends_on = None
 
@@ -70,7 +70,7 @@ def upgrade() -> None:
         NULL AS price_per_unit,
         ias.status::text AS status,
         NULL AS compliance_period,
-        c.comment,
+        ia.gov_comment AS comment,
         NULL AS category,
         ia.effective_date,
         ia.effective_status,
@@ -79,7 +79,6 @@ def upgrade() -> None:
     FROM initiative_agreement ia
     JOIN organization org ON ia.to_organization_id = org.organization_id
     JOIN initiative_agreement_status ias ON ia.current_status_id = ias.initiative_agreement_status_id
-    LEFT JOIN comment c ON ia.comment_id = c.comment_id
     UNION ALL
     SELECT
         aa.admin_adjustment_id AS transaction_id,
@@ -92,7 +91,7 @@ def upgrade() -> None:
         NULL AS price_per_unit,
         aas.status::text AS status,
         NULL AS compliance_period,
-        c.comment,
+        aa.gov_comment AS comment,
         NULL AS category,
         aa.effective_date,
         aa.effective_status,
@@ -100,8 +99,7 @@ def upgrade() -> None:
         aa.create_date
     FROM admin_adjustment aa
     JOIN organization org ON aa.to_organization_id = org.organization_id
-    JOIN admin_adjustment_status aas ON aa.current_status_id = aas.admin_adjustment_status_id
-    LEFT JOIN comment c ON aa.comment_id = c.comment_id;
+    JOIN admin_adjustment_status aas ON aa.current_status_id = aas.admin_adjustment_status_id;
     """)
 
     # Creates a unique composite key for our mv_transaction_aggregate view so it 
