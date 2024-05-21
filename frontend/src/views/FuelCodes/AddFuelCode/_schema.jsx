@@ -87,7 +87,6 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
-
 export const fuelCodeColDefs = (t, optionsData) => [
   {
     colId: 'action',
@@ -150,7 +149,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {
-      onDynamicUpdate: (fuelCodeValue, params) => params.api.redrawRows({ rowNodes: [params.node] }),
+      // onDynamicUpdate: (fuelCodeValue, params) => params.api.redrawRows({ rowNodes: [params.node] }),
       // autoSelect: true,
       options: optionsData.latestFuelCodes.map((obj) => obj.fuelCode),
       optionLabel: 'fuelCode',
@@ -167,7 +166,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
     },
-    tooltipValueGetter: (p) => "select the next fuel code version"
+    tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
     field: 'company',
