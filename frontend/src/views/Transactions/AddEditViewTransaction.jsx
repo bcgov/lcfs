@@ -168,7 +168,10 @@ export const AddEditViewTransaction = () => {
   
   const currentStatus = transactionData?.currentStatus?.status
   const isDraft = currentStatus === TRANSACTION_STATUSES.DRAFT
+  const isRecommended = currentStatus === TRANSACTION_STATUSES.RECOMMENDED
+  const isApproved = currentStatus === TRANSACTION_STATUSES.APPROVED
   const isEditable = (mode === 'add' || (mode === 'edit' && isDraft)) && hasAnyRole(roles.analyst, roles.director)
+  const isCommentEditable = isEditable || (isRecommended && hasAnyRole(roles.director))
 
   useEffect(() => {
     const updateSteps = () => {
@@ -294,10 +297,12 @@ export const AddEditViewTransaction = () => {
         )}
 
         {/* Comments */}
-        <Comments
-          isEditable={isEditable}
-          commentField={'govComment'}
-        />
+        {!(isApproved || (isRecommended && hasAnyRole(roles.analyst))) && (
+          <Comments
+            isEditable={isCommentEditable}
+            commentField={'govComment'}
+          />
+        )}
 
         {/* Internal Comments */}
         {/* {mode !== 'add' &&
