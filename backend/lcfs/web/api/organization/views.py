@@ -146,7 +146,7 @@ async def update_user(
 )
 @roles_required("Supplier")
 @view_handler
-async def get_transactions_paginated(
+async def get_transactions_paginated_for_org(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     org_service: OrganizationService = Depends(),
@@ -166,7 +166,7 @@ async def get_transactions_paginated(
 @router.get("/transactions/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @roles_required("Supplier")
 @view_handler
-async def export_transactions(
+async def export_transactions_for_org(
     request: Request,
     format: str = Query(default="xls", description="File export format"),
     txn_service: TransactionsService = Depends(),
