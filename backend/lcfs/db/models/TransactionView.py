@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
 from lcfs.db.base import BaseModel
 
 class TransactionViewTypeEnum(enum.Enum):
@@ -31,5 +31,10 @@ class TransactionView(BaseModel):
     quantity = Column(Integer)
     price_per_unit = Column(Float)
     status = Column(String)
+    compliance_period = Column(String)
+    comment = Column(String)
+    category = Column(String)
+    effective_date = Column(DateTime)
+    effective_status = Column(Boolean)
     create_date = Column(DateTime)
     update_date = Column(DateTime)

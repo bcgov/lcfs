@@ -16,6 +16,8 @@
   "adminAdjustmentId": "Administrative adjustment — ID:",
   "initiativeAgreementId": "Initiative agreement — ID:",
   "noTxnsFound": "No transactions found",
+  "downloadAsExcel": "Download as Excel",
+  "downloadingTxnInfo": "Downloading Transaction Information...",
   "txnDownloadFailMsg": "Failed to download transaction information.",
   "newTransferBtn": "New transfer",
   "newTransactionBtn": "New transaction",
@@ -54,6 +56,7 @@
   "loadingText": "Loading...",
   "processingText": "Processing...",
   "inReserve": "in reserve",
+  "complianceUnitsBalance": "compliance units",
   "txnHistoryLabel": "Transaction History",
   "txnHistory": {
     "Draft": "Created draft",

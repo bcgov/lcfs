@@ -36,6 +36,24 @@ class LCFS_Constants:
         TransferStatusEnum.Recorded.value
     ]
 
+    # Export transactions
+    TRANSACTIONS_EXPORT_MEDIA_TYPE = "application/vnd.ms-excel"
+    TRANSACTIONS_EXPORT_COLUMNS = [
+        "ID",
+        "Compliance period",
+        "Type",
+        "Compliance units from",
+        "Compliance units to",
+        "Number of units",
+        "Value per unit",
+        "Category",
+        "Status",
+        "Effective Date",
+        "Comments (external)"
+    ]
+    TRANSACTIONS_EXPORT_SHEETNAME = "Transactions"
+    TRANSACTIONS_EXPORT_FILENAME = "BC-LCFS-transactions"
+
 
 class FILE_MEDIA_TYPE(Enum):
     PDF = "application/pdf"

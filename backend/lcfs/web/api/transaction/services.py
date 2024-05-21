@@ -1,7 +1,8 @@
-# transactions/services.py
-
+import io
+from datetime import datetime
 from typing import List, Dict, Any
 from fastapi import Depends
+from fastapi.responses import StreamingResponse
 from math import ceil
 from sqlalchemy import or_
 
@@ -18,6 +19,8 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     validate_pagination,
 )
+from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
 class TransactionsService:
     def __init__(
@@ -69,7 +72,7 @@ class TransactionsService:
             )
             conditions.append(org_conditions)
 
-        transactions, total_count = await self.repo.get_transactions_paginated(offset, limit, conditions, pagination.sort_orders)
+        transactions, total_count = await self.repo.get_transactions_paginated(offset, limit, conditions, pagination.sort_orders, None)
 
         if not transactions:
             raise DataNotFoundException('Transactions not found')
@@ -94,3 +97,58 @@ class TransactionsService:
             raise DataNotFoundException("No transaction statuses found")
 
         return statuses
+
+    @service_handler
+    async def export_transactions(self, export_format, organization_id = None) -> StreamingResponse:
+        """
+        Prepares a list of transactions in a file that is downloadable
+        """
+        if not export_format in ["xls", "xlsx", "csv"]:
+            raise DataNotFoundException("Export format not supported")
+
+        results = await self.repo.get_transactions_paginated(0, None, [], [], organization_id)
+
+        # Prepare data for the spreadsheet
+        data = []
+        for result in results[0]:
+            data.append(
+                [
+                    result.transaction_id,
+                    result.compliance_period,
+                    result.transaction_type,
+                    result.from_organization,
+                    result.to_organization,
+                    result.quantity,
+                    result.price_per_unit,
+                    result.category,
+                    result.status,
+                    result.effective_date.strftime("%Y-%m-%d") if result.effective_date else None,
+                    result.comment
+                ]
+            )
+
+        # Create a spreadsheet
+        builder = SpreadsheetBuilder(file_format=export_format)
+
+        builder.add_sheet(
+            sheet_name=LCFS_Constants.TRANSACTIONS_EXPORT_SHEETNAME,
+            columns=LCFS_Constants.TRANSACTIONS_EXPORT_COLUMNS,
+            rows=data,
+            styles={"bold_headers": True},
+        )
+
+        file_content = builder.build_spreadsheet()
+
+        # Get the current date in YYYY-MM-DD format
+        current_date = datetime.now().strftime("%Y-%m-%d")
+
+        filename = (
+            f"{LCFS_Constants.TRANSACTIONS_EXPORT_FILENAME}-{current_date}.{export_format}"
+        )
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type=FILE_MEDIA_TYPE[export_format.upper()].value,
+            headers=headers,
+        )

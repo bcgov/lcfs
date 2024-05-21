@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from lcfs.db.dependencies import get_db_session, get_async_db_session
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.utils import create_test_database, drop_test_database
 from lcfs.services.redis.dependency import get_redis_pool
 from lcfs.settings import settings
@@ -30,6 +30,7 @@ from lcfs.db.models.Role import RoleEnum
 from lcfs.db.models.UserProfile import UserProfile
 from lcfs.db.models.UserRole import UserRole
 from lcfs.db.models.Role import Role
+from lcfs.db.models.Organization import Organization
 
 logging.getLogger('faker').setLevel(logging.INFO)
 
@@ -200,6 +201,12 @@ class MockAuthenticationBackend(AuthenticationBackend):
             last_name="User",
             is_active=True
         )
+
+        organization = Organization(
+            organization_id=1,
+            name="Test"
+        )
+        user.organization = organization
 
         # Create UserRole instances based on the RoleEnum members provided
         user.user_roles = [

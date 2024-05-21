@@ -8,7 +8,7 @@ import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box } from '@mui/material'
+import { Box, Grid } from '@mui/material'
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -99,32 +99,32 @@ export const Transactions = () => {
     [currentUser, navigate]
   )
 
+  // Determine the appropriate API endpoint
+  const getApiEndpoint = useCallback(() => {
+    if (hasRoles(roles.supplier)) {
+      return apiRoutes.orgTransactions;
+    } else if (selectedOrgId) {
+      return apiRoutes.filteredTransactionsByOrg.replace(':orgID', selectedOrgId);
+    }
+    return apiRoutes.transactions;
+  }, [selectedOrgId, currentUser, hasRoles]);
+
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
     setAlertMessage('')
     try {
-      await apiService.download('/transactions/export')
-      isDownloadingTransactions(false)
+      const endpoint = getApiEndpoint();
+      await apiService.download(`${endpoint}/export`);
+      setIsDownloadingTransactions(false)
     } catch (error) {
       console.error('Error downloading transactions information:', error)
-      isDownloadingTransactions(false)
+      setIsDownloadingTransactions(false)
       setAlertMessage('Failed to download transactions information.')
       setAlertSeverity('error')
     }
   }
 
-  const apiEndpoint = useMemo(() => {
-    if (hasRoles(roles.supplier)) {
-      return apiRoutes.orgTransactions.replace(
-        ':orgID',
-        currentUser?.organization?.organizationId
-      )
-    }
-    if (selectedOrgId) {
-      return `${apiRoutes.transactions}?organization_id=${selectedOrgId}`
-    }
-    return apiRoutes.transactions
-  }, [currentUser, hasRoles, selectedOrgId])
+  const apiEndpoint = useMemo(() => getApiEndpoint(), [getApiEndpoint]);
 
   useEffect(() => {
     if (location.state?.message) {
@@ -142,15 +142,38 @@ export const Transactions = () => {
           </BCAlert>
         )}
       </div>
-      <BCTypography variant="h5" mb={2} color="primary">
-        {t('txn:title')}
-      </BCTypography>
-      <Box display={'flex'} gap={2} mb={2}>
-        {currentUser.organization?.orgStatus?.status ===
-          ORGANIZATION_STATUSES.REGISTERED && (
-          <Role roles={[roles.transfers]}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} lg={5}>
+          <BCTypography variant="h5" mb={2} color="primary">
+            {t('txn:title')}
+          </BCTypography>
+          <Box display={'flex'} gap={2} mb={2}>
+          {currentUser.organization?.orgStatus?.status ===
+            ORGANIZATION_STATUSES.REGISTERED && (
+            <Role roles={[roles.transfers]}>
+              <BCButton
+                id="new-transfer-button"
+                variant="contained"
+                size="small"
+                color="primary"
+                startIcon={
+                  <FontAwesomeIcon
+                    icon={faCirclePlus}
+                    className="small-icon"
+                    size="2x"
+                  />
+                }
+                onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+              >
+                <BCTypography variant="subtitle2">
+                  {t('txn:newTransferBtn')}
+                </BCTypography>
+              </BCButton>
+            </Role>
+          )}
+          <Role roles={[roles.analyst]}>
             <BCButton
-              id="new-transfer-button"
+              id="new-transaction-button"
               variant="contained"
               size="small"
               color="primary"
@@ -161,46 +184,34 @@ export const Transactions = () => {
                   size="2x"
                 />
               }
-              onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+              onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
             >
               <BCTypography variant="subtitle2">
-                {t('txn:newTransferBtn')}
+                {t('txn:newTransactionBtn')}
               </BCTypography>
             </BCButton>
           </Role>
-        )}
-        <Role roles={[roles.analyst]}>
-          <BCButton
-            id="new-transaction-button"
-            variant="contained"
-            size="small"
-            color="primary"
-            startIcon={
-              <FontAwesomeIcon
-                icon={faCirclePlus}
-                className="small-icon"
-                size="2x"
-              />
-            }
-            onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
-          >
-            <BCTypography variant="subtitle2">
-              {t('txn:newTransactionBtn')}
-            </BCTypography>
-          </BCButton>
-        </Role>
-        <DownloadButton
-          onDownload={handleDownloadTransactions}
-          isDownloading={isDownloadingTransactions}
-          label="Download as .xls"
-          downloadLabel="Downloading Transaction Information..."
-          dataTest="download-transactions-button"
-        />
-      </Box>
+          <DownloadButton
+            onDownload={handleDownloadTransactions}
+            isDownloading={isDownloadingTransactions}
+            label={t('txn:downloadAsExcel')}
+            downloadLabel={t('txn:downloadingTxnInfo')}
+            dataTest="download-transactions-button"
+          />
+        </Box>
+        </Grid>
+        <Grid item xs={12} lg={7} sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            justifyContent: { xs: 'flex-start', lg: 'flex-end' },
+            alignItems: { lg: 'flex-end' }
+        }}>
+          <Role roles={govRoles}>
+            <OrganizationList onOrgChange={setSelectedOrgId} />
+          </Role>
+        </Grid>
+      </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <Role roles={govRoles}>
-          <OrganizationList onOrgChange={setSelectedOrgId} />
-        </Role>
         <BCDataGridServer
           key={selectedOrgId || 'all'}
           gridRef={gridRef}
