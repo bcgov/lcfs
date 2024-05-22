@@ -91,20 +91,28 @@ jobs:
       # working-directory: points to where you test scripts are located
       # browser: Specifies which browser you want to use. The default is 'Electron', but we would typically user 'Chrome' as this represent the majority of our users.
       # ci-build-id: to communicate the PR/Build number to the Cypress Dashboard
-      - name: E2E Smoke tests
-        uses: cypress-io/github-action@v6
-        # let's give this action an ID so we can refer
-        # to its output values later
-        id: smoke
-        continue-on-error: false
-        with:
-          wait-on: ${{ secrets.CYPRESS_HOST }}
-          wait-on-timeout: 120
-          start: npm run cypress:dev
-          install-command: npm ci -f
-          working-directory: frontend
-          browser: chrome
-          ci-build-id: ${{ github.event.number }}
+      # - name: E2E Smoke tests
+      #   uses: cypress-io/github-action@v6
+      #   # let's give this action an ID so we can refer
+      #   # to its output values later
+      #   id: smoke
+      #   continue-on-error: false
+      #   with:
+      #     wait-on: ${{ secrets.CYPRESS_HOST }}
+      #     wait-on-timeout: 120
+      #     start: npm run cypress:dev
+      #     install-command: npm ci -f
+      #     working-directory: frontend
+      #     browser: chrome
+      #     ci-build-id: ${{ github.event.number }}
+      - name: Install Dependencies
+        run: npm ci -f
+        working-directory: frontend
+
+      - name: Run Cypress Tests
+        run: npm run cypress:dev
+        working-directory: frontend
+        
       - name: Debug Cypress Run
         if: failure()
         run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
