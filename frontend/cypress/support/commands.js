@@ -19,24 +19,14 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
 Cypress.Commands.add('loginWith', (userType, username, password) => {
   // Determine which login link to click based on user type
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
-
+  cy.wait(5000)
   // Define the login process for IDIR and BCeID
-  const loginProcess = (args) => {
-    const [username, password] = args
-    cy.get('input[name=user]').type(username, { log: false })
-    cy.get('input[name=password]').type(password, { log: false })
-    cy.get('form').submit()
-  }
-
-  // Perform login on the appropriate page
-  cy.origin(
-    'https://logontest7.gov.bc.ca',
-    { args: [username, password] },
-    loginProcess
-  )
-
+  cy.get("#user").type(username, { log: false });
+  cy.get("#password").type(password, { log: false });
+  cy.get("div.login-form-action > input").click();
+  cy.wait(5000)
   // Check to confirm successful login
-  // cy.getByDataTest('logout-button').should('be.visible')
+  cy.getByDataTest('logout-button').should('be.visible')
 })
 
 /**

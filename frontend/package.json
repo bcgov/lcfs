@@ -19,6 +19,7 @@
     "cypress:verify": "cypress verify",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
+    "cypress:dev": "cypress run --config baseUrl=https://lcfs-dev.apps.silver.devops.gov.bc.ca/",
     "cypress:clear": "cypress cache clear"
   },
   "lint-staged": {
