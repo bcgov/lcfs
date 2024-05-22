@@ -63,7 +63,7 @@ jobs:
           wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
           max_attempts: 5
         run: |
-          cd tool-guidance/testing
+          cd frontend
           chmod +x waitforconnection.sh
           bash ./waitforconnection.sh
 
@@ -97,7 +97,7 @@ jobs:
           wait-on-timeout: 120
           record: true
           install-command: npm ci -f
-          working-directory: tool-guidance/testing
+          working-directory: frontend
           browser: chrome
           ci-build-id: ${{ github.event.number }}
 
