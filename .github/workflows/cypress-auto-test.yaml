@@ -103,7 +103,16 @@ jobs:
           working-directory: frontend
           browser: chrome
           ci-build-id: ${{ github.event.number }}
-
+      - uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: ./cypress/screenshots
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: cypress-videos
+          path: ./cypress/videos
       # For review/debug purposes, just print out key parameters
       - name: Print Env Vars
         run: |
