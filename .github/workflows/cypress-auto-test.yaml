@@ -11,6 +11,10 @@ on: [push, workflow_dispatch]
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, stg, prod]
     # In order for Cypress to run well, it needs to be fed the needed parameters.
     # The below is a mix of Cypress environment variables (All capital) and ones that are needed for this specific set of scripts (Mix of capital and lowercase)
     env:
@@ -51,6 +55,9 @@ jobs:
         name: List the state of node modules
         continue-on-error: true
         run: npm list
+      - name: Install dependencies
+        run: sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev
+      
 
       # Many solutions have an API and APP that start fairly slow (specifically when not many resources are available).
       # Since the APP needs the API and Cypress needs the APP, we first have to test if the API is running and accessible.
@@ -103,6 +110,9 @@ jobs:
           working-directory: frontend
           browser: chrome
           ci-build-id: ${{ github.event.number }}
+      - name: Debug Cypress Run
+        if: failure()
+        run: cat cypress/reports/*.json
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
