@@ -60,6 +60,7 @@ export const AddEditViewTransaction = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [txnType, setTxnType] = useState(null);
+  const [internalComment, setInternalComment] = useState('')
 
   const { handleSuccess, handleError } = useTransactionMutation(
     t, 
@@ -96,6 +97,10 @@ export const AddEditViewTransaction = () => {
       govComment: null,
     }
   })
+
+  const handleCommentChange = (newComment) => {
+    setInternalComment(newComment)
+  }
 
   useEffect(() => {
     const path = window.location.pathname
@@ -210,9 +215,10 @@ export const AddEditViewTransaction = () => {
         t,
         setModalData,
         createUpdateAdminAdjustment,
-        createUpdateInitiativeAgreement
+        createUpdateInitiativeAgreement,
+        internalComment
       }),
-    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles]
+    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles, internalComment]
   )
 
   if (transactionId && isTransactionDataLoading)
@@ -305,18 +311,20 @@ export const AddEditViewTransaction = () => {
         )}
 
         {/* Internal Comments */}
-        {/* {mode !== 'add' &&
-          <BCBox mt={4}>
-            <Typography variant="h6" color="primary">
-              {t(`txn:internalCommentsOptional`)}
-            </Typography>
-            <BCBox>
-              <Role roles={govRoles}>
-                <InternalComments entityType={txnType} entityId={transactionId ?? null} />
-              </Role>
-            </BCBox>
+        <BCBox mt={4}>
+          <Typography variant="h6" color="primary">
+            {t(`txn:internalCommentsOptional`)}
+          </Typography>
+          <BCBox>
+            <Role roles={govRoles}>
+              <InternalComments
+                entityType={txnType}
+                entityId={transactionId ?? null}
+                onCommentChange={handleCommentChange}
+              />
+            </Role>
           </BCBox>
-        } */}
+        </BCBox>
 
         {/* Transaction History */}
         {transactionId &&

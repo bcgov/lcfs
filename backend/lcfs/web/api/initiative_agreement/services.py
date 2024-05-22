@@ -9,16 +9,21 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.Transaction import TransactionActionEnum
 from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.internal_comment.services import InternalCommentService
+from lcfs.web.api.internal_comment.schema import InternalCommentCreateSchema, AudienceScopeEnum, EntityTypeEnum
+
 
 class InitiativeAgreementServices:
     def __init__(
         self, 
         repo: InitiativeAgreementRepository = Depends(InitiativeAgreementRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
+        internal_comment_service: InternalCommentService = Depends(InternalCommentService),
         request: Request = None,
     ) -> None:
         self.repo = repo
         self.org_service = org_service
+        self.internal_comment_service = internal_comment_service
         self.request = request
 
     @service_handler
@@ -76,7 +81,7 @@ class InitiativeAgreementServices:
         )
 
         initiative_agreement = InitiativeAgreement(
-            **initiative_agreement_data.model_dump(exclude={"current_status"})
+            **initiative_agreement_data.model_dump(exclude={"current_status", "internal_comment"})
         )
 
         initiative_agreement.current_status = current_status
@@ -90,6 +95,16 @@ class InitiativeAgreementServices:
                   current_status.initiative_agreement_status_id,
                   self.request.user.user_profile_id
               )
+
+        # Create internal comment if provided
+        if initiative_agreement_data.internal_comment:
+            internal_comment_data = InternalCommentCreateSchema(
+                entity_type=EntityTypeEnum.INITIATIVE_AGREEMENT,
+                entity_id=initiative_agreement.initiative_agreement_id,
+                comment=initiative_agreement_data.internal_comment,
+                audience_scope=AudienceScopeEnum.ANALYST
+            )
+            await self.internal_comment_service.create_internal_comment(internal_comment_data)
 
         return initiative_agreement
 

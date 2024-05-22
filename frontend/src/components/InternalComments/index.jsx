@@ -10,7 +10,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import InternalCommentList from './InternalCommentList';
 import Loading from '@/components/Loading'
 
-const InternalComments = ({ entityType, entityId }) => {
+const InternalComments = ({ entityType, entityId, onCommentChange }) => {
   const { t } = useTranslation(['internalComment'])
   const apiService = useApiService()
   const { hasAnyRole } = useCurrentUser()
@@ -67,22 +67,24 @@ const InternalComments = ({ entityType, entityId }) => {
     if (!showAddCommentBtn)
       return;
 
-    const loadComments = async () => {
-      setIsLoading(true);
-      try {
-        // const fetchedComments = await fetchComments(entityType, entityId);
-        const response = await apiService.get(`/internal_comments/${entityType}/${entityId}`);
-        const fetchedComments = response.data;
-        const sortedComments = fetchedComments.sort((a, b) => b.internalCommentId - a.internalCommentId);
-        setComments(sortedComments);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (entityType && entityId) {
+      const loadComments = async () => {
+        setIsLoading(true);
+        try {
+          // const fetchedComments = await fetchComments(entityType, entityId);
+          const response = await apiService.get(`/internal_comments/${entityType}/${entityId}`);
+          const fetchedComments = response.data;
+          const sortedComments = fetchedComments.sort((a, b) => b.internalCommentId - a.internalCommentId);
+          setComments(sortedComments);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setIsLoading(false);
+        }
+      };
 
-    loadComments();
+      loadComments();
+    }
   }, [entityType, entityId]);
 
   // Adds a newly created comment to the local state.
@@ -129,6 +131,7 @@ const InternalComments = ({ entityType, entityId }) => {
       onEditComment={handleEditComment}
       addCommentFormKey={addCommentKey}
       showAddCommentBtn={showAddCommentBtn}
+      onCommentChange={onCommentChange}
     />
   );
 };
@@ -137,8 +140,9 @@ InternalComments.propTypes = {
   entityType: PropTypes.string.isRequired,
   entityId: PropTypes.oneOfType([
     PropTypes.number,
-    PropTypes.oneOf([null])
-  ])
+    PropTypes.oneOf([null]),
+  ]),
+  onCommentChange: PropTypes.func,
 };
 
 export default InternalComments;
