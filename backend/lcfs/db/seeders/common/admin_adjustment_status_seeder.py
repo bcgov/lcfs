@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatus, AdminAdjustmentStatusEnum
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus, AdminAdjustmentStatusEnum
 
 logger = logging.getLogger(__name__)
 

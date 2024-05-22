@@ -11,10 +11,10 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.transfer.schema import TransferSchema
 
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
-from lcfs.db.models.TransferCategory import TransferCategory, TransferCategoryEnum
-from lcfs.db.models.TransferHistory import TransferHistory
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
+from lcfs.db.models.transfer.TransferCategory import TransferCategory, TransferCategoryEnum
+from lcfs.db.models.transfer.TransferHistory import TransferHistory
 
 logger = getLogger("transfer_repo")
 

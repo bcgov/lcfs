@@ -10,7 +10,7 @@ from lcfs.db import dependencies
 
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.db.models.OrganizationStatus import OrgStatusEnum
+from lcfs.db.models.organization.OrganizationStatus import OrgStatusEnum
 
 from .services import OrganizationsService
 from .schema import (

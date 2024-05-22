@@ -1,9 +1,9 @@
 import pytest
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.tests.payloads import test_transfer
-from lcfs.db.models.Transfer import Transfer
+from lcfs.db.models.transfer.Transfer import Transfer
 from datetime import datetime
-from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.user.UserProfile import UserProfile
 
 
 @pytest.fixture

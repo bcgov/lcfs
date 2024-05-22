@@ -7,7 +7,7 @@ from fastapi import FastAPI, status
 from httpx import AsyncClient
 
 from lcfs.utils.constants import LCFS_Constants
-from lcfs.db.models.Transfer import Transfer, TransferRecommendationEnum
+from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.web.api.transaction.schema import TransactionListSchema
 
 

@@ -1,5 +1,5 @@
 from enum import Enum
-from lcfs.db.models.TransferStatus import TransferStatusEnum
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 
 
 class LCFS_Constants:

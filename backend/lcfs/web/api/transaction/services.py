@@ -8,7 +8,7 @@ from sqlalchemy import or_
 
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
-from lcfs.db.models.TransactionView import TransactionView
+from lcfs.db.models.transaction.TransactionView import TransactionView
 from lcfs.web.api.transaction.schema import TransactionStatusSchema, TransactionViewSchema
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (

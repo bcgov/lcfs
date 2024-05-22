@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatus, InitiativeAgreementStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus, InitiativeAgreementStatusEnum
 
 logger = logging.getLogger(__name__)
 

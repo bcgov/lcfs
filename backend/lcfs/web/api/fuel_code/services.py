@@ -7,10 +7,10 @@ from datetime import datetime
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
-from lcfs.db.models.FeedstockFuelTransportMode import FeedstockFuelTransportMode
-from lcfs.db.models.FinishedFuelTransportMode import FinishedFuelTransportMode
-from lcfs.db.models.FuelCode import FuelCode
-from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
+from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
 from lcfs.web.api.fuel_code.schema import (
     AdditionalCarbonIntensitySchema,
     EnergyDensitySchema,

@@ -20,11 +20,11 @@ from lcfs.web.api.base import (
 
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
-from lcfs.db.models.OrganizationAddress import OrganizationAddress
-from lcfs.db.models.OrganizationStatus import OrganizationStatus, OrgStatusEnum
-from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
-from lcfs.db.models.Organization import Organization
-from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
+from lcfs.db.models.organization.OrganizationStatus import OrganizationStatus, OrgStatusEnum
+from lcfs.db.models.organization.OrganizationAttorneyAddress import OrganizationAttorneyAddress
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 
 from .repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository

@@ -4,7 +4,7 @@ from typing import List
 from fastapi import Depends, Request
 
 from lcfs.web.core.decorators import service_handler
-from lcfs.db.models.InternalComment import InternalComment
+from lcfs.db.models.comment.InternalComment import InternalComment
 from .repo import InternalCommentRepository
 from .schema import (
     InternalCommentCreateSchema,

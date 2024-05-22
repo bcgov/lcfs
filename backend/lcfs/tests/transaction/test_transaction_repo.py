@@ -1,7 +1,7 @@
 import pytest
 from lcfs.web.api.base import SortOrder
 from lcfs.web.api.transaction.repo import EntityType, TransactionRepository
-from lcfs.db.models.TransferStatus import TransferStatusEnum
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.tests.transaction.transaction_payloads import *
 
 

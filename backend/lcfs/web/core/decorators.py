@@ -5,8 +5,8 @@ from logging import getLogger
 from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.db.models.UserRole import UserRole
-from lcfs.db.models.Role import RoleEnum
+from lcfs.db.models.user.UserRole import UserRole
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.exception.exceptions import ServiceException, DatabaseException, DataNotFoundException
 
 

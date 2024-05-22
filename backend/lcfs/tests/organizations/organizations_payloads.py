@@ -1,4 +1,4 @@
-from lcfs.db.models.Transaction import TransactionActionEnum, Transaction
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum, Transaction
 
 # Transactions ORM Models
 adjustment_transaction_orm_model = Transaction(

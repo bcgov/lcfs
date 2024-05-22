@@ -1,4 +1,4 @@
-from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.user.UserProfile import UserProfile
 
 # User ORM Model
 user_orm_model = UserProfile(

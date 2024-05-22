@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
-from lcfs.db.models.TransferStatus import TransferStatusEnum
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 
 from lcfs.web.api.transfer.schema import TransferCreateSchema
 from lcfs.web.api.organizations.repo import OrganizationsRepository

@@ -4,16 +4,16 @@ from pathlib import Path
 from sqlalchemy import select
 
 # database models
-from lcfs.db.models.EnergyDensity import EnergyDensity
-from lcfs.db.models.AdditionalCarbonIntensity import AdditionalCarbonIntensity
-from lcfs.db.models.EnergyEffectivenessRatio import EnergyEffectivenessRatio
-from lcfs.db.models.EndUseType import EndUseType
-from lcfs.db.models.FuelCategory import FuelCategory
-from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
-from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
-from lcfs.db.models.TransportMode import TransportMode
-from lcfs.db.models.UnitOfMeasure import UnitOfMeasure
-from lcfs.db.models.FuelType import FuelType
+from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
+from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
+from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
+from lcfs.db.models.fuel.EndUseType import EndUseType
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
+from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.TransportMode import TransportMode
+from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.FuelType import FuelType
 
 logger = logging.getLogger(__name__)
 

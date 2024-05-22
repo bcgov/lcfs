@@ -1,8 +1,8 @@
 import pytest
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.tests.transfer.transfer_payloads import transfer_orm_model, transfer_orm_model_2, transfer_orm_fields
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferHistory import TransferHistory
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from sqlalchemy import select, and_
 
 

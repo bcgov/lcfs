@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from lcfs.web.api.role.schema import RoleSchema
-from lcfs.db.models.Role import Role, RoleEnum
+from lcfs.db.models.user.Role import Role, RoleEnum
 
 logger = getLogger("role_repo")
 

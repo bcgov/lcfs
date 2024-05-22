@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime
 from sqlalchemy import select, and_, text
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.Organization import Organization
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.organization.Organization import Organization
 
 logger = logging.getLogger(__name__)
 
