@@ -100,9 +100,9 @@ jobs:
         with:
           wait-on: ${{ secrets.CYPRESS_HOST }}
           wait-on-timeout: 120
-          record: true
-          parallel: true
-          group: 'UI-Chrome'
+          # record: true
+          # parallel: true
+          # group: 'UI-Chrome'
           start: npm run cypress:dev
           install-command: npm ci -f
           working-directory: frontend
