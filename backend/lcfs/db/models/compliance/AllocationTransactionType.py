@@ -12,7 +12,5 @@ class AllocationTransactionType(BaseModel, EffectiveDates, DisplayOrder):
     type = Column(String, nullable=False, comment="Type of the allocation transaction")
     description = Column(String, nullable=True, comment="Description of the allocation transaction type")
 
-    allocation_agreements = relationship('AllocationAgreement', back_populates='transaction_type')
-
     def __repr__(self):
         return f"<AllocationTransactionType(id={self.allocation_transaction_type_id}, type={self.type})>"

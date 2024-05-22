@@ -9,6 +9,7 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     )
     
     allocation_agreement_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the allocation agreement")
+    compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
     transaction_partner = Column(String, nullable=False, comment="Partner involved in the transaction")
     postal_address = Column(String, nullable=False, comment="Postal address of the transaction partner")
     quantity_not_sold = Column(Integer, nullable=False, comment="Quantity of fuel not sold")
@@ -20,13 +21,13 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     quantity = Column(Integer, nullable=False, comment="Quantity of fuel involved in the transaction")
     custom_fuel_type_id = Column(Integer, ForeignKey('custom_fuel_type.custom_fuel_type_id'), nullable=True, comment="Foreign key to the custom fuel type")
 
-    fuel_type = relationship('FuelType', back_populates='allocation_agreements')
-    transaction_type = relationship('AllocationTransactionType', back_populates='allocation_agreements')
-    fuel_category = relationship('FuelCategory', back_populates='allocation_agreements')
-    provision_of_the_act = relationship('ProvisionOfTheAct', back_populates='allocation_agreements')
-    fuel_code = relationship('FuelCode', back_populates='allocation_agreements')
-    custom_fuel_type = relationship('CustomFuelType', back_populates='allocation_agreements')
-    compliance_reports = relationship('ComplianceReport', back_populates='allocation_agreement')
+    compliance_report = relationship('ComplianceReport', back_populates='allocation_agreements')
+    fuel_type = relationship('FuelType')
+    transaction_type = relationship('AllocationTransactionType')
+    fuel_category = relationship('FuelCategory')
+    provision_of_the_act = relationship('ProvisionOfTheAct')
+    fuel_code = relationship('FuelCode')
+    custom_fuel_type = relationship('CustomFuelType')
 
     def __repr__(self):
         return f"<AllocationAgreement(id={self.allocation_agreement_id}, transaction_partner={self.transaction_partner})>"

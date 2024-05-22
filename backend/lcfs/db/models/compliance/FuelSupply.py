@@ -9,6 +9,7 @@ class FuelSupply(BaseModel, Auditable):
     )
     
     fuel_supply_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the fuel supply")
+    compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
     quantity = Column(Integer, nullable=False, comment="Quantity of fuel supplied")
     fuel_category_id = Column(Integer, ForeignKey('fuel_category.fuel_category_id'), nullable=False, comment="Foreign key to the fuel category")
     fuel_code_id = Column(Integer, ForeignKey('fuel_code.fuel_code_id'), nullable=False, comment="Foreign key to the fuel code")
@@ -18,13 +19,13 @@ class FuelSupply(BaseModel, Auditable):
     custom_fuel_energy_density = Column(Float, nullable=True, comment="Energy density of the custom fuel")
     end_use_id = Column(Integer, ForeignKey('end_use_type.end_use_type_id'), nullable=True, comment="Foreign key to the end use type")
 
-    fuel_category = relationship('FuelCategory', back_populates='fuel_supplies')
-    fuel_code = relationship('FuelCode', back_populates='fuel_supplies')
-    fuel_type = relationship('FuelType', back_populates='fuel_supplies')
-    provision_of_the_act = relationship('ProvisionOfTheAct', back_populates='fuel_supplies')
-    custom_fuel_type = relationship('CustomFuelType', back_populates='fuel_supplies')
-    end_use_type = relationship('EndUseType', back_populates='fuel_supplies')
-    compliance_reports = relationship('ComplianceReport', back_populates='fuel_supply')
+    compliance_report = relationship('ComplianceReport', back_populates='fuel_supplies')
+    fuel_category = relationship('FuelCategory')
+    fuel_code = relationship('FuelCode')
+    fuel_type = relationship('FuelType')
+    provision_of_the_act = relationship('ProvisionOfTheAct')
+    custom_fuel_type = relationship('CustomFuelType')
+    end_use_type = relationship('EndUseType')
 
     def __repr__(self):
         return f"<FuelSupply(id={self.fuel_supply_id}, quantity={self.quantity})>"

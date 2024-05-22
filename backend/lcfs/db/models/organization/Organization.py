@@ -61,3 +61,5 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     transfers_received = relationship('Transfer', 
                                   foreign_keys="[Transfer.to_organization_id]", 
                                   back_populates='to_organization')
+    compliance_reports = relationship('ComplianceReport', back_populates='organization')
+    

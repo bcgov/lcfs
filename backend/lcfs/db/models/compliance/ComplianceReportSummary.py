@@ -18,7 +18,7 @@ class ComplianceReportSummary(BaseModel):
     diesel_category_obligation = Column(Integer, nullable=False, comment="Obligation for the diesel category")
     diesel_category_previously_retained = Column(Integer, nullable=False, comment="Previously retained diesel category units")
 
-    compliance_reports = relationship('ComplianceReport', back_populates='summary')
+    compliance_report = relationship('ComplianceReport', back_populates='summary')
 
     def __repr__(self):
         return f"<ComplianceReportSummary(id={self.summary_id})>"

@@ -14,7 +14,6 @@ class CustomFuelType(BaseModel, EffectiveDates, DisplayOrder):
 
     fuel_supplies = relationship('FuelSupply', back_populates='custom_fuel_type')
     other_uses = relationship('OtherUses', back_populates='custom_fuel_type')
-    allocation_agreements = relationship('AllocationAgreement', back_populates='custom_fuel_type')
 
     def __repr__(self):
         return f"<CustomFuelType(id={self.custom_fuel_type_id}, type={self.type})>"
