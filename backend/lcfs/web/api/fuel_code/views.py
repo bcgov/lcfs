@@ -25,6 +25,7 @@ from lcfs.web.api.fuel_code.schema import (
     EnergyEffectivenessRatioSchema,
     FuelCodeCreateSchema,
     FuelCodesSchema,
+    FuelCodeSchema,
     TableOptionsSchema,
     FuelCodeSchema
 )
@@ -78,7 +79,6 @@ async def save_fuel_codes(
     return await service.save_fuel_codes(fuel_codes)
 
 
-
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
 @view_handler
 async def get_fuel_code(
@@ -108,6 +108,7 @@ async def delete_fuel_code(
     service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
+
 
 @router.get(
     "/energy-densities",
@@ -149,4 +150,3 @@ async def get_use_of_a_carbon_intensities(
 ):
     """Endpoint to get UCI's"""
     return await service.get_use_of_a_carbon_intensities()
-
