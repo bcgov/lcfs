@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        environment: [dev, stg, prod]
     # In order for Cypress to run well, it needs to be fed the needed parameters.
     # The below is a mix of Cypress environment variables (All capital) and ones that are needed for this specific set of scripts (Mix of capital and lowercase)
     env:
