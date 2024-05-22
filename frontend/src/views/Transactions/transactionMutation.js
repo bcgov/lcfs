@@ -34,18 +34,33 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
     const idPrefix = transactionType === ADMIN_ADJUSTMENT ? 'adminadjustment-' : 'initiativeagreement-'
     const txnId = response.data[idField]
     const { editRoute, viewRoute } = getTransactionRoutes(transactionType, txnId)
-
+  
+    // Check history for 'Recommended' status, to account for Returned action
+    const hasRecommendedHistory = response.data.history?.some(item =>
+      item.initiativeAgreementStatus?.status === 'Recommended' ||
+      item.adminAdjustmentStatus?.status === 'Recommended'
+    );
+  
     // Invalidate relevant queries
     queryClient.invalidateQueries([transactionType, transactionId]);
-
+  
     // Set the message and state for navigating
     const message = t(`${transactionType}:actionMsgs.${transactionId ? 'updatedText' : 'createdText'}`)
     const navigateState = {
       state: { message, severity: 'success' }
     }
-
-    if (status === TRANSACTION_STATUSES.DRAFT) {
+  
+    if (status === TRANSACTION_STATUSES.DRAFT && !hasRecommendedHistory) {
       navigate(editRoute, navigateState)
+    } else if (status === TRANSACTION_STATUSES.DRAFT && hasRecommendedHistory) {
+      navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
+        state: {
+          message: t(`${transactionType}:actionMsgs.successText`, {
+            status: response.data.currentStatus.status.toLowerCase()
+          }),
+          severity: 'success'
+        }
+      })
     } else if (status === TRANSACTION_STATUSES.RECOMMENDED ||
       status === TRANSACTION_STATUSES.APPROVED) {
       navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
@@ -62,7 +77,8 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
       setAlertMessage(t(`${transactionType}:actionMsgs.successText`, { status: 'saved' }))
       setAlertSeverity('success')
     }
-    if(alertRef?.current){
+    
+    if (alertRef?.current) {
       alertRef.current.triggerAlert()
     }
     window.scrollTo(0, 0)
