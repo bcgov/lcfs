@@ -1,6 +1,6 @@
 # Workflow starts automatically on push or can be triggered manually.
 # This is a desirable pattern as it allows for adhoc test runs without a code push
-name: e2e-cypress-test
+name: Cypress tests
 on: [push, workflow_dispatch]
 # on:
 #   push:
@@ -96,6 +96,9 @@ jobs:
           wait-on: ${{ secrets.CYPRESS_HOST }}
           wait-on-timeout: 120
           record: true
+          parallel: true
+          group: 'UI-Chrome'
+          start: npm run cypress:dev
           install-command: npm ci -f
           working-directory: frontend
           browser: chrome
@@ -106,9 +109,3 @@ jobs:
         run: |
           echo Git Base Ref: ${{ github.base_ref }}
           echo Git Change ID: ${{ github.event.number }}
-          echo Cypress BaseUrl: $CYPRESS_BASE_URL
-          echo Cypress Host: $CYPRESS_HOST
-          echo Cypress Environment: $CYPRESS_ENVIRONMENT
-          echo Keycloak Authorization Realm: $CYPRESS_authRealm
-          echo Keycloak Authorization Client ID: $CYPRESS_authClientId
-          echo Keycloak Authorization URL: $CYPRESS_authUrl
