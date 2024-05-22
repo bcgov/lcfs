@@ -56,7 +56,12 @@ const ViewFuelCode = () => {
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
     useDeleteFuelCode(fuelCodeID, {
       onSuccess: () => {
-        navigate(ROUTES.ADMIN_FUEL_CODES)
+        navigate(ROUTES.ADMIN_FUEL_CODES, {
+          state: {
+            message: t('fuelCode:fuelCodeDeleteSuccessMsg'),
+            severity: 'success'
+          }
+        })
       }
     })
 
