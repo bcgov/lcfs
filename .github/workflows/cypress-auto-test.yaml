@@ -56,27 +56,27 @@ jobs:
       # Since the APP needs the API and Cypress needs the APP, we first have to test if the API is running and accessible.
       # Often an OK from the OpenShift deploy does not automatically mean that the API/APP is functional and/or reachable.
       # We like to use a straightforward CURL command, which we have included as a script in this repo.
-      - name: Wait for API response
-        env:
-          url: ${{ secrets.CYPRESS_API_HOST }}
-          code: 200 # The HTML Code we expect to get back
-          wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
-          max_attempts: 5
-        run: |
-          cd frontend
-          chmod +x waitforconnection.sh
-          bash ./waitforconnection.sh
+      # - name: Wait for API response
+      #   env:
+      #     url: ${{ secrets.CYPRESS_API_HOST }}
+      #     code: 200 # The HTML Code we expect to get back
+      #     wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
+      #     max_attempts: 5
+      #   run: |
+      #     cd frontend
+      #     chmod +x waitforconnection.sh
+      #     bash ./waitforconnection.sh
 
-      - name: Wait for APP response
-        env:
-          url: ${{ secrets.CYPRESS_HOST }}
-          code: 200
-          wait_time: 10
-          max_attempts: 5
-        run: |
-          cd frontend
-          chmod +x waitforconnection.sh
-          bash ./waitforconnection.sh
+      # - name: Wait for APP response
+      #   env:
+      #     url: ${{ secrets.CYPRESS_HOST }}
+      #     code: 200
+      #     wait_time: 10
+      #     max_attempts: 5
+      #   run: |
+      #     cd frontend
+      #     chmod +x waitforconnection.sh
+      #     bash ./waitforconnection.sh
 
       # This is the actual Cypress action, invoked with a set of extra parameters.
       # Wait-on/wait-on-timeout: This is the Cypress way of waiting for a response from the application under test, but it does not address the API readiness hence the above Waits.
