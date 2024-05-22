@@ -100,9 +100,6 @@ jobs:
         with:
           wait-on: ${{ secrets.CYPRESS_HOST }}
           wait-on-timeout: 120
-          # record: true
-          # parallel: true
-          # group: 'UI-Chrome'
           start: npm run cypress:dev
           install-command: npm ci -f
           working-directory: frontend
@@ -110,12 +107,12 @@ jobs:
           ci-build-id: ${{ github.event.number }}
       - name: Debug Cypress Run
         if: failure()
-        run: cat cypress/reports/*.json
+        run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: cypress-screenshots
-          path: ./cypress/screenshots
+          path: /home/runner/work/lcfs/lcfs/frontend/cypress/screenshots
 
       # For review/debug purposes, just print out key parameters
       - name: Print Env Vars
