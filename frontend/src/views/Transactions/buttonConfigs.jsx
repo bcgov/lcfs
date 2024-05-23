@@ -47,7 +47,8 @@ export const buttonClusterConfigFn = ({
   t,
   setModalData,
   createUpdateAdminAdjustment,
-  createUpdateInitiativeAgreement
+  createUpdateInitiativeAgreement,
+  internalComment
 }) => {
   const transactionButtons = {
     saveDraft: {
@@ -61,6 +62,7 @@ export const buttonClusterConfigFn = ({
         mutationFn({
           data: {
             ...formData,
+            internalComment: internalComment,
             currentStatus: TRANSACTION_STATUSES.DRAFT
           }
         })
@@ -103,6 +105,7 @@ export const buttonClusterConfigFn = ({
             await mutationFn({
               data: {
                 ...formData,
+                internalComment: internalComment,
                 currentStatus: TRANSACTION_STATUSES.RECOMMENDED
               }
             })

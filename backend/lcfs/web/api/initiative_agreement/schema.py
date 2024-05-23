@@ -38,6 +38,7 @@ class InitiativeAgreementBaseSchema(BaseSchema):
     transaction_effective_date: Optional[date] = None
     to_organization_id: int
     gov_comment: Optional[str] = None
+    internal_comment: Optional[str] = None
 
     @field_validator('compliance_units')
     def validate_compliance_units(cls, v):
