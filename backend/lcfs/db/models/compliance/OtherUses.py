@@ -10,18 +10,17 @@ class OtherUses(BaseModel, Auditable):
     
     other_uses_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the other uses record")
     compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
-    custom_fuel_id = Column(Integer, ForeignKey('custom_fuel_type.custom_fuel_type_id'), nullable=False, comment="Foreign key to the custom fuel type")
-    expected_use_id = Column(Integer, ForeignKey('expected_use_type.expected_use_type_id'), nullable=False, comment="Foreign key to the expected use type")
-    fuel_category_id = Column(Integer, ForeignKey('fuel_category.fuel_category_id'), nullable=False, comment="Foreign key to the fuel category")
     fuel_type_id = Column(Integer, ForeignKey('fuel_type.fuel_type_id'), nullable=False, comment="Foreign key to the fuel type")
-    quantity = Column(Integer, nullable=False, comment="Quantity of fuel used")
-    rationale = Column(String, nullable=True, comment="Rationale for the use of the fuel")
+    fuel_category_id = Column(Integer, ForeignKey('fuel_category.fuel_category_id'), nullable=False, comment="Foreign key to the fuel category")
+    quantity_supplied = Column(Integer, nullable=False, comment="Quantity of fuel used. Cannot be negative.")
+    units = Column(String, nullable=False, comment="Units of the fuel quantity. Auto-selected, locked field.")
+    expected_use_id = Column(Integer, ForeignKey('expected_use_type.expected_use_type_id'), nullable=False, comment="Foreign key to the expected use type")
+    rationale = Column(String, nullable=True, comment="Rationale for the use of the fuel, required if 'Other' is selected as expected use")
 
     compliance_report = relationship('ComplianceReport', back_populates='other_uses')
-    custom_fuel_type = relationship('CustomFuelType')
-    expected_use_type = relationship('ExpectedUseType')
-    fuel_category = relationship('FuelCategory')
     fuel_type = relationship('FuelType')
+    fuel_category = relationship('FuelCategory')
+    expected_use_type = relationship('ExpectedUseType')
 
     def __repr__(self):
-        return f"<OtherUses(id={self.other_uses_id}, quantity={self.quantity})>"
+        return f"<OtherUses(id={self.other_uses_id}, quantity_supplied={self.quantity_supplied})>"

@@ -973,25 +973,31 @@ def upgrade() -> None:
             "quantity",
             sa.Integer(),
             nullable=False,
-            comment="Quantity of fuel being notionally transferred",
+            comment="Quantity of fuel being notionally transferred. Cannot be negative.",
         ),
         sa.Column(
-            "notional_transfer_partner",
+            "legal_name",
             sa.String(),
             nullable=False,
-            comment="Partner to whom the fuel is being transferred",
+            comment="Legal name of the trading partner",
         ),
         sa.Column(
-            "postal_address",
+            "address_for_service",
             sa.String(),
             nullable=False,
-            comment="Postal address of the transfer partner",
+            comment="Address for service of the trading partner",
         ),
         sa.Column(
             "fuel_category_id",
             sa.Integer(),
             nullable=False,
             comment="Foreign key to the fuel category",
+        ),
+        sa.Column(
+            "received_or_transferred",
+            sa.String(),
+            nullable=False,
+            comment="Indicates if the fuel was received or transferred",
         ),
         sa.Column(
             "create_date",
@@ -1046,16 +1052,10 @@ def upgrade() -> None:
             comment="Foreign key to the compliance report",
         ),
         sa.Column(
-            "custom_fuel_id",
+            "fuel_type_id",
             sa.Integer(),
             nullable=False,
-            comment="Foreign key to the custom fuel type",
-        ),
-        sa.Column(
-            "expected_use_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the expected use type",
+            comment="Foreign key to the fuel type",
         ),
         sa.Column(
             "fuel_category_id",
@@ -1064,19 +1064,28 @@ def upgrade() -> None:
             comment="Foreign key to the fuel category",
         ),
         sa.Column(
-            "fuel_type_id",
+            "quantity_supplied",
             sa.Integer(),
             nullable=False,
-            comment="Foreign key to the fuel type",
+            comment="Quantity of fuel used. Cannot be negative.",
         ),
         sa.Column(
-            "quantity", sa.Integer(), nullable=False, comment="Quantity of fuel used"
+            "units",
+            sa.String(),
+            nullable=False,
+            comment="Units of the fuel quantity. Auto-selected, locked field.",
+        ),
+        sa.Column(
+            "expected_use_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the expected use type",
         ),
         sa.Column(
             "rationale",
             sa.String(),
             nullable=True,
-            comment="Rationale for the use of the fuel",
+            comment="Rationale for the use of the fuel, required if 'Other' is selected as expected use",
         ),
         sa.Column(
             "create_date",
@@ -1109,20 +1118,16 @@ def upgrade() -> None:
             ["compliance_report.compliance_report_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["custom_fuel_id"],
-            ["custom_fuel_type.custom_fuel_type_id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["expected_use_id"],
-            ["expected_use_type.expected_use_type_id"],
+            ["fuel_type_id"],
+            ["fuel_type.fuel_type_id"],
         ),
         sa.ForeignKeyConstraint(
             ["fuel_category_id"],
             ["fuel_category.fuel_category_id"],
         ),
         sa.ForeignKeyConstraint(
-            ["fuel_type_id"],
-            ["fuel_type.fuel_type_id"],
+            ["expected_use_id"],
+            ["expected_use_type.expected_use_type_id"],
         ),
         sa.PrimaryKeyConstraint("other_uses_id"),
         comment="Records other uses of fuels that are subject to renewable requirements but do not earn credits.",
