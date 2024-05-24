@@ -57,6 +57,11 @@ export const AddEditViewTransaction = () => {
   const alertRef = useRef()
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+<<<<<<< feat/alex-return-txn-to-analyst-382
+=======
+  const [txnType, setTxnType] = useState(null);
+  const [internalComment, setInternalComment] = useState('')
+>>>>>>> release-0.2.0
 
   const { handleSuccess, handleError } = useTransactionMutation(
     t,
@@ -95,6 +100,7 @@ export const AddEditViewTransaction = () => {
     },
   })
 
+<<<<<<< feat/alex-return-txn-to-analyst-382
   const {
     watch,
     setValue,
@@ -103,6 +109,11 @@ export const AddEditViewTransaction = () => {
   } = methods
 
   const txnType = watch('txnType')
+=======
+  const handleCommentChange = (newComment) => {
+    setInternalComment(newComment)
+  }
+>>>>>>> release-0.2.0
 
   useEffect(() => {
     const path = window.location.pathname
@@ -215,8 +226,12 @@ export const AddEditViewTransaction = () => {
         setModalData,
         createUpdateAdminAdjustment,
         createUpdateInitiativeAgreement,
+<<<<<<< feat/alex-return-txn-to-analyst-382
+=======
+        internalComment
+>>>>>>> release-0.2.0
       }),
-    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles]
+    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles, internalComment]
   )
 
   if (transactionId && isTransactionDataLoading) return <Loading message={t('txn:loadingText')} />
@@ -284,18 +299,20 @@ export const AddEditViewTransaction = () => {
         />}
 
         {/* Internal Comments */}
-        {/* {mode !== 'add' &&
-          <BCBox mt={4}>
-            <Typography variant="h6" color="primary">
-              {t(`txn:internalCommentsOptional`)}
-            </Typography>
-            <BCBox>
-              <Role roles={govRoles}>
-                <InternalComments entityType={txnType} entityId={transactionId ?? null} />
-              </Role>
-            </BCBox>
+        <BCBox mt={4}>
+          <Typography variant="h6" color="primary">
+            {t(`txn:internalCommentsOptional`)}
+          </Typography>
+          <BCBox>
+            <Role roles={govRoles}>
+              <InternalComments
+                entityType={txnType}
+                entityId={transactionId ?? null}
+                onCommentChange={handleCommentChange}
+              />
+            </Role>
           </BCBox>
-        } */}
+        </BCBox>
 
         {/* Transaction History */}
         {transactionId && <TransactionHistory transactionHistory={transactionData?.history} />}

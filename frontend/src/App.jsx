@@ -176,7 +176,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.REPORTS,
         element: <ComplianceReports />,
-        handle: { title: 'ComplianceReports' }
+        handle: { title: 'Compliance reporting' }
       },
       {
         path: ROUTES.REPORTS_VIEW,

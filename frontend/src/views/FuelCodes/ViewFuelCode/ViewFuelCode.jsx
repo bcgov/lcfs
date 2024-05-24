@@ -23,6 +23,7 @@ import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
+import { useQueryClient } from '@tanstack/react-query'
 
 const ViewFuelCode = () => {
   const gridRef = useRef(null)
@@ -31,6 +32,7 @@ const ViewFuelCode = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'fuelCode'])
+  const queryClient = useQueryClient()
 
   const [rowData, setRowData] = useState([])
   const [gridApi, setGridApi] = useState(null)
@@ -47,13 +49,19 @@ const ViewFuelCode = () => {
   const { mutate: updateFuelCode, isPending: isUpdateFuelCodePending } =
     useUpdateFuelCode(fuelCodeID, {
       onSuccess: () => {
+        queryClient.invalidateQueries(['fuel-code', fuelCodeID])
         navigate(ROUTES.ADMIN_FUEL_CODES + `?hid=${fuelCodeID}`)
       }
     })
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
     useDeleteFuelCode(fuelCodeID, {
       onSuccess: () => {
-        navigate(ROUTES.ADMIN_FUEL_CODES)
+        navigate(ROUTES.ADMIN_FUEL_CODES, {
+          state: {
+            message: t('fuelCode:fuelCodeDeleteSuccessMsg'),
+            severity: 'success'
+          }
+        })
       }
     })
 
