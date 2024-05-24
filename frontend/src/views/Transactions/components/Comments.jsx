@@ -1,5 +1,5 @@
+import { useState, useEffect } from 'react'
 import { Box, Typography, Collapse, IconButton, TextField } from '@mui/material'
-import { useState } from 'react'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useFormContext } from 'react-hook-form'
@@ -8,9 +8,19 @@ import { useTranslation } from 'react-i18next'
 
 export const Comments = ({commentField, isEditable}) => {
   const { t } = useTranslation(['txn'])
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
-  const { register } = useFormContext()
+  const { register, getValues } = useFormContext()
+
+  // Automatically expand the TextField if it has an initial value
+  useEffect(() => {
+    setTimeout(() => {
+      const value = getValues(commentField)
+      if (value) {
+        setIsExpanded(true)
+      }
+    }, 0)
+  }, [commentField, getValues])
 
   const handleToggle = () => {
     setIsExpanded(!isExpanded)

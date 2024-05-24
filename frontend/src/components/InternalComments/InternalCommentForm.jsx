@@ -11,13 +11,19 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
-const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCancel, isEditing = false, showAddCommentBtn = true }) => {
+const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCancel, isEditing = false, showAddCommentBtn = true, onCommentChange }) => {
   const { t } = useTranslation(['internalComment'])
   const [commentText, setCommentText] = useState(initialCommentText);
 
   useEffect(() => {
     setCommentText(initialCommentText);
   }, [initialCommentText, isEditing]);
+
+  useEffect(() => {
+    if (onCommentChange) {
+      onCommentChange(commentText);
+    }
+  }, [commentText, onCommentChange]);
 
   return (
     <>
@@ -83,6 +89,8 @@ InternalCommentForm.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   onCancel: PropTypes.func,
   isEditing: PropTypes.bool,
+  showAddCommentBtn: PropTypes.bool,
+  onCommentChange: PropTypes.func,
 };
 
 export default InternalCommentForm;

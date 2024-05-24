@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next'
 import commonEn from '@/assets/locales/en/common.json'
 import orgEn from '@/assets/locales/en/organization.json'
 import adminEn from '@/assets/locales/en/admin.json'
+import reportEn from '@/assets/locales/en/reports.json'
 import fuelCodeEn from '@/assets/locales/en/fuelCode.json'
 import txnEn from '@/assets/locales/en/transaction.json'
 import transferEn from '@/assets/locales/en/transfer.json'
@@ -16,6 +17,7 @@ const resources = {
     // Namespaces
     common: commonEn,
     admin: adminEn,
+    report: reportEn,
     fuelCode: fuelCodeEn,
     org: orgEn,
     txn: txnEn,

@@ -1,0 +1,12 @@
+{
+  "title": "Compliance reporting",
+  "newReportBtn": "New complaince report",
+  "reportColLabels": {
+    "compliancePeriod": "Compliance period",
+    "organization": "Organization",
+    "type": "Type",
+    "status": "Current status",
+    "lastUpdated": "Last status update"
+  },
+  "noReportsFound": "No compliance reports found"
+}

@@ -32,6 +32,8 @@ export const ORGANIZATIONS_EDITUSER = `${ORGANIZATIONS_VIEWUSER}/edit-user`
 
 export const REPORTS = '/reports'
 export const REPORTS_VIEW = `${REPORTS}/:reportID`
+export const REPORTS_EDIT = `${REPORTS_VIEW}/edit-report`
+export const REPORTS_ADD = `${REPORTS}/add-report`
 
 export const NOTIFICATIONS = '/notifications'
 export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/settings`

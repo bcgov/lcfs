@@ -30,5 +30,6 @@ export const AddEditTransactionSchema = Yup.object({
         })
         .nullable()
         .default(null),
-    toOrgComment: Yup.string()
+    toOrgComment: Yup.string(),
+    internalComment: Yup.string()
 })

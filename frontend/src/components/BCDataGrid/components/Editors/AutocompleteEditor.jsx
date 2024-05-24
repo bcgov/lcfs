@@ -5,7 +5,6 @@ import {
   Box,
   Checkbox,
   Chip,
-  Typography,
   Stack
 } from '@mui/material'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
@@ -35,7 +34,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
       data-testid="ag-grid-editor-select-options"
       sx={{
         '& .MuiAutocomplete-inputRoot': {
-          paddingBottom: '3px',
+          paddingBottom: '4px',
           backgroundColor: '#fff'
         }
       }}
@@ -59,6 +58,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         autoHighlight
         size="medium"
         freeSolo={props.freeSolo}
+        autoSelect={props.autoSelect}
         getOptionLabel={(option) => option}
         renderOption={(propsIn, option, { selected }) => {
           // Check if the current option is already selected

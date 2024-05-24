@@ -9,6 +9,7 @@
   "approvedFuelCodeTitle": "Approved draft fuel code",
   "deletedFuelCodeTitle": "Deleted draft fuel code",
   "fuelCodeAddSuccessMsg": "Fuel code(s) added successfully.",
+  "fuelCodeDeleteSuccessMsg": "Fuel code deleted successfully.",
   "fuelCodeAddFailMsg": "Failed to add fuel code(s).",
   "saveDraftBtn": "Save draft code",
   "deleteFuelCodeBtn": "Delete Code",

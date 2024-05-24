@@ -10,7 +10,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // ag-grid
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
-import { addEditSchema } from '../_schema'
+import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
 import { AddRowsDropdownButton } from './AddRowsDropdownButton'
 // react components
 import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
@@ -30,6 +30,7 @@ export const AddFuelCode = () => {
   const [columnApi, setColumnApi] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [fuelCodeChanged, setFuelCodeChanged] = useState({ changed: false })
 
   const gridRef = useRef(null)
   const alertRef = useRef()
@@ -96,7 +97,7 @@ export const AddFuelCode = () => {
 
   const validationHandler = async (row) => {
     try {
-      await addEditSchema.fuelCodeSchema(t, optionsData).validate(row.data)
+      await fuelCodeSchema(t, optionsData).validate(row.data)
       setAlertMessage(`Validated fuel code`)
       setAlertSeverity('success')
       row.setData({
@@ -127,7 +128,38 @@ export const AddFuelCode = () => {
       ...params.data,
       modified: true
     })
-    validationHandler(params)
+    const focusedCell = params.api.getFocusedCell()
+    if (focusedCell.column.colId === 'fuelCode') {
+      const fuelCodeData = optionsData.latestFuelCodes.find(
+        (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
+      )
+
+      params.node?.setData({
+        ...params.data,
+        prefix: fuelCodeData.fuelCodePrefix.prefix,
+        company: fuelCodeData.company,
+        fuel: fuelCodeData.fuelCodeType.fuelType,
+        feedstock: fuelCodeData.feedstock,
+        feedstockLocation: fuelCodeData.feedstockLocation,
+        feedstockMisc: fuelCodeData.feedstockMisc,
+        fuelProductionFacilityLocation:
+          fuelCodeData.fuelProductionFacilityLocation,
+        feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
+          (mode) => mode.feedstockFuelTransportMode.transportMode
+        ),
+        finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
+          (mode) => mode.finishedFuelTransportMode.transportMode
+        ),
+        formerCompany: fuelCodeData.formerCompany
+      })
+      setFuelCodeChanged({ changed: true, rowIndex: focusedCell.rowIndex })
+      params.api.startEditingCell({
+        rowIndex: focusedCell.rowIndex,
+        colKey: 'company'
+      })
+    } else {
+      validationHandler(params)
+    }
   })
   const saveData = useCallback(() => {
     const allRowData = []
@@ -135,6 +167,15 @@ export const AddFuelCode = () => {
     const modifiedRows = allRowData.filter((row) => row.modified)
     // Add your API call to save modified rows here
   }, [])
+
+  useEffect(() => {
+    if (fuelCodeChanged.changed) {
+      gridApi.startEditingCell({
+        rowIndex: fuelCodeChanged.rowIndex,
+        colKey: 'company'
+      })
+    }
+  }, [fuelCodeChanged])
 
   const statusBarcomponent = useMemo(() => {
     return (
@@ -181,9 +222,7 @@ export const AddFuelCode = () => {
     gridApi.stopEditing(false)
     const allRowData = []
     gridApi.forEachNode(async (row) => {
-      console.log(row.rowIndex)
       await validationHandler(row)
-
       const data = {
         ...row.data,
         lastUpdated: new Date().toISOString().split('T')[0],
@@ -237,8 +276,8 @@ export const AddFuelCode = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={addEditSchema.fuelCodeColDefs(t, optionsData)}
-            defaultColDef={addEditSchema.defaultColDef}
+            columnDefs={fuelCodeColDefs(t, optionsData)}
+            defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
             setRowData={setRowData}

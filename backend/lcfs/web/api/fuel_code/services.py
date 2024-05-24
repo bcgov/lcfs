@@ -40,6 +40,7 @@ class FuelCodeServices:
         fuel_types = await self.repo.get_fuel_types()
         transport_modes = await self.repo.get_transport_modes()
         fuel_code_prefixes = await self.repo.get_fuel_code_prefixes()
+        latest_fuel_codes = await self.repo.get_latest_fuel_codes()
 
         return {
             "fuelTypes": [
@@ -53,6 +54,7 @@ class FuelCodeServices:
                 FuelCodePrefixSchema.model_validate(fuel_code_prefix)
                 for fuel_code_prefix in fuel_code_prefixes
             ],
+            "latestFuelCodes": latest_fuel_codes
         }
 
     @service_handler
