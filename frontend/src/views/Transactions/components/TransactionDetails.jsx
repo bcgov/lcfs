@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { LabelBox } from './LabelBox'
@@ -13,19 +13,21 @@ import {
   TextField,
   Grid,
   InputLabel
-} from '@mui/material';
+} from '@mui/material'
 import { dateFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
-import Loading from '@/components/Loading';
+import Loading from '@/components/Loading'
+import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from '../AddEditViewTransaction'
 
 export const TransactionDetails = ({ transactionId, isEditable }) => {
-  const { t } = useTranslation(['txn']);
+  const { t } = useTranslation(['txn'])
   
   const {
     watch,
     register,
-    formState: { errors }
+    formState: { errors },
+    control
   } = useFormContext()
 
   const { data: orgData } = useRegExtOrgs()
@@ -38,14 +40,14 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   const currentDate = new Date()
   const maxDate = dateFormatter(currentDate)
 
-  const selectedOrgId = watch('toOrganizationId');
-  const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId);
+  const selectedOrgId = watch('toOrganizationId')
+  const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId)
 
-  // Fetching organizartion balance
+  // Fetching organization balance
   const displayBalance = () => {
-    if (!orgBalanceInfo) return t('txn:loadingBalance');
-    return `${orgBalanceInfo.totalBalance.toLocaleString()} (${orgBalanceInfo.reservedBalance.toLocaleString()} ${t('txn:inReserve')})`;
-  };
+    if (!orgBalanceInfo) return t('txn:loadingBalance')
+    return `${orgBalanceInfo.totalBalance.toLocaleString()} (${orgBalanceInfo.reservedBalance.toLocaleString()} ${t('txn:inReserve')})`
+  }
 
   // Render form error messages
   const renderError = (fieldName, sameAsField = null) => {
@@ -73,7 +75,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   }
 
   if (!orgData || orgData.length === 0) {
-    return <Loading message={t('txn:loadingBalance')} />;
+    return <Loading message={t('txn:loadingBalance')} />
   }
 
   return (
@@ -84,6 +86,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
             <Grid item xs={12} style={{ display: transactionId ? 'none' : 'block' }}>
               <Controller
                 name="txnType"
+                control={control}
                 defaultValue=""
                 render={({ field }) => (
                   <RadioGroup
@@ -93,7 +96,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                     {...field}
                   >
                     <FormControlLabel
-                      value="initiativeAgreement"
+                      value={INITIATIVE_AGREEMENT}
                       control={
                         <Radio 
                           data-test="txn-type-initiative-agreement" 
@@ -108,7 +111,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                       sx={{ alignItems: 'center', marginRight: 8 }}
                     />
                     <FormControlLabel
-                      value="administrativeAdjustment"
+                      value={ADMIN_ADJUSTMENT}
                       control={
                         <Radio
                           data-test="txn-type-administrative-adjustment"
@@ -124,8 +127,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                     />
                   </RadioGroup>
                 )}
-              >
-              </Controller>
+              />
               {renderError('txnType')}
             </Grid>
 
@@ -151,7 +153,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
               >
                 <Controller
                   name="toOrganizationId"
-                  // control={control} // Note: control needs to be passed down from the parent component
+                  control={control}
                   displayEmpty
                   render={({ field }) => (
                     <Select

@@ -52,6 +52,7 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     initiative_agreement_id: int
     to_organization: OrganizationSchema
     history: Optional[List[InitiativeAgreementHistorySchema]]
+    returned: Optional[bool] = False
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str

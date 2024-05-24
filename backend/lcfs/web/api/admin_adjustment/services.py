@@ -28,40 +28,63 @@ class AdminAdjustmentServices:
         return AdminAdjustmentSchema.from_orm(admin_adjustment)
 
     @service_handler
-    async def update_admin_adjustment(
-        self, admin_adjustment_data: AdminAdjustmentUpdateSchema
-    ) -> AdminAdjustmentSchema:
+    async def update_admin_adjustment(self, admin_adjustment_data: AdminAdjustmentUpdateSchema) -> AdminAdjustmentSchema:
         """Update an existing admin adjustment."""
         admin_adjustment = await self.repo.get_admin_adjustment_by_id(admin_adjustment_data.admin_adjustment_id)
         if not admin_adjustment:
             raise DataNotFoundException(f"Admin Adjustment with ID {admin_adjustment_data.admin_adjustment_id} not found.")
         
         new_status = await self.repo.get_admin_adjustment_status_by_name(admin_adjustment_data.current_status)
-        # Check if the status has changed
         status_has_changed = admin_adjustment.current_status != new_status
-        
-        # Update other fields
-        for field, value in admin_adjustment_data.dict(exclude_unset=True).items():
-            if field != 'current_status':  # Skip the current_status field
-                setattr(admin_adjustment, field, value) 
 
-        # Handle the current_status field separately
+        # Update the fields except for 'current_status'
+        for field, value in admin_adjustment_data.dict(exclude_unset=True).items():
+            if field != 'current_status':
+                setattr(admin_adjustment, field, value)
+
+        # Initialize status flags
+        returned, re_recommended = False, False
+
         if status_has_changed:
             admin_adjustment.current_status = new_status
-            # If approving transaction, issue compliance units by Director
+
+            # Issue compliance units by Director if status is approved
             if new_status.status == AdminAdjustmentStatusEnum.Approved:
                 await self.director_approve_admin_adjustment(admin_adjustment)
 
-        # Pass updated object to repository for saving
+            # Check previous recommended status
+            previous_recommended = any(
+                history.admin_adjustment_status.status == AdminAdjustmentStatusEnum.Recommended 
+                for history in admin_adjustment.history
+            )
+
+            if previous_recommended:
+                if new_status.status == AdminAdjustmentStatusEnum.Draft:
+                    returned = True
+                elif new_status.status == AdminAdjustmentStatusEnum.Recommended:
+                    re_recommended = True
+
+            # Update or add history record based on status flags
+            history_method = (
+                self.repo.update_admin_adjustment_history if re_recommended
+                else self.repo.add_admin_adjustment_history
+            )
+            # We only track history changes on Recommended and Approved, not Draft
+            if new_status.status != AdminAdjustmentStatusEnum.Draft:
+                await history_method(
+                    admin_adjustment.admin_adjustment_id,
+                    new_status.admin_adjustment_status_id,
+                    self.request.user.user_profile_id
+                )
+
+        # Save the updated admin adjustment
         updated_admin_adjustment = await self.repo.update_admin_adjustment(admin_adjustment)
 
-        if status_has_changed:
-            await self.repo.add_admin_adjustment_history(
-                admin_adjustment.admin_adjustment_id,
-                new_status.admin_adjustment_status_id,
-                self.request.user.user_profile_id
-            )
-        return AdminAdjustmentSchema.from_orm(updated_admin_adjustment)
+        # Return the updated admin adjustment schema with the returned status flag
+        aa_schema = AdminAdjustmentSchema.from_orm(updated_admin_adjustment)
+        aa_schema.returned = returned
+
+        return aa_schema
 
     @service_handler
     async def create_admin_adjustment(

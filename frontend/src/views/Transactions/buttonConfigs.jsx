@@ -138,7 +138,8 @@ export const buttonClusterConfigFn = ({
           content: t('txn:returnConfirmText'),
           warningText: t('txn:returnWarningText')
         })
-      }
+      },
+      disabled: !hasRoles(roles.director)
     },
     approveTransaction: {
       ...containedButton(
