@@ -63,24 +63,7 @@ const BCDataGridEditor = ({
   const loadingOverlayComponent = useMemo(() => DataGridLoading)
   // Tab to next editable cell - Keyboard navigation
   const tabToNextCell = useCallback((params) => {
-    const previousCell = params.previousCellDef
-    const lastRowIndex = previousCell.rowIndex
-    let nextRowIndex = lastRowIndex + 1
-    const renderedRowCount = rowData.length
-
-    if (nextRowIndex < renderedRowCount) {
-      nextRowIndex = lastRowIndex + 1
-    } else {
-      nextRowIndex = 0
-    }
-
-    const result = {
-      rowIndex: nextRowIndex,
-      column: previousCell.column,
-      floating: previousCell.floating
-    }
-
-    return result
+    return params.nextCellPosition
   })
   // Default ag-grid options
   const defaultGridOptions = useMemo(
@@ -95,6 +78,7 @@ const BCDataGridEditor = ({
       suppressColumnMoveAnimation: false,
       rowSelection: 'multiple',
       editType: 'fullRow',
+      enableBrowserTooltips: true,
       rowHeight: 45,
       headerHeight: 40,
       animateRows: true,

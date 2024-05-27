@@ -11,8 +11,12 @@ from .dev.organization_attorney_address_seeder import seed_organization_attorney
 from .dev.organization_seeder import seed_organizations
 from .dev.transaction_seeder import seed_transactions
 from .dev.admin_adjustment_seeder import seed_admin_adjustments
+from .dev.fuel_code_seeder import seed_fuel_codes
+from .dev.finished_fuel_transfer_mode_seeder import seed_finished_fuel_transfer_modes
+from .dev.feedstock_fuel_transfer_mode_seeder import seed_feedstock_fuel_transfer_modes
 
 logger = logging.getLogger(__name__)
+
 
 async def seed_dev():
     """
@@ -30,6 +34,9 @@ async def seed_dev():
             await seed_admin_adjustments(session)
             await seed_user_profiles(session)
             await seed_user_roles(session)
+            await seed_fuel_codes(session)
+            await seed_finished_fuel_transfer_modes(session)
+            await seed_feedstock_fuel_transfer_modes(session)
             logger.info("Database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")

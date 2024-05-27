@@ -278,6 +278,47 @@ export const TransactionStatusRenderer = (props) => {
     </BCBox>
   )
 }
+export const ReportsStatusRenderer = (props) => {
+  const statusArr = [
+    'Draft',
+    'Submitted',
+    'Recommended by analyst',
+    'Recommended by manager',
+    'Assessed',
+    'RecoReassessedrded'
+  ]
+  const statusColorArr = ['info', 'info', 'info', 'info', 'success', 'success']
+  const statusIndex = statusArr.indexOf(props.data.status)
+  return (
+    <Link
+      to={props.node?.id && location.pathname + '/' + props?.node?.id}
+      style={{ color: '#000' }}
+    >
+      <BCBox
+        m={1}
+        sx={{
+          display: 'flex',
+          justifyContent: 'center'
+        }}
+      >
+        <BCBadge
+          badgeContent={statusArr[statusIndex]}
+          color={statusColorArr[statusIndex]}
+          variant="contained"
+          size="lg"
+          sx={{
+            '& .MuiBadge-badge': {
+              minWidth: '120px',
+              fontWeight: 'regular',
+              fontSize: '0.875rem',
+              padding: '0.4em 0.6em'
+            }
+          }}
+        />
+      </BCBox>
+    </Link>
+  )
+}
 
 // if the status of the user is in-active then don't show their previously held roles
 export const RoleRenderer = (props) => {

@@ -43,18 +43,16 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
           </IconButton>
         </Tooltip>
       )}
-      {(props.data.isValid === undefined || props.data.isValid) &&
-        isCurrentRowEditing &&
-        props.data.modified && (
-          <Tooltip title={'validation success'}>
-            <IconButton
-              aria-label="shows sign for validation"
-              data-testid="validation-sign"
-            >
-              <DoneAll color="success" />
-            </IconButton>
-          </Tooltip>
-        )}
+      {props.data.isValid && isCurrentRowEditing && props.data.modified && (
+        <Tooltip title={'validation success'}>
+          <IconButton
+            aria-label="shows sign for validation"
+            data-testid="validation-sign"
+          >
+            <DoneAll color="success" />
+          </IconButton>
+        </Tooltip>
+      )}
       {props.enableEdit && !isCurrentRowEditing && (
         <Tooltip title="Edit">
           <IconButton
