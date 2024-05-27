@@ -76,5 +76,5 @@ from . import (
     EnergyEffectivenessRatio,
     FuelCategory,
     UnitOfMeasure,
-    ProvisionOfTheAct
+    ProvisionAct
 )
