@@ -13,7 +13,6 @@ class CustomFuelType(BaseModel, EffectiveDates, DisplayOrder):
     description = Column(String, nullable=True, comment="Description of the custom fuel type")
 
     fuel_supplies = relationship('FuelSupply', back_populates='custom_fuel_type')
-    other_uses = relationship('OtherUses', back_populates='custom_fuel_type')
 
     def __repr__(self):
         return f"<CustomFuelType(id={self.custom_fuel_type_id}, type={self.type})>"
