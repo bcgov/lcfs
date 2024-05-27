@@ -32,4 +32,5 @@ __all__ = [
     "ProvisionOfTheAct",
     "TransportMode",
     "UnitOfMeasure",
+    "ProvisionAct",
 ]

@@ -8,13 +8,11 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
     valueGetter: ({ data }) => data.compliancePeriod?.description || '',
-    cellRenderer: LinkRenderer
   },
   {
     field: 'organization',
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
-    cellRenderer: LinkRenderer,
     hide: bceidRole,
     valueGetter: ({ data }) => data.organization?.name || ''
   },
@@ -23,7 +21,6 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.type'),
     flex: 2,
     valueGetter: ({ data }) => data.type?.description || '',
-    cellRenderer: LinkRenderer
   },
   {
     field: 'status',
@@ -65,6 +62,5 @@ export const reportsColDefs = (t, bceidRole) => [
     flex: 1,
     valueGetter: ({ data }) => data.updateDate || '',
     valueFormatter: timezoneFormatter,
-    cellRenderer: LinkRenderer
   }
 ]

@@ -38,7 +38,7 @@ export const ComplianceReports = () => {
   }))
   const getRowId = useCallback((params) => params.data.reportId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback(({ data }) => {
+  const handleRowClicked = useCallback(({data}) => {
     console.log("I'm here")
     navigate(
       ROUTES.REPORTS_VIEW.replace(
@@ -142,10 +142,7 @@ export const ComplianceReports = () => {
             // defaultSortModel={defaultSortModel}
             gridOptions={gridOptions}
             handleGridKey={handleGridKey}
-            handleRowClicked={() => {
-              console.log('I am here')
-              handleRowClicked()
-            }}
+            handleRowClicked={handleRowClicked}
             enableCopyButton={false}
           />
         </BCBox>

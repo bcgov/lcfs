@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Integer, Float
+from sqlalchemy import Column, Integer
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 from sqlalchemy.orm import relationship
-from sqlalchemy import ForeignKey
 from sqlalchemy import String
 
 
