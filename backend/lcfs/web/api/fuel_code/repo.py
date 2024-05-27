@@ -32,7 +32,18 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_types(self) -> List[FuelType]:
         """Get all fuel type options"""
-        return (await self.db.execute(select(FuelType))).scalars().all()
+        return (
+            (
+                await self.db.execute(
+                    select(FuelType).options(
+                        joinedload(FuelType.provision_1_act),
+                        joinedload(FuelType.provision_2_act),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     @repo_handler
     async def get_transport_modes(self) -> List[TransportMode]:
