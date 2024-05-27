@@ -4,6 +4,8 @@ from starlette import status
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transfer.schema import TransferCreateSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.utils.constants import LCFS_Constants
 
 
@@ -13,10 +15,12 @@ class OrganizationValidation:
         request: Request = None,
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
+        report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository)
     ):
         self.org_repo = org_repo
         self.request = request
         self.transaction_repo = transaction_repo
+        self.report_repo = report_repo
 
     async def check_available_balance(self, organization_id, quantity):
         available_balance = await self.transaction_repo.calculate_available_balance(organization_id)
@@ -66,3 +70,16 @@ class OrganizationValidation:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Validation for authorization failed.",
         )
+    
+    async def create_compliance_report(self, organization_id, report_data: ComplianceReportCreateSchema):
+        # Before creating ensure that there isn't any existing report for the given compliance period.
+        period = await self.report_repo.get_compliance_period(report_data.compliance_period)
+        if not period:
+            raise HTTPException(status_code=404, detail="Compliance period not found")
+        is_report_present = await self.report_repo.get_compliance_report_by_period(organization_id, report_data.compliance_period)
+        if (is_report_present):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Duplicate report for the compliance period"
+            )
+        return

@@ -30,10 +30,8 @@ export const ORGANIZATIONS_ADDUSER = `${ORGANIZATIONS_VIEW}/add-user`
 export const ORGANIZATIONS_VIEWUSER = `${ORGANIZATIONS_VIEW}/:userID`
 export const ORGANIZATIONS_EDITUSER = `${ORGANIZATIONS_VIEWUSER}/edit-user`
 
-export const REPORTS = '/reports'
-export const REPORTS_VIEW = `${REPORTS}/:reportID`
-export const REPORTS_EDIT = `${REPORTS_VIEW}/edit-report`
-export const REPORTS_ADD = `${REPORTS}/add-report`
+export const REPORTS = '/compliance-reporting'
+export const REPORTS_VIEW = `${REPORTS}/:compliancePeriod/:reportID`
 
 export const NOTIFICATIONS = '/notifications'
 export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/settings`

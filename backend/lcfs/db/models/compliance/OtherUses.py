@@ -12,6 +12,7 @@ class OtherUses(BaseModel, Auditable):
     compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
     fuel_type_id = Column(Integer, ForeignKey('fuel_type.fuel_type_id'), nullable=False, comment="Foreign key to the fuel type")
     fuel_category_id = Column(Integer, ForeignKey('fuel_category.fuel_category_id'), nullable=False, comment="Foreign key to the fuel category")
+    custom_fuel_type_id = Column(Integer, ForeignKey('custom_fuel_type.custom_fuel_type_id'), nullable=True, comment="Foreign key to the custom fuel type")
     quantity_supplied = Column(Integer, nullable=False, comment="Quantity of fuel used. Cannot be negative.")
     units = Column(String, nullable=False, comment="Units of the fuel quantity. Auto-selected, locked field.")
     expected_use_id = Column(Integer, ForeignKey('expected_use_type.expected_use_type_id'), nullable=False, comment="Foreign key to the expected use type")
@@ -19,6 +20,7 @@ class OtherUses(BaseModel, Auditable):
 
     compliance_report = relationship('ComplianceReport', back_populates='other_uses')
     fuel_type = relationship('FuelType')
+    custom_fuel_type = relationship('CustomFuelType')
     fuel_category = relationship('FuelCategory')
     expected_use_type = relationship('ExpectedUseType')
 

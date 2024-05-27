@@ -2,23 +2,24 @@
 import { Typography, Stack } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
-import BCButton from '@/components/BCButton'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-// Icons
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // react components
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-// internal components
+import { useLocation, useNavigate } from 'react-router-dom'
 // Services
 import { Role } from '@/components/Role'
 // constants
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
-import { reportsColDefs } from './_schema'
+import { ROUTES, apiRoutes } from '@/constants/routes'
+// hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+// internal components
+import { reportsColDefs } from './components/_schema'
+import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
+import { NewComplianceReportButton } from './components/NewComplianceReportButton'
+import Loading from '@/components/Loading'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -27,7 +28,7 @@ export const ComplianceReports = () => {
   const [gridKey, setGridKey] = useState(`compliance-reports-grid`)
 
   const gridRef = useRef()
-  const { orgID } = useParams()
+  const alertRef = useRef()
   const navigate = useNavigate()
   const location = useLocation()
   const { hasRoles, data: currentUser } = useCurrentUser()
@@ -37,9 +38,16 @@ export const ComplianceReports = () => {
   }))
   const getRowId = useCallback((params) => params.data.reportId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback((params) => {
-    navigate(ROUTES.REPORTS_VIEW.replace(':reportID', params.data.reportId))
+  const handleRowClicked = useCallback(({ data }) => {
+    console.log("I'm here")
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        data.compliancePeriod.description
+      ).replace(':reportID', data.complianceReportId)
+    )
   })
+
   const handleGridKey = useCallback(() => {
     setGridKey(`reports-grid`)
   }, [])
@@ -51,11 +59,48 @@ export const ComplianceReports = () => {
     }
   }, [location.state])
 
+  const {
+    mutate: createComplianceReport,
+    isLoading: isCreating,
+    isError
+  } = useCreateComplianceReport(currentUser?.organization?.organizationId, {
+    onSuccess: (response, variables) => {
+      setAlertMessage(
+        t('report:actionMsgs.successText', {
+          status: 'created'
+        })
+      )
+      setAlertSeverity('success')
+      navigate(
+        ROUTES.REPORTS_VIEW.replace(
+          ':compliancePeriod',
+          response.data.compliancePeriod.description
+        ).replace(':reportID', response.data.complianceReportId),
+        { state: { data: response.data } }
+      )
+      alertRef.current.triggerAlert()
+    },
+    onError: (_error, _variables) => {
+      const errorMsg = _error.response.data?.detail
+      setAlertMessage(errorMsg)
+      setAlertSeverity('error')
+      alertRef.current.triggerAlert()
+    }
+  })
+
+  if (isCreating) {
+    return <Loading />
+  }
   return (
     <>
       <div>
         {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
+          <BCAlert
+            ref={alertRef}
+            data-test="alert-box"
+            severity={alertSeverity}
+            delay={65000}
+          >
             {alertMessage}
           </BCAlert>
         )}
@@ -72,27 +117,23 @@ export const ComplianceReports = () => {
         mx={0}
       >
         <Role roles={[roles.supplier]}>
-          <BCButton
-            variant="contained"
-            size="small"
-            color="primary"
-            startIcon={
-              <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-            }
-            onClick={() => navigate(ROUTES.REPORTS_ADD)}
-          >
-            <Typography variant="subtitle2">
-              {t('report:newReportBtn')}
-            </Typography>
-          </BCButton>
+          <NewComplianceReportButton
+            handleNewReport={(option) => {
+              createComplianceReport({
+                compliancePeriod: option.description,
+                organizationId: currentUser?.organization?.organizationId,
+                status: COMPLIANCE_REPORT_STATUSES.DRAFT
+              })
+            }}
+          />
         </Role>
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCDataGridServer
             gridRef={gridRef}
             apiEndpoint={
               hasRoles(roles.supplier)
-                ? `organization/${currentUser.organization?.organizationId}/reports/list`
-                : 'reports/'
+                ? apiRoutes.getOrgComplianceReports
+                : apiRoutes.getComplianceReports
             }
             apiData={'reports'}
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
@@ -101,7 +142,10 @@ export const ComplianceReports = () => {
             // defaultSortModel={defaultSortModel}
             gridOptions={gridOptions}
             handleGridKey={handleGridKey}
-            handleRowClicked={handleRowClicked}
+            handleRowClicked={() => {
+              console.log('I am here')
+              handleRowClicked()
+            }}
             enableCopyButton={false}
           />
         </BCBox>

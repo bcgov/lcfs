@@ -288,7 +288,7 @@ export const ReportsStatusRenderer = (props) => {
     'RecoReassessedrded'
   ]
   const statusColorArr = ['info', 'info', 'info', 'info', 'success', 'success']
-  const statusIndex = statusArr.indexOf(props.data.status)
+  const statusIndex = statusArr.indexOf(props.data.status.status)
   return (
     <Link
       to={props.node?.id && location.pathname + '/' + props?.node?.id}

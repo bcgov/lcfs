@@ -14,7 +14,8 @@ from lcfs.web.api import (
     internal_comment,
     fuel_code,
     admin_adjustment,
-    initiative_agreement
+    initiative_agreement,
+    compliance_report
 )
 
 api_router = APIRouter()
@@ -48,4 +49,7 @@ api_router.include_router(
 )
 api_router.include_router(
     initiative_agreement.router, prefix="/initiative-agreements", tags=["initiative_agreements"]
+)
+api_router.include_router(
+    compliance_report.router, prefix="/reports", tags=["compliance_reports"]
 )

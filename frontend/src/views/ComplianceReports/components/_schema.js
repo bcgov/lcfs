@@ -1,11 +1,13 @@
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { ReportsStatusRenderer, LinkRenderer } from '@/utils/cellRenderers'
+import { timezoneFormatter } from '@/utils/formatters'
 
 export const reportsColDefs = (t, bceidRole) => [
   {
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
-    maxWidth: 210,
+    width: 210,
+    valueGetter: ({ data }) => data.compliancePeriod?.description || '',
     cellRenderer: LinkRenderer
   },
   {
@@ -20,12 +22,14 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
+    valueGetter: ({ data }) => data.type?.description || '',
     cellRenderer: LinkRenderer
   },
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
     maxWidth: 300,
+    valueGetter: ({ data }) => data.status?.status || '',
     cellRenderer: ReportsStatusRenderer,
     floatingFilterComponent: BCColumnSetFilter,
     suppressFloatingFilterButton: true,
@@ -55,10 +59,12 @@ export const reportsColDefs = (t, bceidRole) => [
     }
   },
   {
-    field: 'lastUpdated',
+    field: 'updateDate',
     cellDataType: 'dateString',
     headerName: t('report:reportColLabels.lastUpdated'),
     flex: 1,
+    valueGetter: ({ data }) => data.updateDate || '',
+    valueFormatter: timezoneFormatter,
     cellRenderer: LinkRenderer
   }
 ]
