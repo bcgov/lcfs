@@ -11,7 +11,7 @@ from lcfs.db.models.EndUseType import EndUseType
 from lcfs.db.models.FuelCategory import FuelCategory
 from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
-from lcfs.db.models.ProvisionOfTheAct import ProvisionAct
+from lcfs.db.models.ProvisionAct import ProvisionAct
 from lcfs.db.models.TransportMode import TransportMode
 from lcfs.db.models.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.FuelType import FuelType
