@@ -57,11 +57,7 @@ export const AddEditViewTransaction = () => {
   const alertRef = useRef()
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-<<<<<<< feat/alex-return-txn-to-analyst-382
-=======
-  const [txnType, setTxnType] = useState(null);
   const [internalComment, setInternalComment] = useState('')
->>>>>>> release-0.2.0
 
   const { handleSuccess, handleError } = useTransactionMutation(
     t,
@@ -100,7 +96,6 @@ export const AddEditViewTransaction = () => {
     },
   })
 
-<<<<<<< feat/alex-return-txn-to-analyst-382
   const {
     watch,
     setValue,
@@ -109,11 +104,10 @@ export const AddEditViewTransaction = () => {
   } = methods
 
   const txnType = watch('txnType')
-=======
+
   const handleCommentChange = (newComment) => {
     setInternalComment(newComment)
   }
->>>>>>> release-0.2.0
 
   useEffect(() => {
     const path = window.location.pathname
@@ -226,10 +220,7 @@ export const AddEditViewTransaction = () => {
         setModalData,
         createUpdateAdminAdjustment,
         createUpdateInitiativeAgreement,
-<<<<<<< feat/alex-return-txn-to-analyst-382
-=======
         internalComment
->>>>>>> release-0.2.0
       }),
     [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles, internalComment]
   )
