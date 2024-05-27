@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 # from lcfs.db.models.NotificationType import NotificationType
-from lcfs.db.models.Organization import Organization  # Adjust according to your project structure
+from lcfs.db.models.organization.Organization import Organization  # Adjust according to your project structure
 
 class NotificationMessage(BaseModel, Auditable):
     __tablename__ = 'notification_message'

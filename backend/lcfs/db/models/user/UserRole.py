@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
 from lcfs.db.base import Auditable, BaseModel
-from lcfs.db.models import Role, UserProfile
+from lcfs.db.models.user import Role, UserProfile
 
 
 class UserRole(BaseModel, Auditable):

@@ -1,9 +1,9 @@
 from datetime import datetime
-from lcfs.db.models.Transfer import Transfer, TransferRecommendationEnum
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatusEnum, InitiativeAgreementStatus
-from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatusEnum, AdminAdjustmentStatus
-from lcfs.db.models.AdminAdjustment import AdminAdjustment
+from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatusEnum, InitiativeAgreementStatus
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatusEnum, AdminAdjustmentStatus
+from lcfs.db.models.admin_adjustment import AdminAdjustment
 
 # Utility function to format datetime for consistency
 def formatted_date():

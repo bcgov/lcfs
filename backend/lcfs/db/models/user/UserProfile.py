@@ -3,7 +3,7 @@ from lcfs.db.base import Auditable, BaseModel
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
-from lcfs.db.models.NotificationMessage import NotificationMessage
+from lcfs.db.models.notification.NotificationMessage import NotificationMessage
 
 
 class UserProfile(BaseModel, Auditable):

@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementSchema, InitiativeAgreementCreateSchema
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatusEnum
 
 class InitiativeAgreementValidation:
     def __init__(self, request: Request = None, service: InitiativeAgreementServices = Depends(InitiativeAgreementServices)) -> None:

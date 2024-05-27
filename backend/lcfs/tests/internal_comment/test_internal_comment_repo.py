@@ -20,12 +20,12 @@ from lcfs.tests.internal_comment.internal_comment_payloads import (
 
 from lcfs.web.api.internal_comment.schema import AudienceScopeEnum, EntityTypeEnum
 
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.InternalComment import InternalComment
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 
 @pytest.fixture
 def internal_comment_repo(dbsession):

@@ -12,9 +12,9 @@ from starlette.authentication import (
     AuthenticationBackend, AuthCredentials
 )
 from lcfs.settings import Settings
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.UserRole import UserRole
-from lcfs.db.models.UserLoginHistory import UserLoginHistory
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.UserRole import UserRole
+from lcfs.db.models.user.UserLoginHistory import UserLoginHistory
 from lcfs.services.keycloak.dependencies import _parse_external_username
 
 

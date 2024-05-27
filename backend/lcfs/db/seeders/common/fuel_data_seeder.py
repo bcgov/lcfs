@@ -4,17 +4,18 @@ from pathlib import Path
 from sqlalchemy import select
 
 # database models
-from lcfs.db.models.EnergyDensity import EnergyDensity
-from lcfs.db.models.AdditionalCarbonIntensity import AdditionalCarbonIntensity
-from lcfs.db.models.EnergyEffectivenessRatio import EnergyEffectivenessRatio
-from lcfs.db.models.EndUseType import EndUseType
-from lcfs.db.models.FuelCategory import FuelCategory
-from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
-from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
-from lcfs.db.models.ProvisionAct import ProvisionAct
-from lcfs.db.models.TransportMode import TransportMode
-from lcfs.db.models.UnitOfMeasure import UnitOfMeasure
-from lcfs.db.models.FuelType import FuelType
+from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
+from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
+from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
+from lcfs.db.models.fuel.EndUseType import EndUseType
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
+from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.TransportMode import TransportMode
+from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.FuelType import FuelType
+
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ async def seed_static_fuel_data(session):
                     for transport_mode in data["transport_modes"]
                 ]
                 provision_of_the_acts_to_seed = [
-                    ProvisionAct(**provision) for provision in data["provision_acts"]
+                    ProvisionOfTheAct(**provision) for provision in data["provision_acts"]
                 ]
                 fuel_types_to_seed = [
                     FuelType(**fuel_type) for fuel_type in data["fuel_types"]

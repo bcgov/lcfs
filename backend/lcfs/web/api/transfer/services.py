@@ -9,10 +9,10 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 # models
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferStatus import TransferStatusEnum
-from lcfs.db.models.TransferCategory import TransferCategoryEnum
-from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
+from lcfs.db.models.transfer.TransferCategory import TransferCategoryEnum
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 
 # services
 from lcfs.web.api.organizations.services import OrganizationsService

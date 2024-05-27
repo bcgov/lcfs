@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from sqlalchemy import select
-from lcfs.db.models.AdminAdjustment import AdminAdjustment
+from lcfs.db.models.admin_adjustment import AdminAdjustment
 
 logger = logging.getLogger(__name__)
 

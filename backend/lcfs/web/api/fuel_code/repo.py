@@ -8,16 +8,16 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from lcfs.db.models.FuelType import FuelType
-from lcfs.db.models.TransportMode import TransportMode
-from lcfs.db.models.FuelCodePrefix import FuelCodePrefix
-from lcfs.db.models.FeedstockFuelTransportMode import FeedstockFuelTransportMode
-from lcfs.db.models.FinishedFuelTransportMode import FinishedFuelTransportMode
-from lcfs.db.models.EnergyDensity import EnergyDensity
-from lcfs.db.models.EnergyEffectivenessRatio import EnergyEffectivenessRatio
-from lcfs.db.models.AdditionalCarbonIntensity import AdditionalCarbonIntensity
-from lcfs.db.models.FuelCodeStatus import FuelCodeStatus
-from lcfs.db.models.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.fuel.TransportMode import TransportMode
+from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
+from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
+from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
+from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
@@ -36,8 +36,8 @@ class FuelCodeRepository:
             (
                 await self.db.execute(
                     select(FuelType).options(
-                        joinedload(FuelType.provision_1_act),
-                        joinedload(FuelType.provision_2_act),
+                        joinedload(FuelType.provision_1),
+                        joinedload(FuelType.provision_2),
                     )
                 )
             )

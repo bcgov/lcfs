@@ -8,11 +8,11 @@ from sqlalchemy import and_, func, select, asc, desc, distinct
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.models.Organization import Organization
-from lcfs.db.models.OrganizationAddress import OrganizationAddress
-from lcfs.db.models.OrganizationAttorneyAddress import OrganizationAttorneyAddress
-from lcfs.db.models.OrganizationStatus import OrgStatusEnum, OrganizationStatus
-from lcfs.db.models.OrganizationType import OrganizationType
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
+from lcfs.db.models.organization.OrganizationAttorneyAddress import OrganizationAttorneyAddress
+from lcfs.db.models.organization.OrganizationStatus import OrgStatusEnum, OrganizationStatus
+from lcfs.db.models.organization.OrganizationType import OrganizationType
 
 from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema, OrganizationResponseSchema
 

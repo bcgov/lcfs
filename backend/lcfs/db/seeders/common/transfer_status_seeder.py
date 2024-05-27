@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.TransferStatus import TransferStatus, TransferStatusEnum
+from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 
 logger = logging.getLogger(__name__)
 

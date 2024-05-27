@@ -9,11 +9,11 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.InternalComment import InternalComment
-from lcfs.db.models.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
-from lcfs.db.models.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
+from lcfs.db.models.comment.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
 
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 

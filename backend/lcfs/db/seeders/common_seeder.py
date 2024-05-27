@@ -12,6 +12,7 @@ from lcfs.db.seeders.common.transfer_categories_seeder import seed_transfer_cate
 from lcfs.db.seeders.common.admin_adjustment_status_seeder import seed_admin_adjustment_statuses
 from lcfs.db.seeders.common.initiative_agreement_status_seeder import seed_initiative_agreement_statuses
 from lcfs.db.seeders.common.fuel_data_seeder import seed_static_fuel_data
+from lcfs.db.seeders.common.compliance_report_status_seeder import seed_compliance_report_statuses
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ async def seed_common():
             await seed_admin_adjustment_statuses(session)
             await seed_initiative_agreement_statuses(session)
             await seed_static_fuel_data(session)
+            await seed_compliance_report_statuses(session)
             logger.info("Database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")

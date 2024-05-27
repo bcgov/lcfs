@@ -16,9 +16,9 @@ from lcfs.db import dependencies
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSchema
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferStatus import TransferStatusEnum
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
     TransferSchema,

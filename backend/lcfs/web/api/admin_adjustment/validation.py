@@ -3,7 +3,7 @@ from starlette import status
 
 from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
-from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
 
 class AdminAdjustmentValidation:
     def __init__(self, request: Request = None, service: AdminAdjustmentServices = Depends(AdminAdjustmentServices)) -> None:

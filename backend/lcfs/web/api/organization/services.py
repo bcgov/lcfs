@@ -17,7 +17,7 @@ from lcfs.web.api.base import (
     validate_pagination,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.db.models.TransactionView import TransactionView
+from lcfs.db.models.transaction.TransactionView import TransactionView
 from lcfs.web.api.transaction.schema import TransactionViewSchema
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.user.schema import UsersSchema
