@@ -14,5 +14,6 @@
   "deleteDraftConfirmText": "Are you sure you want to delete this draft?",
   "deleteConfirmText": "Are you sure you want to delete this initiative agreement?",
   "recommendConfirmText": "Are you sure you want to recommend this initiative agreement?",
-  "approveConfirmText": "Are you sure you want to approve this initiative agreement?"
+  "approveConfirmText": "Are you sure you want to approve this initiative agreement?",
+  "loadingText": "Loading Initiative Agreement"
 }
