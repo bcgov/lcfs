@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.user.UserProfile import UserProfile
 from faker import Faker
 
 logger = logging.getLogger(__name__)

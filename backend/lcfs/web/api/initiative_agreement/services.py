@@ -1,13 +1,13 @@
 from datetime import datetime
 from fastapi import Depends, Request, HTTPException
-from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatusEnum
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema, InitiativeAgreementSchema
 from lcfs.web.api.initiative_agreement.repo import InitiativeAgreementRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.api.internal_comment.schema import InternalCommentCreateSchema, AudienceScopeEnum, EntityTypeEnum

@@ -5,9 +5,9 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.db.models.AdminAdjustment import AdminAdjustment
-from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatus
-from lcfs.db.models.AdminAdjustmentHistory import AdminAdjustmentHistory
+from lcfs.db.models.admin_adjustment import AdminAdjustment
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
+from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
 from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentSchema
 
 from lcfs.db.dependencies import get_async_db_session

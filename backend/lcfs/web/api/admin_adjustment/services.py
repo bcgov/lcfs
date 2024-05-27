@@ -1,13 +1,13 @@
 from datetime import datetime
 from fastapi import Depends, Request, HTTPException
-from lcfs.db.models.AdminAdjustment import AdminAdjustment
-from lcfs.db.models.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
+from lcfs.db.models.admin_adjustment import AdminAdjustment
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
 from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema, AdminAdjustmentUpdateSchema
 from lcfs.web.api.admin_adjustment.repo import AdminAdjustmentRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.Transaction import TransactionActionEnum
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.web.api.organizations.services import OrganizationsService
 
 class AdminAdjustmentServices:

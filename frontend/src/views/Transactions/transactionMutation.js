@@ -73,7 +73,7 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
       setAlertMessage(t(`${transactionType}:actionMsgs.successText`, { status: 'saved' }))
       setAlertSeverity('success')
     }
-  
+
     if (alertRef?.current) {
       alertRef.current.triggerAlert()
     }

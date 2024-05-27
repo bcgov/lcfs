@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.Role import Role, RoleEnum
+from lcfs.db.models.user.Role import Role, RoleEnum
 
 logger = logging.getLogger(__name__)
 

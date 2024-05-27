@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
+from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 
 logger = logging.getLogger(__name__)
 

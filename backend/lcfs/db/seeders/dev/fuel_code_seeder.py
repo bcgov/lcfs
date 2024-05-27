@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select, func
-from lcfs.db.models.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelCode import FuelCode
 
 logger = logging.getLogger(__name__)
 

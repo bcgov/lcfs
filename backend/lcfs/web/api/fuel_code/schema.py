@@ -10,11 +10,23 @@ class FuelCodeStatusEnumSchema(str, Enum):
     Approved = "Approved"
     Deleted = "Deleted"
 
+class ProvisionOfTheActSchema(BaseSchema):
+    provision_of_the_act_id: int
+    name: str
 
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: Optional[bool] = None
+    provision_1_id: Optional[int] = None
+    provision_2_id: Optional[int] = None
+    default_carbon_intensity: Optional[float] = None
+    provision_1: Optional[ProvisionOfTheActSchema] = None
+    provision_2: Optional[ProvisionOfTheActSchema] = None
+
+    @field_validator("default_carbon_intensity")
+    def quantize_default_carbon_intensity(cls, value):
+        return round(value, 2)
 
 
 class FuelCodeStatusSchema(BaseSchema):

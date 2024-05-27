@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.Organization import Organization
+from lcfs.db.models.organization.Organization import Organization
 
 logger = logging.getLogger(__name__)
 

@@ -7,10 +7,10 @@ def load_all_models() -> None:
 
     # Models that need to be loaded first
     priority_models = [
-      'OrganizationStatus',
-      'Organization', 
-      'UserProfile', 
-      'Role'
+        'organization.OrganizationStatus',
+        'organization.Organization',
+        'user.UserProfile',
+        'user.Role',
     ]
 
     # Load priority models
@@ -28,52 +28,14 @@ def load_all_models() -> None:
         if module.name not in priority_models:
             __import__(module.name)  # noqa: WPS421
 
-
-# Explicit model imports
-from . import (
-    OrganizationType,
-    OrganizationStatus,
-    OrganizationAddress,
-    OrganizationAttorneyAddress,
-    OrganizationStatus,
-    OrganizationBalance,
-    Organization,
-    Role,
-    UserProfile,
-    UserRole,
-    UserLoginHistory,
-    TransferCategory,
-    InternalComment,
-    NotificationChannel,
-    NotificationType,
-    NotificationChannelSubscription,
-    NotificationMessage,
-    Transaction,
-    TransactionView,
-    TransactionStatusView,
-    TransferInternalComment,
-    AdminAdjustment,
-    AdminAdjustmentStatus,
-    AdminAdjustmentHistory,
-    AdminAdjustmentInternalComment,
-    InitiativeAgreement,
-    InitiativeAgreementStatus,
-    InitiativeAgreementHistory,
-    InitiativeAgreementInternalComment,
-    Transfer,
-    TransferHistory,
-    TransferStatus,
-    FuelCode,
-    FuelCodePrefix,
-    FuelCodeStatus,
-    FuelType,
-    FeedstockFuelTransportMode,
-    FinishedFuelTransportMode,
-    TransportMode,
-    AdditionalCarbonIntensity,
-    EndUseType,
-    EnergyDensity,
-    EnergyEffectivenessRatio,
-    FuelCategory,
-    UnitOfMeasure,
-)
+# Explicit model imports from subdirectories
+from .admin_adjustment import *
+from .comment import *
+from .compliance import *
+from .fuel import *
+from .initiative_agreement import *
+from .notification import *
+from .organization import *
+from .transaction import *
+from .transfer import *
+from .user import *

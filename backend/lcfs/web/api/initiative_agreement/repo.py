@@ -5,9 +5,9 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatus
-from lcfs.db.models.InitiativeAgreementHistory import InitiativeAgreementHistory
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus
+from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import InitiativeAgreementHistory
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema
 
 from lcfs.db.dependencies import get_async_db_session

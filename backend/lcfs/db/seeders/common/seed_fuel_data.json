@@ -1,94 +1,159 @@
 {
+  "provision_acts": [
+    {
+      "name": "Prescribed carbon intensity - section 19 (a)",
+      "description": "Prescribed carbon intensity - section 19 (a)"
+    },
+    {
+      "name": "Fuel code - section 19 (b) (i)",
+      "description": "Fuel code - section 19 (b) (i)"
+    },
+    {
+      "name": "Default carbon intensity - section 19 (b) (ii)",
+      "description": "Default carbon intensity - section 19 (b) (ii)"
+    }
+  ],
   "fuel_types": [
     {
       "fuel_type_id": 1,
       "fuel_type": "Biodiesel",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 100.21
     },
     {
       "fuel_type_id": 2,
       "fuel_type": "CNG",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 63.91
     },
     {
       "fuel_type_id": 3,
       "fuel_type": "Electricity",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 12.14
     },
     {
       "fuel_type_id": 4,
       "fuel_type": "Ethanol",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 93.67
     },
     {
       "fuel_type_id": 5,
       "fuel_type": "HDRD",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 100.21
     },
     {
       "fuel_type_id": 6,
       "fuel_type": "Hydrogen",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 123.96
     },
     {
       "fuel_type_id": 7,
       "fuel_type": "LNG",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 90.11
     },
     {
       "fuel_type_id": 8,
       "fuel_type": "Other - gasoline category",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 93.67
     },
     {
       "fuel_type_id": 9,
       "fuel_type": "Other diesel fuel",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 100.21
     },
     {
       "fuel_type_id": 10,
       "fuel_type": "Other - diesel category",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 100.21
     },
     {
       "fuel_type_id": 11,
       "fuel_type": "Alternative jet fuel",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 88.83
     },
     {
       "fuel_type_id": 12,
       "fuel_type": "Other - jet fuel category",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 88.83
     },
     {
       "fuel_type_id": 13,
       "fuel_type": "Propane",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 79.87
     },
     {
       "fuel_type_id": 14,
       "fuel_type": "Renewable gasoline",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 93.67
     },
     {
       "fuel_type_id": 15,
       "fuel_type": "Renewable naphtha",
-      "fossil_derived": false
+      "fossil_derived": false,
+      "provision_1_id": 2,
+      "provision_2_id": 3,
+      "default_carbon_intensity": 93.67
     },
     {
       "fuel_type_id": 16,
       "fuel_type": "Fossil-derived diesel",
-      "fossil_derived": true
+      "fossil_derived": true,
+      "provision_1_id": 1,
+      "default_carbon_intensity": 94.38
     },
     {
       "fuel_type_id": 17,
       "fuel_type": "Fossil-derived gasoline",
-      "fossil_derived": true
+      "fossil_derived": true,
+      "provision_1_id": 1,
+      "default_carbon_intensity": 93.67
     },
     {
       "fuel_type_id": 18,
       "fuel_type": "Fossil-derived jet fuel",
-      "fossil_derived": true
+      "fossil_derived": true,
+      "provision_1_id": 1,
+      "default_carbon_intensity": 88.83
     }
   ],
   "fuel_code_prefixes": [

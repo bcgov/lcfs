@@ -1,8 +1,8 @@
 from datetime import datetime
 from lcfs.web.api.transfer.schema import TransferCreateSchema, TransferUpdate
-from lcfs.db.models.Transfer import Transfer
-from lcfs.db.models.TransferHistory import TransferHistory
-from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferHistory import TransferHistory
+from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 
 agreement_date = datetime.strptime("2023-01-01", "%Y-%m-%d").date()
 
