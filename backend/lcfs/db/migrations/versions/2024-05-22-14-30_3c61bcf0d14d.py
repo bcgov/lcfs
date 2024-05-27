@@ -487,7 +487,7 @@ def upgrade() -> None:
             comment="The calendar date the value is no longer valid.",
         ),
         sa.PrimaryKeyConstraint("provision_of_the_act_id"),
-        sa.UniqueConstraint("provision"),
+        sa.UniqueConstraint("name"),
         comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
     )
     op.add_column(
