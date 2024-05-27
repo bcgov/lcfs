@@ -152,11 +152,23 @@ class FuelCodeSchema(BaseSchema):
     )
 
 
+class FieldOptions(BaseSchema):
+    company: List[str]
+    feedstock: List[str]
+    feedstock_location: List[str]
+    feedstock_misc: List[str]
+    former_company: List[str]
+    # cities: List[str]
+    # provinces_states: List[str]
+    # countries: List[str]
+
+
 class TableOptionsSchema(BaseSchema):
     fuel_types: List[FuelTypeSchema]
     transport_modes: List[TransportModeSchema]
     fuel_code_prefixes: List[FuelCodePrefixSchema]
     latest_fuel_codes: List[FuelCodeSchema]
+    field_options: FieldOptions
 
 
 class FuelCodesSchema(BaseSchema):

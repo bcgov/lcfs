@@ -41,6 +41,17 @@ class FuelCodeServices:
         transport_modes = await self.repo.get_transport_modes()
         fuel_code_prefixes = await self.repo.get_fuel_code_prefixes()
         latest_fuel_codes = await self.repo.get_latest_fuel_codes()
+        field_options_results = await self.repo.get_fuel_code_field_options()
+
+        result_dict = {}
+        for row in field_options_results:
+            for key, value in row._mapping.items():
+                if key not in result_dict:
+                    result_dict[key] = set()  # Use a set to remove duplicates
+                result_dict[key].add(value)
+
+        field_options = {key: sorted(list(values))
+                         for key, values in result_dict.items()}
 
         return {
             "fuelTypes": [
@@ -54,7 +65,8 @@ class FuelCodeServices:
                 FuelCodePrefixSchema.model_validate(fuel_code_prefix)
                 for fuel_code_prefix in fuel_code_prefixes
             ],
-            "latestFuelCodes": latest_fuel_codes
+            "latestFuelCodes": latest_fuel_codes,
+            "field_options": field_options
         }
 
     @service_handler
