@@ -1160,10 +1160,6 @@ def upgrade() -> None:
         type_=sa.Float(precision=10, asdecimal=2),
         existing_nullable=False,
     )
-    op.create_unique_constraint(None, "admin_adjustment", ["admin_adjustment_id"])
-    op.create_unique_constraint(
-        None, "admin_adjustment_history", ["admin_adjustment_history_id"]
-    )
     op.alter_column(
         "energy_density",
         "density",
@@ -1179,16 +1175,15 @@ def upgrade() -> None:
         existing_comment="Energy effectiveness ratio constant",
         existing_nullable=False,
     )
-    op.create_unique_constraint(
-        None, "initiative_agreement", ["initiative_agreement_id"]
-    )
-    op.create_unique_constraint(
-        None, "initiative_agreement_history", ["initiative_agreement_history_id"]
-    )
-    op.create_unique_constraint(None, "internal_comment", ["internal_comment_id"])
-    op.create_unique_constraint(None, "transaction", ["transaction_id"])
-    op.create_unique_constraint(None, "transfer", ["transfer_id"])
-    op.create_unique_constraint(None, "transfer_category", ["transfer_category_id"])
+
+    # Create unique constraints with default names
+    op.create_unique_constraint("transfer_category_transfer_category_id_key", "transfer_category", ["transfer_category_id"])
+    op.create_unique_constraint("transfer_transfer_id_key", "transfer", ["transfer_id"])
+    op.create_unique_constraint("transaction_transaction_id_key", "transaction", ["transaction_id"])
+    op.create_unique_constraint("internal_comment_internal_comment_id_key", "internal_comment", ["internal_comment_id"])
+    op.create_unique_constraint("initiative_agreement_history_initiative_agreement_history_id_key", "initiative_agreement_history", ["initiative_agreement_history_id"])
+    op.create_unique_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", ["initiative_agreement_id"])
+
     # ### end Alembic commands ###
 
 
