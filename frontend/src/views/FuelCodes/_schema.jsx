@@ -155,7 +155,6 @@ export const addEditSchema = {
   },
 
   onPrefixUpdate: (val, params) => {
-    console.log(params)
     if (val === 'BCLCF') {
       params.node?.setData({
         ...params.data,
