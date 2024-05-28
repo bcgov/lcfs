@@ -225,7 +225,7 @@ export const Transactions = () => {
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
-          enableExportButton={true}
+          enableExportButton={false}
           exportName={t('txn:title')}
           highlightedRowId={highlightedId}
         />
