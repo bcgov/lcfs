@@ -80,11 +80,21 @@ export const fuelCodeSchema = (t, optionsData) =>
         field: t('fuelCode:fuelCodeColLabels.feedstockLocation')
       })
     ),
-    fuelProductionFacilityLocation: yup.string().required(
+    fuelProductionFacilityCity: yup.string().required(
       t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation')
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity')
       })
-    )
+    ),
+    fuelProductionFacilityProvinceState: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState')
+      })
+    ),
+    fuelProductionFacilityCountry: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry')
+      })
+    ),
   })
 
 export const fuelCodeColDefs = (t, optionsData) => [
