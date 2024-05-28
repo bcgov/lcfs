@@ -11,11 +11,10 @@ from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.FuelType import FuelType
-
-from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 
 logger = logging.getLogger(__name__)
 

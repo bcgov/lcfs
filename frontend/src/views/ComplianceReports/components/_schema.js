@@ -1,18 +1,18 @@
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { ReportsStatusRenderer, LinkRenderer } from '@/utils/cellRenderers'
+import { timezoneFormatter } from '@/utils/formatters'
 
 export const reportsColDefs = (t, bceidRole) => [
   {
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
-    maxWidth: 210,
-    cellRenderer: LinkRenderer
+    width: 210,
+    valueGetter: ({ data }) => data.compliancePeriod?.description || '',
   },
   {
     field: 'organization',
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
-    cellRenderer: LinkRenderer,
     hide: bceidRole,
     valueGetter: ({ data }) => data.organization?.name || ''
   },
@@ -20,12 +20,13 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    cellRenderer: LinkRenderer
+    valueGetter: ({ data }) => data.type?.description || '',
   },
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
     maxWidth: 300,
+    valueGetter: ({ data }) => data.status?.status || '',
     cellRenderer: ReportsStatusRenderer,
     floatingFilterComponent: BCColumnSetFilter,
     suppressFloatingFilterButton: true,
@@ -55,10 +56,11 @@ export const reportsColDefs = (t, bceidRole) => [
     }
   },
   {
-    field: 'lastUpdated',
+    field: 'updateDate',
     cellDataType: 'dateString',
     headerName: t('report:reportColLabels.lastUpdated'),
     flex: 1,
-    cellRenderer: LinkRenderer
+    valueGetter: ({ data }) => data.updateDate || '',
+    valueFormatter: timezoneFormatter,
   }
 ]

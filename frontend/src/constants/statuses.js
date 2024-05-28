@@ -31,6 +31,14 @@ export const ORGANIZATION_STATUSES = {
   CANCELED: 'Canceled'
 }
 
+export const COMPLIANCE_REPORT_STATUSES = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  ASSESSED: 'Assessed',
+  REASSESSED: 'Reassessed',
+  RECOMMENDED_BY_ANALYST: 'Recommended by analyst',
+  RECOMMENDED_BY_MANAGER: 'Recommended by manager'
+}
 export function getAllOrganizationStatuses() {
   return Object.values(ORGANIZATION_STATUSES)
 }

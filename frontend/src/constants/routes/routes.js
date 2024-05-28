@@ -30,10 +30,14 @@ export const ORGANIZATIONS_ADDUSER = `${ORGANIZATIONS_VIEW}/add-user`
 export const ORGANIZATIONS_VIEWUSER = `${ORGANIZATIONS_VIEW}/:userID`
 export const ORGANIZATIONS_EDITUSER = `${ORGANIZATIONS_VIEWUSER}/edit-user`
 
-export const REPORTS = '/reports'
-export const REPORTS_VIEW = `${REPORTS}/:reportID`
-export const REPORTS_EDIT = `${REPORTS_VIEW}/edit-report`
-export const REPORTS_ADD = `${REPORTS}/add-report`
+export const REPORTS = '/compliance-reporting'
+export const REPORTS_VIEW = `${REPORTS}/:compliancePeriod/:reportID`
+export const REPORTS_ADD_SUPPLY_OF_FUEL = `${REPORTS_VIEW}/supply-of-fuel`
+export const REPORTS_ADD_FSE = `${REPORTS_VIEW}/fse`
+export const REPORTS_ADD_ALLOCATION_AGREEMENTS = `${REPORTS_VIEW}/allocation-agreements`
+export const REPORTS_ADD_NOTIONAL_TRANSFERS = `${REPORTS_VIEW}/notional-transfers`
+export const REPORTS_ADD_OTHER_USE_FUELS = `${REPORTS_VIEW}/fuels-other-use`
+export const REPORTS_ADD_FUEL_EXPORTS = `${REPORTS_VIEW}/fuel-exports`
 
 export const NOTIFICATIONS = '/notifications'
 export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/settings`

@@ -24,6 +24,7 @@ import { Login } from './components/Login'
 import { NotFound } from './components/NotFound'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
+import { AddEditViewComplianceReport } from './views/ComplianceReports/components/AddEditViewComplianceReport'
 
 const router = createBrowserRouter([
   {
@@ -180,8 +181,8 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <ViewComplianceReport />,
-        handle: { title: 'View Compliance Report' }
+        element: <AddEditViewComplianceReport />,
+        handle: { title: (period) => `${period} Compliance report` }
       },
       {
         path: ROUTES.NOTIFICATIONS,

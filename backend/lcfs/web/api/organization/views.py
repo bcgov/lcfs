@@ -26,6 +26,12 @@ from lcfs.web.api.transfer.schema import (
 from lcfs.web.api.transaction.schema import TransactionListSchema
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.api.user.services import UserServices
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportBaseSchema,
+    ComplianceReportCreateSchema,
+    ComplianceReportListSchema,
+)
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
 from .validation import OrganizationValidation
 from lcfs.web.api.transfer.services import TransferServices
@@ -177,6 +183,7 @@ async def export_transactions_for_org(
     organization_id = request.user.organization.organization_id
     return await txn_service.export_transactions(format, organization_id)
 
+
 @router.post(
     "/{organization_id}/transfers",
     response_model=TransferSchema,
@@ -221,3 +228,37 @@ async def update_transfer(
     validate.update_transfer(organization_id, transfer_create)
     transfer_create.transfer_id = transfer_id
     return await transfer_service.update_transfer(transfer_create)
+
+
+@router.post(
+    "/{organization_id}/reports",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@roles_required("Supplier")
+@view_handler
+async def create_compliance_report(
+    request: Request,
+    organization_id: int,
+    report_data: ComplianceReportCreateSchema = ...,
+    report_service: ComplianceReportServices = Depends(),
+    validate: OrganizationValidation = Depends(),
+):
+    await validate.create_compliance_report(organization_id, report_data)
+    return await report_service.create_compliance_report(organization_id, report_data)
+
+
+@router.post(
+    "/reports/list",
+    response_model=ComplianceReportListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Supplier")
+@view_handler
+async def get_compliance_reports(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    report_service: ComplianceReportServices = Depends(),
+) -> ComplianceReportListSchema:
+    organization_id = request.user.organization.organization_id
+    return await report_service.get_compliance_reports_paginated(pagination, organization_id)
