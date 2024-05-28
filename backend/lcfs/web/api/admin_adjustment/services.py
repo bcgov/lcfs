@@ -153,7 +153,7 @@ class AdminAdjustmentServices:
         admin_adjustment.transaction = to_transaction
 
         # Set effective date to today if the analyst left it blank
-        if admin_adjustment.transaction_effective_date == None:
-            admin_adjustment.transaction_effective_date = datetime.now().date().isoformat()
+        if admin_adjustment.transaction_effective_date is None:
+            admin_adjustment.transaction_effective_date = datetime.now().date()
 
         await self.repo.refresh_admin_adjustment(admin_adjustment)

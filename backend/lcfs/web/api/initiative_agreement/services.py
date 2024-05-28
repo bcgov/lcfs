@@ -154,7 +154,7 @@ class InitiativeAgreementServices:
         initiative_agreement.transaction = to_transaction
 
         # Set effective date to today if the analyst left it blank
-        if initiative_agreement.transaction_effective_date == None:
-            initiative_agreement.transaction_effective_date = datetime.now().date().isoformat()
+        if initiative_agreement.transaction_effective_date is None:
+            initiative_agreement.transaction_effective_date = datetime.now().date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
