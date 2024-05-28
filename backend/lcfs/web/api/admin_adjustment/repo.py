@@ -1,6 +1,7 @@
 from fastapi import Depends
 from typing import Optional
-from sqlalchemy import select
+from datetime import datetime
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -82,6 +83,34 @@ class AdminAdjustmentRepository:
         self.db.add(new_history_record)
         await self.db.flush()
         return new_history_record
+
+    @repo_handler
+    async def update_admin_adjustment_history(self, admin_adjustment_id: int, admin_adjustment_status_id: int, user_profile_id: int) -> AdminAdjustmentHistory:
+        """
+        Updates an admin adjustment history record in the database.
+
+        Args:
+            admin_adjustment_id (int): The ID of the admin adjustment to which this history record relates.
+            admin_adjustment_status_id (int): The status ID that describes the current state of the admin adjustment.
+            user_profile_id (int): The ID of the user who made the change.
+
+        Returns:
+            AdminAdjustmentHistory: The updated admin adjustment history record.
+        """
+        existing_history = await self.db.scalar(
+            select(AdminAdjustmentHistory).where(
+                and_(
+                    AdminAdjustmentHistory.admin_adjustment_id == admin_adjustment_id,
+                    AdminAdjustmentHistory.admin_adjustment_status_id == admin_adjustment_status_id,
+                )
+            )
+        )
+        existing_history.create_date = datetime.now()
+        existing_history.update_date = datetime.now()
+        existing_history.user_profile_id = user_profile_id
+        self.db.add(existing_history)
+        await self.db.flush()
+        return existing_history
 
     @repo_handler
     async def refresh_admin_adjustment(self, admin_adjustment: AdminAdjustment) -> AdminAdjustment:

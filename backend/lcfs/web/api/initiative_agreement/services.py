@@ -42,32 +42,56 @@ class InitiativeAgreementServices:
         
         # Fetch the new status
         new_status = await self.repo.get_initiative_agreement_status_by_name(initiative_agreement_data.current_status)
-        
-        # Check if the status has changed
         status_has_changed = initiative_agreement.current_status != new_status
 
+        # Update the fields except for 'current_status'
         for field, value in initiative_agreement_data.dict(exclude_unset=True).items():
-            if field != 'current_status':  # Skip the current_status field
+            if field != 'current_status':
                 setattr(initiative_agreement, field, value)
 
-        # Handle the current_status field separately
+        # Initialize status flags
+        returned, re_recommended = False, False
+
         if status_has_changed:
             initiative_agreement.current_status = new_status
-            # If approving transaction, issue compliance units by Director
+
+            # Issue compliance units by Director if status is approved
             if new_status.status == InitiativeAgreementStatusEnum.Approved:
                 await self.director_approve_initiative_agreement(initiative_agreement)
 
+            # Check previous recommended status
+            previous_recommended = any(
+                history.initiative_agreement_status.status == InitiativeAgreementStatusEnum.Recommended 
+                for history in initiative_agreement.history
+            )
+
+            if previous_recommended:
+                if new_status.status == InitiativeAgreementStatusEnum.Draft:
+                    returned = True
+                elif new_status.status == InitiativeAgreementStatusEnum.Recommended:
+                    re_recommended = True
+
+            # Update or add history record based on status flags
+            history_method = (
+                self.repo.update_initiative_agreement_history if re_recommended
+                else self.repo.add_initiative_agreement_history
+            )
+            # We only track history changes on Recommended and Approved, not Draft
+            if new_status.status != InitiativeAgreementStatusEnum.Draft:
+                await history_method(
+                    initiative_agreement.initiative_agreement_id,
+                    new_status.initiative_agreement_status_id,
+                    self.request.user.user_profile_id
+                )
+
         # Save the updated initiative agreement
         updated_initiative_agreement = await self.repo.update_initiative_agreement(initiative_agreement)
-        
-        if status_has_changed:
-            await self.repo.add_initiative_agreement_history(
-                initiative_agreement.initiative_agreement_id,
-                new_status.initiative_agreement_status_id,
-                self.request.user.user_profile_id
-            )
-            
-        return InitiativeAgreementSchema.from_orm(updated_initiative_agreement)
+
+        # Return the updated initiative agreement schema with the returned status flag
+        ia_schema = InitiativeAgreementSchema.from_orm(updated_initiative_agreement)
+        ia_schema.returned = returned
+
+        return ia_schema
 
     @service_handler
     async def create_initiative_agreement(

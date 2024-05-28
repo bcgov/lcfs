@@ -63,7 +63,7 @@ export const useOrganizationBalance = (orgID, options) => {
   return useQuery({
     queryKey: ['organization-balance', orgID],
     queryFn: async () =>
-      (await client.get(`/organizations/balances/${orgID}`)).data,
+      orgID ? (await client.get(`/organizations/balances/${orgID}`)).data : {},
     ...options
   })
 }

@@ -13,7 +13,12 @@ import {
 export const Dashboard = () => {
   return (
     <Box mt={-4}>
-      <Grid container spacing={{ xs: 3, lg: 0 }} justifyContent={{ md: 'center' }}>
+      <Grid 
+        container 
+        spacing={{ xs: 3, lg: 0 }} 
+        justifyContent={{ md: 'center' }}
+        data-test="dashboard-container"
+      >
 
         {/* Left Section */}
         <Grid

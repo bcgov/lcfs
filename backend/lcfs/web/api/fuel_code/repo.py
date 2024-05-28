@@ -36,8 +36,8 @@ class FuelCodeRepository:
             (
                 await self.db.execute(
                     select(FuelType).options(
-                        joinedload(FuelType.provision_1_act),
-                        joinedload(FuelType.provision_2_act),
+                        joinedload(FuelType.provision_1),
+                        joinedload(FuelType.provision_2),
                     )
                 )
             )

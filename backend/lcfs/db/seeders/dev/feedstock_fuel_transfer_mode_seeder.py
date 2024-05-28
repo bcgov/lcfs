@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import select
+from sqlalchemy import select, func
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 
 logger = logging.getLogger(__name__)

@@ -425,7 +425,7 @@ def upgrade() -> None:
             comment="Unique identifier for the provision of the act",
         ),
         sa.Column(
-            "provision",
+            "name",
             sa.String(length=100),
             nullable=False,
             comment="Name of the Provision. e.g. Section 6 (5) (a)",
@@ -487,8 +487,29 @@ def upgrade() -> None:
             comment="The calendar date the value is no longer valid.",
         ),
         sa.PrimaryKeyConstraint("provision_of_the_act_id"),
-        sa.UniqueConstraint("provision"),
-        comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a)",
+        sa.UniqueConstraint("name"),
+        comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
+    )
+    op.add_column(
+        "fuel_type", sa.Column("provision_1_id", sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        "fuel_type", sa.Column("provision_2_id", sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        "fuel_type",
+        sa.Column(
+            "default_carbon_intensity",
+            sa.Float(precision=10, asdecimal=2),
+            nullable=True,
+            comment="Carbon intensities: default & prescribed (gCO2e/MJ)",
+        ),
+    )
+    op.create_foreign_key(
+        None, "fuel_type", "provision_of_the_act", ["provision_1_id"], ["provision_of_the_act_id"]
+    )
+    op.create_foreign_key(
+        None, "fuel_type", "provision_of_the_act", ["provision_2_id"], ["provision_of_the_act_id"]
     )
     op.create_table(
         "compliance_report",
@@ -1210,6 +1231,8 @@ def downgrade() -> None:
     op.drop_table("compliance_report_history")
     op.drop_table("allocation_agreement")
     op.drop_table("compliance_report")
+    op.drop_column("fuel_type", "provision_1_id")
+    op.drop_column("fuel_type", "provision_2_id")
     op.drop_table("provision_of_the_act")
     op.drop_table("expected_use_type")
     op.drop_table("custom_fuel_type")

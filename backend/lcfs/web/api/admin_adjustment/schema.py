@@ -44,6 +44,7 @@ class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):
     admin_adjustment_id: int
     to_organization: OrganizationSchema
     history: Optional[List[AdminAdjustmentHistorySchema]]
+    returned: Optional[bool] = False
 
 class AdminAdjustmentCreateSchema(AdminAdjustmentBaseSchema):
     current_status: str
