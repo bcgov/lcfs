@@ -1,11 +1,22 @@
-import { numberFormatter, currencyFormatter, dateFormatter } from '@/utils/formatters'
+import { 
+  numberFormatter, 
+  currencyFormatter, 
+  dateFormatter, 
+  spacesFormatter 
+} from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 export const transactionsColDefs = (t) => [
   { colId: 'transactionId', field: 'transactionId', headerName: t('txn:txnColLabels.txnId'), width: 120 },
-  { colId: 'transactionType', field: 'transactionType', headerName: t('txn:txnColLabels.type'), width: 150 },
+  { 
+    colId: 'transactionType', 
+    field: 'transactionType', 
+    headerName: t('txn:txnColLabels.type'), 
+    valueFormatter: spacesFormatter,
+    width: 150 
+  },
   { colId: 'fromOrganization', field: 'fromOrganization', headerName: t('txn:txnColLabels.organizationFrom'), minWidth: 300, flex: 2 },
   { colId: 'toOrganization', field: 'toOrganization', headerName: t('txn:txnColLabels.organizationTo'), minWidth: 300, flex: 2 },
   {

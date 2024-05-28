@@ -122,3 +122,10 @@ export const timezoneFormatter = ({ value }) => {
   const formattedDate = date.toLocaleString('en-CA', options)
   return formattedDate.replace(',', '').replaceAll('.', '')
 }
+
+export const spacesFormatter = (params) => {
+  if (params.value != null) {
+    return params.value.replace(/([A-Z])/g, ' $1').trim();
+  }
+  return params.value;
+}

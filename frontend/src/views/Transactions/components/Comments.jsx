@@ -46,6 +46,7 @@ export const Comments = ({commentField, isEditable}) => {
           <Collapse in={isExpanded}>
             <TextField
               id="external-comments"
+              data-test="external-comments"
               {...register(commentField)}
               multiline
               fullWidth

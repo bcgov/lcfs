@@ -38,6 +38,8 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * - getRowId: Function to uniquely identify each row.
  * - enableCopyButton: Flag to enable/disable a copy button in the grid toolbar.
  * - enableResetButton: Flag to enable/disable a reset button in the grid toolbar.
+ * - enableExportButton: Flag to enable/disable a export button in the grid toolbar.
+ * - exportName: The name to be used for the exported file and sheet.
  * - handleGridKey: Function to handle changes in the grid key.
  * - handleRowClicked: Function to handle row click events.
  * - others: Other props that can be spread into the AG Grid component.
@@ -60,6 +62,8 @@ const BCDataGridServer = ({
   getRowId,
   enableCopyButton,
   enableResetButton,
+  enableExportButton,
+  exportName,
   handleGridKey,
   handleRowClicked,
   paginationPageSize,
@@ -294,6 +298,8 @@ const BCDataGridServer = ({
           handleChangeRowsPerPage={handleChangeRowsPerPage}
           enableResetButton={enableResetButton}
           enableCopyButton={enableCopyButton}
+          enableExportButton={enableExportButton}
+          exportName={exportName}
           gridRef={gridRef}
           rowsPerPageOptions={paginationPageSizeSelector}
         />
@@ -323,6 +329,8 @@ BCDataGridServer.defaultProps = {
   defaultColDef: {},
   enableResetButton: false,
   enableCopyButton: true,
+  enableExportButton: false,
+  exportName: 'ExportData',
   className: 'ag-theme-material'
 }
 
@@ -340,6 +348,8 @@ BCDataGridServer.propTypes = {
   gridKey: PropTypes.string.isRequired,
   enableResetButton: PropTypes.bool,
   enableCopyButton: PropTypes.bool,
+  enableExportButton: PropTypes.bool,
+  exportName: PropTypes.string,
   gridOptions: PropTypes.object,
   className: PropTypes.oneOf([
     'ag-theme-alpine',

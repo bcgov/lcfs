@@ -9,16 +9,20 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.internal_comment.services import InternalCommentService
+from lcfs.web.api.internal_comment.schema import InternalCommentCreateSchema, AudienceScopeEnum, EntityTypeEnum
 
 class AdminAdjustmentServices:
     def __init__(
         self, 
         repo: AdminAdjustmentRepository = Depends(AdminAdjustmentRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
+        internal_comment_service: InternalCommentService = Depends(InternalCommentService),
         request: Request = None,
     ) -> None:
         self.repo = repo
         self.org_service = org_service
+        self.internal_comment_service = internal_comment_service
         self.request = request
 
     @service_handler
@@ -100,7 +104,7 @@ class AdminAdjustmentServices:
 
         # Create the admin adjustment
         admin_adjustment = AdminAdjustment(
-            **admin_adjustment_data.model_dump(exclude={"current_status"})
+            **admin_adjustment_data.model_dump(exclude={"current_status", "internal_comment"})
         )
 
         admin_adjustment.current_status = current_status
@@ -114,6 +118,16 @@ class AdminAdjustmentServices:
                 current_status.admin_adjustment_status_id,
                 self.request.user.user_profile_id
             )
+        
+        # Create internal comment if provided
+        if admin_adjustment_data.internal_comment:
+            internal_comment_data = InternalCommentCreateSchema(
+                entity_type=EntityTypeEnum.ADMIN_ADJUSTMENT,
+                entity_id=admin_adjustment.admin_adjustment_id,
+                comment=admin_adjustment_data.internal_comment,
+                audience_scope=AudienceScopeEnum.ANALYST
+            )
+            await self.internal_comment_service.create_internal_comment(internal_comment_data)
 
         return AdminAdjustmentSchema.from_orm(admin_adjustment)
 
@@ -139,7 +153,7 @@ class AdminAdjustmentServices:
         admin_adjustment.transaction = to_transaction
 
         # Set effective date to today if the analyst left it blank
-        if admin_adjustment.transaction_effective_date == None:
-            admin_adjustment.transaction_effective_date = datetime.now().date().isoformat()
+        if admin_adjustment.transaction_effective_date is None:
+            admin_adjustment.transaction_effective_date = datetime.now().date()
 
         await self.repo.refresh_admin_adjustment(admin_adjustment)
