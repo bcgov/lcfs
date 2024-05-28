@@ -1,20 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { AddEditViewTransaction, INITIATIVE_AGREEMENT, ADMIN_ADJUSTMENT } from '../AddEditViewTransaction'
-import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { MemoryRouter, useMatches, useLocation, useParams } from 'react-router-dom'
 // import { yupResolver } from '@hookform/resolvers/yup'
 import { useAdminAdjustment, useCreateUpdateAdminAdjustment } from '@/hooks/useAdminAdjustment'
 import { useInitiativeAgreement, useCreateUpdateInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { AddEditTransactionSchema } from '../_schema.yup'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
