@@ -132,8 +132,8 @@ export const FuelCodes = () => {
           onDownload={handleDownloadFuelCodes}
           isDownloading={isDownloadingFuelCodes}
           label={t('fuelCode:fuelCodeDownloadBtn')}
-          downloadLabel={`${t('fuelCode:fuelCodeDownloadBtn')}...`}
-          data-test="fuel-code-download-btn"
+          downloadLabel={`${t('fuelCode:fuelCodeDownloadingMsg')}...`}
+          dataTest="fuel-code-download-btn"
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>

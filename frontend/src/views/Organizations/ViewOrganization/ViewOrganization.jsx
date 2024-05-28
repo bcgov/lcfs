@@ -273,6 +273,7 @@ export const ViewOrganization = () => {
                 variant="outlined"
                 size="small"
                 color="primary"
+                data-test="show-inactive-btn"
                 sx={{
                   textTransform: 'none',
                   marginRight: '8px',
@@ -286,7 +287,7 @@ export const ViewOrganization = () => {
                 </BCTypography>
               </BCButton>
             </BCBox>
-            <BCTypography variant="h5" mt={1} color="primary">
+            <BCTypography variant="h5" mt={1} color="primary" data-test="active-users-heading">
               {t('org:activeUsersBtn')}
             </BCTypography>
           </>
@@ -296,6 +297,7 @@ export const ViewOrganization = () => {
               variant="outlined"
               size="small"
               color="primary"
+              data-test="show-active-btn"
               sx={{
                 textTransform: 'none',
                 marginRight: '8px',
@@ -308,7 +310,7 @@ export const ViewOrganization = () => {
                 {t('org:showActiveUsersBtn')}
               </BCTypography>
             </BCButton>
-            <BCTypography variant="h5" mt={1} color="primary">
+            <BCTypography variant="h5" mt={1} color="primary" data-test="inactive-users-heading">
               {t('org:inactiveUsersBtn')}
             </BCTypography>
           </>

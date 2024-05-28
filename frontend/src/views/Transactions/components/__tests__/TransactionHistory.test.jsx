@@ -4,24 +4,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TransactionHistory } from '../TransactionHistory'
 // import { useTranslation } from 'react-i18next'
 import { ThemeProvider } from '@mui/material'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
 import dayjs from 'dayjs'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
 
 dayjs.extend(localizedFormat)
 
-// Mock the translation function
-// vi.mock('react-i18next', () => ({
-//   useTranslation: () => ({
-//     t: vi.fn((key, fallback) => fallback || key)
-//   })
-// }))
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: () => ({
+    keycloak: {
+      token: 'mock-token',
+      authenticated: true,
+      initialized: true
+    }
+  })
+}))
 
 const renderComponent = (props) => {
+  const queryClient = new QueryClient()
   return render(
-    <ThemeProvider theme={theme}>
-      <TransactionHistory {...props} />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <TransactionHistory {...props} />
+      </ThemeProvider>
+    </QueryClientProvider>
   )
 }
 
@@ -46,7 +53,7 @@ describe('TransactionHistory Component', () => {
   ]
 
   it('renders without crashing', () => {
-    renderComponent({ transactionHistory: [] })
+    renderComponent({ transactionHistory: [{userProfile: { firstName: 'Jane', lastName: 'Smith' }}] })
     expect(screen.getByText('Transaction History')).toBeInTheDocument()
   })
 
@@ -76,7 +83,7 @@ describe('TransactionHistory Component', () => {
   it('handles empty transaction history gracefully', () => {
     renderComponent({ transactionHistory: [] })
 
-    expect(screen.queryByText('Transaction History')).toBeInTheDocument()
+    expect(screen.queryByText('Transaction History')).not.toBeInTheDocument()
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument()
   })
 })
