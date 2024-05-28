@@ -140,13 +140,14 @@ class FuelCodeRepository:
         query = select(FuelCode).options(
             joinedload(FuelCode.fuel_code_status),
             joinedload(FuelCode.fuel_code_prefix),
-            joinedload(FuelCode.fuel_code_type),
-            joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
-                FeedstockFuelTransportMode.feedstock_fuel_transport_mode
-            ),
-            joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
-                FinishedFuelTransportMode.finished_fuel_transport_mode
-            ),
+            joinedload(FuelCode.fuel_code_type)
+              .joinedload(FuelType.provision_1),
+            joinedload(FuelCode.fuel_code_type)
+              .joinedload(FuelType.provision_2),
+            joinedload(FuelCode.feedstock_fuel_transport_modes)
+              .joinedload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
+            joinedload(FuelCode.finished_fuel_transport_modes)
+              .joinedload(FinishedFuelTransportMode.finished_fuel_transport_mode),
         ).where(FuelCode.fuel_status_id != delete_status.fuel_code_status_id)
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
