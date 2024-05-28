@@ -225,6 +225,8 @@ export const Transactions = () => {
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
+          enableExportButton={false}
+          exportName={t('txn:title')}
           highlightedRowId={highlightedId}
         />
       </BCBox>
