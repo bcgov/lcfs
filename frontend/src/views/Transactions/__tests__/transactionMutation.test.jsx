@@ -80,7 +80,7 @@ describe('useTransactionMutation', () => {
     })
   })
 
-  it('should navigate to TRANSACTIONS with hid if status is DRAFT and has recommended history', () => {
+  it('should navigate to TRANSACTIONS with hid if status is DRAFT and isReturned is true', () => {
     const HookComponent = () => {
       const { handleSuccess } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient)
       return (
@@ -88,9 +88,7 @@ describe('useTransactionMutation', () => {
           data: {
             currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
             initiativeAgreementId: '123',
-            history: [
-              { initiativeAgreementStatus: { status: 'Recommended' } },
-            ],
+            returned: true
           }
         }, '123', INITIATIVE_AGREEMENT)}>
           Test

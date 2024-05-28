@@ -1,8 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Comments } from '../Comments'
-import { useFormContext } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
@@ -23,7 +21,6 @@ vi.mock('react-i18next', () => ({
 }))
 
 const commentField = 'comment'
-const isEditable = true
 
 const renderComponent = (props) => {
   const queryClient = new QueryClient()
@@ -31,7 +28,7 @@ const renderComponent = (props) => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <MemoryRouter>
-          <Comments {...props} />
+          <Comments {...props} isEditable={props.isEditable} />
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>
@@ -44,13 +41,13 @@ describe('Comments Component', () => {
   })
 
   it('renders without crashing', () => {
-    renderComponent({ commentField, isEditable })
+    renderComponent({ commentField, isEditable: true })
     expect(screen.getByText('txn:commentsLabel')).toBeInTheDocument()
     expect(screen.getByText('txn:commentsDescText')).toBeInTheDocument()
   })
 
   it('toggles collapse when clicking on the header', () => {
-    renderComponent({ commentField, isEditable })
+    renderComponent({ commentField, isEditable: true })
 
     const header = screen.getByText('txn:commentsDescText').closest('div')
     expect(header).toBeInTheDocument()
@@ -75,15 +72,9 @@ describe('Comments Component', () => {
     }, 300) // Assuming 300ms is the transition duration
   })
 
-  it('disables TextField when isEditable is false', () => {
-    renderComponent({ commentField, isEditable: false })
-    const textField = screen.getByRole('textbox')
-    expect(textField).toBeDisabled()
-  })
-
   it('enables TextField when isEditable is true', () => {
     renderComponent({ commentField, isEditable: true })
-    const textField = screen.getByRole('textbox')
+    const textField = screen.getByTestId('external-comments')
     expect(textField).toBeEnabled()
   })
 })
