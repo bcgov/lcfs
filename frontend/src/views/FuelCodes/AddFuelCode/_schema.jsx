@@ -149,6 +149,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {
+      onDynamicUpdate: (val, params) => params.api.stopEditing(),
       options: optionsData.latestFuelCodes.map((obj) => obj.fuelCode),
       optionLabel: 'fuelCode',
       multiple: false,
