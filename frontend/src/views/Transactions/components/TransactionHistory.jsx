@@ -25,6 +25,10 @@ export const TransactionHistory = ({ transactionHistory }) => {
     return 'Unknown Status'; // Fallback in case no known status object keys are found
   };
 
+  if (transactionHistory?.length <= 0) {
+    return <></>
+  }
+
   return (
     <BCBox mt={2}>
       <Typography variant="h6" color="primary">
