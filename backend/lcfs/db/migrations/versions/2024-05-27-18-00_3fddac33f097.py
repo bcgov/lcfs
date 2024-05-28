@@ -49,6 +49,5 @@ def downgrade() -> None:
             comment="Identifier for the user role associated with the status change",
         ),
     )
-    op.drop_constraint(None, "compliance_report_history", type_="foreignkey")
     op.drop_column("compliance_report_history", "user_profile_id")
     # ### end Alembic commands ###
