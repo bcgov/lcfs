@@ -8,10 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 
 from lcfs.web.api.base import (
-    FilterModel,
     PaginationRequestSchema,
     apply_filter_conditions,
-    apply_text_filter_conditions,
     get_field_for_filter,
 )
 from lcfs.db.models.compliance import CompliancePeriod
@@ -179,7 +177,7 @@ class ComplianceReportRepository:
         history = ComplianceReportHistory(
             compliance_report_id=report.compliance_report_id,
             status_id=report.status_id,
-            user_role_id=user.user_profile_id,
+            user_profile_id=user.user_profile_id,
         )
         self.db.add(history)
         await self.db.flush()
