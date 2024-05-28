@@ -8,26 +8,27 @@ export const ActivityLinksList = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { compliancePeriod, reportID } = useParams()
+  const REPORTS_VIEW_PATH = `/reports/${compliancePeriod}/${reportID}/`
   // reports activities
   const activityList = useMemo(() => {
     return [
       {
         name: t('report:activityLists.supplyOfFuel'),
         action: () => {
-          navigate(`/reports/${compliancePeriod}/${reportID}/supply-of-fuel`)
+          navigate(`${REPORTS_VIEW_PATH}/supply-of-fuel`)
         }
       },
       {
         name: t('report:activityLists.finalSupplyEquipment'),
         action: () => {
-          navigate(`/reports/${compliancePeriod}/${reportID}/fse`)
+          navigate(`${REPORTS_VIEW_PATH}/fse`)
         }
       },
       {
         name: t('report:activityLists.allocationAgreements'),
         action: () => {
           navigate(
-            `/reports/${compliancePeriod}/${reportID}/allocation-agreements`
+            `${REPORTS_VIEW_PATH}/allocation-agreements`
           )
         }
       },
@@ -35,20 +36,20 @@ export const ActivityLinksList = () => {
         name: t('report:activityLists.notionalTransfers'),
         action: () => {
           navigate(
-            `/reports/${compliancePeriod}/${reportID}/notional-transfers`
+            `${REPORTS_VIEW_PATH}/notional-transfers`
           )
         }
       },
       {
         name: t('report:activityLists.fuelsOtherUse'),
         action: () => {
-          navigate(`/reports/${compliancePeriod}/${reportID}/fuels-other-use`)
+          navigate(`${REPORTS_VIEW_PATH}/fuels-other-use`)
         }
       },
       {
         name: t('report:activityLists.exportFuels'),
         action: () => {
-          navigate(`/reports/${compliancePeriod}/${reportID}/fuel-exports`)
+          navigate(`${REPORTS_VIEW_PATH}/fuel-exports`)
         }
       }
     ]
