@@ -252,3 +252,12 @@ class FuelCodeRepository:
         result = (await self.db.execute(query)).all()
 
         return result
+
+    @repo_handler
+    async def get_fp_locations(self):
+        query = select(FuelCode.fuel_production_facility_city,
+                       FuelCode.fuel_production_facility_province_state, FuelCode.fuel_production_facility_country)
+
+        result = (await self.db.execute(query)).all()
+
+        return result

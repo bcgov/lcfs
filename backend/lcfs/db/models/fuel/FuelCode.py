@@ -51,9 +51,17 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     )
     feedstock_misc = Column(String(500), nullable=True,
                             comment="Feedstock misc")
-    fuel_production_facility_location = Column(
-        String(1000), nullable=False, comment="Location of the fuel production"
+
+    fuel_production_facility_city = Column(
+        String(1000), nullable=True, comment="City of the fuel production"
     )
+    fuel_production_facility_province_state = Column(
+        String(1000), nullable=True, comment="Province or state of the fuel production"
+    )
+    fuel_production_facility_country = Column(
+        String(1000), nullable=True, comment="Country of the fuel production"
+    )
+
     facility_nameplate_capacity = Column(
         Integer, nullable=True, comment="Nameplate capacity"
     )

@@ -42,31 +42,36 @@ class FuelCodeServices:
         fuel_code_prefixes = await self.repo.get_fuel_code_prefixes()
         latest_fuel_codes = await self.repo.get_latest_fuel_codes()
         field_options_results = await self.repo.get_fuel_code_field_options()
+        fp_locations = await self.repo.get_fp_locations()
 
-        result_dict = {}
+        field_options_results_dict = {}
         for row in field_options_results:
             for key, value in row._mapping.items():
-                if key not in result_dict:
-                    result_dict[key] = set()  # Use a set to remove duplicates
-                result_dict[key].add(value)
+                if value is None or value == "":  # Skip empty strings or null values
+                    continue
+                if key not in field_options_results_dict:
+                    # Use a set to remove duplicates
+                    field_options_results_dict[key] = set()
+                field_options_results_dict[key].add(value)
 
         field_options = {key: sorted(list(values))
-                         for key, values in result_dict.items()}
+                         for key, values in field_options_results_dict.items()}
 
         return {
-            "fuelTypes": [
+            "fuel_types": [
                 FuelTypeSchema.model_validate(fuel_type) for fuel_type in fuel_types
             ],
-            "transportModes": [
+            "transport_modes": [
                 TransportModeSchema.model_validate(transport_mode)
                 for transport_mode in transport_modes
             ],
-            "fuelCodePrefixes": [
+            "fuel_code_prefixes": [
                 FuelCodePrefixSchema.model_validate(fuel_code_prefix)
                 for fuel_code_prefix in fuel_code_prefixes
             ],
-            "latestFuelCodes": latest_fuel_codes,
-            "field_options": field_options
+            "latest_fuel_codes": latest_fuel_codes,
+            "field_options": field_options,
+            "fp_locations": list(set(fp_locations))
         }
 
     @service_handler
