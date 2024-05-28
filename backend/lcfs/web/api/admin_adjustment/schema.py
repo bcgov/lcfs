@@ -36,6 +36,7 @@ class AdminAdjustmentBaseSchema(BaseSchema):
     transaction_effective_date: Optional[date] = None
     to_organization_id: int
     gov_comment: Optional[str] = None
+    internal_comment: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -118,5 +118,6 @@ class AdminAdjustmentRepository:
         Commits and refreshes an administrative adjustment object in db session
 
         """
+        await self.db.flush()
         await self.db.refresh(admin_adjustment)
         return admin_adjustment

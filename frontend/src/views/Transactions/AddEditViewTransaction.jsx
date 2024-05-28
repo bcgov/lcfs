@@ -3,7 +3,7 @@ import { useMatches, useParams, useNavigate, useLocation } from 'react-router-do
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { roles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -37,6 +37,7 @@ import { AddEditTransactionSchema } from './_schema.yup'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { useTransactionMutation } from './transactionMutation'
+import InternalComments from '@/components/InternalComments'
 
 export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
 export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
@@ -103,7 +104,7 @@ export const AddEditViewTransaction = () => {
     handleSubmit,
   } = methods
 
-  const txnType = watch('txnType')
+  let txnType = watch('txnType')
 
   const handleCommentChange = (newComment) => {
     setInternalComment(newComment)
@@ -126,6 +127,10 @@ export const AddEditViewTransaction = () => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state, mode, setValue])
+
+  if (mode !== 'add') {
+    txnType = location.pathname.includes('admin-adjustment') ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
+  }
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook = txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement

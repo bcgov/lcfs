@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TransactionView } from '../TransactionView'
 import { useTranslation } from 'react-i18next'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 
@@ -13,11 +14,24 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: () => ({
+    keycloak: {
+      token: 'mock-token',
+      authenticated: true,
+      initialized: true
+    }
+  })
+}))
+
 const renderComponent = (props) => {
+  const queryClient = new QueryClient()
   return render(
-    <ThemeProvider theme={theme}>
-      <TransactionView {...props} />
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <TransactionView {...props} />
+      </ThemeProvider>
+    </QueryClientProvider>
   )
 }
 

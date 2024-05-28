@@ -1,5 +1,6 @@
 {
   "title": "Compliance reporting",
+  "complianceReport": "Compliance report",
   "newReportBtn": "New complaince report",
   "reportColLabels": {
     "compliancePeriod": "Compliance period",
@@ -8,5 +9,27 @@
     "status": "Current status",
     "lastUpdated": "Last status update"
   },
-  "noReportsFound": "No compliance reports found"
+  "noReportsFound": "No compliance reports found",
+  "serviceAddrLabel": "Address for service",
+  "bcAddrLabel": "Address in B.C.",
+  "activityHdrLabel": "Did {{name}} engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
+  "activityLinksList": "Click links to report activities",
+  "activityLists": {
+    "supplyOfFuel": "Supply of fuel (e.g., gasoline, diesel, jet fuel, electricity, hydrogen, etc.)",
+    "finalSupplyEquipment": "Final supply equipment (FSE) identification for electricity supply",
+    "allocationAgreements": "Allocation agreements (e.g., allocating responsibility for fuel)",
+    "notionalTransfers": "Notional transfers of eligible renewable fuel",
+    "fuelsOtherUse": "Fuels for other use",
+    "exportFuels": "Exporting fuel that was previously marketed in British Columbia"
+  },
+  "uploadLabel": "Upload supporting documents for your report",
+  "introduction": "Introduction",
+  "introH1": "British Columbia Renewable and Low Carbon Fuel Requirements Regulation",
+  "introH1Details": "<p>It is the responsibility of anyone who manufactures or imports fuel to determine whether their activities qualify them as a Part 2 (Renewable) and/or Part 3 (Low Carbon) fuel supplier under the Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirements) Act (available online at <a href='https://www.bclaws.ca' target='_blank'>www.bclaws.ca</a>).</p>  <p>All Part 2 and Part 3 fuel suppliers must report using this form unless they claim the Small Supplier Exemption (see below). The 2024 compliance period for Part 2 and Part 3 requirements is from January 1 to December 31, 2024. Compliance reports for 2024 are due March 31, 2025.</p>  <p>The compliance report must be submitted by an officer or employee authorized by the fuel supplier, and records evidencing each matter reported under the Renewable and Low Carbon Fuel Requirements Regulation (Regulation) must be available for inspection upon request. These records must be retained for a period of seven years after the compliance period to which they refer.</p>  <p>An administrative penalty must be made payable to the Minister of Finance. Payment is due March 31 following each compliance period. For more information please contact the Low Carbon Fuels Branch via email at <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a>.</p>",
+  "introH2": "Small Fuel Supplier Exemption",
+  "introH2Details": "<p>Fuel suppliers and their affiliates who supplied less than a total of 200,000 litres litres of gasoline and diesel class fuels (combined) in the 2024 compliance period may apply to be exempted from Part 2 and/or Part 3 requirements. A Part 2 or Part 3 fuel supplier who applies to be exempted must submit an Exemption Report, available from (<a href='https://www2.gov.bc.ca//lowcarbonfuels' target='_blank'>www.gov.bc.ca/lowcarbonfuels</a>). A Part 3 fuel supplier who does not supply any Part 2 fuels may not be exempted.</p><p>For more information, see Information Bulletin RLCF-005 Exemption Reports; available from (<a href='https://www2.gov.bc.ca//lowcarbonfuels' target='_blank'>www.gov.bc.ca/lowcarbonfuels</a>).</p>",
+  "introH3": "About this form",
+  "introH3Details": "<p>The values and calculations provided in this report are for informational purposes only and are subject to change at any time as a result of administrative and legislative changes. The Declaration & Summary section of this Compliance Report compiles information from the other schedules of this report. This is the last section users should complete.</p>",
+  "questions": "Questions?",
+  "contact": "<p>Please contact <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a> with any questions you may have about this form.</p>"
 }

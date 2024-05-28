@@ -1,16 +1,16 @@
-import { useState, forwardRef } from 'react'
+import BCBox from '@/components/BCBox'
+import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
 import {
   Autocomplete,
-  TextField,
   Box,
   Checkbox,
   Chip,
-  Stack
+  Stack,
+  TextField
 } from '@mui/material'
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
-import CheckBoxIcon from '@mui/icons-material/CheckBox'
-import BCBox from '@/components/BCBox'
 import PropTypes from 'prop-types'
+import { forwardRef, useState } from 'react'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
 const checkedIcon = <CheckBoxIcon fontSize="medium" />
@@ -45,6 +45,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
             padding: '2px 0px 2px 0px'
           }
         }}
+        {...props}
         openOnFocus={props.openOnFocus}
         value={selectedValues}
         onChange={(_, newValue) => updateValue(newValue)}
@@ -55,6 +56,9 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         className="bc-column-set-filter ag-input-field ag-checkbox-input"
         role="list-box"
         options={props.options}
+        onKeyDownCapture={props.onKeyDownCapture}
+        onBlur={(e) => props.onBlur(e, updateValue)}
+        onPaste={(e) => props.onPaste(e, updateValue)}
         autoHighlight
         size="medium"
         freeSolo={props.freeSolo}

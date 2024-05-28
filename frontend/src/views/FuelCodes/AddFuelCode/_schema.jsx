@@ -1,8 +1,8 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
-import * as yup from 'yup'
-import { v4 as uuid } from 'uuid'
 import { Typography } from '@mui/material'
+import { v4 as uuid } from 'uuid'
+import * as yup from 'yup'
 
 // copy the desired columns to new row
 const duplicateRow = (props) => {
@@ -159,14 +159,78 @@ export const fuelCodeColDefs = (t, optionsData) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {
-      // onDynamicUpdate: (fuelCodeValue, params) => params.api.redrawRows({ rowNodes: [params.node] }),
-      // autoSelect: true,
+      onDynamicUpdate: (val, params) => params.api.stopEditing(),
       options: optionsData.latestFuelCodes.map((obj) => obj.fuelCode),
       optionLabel: 'fuelCode',
       multiple: false,
       disableCloseOnSelect: false,
-      freeSolo: false, // whether to allow free text or restrict to only options selection
-      openOnFocus: true
+      freeSolo: true, // whether to allow free text or restrict to only options selection
+      openOnFocus: true,
+      onKeyDownCapture: (e) => {
+        const allowedKeys = [
+          'Backspace',
+          'ArrowLeft',
+          'ArrowRight',
+          'Delete',
+          'Tab',
+          'Escape',
+          'Enter',
+          'Home',
+          'End',
+          'Control',
+          'Meta',
+          'Shift',
+          'Alt'
+        ]
+
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())
+        ) {
+          return
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+          return
+        }
+
+        if (allowedKeys.includes(e.key)) {
+          return
+        }
+
+        const charCode = e.which ? e.which : e.keyCode
+        if (e.key === '.' || charCode < 48 || charCode > 57) {
+          e.preventDefault()
+        }
+      },
+      onPaste: (e, onChange) => {
+        e.preventDefault()
+        const paste = (e.clipboardData || window.clipboardData).getData('text')
+        const cleaned = paste.split('.')[0].replace(/[^0-9]/g, '')
+
+        onChange(cleaned)
+      },
+      onBlur: (e, onChange) => {
+        if (!e.target.value) {
+          return
+        }
+
+        if (
+          optionsData.latestFuelCodes.find(
+            (item) => item.fuelCode === e.target.value
+          )
+        ) {
+          return
+        }
+
+        const match = optionsData.latestFuelCodes.find(
+          (item) => item.fuelCode.split('.')[0] === e.target.value
+        )
+
+        const newValue = match ? match.fuelCode : `${e.target.value}.0`
+
+        onChange(newValue)
+      }
     },
     suppressKeyboardEvent: (params) => {
       // return true (to suppress) if editing and user hit Enter key

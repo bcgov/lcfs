@@ -125,5 +125,6 @@ class InitiativeAgreementRepository:
         Commits and refreshes an initiative agreement object in db session
 
         """
+        await self.db.flush()
         await self.db.refresh(initiative_agreement)
         return initiative_agreement
