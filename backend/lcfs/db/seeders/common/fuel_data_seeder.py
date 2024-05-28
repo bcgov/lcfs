@@ -11,7 +11,7 @@ from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
-from lcfs.db.models.fuel.ProvisionAct import ProvisionAct
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.FuelType import FuelType
@@ -39,7 +39,7 @@ async def seed_static_fuel_data(session):
                     for transport_mode in data["transport_modes"]
                 ]
                 provision_of_the_acts_to_seed = [
-                    ProvisionAct(**provision) for provision in data["provision_acts"]
+                    ProvisionOfTheAct(**provision) for provision in data["provision_acts"]
                 ]
                 fuel_types_to_seed = [
                     FuelType(**fuel_type) for fuel_type in data["fuel_types"]

@@ -11,7 +11,7 @@ from .FuelCode import FuelCode
 from .FuelCodePrefix import FuelCodePrefix
 from .FuelCodeStatus import FuelCodeStatus
 from .FuelType import FuelType
-from .ProvisionAct import ProvisionOfTheAct
+from .ProvisionOfTheAct import ProvisionOfTheAct
 from .TransportMode import TransportMode
 from .UnitOfMeasure import UnitOfMeasure
 
@@ -29,8 +29,8 @@ __all__ = [
     "FuelCodePrefix",
     "FuelCodeStatus",
     "FuelType",
-    "ProvisionAct",
+    "ProvisionOfTheAct",
     "TransportMode",
     "UnitOfMeasure",
-    "ProvisionAct",
+    "ProvisionOfTheAct",
 ]
