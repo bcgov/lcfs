@@ -104,3 +104,10 @@ export function calculateRowHeight(actualWidth, roles) {
 
   return totalHeight
 }
+
+export const spacesFormatter = (params) => {
+  if (params.value != null) {
+    return params.value.replace(/([A-Z])/g, ' $1').trim();
+  }
+  return params.value;
+}
