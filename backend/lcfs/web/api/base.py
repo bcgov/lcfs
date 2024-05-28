@@ -46,7 +46,7 @@ class SortOrder(BaseSchema):
 class FilterModel(BaseSchema):
     filter_type: str = Field(Query(default="text", alias="filterType"))
     type: str = Field(Query(default="contains", alias="type"))
-    filter: Optional[Any] = Field(Query(default=None, alias="filter"))
+    filter: Optional[Any] = None
     field: str = Field(Query(default="", alias="field"))
     date_from: Optional[str] = Field(Query(default="", alias="dateFrom"))
     date_to: Optional[str] = Field(Query(default="", alias="dateTo"))

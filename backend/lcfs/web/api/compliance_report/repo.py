@@ -201,49 +201,54 @@ class ComplianceReportRepository:
         # Apply pagination and sorting parameters
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        # Form queries to get the total count and the paginated results
-        unique_ids_query = select(ComplianceReport.compliance_report_id).where(
-            and_(*conditions)
+
+        query = (
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.status),
+            )
+            .where(and_(*conditions))
         )
-        query = select(ComplianceReport).options(
-            joinedload(ComplianceReport.organization),
-            joinedload(ComplianceReport.compliance_period),
-            joinedload(ComplianceReport.status),
-        )
-        # get resultset
-        query_result = (
-            (await self.db.execute(unique_ids_query)).unique().scalars().all()
-        )
+        # Apply sorts
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
+            # Add the sorting condition to the query
+            if order.field == "status":
+                order.field = get_field_for_filter(ComplianceReportStatus, "status")
+                query = query.join(
+                    ComplianceReportStatus,
+                    ComplianceReport.status_id
+                    == ComplianceReportStatus.compliance_report_status_id,
+                )
+            elif order.field == "compliance_period":
+                order.field = get_field_for_filter(CompliancePeriod, "description")
+                query = query.join(
+                    CompliancePeriod,
+                    ComplianceReport.compliance_period_id
+                    == CompliancePeriod.compliance_period_id,
+                )
+            elif order.field == "organization":
+                order.field = get_field_for_filter(Organization, "name")
+                query = query.join(
+                    Organization,
+                    ComplianceReport.organization_id == Organization.organization_id,
+                )
+            elif order.field == "type":
+                continue
+            else:
+                order.field = get_field_for_filter(ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))
 
-        unique_ids = (
-            (await self.db.execute(unique_ids_query.offset(offset).limit(limit)))
-            .unique()
-            .scalars()
-            .all()
-        )
-        # report_id_list = [report.compliance_report_id for report in unique_ids]
-        # Execute the main query
-        reports = (
-            (
-                await self.db.execute(
-                    query.where(
-                        and_(
-                            ComplianceReport.compliance_report_id.in_(unique_ids),
-                            *conditions,
-                        )
-                    )
-                    .offset(offset)
-                    .limit(limit)
-                )
-            )
-            .scalars()
-            .unique()
-            .all()
-        )
+        query_result = (await self.db.execute(query)).unique().scalars().all()
         total_count = len(query_result)
+        reports = (
+            (await self.db.execute(query.offset(offset).limit(limit)))
+            .unique()
+            .scalars()
+            .all()
+        )
         return [
             ComplianceReportBaseSchema.model_validate(report) for report in reports
         ], total_count
