@@ -1183,6 +1183,8 @@ def upgrade() -> None:
     op.create_unique_constraint("internal_comment_internal_comment_id_key", "internal_comment", ["internal_comment_id"])
     op.create_unique_constraint("initiative_agreement_history_initiative_agreement_history_i_key", "initiative_agreement_history", ["initiative_agreement_history_id"])
     op.create_unique_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", ["initiative_agreement_id"])
+    op.create_unique_constraint("admin_adjustment_history_admin_adjustment_history_id_key", "admin_adjustment_history", ["admin_adjustment_history_id"])
+    op.create_unique_constraint("admin_adjustment_admin_adjustment_id_key", "admin_adjustment", ["admin_adjustment_id"])
 
     # ### end Alembic commands ###
 
@@ -1195,6 +1197,8 @@ def downgrade() -> None:
     op.drop_constraint("internal_comment_internal_comment_id_key", "internal_comment", type_="unique")
     op.drop_constraint("initiative_agreement_history_initiative_agreement_history_i_key", "initiative_agreement_history", type_="unique")
     op.drop_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", type_="unique")
+    op.drop_constraint("admin_adjustment_history_admin_adjustment_history_id_key", "admin_adjustment_history", type_="unique")
+    op.drop_constraint("admin_adjustment_admin_adjustment_id_key", "admin_adjustment", type_="unique")
 
     op.alter_column(
         "energy_effectiveness_ratio",
@@ -1211,8 +1215,6 @@ def downgrade() -> None:
         type_=sa.REAL(),
         existing_nullable=False,
     )
-    op.drop_constraint(None, "admin_adjustment_history", type_="unique")
-    op.drop_constraint(None, "admin_adjustment", type_="unique")
     op.alter_column(
         "additional_carbon_intensity",
         "intensity",
