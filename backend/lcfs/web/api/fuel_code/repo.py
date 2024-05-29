@@ -244,3 +244,21 @@ class FuelCodeRepository:
             next_fuel_codes.append({**fuel_code_dict, 'fuel_code': next_code})
 
         return next_fuel_codes
+
+    @repo_handler
+    async def get_fuel_code_field_options(self):
+        query = select(FuelCode.company, FuelCode.feedstock, FuelCode.feedstock_location, FuelCode.feedstock_misc,
+                       FuelCode.former_company)
+
+        result = (await self.db.execute(query)).all()
+
+        return result
+
+    @repo_handler
+    async def get_fp_locations(self):
+        query = select(FuelCode.fuel_production_facility_city,
+                       FuelCode.fuel_production_facility_province_state, FuelCode.fuel_production_facility_country)
+
+        result = (await self.db.execute(query)).all()
+
+        return result

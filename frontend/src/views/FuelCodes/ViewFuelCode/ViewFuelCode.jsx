@@ -213,7 +213,7 @@ const ViewFuelCode = () => {
   if (isLoading || isFuelCodeDataLoading) {
     return <Loading />
   }
-  console.log(fuelCodeData)
+
   return (
     isFetched && (
       <>

@@ -80,11 +80,21 @@ export const fuelCodeSchema = (t, optionsData) =>
         field: t('fuelCode:fuelCodeColLabels.feedstockLocation')
       })
     ),
-    fuelProductionFacilityLocation: yup.string().required(
+    fuelProductionFacilityCity: yup.string().required(
       t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation')
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity')
       })
-    )
+    ),
+    fuelProductionFacilityProvinceState: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState')
+      })
+    ),
+    fuelProductionFacilityCountry: yup.string().required(
+      t('fuelCode:validateMsg.isRequired', {
+        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry')
+      })
+    ),
   })
 
 export const fuelCodeColDefs = (t, optionsData) => [
@@ -235,11 +245,26 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.company,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
     },
     minWidth: 300
   },
@@ -366,40 +391,157 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'feedstock',
     headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.feedstock,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
     },
     minWidth: 300
   },
   {
     field: 'feedstockLocation',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.feedstockLocation,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
     },
     minWidth: 300
   },
   {
     field: 'feedstockMisc',
     headerName: t('fuelCode:fuelCodeColLabels.misc'),
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    minWidth: 495
-  },
-  {
-    field: 'fuelProductionFacilityLocation',
-    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.feedstockMisc,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    minWidth: 495
+  },
+  {
+    field: 'fuelProductionFacilityCity',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
+    cellEditor: 'autocompleteEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      onDynamicUpdate: (val, params) => params.api.stopEditing(),
+      noLabel: true,
+      options: [
+        ...new Map(
+          optionsData.fpLocations.map((location) => [
+            location.fuelProductionFacilityCity,
+            location.fuelProductionFacilityCity
+          ])
+        ).values()
+      ],
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    minWidth: 325 // TODO: handle in #486
+  },
+  {
+    field: 'fuelProductionFacilityProvinceState',
+    headerName: t(
+      'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
+    ),
+    cellEditor: 'autocompleteEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      onDynamicUpdate: (val, params) => params.api.stopEditing(),
+      noLabel: true,
+      options: [
+        ...new Map(
+          optionsData.fpLocations.map((location) => [
+            location.fuelProductionFacilityProvinceState,
+            location.fuelProductionFacilityProvinceState
+          ])
+        ).values()
+      ],
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    minWidth: 325 // TODO: handle in #486
+  },
+  {
+    field: 'fuelProductionFacilityCountry',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
+    cellEditor: 'autocompleteEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: [
+        ...new Map(
+          optionsData.fpLocations.map((location) => [
+            location.fuelProductionFacilityCountry,
+            location.fuelProductionFacilityCountry
+          ])
+        ).values()
+      ],
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
     },
     minWidth: 325 // TODO: handle in #486
   },
@@ -462,8 +604,20 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'formerCompany',
     headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.formerCompany,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
     minWidth: 300
   },
   {

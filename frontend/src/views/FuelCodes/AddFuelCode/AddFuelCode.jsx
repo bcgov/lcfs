@@ -30,7 +30,6 @@ export const AddFuelCode = () => {
   const [columnApi, setColumnApi] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [fuelCodeChanged, setFuelCodeChanged] = useState({ changed: false })
 
   const gridRef = useRef(null)
   const alertRef = useRef()
@@ -152,10 +151,44 @@ export const AddFuelCode = () => {
         ),
         formerCompany: fuelCodeData.formerCompany
       })
-      setFuelCodeChanged({ changed: true, rowIndex: focusedCell.rowIndex })
-      params.api.startEditingCell({
+
+      gridApi.startEditingCell({
         rowIndex: focusedCell.rowIndex,
         colKey: 'company'
+      })
+    } else if (focusedCell.column.colId === 'fuelProductionFacilityCity') {
+      const location = optionsData.fpLocations.find(
+        (location) =>
+          location.fuelProductionFacilityCity ===
+          params.data.fuelProductionFacilityCity
+      )
+      params.node.setData({
+        ...params.data,
+        fuelProductionFacilityProvinceState:
+          location.fuelProductionFacilityProvinceState,
+        fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
+      })
+
+      gridApi.startEditingCell({
+        rowIndex: focusedCell.rowIndex,
+        colKey: 'facilityNameplateCapacity'
+      })
+    } else if (
+      focusedCell.column.colId === 'fuelProductionFacilityProvinceState'
+    ) {
+      const location = optionsData.fpLocations.find(
+        (location) =>
+          location.fuelProductionFacilityProvinceState ===
+          params.data.fuelProductionFacilityProvinceState
+      )
+      params.node.setData({
+        ...params.data,
+        fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
+      })
+
+      gridApi.startEditingCell({
+        rowIndex: focusedCell.rowIndex,
+        colKey: 'facilityNameplateCapacity'
       })
     } else {
       validationHandler(params)
@@ -167,15 +200,6 @@ export const AddFuelCode = () => {
     const modifiedRows = allRowData.filter((row) => row.modified)
     // Add your API call to save modified rows here
   }, [])
-
-  useEffect(() => {
-    if (fuelCodeChanged.changed) {
-      gridApi.startEditingCell({
-        rowIndex: fuelCodeChanged.rowIndex,
-        colKey: 'company'
-      })
-    }
-  }, [fuelCodeChanged])
 
   const statusBarcomponent = useMemo(() => {
     return (

@@ -137,7 +137,9 @@ class FuelCodeSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
-    fuel_production_facility_location: Optional[str] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
@@ -152,11 +154,27 @@ class FuelCodeSchema(BaseSchema):
     )
 
 
+class FieldOptions(BaseSchema):
+    company: List[str]
+    feedstock: List[str]
+    feedstock_location: List[str]
+    feedstock_misc: List[str]
+    former_company: List[str]
+
+
+class FPLocationsSchema(BaseSchema):
+    fuel_production_facility_city: str
+    fuel_production_facility_province_state: str
+    fuel_production_facility_country: str
+
+
 class TableOptionsSchema(BaseSchema):
     fuel_types: List[FuelTypeSchema]
     transport_modes: List[TransportModeSchema]
     fuel_code_prefixes: List[FuelCodePrefixSchema]
     latest_fuel_codes: List[FuelCodeSchema]
+    field_options: FieldOptions
+    fp_locations: List[FPLocationsSchema]
 
 
 class FuelCodesSchema(BaseSchema):
@@ -184,7 +202,10 @@ class FuelCodeCreateSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
-    fuel_production_facility_location: str
+    fuel_production_facility_city: str
+    fuel_production_facility_province_state: str
+    fuel_production_facility_country: str
+
     facility_nameplate_capacity: Optional[int] = None
     feedstock_transport_mode: Optional[List[str]] = None
     finished_fuel_transport_mode: Optional[List[str]] = None

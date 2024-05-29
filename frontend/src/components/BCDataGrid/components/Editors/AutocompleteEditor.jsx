@@ -102,20 +102,26 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
             </Box>
           )
         }}
-        renderInput={(params) => (
-          <TextField
-            className="ag-input-field ag-checkbox-input"
-            role="presentation"
-            {...params}
-            label="Select"
-            variant="outlined"
-            size="medium"
-            inputProps={{
-              ...params.inputProps,
-              autoComplete: 'new-password' // disable autocomplete and autofill
-            }}
-          />
-        )}
+        renderInput={(params) => {
+          return (
+            <TextField
+              className="ag-input-field ag-checkbox-input"
+              role="presentation"
+              {...params}
+              label={
+                props.colDef?.cellEditorParams.noLabel
+                  ? null
+                  : props.colDef?.cellEditorParams.label || 'Select'
+              }
+              variant="outlined"
+              size="medium"
+              inputProps={{
+                ...params.inputProps,
+                autoComplete: 'new-password' // disable autocomplete and autofill
+              }}
+            />
+          )
+        }}
         renderTags={(value, getTagProps) => {
           const numTags = value.length
 
