@@ -2,15 +2,18 @@
   "provision_acts": [
     {
       "name": "Prescribed carbon intensity - section 19 (a)",
-      "description": "Prescribed carbon intensity - section 19 (a)"
+      "description": "Prescribed carbon intensity - section 19 (a)",
+      "effective_status": true
     },
     {
       "name": "Fuel code - section 19 (b) (i)",
-      "description": "Fuel code - section 19 (b) (i)"
+      "description": "Fuel code - section 19 (b) (i)",
+      "effective_status": true
     },
     {
       "name": "Default carbon intensity - section 19 (b) (ii)",
-      "description": "Default carbon intensity - section 19 (b) (ii)"
+      "description": "Default carbon intensity - section 19 (b) (ii)",
+      "effective_status": true
     }
   ],
   "fuel_types": [

@@ -183,6 +183,10 @@ class FuelCodeRepository:
             joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                 FinishedFuelTransportMode.finished_fuel_transport_mode
             ),
+            joinedload(FuelCode.fuel_code_type)
+              .joinedload(FuelType.provision_1),
+            joinedload(FuelCode.fuel_code_type)
+              .joinedload(FuelType.provision_2),
         ).where(FuelCode.fuel_code_id == fuel_code_id)))
 
     @repo_handler
@@ -223,6 +227,10 @@ class FuelCodeRepository:
                 joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
+                joinedload(FuelCode.fuel_code_type)
+                  .joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_code_type)
+                  .joinedload(FuelType.provision_2),
             )
         )
 
