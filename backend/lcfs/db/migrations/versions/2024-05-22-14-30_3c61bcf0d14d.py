@@ -1181,7 +1181,7 @@ def upgrade() -> None:
     op.create_unique_constraint("transfer_transfer_id_key", "transfer", ["transfer_id"])
     op.create_unique_constraint("transaction_transaction_id_key", "transaction", ["transaction_id"])
     op.create_unique_constraint("internal_comment_internal_comment_id_key", "internal_comment", ["internal_comment_id"])
-    op.create_unique_constraint("initiative_agreement_history_initiative_agreement_history_id_key", "initiative_agreement_history", ["initiative_agreement_history_id"])
+    op.create_unique_constraint("initiative_agreement_history_initiative_agreement_history_i_key", "initiative_agreement_history", ["initiative_agreement_history_id"])
     op.create_unique_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", ["initiative_agreement_id"])
 
     # ### end Alembic commands ###
@@ -1193,7 +1193,7 @@ def downgrade() -> None:
     op.drop_constraint("transfer_transfer_id_key", "transfer", type_="unique")
     op.drop_constraint("transaction_transaction_id_key", "transaction", type_="unique")
     op.drop_constraint("internal_comment_internal_comment_id_key", "internal_comment", type_="unique")
-    op.drop_constraint("initiative_agreement_history_initiative_agreement_history_id_key", "initiative_agreement_history", type_="unique")
+    op.drop_constraint("initiative_agreement_history_initiative_agreement_history_i_key", "initiative_agreement_history", type_="unique")
     op.drop_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", type_="unique")
 
     op.alter_column(
