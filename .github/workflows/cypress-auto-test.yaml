@@ -1,13 +1,13 @@
 # Workflow starts automatically on push or can be triggered manually.
 # This is a desirable pattern as it allows for adhoc test runs without a code push
 name: Cypress tests
-on: [push, workflow_dispatch]
-# on:
-#   push:
-#     branches:
-#       - 'release-0.2.0'
+# on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - 'kuan-619'
 #   pull_request:
-#   workflow_dispatch:
+  workflow_dispatch:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
