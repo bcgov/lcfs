@@ -4,8 +4,11 @@ name: Cypress tests
 # on: [push, workflow_dispatch]
 on:
   push:
-    branches: [ kuan-619 ]
-#   pull_request:
+    
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches: 
+      - "kuan-619"
   workflow_dispatch:
 jobs:
   cypress-run:
