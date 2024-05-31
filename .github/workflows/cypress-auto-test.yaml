@@ -2,10 +2,10 @@
 # This is a desirable pattern as it allows for adhoc test runs without a code push
 name: Cypress tests
 on:
-  pull_request:
-    types: [opened, edited, synchronize]
-    branches: 
-      - "feat/prashanth-ci-cd-test-pipeline-619"
+  # pull_request:
+  #   types: [opened, edited, synchronize]
+  #   branches: 
+  #     - "feat/prashanth-ci-cd-test-pipeline-619"
   workflow_dispatch:
 jobs:
   cypress-run:
