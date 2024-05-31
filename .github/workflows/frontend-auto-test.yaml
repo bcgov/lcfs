@@ -6,6 +6,8 @@ on:
     types: [opened, edited, synchronize]
     branches: 
       - "feat/prashanth-ci-cd-test-pipeline-619"
+    paths: 
+      - "frontend"
   workflow_dispatch:
 jobs:
   
