@@ -26,4 +26,8 @@ jobs:
       - name: Start frontend test
         run: |
           node --version
+          cd frontend
+          pwd
+          npm install
+          npm run test
 
