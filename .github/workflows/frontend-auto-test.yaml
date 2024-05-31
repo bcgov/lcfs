@@ -18,6 +18,11 @@ jobs:
       - name: Checkout Target Branch
         uses: actions/checkout@v4.1.6
 
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4.0.2
+        with:
+          node-version: '20'
+    
       - name: Start frontend test
         run: |
           node --version
