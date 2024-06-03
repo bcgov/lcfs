@@ -198,6 +198,8 @@ export const addEditSchema = {
           field: t('fuelCode:fuelCodeColLabels.company')
         })
       ),
+      contactName: yup.string(),
+      contactEmail: yup.string(),
       carbonIntensity: yup.number().required(
         t('fuelCode:validateMsg.isRequired', {
           field: t('fuelCode:fuelCodeColLabels.carbonIntensity')
@@ -307,6 +309,30 @@ export const addEditSchema = {
     {
       field: 'company',
       headerName: t('fuelCode:fuelCodeColLabels.company'),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      minWidth: 300,
+      editable: isDraftOrNew
+    },
+    {
+      field: 'contactName',
+      headerName: t('fuelCode:fuelCodeColLabels.contactName'),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      minWidth: 300,
+      editable: isDraftOrNew
+    },
+    {
+      field: 'contactEmail',
+      headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
       cellStyle: (params) => {
