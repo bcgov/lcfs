@@ -149,7 +149,9 @@ export const AddFuelCode = () => {
         finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
           (mode) => mode.finishedFuelTransportMode.transportMode
         ),
-        formerCompany: fuelCodeData.formerCompany
+        formerCompany: fuelCodeData.formerCompany,
+        contactName: fuelCodeData.contactName,
+        contactEmail: fuelCodeData.contactEmail
       })
 
       gridApi.startEditingCell({

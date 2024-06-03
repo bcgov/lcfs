@@ -34,6 +34,18 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 300
   },
   {
+    field: 'contactName',
+    headerName: t('fuelCode:fuelCodeColLabels.contactName'),
+    cellRenderer: TextRenderer,
+    minWidth: 300
+  },
+  {
+    field: 'contactEmail',
+    headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
+    cellRenderer: TextRenderer,
+    minWidth: 300
+  },
+  {
     field: 'carbonIntensity',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellRenderer: TextRenderer,
