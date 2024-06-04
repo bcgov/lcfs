@@ -141,13 +141,13 @@ class FuelCodeRepository:
             joinedload(FuelCode.fuel_code_status),
             joinedload(FuelCode.fuel_code_prefix),
             joinedload(FuelCode.fuel_code_type)
-              .joinedload(FuelType.provision_1),
+            .joinedload(FuelType.provision_1),
             joinedload(FuelCode.fuel_code_type)
-              .joinedload(FuelType.provision_2),
+            .joinedload(FuelType.provision_2),
             joinedload(FuelCode.feedstock_fuel_transport_modes)
-              .joinedload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
+            .joinedload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
             joinedload(FuelCode.finished_fuel_transport_modes)
-              .joinedload(FinishedFuelTransportMode.finished_fuel_transport_mode),
+            .joinedload(FinishedFuelTransportMode.finished_fuel_transport_mode),
         ).where(FuelCode.fuel_status_id != delete_status.fuel_code_status_id)
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
@@ -184,9 +184,9 @@ class FuelCodeRepository:
                 FinishedFuelTransportMode.finished_fuel_transport_mode
             ),
             joinedload(FuelCode.fuel_code_type)
-              .joinedload(FuelType.provision_1),
+            .joinedload(FuelType.provision_1),
             joinedload(FuelCode.fuel_code_type)
-              .joinedload(FuelType.provision_2),
+            .joinedload(FuelType.provision_2),
         ).where(FuelCode.fuel_code_id == fuel_code_id)))
 
     @repo_handler
@@ -228,9 +228,9 @@ class FuelCodeRepository:
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
                 joinedload(FuelCode.fuel_code_type)
-                  .joinedload(FuelType.provision_1),
+                .joinedload(FuelType.provision_1),
                 joinedload(FuelCode.fuel_code_type)
-                  .joinedload(FuelType.provision_2),
+                .joinedload(FuelType.provision_2),
             )
         )
 
@@ -256,7 +256,7 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_code_field_options(self):
         query = select(FuelCode.company, FuelCode.feedstock, FuelCode.feedstock_location, FuelCode.feedstock_misc,
-                       FuelCode.former_company)
+                       FuelCode.former_company, FuelCode.contact_name, FuelCode.contact_email)
 
         result = (await self.db.execute(query)).all()
 

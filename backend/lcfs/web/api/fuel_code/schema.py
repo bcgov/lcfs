@@ -10,9 +10,11 @@ class FuelCodeStatusEnumSchema(str, Enum):
     Approved = "Approved"
     Deleted = "Deleted"
 
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
+
 
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
@@ -126,6 +128,8 @@ class FuelCodeSchema(BaseSchema):
     prefix_id: int
     fuel_code: str
     company: str
+    contact_name: str
+    contact_email: str
     carbon_intensity: float
     edrms: str
     last_updated: date
@@ -160,6 +164,8 @@ class FieldOptions(BaseSchema):
     feedstock_location: List[str]
     feedstock_misc: List[str]
     former_company: List[str]
+    contact_name: List[str]
+    contact_email: List[str]
 
 
 class FPLocationsSchema(BaseSchema):
