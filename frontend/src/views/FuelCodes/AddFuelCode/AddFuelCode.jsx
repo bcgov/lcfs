@@ -1,26 +1,20 @@
-// mui components
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { Box, Stack, Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
-import { Box, Stack, Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import Loading from '@/components/Loading'
-// Icons
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// ag-grid
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
 import { AddRowsDropdownButton } from './AddRowsDropdownButton'
-// react components
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-// services
 import { useApiService } from '@/services/useApiService'
 import { useFuelCodeOptions, useAddFuelCodes } from '@/hooks/useFuelCode'
 import { v4 as uuid } from 'uuid'
-// constants
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
@@ -69,7 +63,7 @@ export const AddFuelCode = () => {
       })
   }, [apiService])
 
-  function onGridReady(params) {
+  const onGridReady = (params) => {
     setGridApi(params.api)
     setColumnApi(params.columnApi)
 
@@ -94,46 +88,36 @@ export const AddFuelCode = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const validationHandler = async (row) => {
+  const validationHandler = useCallback(async (row) => {
     try {
       await fuelCodeSchema(t, optionsData).validate(row.data)
+      const updatedRow = { ...row.data, isValid: true, validationMsg: '' }
+      gridApi.applyTransaction({ update: [updatedRow] })
       setAlertMessage(`Validated fuel code`)
       setAlertSeverity('success')
-      row.setData({
-        ...row.data,
-        isValid: true,
-        validationMsg: ''
-      })
       alertRef.current?.triggerAlert()
     } catch (err) {
+      const updatedRow = { ...row.data, isValid: false, validationMsg: err.errors[0] }
+      gridApi.applyTransaction({ update: [updatedRow] })
       setAlertMessage(err.errors[0])
       setAlertSeverity('error')
-      row.setData({
-        ...row.data,
-        isValid: false,
-        validationMsg: err.errors[0]
-      })
       alertRef.current?.triggerAlert()
-      throw new Error()
+      // throw new Error()
     }
-  }
+  }, [gridApi, optionsData, t])
+
   const onRowEditingStarted = useCallback((params) => {
-    // perform initial validation
     if (params.data.modified && params.data.isValid) validationHandler(params)
-  })
+  }, [validationHandler])
+
   const onRowEditingStopped = useCallback((params) => {
-    // peform final validation
-    params.node.setData({
-      ...params.data,
-      modified: true
-    })
+    params.node.setData({ ...params.data, modified: true })
     const focusedCell = params.api.getFocusedCell()
     if (focusedCell.column.colId === 'fuelCode') {
       const fuelCodeData = optionsData.latestFuelCodes.find(
         (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
       )
-
-      params.node?.setData({
+      const updatedData = {
         ...params.data,
         prefix: fuelCodeData.fuelCodePrefix.prefix,
         company: fuelCodeData.company,
@@ -141,8 +125,7 @@ export const AddFuelCode = () => {
         feedstock: fuelCodeData.feedstock,
         feedstockLocation: fuelCodeData.feedstockLocation,
         feedstockMisc: fuelCodeData.feedstockMisc,
-        fuelProductionFacilityLocation:
-          fuelCodeData.fuelProductionFacilityLocation,
+        fuelProductionFacilityLocation: fuelCodeData.fuelProductionFacilityLocation,
         feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
           (mode) => mode.feedstockFuelTransportMode.transportMode
         ),
@@ -150,99 +133,84 @@ export const AddFuelCode = () => {
           (mode) => mode.finishedFuelTransportMode.transportMode
         ),
         formerCompany: fuelCodeData.formerCompany
-      })
-
-      gridApi.startEditingCell({
-        rowIndex: focusedCell.rowIndex,
-        colKey: 'company'
-      })
+      }
+      gridApi.applyTransaction({ update: [updatedData] })
+      gridApi.startEditingCell({ rowIndex: focusedCell.rowIndex, colKey: 'company' })
     } else if (focusedCell.column.colId === 'fuelProductionFacilityCity') {
       const location = optionsData.fpLocations.find(
-        (location) =>
-          location.fuelProductionFacilityCity ===
-          params.data.fuelProductionFacilityCity
+        (location) => location.fuelProductionFacilityCity === params.data.fuelProductionFacilityCity
       )
-      params.node.setData({
+      const updatedData = {
         ...params.data,
-        fuelProductionFacilityProvinceState:
-          location.fuelProductionFacilityProvinceState,
+        fuelProductionFacilityProvinceState: location.fuelProductionFacilityProvinceState,
         fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
-      })
-
-      gridApi.startEditingCell({
-        rowIndex: focusedCell.rowIndex,
-        colKey: 'facilityNameplateCapacity'
-      })
-    } else if (
-      focusedCell.column.colId === 'fuelProductionFacilityProvinceState'
-    ) {
+      }
+      gridApi.applyTransaction({ update: [updatedData] })
+      gridApi.startEditingCell({ rowIndex: focusedCell.rowIndex, colKey: 'facilityNameplateCapacity' })
+    } else if (focusedCell.column.colId === 'fuelProductionFacilityProvinceState') {
       const location = optionsData.fpLocations.find(
-        (location) =>
-          location.fuelProductionFacilityProvinceState ===
-          params.data.fuelProductionFacilityProvinceState
+        (location) => location.fuelProductionFacilityProvinceState === params.data.fuelProductionFacilityProvinceState
       )
-      params.node.setData({
+      const updatedData = {
         ...params.data,
         fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
-      })
-
-      gridApi.startEditingCell({
-        rowIndex: focusedCell.rowIndex,
-        colKey: 'facilityNameplateCapacity'
-      })
+      }
+      gridApi.applyTransaction({ update: [updatedData] })
+      gridApi.startEditingCell({ rowIndex: focusedCell.rowIndex, colKey: 'facilityNameplateCapacity' })
     } else {
       validationHandler(params)
     }
-  })
+  }, [validationHandler, gridApi, optionsData])
+
   const saveData = useCallback(() => {
     const allRowData = []
     gridApi.forEachNode((node) => allRowData.push(node.data))
     const modifiedRows = allRowData.filter((row) => row.modified)
     // Add your API call to save modified rows here
-  }, [])
+  }, [gridApi])
 
-  const statusBarcomponent = useMemo(() => {
-    return (
-      <Box component="div" m={2}>
-        <AddRowsDropdownButton gridApi={gridApi} />
-      </Box>
-    )
+  const statusBarcomponent = useMemo(() => (
+    <Box component="div" m={2}>
+      <AddRowsDropdownButton gridApi={gridApi} />
+    </Box>
+  ), [gridApi])
+
+  const { mutate: addFuelCodes, isLoading: isAddFuelCodeLoading } = useAddFuelCodes({
+    onSuccess: () => {
+      localStorage.removeItem(gridKey)
+      navigate(ROUTES.ADMIN_FUEL_CODES, {
+        state: {
+          message: t('fuelCode:fuelCodeAddSuccessMsg'),
+          severity: 'success'
+        }
+      })
+    },
+    onError: (error) => {
+      setAlertMessage(t('fuelCode:fuelCodeAddFailMsg') + ' ' + error)
+      setAlertSeverity('error')
+      alertRef.current.triggerAlert()
+    }
   })
-
-  const { mutate: addFuelCodes, isLoading: isAddFuelCodeLoading } =
-    useAddFuelCodes({
-      onSuccess: () => {
-        localStorage.removeItem(gridKey)
-        navigate(ROUTES.ADMIN_FUEL_CODES, {
-          state: {
-            message: t('fuelCode:fuelCodeAddSuccessMsg'),
-            severity: 'success'
-          }
-        })
-      },
-      onError: (error) => {
-        setAlertMessage(t('fuelCode:fuelCodeAddFailMsg') + ' ' + error)
-        setAlertSeverity('error')
-        alertRef.current.triggerAlert()
-      }
-    })
 
   const getTransportModeIds = useCallback((transportMode) => {
     const transportModeIds = []
     if (transportMode) {
-      transportMode.forEach((transportMode) => {
-        transportModeIds.push({
-          fuelCodeId: null,
-          transportModeId: optionsData.transportModes.find(
-            (elm) => elm.transportMode === transportMode
-          ).transportModeId
-        })
+      transportMode.forEach((mode) => {
+        const foundMode = optionsData.transportModes.find(
+          (elm) => elm.transportMode === mode
+        )
+        if (foundMode) {
+          transportModeIds.push({
+            fuelCodeId: null,
+            transportModeId: foundMode.transportModeId
+          })
+        }
       })
     }
     return transportModeIds
-  })
+  }, [optionsData])
 
-  const handleSaveDraftCodes = async (params) => {
+  const handleSaveDraftCodes = async () => {
     gridApi.stopEditing(false)
     const allRowData = []
     gridApi.forEachNode(async (row) => {
@@ -250,20 +218,13 @@ export const AddFuelCode = () => {
       const data = {
         ...row.data,
         lastUpdated: new Date().toISOString().split('T')[0],
-        prefixId: optionsData.fuelCodePrefixes.find(
-          (elm) => elm.prefix === row.data.prefix
-        ).fuelCodePrefixId,
-        fuelTypeId: optionsData.fuelTypes.find(
-          (elm) => elm.fuelType === row.data.fuel
-        ).fuelTypeId,
-        feedstockFuelTransportModes: [
-          ...getTransportModeIds(row.data.feedstockTransportMode)
-        ],
-        finishedFuelTransportModes: [
-          ...getTransportModeIds(row.data.finishedFuelTransportMode)
-        ],
+        prefixId: optionsData.fuelCodePrefixes.find((elm) => elm.prefix === row.data.prefix).fuelCodePrefixId,
+        fuelTypeId: optionsData.fuelTypes.find((elm) => elm.fuelType === row.data.fuel).fuelTypeId,
+        feedstockFuelTransportModes: getTransportModeIds(row.data.feedstockTransportMode),
+        finishedFuelTransportModes: getTransportModeIds(row.data.finishedFuelTransportMode),
         fuelCodeId: null,
-        status: FUEL_CODE_STATUSES.DRAFT
+        status: FUEL_CODE_STATUSES.DRAFT,
+        fuelCode: String(row.data.fuelCode)
       }
       allRowData.push(data)
     })
@@ -274,6 +235,7 @@ export const AddFuelCode = () => {
   if (isLoading || isAddFuelCodeLoading) {
     return <Loading />
   }
+
   return (
     isFetched && (
       <Grid2 className="add-edit-fuel-code-container" mx={-1}>
@@ -300,7 +262,7 @@ export const AddFuelCode = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={fuelCodeColDefs(t, optionsData)}
+            columnDefs={fuelCodeColDefs(t, optionsData, gridApi)}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
@@ -317,7 +279,7 @@ export const AddFuelCode = () => {
           />
         </BCBox>
         <Stack
-          direction={{ md: 'coloumn', lg: 'row' }}
+          direction={{ md: 'column', lg: 'row' }}
           spacing={{ xs: 2, sm: 2, md: 3 }}
           useFlexGap
           flexWrap="wrap"
@@ -327,9 +289,7 @@ export const AddFuelCode = () => {
             variant="contained"
             size="medium"
             color="primary"
-            startIcon={
-              <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
-            }
+            startIcon={<FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />}
             onClick={handleSaveDraftCodes}
           >
             <Typography variant="subtitle2">

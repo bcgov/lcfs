@@ -1,13 +1,5 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
-import {
-  Edit,
-  Delete,
-  Save,
-  Cancel,
-  Queue,
-  Warning,
-  DoneAll
-} from '@mui/icons-material'
+import { Edit, Delete, Save, Cancel, Queue, Warning, DoneAll } from '@mui/icons-material'
 
 export const ActionsRenderer = ({ onDuplicate, ...props }) => {
   const isCurrentRowEditing = props.api
@@ -22,7 +14,6 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
             aria-label="copy the data to new row"
             data-testid="duplicate-button"
             color="primary"
-            // in order to retain the ability to copy only specific columns this functionality is presented to individual components to code
             onClick={() => onDuplicate(props)}
           >
             <Queue
@@ -88,7 +79,7 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
         <Tooltip title="Save">
           <IconButton
             aria-label="save modified data"
-            data-testid="save-🏗 "
+            data-testid="save-button"
             color="success"
             onClick={() => {
               props.api.stopEditing(false)
