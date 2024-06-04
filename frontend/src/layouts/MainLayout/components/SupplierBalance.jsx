@@ -18,7 +18,7 @@ const SupplierBalance = () => {
 
   const { data: orgBalance } = useCurrentOrgBalance()
   const formattedTotalBalance = orgBalance?.totalBalance != null ? numberFormatter({ value: orgBalance.totalBalance }) : 'N/A'
-  const formattedReservedBalance = orgBalance?.reservedBalance != null ? numberFormatter({ value: orgBalance.reservedBalance }) : 'N/A'
+  const formattedReservedBalance = orgBalance?.reservedBalance != null ? numberFormatter({ value: Math.abs(orgBalance.reservedBalance) }) : 'N/A'
 
   const toggleBalanceVisibility = () => {
     setShowBalance(!showBalance)

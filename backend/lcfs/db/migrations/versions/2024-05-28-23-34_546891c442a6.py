@@ -1,7 +1,7 @@
 """Update the consolidated transactions view to replace effective_date and effective_status with transaction_effective_date and add approval_date placeholder.
 
 Revision ID: 546891c442a6
-Revises: 3c61bcf0d14d
+Revises: bb4f823e5aac
 Create Date: 2024-05-28 23:34:24.799512
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "546891c442a6"
-down_revision = "3c61bcf0d14d"
+down_revision = "bb4f823e5aac"
 branch_labels = None
 depends_on = None
 

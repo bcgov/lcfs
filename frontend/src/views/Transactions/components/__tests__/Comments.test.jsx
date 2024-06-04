@@ -9,6 +9,7 @@ import theme from '@/themes'
 // Mock useFormContext to return a register function
 vi.mock('react-hook-form', () => ({
   useFormContext: () => ({
+    getValues: vi.fn(),
     register: vi.fn()
   })
 }))
