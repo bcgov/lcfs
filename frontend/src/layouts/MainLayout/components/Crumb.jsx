@@ -42,7 +42,9 @@ const Crumb = () => {
     'add-org': { label: 'Add organization', route: '/add-org' },
     'edit-org': { label: 'Edit organization', route: '/edit-org' },
     'initiative-agreement': { label: 'Transactions', route: '/transactions' },
-    'admin-adjustment': { label: 'Transactions', route: '/transactions' }
+    'org-initiative-agreement': { label: 'Transactions', route: '/transactions' },
+    'admin-adjustment': { label: 'Transactions', route: '/transactions' },
+    'org-admin-adjustment': { label: 'Transactions', route: '/transactions' }
   }
 
   return (

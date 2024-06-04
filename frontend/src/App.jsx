@@ -16,7 +16,7 @@ import {
   AddEditOrg,
   ViewOrganization
 } from './views/Organizations'
-import { Transactions, AddEditViewTransaction } from './views/Transactions'
+import { Transactions, AddEditViewTransaction, ViewOrgTransaction } from './views/Transactions'
 import { AddEditViewTransfer } from './views/Transfers'
 import { AddEditUser } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
@@ -276,6 +276,13 @@ const router = createBrowserRouter([
         }
       },
       {
+        path: ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
+        element: <ViewOrgTransaction />,
+        handle: {
+          title: 'Admin Adjustment'
+        }
+      },
+      {
         path: ROUTES.ADMIN_ADJUSTMENT_EDIT,
         element: <AddEditViewTransaction />,
         handle: {
@@ -289,6 +296,13 @@ const router = createBrowserRouter([
         handle: {
           title: 'Initiative Agreement',
           mode: 'view'
+        }
+      },
+      {
+        path: ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
+        element: <ViewOrgTransaction />,
+        handle: {
+          title: 'Initiative Agreement'
         }
       },
       {

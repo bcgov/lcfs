@@ -13,12 +13,13 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
-        width: '100vw',
+        height: '100%',
+        width: '100%',
         zIndex: 99999,
-        position: fixed && 'fixed',
+        position: fixed ? 'fixed' : 'relative',
         top: fixed && 0,
-        left: fixed && 0
+        left: fixed && 0,
+        margin: fixed ? 0 : '30px'
       }}
       data-test="loading"
     >

@@ -63,11 +63,11 @@ export const Transactions = () => {
           edit: ROUTES.TRANSFERS_EDIT
         },
         'AdminAdjustment': {
-          view: ROUTES.ADMIN_ADJUSTMENT_VIEW,
+          view: currentUser.isGovernmentUser ? ROUTES.ADMIN_ADJUSTMENT_VIEW : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
           edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
         },
         'InitiativeAgreement': {
-          view: ROUTES.INITIATIVE_AGREEMENT_VIEW,
+          view: currentUser.isGovernmentUser ? ROUTES.INITIATIVE_AGREEMENT_VIEW : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
           edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
         }
       }
