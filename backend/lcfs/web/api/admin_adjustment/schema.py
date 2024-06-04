@@ -46,6 +46,7 @@ class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):
     to_organization: OrganizationSchema
     history: Optional[List[AdminAdjustmentHistorySchema]]
     returned: Optional[bool] = False
+    create_date: datetime
 
 class AdminAdjustmentCreateSchema(AdminAdjustmentBaseSchema):
     current_status: str
