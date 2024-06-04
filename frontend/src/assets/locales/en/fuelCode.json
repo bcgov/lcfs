@@ -26,6 +26,8 @@
     "prefix": "Prefix",
     "fuelCode": "Fuel code",
     "company": "Company",
+    "contactName": "Contact Name",
+    "contactEmail": "Contact Email",
     "carbonIntensity": "Carbon intensity (gCO2E/MJ)",
     "edrms": "EDRMS#",
     "applicationDate": "Application date",

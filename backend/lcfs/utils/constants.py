@@ -48,6 +48,7 @@ class LCFS_Constants:
         "Value per unit",
         "Category",
         "Status",
+        "Approval Date",
         "Effective Date",
         "Comments (external)"
     ]

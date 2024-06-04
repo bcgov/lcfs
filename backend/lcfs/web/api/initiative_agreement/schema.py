@@ -54,6 +54,7 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     to_organization: OrganizationSchema
     history: Optional[List[InitiativeAgreementHistorySchema]]
     returned: Optional[bool] = False
+    create_date: datetime
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str

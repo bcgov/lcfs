@@ -42,6 +42,8 @@ export const fuelCodeSchema = (t, optionsData) =>
         field: t('fuelCode:fuelCodeColLabels.company')
       })
     ),
+    contactName: yup.string(),
+    contactEmail: yup.string(),
     carbonIntensity: yup.number().required(
       t('fuelCode:validateMsg.isRequired', {
         field: t('fuelCode:fuelCodeColLabels.carbonIntensity')
@@ -257,6 +259,58 @@ export const fuelCodeColDefs = (t, optionsData) => [
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.company,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
+    },
+    minWidth: 300
+  },
+  {
+    field: 'contactName',
+    headerName: t('fuelCode:fuelCodeColLabels.contactName'),
+    cellEditor: 'autocompleteEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.contactName,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
+    },
+    minWidth: 300
+  },
+  {
+    field: 'contactEmail',
+    headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
+    cellEditor: 'autocompleteEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      noLabel: true,
+      options: optionsData.fieldOptions.contactEmail,
       multiple: false, // ability to select multiple values from dropdown
       disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
       freeSolo: true, // this will allow user to type in the input box or choose from the dropdown

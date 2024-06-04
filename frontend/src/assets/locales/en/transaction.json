@@ -33,6 +33,9 @@
   "selectOrganizationName": "Select organization name",
   "internalCommentsOptional": "Internal comments (optional)",
   "commentsLabel": "Director comments to the organization (optional)",
+  "commentsTextLabel": "Comments:",
+  "approvedLabel": "Approved:",
+  "approvedByDirector": "by the director under the Low Carbon Fuels Act",
   "commentsDescText": "Comments will be visible to the organization and government:",
   "actionBtns": {
     "saveDraftBtn": "Save draft",
@@ -67,5 +70,8 @@
     "Deleted": "Deleted",
     "Recommended": "Recommended",
     "Approved": "Approved"
-  }
+  },
+  "noComments": "No comments provided.",
+  "noEffectiveDate": "No effective date provided.",
+  "for": "for"
 }
