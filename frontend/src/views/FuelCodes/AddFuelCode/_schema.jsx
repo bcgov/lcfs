@@ -346,22 +346,6 @@ export const fuelCodeColDefs = (t, optionsData) => [
     cellDataType: 'text'
   },
   {
-    field: 'lastUpdated',
-    headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
-    maxWidth: 180,
-    minWidth: 180,
-    cellRenderer: (params) => (
-      <Typography variant="body4">
-        {params.value ? params.value : 'YYYY-MM-DD'}
-      </Typography>
-    ),
-    editable: false, // TODO: change as per #516
-    cellDataType: 'dateString',
-    valueGetter: (params) => {
-      return new Date().toLocaleDateString()
-    }
-  },
-  {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
     maxWidth: 180,
@@ -379,6 +363,15 @@ export const fuelCodeColDefs = (t, optionsData) => [
         return { borderColor: 'red' }
     },
     cellEditor: 'dateEditor'
+  },
+  {
+    field: 'approvalDate',
+    headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+    maxWidth: 180,
+    minWidth: 180,
+    cellRenderer: (params) => <Typography variant="body4">{params.value ? params.value : "YYYY-MM-DD"}</Typography>,
+    suppressKeyboardEvent: (params) => params.editing,
+    cellEditor: 'dateEditor',
   },
   {
     field: 'effectiveDate',
