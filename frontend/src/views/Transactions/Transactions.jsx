@@ -109,12 +109,22 @@ export const Transactions = () => {
     return apiRoutes.transactions;
   }, [selectedOrgId, currentUser, hasRoles]);
 
+  // Determine the appropriate export API endpoint
+  const getExportApiEndpoint = useCallback(() => {
+    if (hasRoles(roles.supplier)) {
+      return apiRoutes.exportOrgTransactions;
+    } else if (selectedOrgId) {
+      return apiRoutes.exportFilteredTransactionsByOrg.replace(':orgID', selectedOrgId);
+    }
+    return apiRoutes.exportTransactions;
+  }, [selectedOrgId, currentUser, hasRoles]);
+
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
     setAlertMessage('')
     try {
-      const endpoint = getApiEndpoint();
-      await apiService.download(`${endpoint}/export`);
+      const endpoint = getExportApiEndpoint();
+      await apiService.download(`${endpoint}`);
       setIsDownloadingTransactions(false)
     } catch (error) {
       console.error('Error downloading transactions information:', error)
