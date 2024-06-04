@@ -1,7 +1,7 @@
 """fuel code contact info
 
 Revision ID: 2b64a18af91d
-Revises: bb4f823e5aac
+Revises: 546891c442a6
 Create Date: 2024-06-03 20:34:47.139153
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "2b64a18af91d"
-down_revision = "bb4f823e5aac"
+down_revision = "546891c442a6"
 branch_labels = None
 depends_on = None
 
