@@ -13,8 +13,10 @@ export const TRANSFERS_VIEW = `${TRANSFERS}/:transferId`
 
 export const TRANSACTION_ADD = '/transaction/add'
 export const ADMIN_ADJUSTMENT_VIEW = '/admin-adjustment/:transactionId'
+export const ORG_ADMIN_ADJUSTMENT_VIEW = '/org-admin-adjustment/:transactionId'
 export const ADMIN_ADJUSTMENT_EDIT = '/admin-adjustment/edit/:transactionId'
 export const INITIATIVE_AGREEMENT_VIEW = '/initiative-agreement/:transactionId'
+export const ORG_INITIATIVE_AGREEMENT_VIEW = '/org-initiative-agreement/:transactionId'
 export const INITIATIVE_AGREEMENT_EDIT = '/initiative-agreement/edit/:transactionId'
 
 export const ORGANIZATION = '/organization'

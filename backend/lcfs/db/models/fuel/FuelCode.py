@@ -26,6 +26,9 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     )
     fuel_code = Column(String(20), nullable=False, comment="Fuel code")
     company = Column(String(500), nullable=False, comment="Company name")
+    contact_name = Column(String(500), nullable=True, comment="Contact name")
+    contact_email = Column(String(500), nullable=True,
+                           comment="Contact email")
     carbon_intensity = Column(
         Numeric(precision=10, scale=2, asdecimal=True), nullable=False
     )

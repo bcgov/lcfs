@@ -22,6 +22,9 @@ export const OrgBalanceCard = () => {
         </BCTypography>
       );
     } else {
+      // Ensure reservedBalance is displayed as positive
+      const formattedReservedBalance = Math.abs(orgBalance.reservedBalance).toLocaleString();
+
       return (
         <>
           <BCTypography style={{ fontSize: '18px', color: '#003366', marginBottom: '-2px' }} gutterBottom>
@@ -38,7 +41,7 @@ export const OrgBalanceCard = () => {
           </BCTypography>
           <Box display="flex" alignItems="center" mt={1}>
             <BCTypography style={{ fontSize: '22px', color: '#578260' }} component="span">
-              ({orgBalance.reservedBalance.toLocaleString()} {t('org:inReserve')})
+              ({formattedReservedBalance} {t('org:inReserve')})
             </BCTypography>
             <Tooltip
                 title={t('org:inReserveTooltip')}
