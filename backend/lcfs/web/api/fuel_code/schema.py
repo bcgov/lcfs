@@ -11,6 +11,13 @@ class FuelCodeStatusEnumSchema(str, Enum):
     Deleted = "Deleted"
 
 
+class FuelTypeQuantityUnitsEnumSchema(str, Enum):
+    Litres = 'L'
+    Kilograms = "kg"
+    Kilowatt_hour = 'kWh'
+    Cubic_metres = 'm3'
+
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
@@ -25,6 +32,7 @@ class FuelTypeSchema(BaseSchema):
     default_carbon_intensity: Optional[float] = None
     provision_1: Optional[ProvisionOfTheActSchema] = None
     provision_2: Optional[ProvisionOfTheActSchema] = None
+    units: FuelTypeQuantityUnitsEnumSchema
 
     @field_validator("default_carbon_intensity")
     def quantize_default_carbon_intensity(cls, value):
