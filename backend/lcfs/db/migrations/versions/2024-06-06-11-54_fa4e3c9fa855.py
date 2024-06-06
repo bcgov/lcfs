@@ -1,7 +1,7 @@
 """add target carbon intensity
 
 Revision ID: fa4e3c9fa855
-Revises: 2b64a18af91d
+Revises: dd60b3d7008e
 Create Date: 2024-06-06 11:54:38.443607
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "fa4e3c9fa855"
-down_revision = "2b64a18af91d"
+down_revision = "dd60b3d7008e"
 branch_labels = None
 depends_on = None
 

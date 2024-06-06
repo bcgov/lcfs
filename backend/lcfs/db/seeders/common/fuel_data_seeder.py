@@ -14,10 +14,17 @@ from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
-from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 
 logger = logging.getLogger(__name__)
+
+UNITS_MAPPING = {
+    "L": QuantityUnitsEnum.Litres,
+    "kg": QuantityUnitsEnum.Kilograms,
+    "kWh": QuantityUnitsEnum.Kilowatt_hour,
+    "m3": QuantityUnitsEnum.Cubic_metres
+}
 
 async def seed_static_fuel_data(session):
     """
@@ -37,6 +44,10 @@ async def seed_static_fuel_data(session):
                     )
                     if not exists.scalars().first():
                         session.add(model(**record))
+
+            # Ensure fuel_type units are correctly formatted
+            for fuel_type in data["fuel_types"]:
+                fuel_type["units"] = QuantityUnitsEnum(fuel_type["units"])
 
             await add_if_not_exists(TransportMode, 'transport_mode_id', data["transport_modes"])
             await add_if_not_exists(ProvisionOfTheAct, 'provision_of_the_act_id', data["provision_acts"])
