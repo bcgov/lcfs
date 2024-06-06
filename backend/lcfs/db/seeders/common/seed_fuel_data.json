@@ -1,16 +1,19 @@
 {
   "provision_acts": [
     {
+      "provision_of_the_act_id": 1,
       "name": "Prescribed carbon intensity - section 19 (a)",
       "description": "Prescribed carbon intensity - section 19 (a)",
       "effective_status": true
     },
     {
+      "provision_of_the_act_id": 2,
       "name": "Fuel code - section 19 (b) (i)",
       "description": "Fuel code - section 19 (b) (i)",
       "effective_status": true
     },
     {
+      "provision_of_the_act_id": 3,
       "name": "Default carbon intensity - section 19 (b) (ii)",
       "description": "Default carbon intensity - section 19 (b) (ii)",
       "effective_status": true
@@ -23,7 +26,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 100.21
+      "default_carbon_intensity": 100.21,
+      "units": "L"
     },
     {
       "fuel_type_id": 2,
@@ -31,7 +35,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 63.91
+      "default_carbon_intensity": 63.91,
+      "units": "m3"
     },
     {
       "fuel_type_id": 3,
@@ -39,7 +44,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 12.14
+      "default_carbon_intensity": 12.14,
+      "units": "kWh"
     },
     {
       "fuel_type_id": 4,
@@ -47,7 +53,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 93.67
+      "default_carbon_intensity": 93.67,
+      "units": "L"
     },
     {
       "fuel_type_id": 5,
@@ -55,7 +62,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 100.21
+      "default_carbon_intensity": 100.21,
+      "units": "L"
     },
     {
       "fuel_type_id": 6,
@@ -63,7 +71,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 123.96
+      "default_carbon_intensity": 123.96,
+      "units": "kWh"
     },
     {
       "fuel_type_id": 7,
@@ -71,7 +80,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 90.11
+      "default_carbon_intensity": 90.11,
+      "units": "kg"
     },
     {
       "fuel_type_id": 8,
@@ -79,7 +89,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 93.67
+      "default_carbon_intensity": 93.67,
+      "units": "L"
     },
     {
       "fuel_type_id": 9,
@@ -87,7 +98,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 100.21
+      "default_carbon_intensity": 100.21,
+      "units": "L"
     },
     {
       "fuel_type_id": 10,
@@ -95,7 +107,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 100.21
+      "default_carbon_intensity": 100.21,
+      "units": "L"
     },
     {
       "fuel_type_id": 11,
@@ -103,7 +116,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 88.83
+      "default_carbon_intensity": 88.83,
+      "units": "L"
     },
     {
       "fuel_type_id": 12,
@@ -111,7 +125,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 88.83
+      "default_carbon_intensity": 88.83,
+      "units": "L"
     },
     {
       "fuel_type_id": 13,
@@ -119,7 +134,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 79.87
+      "default_carbon_intensity": 79.87,
+      "units": "L"
     },
     {
       "fuel_type_id": 14,
@@ -127,7 +143,8 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 93.67
+      "default_carbon_intensity": 93.67,
+      "units": "L"
     },
     {
       "fuel_type_id": 15,
@@ -135,47 +152,55 @@
       "fossil_derived": false,
       "provision_1_id": 2,
       "provision_2_id": 3,
-      "default_carbon_intensity": 93.67
+      "default_carbon_intensity": 93.67,
+      "units": "L"
     },
     {
       "fuel_type_id": 16,
       "fuel_type": "Fossil-derived diesel",
       "fossil_derived": true,
       "provision_1_id": 1,
-      "default_carbon_intensity": 94.38
+      "default_carbon_intensity": 94.38,
+      "units": "L"
     },
     {
       "fuel_type_id": 17,
       "fuel_type": "Fossil-derived gasoline",
       "fossil_derived": true,
       "provision_1_id": 1,
-      "default_carbon_intensity": 93.67
+      "default_carbon_intensity": 93.67,
+      "units": "L"
     },
     {
       "fuel_type_id": 18,
       "fuel_type": "Fossil-derived jet fuel",
       "fossil_derived": true,
       "provision_1_id": 1,
-      "default_carbon_intensity": 88.83
+      "default_carbon_intensity": 88.83,
+      "units": "L"
     }
   ],
   "fuel_code_prefixes": [
     {
+      "fuel_code_prefix_id": 1,
       "prefix": "BCLCF"
     }
   ],
   "fuel_code_statuses": [
     {
+      "fuel_code_status_id": 1,
       "status": "Draft",
       "description": "Initial state of the fuel code",
       "display_order": 1
     },
     {
+      "fuel_code_status_id": 2,
       "status": "Approved",
       "description": "Fuel code has been approved",
       "display_order": 2
     },
     {
+      "fuel_code_status_id": 3,
       "status": "Deleted",
       "description": "Fuel code has been deleted",
       "display_order": 3
@@ -183,18 +208,23 @@
   ],
   "transport_modes": [
     {
+      "transport_mode_id": 1,
       "transport_mode": "Truck"
     },
     {
+      "transport_mode_id": 2,
       "transport_mode": "Rail"
     },
     {
+      "transport_mode_id": 3,
       "transport_mode": "Marine"
     },
     {
+      "transport_mode_id": 4,
       "transport_mode": "Adjacent"
     },
     {
+      "transport_mode_id": 5,
       "transport_mode": "Pipeline"
     }
   ],
@@ -332,193 +362,226 @@
   ],
   "ucis": [
     {
+      "additional_uci_id": 1,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 14,
       "intensity": 27.3
     },
     {
+      "additional_uci_id": 2,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 15,
       "intensity": 17.8
     },
     {
+      "additional_uci_id": 3,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 16,
       "intensity": 12.2
     },
     {
+      "additional_uci_id": 4,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 17,
       "intensity": 10.6
     },
     {
+      "additional_uci_id": 5,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 18,
       "intensity": 8.4
     },
     {
+      "additional_uci_id": 6,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 19,
       "intensity": 8.0
     },
     {
+      "additional_uci_id": 7,
       "fuel_type_id": 7,
       "uom_id": 5,
       "end_use_type_id": 20,
       "intensity": 27.3
     },
     {
+      "additional_uci_id": 8,
       "fuel_type_id": 7,
       "uom_id": 5,
       "intensity": 0
     },
     {
+      "additional_uci_id": 9,
       "uom_id": 5,
       "intensity": 0
     }
   ],
   "eers": [
     {
+      "eer_id": 1,
       "fuel_category_id": 1,
       "fuel_type_id": 2,
       "end_use_type_id": 3,
       "ratio": 0.9
     },
     {
+      "eer_id": 2,
       "fuel_category_id": 1,
       "fuel_type_id": 3,
       "end_use_type_id": 1,
       "ratio": 3.5
     },
     {
+      "eer_id": 3,
       "fuel_category_id": 1,
       "fuel_type_id": 3,
       "end_use_type_id": 2,
       "ratio": 1.0
     },
     {
+      "eer_id": 4,
       "fuel_category_id": 1,
       "fuel_type_id": 6,
       "end_use_type_id": 3,
       "ratio": 2.4
     },
     {
+      "eer_id": 5,
       "fuel_category_id": 1,
       "fuel_type_id": 6,
       "end_use_type_id": 2,
       "ratio": 0.9
     },
     {
+      "eer_id": 6,
       "fuel_category_id": 1,
       "fuel_type_id": 13,
       "ratio": 0.9
     },
     {
+      "eer_id": 7,
       "fuel_category_id": 2,
       "fuel_type_id": 2,
       "ratio": 0.9
     },
     {
+      "eer_id": 8,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 4,
       "ratio": 3.8
     },
     {
+      "eer_id": 9,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 5,
       "ratio": 3.2
     },
     {
+      "eer_id": 10,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 6,
       "ratio": 2.5
     },
     {
+      "eer_id": 11,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 7,
       "ratio": 2.9
     },
     {
+      "eer_id": 12,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 8,
       "ratio": 2.5
     },
     {
+      "eer_id": 13,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 9,
       "ratio": 3.9
     },
     {
+      "eer_id": 14,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 14,
       "ratio": 2.5
     },
     {
+      "eer_id": 15,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 10,
       "ratio": 2.8
     },
     {
+      "eer_id": 16,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 11,
       "ratio": 2.4
     },
     {
+      "eer_id": 17,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 2,
       "ratio": 1.0
     },
     {
+      "eer_id": 18,
       "fuel_category_id": 2,
       "fuel_type_id": 6,
       "end_use_type_id": 3,
       "ratio": 1.8
     },
     {
+      "eer_id": 19,
       "fuel_category_id": 2,
       "fuel_type_id": 6,
       "end_use_type_id": 2,
       "ratio": 0.9
     },
     {
+      "eer_id": 20,
       "fuel_category_id": 2,
       "fuel_type_id": 7,
       "end_use_type_id": 12,
       "ratio": 1.0
     },
     {
+      "eer_id": 21,
       "fuel_category_id": 2,
       "fuel_type_id": 7,
       "end_use_type_id": 2,
       "ratio": 0.9
     },
     {
+      "eer_id": 22,
       "fuel_category_id": 2,
       "fuel_type_id": 13,
       "ratio": 0.9
     },
     {
+      "eer_id": 23,
       "fuel_category_id": 3,
       "fuel_type_id": 3,
       "ratio": 2.5
     },
     {
+      "eer_id": 24,
       "fuel_category_id": 3,
       "fuel_type_id": 11,
       "ratio": 1.0
@@ -526,76 +589,91 @@
   ],
   "energy_densities": [
     {
+      "energy_density_id": 1,
       "fuel_type_id": 17,
       "uom_id": 1,
       "density": 34.69
     },
     {
+      "energy_density_id": 2,
       "fuel_type_id": 4,
       "uom_id": 1,
       "density": 23.58
     },
     {
+      "energy_density_id": 3,
       "fuel_type_id": 14,
       "uom_id": 1,
       "density": 34.69
     },
     {
+      "energy_density_id": 4,
       "fuel_type_id": 15,
       "uom_id": 1,
       "density": 34.51
     },
     {
+      "energy_density_id": 5,
       "fuel_type_id": 16,
       "uom_id": 1,
       "density": 38.65
     },
     {
+      "energy_density_id": 6,
       "fuel_type_id": 1,
       "uom_id": 1,
       "density": 35.40
     },
     {
+      "energy_density_id": 7,
       "fuel_type_id": 5,
       "uom_id": 1,
       "density": 37.89
     },
     {
+      "energy_density_id": 8,
       "fuel_type_id": 9,
       "uom_id": 1,
       "density": 36.51
     },
     {
+      "energy_density_id": 9,
       "fuel_type_id": 18,
       "uom_id": 1,
       "density": 37.40
     },
     {
+      "energy_density_id": 10,
       "fuel_type_id": 11,
       "uom_id": 1,
       "density": 36.00
     },
     {
+      "energy_density_id": 11,
       "fuel_type_id": 3,
       "uom_id": 2,
       "density": 3.60
     },
     {
+      "energy_density_id": 12,
       "fuel_type_id": 6,
       "uom_id": 2,
       "density": 141.76
     },
     {
+      "energy_density_id": 13,
       "fuel_type_id": 13,
       "uom_id": 1,
       "density": 25.62
     },
     {
+      "energy_density_id": 14,
       "fuel_type_id": 2,
       "uom_id": 3,
       "density": 38.27
     },
     {
+      "energy_density_id": 15,
       "fuel_type_id": 7,
       "uom_id": 4,
       "density": 53.54

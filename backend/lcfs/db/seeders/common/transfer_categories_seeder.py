@@ -15,10 +15,10 @@ async def seed_transfer_categories(session: AsyncSession):
         session: The database session for committing the new records.
     """
     category_data = [
-        {'category': TransferCategoryEnum.A},
-        {'category': TransferCategoryEnum.B},
-        {'category': TransferCategoryEnum.C},
-        {'category': TransferCategoryEnum.D},
+        {'transfer_category_id': 1, 'category': TransferCategoryEnum.A},
+        {'transfer_category_id': 2, 'category': TransferCategoryEnum.B},
+        {'transfer_category_id': 3, 'category': TransferCategoryEnum.C},
+        {'transfer_category_id': 4, 'category': TransferCategoryEnum.D},
     ]
 
     try:

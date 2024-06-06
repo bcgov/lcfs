@@ -14,9 +14,16 @@ from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
-from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 
 logger = logging.getLogger(__name__)
+
+UNITS_MAPPING = {
+    "L": QuantityUnitsEnum.Litres,
+    "kg": QuantityUnitsEnum.Kilograms,
+    "kWh": QuantityUnitsEnum.Kilowatt_hour,
+    "m3": QuantityUnitsEnum.Cubic_metres
+}
 
 
 async def seed_static_fuel_data(session):
@@ -30,7 +37,8 @@ async def seed_static_fuel_data(session):
     try:
         with open(Path(__file__).parent / "seed_fuel_data.json") as f_data:
             exists = await session.execute(
-                select(TransportMode).where(TransportMode.transport_mode_id == 1)
+                select(TransportMode).where(
+                    TransportMode.transport_mode_id == 1)
             )
             if not exists.scalars().first():
                 data = json.load(f_data)
@@ -41,9 +49,12 @@ async def seed_static_fuel_data(session):
                 provision_of_the_acts_to_seed = [
                     ProvisionOfTheAct(**provision) for provision in data["provision_acts"]
                 ]
-                fuel_types_to_seed = [
-                    FuelType(**fuel_type) for fuel_type in data["fuel_types"]
-                ]
+
+                fuel_types_to_seed = []
+                for fuel_type in data["fuel_types"]:
+                    fuel_type["units"] = QuantityUnitsEnum(fuel_type["units"])
+                    fuel_types_to_seed.append(FuelType(**fuel_type))
+
                 fuel_code_prefixes_to_seed = [
                     FuelCodePrefix(**prefix) for prefix in data["fuel_code_prefixes"]
                 ]
@@ -60,12 +71,15 @@ async def seed_static_fuel_data(session):
                     UnitOfMeasure(**unit_of_measure)
                     for unit_of_measure in data["unit_of_measures"]
                 ]
-                uci_to_seed = [AdditionalCarbonIntensity(**uci) for uci in data["ucis"]]
-                eer_to_seed = [EnergyEffectivenessRatio(**eer) for eer in data["eers"]]
+                uci_to_seed = [AdditionalCarbonIntensity(
+                    **uci) for uci in data["ucis"]]
+                eer_to_seed = [EnergyEffectivenessRatio(
+                    **eer) for eer in data["eers"]]
                 energy_densities_to_seed = [
                     EnergyDensity(**energy_density)
                     for energy_density in data["energy_densities"]
                 ]
+
                 # Load static data
                 session.add_all(provision_of_the_acts_to_seed)
                 session.add_all(transport_modes_to_seed)
