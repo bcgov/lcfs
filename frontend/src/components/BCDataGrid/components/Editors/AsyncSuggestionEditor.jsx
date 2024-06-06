@@ -5,7 +5,7 @@ import { debounce } from 'lodash'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
 
-export const AysncSuggestionEditor = forwardRef(
+export const AsyncSuggestionEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
     const [inputValue, setInputValue] = useState('')
     const { data: options, isLoading } = useQuery({
@@ -87,4 +87,4 @@ export const AysncSuggestionEditor = forwardRef(
   }
 )
 
-AysncSuggestionEditor.displayName = 'AysncSuggestionEditor'
+AsyncSuggestionEditor.displayName = 'AsyncSuggestionEditor'

@@ -12,11 +12,16 @@ const duplicateRow = (props) => {
     modified: true,
     fuelCode: 1000 + (props.node?.rowIndex + 1) / 10
   }
-  props.api.applyTransaction({
-    add: [newRow],
-    addIndex: props.node?.rowIndex + 1
-  })
-  props.api.stopEditing()
+  
+  if (props.api) {
+    props.api.applyTransaction({
+      add: [newRow],
+      addIndex: props.node?.rowIndex + 1
+    })
+    props.api.stopEditing()
+  } else {
+    console.error('API is undefined')
+  }
 }
 
 export const fuelCodeSchema = (t, optionsData) =>
@@ -99,7 +104,7 @@ export const fuelCodeSchema = (t, optionsData) =>
     ),
   })
 
-export const fuelCodeColDefs = (t, optionsData) => [
+export const fuelCodeColDefs = (t, optionsData, api) => [
   {
     colId: 'action',
     cellRenderer: 'actionsRenderer',
@@ -107,7 +112,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       enableDuplicate: true,
       enableEdit: false,
       enableDelete: true,
-      onDuplicate: duplicateRow
+      onDuplicate: (props) => duplicateRow({ ...props, api })
     },
     // checkboxSelection: true,
     // headerCheckboxSelection: true,

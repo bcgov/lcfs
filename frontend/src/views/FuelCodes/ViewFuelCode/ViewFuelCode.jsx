@@ -249,7 +249,8 @@ const ViewFuelCode = () => {
               columnDefs={addEditSchema.fuelCodeColDefs(
                 t,
                 optionsData,
-                fuelCodeData.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT
+                fuelCodeData.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT,
+                gridApi
               )}
               defaultColDef={addEditSchema.defaultColDef}
               onGridReady={onGridReady}
