@@ -501,7 +501,6 @@ def downgrade() -> None:
     op.drop_column("initiative_agreement_history", "effective_status")
     op.drop_column("initiative_agreement", "effective_status")
     op.drop_column("fuel_code", "effective_status")
-    op.drop_column("comment", "effective_status")
     op.drop_column("admin_adjustment_history", "effective_status")
     op.drop_column("admin_adjustment", "effective_status")
     op.drop_table("energy_effectiveness_ratio")
