@@ -200,6 +200,8 @@ class FuelCodeCreateSchema(BaseSchema):
     edrms: str
     last_updated: date
     application_date: date
+    contact_name: str
+    contact_email: str
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
