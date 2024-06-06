@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from lcfs.settings import settings
 
+from lcfs.db.seeders.common.compliance_period_seeder import seed_compliance_periods
 from lcfs.db.seeders.common.organization_type_seeder import seed_organization_types
 from lcfs.db.seeders.common.organization_status_seeder import seed_organization_statuses
 from lcfs.db.seeders.common.role_seeder import seed_roles
@@ -26,6 +27,7 @@ async def seed_common():
 
     async with AsyncSessionLocal() as session:
         try:
+            await seed_compliance_periods(session)
             await seed_organization_types(session)
             await seed_organization_statuses(session)
             await seed_roles(session)
