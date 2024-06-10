@@ -188,7 +188,7 @@ export const ViewOrganization = () => {
               </BCTypography>
               <Typography variant="body4">
                 {orgBalaceInfo?.totalBalance.toLocaleString()} (
-                {orgBalaceInfo?.reservedBalance.toLocaleString()})
+                {Math.abs(orgBalaceInfo?.reservedBalance).toLocaleString()})
               </Typography>
             </Role>
           </BCBox>
