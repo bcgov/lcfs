@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
@@ -44,6 +45,11 @@ class FuelCodeRepository:
             .scalars()
             .all()
         )
+
+    @repo_handler
+    async def get_fuel_categories(self) -> List[FuelCategory]:
+        """Get all fuel category options"""
+        return (await self.db.execute(select(FuelCategory))).scalars().all()
 
     @repo_handler
     async def get_transport_modes(self) -> List[TransportMode]:

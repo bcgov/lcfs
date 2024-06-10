@@ -25,6 +25,7 @@ import { NotFound } from './components/NotFound'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
 import { AddEditViewComplianceReport } from './views/ComplianceReports/components/AddEditViewComplianceReport'
+import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
 
 const router = createBrowserRouter([
   {
@@ -311,6 +312,14 @@ const router = createBrowserRouter([
         handle: {
           title: 'Edit Initiative Agreement',
           mode: 'edit'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS,
+        element: <AddEditNotionalTransfers />,
+        handle: {
+          title: 'New Notional Transfer',
+          mode: 'add'
         }
       }
     ]

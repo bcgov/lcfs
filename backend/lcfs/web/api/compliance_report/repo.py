@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from lcfs.db.models.organization.Organization import Organization
 from sqlalchemy import func, select, and_, asc, desc
@@ -119,6 +119,16 @@ class ComplianceReportRepository:
         )
         return result
 
+    @repo_handler
+    async def get_compliance_report(self, compliance_report_id: int) -> Optional[ComplianceReport]:
+        """
+        Identify and retrieve the compliance report by id.
+        """
+        return await self.db.scalar(
+            select(ComplianceReport)
+            .where(ComplianceReport.compliance_report_id == compliance_report_id)
+        )
+    
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
         """

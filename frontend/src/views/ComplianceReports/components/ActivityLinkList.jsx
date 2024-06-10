@@ -8,7 +8,7 @@ export const ActivityLinksList = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { compliancePeriod, reportID } = useParams()
-  const REPORTS_VIEW_PATH = `/reports/${compliancePeriod}/${reportID}/`
+  const REPORTS_VIEW_PATH = `/compliance-reporting/${compliancePeriod}/${reportID}`
   // reports activities
   const activityList = useMemo(() => {
     return [
