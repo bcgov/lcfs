@@ -292,7 +292,7 @@ export const AddFuelCode = () => {
             <BCAlert
               ref={alertRef}
               data-test="alert-box"
-              severity={'pending'}
+              severity={alertSeverity}
               delay={5000}
             >
               {alertMessage}
