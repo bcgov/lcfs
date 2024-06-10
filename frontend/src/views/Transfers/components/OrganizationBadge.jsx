@@ -28,7 +28,7 @@ export const OrganizationBadge = ({
               <Role roles={[roles.government]}>
                 <Typography variant="body4">
                   Balance: {orgInfo?.totalBalance.toLocaleString()} (
-                  {orgInfo?.reservedBalance.toLocaleString()})
+                  {Math.abs(orgInfo?.reservedBalance).toLocaleString()})
                 </Typography>
                 <Typography variant="body4">
                   Registered: {orgInfo?.registered ? 'Yes' : 'No'}
