@@ -21,11 +21,11 @@ jobs:
         ports:
           - 5432:5432
         env:
-          POSTGRES_DB: lcfs
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: lcfs_test
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
         options: >-
-          --health-cmd="pg_isready -U test_user -d lcfs"
+          --health-cmd="pg_isready -U lcfs -d lcfs_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -50,14 +50,14 @@ jobs:
 
       - name: Wait for PostgreSQL to be ready
         run: |
-          while ! pg_isready -h 127.0.0.1 -U test_user -d lcfs; do
+          while ! pg_isready -h 127.0.0.1 -U lcfs -d lcfs_test; do
             echo "Waiting for PostgreSQL to be ready..."
             sleep 1
           done
 
       - name: Run Backend Tests
         env:
-          DATABASE_URL: postgresql://test_user:test_password@127.0.0.1:5432/lcfs
+          DATABASE_URL: postgresql://lcfs:development_only@127.0.0.1:5432/lcfs_test
         run: |
           pwd
           cd backend
