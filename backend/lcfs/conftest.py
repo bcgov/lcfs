@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from lcfs.db.dependencies import get_db_session, get_async_db_session
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.utils import create_test_database, drop_test_database
 from lcfs.services.redis.dependency import get_redis_pool
 from lcfs.settings import settings
