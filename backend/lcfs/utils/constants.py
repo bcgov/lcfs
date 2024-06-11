@@ -48,8 +48,9 @@ class LCFS_Constants:
         "Value per unit",
         "Category",
         "Status",
-        "Approval Date",
         "Effective Date",
+        "Recorded",
+        "Approved",
         "Comments (external)"
     ]
     TRANSACTIONS_EXPORT_SHEETNAME = "Transactions"
