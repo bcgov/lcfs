@@ -10,7 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+
+  backend-test:
+    
     runs-on: ubuntu-latest
 
     services:
@@ -43,6 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           pwd
           cd backend
+          pip install poetry
           poetry install
 
       - name: Wait for PostgreSQL to be ready
