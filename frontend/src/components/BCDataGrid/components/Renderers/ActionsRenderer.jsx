@@ -9,7 +9,7 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
   return (
     <Stack direction="row" spacing={0.1} m={0}>
       {props.data.isValid && props.enableDuplicate && !isCurrentRowEditing && (
-        <Tooltip title="clone">
+        <Tooltip title="duplicate">
           <IconButton
             aria-label="copy the data to new row"
             data-testid="duplicate-button"
