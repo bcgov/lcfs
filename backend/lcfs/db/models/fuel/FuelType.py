@@ -40,3 +40,4 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
                                provision_1_id], back_populates="fuel_type_provision_1")
     provision_2 = relationship('ProvisionOfTheAct', foreign_keys=[
                                provision_2_id], back_populates="fuel_type_provision_2")
+    fuel_classes = relationship("FuelClass", back_populates="fuel_type")
