@@ -15,6 +15,7 @@ from .ProvisionOfTheAct import ProvisionOfTheAct
 from .TransportMode import TransportMode
 from .UnitOfMeasure import UnitOfMeasure
 from .TargetCarbonIntensity import TargetCarbonIntensity
+from .FuelClass import FuelClass
 
 __all__ = [
     "AdditionalCarbonIntensity",
@@ -34,5 +35,6 @@ __all__ = [
     "TransportMode",
     "UnitOfMeasure",
     "ProvisionOfTheAct",
-    "TargetCarbonIntensity"
+    "TargetCarbonIntensity",
+    "FuelClass"
 ]

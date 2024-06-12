@@ -1,7 +1,7 @@
 """Update the transactions view to remove Approval Date, add Recorded and Approved columns, and refresh on history updates.
 
 Revision ID: r42e3c9va810
-Revises: fa4e3c9fa855
+Revises: ca01318d5925
 Create Date: 2024-06-11 09:13:18.443601
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "r42e3c9va810"
-down_revision = "fa4e3c9fa855"
+down_revision = "ca01318d5925"
 branch_labels = None
 depends_on = None
 
