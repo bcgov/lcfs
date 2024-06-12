@@ -7,7 +7,8 @@ import { v4 as uuid } from 'uuid'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-export const AddRowsDropdownButton = ({ gridApi }) => {
+export const AddRowsButton = ({ gridApi }) => {
+  console.log('AddRowsButton rendered');
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedOption, setSelectedOption] = useState(null)
   const buttonRef = useRef(null)
@@ -69,4 +70,4 @@ export const AddRowsDropdownButton = ({ gridApi }) => {
   )
 }
 
-AddRowsDropdownButton.displayName = 'AddRowsDropdownButton'
+AddRowsButton.displayName = 'AddRowsButton'

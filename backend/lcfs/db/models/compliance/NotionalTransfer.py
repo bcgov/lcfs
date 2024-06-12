@@ -1,6 +1,12 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
+import enum
+
+class ReceivedOrTransferredEnum(enum.Enum):
+    Received = "Received"
+    Transferred = "Transferred"
+
 
 class NotionalTransfer(BaseModel, Auditable):
     __tablename__ = 'notional_transfer'
@@ -14,7 +20,11 @@ class NotionalTransfer(BaseModel, Auditable):
     legal_name = Column(String, nullable=False, comment="Legal name of the trading partner")
     address_for_service = Column(String, nullable=False, comment="Address for service of the trading partner")
     fuel_category_id = Column(Integer, ForeignKey('fuel_category.fuel_category_id'), nullable=False, comment="Foreign key to the fuel category")
-    received_or_transferred = Column(String, nullable=False, comment="Indicates if the fuel was received or transferred")
+    received_or_transferred = Column(
+        Enum(ReceivedOrTransferredEnum),
+        nullable=False,
+        comment="Indicates whether the transfer is Received or Transferred",
+    )
 
     compliance_report = relationship('ComplianceReport', back_populates='notional_transfers')
     fuel_category = relationship('FuelCategory')

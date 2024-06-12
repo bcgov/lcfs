@@ -15,38 +15,41 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferTableOptionsSchema,
     NotionalTransferFuelCategorySchema
 )
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 
 logger = getLogger("notional_transfer_services")
 
 
 class NotionalTransferServices:
-    def __init__(self, repo: NotionalTransferRepository = Depends(NotionalTransferRepository)) -> None:
+    def __init__(
+            self, 
+            repo: NotionalTransferRepository = Depends(NotionalTransferRepository),
+            fuel_repo: FuelCodeRepository = Depends()
+    ) -> None:
         self.repo = repo
+        self.fuel_repo = fuel_repo
 
     @service_handler
     async def get_table_options(self) -> NotionalTransferTableOptionsSchema:
         """
         Gets the list of table options related to notional transfers.
         """
-        fuel_categories = await self.repo.get_table_options()
-        return {"fuel_categories": [NotionalTransferFuelCategorySchema.model_validate(category) for category in fuel_categories]}
+        table_options = await self.repo.get_table_options()
+        return {
+            "fuel_categories": [NotionalTransferFuelCategorySchema.model_validate(category) for category in table_options["fuel_categories"]],
+            "received_or_transferred": table_options["received_or_transferred"]
+        }
 
     @service_handler
     async def get_notional_transfers(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self, compliance_report_id: int
     ) -> NotionalTransfersSchema:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
-        notional_transfers, total_count = await self.repo.get_notional_transfers_paginated(pagination, compliance_report_id)
+        notional_transfers = await self.repo.get_notional_transfers(compliance_report_id)
 
         return NotionalTransfersSchema(
-            pagination=PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
-            ),
             notional_transfers=[
                 NotionalTransferSchema.model_validate(notional_transfer) for notional_transfer in notional_transfers
             ],
@@ -56,7 +59,20 @@ class NotionalTransferServices:
         """
         Converts data from NotionalTransferCreateSchema to NotionalTransfer data model to store into the database.
         """
-        return NotionalTransfer(**notional_transfer.model_dump())
+        fuel_category = await self.fuel_repo.get_fuel_category_by_name(
+            notional_transfer.fuel_category
+        )
+        
+        nt = NotionalTransfer(
+            **notional_transfer.model_dump(
+                exclude={
+                    "id",
+                    "fuel_category",
+                }
+            ),
+            fuel_category_id=fuel_category.fuel_category_id
+        )
+        return nt
 
     @service_handler
     async def save_notional_transfers(self, notional_transfers: List[NotionalTransferCreateSchema]) -> str:

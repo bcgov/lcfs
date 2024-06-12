@@ -29,7 +29,7 @@ export const AddEditViewComplianceReport = ({ period }) => {
   const [alertSeverity, setAlertSeverity] = useState('info')
   const alertRef = useRef()
 
-  const { compliancePeriod, reportID } = useParams()
+  const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
 

@@ -52,6 +52,14 @@ class FuelCodeRepository:
         return (await self.db.execute(select(FuelCategory))).scalars().all()
 
     @repo_handler
+    async def get_fuel_category_by_name(self, name: str) -> FuelCategory:
+        """Get a fuel category by its name"""
+        result = await self.db.execute(
+            select(FuelCategory).filter_by(category=name)
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_transport_modes(self) -> List[TransportMode]:
         """Get all transport mode options"""
         return (await self.db.execute(select(TransportMode))).scalars().all()

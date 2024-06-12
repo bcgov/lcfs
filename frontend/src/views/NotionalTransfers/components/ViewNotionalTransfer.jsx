@@ -17,7 +17,7 @@ import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { addEditSchema } from './components/_schema'
+import { addEditSchema } from './_schema'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import { useQueryClient } from '@tanstack/react-query'
@@ -161,9 +161,9 @@ export const ViewNotionalTransfer = () => {
     const data = {
       ...row.data,
       lastUpdated: new Date().toISOString().split('T')[0],
-      fuelCategoryId: optionsData.fuelCategories.find(
+      fuelCategory: optionsData.fuelCategories.find(
         (elm) => elm.category === row.data.fuelCategory
-      ).fuelCategoryId,
+      ).fuelCategory,
       status
     }
 

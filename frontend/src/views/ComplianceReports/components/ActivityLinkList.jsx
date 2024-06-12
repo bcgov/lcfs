@@ -7,8 +7,8 @@ import BCTypography from '@/components/BCTypography'
 export const ActivityLinksList = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { compliancePeriod, reportID } = useParams()
-  const REPORTS_VIEW_PATH = `/compliance-reporting/${compliancePeriod}/${reportID}`
+  const { compliancePeriod, complianceReportId } = useParams()
+  const REPORTS_VIEW_PATH = `/compliance-reporting/${compliancePeriod}/${complianceReportId}`
   // reports activities
   const activityList = useMemo(() => {
     return [
@@ -53,7 +53,7 @@ export const ActivityLinksList = () => {
         }
       }
     ]
-  }, [compliancePeriod, reportID, navigate, t])
+  }, [navigate, t, REPORTS_VIEW_PATH])
 
   return (
     <List component="div" sx={{ maxWidth: '100%', listStyleType: 'disc' }}>

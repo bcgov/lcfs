@@ -12,7 +12,7 @@ export const useNotionalTransferOptions = (params, options) => {
   })
 }
 
-export const useAddNotionalTransfers = (options) => {
+export const useAddNotionalTransfers = (complianceReportId, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -22,11 +22,28 @@ export const useAddNotionalTransfers = (options) => {
       if (!Array.isArray(data) || !data.every((item) => item.isValid)) {
         throw new Error('All notional transfers must be validated before saving.')
       }
-      await client.post(apiRoutes.addNotionalTransfers, data)
+      const payload = {
+        complianceReportId,
+        notional_transfers: data
+      }
+      await client.post(apiRoutes.addNotionalTransfers, payload)
     },
     onSettled: () => {
       queryClient.invalidateQueries(['notional-transfers'])
     }
+  })
+}
+
+export const useGetNotionalTransfers = (complianceReportId, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['notional-transfers', complianceReportId],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getNotionalTransfers, { complianceReportId })
+      ).data.notionalTransfers
+    },
+    ...options
   })
 }
 

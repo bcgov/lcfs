@@ -33,6 +33,7 @@ import '@ag-grid-community/styles/ag-theme-quartz.css'
  * @param {array} columnDefs - Definitions for the columns in the grid.
  * @param {object} defaultColDef - Default column definition for the grid.
  * @param {string} highlightedRowId - ID of the row to be highlighted.
+ * @param {array} fieldsToNullOnDuplicate - List of fields that need to be set to null on row duplication.
  */
 const BCDataGridEditor = ({
   saveData,
@@ -51,6 +52,7 @@ const BCDataGridEditor = ({
   defaultStatusBar,
   onRowEditingStarted,
   onRowEditingStopped,
+  fieldsToNullOnDuplicate,
   ...props
 }) => {
   const frameworkComponents = useMemo(() => ({
@@ -111,8 +113,11 @@ const BCDataGridEditor = ({
 
   const duplicateRow = useCallback((rowData) => {
     const newData = { ...rowData, id: uuid() }
+    fieldsToNullOnDuplicate.forEach(field => {
+      newData[field] = null
+    })
     gridApi.applyTransaction({ add: [newData] })
-  }, [gridApi])
+  }, [gridApi, fieldsToNullOnDuplicate])
 
   const cacheRowData = useCallback((params) => {
     const allRowData = []
@@ -213,6 +218,7 @@ BCDataGridEditor.propTypes = {
   columnDefs: PropTypes.array.isRequired,
   defaultColDef: PropTypes.object.isRequired,
   highlightedRowId: PropTypes.string,
+  fieldsToNullOnDuplicate: PropTypes.array,
   className: PropTypes.oneOf([
     'ag-theme-alpine',
     'ag-theme-alpine-dark',
@@ -238,6 +244,7 @@ BCDataGridEditor.defaultProps = {
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   className: 'ag-theme-quartz',
   getRowNodeId: uuid(),
+  fieldsToNullOnDuplicate: [],
 }
 
 export default BCDataGridEditor

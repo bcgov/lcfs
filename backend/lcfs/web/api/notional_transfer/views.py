@@ -22,7 +22,9 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferCreateSchema,
     NotionalTransferSchema,
     NotionalTransfersSchema,
-    NotionalTransferTableOptionsSchema
+    NotionalTransferTableOptionsSchema,
+    NotionalTransferListCreateSchema,
+    ComplianceReportRequestSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -49,13 +51,12 @@ async def get_table_options(
 @view_handler
 async def get_notional_transfers(
     request: Request,
-    compliance_report_id: int,
-    pagination: PaginationRequestSchema = Body(..., embed=False),
+    request_data: ComplianceReportRequestSchema = Body(...),
     response: Response = None,
     service: NotionalTransferServices = Depends(),
 ):
-    """Endpoint to get list of notional transfers with pagination options"""
-    return await service.get_notional_transfers(pagination, compliance_report_id)
+    """Endpoint to get list of notional transfers for a compliance report"""
+    return await service.get_notional_transfers(request_data.compliance_report_id)
 
 
 @router.get("/{notional_transfer_id}", status_code=status.HTTP_200_OK)
@@ -77,13 +78,15 @@ async def get_notional_transfer(
 @view_handler
 async def save_notional_transfers(
     request: Request,
-    compliance_report_id: int,
-    notional_transfers: List[NotionalTransferCreateSchema] = Body(..., embed=False),
+    request_data: NotionalTransferListCreateSchema = Body(...),
     service: NotionalTransferServices = Depends(),
     validate: NotionalTransferValidation = Depends(),
 ) -> str:
     """Endpoint to save notional transfers"""
+    compliance_report_id = request_data.compliance_report_id
+    notional_transfers = request_data.notional_transfers
     await validate.validate_organization_access(compliance_report_id)
+    await validate.validate_compliance_report_id(compliance_report_id, notional_transfers)
     return await service.save_notional_transfers(notional_transfers)
 
 

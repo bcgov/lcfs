@@ -1,14 +1,16 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
+import { DeleteForeverTwoTone } from '@mui/icons-material'
 import { Typography } from '@mui/material'
 import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
 
-// copy the desired columns to new row
+// Copy the desired columns to new row
 const duplicateRow = (props) => {
   const newRow = {
     ...props.data,
     id: uuid(),
+    notionalTransferId: null,
     modified: true
   }
   
@@ -23,18 +25,20 @@ const duplicateRow = (props) => {
   }
 }
 
+// const deleteRow = (props) => {
+//   const updatedRow = { ...props.data, deleteFlag: true, modified: true }
+//   console.log("ON DELETE")
+  
+//   if (props.api) {
+//     props.api.applyTransaction({ update: [updatedRow] })
+//     props.api.stopEditing()
+//   } else {
+//     console.error('API is undefined')
+//   }
+// }
+
 export const notionalTransferSchema = (t, optionsData) =>
   yup.object().shape({
-    complianceReportId: yup.number().required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.complianceReportId')
-      })
-    ),
-    quantity: yup.number().min(0, t('notionalTransfer:validateMsg.nonNegative')).required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.quantity')
-      })
-    ),
     legalName: yup.string().required(
       t('notionalTransfer:validateMsg.isRequired', {
         field: t('notionalTransfer:notionalTransferColLabels.legalName')
@@ -45,16 +49,21 @@ export const notionalTransferSchema = (t, optionsData) =>
         field: t('notionalTransfer:notionalTransferColLabels.addressForService')
       })
     ),
-    fuelCategoryId: yup.number().required(
+    fuelCategory: yup.string().required(
       t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.fuelCategoryId')
+        field: t('notionalTransfer:notionalTransferColLabels.fuelCategory')
       })
     ),
     receivedOrTransferred: yup.string().required(
       t('notionalTransfer:validateMsg.isRequired', {
         field: t('notionalTransfer:notionalTransferColLabels.receivedOrTransferred')
       })
-    )
+    ),
+    quantity: yup.number().min(0, t('notionalTransfer:validateMsg.nonNegative')).required(
+      t('notionalTransfer:validateMsg.isRequired', {
+        field: t('notionalTransfer:notionalTransferColLabels.quantity')
+      })
+    ),
   })
 
 export const notionalTransferColDefs = (t, optionsData, api) => [
@@ -65,7 +74,8 @@ export const notionalTransferColDefs = (t, optionsData, api) => [
       enableDuplicate: true,
       enableEdit: false,
       enableDelete: true,
-      onDuplicate: (props) => duplicateRow({ ...props, api })
+      onDuplicate: (props) => duplicateRow({ ...props, api }),
+      // onDelete: (props) => deleteRow({ ...props, api })
     },
     pinned: 'left',
     maxWidth: 100,
@@ -86,20 +96,6 @@ export const notionalTransferColDefs = (t, optionsData, api) => [
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     hide: true
-  },
-  {
-    field: 'quantity',
-    headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
-    cellEditor: 'agNumberCellEditor',
-    type: 'numericColumn',
-    cellEditorParams: {
-      precision: 0,
-      min: 0,
-      showStepperButtons: false
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && !params.value) return { borderColor: 'red' }
-    }
   },
   {
     field: 'legalName',
@@ -128,12 +124,12 @@ export const notionalTransferColDefs = (t, optionsData, api) => [
       (!params.value && <Typography variant="body4">Select</Typography>)
   },
   {
-    field: 'fuelCategoryId',
-    headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
     cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
     cellEditorParams: {
-      options: optionsData.fuelCategories.map((obj) => obj.fuelCategoryId),
+      options: optionsData.fuelCategories.map((obj) => obj.category),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -150,8 +146,15 @@ export const notionalTransferColDefs = (t, optionsData, api) => [
   {
     field: 'receivedOrTransferred',
     headerName: t('notionalTransfer:notionalTransferColLabels.receivedOrTransferred'),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
+    cellEditorParams: {
+      options: optionsData?.receivedOrTransferred || [],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
+    },
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
@@ -159,7 +162,21 @@ export const notionalTransferColDefs = (t, optionsData, api) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>)
-  }
+  },
+  {
+    field: 'quantity',
+    headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
+    cellEditor: 'agNumberCellEditor',
+    type: 'numericColumn',
+    cellEditorParams: {
+      precision: 0,
+      min: 0,
+      showStepperButtons: false
+    },
+    cellStyle: (params) => {
+      if (params.data.modified && !params.value) return { borderColor: 'red' }
+    }
+  },
 ]
 
 export const defaultColDef = {
