@@ -2,21 +2,41 @@ import logging
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 from lcfs.settings import settings
 
 from lcfs.db.seeders.dev.user_profile_seeder import seed_user_profiles
 from lcfs.db.seeders.dev.user_role_seeder import seed_user_roles
-from .dev.organization_address_seeder import seed_organization_addresses
-from .dev.organization_attorney_address_seeder import seed_organization_attorney_addresses
-from .dev.organization_seeder import seed_organizations
-from .dev.transaction_seeder import seed_transactions
-from .dev.admin_adjustment_seeder import seed_admin_adjustments
-from .dev.fuel_code_seeder import seed_fuel_codes
-from .dev.finished_fuel_transfer_mode_seeder import seed_finished_fuel_transfer_modes
-from .dev.feedstock_fuel_transfer_mode_seeder import seed_feedstock_fuel_transfer_modes
+from lcfs.db.seeders.dev.organization_address_seeder import seed_organization_addresses
+from lcfs.db.seeders.dev.organization_attorney_address_seeder import seed_organization_attorney_addresses
+from lcfs.db.seeders.dev.organization_seeder import seed_organizations
+from lcfs.db.seeders.dev.transaction_seeder import seed_transactions
+from lcfs.db.seeders.dev.admin_adjustment_seeder import seed_admin_adjustments
+from lcfs.db.seeders.dev.fuel_code_seeder import seed_fuel_codes
+from lcfs.db.seeders.dev.finished_fuel_transfer_mode_seeder import seed_finished_fuel_transfer_modes
+from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import seed_feedstock_fuel_transfer_modes
 
 logger = logging.getLogger(__name__)
 
+async def update_sequences(session):
+    """
+    Function to update sequences for all tables after seeding.
+    """
+    sequences = {
+        'organization_address': 'organization_address_id',
+        'organization': 'organization_id',
+        'transaction': 'transaction_id',
+        'admin_adjustment': 'admin_adjustment_id',
+        'user_profile': 'user_profile_id',
+        'user_role': 'user_role_id',
+        'fuel_code': 'fuel_code_id',
+    }
+
+    for table, column in sequences.items():
+        sequence_name = f"{table}_{column}_seq"
+        max_value_query = text(f"SELECT setval('{sequence_name}', COALESCE((SELECT MAX({column}) + 1 FROM {table}), 1), false)")
+        await session.execute(max_value_query)
+    await session.commit()
 
 async def seed_dev():
     """
@@ -37,6 +57,10 @@ async def seed_dev():
             await seed_fuel_codes(session)
             await seed_finished_fuel_transfer_modes(session)
             await seed_feedstock_fuel_transfer_modes(session)
+            
+            # Update sequences after all seeders have run
+            await update_sequences(session)
+            
             logger.info("Database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")

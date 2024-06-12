@@ -2,6 +2,7 @@ import logging
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
 from lcfs.settings import settings
 
 from lcfs.db.seeders.common.compliance_period_seeder import seed_compliance_periods
@@ -17,6 +18,40 @@ from lcfs.db.seeders.common.compliance_report_status_seeder import seed_complian
 
 logger = logging.getLogger(__name__)
 
+async def update_sequences(session):
+    """
+    Function to update sequences for all tables after seeding.
+    """
+    sequences = {
+        'fuel_code': 'fuel_code_id',
+        'transport_mode': 'transport_mode_id',
+        'provision_of_the_act': 'provision_of_the_act_id',
+        'fuel_type': 'fuel_type_id',
+        'fuel_code_prefix': 'fuel_code_prefix_id',
+        'fuel_code_status': 'fuel_code_status_id',
+        'fuel_category': 'fuel_category_id',
+        'end_use_type': 'end_use_type_id',
+        'unit_of_measure': 'uom_id',
+        'additional_carbon_intensity': 'additional_uci_id',
+        'energy_effectiveness_ratio': 'eer_id',
+        'energy_density': 'energy_density_id',
+        'target_carbon_intensity': 'target_carbon_intensity_id',
+        'compliance_report_status': 'compliance_report_status_id',
+        'admin_adjustment_status': 'admin_adjustment_status_id',
+        'compliance_period': 'compliance_period_id',
+        'initiative_agreement_status': 'initiative_agreement_status_id',
+        'organization_status': 'organization_status_id',
+        'organization_type': 'organization_type_id',
+        'transfer_category': 'transfer_category_id',
+        'transfer_status': 'transfer_status_id',
+        'role': 'role_id',
+    }
+
+    for table, column in sequences.items():
+        sequence_name = f"{table}_{column}_seq"
+        max_value_query = text(f"SELECT setval('{sequence_name}', COALESCE((SELECT MAX({column}) + 1 FROM {table}), 1), false)")
+        await session.execute(max_value_query)
+    await session.commit()
 
 async def seed_common():
     """
@@ -37,11 +72,14 @@ async def seed_common():
             await seed_initiative_agreement_statuses(session)
             await seed_static_fuel_data(session)
             await seed_compliance_report_statuses(session)
+            
+            # Update sequences after all seeders have run
+            await update_sequences(session)
+            
             logger.info("Database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")
             await session.rollback()
-
 
 if __name__ == "__main__":
     asyncio.run(seed_common())
