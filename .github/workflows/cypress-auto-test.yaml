@@ -1,12 +1,13 @@
 # Workflow starts automatically on push or can be triggered manually.
 # This is a desirable pattern as it allows for adhoc test runs without a code push
 name: Cypress tests
-on:
-  # pull_request:
-  #   types: [opened, edited, synchronize]
-  #   branches: 
-  #     - "feat/prashanth-ci-cd-test-pipeline-619"
-  workflow_dispatch:
+on: [push, workflow_dispatch]
+# on:
+#   push:
+#     branches:
+#       - 'release-0.2.0'
+#   pull_request:
+#   workflow_dispatch:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
@@ -56,73 +57,73 @@ jobs:
         run: sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev
       
 
-      # # Many solutions have an API and APP that start fairly slow (specifically when not many resources are available).
-      # # Since the APP needs the API and Cypress needs the APP, we first have to test if the API is running and accessible.
-      # # Often an OK from the OpenShift deploy does not automatically mean that the API/APP is functional and/or reachable.
-      # # We like to use a straightforward CURL command, which we have included as a script in this repo.
-      # # - name: Wait for API response
-      # #   env:
-      # #     url: ${{ secrets.CYPRESS_API_HOST }}
-      # #     code: 200 # The HTML Code we expect to get back
-      # #     wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
-      # #     max_attempts: 5
-      # #   run: |
-      # #     cd frontend
-      # #     chmod +x waitforconnection.sh
-      # #     bash ./waitforconnection.sh
-
-      # # - name: Wait for APP response
-      # #   env:
-      # #     url: ${{ secrets.CYPRESS_HOST }}
-      # #     code: 200
-      # #     wait_time: 10
-      # #     max_attempts: 5
-      # #   run: |
-      # #     cd frontend
-      # #     chmod +x waitforconnection.sh
-      # #     bash ./waitforconnection.sh
-
-      # # This is the actual Cypress action, invoked with a set of extra parameters.
-      # # Wait-on/wait-on-timeout: This is the Cypress way of waiting for a response from the application under test, but it does not address the API readiness hence the above Waits.
-      # # record: Switches on recording to the cloud-based Cypress dahsboard
-      # # install-command: Since we are forcing our libraries (keycloak) to be installed because of version issues, we have to specify "npm ci -f" to install as the normal "npm ci" would results in errors.
-      # # If you do not run additional libraries or forced the libraries to install, the this option can be left out.
-      # # working-directory: points to where you test scripts are located
-      # # browser: Specifies which browser you want to use. The default is 'Electron', but we would typically user 'Chrome' as this represent the majority of our users.
-      # # ci-build-id: to communicate the PR/Build number to the Cypress Dashboard
-      # # - name: E2E Smoke tests
-      # #   uses: cypress-io/github-action@v6
-      # #   # let's give this action an ID so we can refer
-      # #   # to its output values later
-      # #   id: smoke
-      # #   continue-on-error: false
-      # #   with:
-      # #     wait-on: ${{ secrets.CYPRESS_HOST }}
-      # #     wait-on-timeout: 120
-      # #     start: npm run cypress:dev
-      # #     install-command: npm ci -f
-      # #     working-directory: frontend
-      # #     browser: chrome
-      # #     ci-build-id: ${{ github.event.number }}
-      # - name: Install Dependencies
-      #   run: npm ci -f
-      #   working-directory: frontend
-
-      # - name: Run Cypress Tests
-      #   run: npm run cypress:dev
-      #   working-directory: frontend
-        
-      # - name: Debug Cypress Run
-      #   if: failure()
-      #   run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
-      # - uses: actions/upload-artifact@v3
-      #   if: failure()
-      #   with:
-      #     name: cypress-screenshots
-      #     path: /home/runner/work/lcfs/lcfs/frontend/cypress/screenshots
-
-      # # For review/debug purposes, just print out key parameters
-      # - name: Print Env Vars
+      # Many solutions have an API and APP that start fairly slow (specifically when not many resources are available).
+      # Since the APP needs the API and Cypress needs the APP, we first have to test if the API is running and accessible.
+      # Often an OK from the OpenShift deploy does not automatically mean that the API/APP is functional and/or reachable.
+      # We like to use a straightforward CURL command, which we have included as a script in this repo.
+      # - name: Wait for API response
+      #   env:
+      #     url: ${{ secrets.CYPRESS_API_HOST }}
+      #     code: 200 # The HTML Code we expect to get back
+      #     wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
+      #     max_attempts: 5
       #   run: |
-      #     echo Git Base Ref: ${{ github.base_ref }}
-      #     echo Git Change ID: ${{ github.event.number }}
+      #     cd frontend
+      #     chmod +x waitforconnection.sh
+      #     bash ./waitforconnection.sh
+
+      # - name: Wait for APP response
+      #   env:
+      #     url: ${{ secrets.CYPRESS_HOST }}
+      #     code: 200
+      #     wait_time: 10
+      #     max_attempts: 5
+      #   run: |
+      #     cd frontend
+      #     chmod +x waitforconnection.sh
+      #     bash ./waitforconnection.sh
+
+      # This is the actual Cypress action, invoked with a set of extra parameters.
+      # Wait-on/wait-on-timeout: This is the Cypress way of waiting for a response from the application under test, but it does not address the API readiness hence the above Waits.
+      # record: Switches on recording to the cloud-based Cypress dahsboard
+      # install-command: Since we are forcing our libraries (keycloak) to be installed because of version issues, we have to specify "npm ci -f" to install as the normal "npm ci" would results in errors.
+      # If you do not run additional libraries or forced the libraries to install, the this option can be left out.
+      # working-directory: points to where you test scripts are located
+      # browser: Specifies which browser you want to use. The default is 'Electron', but we would typically user 'Chrome' as this represent the majority of our users.
+      # ci-build-id: to communicate the PR/Build number to the Cypress Dashboard
+      # - name: E2E Smoke tests
+      #   uses: cypress-io/github-action@v6
+      #   # let's give this action an ID so we can refer
+      #   # to its output values later
+      #   id: smoke
+      #   continue-on-error: false
+      #   with:
+      #     wait-on: ${{ secrets.CYPRESS_HOST }}
+      #     wait-on-timeout: 120
+      #     start: npm run cypress:dev
+      #     install-command: npm ci -f
+      #     working-directory: frontend
+      #     browser: chrome
+      #     ci-build-id: ${{ github.event.number }}
+      - name: Install Dependencies
+        run: npm ci -f
+        working-directory: frontend
+
+      - name: Run Cypress Tests
+        run: npm run cypress:dev
+        working-directory: frontend
+        
+      - name: Debug Cypress Run
+        if: failure()
+        run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
+      - uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: /home/runner/work/lcfs/lcfs/frontend/cypress/screenshots
+
+      # For review/debug purposes, just print out key parameters
+      - name: Print Env Vars
+        run: |
+          echo Git Base Ref: ${{ github.base_ref }}
+          echo Git Change ID: ${{ github.event.number }}
