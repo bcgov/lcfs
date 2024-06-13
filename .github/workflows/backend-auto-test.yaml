@@ -30,6 +30,24 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+      redis:
+        # Docker Hub image
+        image: redis:latest
+        ports: 
+          - 6379:6379
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_DB: lcfs
+      REDIS_PASS: development_only       
+
     steps:
 
       - name: Checkout Target Branch
@@ -56,8 +74,6 @@ jobs:
           done
 
       - name: Run Backend Tests
-        env:
-          DATABASE_URL: postgresql://lcfs:development_only@127.0.0.1:5432/lcfs_test
         run: |
           pwd
           cd backend
