@@ -1,0 +1,35 @@
+# Workflow starts automatically on push or can be triggered manually.
+# This is a desirable pattern as it allows for adhoc test runs without a code push
+name: Frontend Test
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches: 
+      - "feat/prashanth-ci-cd-test-pipeline-619"
+    paths: 
+      - "frontend"
+  workflow_dispatch:
+jobs:
+  
+  frontend-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Target Branch
+        uses: actions/checkout@v4.1.6
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4.0.2
+        with:
+          node-version: '20'
+    
+      - name: Start frontend test
+        run: |
+          node --version
+          cd frontend
+          pwd
+          npm install
+          npm run test.coverage
+
