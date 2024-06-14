@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import List
 
 from fastapi import (
     APIRouter,
@@ -30,6 +31,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -262,3 +264,47 @@ async def get_compliance_reports(
 ) -> ComplianceReportListSchema:
     organization_id = request.user.organization.organization_id
     return await report_service.get_compliance_reports_paginated(pagination, organization_id)
+
+
+@router.get(
+    "/{organization_id}/reports/{report_id}",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Supplier")
+@view_handler
+async def get_compliance_report_by_id(
+    request: Request,
+    organization_id: int,
+    response: Response = None,
+    report_id: int = None,
+    report_service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Endpoint to get information of a user by ID
+    This endpoint returns the information of a user by ID, including their roles and organization.
+    """
+    return await report_service.get_compliance_report_by_id(report_id)
+
+
+@router.post(
+    "/{organization_id}/reports/{report_id}/fse",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@roles_required("Supplier")
+@view_handler
+async def save_final_supply_equipment_rows(
+    request: Request,
+    organization_id: int,
+    response: Response = None,
+    report_id: int = None,
+    fse_list: List[FinalSupplyEquipmentSchema] = Body(..., embed=False),
+    report_service: ComplianceReportServices = Depends(),
+    validate: OrganizationValidation = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Endpoint to save final supply equipment details
+    """
+    await validate.save_final_supply_equipment_rows(organization_id, report_id, fse_list)
+    return await report_service.save_fse_list(report_id, fse_list)

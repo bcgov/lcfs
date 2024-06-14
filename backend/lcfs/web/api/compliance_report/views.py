@@ -24,9 +24,9 @@ from fastapi.responses import StreamingResponse
 
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportListSchema
+from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportBaseSchema, ComplianceReportListSchema, FSEOptionsSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
-from lcfs.web.core.decorators import view_handler
+from lcfs.web.core.decorators import roles_required, view_handler
 
 router = APIRouter()
 logger = getLogger("reports_view")
@@ -46,6 +46,7 @@ async def get_compliance_periods(service: ComplianceReportServices = Depends()) 
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
+@roles_required("Government")
 @view_handler
 async def get_compliance_reports(
     request: Request,
@@ -54,3 +55,24 @@ async def get_compliance_reports(
 ) -> ComplianceReportListSchema:
     # TODO: Add filter on statuses so that IDIR users won't be able to see draft reports
     return await service.get_compliance_reports_paginated(pagination)
+
+
+@router.get("/fse-options", response_model=FSEOptionsSchema, status_code=status.HTTP_200_OK)
+@view_handler
+async def get_fse_options(service: ComplianceReportServices = Depends()) -> FSEOptionsSchema:
+    return await service.get_fse_options()
+
+@router.get(
+    "/{report_id}",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler
+@roles_required("Government")
+async def get_compliance_report_by_id(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    return await service.get_compliance_report_by_id(report_id)
+    

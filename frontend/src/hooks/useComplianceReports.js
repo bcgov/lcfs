@@ -18,8 +18,22 @@ export const useCreateComplianceReport = (orgID, options) => {
   return useMutation({
     mutationFn: (data) => client.post(path, data),
     onSettled: () => {
-      queryClient.invalidateQueries(['reports'])
+      queryClient.invalidateQueries(['compliance-report'])
     },
+    ...options
+  })
+}
+
+export const useGetComplianceReport = (orgID, reportID, options) => {
+  const client = useApiService()
+  const path = orgID
+    ? apiRoutes.getOrgComplianceReport
+        .replace(':orgID', orgID)
+        .replace(':reportID', reportID)
+    : apiRoutes.getComplianceReport.replace(':reportID', reportID)
+  return useQuery({
+    queryKey: ['compliance-report', reportID],
+    queryFn: () => client.get(path),
     ...options
   })
 }

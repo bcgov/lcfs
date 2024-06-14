@@ -36,7 +36,7 @@ export const ComplianceReports = () => {
   const gridOptions = useMemo(() => ({
     overlayNoRowsTemplate: t('report:noReportsFound')
   }))
-  const getRowId = useCallback((params) => params.data.reportId)
+  const getRowId = useCallback((params) => params.data.complianceReportId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(({data}) => {
     console.log("I'm here")
@@ -99,7 +99,7 @@ export const ComplianceReports = () => {
             ref={alertRef}
             data-test="alert-box"
             severity={alertSeverity}
-            delay={65000}
+            delay={6500}
           >
             {alertMessage}
           </BCAlert>

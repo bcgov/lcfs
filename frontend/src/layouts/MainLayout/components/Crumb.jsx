@@ -31,8 +31,9 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 const Crumb = () => {
   const location = useLocation()
   const matches = useMatches()
-  const { userID, orgID } = useParams()
-  const pathnames = location.pathname.split('/').filter((x) => x)
+  const { userID, orgID, reportID, compliancePeriod } = useParams()
+  const path = location.pathname.replace(`/compliance-reporting/${compliancePeriod}/${reportID}`, `/compliance-reporting/${compliancePeriod}-Compliance-report`)
+  const pathnames = path.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
 
   // Mapping for custom breadcrumb labels and routes
@@ -77,7 +78,7 @@ const Crumb = () => {
           const isLast = index === pathnames.length - 1
           const customCrumb = customBreadcrumbs[name] || {}
           const routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
-          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
 
           return isLast ? (
             <StyledBreadcrumb
