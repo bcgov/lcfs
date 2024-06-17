@@ -15,7 +15,7 @@ export const transactionsColDefs = (t) => [
     field: 'transactionType', 
     headerName: t('txn:txnColLabels.type'), 
     valueFormatter: spacesFormatter,
-    width: 150 
+    width: 222 
   },
   { colId: 'fromOrganization', field: 'fromOrganization', headerName: t('txn:txnColLabels.organizationFrom'), minWidth: 300, flex: 2 },
   { colId: 'toOrganization', field: 'toOrganization', headerName: t('txn:txnColLabels.organizationTo'), minWidth: 300, flex: 2 },
