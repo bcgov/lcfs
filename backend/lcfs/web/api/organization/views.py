@@ -251,7 +251,7 @@ async def create_compliance_report(
 
 
 @router.post(
-    "/reports/list",
+    "/{organization_id}/reports/list",
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -259,6 +259,7 @@ async def create_compliance_report(
 @view_handler
 async def get_compliance_reports(
     request: Request,
+    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     report_service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:

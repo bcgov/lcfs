@@ -24,6 +24,6 @@ export const apiRoutes = {
   getComplianceReports: '/reports/list',
   getComplianceReport: '/reports/:reportID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
-  getOrgComplianceReports: '/organization/reports/list',
+  getOrgComplianceReports: '/organization/:orgID/reports/list',
   createComplianceReport: '/organization/:orgID/reports'
 }

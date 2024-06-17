@@ -12,14 +12,14 @@ import { Role } from '@/components/Role'
 // constants
 import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 // hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
 import { reportsColDefs } from './components/_schema'
-import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import Loading from '@/components/Loading'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -132,7 +132,10 @@ export const ComplianceReports = () => {
             gridRef={gridRef}
             apiEndpoint={
               hasRoles(roles.supplier)
-                ? apiRoutes.getOrgComplianceReports
+                ? apiRoutes.getOrgComplianceReports.replace(
+                  ':orgID',
+                  currentUser?.organization?.organizationId
+                )
                 : apiRoutes.getComplianceReports
             }
             apiData={'reports'}
