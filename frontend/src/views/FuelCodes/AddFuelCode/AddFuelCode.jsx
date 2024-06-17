@@ -278,6 +278,7 @@ export const AddFuelCode = () => {
             statusBarcomponent={statusBarcomponent}
             onRowEditingStarted={onRowEditingStarted}
             onRowEditingStopped={onRowEditingStopped}
+            // onValidated={} pass back validated fields, data, success
           />
         </BCBox>
         <Stack

@@ -3,38 +3,21 @@ import { AgGridReact } from '@ag-grid-community/react'
 import { Stack } from '@mui/material'
 import PropTypes from 'prop-types'
 import { v4 as uuid } from 'uuid'
-
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import DataGridLoading from '@/components/DataGridLoading'
-import { 
-  AutocompleteEditor, 
-  AsyncValidationEditor, 
-  DateEditor, 
-  ActionsRenderer, 
-  AsyncSuggestionEditor 
+import {
+  AutocompleteEditor,
+  AsyncValidationEditor,
+  DateEditor,
+  ActionsRenderer,
+  AsyncSuggestionEditor
 } from '@/components/BCDataGrid/components'
+import { useNotionalTransferActions } from '@/hooks/useNotionalTransfer'
 
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 
-/**
- * BCDataGridEditor component is a customizable data grid editor using ag-grid.
- * It provides features like adding new rows, deleting selected rows, and saving changes.
- *
- * @param {function} saveData - Function to save changes made to the grid.
- * @param {function} onGridReady - Callback function invoked when the grid is initialized and ready.
- * @param {object} gridApi - Reference to the ag-grid API.
- * @param {object} columnApi - Reference to the ag-grid column API.
- * @param {array} rowData - Data to be displayed in the grid.
- * @param {string} gridKey - Unique key identifier for the grid.
- * @param {function} getRowNodeId - Function to get the unique identifier for each row.
- * @param {object} gridRef - Reference to the ag-grid instance.
- * @param {array} columnDefs - Definitions for the columns in the grid.
- * @param {object} defaultColDef - Default column definition for the grid.
- * @param {string} highlightedRowId - ID of the row to be highlighted.
- * @param {array} fieldsToNullOnDuplicate - List of fields that need to be set to null on row duplication.
- */
 const BCDataGridEditor = ({
   saveData,
   gridOptions,
@@ -55,6 +38,8 @@ const BCDataGridEditor = ({
   fieldsToNullOnDuplicate,
   ...props
 }) => {
+  const { saveRow } = useNotionalTransferActions()
+
   const frameworkComponents = useMemo(() => ({
     asyncValidationEditor: AsyncValidationEditor,
     autocompleteEditor: AutocompleteEditor,
@@ -106,46 +91,47 @@ const BCDataGridEditor = ({
     gridApi.applyTransaction({ add: [emptyRow] })
   }, [gridApi])
 
-  const deleteRow = useCallback(() => {
-    const selectedData = columnApi?.api?.getSelectedRows()
-    gridApi?.applyTransaction({ remove: selectedData })
-  }, [columnApi, gridApi])
-
   const duplicateRow = useCallback((rowData) => {
     const newData = { ...rowData, id: uuid() }
     fieldsToNullOnDuplicate.forEach(field => {
       newData[field] = null
     })
-    gridApi.applyTransaction({ add: [newData] })
-  }, [gridApi, fieldsToNullOnDuplicate])
-
-  const cacheRowData = useCallback((params) => {
-    const allRowData = []
-    params.api.forEachNode((node) => {
-      allRowData.push(node.data)
+    saveRow.mutate(newData, {
+      onSuccess: (newRow) => {
+        gridApi.applyTransaction({ add: [newRow] })
+      },
+      onError: (error) => {
+        console.error('Error duplicating row:', error)
+      }
     })
-    localStorage.setItem(gridKey, JSON.stringify(allRowData))
-  }, [gridKey])
+  }, [gridApi, fieldsToNullOnDuplicate, saveRow])
 
-  const onRowEditingStartedHandler = useCallback((params) => {
-    params.api.refreshCells({
-      columns: ['action'],
-      rowNodes: [params.node],
-      force: true,
+  const deleteRow = useCallback((rowData) => {
+    const updatedData = { ...rowData, deleted: true }
+    saveRow.mutate(updatedData, {
+      onSuccess: () => {
+        gridApi.applyTransaction({ remove: [rowData] })
+      },
+      onError: (error) => {
+        console.error('Error deleting row:', error)
+      }
     })
-    if (onRowEditingStarted) {
-      onRowEditingStarted(params)
-    }
-    cacheRowData(params)
-  }, [onRowEditingStarted, cacheRowData])
+  }, [gridApi, saveRow])
 
   const onRowEditingStoppedHandler = useCallback((params) => {
     params.api.redrawRows({ rowNodes: [params.node] })
+    saveRow.mutate(params.data, {
+      onSuccess: () => {
+        params.api.refreshCells()
+      },
+      onError: (error) => {
+        console.error('Error saving row:', error)
+      },
+    })
     if (onRowEditingStopped) {
       onRowEditingStopped(params)
     }
-    cacheRowData(params)
-  }, [onRowEditingStopped, cacheRowData])
+  }, [onRowEditingStopped, saveRow])
 
   function onCellValueChanged(params) {
     params.data.modified = true
@@ -158,9 +144,6 @@ const BCDataGridEditor = ({
       </BCButton>
       <BCButton variant="outlined" color="primary" onClick={addRow}>
         Add new row
-      </BCButton>
-      <BCButton variant="outlined" color="error" onClick={deleteRow}>
-        Delete selected rows
       </BCButton>
     </Stack>
   )
@@ -182,10 +165,9 @@ const BCDataGridEditor = ({
         domLayout="autoHeight"
         onCellValueChanged={onCellValueChanged}
         onRowEditingStopped={onRowEditingStoppedHandler}
-        onRowEditingStarted={onRowEditingStartedHandler}
         loadingOverlayComponent={loadingOverlayComponent}
         {...props}
-        context={{ onDuplicate: duplicateRow }}
+        context={{ onDuplicate: duplicateRow, onDelete: deleteRow }}
       />
       <BCBox
         display="flex"

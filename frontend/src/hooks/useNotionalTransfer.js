@@ -12,27 +12,6 @@ export const useNotionalTransferOptions = (params, options) => {
   })
 }
 
-export const useAddNotionalTransfers = (complianceReportId, options) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    ...options,
-    mutationFn: async ({ data }) => {
-      // Check if data is an array and isValid is true for all rows
-      if (!Array.isArray(data) || !data.every((item) => item.isValid)) {
-        throw new Error('All notional transfers must be validated before saving.')
-      }
-      const payload = {
-        complianceReportId,
-        notional_transfers: data
-      }
-      await client.post(apiRoutes.addNotionalTransfers, payload)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(['notional-transfers'])
-    }
-  })
-}
 
 export const useGetNotionalTransfers = (complianceReportId, options) => {
   const client = useApiService()
@@ -47,41 +26,18 @@ export const useGetNotionalTransfers = (complianceReportId, options) => {
   })
 }
 
-export const useGetNotionalTransfer = (notionalTransferID) => {
+export const useNotionalTransferActions = () => {
   const client = useApiService()
-  return useQuery({
-    queryKey: ['notional-transfer', notionalTransferID],
-    queryFn: async () => {
-      return (
-        await client.get(
-          apiRoutes.getNotionalTransfer.replace(':notionalTransferID', notionalTransferID)
-        )
-      ).data
-    }
-  })
-}
+  const queryClient = useQueryClient()
 
-export const useUpdateNotionalTransfer = (notionalTransferID, options) => {
-  const client = useApiService()
-  return useMutation({
-    ...options,
-    mutationFn: async (data) => {
-      return await client.put(
-        apiRoutes.updateNotionalTransfer.replace(':notionalTransferID', notionalTransferID),
-        data
-      )
+  const saveRow = useMutation(
+    (data) => client.post(apiRoutes.saveNotionalTransfer, { data }),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['notional-transfers'])
+      },
     }
-  })
-}
+  )
 
-export const useDeleteNotionalTransfer = (notionalTransferID, options) => {
-  const client = useApiService()
-  return useMutation({
-    ...options,
-    mutationFn: async () => {
-      return await client.delete(
-        apiRoutes.updateNotionalTransfer.replace(':notionalTransferID', notionalTransferID)
-      )
-    }
-  })
+  return { saveRow }
 }

@@ -3,7 +3,7 @@ Notional Transfers endpoints
 """
 
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
 from fastapi import (
     APIRouter,
@@ -70,50 +70,33 @@ async def get_notional_transfer(
 
 
 @router.post(
-    "/save-notional-transfers",
-    response_model=str,
-    status_code=status.HTTP_201_CREATED,
+    "/save",
+    response_model=NotionalTransferSchema,
+    status_code=status.HTTP_200_OK,
 )
 @roles_required("Supplier")
 @view_handler
-async def save_notional_transfers(
+async def save_notional_transfer_row(
     request: Request,
-    request_data: NotionalTransferListCreateSchema = Body(...),
+    request_data: NotionalTransferCreateSchema = Body(...),
     service: NotionalTransferServices = Depends(),
     validate: NotionalTransferValidation = Depends(),
-) -> str:
-    """Endpoint to save notional transfers"""
+) -> NotionalTransferSchema:
+    """Endpoint to save a single notional transfer row"""
     compliance_report_id = request_data.compliance_report_id
-    notional_transfers = request_data.notional_transfers
+    notional_transfer_id: Optional[int] = request_data.notional_transfer_id
+
     await validate.validate_organization_access(compliance_report_id)
-    await validate.validate_compliance_report_id(compliance_report_id, notional_transfers)
-    return await service.save_notional_transfers(notional_transfers)
 
-
-@router.put("/{notional_transfer_id}", status_code=status.HTTP_200_OK)
-@roles_required("Supplier")
-@view_handler
-async def update_notional_transfer(
-    request: Request,
-    notional_transfer_id: int,
-    compliance_report_id: int,
-    notional_transfer_data: NotionalTransferCreateSchema,
-    service: NotionalTransferServices = Depends(),
-    validate: NotionalTransferValidation = Depends(),
-):
-    await validate.validate_organization_access(compliance_report_id)
-    return await service.update_notional_transfer(notional_transfer_id, notional_transfer_data)
-
-
-@router.delete("/{notional_transfer_id}", status_code=status.HTTP_200_OK)
-@roles_required("Supplier")
-@view_handler
-async def delete_notional_transfer(
-    request: Request,
-    notional_transfer_id: int,
-    compliance_report_id: int,
-    service: NotionalTransferServices = Depends(),
-    validate: NotionalTransferValidation = Depends(),
-):
-    await validate.validate_organization_access(compliance_report_id)
-    return await service.delete_notional_transfer(notional_transfer_id)
+    if request_data.deleted:
+        # Delete existing notional transfer
+        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        return await service.delete_notional_transfer(notional_transfer_id)
+    elif notional_transfer_id:
+        # Update existing notional transfer
+        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        return await service.update_notional_transfer(notional_transfer_id, request_data)
+    else:
+        # Create new notional transfer
+        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        return await service.create_notional_transfer(request_data)

@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, notionalTransferColDefs, notionalTransferSchema } from './_schema'
 import { AddRowsButton } from './AddRowsButton'
-import { useNotionalTransferOptions, useAddNotionalTransfers, useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
+import { useNotionalTransferOptions, useGetNotionalTransfers, useNotionalTransferActions } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
 import { ROUTES } from '@/constants/routes'
 
@@ -31,6 +31,7 @@ export const AddEditNotionalTransfers = () => {
   const { complianceReportId } = useParams()
   const { data: optionsData, isLoading: optionsLoading, isFetched } = useNotionalTransferOptions()
   const { data: notionalTransfers, isLoading: transfersLoading } = useGetNotionalTransfers(complianceReportId)
+  const { saveRow } = useNotionalTransferActions()
 
   const gridKey = 'add-notional-transfer'
   const gridOptions = useMemo(
@@ -116,17 +117,10 @@ export const AddEditNotionalTransfers = () => {
     (params) => {
       params.node.setData({ ...params.data, modified: true })
       validationHandler(params)
+      saveRow.mutate(params.data)
     },
-    [validationHandler]
+    [validationHandler, saveRow]
   )
-
-  const saveData = useCallback(() => {
-    const allRowData = []
-    gridApi.forEachNode((node) => allRowData.push(node.data))
-    const modifiedRows = allRowData.filter((row) => row.modified)
-    // Add your API call to save modified rows here
-    console.log('Saving data:', modifiedRows)
-  }, [gridApi])
 
   const statusBarComponent = useMemo(
     () => (
@@ -137,40 +131,7 @@ export const AddEditNotionalTransfers = () => {
     [gridApi]
   )
 
-  const { mutate: addNotionalTransfers, isLoading: isAddNotionalTransferLoading } = useAddNotionalTransfers(complianceReportId, {
-    onSuccess: () => {
-      localStorage.removeItem(gridKey)
-      navigate(ROUTES.ADMIN_NOTIONAL_TRANSFERS, {
-        state: {
-          message: t('notionalTransfer:notionalTransferAddSuccessMsg'),
-          severity: 'success',
-        },
-      })
-    },
-    onError: (error) => {
-      setAlertMessage(t('notionalTransfer:notionalTransferAddFailMsg') + ' ' + error)
-      setAlertSeverity('error')
-      alertRef.current.triggerAlert()
-    },
-  })
-
-  const handleSaveDraftTransfers = async () => {
-    gridApi.stopEditing(false)
-    const allRowData = []
-    gridApi.forEachNode(async (row) => {
-      await validationHandler(row)
-      const data = {
-        ...row.data,
-        complianceReportId,
-        lastUpdated: new Date().toISOString().split('T')[0],
-      }
-      allRowData.push(data)
-    })
-
-    addNotionalTransfers({ data: allRowData })
-  }
-
-  if (optionsLoading || isAddNotionalTransferLoading || transfersLoading) {
+  if (optionsLoading || transfersLoading) {
     return <Loading />
   }
 
@@ -204,7 +165,6 @@ export const AddEditNotionalTransfers = () => {
             columnApi={columnApi}
             gridOptions={gridOptions}
             getRowNodeId={(data) => data.id}
-            saveData={saveData}
             defaultStatusBar={false}
             statusBarComponent={statusBarComponent}
             onRowEditingStarted={onRowEditingStarted}
@@ -223,7 +183,7 @@ export const AddEditNotionalTransfers = () => {
             size="medium"
             color="primary"
             startIcon={<FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />}
-            onClick={handleSaveDraftTransfers}
+            onClick={() => gridApi.stopEditing(false)}
           >
             <Typography variant="subtitle2">{t('notionalTransfer:saveNotionalTransferBtn')}</Typography>
           </BCButton>
