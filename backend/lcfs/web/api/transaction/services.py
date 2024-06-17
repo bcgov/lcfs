@@ -122,8 +122,9 @@ class TransactionsService:
                     result.price_per_unit,
                     result.category,
                     result.status,
-                    result.approval_date,
                     result.transaction_effective_date.strftime("%Y-%m-%d") if result.transaction_effective_date else None,
+                    result.recorded_date.strftime("%Y-%m-%d") if result.recorded_date else None,
+                    result.approved_date.strftime("%Y-%m-%d") if result.approved_date else None,
                     result.comment
                 ]
             )

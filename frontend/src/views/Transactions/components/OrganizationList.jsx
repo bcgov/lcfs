@@ -15,7 +15,7 @@ const OrganizationList = ({ onOrgChange }) => {
     if (!isLoading) {
       const formattedData = data.map(org => ({
         ...org,
-        label: `${org.name} ${t('txn:complianceUnitsBalance')}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: org.reservedBalance })} ${t('txn:inReserve')})`
+        label: `${org.name} ${t('txn:complianceUnitsBalance')}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: Math.abs(org.reservedBalance) })} ${t('txn:inReserve')})`
       }));
 
       setOptionsList([

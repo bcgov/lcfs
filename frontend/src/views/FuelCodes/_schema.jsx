@@ -238,9 +238,21 @@ export const addEditSchema = {
           field: t('fuelCode:fuelCodeColLabels.feedstockLocation')
         })
       ),
-      fuelProductionFacilityLocation: yup.string().required(
+      fuelProductionFacilityCity: yup.string().required(
         t('fuelCode:validateMsg.isRequired', {
-          field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation')
+          field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity')
+        })
+      ),
+      fuelProductionFacilityProvinceState: yup.string().required(
+        t('fuelCode:validateMsg.isRequired', {
+          field: t(
+            'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
+          )
+        })
+      ),
+      fuelProductionFacilityCountry: yup.string().required(
+        t('fuelCode:validateMsg.isRequired', {
+          field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry')
         })
       )
     }),
@@ -403,16 +415,19 @@ export const addEditSchema = {
       cellEditor: 'dateEditor',
       editable: isDraftOrNew
     },
-    // {
-    //   field: 'approvalDate',
-    //   headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    //   maxWidth: 180,
-    //   minWidth: 180,
-    // cellRenderer: (params) => <Typography variant="body4">{params.value ? params.value : "YYYY-MM-DD"}</Typography>,
-    //   suppressKeyboardEvent: (params) => params.editing,
-    //   cellEditor: 'dateEditor',
-    //   editable: false
-    // },
+    {
+      field: 'approvalDate',
+      headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+      maxWidth: 180,
+      minWidth: 180,
+      cellRenderer: (params) => (
+        <Typography variant="body4">
+          {params.value ? params.value : 'YYYY-MM-DD'}
+        </Typography>
+      ),
+      suppressKeyboardEvent: (params) => params.editing,
+      cellEditor: 'dateEditor'
+    },
     {
       field: 'effectiveDate',
       headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
@@ -501,18 +516,95 @@ export const addEditSchema = {
       editable: isDraftOrNew
     },
     {
-      field: 'fuelProductionFacilityLocation',
-      headerName: t(
-        'fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'
-      ),
-      cellEditor: 'agTextCellEditor',
+      field: 'fuelProductionFacilityCity',
+      headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
+      cellEditor: 'autocompleteEditor',
       cellDataType: 'text',
       cellStyle: (params) => {
         if (params.data.modified && (!params.value || params.value === ''))
           return { borderColor: 'red' }
       },
-      minWidth: 325, // TODO: handle in #486
-      editable: isDraftOrNew
+      cellRenderer: (params) =>
+        params.value ||
+        (!params.value && <Typography variant="body4">Select</Typography>),
+      cellEditorParams: {
+        onDynamicUpdate: (val, params) => params.api.stopEditing(),
+        noLabel: true,
+        options: [
+          ...new Map(
+            optionsData.fpLocations.map((location) => [
+              location.fuelProductionFacilityCity,
+              location.fuelProductionFacilityCity
+            ])
+          ).values()
+        ],
+        multiple: false, // ability to select multiple values from dropdown
+        disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+        freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+        openOnFocus: true // this will open the dropdown on input focus
+      },
+      minWidth: 325 // TODO: handle in #486
+    },
+    {
+      field: 'fuelProductionFacilityProvinceState',
+      headerName: t(
+        'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
+      ),
+      cellEditor: 'autocompleteEditor',
+      cellDataType: 'text',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      cellRenderer: (params) =>
+        params.value ||
+        (!params.value && <Typography variant="body4">Select</Typography>),
+      cellEditorParams: {
+        onDynamicUpdate: (val, params) => params.api.stopEditing(),
+        noLabel: true,
+        options: [
+          ...new Map(
+            optionsData.fpLocations.map((location) => [
+              location.fuelProductionFacilityProvinceState,
+              location.fuelProductionFacilityProvinceState
+            ])
+          ).values()
+        ],
+        multiple: false, // ability to select multiple values from dropdown
+        disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+        freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+        openOnFocus: true // this will open the dropdown on input focus
+      },
+      minWidth: 325 // TODO: handle in #486
+    },
+    {
+      field: 'fuelProductionFacilityCountry',
+      headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
+      cellEditor: 'autocompleteEditor',
+      cellDataType: 'text',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      cellRenderer: (params) =>
+        params.value ||
+        (!params.value && <Typography variant="body4">Select</Typography>),
+      cellEditorParams: {
+        noLabel: true,
+        options: [
+          ...new Map(
+            optionsData.fpLocations.map((location) => [
+              location.fuelProductionFacilityCountry,
+              location.fuelProductionFacilityCountry
+            ])
+          ).values()
+        ],
+        multiple: false, // ability to select multiple values from dropdown
+        disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+        freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
+        openOnFocus: true // this will open the dropdown on input focus
+      },
+      minWidth: 325 // TODO: handle in #486
     },
     {
       field: 'facilityNameplateCapacity',

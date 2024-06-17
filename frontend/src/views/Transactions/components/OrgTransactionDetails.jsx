@@ -25,6 +25,9 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   // Use createDate as the approved date if there is no history
   const approvedDate = approvedDateFromHistory || transactionData.createDate
 
+  // Use the transaction effective date or the approved date if no effective date is provided
+  const effectiveDate = transactionData.transactionEffectiveDate || approvedDate;
+
   // Construct the content based on the transaction type
   const content = (
     <Box component="div" display="flex" flexDirection="column" gap={1}>
@@ -35,11 +38,13 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
         <strong>{t('txn:complianceUnitsLabel')}</strong> {numberFormatter({ value: transactionData.complianceUnits })}
       </Typography>
       <Typography variant="body2">
-        <strong>{t('txn:effectiveDateLabel')}</strong> {transactionData.transactionEffectiveDate ? dateFormatter({ value: transactionData.transactionEffectiveDate }) : t('txn:noEffectiveDate')}
+        <strong>{t('txn:effectiveDateLabel')}</strong> {dateFormatter({ value: effectiveDate })}
       </Typography>
-      <Typography variant="body2">
-        <strong>{t('txn:commentsTextLabel')}</strong> {transactionData.govComment || t('txn:noComments')}
-      </Typography>
+      {transactionData.govComment && (
+        <Typography variant="body2">
+          <strong>{t('txn:commentsTextLabel')}</strong> {transactionData.govComment}
+        </Typography>
+      )}
       <Typography variant="body2">
         <strong>{t('txn:approvedLabel')}</strong> {dateFormatter({ value: approvedDate })} {t('txn:approvedByDirector')}
       </Typography>

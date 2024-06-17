@@ -37,6 +37,10 @@ const colors = {
     main: '#fb8c00',
     focus: '#fc9d26'
   },
+  pending: {
+    main: '#fb8c00',
+    focus: '#fc9d26'
+  },
   grey: {
     100: '#f8f9fa',
     200: '#f0f2f5',
@@ -60,8 +64,8 @@ const colors = {
   },
   // Used for headings and paragraphs
   text: {
-    main: "#000000",
-    focus: "#7b809a",
+    main: '#000000',
+    focus: '#7b809a',
     primary: '#313132',
     secondary: '#313132',
     disabled: 'rgba(0,0,0,0.38)'
@@ -186,6 +190,11 @@ const colors = {
       color: '#a12622',
       border: '#ebccd1',
       background: '#f2dede'
+    },
+    pending: {
+      color: '#6c4a00',
+      border: '#faebcc',
+      background: '#f9f1c6'
     }
   },
   gradients: {

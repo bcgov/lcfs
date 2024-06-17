@@ -827,5 +827,127 @@
       "target_carbon_intensity": 79.95,
       "reduction_target_percentage": 10.0
     }
+  ],
+  "fuel_classes": [
+    {
+      "fuel_class_id": 1,
+      "fuel_type_id": 1,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 2,
+      "fuel_type_id": 2,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 3,
+      "fuel_type_id": 2,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 4,
+      "fuel_type_id": 3,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 5,
+      "fuel_type_id": 3,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 6,
+      "fuel_type_id": 3,
+      "fuel_category_id": 3
+    },
+    {
+      "fuel_class_id": 7,
+      "fuel_type_id": 4,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 8,
+      "fuel_type_id": 5,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 9,
+      "fuel_type_id": 6,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 10,
+      "fuel_type_id": 6,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 11,
+      "fuel_type_id": 6,
+      "fuel_category_id": 3
+    },
+    {
+      "fuel_class_id": 12,
+      "fuel_type_id": 7,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 13,
+      "fuel_type_id": 8,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 14,
+      "fuel_type_id": 9,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 15,
+      "fuel_type_id": 10,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 16,
+      "fuel_type_id": 11,
+      "fuel_category_id": 3
+    },
+    {
+      "fuel_class_id": 17,
+      "fuel_type_id": 12,
+      "fuel_category_id": 3
+    },
+    {
+      "fuel_class_id": 18,
+      "fuel_type_id": 13,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 19,
+      "fuel_type_id": 13,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 20,
+      "fuel_type_id": 14,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 21,
+      "fuel_type_id": 15,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 22,
+      "fuel_type_id": 16,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_class_id": 23,
+      "fuel_type_id": 17,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_class_id": 24,
+      "fuel_type_id": 18,
+      "fuel_category_id": 3
+    }
   ]
 }

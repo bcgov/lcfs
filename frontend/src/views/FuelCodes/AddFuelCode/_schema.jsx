@@ -12,7 +12,7 @@ const duplicateRow = (props) => {
     modified: true,
     fuelCode: 1000 + (props.node?.rowIndex + 1) / 10
   }
-  
+
   if (props.api) {
     props.api.applyTransaction({
       add: [newRow],
@@ -47,8 +47,6 @@ export const fuelCodeSchema = (t, optionsData) =>
         field: t('fuelCode:fuelCodeColLabels.company')
       })
     ),
-    contactName: yup.string(),
-    contactEmail: yup.string(),
     carbonIntensity: yup.number().required(
       t('fuelCode:validateMsg.isRequired', {
         field: t('fuelCode:fuelCodeColLabels.carbonIntensity')
@@ -94,14 +92,16 @@ export const fuelCodeSchema = (t, optionsData) =>
     ),
     fuelProductionFacilityProvinceState: yup.string().required(
       t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState')
+        field: t(
+          'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
+        )
       })
     ),
     fuelProductionFacilityCountry: yup.string().required(
       t('fuelCode:validateMsg.isRequired', {
         field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry')
       })
-    ),
+    )
   })
 
 export const fuelCodeColDefs = (t, optionsData, api) => [
@@ -280,10 +280,6 @@ export const fuelCodeColDefs = (t, optionsData, api) => [
     headerName: t('fuelCode:fuelCodeColLabels.contactName'),
     cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -306,10 +302,6 @@ export const fuelCodeColDefs = (t, optionsData, api) => [
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
     cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -374,9 +366,13 @@ export const fuelCodeColDefs = (t, optionsData, api) => [
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
     maxWidth: 180,
     minWidth: 180,
-    cellRenderer: (params) => <Typography variant="body4">{params.value ? params.value : "YYYY-MM-DD"}</Typography>,
+    cellRenderer: (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    ),
     suppressKeyboardEvent: (params) => params.editing,
-    cellEditor: 'dateEditor',
+    cellEditor: 'dateEditor'
   },
   {
     field: 'effectiveDate',

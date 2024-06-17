@@ -46,7 +46,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   // Fetching organization balance
   const displayBalance = () => {
     if (!orgBalanceInfo) return t('txn:loadingBalance')
-    return `${orgBalanceInfo.totalBalance.toLocaleString()} (${orgBalanceInfo.reservedBalance.toLocaleString()} ${t('txn:inReserve')})`
+    return `${orgBalanceInfo.totalBalance.toLocaleString()} (${Math.abs(orgBalanceInfo.reservedBalance).toLocaleString()} ${t('txn:inReserve')})`
   }
 
   // Render form error messages

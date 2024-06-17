@@ -25,7 +25,7 @@ export const organizationsColDefs = (t) => [
     field: 'reserve',
     headerName: t('org:orgColLabels.inReserve'),
     valueFormatter: numberFormatter,
-    valueGetter: (params) => params.data.reservedBalance,
+    valueGetter: (params) => Math.abs(params.data.reservedBalance),
     width: 300,
     cellRenderer: LinkRenderer,
     // Temporary measures

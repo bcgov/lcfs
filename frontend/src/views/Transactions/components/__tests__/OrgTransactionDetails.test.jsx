@@ -17,8 +17,6 @@ vi.mock('react-i18next', () => ({
         "txn:approvedLabel": "Approved",
         "txn:approvedByDirector": "by the director under the Low Carbon Fuels Act",
         "txn:for": "for",
-        "txn:noComments": "No comments provided.",
-        "txn:noEffectiveDate": "No effective date provided.",
         "txn:adminAdjustmentId": "Administrative adjustment — ID:",
         "txn:initiativeAgreementId": "Initiative agreement — ID:"
       };
@@ -119,8 +117,6 @@ describe('OrgTransactionDetails Component', () => {
     expect(screen.getAllByText(/1/)).toHaveLength(3);
     expect(screen.getByText(/Effective date/)).toBeInTheDocument();
     expect(screen.getAllByText(/2024-06-04/)).toHaveLength(2);
-    expect(screen.getByText(/Comments/)).toBeInTheDocument();
-    expect(screen.getByText(/No comments provided./)).toBeInTheDocument();
     expect(screen.getByText(/Approved/)).toBeInTheDocument();
     expect(screen.getByText(/by the director under the Low Carbon Fuels Act/)).toBeInTheDocument();
   });
@@ -136,8 +132,6 @@ describe('OrgTransactionDetails Component', () => {
     expect(screen.getByText(/50,000/)).toBeInTheDocument();
     expect(screen.getByText(/Effective date/)).toBeInTheDocument();
     expect(screen.getByText(/2023-01-01/)).toBeInTheDocument();
-    expect(screen.getByText(/Comments/)).toBeInTheDocument();
-    expect(screen.getByText(/No comments provided./)).toBeInTheDocument();
     expect(screen.getByText(/Approved/)).toBeInTheDocument();
     expect(screen.getByText(/by the director under the Low Carbon Fuels Act/)).toBeInTheDocument();
   });
@@ -158,8 +152,6 @@ describe('OrgTransactionDetails Component', () => {
     expect(screen.getAllByText(/1/)).toHaveLength(3);
     expect(screen.getByText(/Effective date/)).toBeInTheDocument();
     expect(screen.getAllByText(/2024-06-04/)).toHaveLength(2);
-    expect(screen.getByText(/Comments/)).toBeInTheDocument();
-    expect(screen.getByText(/No comments provided./)).toBeInTheDocument();
     expect(screen.getByText(/Approved/)).toBeInTheDocument();
     expect(screen.getByText(/by the director under the Low Carbon Fuels Act/)).toBeInTheDocument();
   });
