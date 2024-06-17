@@ -1,11 +1,9 @@
 """
 Compliance reports endpoints
-GET: /reports/<report_id>
-POST: /reports/list (Includes ability to perform sort, filter and pagination)
-POST: /reports (Create a new compliance report)
-PUT: /reports/<report_id> (Update the compliance report)
-GET: /reports/periods {List of Roles with IDs}
-GET: /reports/<report_id>/history
+GET: /reports/compliance-periods (to retreieve the list of compliance periods)
+POST: /reports/list (Includes ability to perform sort, filter and pagination) - retrieve the list of compliance reports
+GET: /reports/fse-options - retrieve the options that assists the user in filling up the Final Supply Equipment rows.
+GET: /reports/<report_id> - retrieve the compliance report by ID
 """
 
 from logging import getLogger
@@ -41,7 +39,7 @@ async def get_compliance_periods(service: ComplianceReportServices = Depends()) 
     """
     return await service.get_all_compliance_periods()
 
-@router.post(
+@router.post(              
     "/list",
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
