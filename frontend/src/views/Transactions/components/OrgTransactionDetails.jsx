@@ -53,8 +53,8 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
 
   // Determine the title based on the transaction type
   const title = transactionType === ADMIN_ADJUSTMENT
-    ? `${t('txn:adminAdjustmentId')} ${transactionData.adminAdjustmentId}`
-    : `${t('txn:initiativeAgreementId')} ${transactionData.initiativeAgreementId}`
+    ? `${t('txn:adminAdjustmentId')} AA${transactionData.adminAdjustmentId}`
+    : `${t('txn:initiativeAgreementId')} IA${transactionData.initiativeAgreementId}`
 
   return (
     <Grid container spacing={2}>
