@@ -7,7 +7,7 @@ import { v4 as uuid } from 'uuid'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-export const AddRowsButton = ({ gridApi }) => {
+export const AddRowsButton = ({ gridApi, complianceReportId }) => {
   console.log('AddRowsButton rendered');
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedOption, setSelectedOption] = useState(null)
@@ -25,7 +25,7 @@ export const AddRowsButton = ({ gridApi }) => {
   const handleAddRows = (option) => {
     const rows = []
     while (option > 0) {
-      rows.push({ id: uuid() })
+      rows.push({ id: uuid(), complianceReportId })
       option--
     }
     gridApi?.applyTransaction({ add: rows })

@@ -86,22 +86,19 @@ class NotionalTransferRepository:
         """
         Get a specific notional transfer by id.
         """
-        return await self.db.scalar(select(NotionalTransfer).where(NotionalTransfer.notional_transfer_id == notional_transfer_id))
-
-    @repo_handler
-    async def delete_notional_transfer(self, notional_transfer_id: int):
-        """Delete a notional transfer from the database"""
-        await self.db.execute(delete(NotionalTransfer).where(NotionalTransfer.notional_transfer_id == notional_transfer_id))
-        await self.db.flush()
+        return await self.db.scalar(select(NotionalTransfer)
+                                    .options(joinedload(NotionalTransfer.fuel_category))
+                                    .where(NotionalTransfer.notional_transfer_id == notional_transfer_id))
 
     @repo_handler
     async def update_notional_transfer(self, notional_transfer: NotionalTransfer) -> NotionalTransfer:
         """
         Update an existing notional transfer in the database.
         """
+        updated_notional_transfer = await self.db.merge(notional_transfer)
         await self.db.flush()
-        await self.db.refresh(notional_transfer)
-        return notional_transfer
+        await self.db.refresh(updated_notional_transfer, ['fuel_category'])
+        return updated_notional_transfer
 
     @repo_handler
     async def create_notional_transfer(self, notional_transfer: NotionalTransfer) -> NotionalTransfer:
@@ -110,5 +107,11 @@ class NotionalTransferRepository:
         """
         self.db.add(notional_transfer)
         await self.db.flush()
-        await self.db.refresh(notional_transfer)
+        await self.db.refresh(notional_transfer, ['fuel_category'])
         return notional_transfer
+    
+    @repo_handler
+    async def delete_notional_transfer(self, notional_transfer_id: int):
+        """Delete a notional transfer from the database"""
+        await self.db.execute(delete(NotionalTransfer).where(NotionalTransfer.notional_transfer_id == notional_transfer_id))
+        await self.db.flush()

@@ -25,17 +25,16 @@ const duplicateRow = (props) => {
   }
 }
 
-// const deleteRow = (props) => {
-//   const updatedRow = { ...props.data, deleteFlag: true, modified: true }
-//   console.log("ON DELETE")
-  
-//   if (props.api) {
-//     props.api.applyTransaction({ update: [updatedRow] })
-//     props.api.stopEditing()
-//   } else {
-//     console.error('API is undefined')
-//   }
-// }
+const deleteRow = (props) => {
+  const updatedRow = { ...props.data, deleted: true, modified: true }
+  if (props.api) {
+    props.api.applyTransaction({ update: [updatedRow] })
+    props.api.applyTransaction({ remove: [props.node.data] })
+    props.api.stopEditing()
+  } else {
+    console.error('API is undefined')
+  }
+}
 
 export const notionalTransferSchema = (t, optionsData) =>
   yup.object().shape({
@@ -75,7 +74,7 @@ export const notionalTransferColDefs = (t, optionsData, api) => [
       enableEdit: false,
       enableDelete: true,
       onDuplicate: (props) => duplicateRow({ ...props, api }),
-      // onDelete: (props) => deleteRow({ ...props, api })
+      onDelete: (props) => deleteRow({ ...props, api })
     },
     pinned: 'left',
     maxWidth: 100,

@@ -12,7 +12,6 @@ export const useNotionalTransferOptions = (params, options) => {
   })
 }
 
-
 export const useGetNotionalTransfers = (complianceReportId, options) => {
   const client = useApiService()
   return useQuery({
@@ -26,18 +25,17 @@ export const useGetNotionalTransfers = (complianceReportId, options) => {
   })
 }
 
-export const useNotionalTransferActions = () => {
+export const useSaveNotionalTransfer = (options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
-  const saveRow = useMutation(
-    (data) => client.post(apiRoutes.saveNotionalTransfer, { data }),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['notional-transfers'])
-      },
-    }
-  )
-
-  return { saveRow }
+  return useMutation({
+    ...options,
+    mutationFn: async (data) => {
+      return await client.post(apiRoutes.saveNotionalTransfer, data)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['notional-transfers'])
+    },
+  })
 }

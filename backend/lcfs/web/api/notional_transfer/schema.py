@@ -14,7 +14,7 @@ class NotionalTransferCreateSchema(BaseSchema):
     address_for_service: str
     fuel_category: str
     received_or_transferred: ReceivedOrTransferredEnumSchema
-    deleted: Optional[bool]
+    deleted: Optional[bool] = None
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):
     pass
@@ -39,3 +39,10 @@ class NotionalTransferTableOptionsSchema(BaseSchema):
 class NotionalTransferListCreateSchema(BaseSchema):
     compliance_report_id: int
     notional_transfers: List[NotionalTransferSchema]
+
+class DeleteNotionalTransferSchema(BaseSchema):
+    notional_transfer_id: int
+    compliance_report_id: int
+
+class DeleteNotionalTransferResponseSchema(BaseSchema):
+    message: str

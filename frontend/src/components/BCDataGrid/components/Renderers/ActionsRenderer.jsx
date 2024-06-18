@@ -1,20 +1,22 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
 import { Edit, Delete, Save, Cancel, Queue, Warning, DoneAll } from '@mui/icons-material'
 
-export const ActionsRenderer = ({ onDuplicate, ...props }) => {
+export const ActionsRenderer = ({ onDuplicate, onDelete, ...props }) => {
   const isCurrentRowEditing = props.api
     .getEditingCells()
     .some((cell) => cell.rowIndex === props.node.rowIndex)
 
   return (
     <Stack direction="row" spacing={0.1} m={0}>
-      {props.data.isValid && props.enableDuplicate && !isCurrentRowEditing && (
+      {props.enableDuplicate && (
         <Tooltip title="duplicate">
           <IconButton
             aria-label="copy the data to new row"
             data-testid="duplicate-button"
             color="primary"
-            onClick={() => onDuplicate(props)}
+            onClick={() => {
+              onDuplicate(props)
+            }}
           >
             <Queue
               sx={{
@@ -68,7 +70,7 @@ export const ActionsRenderer = ({ onDuplicate, ...props }) => {
             data-testid="delete-button"
             color="error"
             onClick={() => {
-              props.api.applyTransaction({ remove: [props.node.data] })
+              onDelete(props)
             }}
           >
             <Delete />

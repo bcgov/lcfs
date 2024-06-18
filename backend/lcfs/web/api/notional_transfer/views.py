@@ -3,7 +3,7 @@ Notional Transfers endpoints
 """
 
 from logging import getLogger
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import (
     APIRouter,
@@ -24,7 +24,8 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransfersSchema,
     NotionalTransferTableOptionsSchema,
     NotionalTransferListCreateSchema,
-    ComplianceReportRequestSchema
+    ComplianceReportRequestSchema,
+    DeleteNotionalTransferResponseSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -68,10 +69,9 @@ async def get_notional_transfer(
 ) -> NotionalTransferSchema:
     return await service.get_notional_transfer(notional_transfer_id)
 
-
 @router.post(
     "/save",
-    response_model=NotionalTransferSchema,
+    response_model=Union[NotionalTransferSchema, DeleteNotionalTransferResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 @roles_required("Supplier")
@@ -81,7 +81,7 @@ async def save_notional_transfer_row(
     request_data: NotionalTransferCreateSchema = Body(...),
     service: NotionalTransferServices = Depends(),
     validate: NotionalTransferValidation = Depends(),
-) -> NotionalTransferSchema:
+):
     """Endpoint to save a single notional transfer row"""
     compliance_report_id = request_data.compliance_report_id
     notional_transfer_id: Optional[int] = request_data.notional_transfer_id
@@ -91,11 +91,12 @@ async def save_notional_transfer_row(
     if request_data.deleted:
         # Delete existing notional transfer
         await validate.validate_compliance_report_id(compliance_report_id, [request_data])
-        return await service.delete_notional_transfer(notional_transfer_id)
+        await service.delete_notional_transfer(notional_transfer_id)
+        return DeleteNotionalTransferResponseSchema(message="Notional transfer deleted successfully")
     elif notional_transfer_id:
         # Update existing notional transfer
         await validate.validate_compliance_report_id(compliance_report_id, [request_data])
-        return await service.update_notional_transfer(notional_transfer_id, request_data)
+        return await service.update_notional_transfer(request_data)
     else:
         # Create new notional transfer
         await validate.validate_compliance_report_id(compliance_report_id, [request_data])

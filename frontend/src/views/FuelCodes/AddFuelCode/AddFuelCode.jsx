@@ -202,7 +202,7 @@ export const AddFuelCode = () => {
     // Add your API call to save modified rows here
   }, [gridApi])
 
-  const statusBarcomponent = useMemo(
+  const statusBarComponent = useMemo(
     () => (
       <Box component="div" m={2}>
         <AddRowsDropdownButton gridApi={gridApi} />
@@ -321,7 +321,7 @@ export const AddFuelCode = () => {
             getRowNodeId={(data) => data.id}
             saveData={saveData}
             defaultStatusBar={false}
-            statusBarcomponent={statusBarcomponent}
+            statusBarComponent={statusBarComponent}
             onRowEditingStarted={onRowEditingStarted}
             onRowEditingStopped={onRowEditingStopped}
             // onValidated={} pass back validated fields, data, success

@@ -12,9 +12,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, notionalTransferColDefs, notionalTransferSchema } from './_schema'
 import { AddRowsButton } from './AddRowsButton'
-import { useNotionalTransferOptions, useGetNotionalTransfers, useNotionalTransferActions } from '@/hooks/useNotionalTransfer'
+import { useNotionalTransferOptions, useGetNotionalTransfers, useSaveNotionalTransfer } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
-import { ROUTES } from '@/constants/routes'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -25,13 +24,12 @@ export const AddEditNotionalTransfers = () => {
 
   const gridRef = useRef(null)
   const alertRef = useRef()
-  const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation(['common', 'notionalTransfer'])
   const { complianceReportId } = useParams()
   const { data: optionsData, isLoading: optionsLoading, isFetched } = useNotionalTransferOptions()
   const { data: notionalTransfers, isLoading: transfersLoading } = useGetNotionalTransfers(complianceReportId)
-  const { saveRow } = useNotionalTransferActions()
+  const { mutate: saveRow } = useSaveNotionalTransfer()
 
   const gridKey = 'add-notional-transfer'
   const gridOptions = useMemo(
@@ -45,7 +43,6 @@ export const AddEditNotionalTransfers = () => {
     }),
     [t]
   )
-  const getRowId = useCallback((params) => params.data.id, [])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -57,35 +54,35 @@ export const AddEditNotionalTransfers = () => {
   const onGridReady = (params) => {
     setGridApi(params.api)
     setColumnApi(params.columnApi)
-  
+
     const ensureRowIds = (rows) => {
       return rows.map(row => {
         if (!row.id) {
-          return { ...row, id: uuid() }
+          return { 
+            ...row, 
+            id: uuid()
+          }
         }
         return row
       })
     }
-  
-    if (!complianceReportId) {
-      const cachedRowData = JSON.parse(localStorage.getItem(gridKey))
-      if (cachedRowData && cachedRowData.length > 0) {
-        setRowData(ensureRowIds(cachedRowData))
-      } else {
-        const id = uuid()
-        const emptyRow = { id }
-        setRowData([emptyRow])
-      }
-    } else {
+
+    if(notionalTransfers && notionalTransfers.length > 0) {
       try {
         setRowData(ensureRowIds(notionalTransfers))
       } catch (error) {
         setAlertMessage(t('fuelCode:fuelCodeLoadFailMsg'))
         setAlertSeverity('error')
       }
+    } else {
+      const id = uuid()
+      const emptyRow = { id, complianceReportId }
+      setRowData([emptyRow])
     }
+
     params.api.sizeColumnsToFit()
   }
+
   const validationHandler = useCallback(
     async (row) => {
       try {
@@ -108,27 +105,24 @@ export const AddEditNotionalTransfers = () => {
 
   const onRowEditingStarted = useCallback(
     (params) => {
-      if (params.data.modified && params.data.isValid) validationHandler(params)
+      if (params.data.modified) validationHandler(params)
     },
     [validationHandler]
   )
 
-  const onRowEditingStopped = useCallback(
-    (params) => {
-      params.node.setData({ ...params.data, modified: true })
-      validationHandler(params)
-      saveRow.mutate(params.data)
-    },
-    [validationHandler, saveRow]
-  )
+  const onValidated = (status, message) => {
+    setAlertMessage(message)
+    setAlertSeverity(status)
+    alertRef.current?.triggerAlert()
+  }
 
   const statusBarComponent = useMemo(
     () => (
       <Box component="div" m={2}>
-        <AddRowsButton gridApi={gridApi} />
+        <AddRowsButton gridApi={gridApi} complianceReportId={complianceReportId} />
       </Box>
     ),
-    [gridApi]
+    [gridApi, complianceReportId]
   )
 
   if (optionsLoading || transfersLoading) {
@@ -168,7 +162,8 @@ export const AddEditNotionalTransfers = () => {
             defaultStatusBar={false}
             statusBarComponent={statusBarComponent}
             onRowEditingStarted={onRowEditingStarted}
-            onRowEditingStopped={onRowEditingStopped}
+            saveRow={saveRow}
+            onValidated={onValidated}
           />
         </BCBox>
         <Stack
