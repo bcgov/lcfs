@@ -391,9 +391,10 @@ export const addEditSchema = {
       ),
       editable: false, // TODO: change as per #516
       cellDataType: 'dateString',
-      valueGetter: (params) => {
-        return new Date().toLocaleDateString()
-      }
+      // valueGetter: (params) => {
+      //   return new Date().toLocaleDateString()
+      // },
+      hide: isDraftOrNew
     },
     {
       field: 'applicationDate',
