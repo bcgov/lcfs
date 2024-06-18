@@ -329,7 +329,7 @@ describe('AddEditViewTransaction Component Tests', () => {
     renderComponent('edit', INITIATIVE_AGREEMENT)
 
     await waitFor(() => {
-      expect(screen.getByText('Edit initiativeAgreement:initiativeAgreement 1')).toBeInTheDocument()
+      expect(screen.getByText('Edit initiativeAgreement:initiativeAgreement IA1')).toBeInTheDocument()
     })
   })
 
@@ -357,7 +357,7 @@ describe('AddEditViewTransaction Component Tests', () => {
     })
     renderComponent('view', INITIATIVE_AGREEMENT)
     await waitFor(() => {
-      expect(screen.getByText('initiativeAgreement:initiativeAgreement 1')).toBeInTheDocument()
+      expect(screen.getByText('initiativeAgreement:initiativeAgreement IA1')).toBeInTheDocument()
     })
   })
 
@@ -460,7 +460,7 @@ describe('AddEditViewTransaction Component Tests', () => {
     renderComponent('edit', ADMIN_ADJUSTMENT)
     
     await waitFor(() => {
-      expect(screen.getByText('Edit administrativeAdjustment:administrativeAdjustment 1')).toBeInTheDocument()
+      expect(screen.getByText('Edit administrativeAdjustment:administrativeAdjustment AA1')).toBeInTheDocument()
     })
   })
 
@@ -502,7 +502,7 @@ describe('AddEditViewTransaction Component Tests', () => {
     renderComponent('view', ADMIN_ADJUSTMENT)
 
     await waitFor(() => {
-      expect(screen.getByText('administrativeAdjustment:administrativeAdjustment 1')).toBeInTheDocument()
+      expect(screen.getByText('administrativeAdjustment:administrativeAdjustment AA1')).toBeInTheDocument()
     })
   })
 })

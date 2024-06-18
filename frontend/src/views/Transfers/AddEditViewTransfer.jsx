@@ -302,16 +302,18 @@ export const AddEditViewTransfer = () => {
   )
 
   const title = useMemo(() => {
+    const formattedTransferId = `CUT${transferId}`
+    
     if (!editorMode) {
-      return t('transfer:transferID') + transferId
+      return `${t('transfer:transferID')} ${formattedTransferId}`
     }
     switch (mode) {
       case 'add':
         return t('transfer:newTransfer')
       case 'edit':
-        return t('transfer:editTransferID') + transferId
+        return `${t('transfer:editTransferID')} ${formattedTransferId}`
       default:
-        return t('transfer:transferID') + transferId
+        return `${t('transfer:transferID')} ${formattedTransferId}`
     }
   }, [editorMode, mode, t, transferId])
 

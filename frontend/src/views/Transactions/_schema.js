@@ -8,8 +8,24 @@ import { TransactionStatusRenderer } from '@/utils/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
+const prefixMap = {
+  "Transfer": "CUT",
+  "AdminAdjustment": "AA",
+  "InitiativeAgreement": "IA"
+};
+
 export const transactionsColDefs = (t) => [
-  { colId: 'transactionId', field: 'transactionId', headerName: t('txn:txnColLabels.txnId'), width: 120 },
+  { 
+    colId: 'transactionId', 
+    field: 'transactionId', 
+    headerName: t('txn:txnColLabels.txnId'), 
+    width: 175,
+    valueGetter: (params) => {
+      const transactionType = params.data.transactionType;
+      const prefix = prefixMap[transactionType] || '';
+      return `${prefix}${params.data.transactionId}`;
+    }
+  },
   { 
     colId: 'transactionType', 
     field: 'transactionType', 
