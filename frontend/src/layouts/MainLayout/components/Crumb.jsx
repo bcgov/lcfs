@@ -31,8 +31,9 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 const Crumb = () => {
   const location = useLocation()
   const matches = useMatches()
-  const { userID, orgID, reportID, compliancePeriod } = useParams()
-  const path = location.pathname.replace(`/compliance-reporting/${compliancePeriod}/${reportID}`, `/compliance-reporting/${compliancePeriod}-Compliance-report`)
+  const reportPathRegex = /^\d{4}-Compliance-report$/
+  const { userID, orgID, complianceReportId, compliancePeriod } = useParams()
+  const path = location.pathname.replace(`/compliance-reporting/${compliancePeriod}/${complianceReportId}`, `/compliance-reporting/${compliancePeriod}-Compliance-report`)
   const pathnames = path.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
 
@@ -77,7 +78,10 @@ const Crumb = () => {
         {pathnames.map((name, index) => {
           const isLast = index === pathnames.length - 1
           const customCrumb = customBreadcrumbs[name] || {}
-          const routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
+          let routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
+          if (reportPathRegex.test(name)) {
+            routeTo = `compliance-reporting/${compliancePeriod}/${complianceReportId}` 
+          }
           const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
 
           return isLast ? (
