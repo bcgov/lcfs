@@ -151,6 +151,14 @@ class FuelCodeServices:
             return await self.repo.save_fuel_codes(fuel_code_models)
 
     @service_handler
+    async def create_fuel_code(self, fuel_code: FuelCodeCreateSchema) -> FuelCode:
+        """
+        Create a new fuel code.
+        """
+        fuel_code_model = await self.convert_to_model(fuel_code)
+        return await self.repo.create_fuel_code(fuel_code_model)
+        
+    @service_handler
     async def get_fuel_code(self, fuel_code_id: int):
         return await self.repo.get_fuel_code(fuel_code_id)
 

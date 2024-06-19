@@ -3,7 +3,7 @@ Fuel codes endpoints
 """
 
 from logging import getLogger
-from typing import List
+from typing import List, Union, Optional
 
 from fastapi import (
     APIRouter,
@@ -27,7 +27,8 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodesSchema,
     FuelCodeSchema,
     TableOptionsSchema,
-    FuelCodeSchema
+    FuelCodeSchema,
+    DeleteFuelCodeResponseSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 
@@ -150,3 +151,30 @@ async def get_use_of_a_carbon_intensities(
 ):
     """Endpoint to get UCI's"""
     return await service.get_use_of_a_carbon_intensities()
+
+
+@router.post(
+    "/save",
+    response_model=Union[FuelCodeSchema, DeleteFuelCodeResponseSchema],
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Administrator")
+@view_handler
+async def save_fuel_code_row(
+    request: Request,
+    request_data: FuelCodeCreateSchema = Body(...),
+    service: FuelCodeServices = Depends(),
+):
+    """Endpoint to save a single fuel code row"""
+    fuel_code_id: Optional[int] = request_data.fuel_code_id
+
+    if request_data.deleted:
+        # Delete existing fuel code
+        await service.delete_fuel_code(fuel_code_id)
+        return DeleteFuelCodeResponseSchema(message="Fuel code deleted successfully")
+    elif fuel_code_id:
+        # Update existing fuel code
+        return await service.update_fuel_code(fuel_code_id, request_data)
+    else:
+        # Create new fuel code
+        return await service.create_fuel_code(request_data)

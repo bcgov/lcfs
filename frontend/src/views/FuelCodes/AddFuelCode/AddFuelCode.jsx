@@ -13,7 +13,7 @@ import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
 import { AddRowsDropdownButton } from './AddRowsDropdownButton'
 import { useApiService } from '@/services/useApiService'
-import { useFuelCodeOptions, useAddFuelCodes } from '@/hooks/useFuelCode'
+import { useFuelCodeOptions, useAddFuelCodes, useSaveFuelCode } from '@/hooks/useFuelCode'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
@@ -33,6 +33,7 @@ export const AddFuelCode = () => {
   const { t } = useTranslation(['common', 'fuelCode'])
   const { fuelCodeId } = useParams()
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
+  const { mutate: saveRow } = useSaveFuelCode()
 
   const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(() => ({
@@ -43,7 +44,7 @@ export const AddFuelCode = () => {
       defaultMaxWidth: 600
     }
   }))
-  const getRowId = useCallback((params) => params.data.fuelCodeId, [])
+  // const getRowId = useCallback((params) => params.data.fuelCodeId, [])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -112,6 +113,12 @@ export const AddFuelCode = () => {
     },
     [gridApi, optionsData, t]
   )
+
+  const onValidated = (status, message) => {
+    setAlertMessage(message)
+    setAlertSeverity(status)
+    alertRef.current?.triggerAlert()
+  }
 
   const onRowEditingStarted = useCallback(
     (params) => {
@@ -324,7 +331,8 @@ export const AddFuelCode = () => {
             statusBarComponent={statusBarComponent}
             onRowEditingStarted={onRowEditingStarted}
             onRowEditingStopped={onRowEditingStopped}
-            // onValidated={} pass back validated fields, data, success
+            saveRow={saveRow}
+            onValidated={onValidated}
           />
         </BCBox>
         <Stack
@@ -341,7 +349,8 @@ export const AddFuelCode = () => {
             startIcon={
               <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
             }
-            onClick={handleSaveDraftCodes}
+            // onClick={handleSaveDraftCodes}
+            onClick={() => {console.log('save click')}}
           >
             <Typography variant="subtitle2">
               {t('fuelCode:saveDraftBtn')}

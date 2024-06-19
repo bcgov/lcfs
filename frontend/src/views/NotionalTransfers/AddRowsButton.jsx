@@ -8,7 +8,6 @@ import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 export const AddRowsButton = ({ gridApi, complianceReportId }) => {
-  console.log('AddRowsButton rendered');
   const [anchorEl, setAnchorEl] = useState(null)
   const [selectedOption, setSelectedOption] = useState(null)
   const buttonRef = useRef(null)

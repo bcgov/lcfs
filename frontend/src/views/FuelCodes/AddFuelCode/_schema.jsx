@@ -24,6 +24,17 @@ const duplicateRow = (props) => {
   }
 }
 
+const deleteRow = (props) => {
+  const updatedRow = { ...props.data, deleted: true, modified: true }
+  if (props.api) {
+    props.api.applyTransaction({ update: [updatedRow] })
+    props.api.applyTransaction({ remove: [props.node.data] })
+    props.api.stopEditing()
+  } else {
+    console.error('API is undefined')
+  }
+}
+
 export const fuelCodeSchema = (t, optionsData) =>
   yup.object().shape({
     prefix: yup
@@ -112,7 +123,8 @@ export const fuelCodeColDefs = (t, optionsData, api) => [
       enableDuplicate: true,
       enableEdit: false,
       enableDelete: true,
-      onDuplicate: (props) => duplicateRow({ ...props, api })
+      onDuplicate: (props) => duplicateRow({ ...props, api }),
+      onDelete: (props) => deleteRow({ ...props, api })
     },
     // checkboxSelection: true,
     // headerCheckboxSelection: true,

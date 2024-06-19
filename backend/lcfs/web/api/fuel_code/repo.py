@@ -187,6 +187,18 @@ class FuelCodeRepository:
         await self.db.flush()
 
         return "fuel codes added successfully"
+    
+    @repo_handler
+    async def create_fuel_code(self, fuel_code: FuelCode) -> FuelCode:
+        """
+        Saves a new fuel code to the database.
+
+        Args:
+            fuel_code (FuelCodeSchema): A fuel code to be saved.
+        """
+        self.db.add(fuel_code)
+        await self.db.flush()
+        return fuel_code
 
     @repo_handler
     async def get_fuel_code(self, fuel_code_id: int) -> FuelCode:
@@ -219,7 +231,6 @@ class FuelCodeRepository:
 
     @repo_handler
     async def delete_fuel_code(self, fuel_code_id: int):
-
         await self.db.execute(update(FuelCode).where(FuelCode.fuel_code_id == fuel_code_id).values(fuel_status_id=3))
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:

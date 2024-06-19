@@ -20,6 +20,7 @@ export const apiRoutes = {
   addFuelCodes: '/fuel-codes/save-fuel-codes',
   getFuelCodes: '/fuel-codes/list',
   updateFuelCode: '/fuel-codes/:fuelCodeId',
+  saveFuelCode: '/fuel-codes/save',
   getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',
   getOrgComplianceReports: '/organization/reports/list',

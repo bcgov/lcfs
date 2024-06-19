@@ -235,3 +235,7 @@ class FuelCodeCreateSchema(BaseSchema):
     notes: Optional[str] = None
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
+    deleted: Optional[bool] = None
+
+class DeleteFuelCodeResponseSchema(BaseSchema):
+    message: str
