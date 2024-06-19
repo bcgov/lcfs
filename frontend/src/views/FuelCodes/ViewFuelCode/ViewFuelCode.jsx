@@ -185,7 +185,7 @@ const ViewFuelCode = () => {
     await validationHandler(row)
     const data = {
       ...row.data,
-      lastUpdated: new Date().toISOString().split('T')[0],
+      lastUpdated: new Date(),
       prefixId: optionsData.fuelCodePrefixes.find(
         (elm) => elm.prefix === row.data.prefix
       ).fuelCodePrefixId,
