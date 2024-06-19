@@ -10,8 +10,8 @@ import Loading from '@/components/Loading'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
-import { defaultColDef, notionalTransferColDefs, notionalTransferSchema } from './_schema'
-import { AddRowsButton } from './AddRowsButton'
+import { defaultColDef, notionalTransferColDefs } from './_schema'
+import { AddRowsButton } from './components/AddRowsButton'
 import { useNotionalTransferOptions, useGetNotionalTransfers, useSaveNotionalTransfer } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
 
@@ -60,7 +60,8 @@ export const AddEditNotionalTransfers = () => {
         if (!row.id) {
           return { 
             ...row, 
-            id: uuid()
+            id: uuid(),
+            isValid: true
           }
         }
         return row
@@ -82,33 +83,6 @@ export const AddEditNotionalTransfers = () => {
 
     params.api.sizeColumnsToFit()
   }
-
-  const validationHandler = useCallback(
-    async (row) => {
-      try {
-        await notionalTransferSchema(t, optionsData).validate(row.data)
-        const updatedRow = { ...row.data, isValid: true, validationMsg: '' }
-        gridApi.applyTransaction({ update: [updatedRow] })
-        setAlertMessage(`Validated notional transfer`)
-        setAlertSeverity('success')
-        alertRef.current?.triggerAlert()
-      } catch (err) {
-        const updatedRow = { ...row.data, isValid: false, validationMsg: err.errors[0] }
-        gridApi.applyTransaction({ update: [updatedRow] })
-        setAlertMessage(err.errors[0])
-        setAlertSeverity('error')
-        alertRef.current?.triggerAlert()
-      }
-    },
-    [gridApi, optionsData, t]
-  )
-
-  const onRowEditingStarted = useCallback(
-    (params) => {
-      if (params.data.modified) validationHandler(params)
-    },
-    [validationHandler]
-  )
 
   const onValidated = (status, message) => {
     setAlertMessage(message)
@@ -150,7 +124,7 @@ export const AddEditNotionalTransfers = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={notionalTransferColDefs(t, optionsData, gridApi)}
+            columnDefs={notionalTransferColDefs(t, optionsData, gridApi, onValidated)}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
@@ -161,7 +135,6 @@ export const AddEditNotionalTransfers = () => {
             getRowNodeId={(data) => data.id}
             defaultStatusBar={false}
             statusBarComponent={statusBarComponent}
-            onRowEditingStarted={onRowEditingStarted}
             saveRow={saveRow}
             onValidated={onValidated}
           />

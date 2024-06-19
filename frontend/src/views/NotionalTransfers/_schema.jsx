@@ -1,83 +1,25 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
-import { CommonArrayRenderer } from '@/utils/cellRenderers'
-import { DeleteForeverTwoTone } from '@mui/icons-material'
 import { Typography } from '@mui/material'
-import { v4 as uuid } from 'uuid'
-import * as yup from 'yup'
+import { NotionalTransferActions } from './components/NotionalTransferActions'
+import { NotionalTransferValidation } from './components/NotionalTransferValidation'
 
-// Copy the desired columns to new row
-const duplicateRow = (props) => {
-  const newRow = {
-    ...props.data,
-    id: uuid(),
-    notionalTransferId: null,
-    modified: true
-  }
-  
-  if (props.api) {
-    props.api.applyTransaction({
-      add: [newRow],
-      addIndex: props.node?.rowIndex + 1
-    })
-    props.api.stopEditing()
-  } else {
-    console.error('API is undefined')
-  }
-}
-
-const deleteRow = (props) => {
-  const updatedRow = { ...props.data, deleted: true, modified: true }
-  if (props.api) {
-    props.api.applyTransaction({ update: [updatedRow] })
-    props.api.applyTransaction({ remove: [props.node.data] })
-    props.api.stopEditing()
-  } else {
-    console.error('API is undefined')
-  }
-}
-
-export const notionalTransferSchema = (t, optionsData) =>
-  yup.object().shape({
-    legalName: yup.string().required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.legalName')
-      })
-    ),
-    addressForService: yup.string().required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.addressForService')
-      })
-    ),
-    fuelCategory: yup.string().required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.fuelCategory')
-      })
-    ),
-    receivedOrTransferred: yup.string().required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.receivedOrTransferred')
-      })
-    ),
-    quantity: yup.number().min(0, t('notionalTransfer:validateMsg.nonNegative')).required(
-      t('notionalTransfer:validateMsg.isRequired', {
-        field: t('notionalTransfer:notionalTransferColLabels.quantity')
-      })
-    ),
-  })
-
-export const notionalTransferColDefs = (t, optionsData, api) => [
+export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
+  {
+    colId: 'validation',
+    cellRenderer: NotionalTransferValidation,
+    pinned: 'left',
+    maxWidth: 75,
+    editable: false,
+    suppressKeyboardEvent: (params) =>
+      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    filter: false
+  },
   {
     colId: 'action',
-    cellRenderer: 'actionsRenderer',
-    cellRendererParams: {
-      enableDuplicate: true,
-      enableEdit: false,
-      enableDelete: true,
-      onDuplicate: (props) => duplicateRow({ ...props, api }),
-      onDelete: (props) => deleteRow({ ...props, api })
-    },
+    cellRenderer: NotionalTransferActions,
+    cellRendererParams: { api, onValidated },
     pinned: 'left',
-    maxWidth: 100,
+    maxWidth: 110,
     editable: false,
     suppressKeyboardEvent: (params) =>
       params.event.key === KEY_ENTER || params.event.key === KEY_TAB,

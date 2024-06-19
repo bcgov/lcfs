@@ -1,11 +1,9 @@
 import { useMemo, useCallback, useEffect } from 'react'
 import { AgGridReact } from '@ag-grid-community/react'
-import { Stack } from '@mui/material'
 import PropTypes from 'prop-types'
 import { v4 as uuid } from 'uuid'
 
 import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
 import DataGridLoading from '@/components/DataGridLoading'
 import {
   AutocompleteEditor,
@@ -34,7 +32,6 @@ const BCDataGridEditor = ({
   defaultStatusBar,
   onRowEditingStarted,
   onRowEditingStopped,
-  fieldsToNullOnDuplicate,
   saveRow,
   onValidated,
   ...props
@@ -118,73 +115,6 @@ const BCDataGridEditor = ({
       : undefined,
   }), [highlightedRowId, frameworkComponents, tabToNextCell])
 
-  const addRow = useCallback(() => {
-    const id = uuid()
-    const emptyRow = { id }
-    gridApi.applyTransaction({ add: [emptyRow] })
-  }, [gridApi])
-  
-  const deleteRowHandler = useCallback((rowData) => {
-    onValidated('pending', 'Deleting row...')
-    const updatedData = { ...rowData, deleted: true }
-    saveRow(updatedData, {
-      onSuccess: (data) => {
-        gridApi.applyTransaction({ remove: [rowData] })
-        if (onValidated) {
-          onValidated('success', 'Row deleted successfully.')
-        }
-      },
-      onError: (error) => {
-        if (onValidated) {
-          onValidated('error', `Error deleting row: ${error.message}`)
-        }
-        console.error('Error deleting row:', error)
-      }
-    })
-  }, [gridApi, saveRow, onValidated])
-
-  const duplicateRowHandler = useCallback((rowData) => {
-    onValidated('pending', 'Duplicating row...')
-    const newData = { ...rowData, id: uuid(), duplicated: true }
-    fieldsToNullOnDuplicate.forEach(field => {
-      newData[field] = null
-    })
-    saveRow(newData, {
-      onSuccess: (newRow) => {
-        gridApi.applyTransaction({ add: [newRow] })
-        if (onValidated) {
-          onValidated('success', 'Row duplicated successfully.')
-        }
-      },
-      onError: (error) => {
-        console.error('Error duplicating row:', error)
-        if (onValidated) {
-          onValidated('error', `Error duplicating row: ${error.message}`)
-        }
-      }
-    })
-  }, [gridApi, fieldsToNullOnDuplicate, saveRow, onValidated])
-
-  const updateRowHandler = useCallback((params) => {
-    onValidated('pending', 'Updating row...')
-    saveRow(params.data, {
-      onSuccess: () => {
-        params.data.modified = false
-        params.api.refreshCells()
-        if (onValidated) {
-          onValidated('success', 'Row updated successfully.')
-        }
-      },
-      onError: (error) => {
-        console.error('Error updating row:', error)
-        if (onValidated) {
-          console.log(error)
-          onValidated('error', `Error updating row: ${error.message}`)
-        }
-      }
-    })
-  }, [saveRow, onValidated])
-
   const onRowEditingStartedHandler = useCallback((params) => {
     params.api.refreshCells({
       columns: ['action'],
@@ -199,7 +129,26 @@ const BCDataGridEditor = ({
   const onRowEditingStoppedHandler = useCallback((params) => {
     // Check if any data field has changed
     if (params.data.modified) {
-      updateRowHandler(params)
+      onValidated('pending', 'Updating row...')
+      saveRow(params.data, {
+        onSuccess: () => {
+          params.data.modified = false
+          params.data.isValid = true
+          params.api.refreshCells()
+          if (onValidated) {
+            onValidated('success', 'Row updated successfully.')
+          }
+        },
+        onError: (error) => {
+          console.error('Error updating row:', error)
+          params.data.isValid = false
+          params.api.refreshCells()
+          if (onValidated) {
+            console.log(error)
+            onValidated('error', `Error updating row: ${error.message}`)
+          }
+        }
+      })
     }
   
     params.api.redrawRows({ rowNodes: [params.node] })
@@ -207,22 +156,11 @@ const BCDataGridEditor = ({
     if (onRowEditingStopped) {
       onRowEditingStopped(params)
     }
-  }, [onRowEditingStopped, updateRowHandler])
+  }, [onRowEditingStopped, onValidated, saveRow])
   
   function onCellValueChanged(params) {
     params.data.modified = true
   }
-
-  const AgEditorStatusBar = (
-    <Stack spacing={2} direction="row" m={2}>
-      <BCButton variant="contained" color="primary" onClick={() => {console.log("save click")}}>
-        Save changes
-      </BCButton>
-      <BCButton variant="outlined" color="primary" onClick={addRow}>
-        Add new row
-      </BCButton>
-    </Stack>
-  )
 
   return (
     <>
@@ -244,7 +182,6 @@ const BCDataGridEditor = ({
         onRowEditingStopped={onRowEditingStoppedHandler}
         loadingOverlayComponent={loadingOverlayComponent}
         {...props}
-        context={{ onDuplicate: duplicateRowHandler, onDelete: deleteRowHandler }}
       />
       <BCBox
         display="flex"
@@ -258,7 +195,7 @@ const BCDataGridEditor = ({
           overflow: 'hidden',
         }}
       >
-        {defaultStatusBar ? AgEditorStatusBar : props.statusBarComponent}
+        {props.statusBarComponent}
       </BCBox>
     </>
   )
@@ -276,7 +213,6 @@ BCDataGridEditor.propTypes = {
   columnDefs: PropTypes.array.isRequired,
   defaultColDef: PropTypes.object.isRequired,
   highlightedRowId: PropTypes.string,
-  fieldsToNullOnDuplicate: PropTypes.array,
   saveRow: PropTypes.object.isRequired,
   onValidated: PropTypes.func,
   className: PropTypes.oneOf([
@@ -304,7 +240,6 @@ BCDataGridEditor.defaultProps = {
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   className: 'ag-theme-quartz',
   getRowNodeId: uuid(),
-  fieldsToNullOnDuplicate: [],
   onValidated: null,
 }
 
