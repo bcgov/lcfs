@@ -47,6 +47,16 @@ class FuelCodeRepository:
         )
 
     @repo_handler
+    async def get_fuel_type_by_name(self, fuel_type_name: str) -> FuelType:
+        """Get fuel type by name"""
+        stmt = select(FuelType).where(FuelType.fuel_type == fuel_type_name)
+        result = await self.db.execute(stmt)
+        fuel_type = result.scalars().first()
+        if not fuel_type:
+            raise ValueError(f"Fuel type '{fuel_type_name}' not found")
+        return fuel_type
+
+    @repo_handler
     async def get_fuel_categories(self) -> List[FuelCategory]:
         """Get all fuel category options"""
         return (await self.db.execute(select(FuelCategory))).scalars().all()
@@ -72,6 +82,12 @@ class FuelCodeRepository:
     async def get_fuel_code_prefixes(self) -> List[FuelCodePrefix]:
         """Get all fuel code prefix options"""
         return (await self.db.execute(select(FuelCodePrefix))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_code_prefix_by_name(self, prefix_name: str) -> FuelCodePrefix:
+        """Get fuel code prefix by name"""
+        result = await self.db.execute(select(FuelCodePrefix).where(FuelCodePrefix.prefix == prefix_name))
+        return result.scalar_one_or_none()
 
     @repo_handler
     async def get_fuel_status_by_status(self, status: str) -> FuelCodeStatus:
@@ -198,6 +214,18 @@ class FuelCodeRepository:
         """
         self.db.add(fuel_code)
         await self.db.flush()
+        await self.db.refresh(
+            fuel_code,
+            [
+                'fuel_code_status',
+                'fuel_code_prefix',
+                'fuel_code_type',
+                'feedstock_fuel_transport_modes',
+                'finished_fuel_transport_modes'
+            ]
+        )
+        # Manually load nested relationships
+        await self.db.refresh(fuel_code.fuel_code_type, ['provision_1', 'provision_2'])
         return fuel_code
 
     @repo_handler

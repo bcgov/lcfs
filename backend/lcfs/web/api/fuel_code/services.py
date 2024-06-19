@@ -99,14 +99,20 @@ class FuelCodeServices:
 
     async def convert_to_model(self, fuel_code: FuelCodeCreateSchema) -> FuelCode:
         """
-        converts data from FuelCodeCreateSchema to FuelCode data model to store into database.
+        Converts data from FuelCodeCreateSchema to FuelCode data model to store in the database.
         """
+        prefix = await self.repo.get_fuel_code_prefix_by_name(fuel_code.prefix)
+        fuel_status = await self.repo.get_fuel_status_by_status(fuel_code.status)
+        fuel_type = await self.repo.get_fuel_type_by_name(fuel_code.fuel)
+
         fc = FuelCode(
             **fuel_code.model_dump(
                 exclude={
                     "id",
                     "prefix",
+                    "prefix_id",
                     "fuel",
+                    "fuel_type_id",
                     "feedstock_transport_mode",
                     "finished_fuel_transport_mode",
                     "feedstock_fuel_transport_modes",
@@ -115,27 +121,30 @@ class FuelCodeServices:
                     "is_valid",
                     "validation_msg",
                     "fuel_code",
+                    "deleted"
                 }
-            )
+            ),
+            fuel_code_status=fuel_status,
+            fuel_code=str(fuel_code.fuel_code),
+            prefix_id=prefix.fuel_code_prefix_id,
+            fuel_type_id=fuel_type.fuel_type_id
         )
-        fc.fuel_code_status = await self.repo.get_fuel_status_by_status(
-            fuel_code.status
-        )
-        fc.fuel_code = str(fuel_code.fuel_code)
+
         fc.feedstock_fuel_transport_modes = [
             FeedstockFuelTransportMode(
                 fuel_code_id=fc.fuel_code_id,
                 transport_mode_id=item.transport_mode_id,
             )
-            for item in fuel_code.feedstock_fuel_transport_modes
+            for item in (fuel_code.feedstock_fuel_transport_modes or [])
         ]
         fc.finished_fuel_transport_modes = [
             FinishedFuelTransportMode(
                 fuel_code_id=fc.fuel_code_id,
                 transport_mode_id=item.transport_mode_id,
             )
-            for item in fuel_code.finished_fuel_transport_modes
+            for item in (fuel_code.finished_fuel_transport_modes or [])
         ]
+
         return fc
 
     @service_handler
@@ -156,6 +165,7 @@ class FuelCodeServices:
         Create a new fuel code.
         """
         fuel_code_model = await self.convert_to_model(fuel_code)
+        fuel_code_model.fuel_status_id = 1 # set to draft by default
         return await self.repo.create_fuel_code(fuel_code_model)
         
     @service_handler
