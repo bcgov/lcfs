@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 from math import ceil
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
@@ -40,16 +40,36 @@ class TransactionsService:
         Returns:
             List[Transactions]: The list of transactions after applying the filters.
         """
+        prefix_map = {
+            "CUT": "Transfer",
+            "AA": "AdminAdjustment",
+            "IA": "InitiativeAgreement"
+        }
+
         for filter in pagination.filters:
             filter_value = filter.filter
             filter_option = filter.type
             filter_type = filter.filter_type
             field = get_field_for_filter(TransactionView, filter.field)
 
-            conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type)
-            )
+            # Check for prefixed transaction_id
+            if filter.field == "transaction_id":
+                for prefix, transaction_type in prefix_map.items():
+                    if filter_value.upper().startswith(prefix):
+                        numeric_id = filter_value[len(prefix):]
+                        if numeric_id.isdigit():
+                            transaction_type_condition = TransactionView.transaction_type == transaction_type
+                            transaction_id_condition = TransactionView.transaction_id == int(numeric_id)
+                            conditions.append(and_(transaction_type_condition, transaction_id_condition))
+                        break
+                else:
+                    # If no prefix matches, add a condition that will never match
+                    conditions.append(False)
+            else:
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type)
+                )
 
     @service_handler
     async def get_transactions_paginated(self, pagination: PaginationRequestSchema = {}, organization_id: int = None) -> List[TransactionViewSchema]:

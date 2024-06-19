@@ -1,7 +1,7 @@
 """Add received_or_transferred enum to notional_transfer
 
 Revision ID: 01f6ad70d9a8
-Revises: r42e3c9va810
+Revises: f744e992df7f
 Create Date: 2024-06-10 15:44:17.109905
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "01f6ad70d9a8"
-down_revision = "r42e3c9va810"
+down_revision = "f744e992df7f"
 branch_labels = None
 depends_on = None
 

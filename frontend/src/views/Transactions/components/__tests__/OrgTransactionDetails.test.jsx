@@ -111,7 +111,7 @@ describe('OrgTransactionDetails Component', () => {
     render(<OrgTransactionDetails transactionType={INITIATIVE_AGREEMENT} transactionData={mockInitiativeAgreementData} />);
 
     // Validate the presence of key elements
-    expect(screen.getByText(/Initiative agreement — ID: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Initiative agreement — ID: IA1/)).toBeInTheDocument();
     expect(screen.getByText((content, element) => element.tagName.toLowerCase() === 'strong' && content.includes('Initiative agreement for LCFS Org 1'))).toBeInTheDocument();
     expect(screen.getByText(/Compliance units/)).toBeInTheDocument();
     expect(screen.getAllByText(/1/)).toHaveLength(3);
@@ -126,7 +126,7 @@ describe('OrgTransactionDetails Component', () => {
     render(<OrgTransactionDetails transactionType={ADMIN_ADJUSTMENT} transactionData={mockAdminAdjustmentData} />);
 
     // Validate the presence of key elements
-    expect(screen.getByText(/Administrative adjustment — ID: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Administrative adjustment — ID: AA1/)).toBeInTheDocument();
     expect(screen.getByText((content, element) => element.tagName.toLowerCase() === 'strong' && content.includes('Administrative adjustment for LCFS Org 1'))).toBeInTheDocument();
     expect(screen.getByText(/Compliance units/)).toBeInTheDocument();
     expect(screen.getByText(/50,000/)).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('OrgTransactionDetails Component', () => {
     render(<OrgTransactionDetails transactionType={INITIATIVE_AGREEMENT} transactionData={transactionDataWithoutHistory} />);
 
     // Validate the presence of key elements
-    expect(screen.getByText(/Initiative agreement — ID: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Initiative agreement — ID: IA1/)).toBeInTheDocument();
     expect(screen.getByText((content, element) => element.tagName.toLowerCase() === 'strong' && content.includes('Initiative agreement for LCFS Org 1'))).toBeInTheDocument();
     expect(screen.getByText(/Compliance units/)).toBeInTheDocument();
     expect(screen.getAllByText(/1/)).toHaveLength(3);

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useEffect } from 'react'
 import { AgGridReact } from '@ag-grid-community/react'
 import { Stack } from '@mui/material'
 import PropTypes from 'prop-types'
@@ -14,7 +14,7 @@ import {
   ActionsRenderer,
   AsyncSuggestionEditor,
 } from '@/components/BCDataGrid/components'
-
+import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 
@@ -46,6 +46,40 @@ const BCDataGridEditor = ({
     actionsRenderer: ActionsRenderer,
     asyncSuggestionEditor: AsyncSuggestionEditor,
   }), [])
+
+  const handleExcelPaste = useCallback(
+    (params) => {
+      const newData = []
+      const pastedData = params.clipboardData.getData('text/plain')
+      const headerRow = gridApi
+        .getAllDisplayedColumns()
+        .map((column) => column.colDef.field)
+        .filter((col => col))
+        .join('\t')
+      const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
+        delimiter: '\t',
+        header: true,
+        skipEmptyLines: true
+      })
+      if (parsedData.data.length < 1 || parsedData.data[1].length < 2) {
+        return
+      }
+      parsedData.data.forEach((row) => {
+        const newRow = { ...row }
+        newRow.id = uuid()
+        newData.push(newRow)
+      })
+      gridApi.applyTransaction({ add: newData })
+    },
+    [gridApi]
+  )
+
+  useEffect(() => {
+    window.addEventListener('paste', props.handlePaste || handleExcelPaste)
+    return () => {
+      window.removeEventListener('paste', props.handlePaste || handleExcelPaste)
+    }
+  }, [handleExcelPaste, props.handlePaste])
 
   const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
   const tabToNextCell = useCallback((params) => params.nextCellPosition, [])

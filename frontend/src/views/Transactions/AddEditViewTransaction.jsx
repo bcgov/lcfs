@@ -170,14 +170,24 @@ export const AddEditViewTransaction = () => {
     }
   }, [isFetched, transactionId, transactionData, isLoadingError, queryState, txnType, methods, t, queryClient])
 
+  const formatTransactionId = (transactionId, txnType) => {
+    const prefixMap = {
+      'administrativeAdjustment': "AA",
+      'initiativeAgreement': "IA"
+    }
+  
+    const prefix = prefixMap[txnType] || ""
+    return `${prefix}${transactionId}`
+  }
+
   const title = useMemo(() => {
     switch (mode) {
       case 'add':
         return t('txn:newTransaction')
       case 'edit':
-        return `Edit ${t(`${txnType}:${txnType}`)} ${transactionId}`
+        return `Edit ${t(`${txnType}:${txnType}`)} ${formatTransactionId(transactionId, txnType)}`
       default:
-        return `${t(`${txnType}:${txnType}`)} ${transactionId}`
+        return `${t(`${txnType}:${txnType}`)} ${formatTransactionId(transactionId, txnType)}`
     }
   }, [mode, t, transactionId, txnType])
 
