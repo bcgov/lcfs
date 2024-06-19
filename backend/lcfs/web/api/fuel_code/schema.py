@@ -1,6 +1,6 @@
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from datetime import date
+from datetime import date, datetime
 from pydantic import Field, field_validator
 from enum import Enum
 
@@ -140,7 +140,7 @@ class FuelCodeSchema(BaseSchema):
     contact_email: str
     carbon_intensity: float
     edrms: str
-    last_updated: date
+    last_updated: datetime
     application_date: date
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
@@ -206,7 +206,7 @@ class FuelCodeCreateSchema(BaseSchema):
     company: str
     carbon_intensity: float
     edrms: str
-    last_updated: date
+    last_updated: datetime
     application_date: date
     contact_name: str
     contact_email: str

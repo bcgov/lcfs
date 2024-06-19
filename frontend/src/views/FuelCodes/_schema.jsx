@@ -5,6 +5,7 @@ import {
   FuelCodeStatusTextRenderer,
   TextRenderer
 } from '@/utils/cellRenderers'
+import { timezoneFormatter } from '@/utils/formatters'
 import { Typography } from '@mui/material'
 import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
@@ -141,7 +142,14 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'lastUpdated',
     headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
-    cellRenderer: TextRenderer
+    cellRenderer: (params) => (
+      <Typography variant="body4">
+        {params.value
+          ? timezoneFormatter({ value: params.value })
+          : 'YYYY-MM-DD'}
+      </Typography>
+    ),
+    minWidth: 300
   },
   {
     field: 'notes',
@@ -386,11 +394,11 @@ export const addEditSchema = {
       minWidth: 180,
       cellRenderer: (params) => (
         <Typography variant="body4">
-          {params.value ? params.value : 'YYYY-MM-DD'}
+          {params.value ? `${params.value} PDT` : 'YYYY-MM-DD'}
         </Typography>
       ),
       editable: false, // TODO: change as per #516
-      cellDataType: 'dateString',
+      cellDataType: 'text',
       // valueGetter: (params) => {
       //   return new Date().toLocaleDateString()
       // },

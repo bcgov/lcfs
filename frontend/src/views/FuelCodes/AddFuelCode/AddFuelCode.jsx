@@ -257,11 +257,7 @@ export const AddFuelCode = () => {
       await validationHandler(row)
       const data = {
         ...row.data,
-        lastUpdated: new Date()
-          .toLocaleDateString('en-CA')
-          .split('/')
-          .reverse()
-          .join('-'),
+        lastUpdated: new Date(),
         prefixId: optionsData.fuelCodePrefixes.find(
           (elm) => elm.prefix === row.data.prefix
         ).fuelCodePrefixId,
