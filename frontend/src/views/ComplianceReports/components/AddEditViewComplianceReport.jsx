@@ -89,13 +89,13 @@ export const AddEditViewComplianceReport = ({ period }) => {
               {t('report:serviceAddrLabel')}:
             </Typography>{' '}
             <Typography variant="body3">
-              {constructAddress(orgData.orgAddress)}
+              {constructAddress(orgData?.orgAddress)}
             </Typography>
           </div>
           <div>
             <Typography variant="body3">{t('report:bcAddrLabel')}:</Typography>{' '}
             <Typography variant="body3">
-              {constructAddress(orgData.orgAttorneyAddress)}
+              {constructAddress(orgData?.orgAttorneyAddress)}
             </Typography>
           </div>
         </Stack>

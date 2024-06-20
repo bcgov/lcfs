@@ -1,10 +1,9 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
 import { Warning, DoneAll } from '@mui/icons-material'
 
-export const NotionalTransferValidation = ({ data }) => {
+export const ValidationRenderer = ({ data }) => {
   return (
     <Stack direction="row" spacing={0.1} m={0}>
-      
       {!data.isValid && (
         <Tooltip title={data.validationMsg}>
           <IconButton
@@ -28,4 +27,4 @@ export const NotionalTransferValidation = ({ data }) => {
     </Stack>
   )
 }
-NotionalTransferValidation.displayName = 'NotionalTransferValidation'
+ValidationRenderer.displayName = 'ValidationRenderer'

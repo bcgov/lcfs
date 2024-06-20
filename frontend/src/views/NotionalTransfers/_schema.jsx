@@ -1,12 +1,11 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { Typography } from '@mui/material'
 import { NotionalTransferActions } from './components/NotionalTransferActions'
-import { NotionalTransferValidation } from './components/NotionalTransferValidation'
 
 export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
   {
     colId: 'validation',
-    cellRenderer: NotionalTransferValidation,
+    cellRenderer: 'validationRenderer',
     pinned: 'left',
     maxWidth: 75,
     editable: false,

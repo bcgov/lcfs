@@ -15,6 +15,7 @@ import {
 import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
+import { ValidationRenderer } from './components/Renderers/ValidationRenderer'
 
 const BCDataGridEditor = ({
   gridOptions,
@@ -42,6 +43,7 @@ const BCDataGridEditor = ({
     dateEditor: DateEditor,
     actionsRenderer: ActionsRenderer,
     asyncSuggestionEditor: AsyncSuggestionEditor,
+    validationRenderer: ValidationRenderer,
   }), [])
 
   const handleExcelPaste = useCallback(

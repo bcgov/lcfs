@@ -11,7 +11,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
-import { AddRowsDropdownButton } from './AddRowsDropdownButton'
+import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
 import { useApiService } from '@/services/useApiService'
 import { useFuelCodeOptions, useAddFuelCodes, useSaveFuelCode } from '@/hooks/useFuelCode'
 import { v4 as uuid } from 'uuid'
@@ -120,12 +120,12 @@ export const AddFuelCode = () => {
     alertRef.current?.triggerAlert()
   }
 
-  const onRowEditingStarted = useCallback(
-    (params) => {
-      if (params.data.modified && params.data.isValid) validationHandler(params)
-    },
-    [validationHandler]
-  )
+  // const onRowEditingStarted = useCallback(
+  //   (params) => {
+  //     if (params.data.modified && params.data.isValid) validationHandler(params)
+  //   },
+  //   [validationHandler]
+  // )
 
   const onRowEditingStopped = useCallback(
     (params) => {
@@ -317,7 +317,7 @@ export const AddFuelCode = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={fuelCodeColDefs(t, optionsData, gridApi)}
+            columnDefs={fuelCodeColDefs(t, optionsData, gridApi, onValidated)}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
@@ -329,7 +329,7 @@ export const AddFuelCode = () => {
             saveData={saveData}
             defaultStatusBar={false}
             statusBarComponent={statusBarComponent}
-            onRowEditingStarted={onRowEditingStarted}
+            // onRowEditingStarted={onRowEditingStarted}
             onRowEditingStopped={onRowEditingStopped}
             saveRow={saveRow}
             onValidated={onValidated}
