@@ -22,6 +22,8 @@ export const apiRoutes = {
   updateFuelCode: '/fuel-codes/:fuelCodeId',
   getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',
-  getOrgComplianceReports: '/organization/reports/list',
+  getComplianceReport: '/reports/:reportID',
+  getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
+  getOrgComplianceReports: '/organization/:orgID/reports/list',
   createComplianceReport: '/organization/:orgID/reports'
 }

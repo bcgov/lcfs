@@ -73,7 +73,9 @@ export const NewComplianceReportButton = ({ handleNewReport }) => {
           slotProps={{
             paper: {
               style: {
-                width: buttonRef.current?.offsetWidth
+                width: buttonRef.current?.offsetWidth,
+                maxHeight: '10rem',
+                overflowY: 'scroll'
               }
             }
           }}
