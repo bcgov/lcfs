@@ -30,15 +30,13 @@ export const AddEditViewComplianceReport = ({ period }) => {
   const [alertSeverity, setAlertSeverity] = useState('info')
   const alertRef = useRef()
 
-  const { compliancePeriod, reportID, orgID } = useParams()
-  const navigate = useNavigate()
+  const { compliancePeriod, complianceReportId } = useParams()
   const location = useLocation()
 
   // hooks
   const {
     data: currentUser,
-    isLoading: isCurrentUserLoading,
-    hasRoles
+    isLoading: isCurrentUserLoading
   } = useCurrentUser()
   const {
     data: reportData,
@@ -47,7 +45,7 @@ export const AddEditViewComplianceReport = ({ period }) => {
     error
   } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
-    reportID
+    complianceReportId
   )
   const { data: orgData, isLoading } = useOrganization(
     reportData?.data?.organizationId

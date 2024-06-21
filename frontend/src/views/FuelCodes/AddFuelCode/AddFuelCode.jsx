@@ -11,9 +11,9 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
-import { AddRowsDropdownButton } from './AddRowsDropdownButton'
+import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
 import { useApiService } from '@/services/useApiService'
-import { useFuelCodeOptions, useAddFuelCodes } from '@/hooks/useFuelCode'
+import { useFuelCodeOptions, useAddFuelCodes, useSaveFuelCode } from '@/hooks/useFuelCode'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
@@ -33,6 +33,7 @@ export const AddFuelCode = () => {
   const { t } = useTranslation(['common', 'fuelCode'])
   const { fuelCodeId } = useParams()
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
+  const { mutate: saveRow } = useSaveFuelCode()
 
   const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(() => ({
@@ -43,7 +44,7 @@ export const AddFuelCode = () => {
       defaultMaxWidth: 600
     }
   }))
-  const getRowId = useCallback((params) => params.data.fuelCodeId, [])
+  // const getRowId = useCallback((params) => params.data.fuelCodeId, [])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -113,12 +114,18 @@ export const AddFuelCode = () => {
     [gridApi, optionsData, t]
   )
 
-  const onRowEditingStarted = useCallback(
-    (params) => {
-      if (params.data.modified && params.data.isValid) validationHandler(params)
-    },
-    [validationHandler]
-  )
+  const onValidated = (status, message) => {
+    setAlertMessage(message)
+    setAlertSeverity(status)
+    alertRef.current?.triggerAlert()
+  }
+
+  // const onRowEditingStarted = useCallback(
+  //   (params) => {
+  //     if (params.data.modified && params.data.isValid) validationHandler(params)
+  //   },
+  //   [validationHandler]
+  // )
 
   const onRowEditingStopped = useCallback(
     (params) => {
@@ -202,7 +209,7 @@ export const AddFuelCode = () => {
     // Add your API call to save modified rows here
   }, [gridApi])
 
-  const statusBarcomponent = useMemo(
+  const statusBarComponent = useMemo(
     () => (
       <Box component="div" m={2}>
         <AddRowsDropdownButton gridApi={gridApi} />
@@ -310,7 +317,7 @@ export const AddFuelCode = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={fuelCodeColDefs(t, optionsData, gridApi)}
+            columnDefs={fuelCodeColDefs(t, optionsData, gridApi, onValidated)}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
@@ -321,9 +328,11 @@ export const AddFuelCode = () => {
             getRowNodeId={(data) => data.id}
             saveData={saveData}
             defaultStatusBar={false}
-            statusBarcomponent={statusBarcomponent}
-            onRowEditingStarted={onRowEditingStarted}
+            statusBarComponent={statusBarComponent}
+            // onRowEditingStarted={onRowEditingStarted}
             onRowEditingStopped={onRowEditingStopped}
+            saveRow={saveRow}
+            onValidated={onValidated}
           />
         </BCBox>
         <Stack
@@ -340,7 +349,8 @@ export const AddFuelCode = () => {
             startIcon={
               <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
             }
-            onClick={handleSaveDraftCodes}
+            // onClick={handleSaveDraftCodes}
+            onClick={() => {console.log('save click')}}
           >
             <Typography variant="subtitle2">
               {t('fuelCode:saveDraftBtn')}

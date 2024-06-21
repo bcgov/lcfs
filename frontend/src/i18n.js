@@ -10,6 +10,7 @@ import transferEn from '@/assets/locales/en/transfer.json'
 import internalCommentEn from '@/assets/locales/en/internalComment.json'
 import adminAdjustmentEn from '@/assets/locales/en/adminAdjustment.json'
 import initiativeAgreementEn from '@/assets/locales/en/initiativeAgreement.json'
+import notionalTransferEn from '@/assets/locales/en/notionalTransfer.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
 const resources = {
@@ -25,6 +26,7 @@ const resources = {
     internalComment: internalCommentEn,
     administrativeAdjustment: adminAdjustmentEn,
     initiativeAgreement: initiativeAgreementEn,
+    notionalTransfer: notionalTransferEn,
   }
 }
 

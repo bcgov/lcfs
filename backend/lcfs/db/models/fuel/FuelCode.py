@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, func
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 from sqlalchemy.orm import relationship
 
@@ -34,7 +34,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     )
     edrms = Column(String(255), nullable=False, comment="EDRMS #")
     last_updated = Column(
-        DateTime(timezone=True), nullable=False, comment="Date at which the record was last updated."
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False, comment="Date at which the record was last updated."
     )
     application_date = Column(
         Date, nullable=False, comment="application recorded date."

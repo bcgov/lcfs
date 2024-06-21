@@ -24,15 +24,14 @@ export const useCreateComplianceReport = (orgID, options) => {
   })
 }
 
-export const useGetComplianceReport = (orgID, reportID, options) => {
+export const useGetComplianceReport = (orgID, complianceReportId, options) => {
   const client = useApiService()
   const path = orgID
     ? apiRoutes.getOrgComplianceReport
-        .replace(':orgID', orgID)
-        .replace(':reportID', reportID)
-    : apiRoutes.getComplianceReport.replace(':reportID', reportID)
+        .replace(':complianceReportId', complianceReportId)
+    : apiRoutes.getComplianceReport.replace(':complianceReportId', complianceReportId)
   return useQuery({
-    queryKey: ['compliance-report', reportID],
+    queryKey: ['compliance-report', complianceReportId],
     queryFn: () => client.get(path),
     ...options
   })

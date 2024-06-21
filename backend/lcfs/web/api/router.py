@@ -15,7 +15,8 @@ from lcfs.web.api import (
     fuel_code,
     admin_adjustment,
     initiative_agreement,
-    compliance_report
+    compliance_report,
+    notional_transfer
 )
 
 api_router = APIRouter()
@@ -52,4 +53,7 @@ api_router.include_router(
 )
 api_router.include_router(
     compliance_report.router, prefix="/reports", tags=["compliance_reports"]
+)
+api_router.include_router(
+    notional_transfer.router, prefix="/notional-transfers", tags=["notional_transfers"]
 )

@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
@@ -46,6 +47,29 @@ class FuelCodeRepository:
         )
 
     @repo_handler
+    async def get_fuel_type_by_name(self, fuel_type_name: str) -> FuelType:
+        """Get fuel type by name"""
+        stmt = select(FuelType).where(FuelType.fuel_type == fuel_type_name)
+        result = await self.db.execute(stmt)
+        fuel_type = result.scalars().first()
+        if not fuel_type:
+            raise ValueError(f"Fuel type '{fuel_type_name}' not found")
+        return fuel_type
+
+    @repo_handler
+    async def get_fuel_categories(self) -> List[FuelCategory]:
+        """Get all fuel category options"""
+        return (await self.db.execute(select(FuelCategory))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_category_by_name(self, name: str) -> FuelCategory:
+        """Get a fuel category by its name"""
+        result = await self.db.execute(
+            select(FuelCategory).filter_by(category=name)
+        )
+        return result.scalar_one_or_none()
+
+    @repo_handler
     async def get_transport_modes(self) -> List[TransportMode]:
         """Get all transport mode options"""
         return (await self.db.execute(select(TransportMode))).scalars().all()
@@ -58,6 +82,12 @@ class FuelCodeRepository:
     async def get_fuel_code_prefixes(self) -> List[FuelCodePrefix]:
         """Get all fuel code prefix options"""
         return (await self.db.execute(select(FuelCodePrefix))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_code_prefix_by_name(self, prefix_name: str) -> FuelCodePrefix:
+        """Get fuel code prefix by name"""
+        result = await self.db.execute(select(FuelCodePrefix).where(FuelCodePrefix.prefix == prefix_name))
+        return result.scalar_one_or_none()
 
     @repo_handler
     async def get_fuel_status_by_status(self, status: str) -> FuelCodeStatus:
@@ -173,6 +203,30 @@ class FuelCodeRepository:
         await self.db.flush()
 
         return "fuel codes added successfully"
+    
+    @repo_handler
+    async def create_fuel_code(self, fuel_code: FuelCode) -> FuelCode:
+        """
+        Saves a new fuel code to the database.
+
+        Args:
+            fuel_code (FuelCodeSchema): A fuel code to be saved.
+        """
+        self.db.add(fuel_code)
+        await self.db.flush()
+        await self.db.refresh(
+            fuel_code,
+            [
+                'fuel_code_status',
+                'fuel_code_prefix',
+                'fuel_code_type',
+                'feedstock_fuel_transport_modes',
+                'finished_fuel_transport_modes'
+            ]
+        )
+        # Manually load nested relationships
+        await self.db.refresh(fuel_code.fuel_code_type, ['provision_1', 'provision_2'])
+        return fuel_code
 
     @repo_handler
     async def get_fuel_code(self, fuel_code_id: int) -> FuelCode:
@@ -205,7 +259,6 @@ class FuelCodeRepository:
 
     @repo_handler
     async def delete_fuel_code(self, fuel_code_id: int):
-
         await self.db.execute(update(FuelCode).where(FuelCode.fuel_code_id == fuel_code_id).values(fuel_status_id=3))
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:

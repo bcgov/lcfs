@@ -251,7 +251,7 @@ async def create_compliance_report(
 
 
 @router.post(
-    "/{organization_id}/reports/list",
+    "/reports/list",
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -259,7 +259,6 @@ async def create_compliance_report(
 @view_handler
 async def get_compliance_reports(
     request: Request,
-    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     report_service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
@@ -268,7 +267,7 @@ async def get_compliance_reports(
 
 
 @router.get(
-    "/{organization_id}/reports/{report_id}",
+    "/reports/{report_id}",
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -276,7 +275,6 @@ async def get_compliance_reports(
 @view_handler
 async def get_compliance_report_by_id(
     request: Request,
-    organization_id: int,
     response: Response = None,
     report_id: int = None,
     report_service: ComplianceReportServices = Depends(),
@@ -289,7 +287,7 @@ async def get_compliance_report_by_id(
 
 
 @router.post(
-    "/{organization_id}/reports/{report_id}/fse",
+    "/reports/{report_id}/fse",
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
@@ -297,7 +295,6 @@ async def get_compliance_report_by_id(
 @view_handler
 async def save_final_supply_equipment_rows(
     request: Request,
-    organization_id: int,
     response: Response = None,
     report_id: int = None,
     fse_list: List[FinalSupplyEquipmentSchema] = Body(..., embed=False),
@@ -307,5 +304,6 @@ async def save_final_supply_equipment_rows(
     """
     Endpoint to save final supply equipment details
     """
+    organization_id = request.user.organization.organization_id
     await validate.save_final_supply_equipment_rows(organization_id, report_id, fse_list)
     return await report_service.save_fse_list(report_id, fse_list)

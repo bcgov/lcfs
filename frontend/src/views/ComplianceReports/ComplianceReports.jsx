@@ -44,7 +44,7 @@ export const ComplianceReports = () => {
       ROUTES.REPORTS_VIEW.replace(
         ':compliancePeriod',
         data.compliancePeriod.description
-      ).replace(':reportID', data.complianceReportId)
+      ).replace(':complianceReportId', data.complianceReportId)
     )
   })
 
@@ -75,7 +75,7 @@ export const ComplianceReports = () => {
         ROUTES.REPORTS_VIEW.replace(
           ':compliancePeriod',
           response.data.compliancePeriod.description
-        ).replace(':reportID', response.data.complianceReportId),
+        ).replace(':complianceReportId', response.data.complianceReportId),
         { state: { data: response.data } }
       )
       alertRef.current.triggerAlert()
@@ -132,10 +132,7 @@ export const ComplianceReports = () => {
             gridRef={gridRef}
             apiEndpoint={
               hasRoles(roles.supplier)
-                ? apiRoutes.getOrgComplianceReports.replace(
-                  ':orgID',
-                  currentUser?.organization?.organizationId
-                )
+                ? apiRoutes.getOrgComplianceReports
                 : apiRoutes.getComplianceReports
             }
             apiData={'reports'}
