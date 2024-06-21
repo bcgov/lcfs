@@ -183,7 +183,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.REPORTS_VIEW,
         element: <AddEditViewComplianceReport />,
-        handle: { title: (period) => `${period} Compliance report` }
+        handle: { title: '' }
       },
       {
         path: ROUTES.NOTIFICATIONS,

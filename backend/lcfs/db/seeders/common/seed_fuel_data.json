@@ -248,7 +248,8 @@
   "end_use_types": [
     {
       "end_use_type_id": 1,
-      "type": "Light duty motor vehicles"
+      "type": "Light duty motor vehicles",
+      "intended_use": true
     },
     {
       "end_use_type_id": 2,
@@ -260,35 +261,43 @@
     },
     {
       "end_use_type_id": 4,
-      "type": "Battery bus"
+      "type": "Battery bus",
+      "intended_use": true
     },
     {
       "end_use_type_id": 5,
-      "type": "Battery truck"
+      "type": "Battery truck",
+      "intended_use": true
     },
     {
       "end_use_type_id": 6,
-      "type": "Cargo handling equipment"
+      "type": "Cargo handling equipment",
+      "intended_use": true
     },
     {
       "end_use_type_id": 7,
-      "type": "Fixed guiderail"
+      "type": "Fixed guiderail",
+      "intended_use": true
     },
     {
       "end_use_type_id": 8,
-      "type": "Ground support equipment"
+      "type": "Ground support equipment",
+      "intended_use": true
     },
     {
       "end_use_type_id": 9,
-      "type": "Heavy forklift"
+      "type": "Heavy forklift",
+      "intended_use": true
     },
     {
       "end_use_type_id": 10,
-      "type": "Shore power"
+      "type": "Shore power",
+      "intended_use": true
     },
     {
       "end_use_type_id": 11,
-      "type": "Trolley bus"
+      "type": "Trolley bus",
+      "intended_use": true
     },
     {
       "end_use_type_id": 12,
@@ -296,12 +305,14 @@
     },
     {
       "end_use_type_id": 13,
-      "type": "Other"
+      "type": "Other",
+      "intended_use": true
     },
     {
       "end_use_type_id": 14,
       "type": "Marine",
-      "sub_type": "General"
+      "sub_type": "General",
+      "intended_use": true
     },
     {
       "end_use_type_id": 15,
@@ -331,6 +342,11 @@
     {
       "end_use_type_id": 20,
       "type": "Unknown"
+    },
+    {
+      "end_use_type_id": 21,
+      "type": "Aircraft",
+      "intended_use": true
     }
   ],
   "unit_of_measures": [
@@ -948,6 +964,50 @@
       "fuel_class_id": 24,
       "fuel_type_id": 18,
       "fuel_category_id": 3
+    }
+  ],
+  "levels_of_equipment": [
+    {
+      "level_of_equipment_id": 1,
+      "name": "Level 3 - Direct current fast charging",
+      "display_order": 1
+    },
+    {
+      "level_of_equipment_id": 2,
+      "name": "Level 2 - High voltage, operating above level 1",
+      "display_order": 2
+    },
+    {
+      "level_of_equipment_id": 3,
+      "name": "Level 1 - Low voltage, operating at 120V AC or less",
+      "display_order": 3
+    },
+    {
+      "level_of_equipment_id": 4,
+      "name": "Other",
+      "display_order": 4
+    }
+  ],
+  "fuel_measurement_types": [
+    {
+      "fuel_measurement_type_id": 1,
+      "type": "Separate utility meter",
+      "display_order": 1
+    },
+    {
+      "fuel_measurement_type_id": 2,
+      "type": "Equipment meter (remote access)",
+      "display_order": 2
+    },
+    {
+      "fuel_measurement_type_id": 3,
+      "type": "Equipment meter (physical access)",
+      "display_order": 3
+    },
+    {
+      "fuel_measurement_type_id": 4,
+      "type": "No meter or estimated",
+      "display_order": 4
     }
   ]
 }

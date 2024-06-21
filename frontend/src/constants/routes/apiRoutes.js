@@ -23,10 +23,12 @@ export const apiRoutes = {
   saveFuelCode: '/fuel-codes/save',
   getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',
-  getOrgComplianceReports: '/organization/reports/list',
   createComplianceReport: '/organization/:orgID/reports',
   notionalTransferOptions: '/notional-transfers/table-options',
   getNotionalTransfer: '/notional-transfers/:notionalTransferId',
   getNotionalTransfers: '/notional-transfers/list',
   saveNotionalTransfer: '/notional-transfers/save',
+  getComplianceReport: '/reports/:complianceReportId',
+  getOrgComplianceReport: '/organization/reports/:complianceReportId',
+  getOrgComplianceReports: '/organization/reports/list',
 }
