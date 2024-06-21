@@ -644,10 +644,6 @@ export const fuelCodeColDefs = (t, optionsData, api) => [
     headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
     cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.formerCompany,
