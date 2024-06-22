@@ -33,7 +33,6 @@ const BCAlert = forwardRef(
     const checkOverflow = () => {
       const textContainer = textContainerRef.current
       if (textContainer) {
-        console.log(textContainer.scrollHeight, textContainer.clientHeight)
         setIsOverflowing(
           textContainer.scrollHeight > textContainer.clientHeight ||
             textContainer.scrollWidth > textContainer.clientWidth

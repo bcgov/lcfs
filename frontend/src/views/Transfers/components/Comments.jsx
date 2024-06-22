@@ -28,6 +28,7 @@ export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
             t('transfer:toOrgCommentLabel')
           }
           description={t('transfer:commentsDescText')}
+          data-test="comments"
         >
           <Box
             display="flex"

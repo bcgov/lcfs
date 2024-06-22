@@ -23,5 +23,7 @@ export const apiRoutes = {
   getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',
   getOrgComplianceReports: '/organization/reports/list',
-  createComplianceReport: '/organization/:orgID/reports'
+  createComplianceReport: '/organization/:orgID/reports',
+  getExternalOrgs: '/organizations/registered/external',
+  getOrgBalance: '/organizations/current/balances'
 }

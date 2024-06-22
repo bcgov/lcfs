@@ -69,7 +69,13 @@ export const TransferGraphic = () => {
   }
 
   return (
-    <Box display="flex" alignItems="center" justifyContent="center" p={2}>
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      p={2}
+      data-test="transfer-graphic"
+    >
       <Paper
         elevation={0}
         sx={{
@@ -142,11 +148,4 @@ TransferGraphic.propTypes = {
   creditsTo: PropTypes.string,
   numberOfCredits: PropTypes.number,
   totalValue: PropTypes.number
-}
-
-TransferGraphic.defaultProps = {
-  creditsFrom: '',
-  creditsTo: '',
-  numberOfCredits: 0,
-  totalValue: 0
 }

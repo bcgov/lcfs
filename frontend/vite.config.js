@@ -24,6 +24,7 @@ export default defineConfig({
     setupFiles: './testSetup.js',
 
     coverage: {
+      thresholds: '80',
       enabled: true,
       reporter: ['html'],
       include: ['src'],

@@ -1,10 +1,4 @@
-import {
-  AppBar,
-  Divider,
-  useMediaQuery,
-  useTheme,
-  Menu
-} from '@mui/material'
+import { AppBar, Divider, useMediaQuery, useTheme, Menu } from '@mui/material'
 import PopupState, { bindMenu } from 'material-ui-popup-state'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
 
@@ -14,8 +8,16 @@ import MenuBar from '@/components/BCNavbar/components/MenuBar'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'
 import BCBox from '@/components/BCBox'
 
-function BCNavbar(props) {
-  const { routes } = props
+function BCNavbar({
+  title = 'Government of British Columbia',
+  routes = [
+    { icon: 'home', name: 'Dashboard', route: '/' }
+    // Add other routes as needed
+  ],
+  beta = true,
+  headerRightPart = null,
+  menuRightPart = null
+}) {
   const theme = useTheme()
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
@@ -36,8 +38,8 @@ function BCNavbar(props) {
             elevation={0}
           >
             <HeaderBar
-              data={props}
-              beta={props.beta}
+              data={{ title, routes, beta, headerRightPart, menuRightPart }}
+              beta={beta}
               isMobileView={isMobileView}
               popupState={popupState}
             />
@@ -61,7 +63,7 @@ function BCNavbar(props) {
                   vertical: 'top',
                   horizontal: 'left'
                 }}
-                sx={{'div': {minWidth: '300px'}}}
+                sx={{ div: { minWidth: '300px' } }}
                 MenuListProps={{ style: { minWidth: '300px' } }}
               >
                 {routes.map((link) => (
@@ -77,24 +79,16 @@ function BCNavbar(props) {
                 ))}
               </Menu>
             ) : (
-              <MenuBar routes={routes} data={props} />
+              <MenuBar
+                routes={routes}
+                data={{ title, routes, beta, headerRightPart, menuRightPart }}
+              />
             )}
           </AppBar>
         )}
       </PopupState>
     </BCBox>
   )
-}
-
-BCNavbar.defaultProps = {
-  title: 'Government of British Columbia',
-  routes: [
-    { icon: 'home', name: 'Dashboard', route: '/' }
-    // Add other routes as needed
-  ],
-  beta: true,
-  headerRightPart: null,
-  menuRightPart: null
 }
 
 BCNavbar.propTypes = {
