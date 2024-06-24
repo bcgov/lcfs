@@ -5,7 +5,10 @@ from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.organization.Organization import Organization
-from sqlalchemy import func, select, and_, asc, desc
+from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
+from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
+from sqlalchemy import func, select, and_, asc, desc, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -25,6 +28,7 @@ from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.compliance.OtherUses import OtherUses
 
 logger = getLogger("compliance_reports_repo")
 
@@ -53,7 +57,8 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
-                filter_value = getattr(ComplianceReportStatusEnum, filter_value)
+                filter_value = getattr(
+                    ComplianceReportStatusEnum, filter_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
@@ -63,7 +68,8 @@ class ComplianceReportRepository:
             else:
                 field = get_field_for_filter(ComplianceReport, filter.field)
             conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type)
             )
 
     @repo_handler
@@ -118,7 +124,8 @@ class ComplianceReportRepository:
         Retrieve a compliance period from the database
         """
         result = await self.db.scalar(
-            select(CompliancePeriod).where(CompliancePeriod.description == period)
+            select(CompliancePeriod).where(
+                CompliancePeriod.description == period)
         )
         return result
 
@@ -131,7 +138,7 @@ class ComplianceReportRepository:
             select(ComplianceReport)
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-    
+
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
         """
@@ -209,12 +216,14 @@ class ComplianceReportRepository:
         # Build the base query statement
         conditions = []
         if organization_id:
-            conditions.append(ComplianceReport.organization_id == organization_id)
+            conditions.append(
+                ComplianceReport.organization_id == organization_id)
 
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_filters(pagination, conditions)
         # Apply pagination and sorting parameters
-        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
 
         query = (
@@ -231,14 +240,16 @@ class ComplianceReportRepository:
             sort_method = asc if order.direction == "asc" else desc
             # Add the sorting condition to the query
             if order.field == "status":
-                order.field = get_field_for_filter(ComplianceReportStatus, "status")
+                order.field = get_field_for_filter(
+                    ComplianceReportStatus, "status")
                 query = query.join(
                     ComplianceReportStatus,
                     ComplianceReport.status_id
                     == ComplianceReportStatus.compliance_report_status_id,
                 )
             elif order.field == "compliance_period":
-                order.field = get_field_for_filter(CompliancePeriod, "description")
+                order.field = get_field_for_filter(
+                    CompliancePeriod, "description")
                 query = query.join(
                     CompliancePeriod,
                     ComplianceReport.compliance_period_id
@@ -253,7 +264,8 @@ class ComplianceReportRepository:
             elif order.field == "type":
                 continue
             else:
-                order.field = get_field_for_filter(ComplianceReport, order.field)
+                order.field = get_field_for_filter(
+                    ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))
 
         query_result = (await self.db.execute(query)).unique().scalars().all()
@@ -343,3 +355,39 @@ class ComplianceReportRepository:
         Get the levels of equipment by name
         """
         return (await self.db.execute(select(FuelMeasurementType).where(FuelMeasurementType.type == type))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_for_other_uses(self, other_uses_id: int) -> OtherUses:
+        return (await self.db.scalar(select(OtherUses).where(OtherUses.other_uses_id == other_uses_id)))
+
+    @repo_handler
+    async def create_fuel_for_ther_uses(self, fuel_for_other_uses: OtherUses) -> OtherUses:
+        self.db.add(fuel_for_other_uses)
+        await self.db.flush()
+        await self.db.refresh(fuel_for_other_uses)
+
+        return fuel_for_other_uses
+
+    @repo_handler
+    async def update_fuel_for_other_uses(self, fuel_for_other_uses: OtherUses) -> OtherUses:
+        await self.db.flush()
+        await self.db.refresh(fuel_for_other_uses)
+
+        return fuel_for_other_uses
+
+    @repo_handler
+    async def delete_fuel_for_other_uses(self, other_uses_id: int):
+        await self.db.execute(delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id))
+        await self.db.flush()
+
+    @repo_handler
+    async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
+        return await self.db.scalar(select(FuelType).where(FuelType.fuel_type_id == fuel_type_id))
+
+    @repo_handler
+    async def get_fuel_category(self, fuel_category_id: int) -> FuelCategory:
+        return await self.db.scalar(select(FuelCategory).where(FuelCategory.fuel_category_id == fuel_category_id))
+
+    @repo_handler
+    async def get_expected_use(self, expected_use_type_id: int) -> ExpectedUseType:
+        return await self.db.scalar(select(ExpectedUseType).where(ExpectedUseType.expected_use_type_id == expected_use_type_id))
