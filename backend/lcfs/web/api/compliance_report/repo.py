@@ -1,6 +1,9 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 from datetime import datetime
+from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
+from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
+from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.organization.Organization import Organization
 from sqlalchemy import func, select, and_, asc, desc
 from sqlalchemy.orm import joinedload
@@ -120,6 +123,16 @@ class ComplianceReportRepository:
         return result
 
     @repo_handler
+    async def get_compliance_report(self, compliance_report_id: int) -> Optional[ComplianceReport]:
+        """
+        Identify and retrieve the compliance report by id.
+        """
+        return await self.db.scalar(
+            select(ComplianceReport)
+            .where(ComplianceReport.compliance_report_id == compliance_report_id)
+        )
+    
+    @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
         """
         Retrieve the compliance report status ID from the database based on the description
@@ -142,6 +155,8 @@ class ComplianceReportRepository:
                 and_(
                     ComplianceReport.organization_id == organization_id,
                     CompliancePeriod.description == period,
+                    ComplianceReport.compliance_period_id
+                    == CompliancePeriod.compliance_period_id,
                 )
             )
         )
@@ -252,3 +267,79 @@ class ComplianceReportRepository:
         return [
             ComplianceReportBaseSchema.model_validate(report) for report in reports
         ], total_count
+
+    @repo_handler
+    async def get_compliance_report_by_id(self, report_id: int):
+        """
+        Retrieve a compliance report from the database by ID
+        """
+        result = (
+            (
+                await self.db.execute(
+                    select(ComplianceReport)
+                    .options(
+                        joinedload(ComplianceReport.organization),
+                        joinedload(ComplianceReport.compliance_period),
+                        joinedload(ComplianceReport.status),
+                    )
+                    .where(ComplianceReport.compliance_report_id == report_id)
+                )
+            )
+            .unique()
+            .scalars()
+            .first()
+        )
+        return ComplianceReportBaseSchema.model_validate(result)
+
+    @repo_handler
+    async def get_intended_use_types(self) -> List[EndUseType]:
+        """
+        Retrieve a list of intended use types from the database
+        """
+        return (
+            (
+                await self.db.execute(
+                    select(EndUseType).where(EndUseType.intended_use == True)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
+        """
+        Retrieve intended use type by name from the database
+        """
+        result = await self.db.scalar(
+            select(EndUseType).where(EndUseType.name == intended_use)
+        )
+        return result
+
+    @repo_handler
+    async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
+        """
+        Retrieve a list of levels of equipment from the database
+        """
+        return (await self.db.execute(select(LevelOfEquipment))).scalars().all()
+
+    @repo_handler
+    async def get_levels_of_equipment_by_name(self, name: str) -> LevelOfEquipment:
+        """
+        Get the levels of equipment by name
+        """
+        return (await self.db.execute(select(LevelOfEquipment).where(LevelOfEquipment.name == name))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
+        """
+        Retrieve a list of levels of equipment from the database
+        """
+        return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
+        """
+        Get the levels of equipment by name
+        """
+        return (await self.db.execute(select(FuelMeasurementType).where(FuelMeasurementType.type == type))).scalars().all()

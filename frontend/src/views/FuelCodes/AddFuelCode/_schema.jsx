@@ -3,26 +3,7 @@ import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { Typography } from '@mui/material'
 import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
-
-// copy the desired columns to new row
-const duplicateRow = (props) => {
-  const newRow = {
-    ...props.data,
-    id: uuid(),
-    modified: true,
-    fuelCode: 1000 + (props.node?.rowIndex + 1) / 10
-  }
-
-  if (props.api) {
-    props.api.applyTransaction({
-      add: [newRow],
-      addIndex: props.node?.rowIndex + 1
-    })
-    props.api.stopEditing()
-  } else {
-    console.error('API is undefined')
-  }
-}
+import { FuelCodeActions } from './components/FuelCodeActions'
 
 export const fuelCodeSchema = (t, optionsData) =>
   yup.object().shape({
@@ -104,21 +85,23 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
-export const fuelCodeColDefs = (t, optionsData, api) => [
+export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
+  {
+    colId: 'validation',
+    cellRenderer: 'validationRenderer',
+    pinned: 'left',
+    maxWidth: 75,
+    editable: false,
+    suppressKeyboardEvent: (params) =>
+      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    filter: false
+  },
   {
     colId: 'action',
-    cellRenderer: 'actionsRenderer',
-    cellRendererParams: {
-      enableDuplicate: true,
-      enableEdit: false,
-      enableDelete: true,
-      onDuplicate: (props) => duplicateRow({ ...props, api })
-    },
-    // checkboxSelection: true,
-    // headerCheckboxSelection: true,
-    // field: 'checkobxBtn',
+    cellRenderer: FuelCodeActions,
+    cellRendererParams: { api, onValidated },
     pinned: 'left',
-    maxWidth: 100,
+    maxWidth: 110,
     editable: false,
     suppressKeyboardEvent: (params) =>
       params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
@@ -644,10 +627,6 @@ export const fuelCodeColDefs = (t, optionsData, api) => [
     headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
     cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.formerCompany,

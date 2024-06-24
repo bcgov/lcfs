@@ -203,11 +203,11 @@ export const ViewOrganization = () => {
               {t('org:serviceAddrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.orgAddress)}
+              {constructAddress(orgData?.orgAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.orgAttorneyAddress)}
+              {constructAddress(orgData?.orgAttorneyAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
             <BCTypography variant="body4">

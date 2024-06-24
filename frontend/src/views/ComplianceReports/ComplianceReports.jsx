@@ -12,14 +12,14 @@ import { Role } from '@/components/Role'
 // constants
 import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 // hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
 import { reportsColDefs } from './components/_schema'
-import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import Loading from '@/components/Loading'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -36,7 +36,7 @@ export const ComplianceReports = () => {
   const gridOptions = useMemo(() => ({
     overlayNoRowsTemplate: t('report:noReportsFound')
   }))
-  const getRowId = useCallback((params) => params.data.reportId)
+  const getRowId = useCallback((params) => params.data.complianceReportId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(({data}) => {
     console.log("I'm here")
@@ -44,7 +44,7 @@ export const ComplianceReports = () => {
       ROUTES.REPORTS_VIEW.replace(
         ':compliancePeriod',
         data.compliancePeriod.description
-      ).replace(':reportID', data.complianceReportId)
+      ).replace(':complianceReportId', data.complianceReportId)
     )
   })
 
@@ -75,7 +75,7 @@ export const ComplianceReports = () => {
         ROUTES.REPORTS_VIEW.replace(
           ':compliancePeriod',
           response.data.compliancePeriod.description
-        ).replace(':reportID', response.data.complianceReportId),
+        ).replace(':complianceReportId', response.data.complianceReportId),
         { state: { data: response.data } }
       )
       alertRef.current.triggerAlert()
@@ -99,7 +99,7 @@ export const ComplianceReports = () => {
             ref={alertRef}
             data-test="alert-box"
             severity={alertSeverity}
-            delay={65000}
+            delay={6500}
           >
             {alertMessage}
           </BCAlert>
