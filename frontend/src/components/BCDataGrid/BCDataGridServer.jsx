@@ -55,6 +55,7 @@ const BCDataGridServer = ({
   defaultFilterModel,
   apiEndpoint,
   apiData,
+  apiParams,
   gridRef,
   className,
   columnDefs,
@@ -88,7 +89,7 @@ const BCDataGridServer = ({
       apiService({
         method: 'post',
         url: apiEndpoint,
-        data: { page, size, sortOrders: sortModel, filters: filterModel }
+        data: { page, size, sortOrders: sortModel, filters: filterModel, ...apiParams }
       })
         .then((resp) => {
           setTotal(resp.data.pagination.total)

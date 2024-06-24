@@ -8,22 +8,23 @@ import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useApiService } from '@/services/useApiService'
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
+import { faCirclePlus, faEdit } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { notionalTransferColDefs } from './_schema'
+import { useLocation, useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
 
-export const NotionalTransfers = () => {
+export const NotionalTransferSummary = ({ compliancePeriod }) => {
   const [isDownloadingNotionalTransfers, setIsDownloadingNotionalTransfers] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`notional-transfers-grid`)
   const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
+  const { complianceReportId } = useParams()
 
   const { data: currentUser } = useCurrentUser()
 
@@ -58,13 +59,20 @@ export const NotionalTransfers = () => {
     }
   }))
 
+  const columns = [
+    { headerName: "Legal name of trading partner", field: "legalName", floatingFilter: false },
+    { headerName: "Address for service", field: "addressForService", floatingFilter: false },
+    { headerName: "Fuel category", field: "fuelCategory", floatingFilter: false },
+    { headerName: "Received OR Transferred", field: "receivedOrTransferred", floatingFilter: false },
+    { headerName: "Quantity (L)", field: "quantity", floatingFilter: false },
+];
+
   const getRowId = (params) => {
     return params.data.notionalTransferId
   }
 
   const handleGridKey = () => {
-    // setGridKey(`notional-transfers-grid-${uuid()}`)
-    setGridKey(`notional-transfers-grid-<unique-id>`)
+    setGridKey(`notional-transfers-grid-${uuid()}`)
   }
 
   const handleRowClicked = (params) => {
@@ -100,40 +108,33 @@ export const NotionalTransfers = () => {
           </BCAlert>
         )}
       </div>
-      <Typography variant="h5" color="primary" data-test="title">
-        {t('NotionalTransfers')}
-      </Typography>
+
       <Stack
         direction={{ md: 'column', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
-        mt={1}
         mb={2}
       >
-        {userRoles.includes(roles.supplier) && (
-          <BCButton
-            variant="contained"
-            size="small"
-            color="primary"
-            startIcon={
-              <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-            }
-            data-test="new-notional-transfer-btn"
-            onClick={() => navigate(ROUTES.ADMIN_NOTIONAL_TRANSFERS_ADD)}
-          >
-            <Typography variant="subtitle2">
-              {t('notionalTransfer:newNotionalTransferBtn')}
-            </Typography>
-          </BCButton>
-        )}
-        <DownloadButton
+        <Typography variant="h5" color="primary" data-test="title">
+          {t('notionalTransfer:summaryTitle')}
+        </Typography>
+        <FontAwesomeIcon 
+          icon={faEdit} 
+          size={'lg'}
+          onClick={() => navigate(
+            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
+              ':complianceReportId', 
+              complianceReportId
+            ).replace(':compliancePeriod', compliancePeriod))}
+        />
+        {/* <DownloadButton
           onDownload={handleDownloadNotionalTransfers}
           isDownloading={isDownloadingNotionalTransfers}
           label={t('notionalTransfer:notionalTransferDownloadBtn')}
           downloadLabel={`${t('notionalTransfer:notionalTransferDownloadingMsg')}...`}
           dataTest="notional-transfer-download-btn"
-        />
+        /> */}
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
@@ -141,7 +142,8 @@ export const NotionalTransfers = () => {
           gridRef={gridRef}
           apiEndpoint={apiRoutes.getNotionalTransfers}
           apiData={'notionalTransfers'}
-          columnDefs={notionalTransferColDefs(t)}
+          apiParams={{complianceReportId}}
+          columnDefs={columns}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
@@ -155,4 +157,4 @@ export const NotionalTransfers = () => {
   )
 }
 
-NotionalTransfers.displayName = 'NotionalTransfers'
+NotionalTransferSummary.displayName = 'NotionalTransferSummary'

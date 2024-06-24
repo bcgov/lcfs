@@ -39,7 +39,6 @@ export const ComplianceReports = () => {
   const getRowId = useCallback((params) => params.data.complianceReportId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(({data}) => {
-    console.log("I'm here")
     navigate(
       ROUTES.REPORTS_VIEW.replace(
         ':compliancePeriod',
