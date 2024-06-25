@@ -1,5 +1,6 @@
 from typing import Optional, List
-from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
+from pydantic import Field
+from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder, PaginationRequestSchema, PaginationResponseSchema
 from enum import Enum
 
 class ReceivedOrTransferredEnumSchema(str, Enum):
@@ -23,9 +24,16 @@ class ComplianceReportRequestSchema(BaseSchema):
     compliance_report_id: int
     # pagination: PaginationResponseSchema
 
+class PaginatedNotionalTransferRequestSchema(BaseSchema):
+    compliance_report_id: int = Field(..., alias="complianceReportId")
+    filters: List[FilterModel]
+    page: int
+    size: int
+    sort_orders: List[SortOrder]
+
 class NotionalTransfersSchema(BaseSchema):
     notional_transfers: List[NotionalTransferSchema]
-    # pagination: PaginationResponseSchema
+    pagination: PaginationResponseSchema
 
 class NotionalTransferFuelCategorySchema(BaseSchema):
     fuel_category_id: int

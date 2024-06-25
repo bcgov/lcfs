@@ -7,6 +7,7 @@ from datetime import datetime
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferCreateSchema,
     NotionalTransferSchema,
@@ -63,6 +64,31 @@ class NotionalTransferServices:
         return NotionalTransfersSchema(
             notional_transfers=[
                 NotionalTransferSchema.model_validate(nt) for nt in notional_transfers
+            ],
+        )
+    
+    @service_handler
+    async def get_notional_transfers_paginated(
+        self, pagination: PaginationRequestSchema, compliance_report_id: int
+    ) -> NotionalTransfersSchema:
+        notional_transfers, total_count = await self.repo.get_notional_transfers_paginated(pagination, compliance_report_id)
+        return NotionalTransfersSchema(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            notional_transfers=[
+                NotionalTransferSchema(
+                    notional_transfer_id=nt.notional_transfer_id,
+                    compliance_report_id=nt.compliance_report_id,
+                    quantity=nt.quantity,
+                    legal_name=nt.legal_name,
+                    address_for_service=nt.address_for_service,
+                    fuel_category=nt.fuel_category.category,
+                    received_or_transferred=nt.received_or_transferred
+                ) for nt in notional_transfers
             ],
         )
 
