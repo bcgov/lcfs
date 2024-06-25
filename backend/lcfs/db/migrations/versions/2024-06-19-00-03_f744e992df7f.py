@@ -1,7 +1,7 @@
 """Fuel code last updated type change from date to datetime
 
 Revision ID: f744e992df7f
-Revises: r42e3c9va810
+Revises: cf8370eb1378
 Create Date: 2024-06-19 00:03:06.264649
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "f744e992df7f"
-down_revision = "r42e3c9va810"
+down_revision = "cf8370eb1378"
 branch_labels = None
 depends_on = None
 
