@@ -4,6 +4,7 @@
   "notionalTransferDownloadBtn": "Download as excel",
   "notionalTransferDownloadingMsg": "Downloading notional transfers information",
   "notionalTransferDownloadFailMsg": "Failed to download notional transfer information.",
+  "LoadFailMsg": "Failed to load notional transfer rows.",
   "notionalTransferLoadFailMsg": "Failed to load notional transfer information.",
   "newNotionalTransferTitle": "Add new notional transfer(s)",
   "editNotionalTransferTitle": "Edit draft notional transfer",

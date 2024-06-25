@@ -9,13 +9,16 @@ import {
   AutocompleteEditor,
   AsyncValidationEditor,
   DateEditor,
+  DateRangeCellEditor,
   ActionsRenderer,
   AsyncSuggestionEditor,
+  ValidationRenderer,
+  HeaderComponent,
+  LargeTextareaEditor
 } from '@/components/BCDataGrid/components'
 import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
-import { ValidationRenderer } from './components/Renderers/ValidationRenderer'
 
 const BCDataGridEditor = ({
   gridOptions,
@@ -37,23 +40,30 @@ const BCDataGridEditor = ({
   onValidated,
   ...props
 }) => {
-  const frameworkComponents = useMemo(() => ({
-    asyncValidationEditor: AsyncValidationEditor,
-    autocompleteEditor: AutocompleteEditor,
-    dateEditor: DateEditor,
-    actionsRenderer: ActionsRenderer,
-    asyncSuggestionEditor: AsyncSuggestionEditor,
-    validationRenderer: ValidationRenderer,
-  }), [])
+  const frameworkComponents = useMemo(
+    () => ({
+      asyncValidationEditor: AsyncValidationEditor,
+      autocompleteEditor: AutocompleteEditor,
+      dateEditor: DateEditor,
+      actionsRenderer: ActionsRenderer,
+      asyncSuggestionEditor: AsyncSuggestionEditor,
+      validationRenderer: ValidationRenderer,
+      dateRangeCellEditor: DateRangeCellEditor,
+      largeTextareaEditor: LargeTextareaEditor,
+      headerComponent: HeaderComponent
+    }),
+    []
+  )
 
   const handleExcelPaste = useCallback(
     (params) => {
       const newData = []
-      const pastedData = params.clipboardData.getData('text/plain')
+      const clipboardData = params.clipboardData || window.clipboardData
+      const pastedData = clipboardData.getData('text/plain')
       const headerRow = gridApi
         .getAllDisplayedColumns()
         .map((column) => column.colDef.field)
-        .filter((col => col))
+        .filter((col) => col)
         .join('\t')
       const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
         delimiter: '\t',
@@ -142,12 +152,15 @@ const BCDataGridEditor = ({
           }
         },
         onError: (error) => {
-          console.error('Error updating row:', error)
           params.data.isValid = false
           params.api.refreshCells()
           if (onValidated) {
-            console.log(error)
-            onValidated('error', `Error updating row: ${error.message}`)
+            if (error.code === 'ERR_BAD_REQUEST') {
+              onValidated('error', error)
+              // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
+            } else {
+              onValidated('error', `Error updating row: ${error.message}`)
+            }
           }
         }
       })
