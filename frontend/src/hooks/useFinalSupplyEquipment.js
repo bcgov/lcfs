@@ -44,7 +44,6 @@ export const useSaveFinalSupplyEquipment = (params, options) => {
     mutationFn: async (data) => {
       const modifedData = {
         ...data,
-        complianceReportId: params.complianceReportId,
         levelOfEquipment: data.levelOfEquipment?.name || data.levelOfEquipment,
         fuelMeasurementType: data.fuelMeasurementType?.type || data.fuelMeasurementType
       }

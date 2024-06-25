@@ -2,21 +2,60 @@ import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
 import moment from 'moment'
-import { FinalSupplyEquipmentActions } from './components/FinalSupplyEquipmentActions'
+import { v4 as uuid } from 'uuid'
+
+// Copy the desired columns to new row
+const duplicateRow = (props) => {
+  const newRow = {
+    ...props.data,
+    id: uuid(),
+    finalSupplyEquipmentId: null,
+    serialNbr: undefined,
+    latitude: undefined,
+    longitude: undefined,
+    modified: true
+  }
+
+  if (props.api) {
+    props.api.applyTransaction({
+      add: [newRow],
+      addIndex: props.node?.rowIndex + 1
+    })
+    props.api.stopEditing()
+  } else {
+    console.error('API is undefined')
+  }
+}
+
+const deleteRow = (props) => {
+  const updatedRow = { ...props.data, deleted: true, modified: true }
+  if (props.api) {
+    props.api.applyTransaction({ update: [updatedRow] })
+    props.api.applyTransaction({ remove: [props.node.data] })
+    props.api.stopEditing()
+  } else {
+    console.error('API is undefined')
+  }
+}
 
 export const finalSupplyEquipmentColDefs = (
   t,
   optionsData,
   compliancePeriod,
-  api,
-  onValidated
+  api
 ) => [
   {
     colId: 'action',
-    cellRenderer: FinalSupplyEquipmentActions,
-    cellRendererParams: { api, onValidated },
+    cellRenderer: 'actionsRenderer',
+    cellRendererParams: {
+      enableDuplicate: true,
+      enableEdit: false,
+      enableDelete: true,
+      onDuplicate: (props) => duplicateRow({ ...props, api }),
+      onDelete: (props) => deleteRow({ ...props, api })
+    },
     pinned: 'left',
-    maxWidth: 110,
+    maxWidth: 150,
     editable: false,
     suppressKeyboardEvent,
     filter: false,

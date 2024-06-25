@@ -85,12 +85,10 @@ export const AddEditNotionalTransfers = () => {
   }
 
   const onValidated = (status, message) => {
-    let errMsg = ''
-    try {
+    let errMsg = message
+    if (status === 'error') {
       const field = t(`notionalTransfer:notionalTransferColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
       errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
-    } catch (error) {
-      errMsg = message
     }
     setAlertMessage(errMsg)
     setAlertSeverity(status)

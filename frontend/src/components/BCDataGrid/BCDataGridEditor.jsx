@@ -148,7 +148,7 @@ const BCDataGridEditor = ({
           params.data.isValid = true
           params.api.refreshCells()
           if (onValidated) {
-            onValidated('success', 'Row updated successfully.')
+            onValidated('success', `Row ${params.data.deleted ? 'deleted': 'updated'} successfully.`)
           }
         },
         onError: (error) => {

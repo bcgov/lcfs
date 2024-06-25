@@ -10,7 +10,7 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
     const rowData = {
       ...data,
       id: uuid(),
-      notionalTransferId: null,
+      finalSupplyEquipmentId: null,
       serialNbr: undefined,
       latitude: undefined,
       longitude: undefined,
@@ -23,7 +23,7 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
         addIndex: node?.rowIndex + 1,
       })
       // Only save to db if original row was validated
-      if(data.notionalTransferId) {
+      if(data.finalSupplyEquipmentId) {
         saveRow(rowData, {
           onSuccess: () => {
             rowData.modified = false
@@ -47,11 +47,10 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
   }
 
   const deleteRow = () => {
-    console.log("ACTION - deleteRow", api)
     const updatedRow = { ...data, deleted: true }
     if (api) {
       api.applyTransaction({ remove: [node.data] })
-      if(updatedRow.notionalTransferId) {
+      if(updatedRow.finalSupplyEquipmentId) {
         saveRow(updatedRow, {
           onSuccess: () => {
             if (onValidated) {
