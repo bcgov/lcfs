@@ -27,6 +27,7 @@ export const apiRoutes = {
   notionalTransferOptions: '/notional-transfers/table-options',
   getNotionalTransfer: '/notional-transfers/:notionalTransferId',
   getNotionalTransfers: '/notional-transfers/list',
+  getAllNotionalTransfers: '/notional-transfers/list-all',
   saveNotionalTransfer: '/notional-transfers/save',
   getComplianceReport: '/reports/:complianceReportId',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',

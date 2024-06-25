@@ -4,6 +4,7 @@ from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
 from lcfs.web.api.base import BaseSchema
 from lcfs.web.api.base import PaginationResponseSchema
+from pydantic import Field
 
 """
 Base - all shared attributes of a resource
@@ -21,9 +22,11 @@ class CompliancePeriodSchema(BaseSchema):
     expiration_date: Optional[datetime] = None
     display_order: Optional[int] = None
 
+
 class ComplianceReportOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
+
 
 class SummarySchema(BaseSchema):
     pass
@@ -54,8 +57,18 @@ class AllocationAgreementSchema(BaseSchema):
     pass
 
 
-class OtherUsesSchema(BaseSchema):
-    pass
+class OtherUsesBaseSchema(BaseSchema):
+    compliance_report_id: int
+    fuel_type_id: int
+    fuel_category_id: int
+    quantity_supplied: int = Field(..., ge=0)
+    units: str
+    expected_use_id: int
+    rationale: Optional[str] = None
+
+
+class OtherUsesSchema(OtherUsesBaseSchema):
+    other_uses_id: int
 
 
 class FuelMeasurementTypeSchema(BaseSchema):

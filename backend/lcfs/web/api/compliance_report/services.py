@@ -11,9 +11,12 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema
+    OtherUsesSchema,
+    OtherUsesBaseSchema
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.models.compliance.OtherUses import OtherUses
 
 logger = getLogger(__name__)
 
@@ -83,3 +86,29 @@ class ComplianceReportServices:
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
         return report
+
+    @service_handler
+    async def create_fuel_for_other_uses(self, data: OtherUsesBaseSchema) -> OtherUses:
+        fuel_for_other_uses = OtherUses(**data.model_dump())
+
+        return await self.repo.create_fuel_for_ther_uses(fuel_for_other_uses)
+
+    @service_handler
+    async def update_fuel_for_other_uses(
+        self,
+        other_uses_id: int,
+        data: OtherUsesBaseSchema
+    ) -> OtherUses:
+        fuel_for_other_uses = await self.repo.get_fuel_for_other_uses(other_uses_id)
+
+        for field, value in data.dict().items():
+            setattr(fuel_for_other_uses, field, value)
+
+        return await self.repo.update_fuel_for_other_uses(fuel_for_other_uses)
+
+    @service_handler
+    async def delete_fuel_for_other_uses(
+        self,
+        other_uses_id: int
+    ):
+        return await self.repo.delete_fuel_for_other_uses(other_uses_id)

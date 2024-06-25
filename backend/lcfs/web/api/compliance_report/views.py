@@ -22,9 +22,10 @@ from fastapi.responses import StreamingResponse
 
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportBaseSchema, ComplianceReportListSchema
+from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportBaseSchema, ComplianceReportListSchema, OtherUsesSchema, OtherUsesBaseSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 
 router = APIRouter()
 logger = getLogger("reports_view")
@@ -39,7 +40,8 @@ async def get_compliance_periods(service: ComplianceReportServices = Depends()) 
     """
     return await service.get_all_compliance_periods()
 
-@router.post(              
+
+@router.post(
     "/list",
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
@@ -68,4 +70,49 @@ async def get_compliance_report_by_id(
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportBaseSchema:
     return await service.get_compliance_report_by_id(report_id)
-    
+
+@router.post(
+    "/other-uses",
+    response_model=OtherUsesSchema,
+    status_code=status.HTTP_201_CREATED
+)
+@view_handler
+@roles_required("Supplier")
+async def create_fuel_for_other_uses(
+    request: Request,
+    data: OtherUsesBaseSchema,
+    service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> OtherUsesSchema:
+    await validate.validate_fuel_for_other_uses_create(request, data)
+    return await service.create_fuel_for_other_uses(data)
+
+
+@router.put(
+    '/other-uses/{other_uses_id}',
+    response_model=OtherUsesSchema,
+    status_code=status.HTTP_200_OK
+)
+@view_handler
+@roles_required("Supplier")
+async def update_fuel_for_other_uses(
+    request: Request,
+    other_uses_id: int,
+    data: OtherUsesBaseSchema,
+    service: ComplianceReportServices = Depends()
+):
+    return await service.update_fuel_for_other_uses(other_uses_id, data)
+
+
+@router.delete(
+    '/other-uses/{other_uses_id}',
+    status_code=status.HTTP_200_OK
+)
+@view_handler
+@roles_required('Supplier')
+async def delete_fuel_for_other_uses(
+    request: Request,
+    other_uses_id: int,
+    service: ComplianceReportServices = Depends()
+):
+    return await service.delete_fuel_for_other_uses(other_uses_id)
