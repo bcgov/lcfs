@@ -4,6 +4,7 @@ from datetime import date
 from lcfs.web.api.base import BaseSchema
 from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
+from pydantic import Field, constr
 
 class FuelMeasurementTypeSchema(BaseSchema):
     fuel_measurement_type_id: int
@@ -37,7 +38,7 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     intended_uses: List[str] | List[EndUseTypeSchema]
     street_address: str
     city: str
-    postal_code: str
+    postal_code: str = Field(pattern=r'^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$') # type: ignore
     latitude: float
     longitude: float
     notes: Optional[str] = None
