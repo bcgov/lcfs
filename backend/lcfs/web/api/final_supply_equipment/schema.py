@@ -38,7 +38,7 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     intended_uses: List[str] | List[EndUseTypeSchema]
     street_address: str
     city: str
-    postal_code: str = Field(pattern=r'^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$') # type: ignore
+    postal_code: str = Field(pattern=r'^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$')
     latitude: float
     longitude: float
     notes: Optional[str] = None

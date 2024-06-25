@@ -3,7 +3,7 @@ from sqlalchemy import Column, Date, Double, Integer, String, Table, Text
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
-# Association table for one-to-many relationship
+# Association table for many-to-many relationship
 final_supply_intended_use_association = Table(
     'final_supply_intended_use_association',
     BaseModel.metadata,
