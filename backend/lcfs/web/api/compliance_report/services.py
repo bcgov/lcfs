@@ -10,7 +10,7 @@ from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
-    ComplianceReportListSchema
+    ComplianceReportListSchema,
     OtherUsesSchema,
     OtherUsesBaseSchema
 )
