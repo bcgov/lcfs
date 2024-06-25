@@ -357,25 +357,6 @@ class ComplianceReportRepository:
         return (await self.db.execute(select(FuelMeasurementType).where(FuelMeasurementType.type == type))).scalars().all()
 
     @repo_handler
-    async def get_fuel_for_other_uses(self, other_uses_id: int) -> OtherUses:
-        return (await self.db.scalar(select(OtherUses).where(OtherUses.other_uses_id == other_uses_id)))
-
-    @repo_handler
-    async def create_fuel_for_ther_uses(self, fuel_for_other_uses: OtherUses) -> OtherUses:
-        self.db.add(fuel_for_other_uses)
-        await self.db.flush()
-        await self.db.refresh(fuel_for_other_uses)
-
-        return fuel_for_other_uses
-
-    @repo_handler
-    async def update_fuel_for_other_uses(self, fuel_for_other_uses: OtherUses) -> OtherUses:
-        await self.db.flush()
-        await self.db.refresh(fuel_for_other_uses)
-
-        return fuel_for_other_uses
-
-    @repo_handler
     async def delete_fuel_for_other_uses(self, other_uses_id: int):
         await self.db.execute(delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id))
         await self.db.flush()

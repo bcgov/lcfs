@@ -26,6 +26,7 @@ import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
 import { AddEditViewComplianceReport } from './views/ComplianceReports/components/AddEditViewComplianceReport'
 import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
+import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 
 const router = createBrowserRouter([
   {
@@ -319,6 +320,14 @@ const router = createBrowserRouter([
         element: <AddEditNotionalTransfers />,
         handle: {
           title: 'New Notional Transfer',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_OTHER_USE_FUELS,
+        element: <AddEditOtherUses />,
+        handle: {
+          title: 'New Fuel for Other Use',
           mode: 'add'
         }
       }
