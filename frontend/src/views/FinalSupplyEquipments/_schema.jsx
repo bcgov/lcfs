@@ -337,10 +337,6 @@ export const finalSupplyEquipmentColDefs = (
     // suppressKeyboardEvent,
     // cellEditorPopup: true,
     // cellEditorParams: { rows: 5 },
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     minWidth: 500
   }
 ]

@@ -5,6 +5,7 @@ import { PickerModal } from 'mui-daterange-picker-plus'
 import { format } from 'date-fns'
 import ArrowCircleRightIcon from '@mui/icons-material/ArrowCircleRight'
 import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown'
+import InputMask from 'react-input-mask'
 
 export const DateRangeCellEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
@@ -21,16 +22,7 @@ export const DateRangeCellEditor = forwardRef(
 
     const open = Boolean(anchorEl)
 
-    // State for the DateRange Value
-    const [dateRangeOnChange, setDateRangeOnChange] = useState({})
-    const [dateRangeOnSubmit, setDateRangeOnSubmit] = useState({})
-
-    const handleSetDateRangeOnChange = (dateRange) => {
-      setDateRangeOnChange(dateRange)
-    }
-
     const handleSetDateRangeOnSubmit = (dateRange) => {
-      setDateRangeOnSubmit(dateRange)
       handleClose() // close the modal
       const formattedRange = [
         format(new Date(dateRange.startDate), 'yyyy-MM-dd'),
@@ -45,27 +37,26 @@ export const DateRangeCellEditor = forwardRef(
     }
     return (
       <>
-        <TextField
-          ref={ref}
-          value={value}
-          onChange={handleTextFieldChange}
-          fullWidth
-          margin="0"
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={handleClick}>
-                  <CalendarTodayIcon />
-                </IconButton>
-              </InputAdornment>
-            )
-          }}
-        />
+        <InputMask mask="9999-99-99 to 9999-99-99" value={value} disabled={false} onChange={handleTextFieldChange}>
+          {()=><TextField
+            ref={ref}
+            fullWidth
+            margin="0"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={handleClick}>
+                    <CalendarTodayIcon />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+          />}
+        </InputMask>
         <PickerModal
           minDate={props.minDate}
           maxDate={props.maxDate}
           hideDefaultRanges={true}
-          onChange={(range) => handleSetDateRangeOnChange(range)}
           customProps={{
             onSubmit: (range) => handleSetDateRangeOnSubmit(range),
             onCloseCallback: handleClose,
