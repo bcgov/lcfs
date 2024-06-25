@@ -286,7 +286,15 @@ export const finalSupplyEquipmentColDefs = (
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
-    cellEditor: 'agTextCellEditor',
+    cellEditor: 'textCellEditor',
+    cellEditorParams: {
+      mask: 'A1A 1A1',
+      formatChars: {
+        'A': '[A-Za-z]',
+        '1': '[0-9]'
+      }
+    },
+    suppressKeyboardEvent,
     cellDataType: 'text',
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))

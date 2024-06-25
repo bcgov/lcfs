@@ -14,7 +14,8 @@ import {
   AsyncSuggestionEditor,
   ValidationRenderer,
   HeaderComponent,
-  LargeTextareaEditor
+  LargeTextareaEditor,
+  TextCellEditor
 } from '@/components/BCDataGrid/components'
 import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
@@ -50,6 +51,7 @@ const BCDataGridEditor = ({
       validationRenderer: ValidationRenderer,
       dateRangeCellEditor: DateRangeCellEditor,
       largeTextareaEditor: LargeTextareaEditor,
+      textCellEditor: TextCellEditor,
       headerComponent: HeaderComponent
     }),
     []
