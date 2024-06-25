@@ -233,7 +233,7 @@ export const finalSupplyEquipmentColDefs = (
     field: 'intendedUses',
     headerComponent: 'headerComponent',
     headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUse'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
     cellEditor: 'autocompleteEditor',
     cellEditorParams: {

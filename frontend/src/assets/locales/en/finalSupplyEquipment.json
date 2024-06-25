@@ -33,7 +33,7 @@
     "manufacturer": "Manufacturer",
     "levelOfEquipment": "Level of equipment",
     "fuelMeasurementType": "Fuel measurement type",
-    "intendedUse": "Intended use",
+    "intendedUses": "Intended use",
     "streetAddress": "Street address",
     "city": "City",
     "postalCode": "Postal code",
