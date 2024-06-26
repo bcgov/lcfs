@@ -106,11 +106,13 @@ export const AddEditFinalSupplyEquipments = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const onValidated = (status, message) => {
+  const onValidated = (status, message, params, response) => {
     let errMsg = message
     if (status === 'error') {
       const field = t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
       errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
+    } else if (status === 'success') {
+      params.data.finalSupplyEquipmentId = response.data.finalSupplyEquipmentId
     }
     setAlertMessage(errMsg)
     setAlertSeverity(status)

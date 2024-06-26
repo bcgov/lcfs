@@ -1,6 +1,7 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { Typography } from '@mui/material'
 import { NotionalTransferActions } from './components/NotionalTransferActions'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 
 export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
   {
@@ -67,6 +68,7 @@ export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
     field: 'fuelCategory',
     headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
     cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
       options: optionsData.fuelCategories.map((obj) => obj.category),
@@ -87,6 +89,7 @@ export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
     field: 'receivedOrTransferred',
     headerName: t('notionalTransfer:notionalTransferColLabels.receivedOrTransferred'),
     cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
       options: optionsData?.receivedOrTransferred || [],

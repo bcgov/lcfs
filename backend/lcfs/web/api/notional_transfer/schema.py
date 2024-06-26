@@ -33,7 +33,7 @@ class PaginatedNotionalTransferRequestSchema(BaseSchema):
 
 class NotionalTransfersSchema(BaseSchema):
     notional_transfers: List[NotionalTransferSchema]
-    pagination: PaginationResponseSchema
+    pagination: Optional[PaginationResponseSchema] = None
 
 class NotionalTransferFuelCategorySchema(BaseSchema):
     fuel_category_id: int
