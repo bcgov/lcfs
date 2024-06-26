@@ -33,9 +33,9 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     supply_to_date: date
     serial_nbr: str
     manufacturer: str
-    level_of_equipment: str | LevelOfEquipmentSchema
-    fuel_measurement_type: str | FuelMeasurementTypeSchema
-    intended_uses: List[str] | List[EndUseTypeSchema]
+    level_of_equipment: str
+    fuel_measurement_type: str
+    intended_uses: List[str]
     street_address: str
     city: str
     postal_code: str = Field(pattern=r'^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$')
