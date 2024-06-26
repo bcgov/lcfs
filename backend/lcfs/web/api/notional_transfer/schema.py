@@ -35,6 +35,9 @@ class NotionalTransfersSchema(BaseSchema):
     notional_transfers: List[NotionalTransferSchema]
     pagination: PaginationResponseSchema
 
+class NotionalTransfersAllSchema(BaseSchema):
+    notional_transfers: List[NotionalTransferSchema]
+
 class NotionalTransferFuelCategorySchema(BaseSchema):
     fuel_category_id: int
     category: str
