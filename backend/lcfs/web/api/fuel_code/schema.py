@@ -136,8 +136,8 @@ class FuelCodeSchema(BaseSchema):
     prefix_id: int
     fuel_code: str
     company: str
-    contact_name: str
-    contact_email: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     carbon_intensity: float
     edrms: str
     last_updated: datetime
@@ -208,8 +208,8 @@ class FuelCodeCreateSchema(BaseSchema):
     edrms: str
     last_updated: Optional[datetime] = None
     application_date: date
-    contact_name: str
-    contact_email: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
@@ -236,6 +236,7 @@ class FuelCodeCreateSchema(BaseSchema):
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
+
 
 class DeleteFuelCodeResponseSchema(BaseSchema):
     message: str

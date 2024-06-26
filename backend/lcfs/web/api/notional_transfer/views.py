@@ -26,7 +26,8 @@ from lcfs.web.api.notional_transfer.schema import (
     ComplianceReportRequestSchema,
     DeleteNotionalTransferResponseSchema,
     PaginatedNotionalTransferRequestSchema,
-    NotionalTransfersSchema
+    NotionalTransfersSchema,
+    NotionalTransfersAllSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -49,7 +50,7 @@ async def get_table_options(
     return await service.get_table_options()
 
 
-@router.post("/list-all", response_model=NotionalTransfersSchema, status_code=status.HTTP_200_OK)
+@router.post("/list-all", response_model=NotionalTransfersAllSchema, status_code=status.HTTP_200_OK)
 @view_handler
 async def get_notional_transfers(
     request: Request,

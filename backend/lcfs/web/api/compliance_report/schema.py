@@ -78,15 +78,15 @@ class FSEOptionsSchema(BaseSchema):
 
 
 class FinalSupplyEquipmentSchema(BaseSchema):
-    final_supply_equipment_id: Optional[int] = None
-    compliance_report_id: Optional[int] = None
+    final_supply_equipment_id: int
+    compliance_report_id: int
     supply_from_date: date
     supply_to_date: date
     serial_nbr: str
     manufacturer: str
-    level_of_equipment: str
-    fuel_measurement_type: str
-    intended_use: str
+    level_of_equipment: LevelOfEquipmentSchema
+    fuel_measurement_type: FuelMeasurementTypeSchema
+    intended_use_types: List[EndUseTypeSchema]
     street_address: str
     city: str
     postal_code: str

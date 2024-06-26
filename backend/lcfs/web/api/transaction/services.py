@@ -22,9 +22,10 @@ from lcfs.web.api.base import (
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
+
 class TransactionsService:
     def __init__(
-        self, 
+        self,
         repo: TransactionRepository = Depends(TransactionRepository)
     ) -> None:
         self.repo = repo
@@ -76,13 +77,15 @@ class TransactionsService:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
-        pagination.filters.append(FilterModel(field="status", filter="Deleted", type="notEqual", filter_type="text"))
+        pagination.filters.append(FilterModel(
+            field="status", filter="Deleted", type="notEqual", filter_type="text"))
         conditions = []
         pagination = validate_pagination(pagination)
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_transaction_filters(pagination, conditions)
 
-        offset = (pagination.page - 1) * pagination.size if pagination.page > 0 else 0
+        offset = (pagination.page - 1) * \
+            pagination.size if pagination.page > 0 else 0
         limit = pagination.size
 
         if organization_id:
@@ -111,7 +114,8 @@ class TransactionsService:
     async def get_transaction_statuses(self) -> List[TransactionStatusSchema]:
         '''handles fetching all transaction statuses'''
         results = await self.repo.get_transaction_statuses()
-        statuses = [TransactionStatusSchema.model_validate(status) for status in results]
+        statuses = [TransactionStatusSchema.model_validate(
+            status) for status in results]
 
         if len(statuses) == 0:
             raise DataNotFoundException("No transaction statuses found")
@@ -119,14 +123,14 @@ class TransactionsService:
         return statuses
 
     @service_handler
-    async def export_transactions(self, export_format, organization_id = None) -> StreamingResponse:
+    async def export_transactions(self, export_format, organization_id=None) -> StreamingResponse:
         """
         Prepares a list of transactions in a file that is downloadable
         """
         if not export_format in ["xls", "xlsx", "csv"]:
             raise DataNotFoundException("Export format not supported")
 
-        results = await self.repo.get_transactions_paginated(0, None, [], [], organization_id)
+        results = await self.repo.get_transactions_paginated(0, None, [or_(TransactionView.status == 'Approved', TransactionView.status == 'Recorded')], [], organization_id)
 
         # Prepare data for the spreadsheet
         data = []
@@ -142,9 +146,12 @@ class TransactionsService:
                     result.price_per_unit,
                     result.category,
                     result.status,
-                    result.transaction_effective_date.strftime("%Y-%m-%d") if result.transaction_effective_date else None,
-                    result.recorded_date.strftime("%Y-%m-%d") if result.recorded_date else None,
-                    result.approved_date.strftime("%Y-%m-%d") if result.approved_date else None,
+                    result.transaction_effective_date.strftime(
+                        "%Y-%m-%d") if result.transaction_effective_date else None,
+                    result.recorded_date.strftime(
+                        "%Y-%m-%d") if result.recorded_date else None,
+                    result.approved_date.strftime(
+                        "%Y-%m-%d") if result.approved_date else None,
                     result.comment
                 ]
             )

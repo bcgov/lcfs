@@ -357,11 +357,6 @@ class ComplianceReportRepository:
         return (await self.db.execute(select(FuelMeasurementType).where(FuelMeasurementType.type == type))).scalars().all()
 
     @repo_handler
-    async def delete_fuel_for_other_uses(self, other_uses_id: int):
-        await self.db.execute(delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id))
-        await self.db.flush()
-
-    @repo_handler
     async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
         return await self.db.scalar(select(FuelType).where(FuelType.fuel_type_id == fuel_type_id))
 

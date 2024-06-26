@@ -13,7 +13,8 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     NotionalTransfersSchema,
     NotionalTransferTableOptionsSchema,
-    NotionalTransferFuelCategorySchema
+    NotionalTransferFuelCategorySchema,
+    NotionalTransfersAllSchema
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 
@@ -56,15 +57,13 @@ class NotionalTransferServices:
     @service_handler
     async def get_notional_transfers(
         self, compliance_report_id: int
-    ) -> NotionalTransfersSchema:
+    ) -> NotionalTransfersAllSchema:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
         notional_transfers = await self.repo.get_notional_transfers(compliance_report_id)
-        return NotionalTransfersSchema(
-            notional_transfers=[
-                NotionalTransferSchema.model_validate(nt) for nt in notional_transfers
-            ],
+        return NotionalTransfersAllSchema(
+            notional_transfers=notional_transfers
         )
     
     @service_handler
