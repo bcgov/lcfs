@@ -32,8 +32,7 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
           onError: (error) => {
             console.error('Error duplicated row:', error)
             if (onValidated) {
-              console.log(error)
-              onValidated('error', `Error duplicated row: ${error.message}`)
+              onValidated('error', error)
             }
           }
         })
@@ -45,7 +44,7 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
 
   const deleteRow = () => {
     console.log("ACTION - deleteRow", api)
-    const updatedRow = { ...data, deleted: true }
+    const updatedRow = { ...data, deleted: true, modified: undefined }
     if (api) {
       api.applyTransaction({ remove: [node.data] })
       if(updatedRow.notionalTransferId) {
@@ -58,8 +57,7 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
           onError: (error) => {
             console.error('Error deleting row:', error)
             if (onValidated) {
-              console.log(error)
-              onValidated('error', `Error deleting row: ${error.message}`)
+              onValidated(onValidated('error', error))
             }
           }
         })

@@ -1,10 +1,12 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
-import { Delete, Queue, Warning, DoneAll } from '@mui/icons-material'
+import { Delete, Queue } from '@mui/icons-material'
 import { v4 as uuid } from 'uuid'
 import { useSaveFinalSupplyEquipment } from '@/hooks/useFinalSupplyEquipment'
+import { useParams } from 'react-router-dom'
 
 export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) => {
-  const { mutate: saveRow } = useSaveFinalSupplyEquipment()
+  const params = useParams()
+  const { mutate: saveRow } = useSaveFinalSupplyEquipment(params)
 
   const duplicateRow = () => {
     const rowData = {
@@ -14,7 +16,7 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
       serialNbr: undefined,
       latitude: undefined,
       longitude: undefined,
-      modified: true
+      modified: undefined
     }
     if (api) {
       // Add new row to grid
@@ -36,7 +38,7 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
             console.error('Error duplicated row:', error)
             if (onValidated) {
               console.log(error)
-              onValidated('error', `Error duplicated row: ${error.message}`)
+              onValidated('error', error)
             }
           }
         })
@@ -47,21 +49,23 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
   }
 
   const deleteRow = () => {
-    const updatedRow = { ...data, deleted: true }
+    const updatedRow = { ...data, deleted: true, modified: undefined }
     if (api) {
       api.applyTransaction({ remove: [node.data] })
       if(updatedRow.finalSupplyEquipmentId) {
         saveRow(updatedRow, {
           onSuccess: () => {
+            api.refreshCells()
             if (onValidated) {
               onValidated('success', 'Row deleted successfully.')
             }
           },
           onError: (error) => {
             console.error('Error deleting row:', error)
+            api.refreshCells()
             if (onValidated) {
               console.log(error)
-              onValidated('error', `Error deleting row: ${error.message}`)
+              onValidated('error', error)
             }
           }
         })

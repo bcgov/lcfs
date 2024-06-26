@@ -20,6 +20,7 @@ import {
 import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
+import { isEqual } from '@/utils/eventHandlers'
 
 const BCDataGridEditor = ({
   gridOptions,
@@ -176,7 +177,9 @@ const BCDataGridEditor = ({
   }, [onRowEditingStopped, onValidated, saveRow])
   
   function onCellValueChanged(params) {
-    params.data.modified = true
+    if (!isEqual(params.oldValue, params.newValue)) {
+      params.data.modified = true
+    }
   }
 
   return (
