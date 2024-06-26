@@ -30,6 +30,9 @@ export const apiRoutes = {
   getAllNotionalTransfers: '/notional-transfers/list-all',
   saveNotionalTransfer: '/notional-transfers/save',
   getComplianceReport: '/reports/:complianceReportId',
-  getOrgComplianceReport: '/organization/reports/:complianceReportId',
-  getOrgComplianceReports: '/organization/reports/list',
+  getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
+  getOrgComplianceReports: '/organization/:orgID/reports/list',
+  finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
+  getFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse',
+  saveFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse/save'
 }

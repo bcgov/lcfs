@@ -1,17 +1,22 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
-import { Delete, Queue, Warning, DoneAll } from '@mui/icons-material'
+import { Delete, Queue } from '@mui/icons-material'
 import { v4 as uuid } from 'uuid'
-import { useSaveNotionalTransfer } from '@/hooks/useNotionalTransfer'
+import { useSaveFinalSupplyEquipment } from '@/hooks/useFinalSupplyEquipment'
+import { useParams } from 'react-router-dom'
 
-export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
-  const { mutate: saveRow } = useSaveNotionalTransfer()
+export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) => {
+  const params = useParams()
+  const { mutate: saveRow } = useSaveFinalSupplyEquipment(params)
 
   const duplicateRow = () => {
     const rowData = {
       ...data,
       id: uuid(),
-      notionalTransferId: null,
-      modified: true
+      finalSupplyEquipmentId: null,
+      serialNbr: undefined,
+      latitude: undefined,
+      longitude: undefined,
+      modified: undefined
     }
     if (api) {
       // Add new row to grid
@@ -20,13 +25,13 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
         addIndex: node?.rowIndex + 1,
       })
       // Only save to db if original row was validated
-      if(data.notionalTransferId) {
+      if(data.finalSupplyEquipmentId) {
         saveRow(rowData, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             rowData.modified = false
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row duplicated successfully.')
+              onValidated('success', 'Row duplicated successfully.', api, response)
             }
           },
           onError: (error) => {
@@ -43,21 +48,22 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
   }
 
   const deleteRow = () => {
-    console.log("ACTION - deleteRow", api)
     const updatedRow = { ...data, deleted: true, modified: undefined }
     if (api) {
       api.applyTransaction({ remove: [node.data] })
-      if(updatedRow.notionalTransferId) {
+      if(updatedRow.finalSupplyEquipmentId) {
         saveRow(updatedRow, {
-          onSuccess: () => {
+          onSuccess: (response) => {
+            api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row deleted successfully.')
+              onValidated('success', 'Row deleted successfully.', api, response)
             }
           },
           onError: (error) => {
             console.error('Error deleting row:', error)
+            api.refreshCells()
             if (onValidated) {
-              onValidated(onValidated('error', error))
+              onValidated('error', error)
             }
           }
         })
@@ -100,4 +106,4 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
     </Stack>
   )
 }
-NotionalTransferActions.displayName = 'NotionalTransferActions'
+FinalSupplyEquipmentActions.displayName = 'FinalSupplyEquipmentActions'

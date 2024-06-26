@@ -33,7 +33,7 @@ class PaginatedNotionalTransferRequestSchema(BaseSchema):
 
 class NotionalTransfersSchema(BaseSchema):
     notional_transfers: List[NotionalTransferSchema]
-    pagination: PaginationResponseSchema
+    pagination: Optional[PaginationResponseSchema] = None
 
 class NotionalTransfersAllSchema(BaseSchema):
     notional_transfers: List[NotionalTransferSchema]

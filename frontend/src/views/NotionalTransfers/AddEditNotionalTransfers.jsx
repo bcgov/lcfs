@@ -72,7 +72,7 @@ export const AddEditNotionalTransfers = () => {
       try {
         setRowData(ensureRowIds(notionalTransfers))
       } catch (error) {
-        setAlertMessage(t('fuelCode:fuelCodeLoadFailMsg'))
+        setAlertMessage(t('errMsg:LoadFailMsg'))
         setAlertSeverity('error')
       }
     } else {
@@ -85,7 +85,12 @@ export const AddEditNotionalTransfers = () => {
   }
 
   const onValidated = (status, message) => {
-    setAlertMessage(message)
+    let errMsg = message
+    if (status === 'error') {
+      const field = t(`notionalTransfer:notionalTransferColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
+      errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
+    }
+    setAlertMessage(errMsg)
     setAlertSeverity(status)
     alertRef.current?.triggerAlert()
   }

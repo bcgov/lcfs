@@ -12,25 +12,26 @@ export const DateEditor = forwardRef(
         val.setHours(0, 0, 0, 0)
       }
       setSelectedDate(val)
-      onValueChange(format(val, 'yyyy-MM-dd'))
+      onValueChange(val === null ? undefined : format(val, 'yyyy-MM-dd'))
     }
 
     return (
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
           className="ag-grid-date-editor ag-input-field"
-          style={{
-            width: '100%',
-            margin: 0,
-          }}
+          fullWidth
           margin="normal"
           id="date-picker-dialog"
           format="yyyy-MM-dd"
+          slotProps={{
+            field: { clearable: true },
+          }}
           value={selectedDate}
           onChange={updateValue}
           variant="inline"
           disableToolbar
-          // {...props.dateparams}
+          minDate={props.minDate}
+          maxDate={props.maxDate}
         />
       </LocalizationProvider>
     )

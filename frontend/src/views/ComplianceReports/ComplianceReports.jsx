@@ -35,8 +35,8 @@ export const ComplianceReports = () => {
 
   const gridOptions = useMemo(() => ({
     overlayNoRowsTemplate: t('report:noReportsFound')
-  }))
-  const getRowId = useCallback((params) => params.data.complianceReportId)
+  }),[t])
+  const getRowId = useCallback((params) => params.data.complianceReportId, [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(({data}) => {
     navigate(
@@ -45,7 +45,7 @@ export const ComplianceReports = () => {
         data.compliancePeriod.description
       ).replace(':complianceReportId', data.complianceReportId)
     )
-  })
+  }, [navigate])
 
   const handleGridKey = useCallback(() => {
     setGridKey(`reports-grid`)
@@ -131,7 +131,10 @@ export const ComplianceReports = () => {
             gridRef={gridRef}
             apiEndpoint={
               hasRoles(roles.supplier)
-                ? apiRoutes.getOrgComplianceReports
+                ? apiRoutes.getOrgComplianceReports.replace(
+                  ':orgID',
+                  currentUser?.organization?.organizationId
+                )
                 : apiRoutes.getComplianceReports
             }
             apiData={'reports'}

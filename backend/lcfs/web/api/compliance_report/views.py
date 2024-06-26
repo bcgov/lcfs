@@ -22,7 +22,7 @@ from fastapi.responses import StreamingResponse
 
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportBaseSchema, ComplianceReportListSchema, FSEOptionsSchema, OtherUsesSchema, OtherUsesBaseSchema
+from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportBaseSchema, ComplianceReportListSchema, OtherUsesSchema, OtherUsesBaseSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.core.decorators import roles_required, view_handler
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
@@ -57,12 +57,6 @@ async def get_compliance_reports(
     return await service.get_compliance_reports_paginated(pagination)
 
 
-@router.get("/fse-options", response_model=FSEOptionsSchema, status_code=status.HTTP_200_OK)
-@view_handler
-async def get_fse_options(service: ComplianceReportServices = Depends()) -> FSEOptionsSchema:
-    return await service.get_fse_options()
-
-
 @router.get(
     "/{report_id}",
     response_model=ComplianceReportBaseSchema,
@@ -76,7 +70,6 @@ async def get_compliance_report_by_id(
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportBaseSchema:
     return await service.get_compliance_report_by_id(report_id)
-
 
 @router.post(
     "/other-uses",
