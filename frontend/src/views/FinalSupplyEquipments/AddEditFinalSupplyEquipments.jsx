@@ -112,7 +112,9 @@ export const AddEditFinalSupplyEquipments = () => {
       const field = t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
       errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
     } else if (status === 'success') {
-      params.data.finalSupplyEquipmentId = response.data.finalSupplyEquipmentId
+      if (response.data.finalSupplyEquipmentId) {
+        params.data.finalSupplyEquipmentId = response.data.finalSupplyEquipmentId
+      }
     }
     setAlertMessage(errMsg)
     setAlertSeverity(status)

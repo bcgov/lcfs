@@ -27,17 +27,16 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
       // Only save to db if original row was validated
       if(data.finalSupplyEquipmentId) {
         saveRow(rowData, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             rowData.modified = false
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row duplicated successfully.')
+              onValidated('success', 'Row duplicated successfully.', api, response)
             }
           },
           onError: (error) => {
             console.error('Error duplicated row:', error)
             if (onValidated) {
-              console.log(error)
               onValidated('error', error)
             }
           }
@@ -54,17 +53,16 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
       api.applyTransaction({ remove: [node.data] })
       if(updatedRow.finalSupplyEquipmentId) {
         saveRow(updatedRow, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row deleted successfully.')
+              onValidated('success', 'Row deleted successfully.', api, response)
             }
           },
           onError: (error) => {
             console.error('Error deleting row:', error)
             api.refreshCells()
             if (onValidated) {
-              console.log(error)
               onValidated('error', error)
             }
           }
