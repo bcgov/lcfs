@@ -13,7 +13,11 @@ import {
   AddEditOrg,
   ViewOrganization
 } from './views/Organizations'
-import { Transactions, AddEditViewTransaction, ViewOrgTransaction } from './views/Transactions'
+import {
+  Transactions,
+  AddEditViewTransaction,
+  ViewOrgTransaction
+} from './views/Transactions'
 import { AddEditViewTransfer } from './views/Transfers'
 import { AddEditUser } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
@@ -210,16 +214,6 @@ const router = createBrowserRouter([
         handle: { title: 'User activity' }
       },
       {
-        path: ROUTES.ADMIN_FUEL_CODES,
-        element: <AdminMenu tabIndex={2} />,
-        handle: { title: 'Fuel codes' }
-      },
-      {
-        path: ROUTES.ADMIN_FUEL_CODES_ADD,
-        element: <AddFuelCode />,
-        handle: { title: 'Add fuel code' }
-      },
-      {
         path: ROUTES.ADMIN_COMPLIANCE_REPORTING,
         element: <AdminMenu tabIndex={3} />,
         handle: { title: 'Compliance reporting' }
@@ -250,7 +244,7 @@ const router = createBrowserRouter([
         handle: { title: 'Add Fuel Code' }
       },
       {
-        path: ROUTES.ADMIN_FUEL_CODES_VIEW,
+        path: ROUTES.FUELCODES_VIEW,
         element: <ViewFuelCode />,
         handle: { title: 'Fuel Code' }
       },

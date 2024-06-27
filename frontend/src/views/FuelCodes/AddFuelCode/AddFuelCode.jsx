@@ -1,24 +1,30 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { Box, Stack, Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCAlert from '@/components/BCAlert'
-import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
-import Loading from '@/components/Loading'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import BCButton from '@/components/BCButton'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
-import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
-import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
-import { useApiService } from '@/services/useApiService'
-import { useFuelCodeOptions, useAddFuelCodes, useSaveFuelCode } from '@/hooks/useFuelCode'
-import { v4 as uuid } from 'uuid'
+import Loading from '@/components/Loading'
+import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
+import {
+  useAddFuelCodes,
+  useFuelCodeOptions,
+  useSaveFuelCode
+} from '@/hooks/useFuelCode'
+import { useApiService } from '@/services/useApiService'
+import withRole from '@/utils/withRole'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Box, Stack, Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
+import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
+import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
 
-export const AddFuelCode = () => {
+const AddFuelCodeBase = () => {
   const [rowData, setRowData] = useState([])
   const [gridApi, setGridApi] = useState(null)
   const [columnApi, setColumnApi] = useState(null)
@@ -222,7 +228,7 @@ export const AddFuelCode = () => {
     useAddFuelCodes({
       onSuccess: () => {
         localStorage.removeItem(gridKey)
-        navigate(ROUTES.ADMIN_FUEL_CODES, {
+        navigate(ROUTES.FUELCODES, {
           state: {
             message: t('fuelCode:fuelCodeAddSuccessMsg'),
             severity: 'success'
@@ -350,7 +356,9 @@ export const AddFuelCode = () => {
               <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
             }
             // onClick={handleSaveDraftCodes}
-            onClick={() => {console.log('save click')}}
+            onClick={() => {
+              console.log('save click')
+            }}
           >
             <Typography variant="subtitle2">
               {t('fuelCode:saveDraftBtn')}
@@ -361,3 +369,9 @@ export const AddFuelCode = () => {
     )
   )
 }
+
+export const AddFuelCode = withRole(
+  AddFuelCodeBase,
+  [roles.analyst],
+  ROUTES.DASHBOARD
+)

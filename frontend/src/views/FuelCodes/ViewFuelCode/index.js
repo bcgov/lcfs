@@ -1,1 +1,1 @@
-export { ViewFuelCodeWithRole as ViewFuelCode } from './ViewFuelCode'
+export { ViewFuelCode } from './ViewFuelCode'
