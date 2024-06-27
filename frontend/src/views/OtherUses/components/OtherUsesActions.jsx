@@ -72,7 +72,7 @@ export const OtherUsesActions = ({ api, node, data, onValidated }) => {
       <Tooltip title="Duplicate">
         <IconButton
           aria-label="copy the data to new row"
-          data-testid="duplicate-button"
+          data-test="duplicate-button"
           color="primary"
           onClick={duplicateRow}
         >
@@ -86,7 +86,7 @@ export const OtherUsesActions = ({ api, node, data, onValidated }) => {
       <Tooltip title="Delete">
         <IconButton
           aria-label="delete row"
-          data-testid="delete-button"
+          data-test="delete-button"
           color="error"
           onClick={deleteRow}
         >

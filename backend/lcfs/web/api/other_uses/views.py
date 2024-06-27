@@ -80,15 +80,6 @@ async def get_other_uses_paginated(
     compliance_report_id = request_data.compliance_report_id
     return await service.get_other_uses_paginated(pagination, compliance_report_id)
 
-@router.get("/{other_uses_id}", status_code=status.HTTP_200_OK)
-@view_handler
-async def get_other_use(
-    request: Request,
-    other_uses_id: int,
-    service: OtherUsesServices = Depends(),
-) -> OtherUsesSchema:
-    return await service.get_other_use(other_uses_id)
-
 @router.post(
     "/save",
     response_model=Union[OtherUsesSchema, DeleteOtherUsesResponseSchema],

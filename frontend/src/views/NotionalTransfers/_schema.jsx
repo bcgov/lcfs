@@ -10,8 +10,7 @@ export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
     pinned: 'left',
     maxWidth: 75,
     editable: false,
-    suppressKeyboardEvent: (params) =>
-      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
@@ -21,8 +20,7 @@ export const notionalTransferColDefs = (t, optionsData, api, onValidated) => [
     pinned: 'left',
     maxWidth: 110,
     editable: false,
-    suppressKeyboardEvent: (params) =>
-      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {

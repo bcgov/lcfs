@@ -1,6 +1,7 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { Typography } from '@mui/material'
 import { OtherUsesActions } from './components/OtherUsesActions'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 
 export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
   {
@@ -9,7 +10,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     pinned: 'left',
     maxWidth: 75,
     editable: false,
-    suppressKeyboardEvent: (params) => params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
@@ -19,7 +20,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     pinned: 'left',
     maxWidth: 110,
     editable: false,
-    suppressKeyboardEvent: (params) => params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
@@ -30,6 +31,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     field: 'fuelType',
     headerName: t('otherUses:otherUsesColLabels.fuelType'),
     cellEditor: 'autocompleteEditor',
+    minWidth: '280',
     cellEditorParams: {
       options: optionsData.fuelTypes
         .map((obj) => obj.fuelType),
@@ -73,6 +75,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     field: 'units',
     headerName: t('otherUses:otherUsesColLabels.units'),
     cellEditor: 'autocompleteEditor',
+    minWidth: '155',
     cellEditorParams: {
       options: optionsData.unitsOfMeasure
         .map((obj) => obj.name),
@@ -100,12 +103,12 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
   },
   {
-    field: 'otherExpectedUse',
+    field: 'rationale',
     headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined,
-    hide: (params) => params.data.expectedUse !== 'Other'
+    hide: (params) => params.data.expectedUse === 'Other'
   }
 ]
 

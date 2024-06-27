@@ -70,13 +70,6 @@ export const OtherUsesSummary = ({ compliancePeriod }) => {
 
   const handleGridKey = () => setGridKey(`other-uses-grid-${uuid()}`)
 
-  const handleRowClicked = (params) => {
-    if (!isAuthorized) return
-    navigate(
-      ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(':otherUsesID', params.data.otherUsesId)
-    )
-  }
-
   const handleDownloadOtherUses = async () => {
     setIsDownloadingOtherUses(true)
     setAlertMessage('')
@@ -111,7 +104,8 @@ export const OtherUsesSummary = ({ compliancePeriod }) => {
         <Typography variant="h5" color="primary" data-test="title">
           {t('otherUses:summaryTitle')}
         </Typography>
-        <FontAwesomeIcon 
+        <FontAwesomeIcon
+          data-test='new-other-use-btn'
           icon={faEdit} 
           size={'lg'}
           onClick={() => navigate(
@@ -140,7 +134,6 @@ export const OtherUsesSummary = ({ compliancePeriod }) => {
           getRowId={getRowId}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
-          handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           highlightedRowId={highlightedId}
         />

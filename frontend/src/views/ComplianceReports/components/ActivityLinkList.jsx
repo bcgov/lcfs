@@ -39,7 +39,7 @@ export const ActivityLinksList = () => {
       {
         name: t('report:activityLists.fuelsOtherUse'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_FUELS_OTHER_USE.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
         }
       },
       {

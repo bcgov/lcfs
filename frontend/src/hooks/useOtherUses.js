@@ -3,6 +3,7 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useOtherUsesOptions = (params, options) => {
+  console.log("HERHEHREHREHR")
   const client = useApiService()
   const path = apiRoutes.otherUsesOptions
   return useQuery({

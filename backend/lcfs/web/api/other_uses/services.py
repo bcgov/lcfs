@@ -103,15 +103,20 @@ class OtherUsesServices:
     @service_handler
     async def update_other_use(self, other_use_data: OtherUsesCreateSchema) -> OtherUsesSchema:
         """Update an existing other use"""
-
-        existing_use = await self.get_other_use(other_use_data.other_uses_id)
+        existing_use = await self.repo.get_other_use(other_use_data.other_uses_id)
         if not existing_use:
             raise ValueError("Other use not found")
-        
-        existing_use.fuel_type = other_use_data.fuel_type
-        existing_use.fuel_category_id = await self.fuel_repo.get_fuel_category_by_name(other_use_data.fuel_category)
+
+        if existing_use.fuel_type.fuel_type != other_use_data.fuel_type:
+            existing_use.fuel_type = await self.fuel_repo.get_fuel_type_by_name(other_use_data.fuel_type)
+
+        if existing_use.fuel_category.category != other_use_data.fuel_category:
+            existing_use.fuel_category = await self.fuel_repo.get_fuel_category_by_name(other_use_data.fuel_category)
+
+        if existing_use.expected_use.name != other_use_data.expected_use:
+            existing_use.expected_use = await self.fuel_repo.get_expected_use_type_by_name(other_use_data.expected_use)
+
         existing_use.quantity_supplied = other_use_data.quantity_supplied
-        existing_use.expected_use = other_use_data.expected_use
         existing_use.rationale = other_use_data.rationale
 
         updated_use = await self.repo.update_other_use(existing_use)
@@ -120,9 +125,10 @@ class OtherUsesServices:
             other_uses_id=updated_use.other_uses_id,
             compliance_report_id=updated_use.compliance_report_id,
             quantity_supplied=updated_use.quantity_supplied,
-            fuel_type=updated_use.fuel_type,
+            fuel_type=updated_use.fuel_type.fuel_type,
             fuel_category=updated_use.fuel_category.category,
-            expected_use=updated_use.expected_use,
+            expected_use=updated_use.expected_use.name,
+            units=updated_use.units,
             rationale=updated_use.rationale
         )
 
