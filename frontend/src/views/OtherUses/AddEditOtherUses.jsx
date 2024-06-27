@@ -100,6 +100,7 @@ export const AddEditOtherUses = () => {
   )
 
   if (optionsLoading || usesLoading) {
+    console.log("Loading")
     return <Loading />
   }
 
