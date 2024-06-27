@@ -1,8 +1,7 @@
 from fastapi import Depends, HTTPException, Request
-from lcfs.web.api.compliance_report.schema import OtherUsesBaseSchema, OtherUsesSchema
+from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.db.models.fuel.FuelType import FuelType
 
 
 class ComplianceReportValidation:
@@ -18,7 +17,7 @@ class ComplianceReportValidation:
         self.service = service
         self.repo = repo
 
-    async def validate_fuel_for_other_uses_create(self, request, fuel_for_other_uses: OtherUsesBaseSchema):
+    async def validate_fuel_for_other_uses_create(self, request, fuel_for_other_uses: OtherUsesSchema):
         fuel_type = await self.repo.get_fuel_type(fuel_for_other_uses.fuel_type_id)
 
         if not fuel_type:

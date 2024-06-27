@@ -3,10 +3,7 @@ import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
 import { AdminMenu } from './views/Admin/AdminMenu'
 import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
-import {
-  ComplianceReports,
-  ViewComplianceReport
-} from './views/ComplianceReports'
+import { ComplianceReports } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
 import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
@@ -26,6 +23,7 @@ import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
 import { AddEditViewComplianceReport } from './views/ComplianceReports/components/AddEditViewComplianceReport'
 import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
+import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 
 const router = createBrowserRouter([
@@ -320,6 +318,14 @@ const router = createBrowserRouter([
         element: <AddEditNotionalTransfers />,
         handle: {
           title: 'New Notional Transfer',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_OTHER_USE_FUELS,
+        element: <AddEditOtherUses />,
+        handle: {
+          title: 'New Fuel for Other Use',
           mode: 'add'
         }
       },

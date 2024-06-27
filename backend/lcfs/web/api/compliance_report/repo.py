@@ -303,3 +303,67 @@ class ComplianceReportRepository:
         )
         return ComplianceReportBaseSchema.model_validate(result)
 
+    @repo_handler
+    async def get_intended_use_types(self) -> List[EndUseType]:
+        """
+        Retrieve a list of intended use types from the database
+        """
+        return (
+            (
+                await self.db.execute(
+                    select(EndUseType).where(EndUseType.intended_use == True)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
+        """
+        Retrieve intended use type by name from the database
+        """
+        result = await self.db.scalar(
+            select(EndUseType).where(EndUseType.name == intended_use)
+        )
+        return result
+
+    @repo_handler
+    async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
+        """
+        Retrieve a list of levels of equipment from the database
+        """
+        return (await self.db.execute(select(LevelOfEquipment))).scalars().all()
+
+    @repo_handler
+    async def get_levels_of_equipment_by_name(self, name: str) -> LevelOfEquipment:
+        """
+        Get the levels of equipment by name
+        """
+        return (await self.db.execute(select(LevelOfEquipment).where(LevelOfEquipment.name == name))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
+        """
+        Retrieve a list of levels of equipment from the database
+        """
+        return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
+        """
+        Get the levels of equipment by name
+        """
+        return (await self.db.execute(select(FuelMeasurementType).where(FuelMeasurementType.type == type))).scalars().all()
+
+    @repo_handler
+    async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
+        return await self.db.scalar(select(FuelType).where(FuelType.fuel_type_id == fuel_type_id))
+
+    @repo_handler
+    async def get_fuel_category(self, fuel_category_id: int) -> FuelCategory:
+        return await self.db.scalar(select(FuelCategory).where(FuelCategory.fuel_category_id == fuel_category_id))
+
+    @repo_handler
+    async def get_expected_use(self, expected_use_type_id: int) -> ExpectedUseType:
+        return await self.db.scalar(select(ExpectedUseType).where(ExpectedUseType.expected_use_type_id == expected_use_type_id))

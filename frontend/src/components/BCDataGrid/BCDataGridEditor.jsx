@@ -233,7 +233,7 @@ BCDataGridEditor.propTypes = {
   columnDefs: PropTypes.array.isRequired,
   defaultColDef: PropTypes.object.isRequired,
   highlightedRowId: PropTypes.string,
-  saveRow: PropTypes.object.isRequired,
+  saveRow: PropTypes.func.isRequired,
   onValidated: PropTypes.func,
   className: PropTypes.oneOf([
     'ag-theme-alpine',
