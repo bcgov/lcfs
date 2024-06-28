@@ -143,7 +143,7 @@ const BCDataGridEditor = ({
 
   const onRowEditingStoppedHandler = useCallback((params) => {
     // Check if any data field has changed
-    if (params.data.modified) {
+    if (params.data.modified && !params.data.deleted) {
       onValidated('pending', 'Updating row...')
       saveRow(params.data, {
         onSuccess: (resp) => {
@@ -159,7 +159,7 @@ const BCDataGridEditor = ({
           params.api.refreshCells()
           if (onValidated) {
             if (error.code === 'ERR_BAD_REQUEST') {
-              onValidated('error', error)
+              onValidated('error', error, params)
               // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
             } else {
               onValidated('error', `Error updating row: ${error.message}`)

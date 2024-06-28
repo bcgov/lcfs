@@ -111,6 +111,8 @@ export const AddEditFinalSupplyEquipments = () => {
     if (status === 'error') {
       const field = t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
       errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
+      params.data.isValid = false
+      params.data.validationMsg = field + ' ' + message.response?.data?.detail[0]?.msg
     } else if (status === 'success') {
       if (response.data.finalSupplyEquipmentId) {
         params.data.finalSupplyEquipmentId = response.data.finalSupplyEquipmentId
@@ -154,7 +156,7 @@ export const AddEditFinalSupplyEquipments = () => {
         </div>
         <div className="header">
           <Typography variant="h5" color="primary">
-            {t('finalSupplyEquipment:fseTitle')}
+            {t('finalSupplyEquipment:addFSErowsTitle')}
           </Typography>
           <Typography
             variant="body4"

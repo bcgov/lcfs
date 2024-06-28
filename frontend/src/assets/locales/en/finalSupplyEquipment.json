@@ -1,5 +1,6 @@
 {
   "fseTitle": "Final supply equipment (FSE)",
+  "addFSErowsTitle": "Add new final supply equipment(s) (FSE)",
   "fseSubtitle": "Report dates of supply for your FSE. If your billing location is different from your equipment location provided below use the Notes field. Use the Notes field if you use any Other options.",
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
