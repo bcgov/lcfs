@@ -1,7 +1,7 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
-import { Warning, DoneAll } from '@mui/icons-material'
+import { Warning, DoneAll, Save } from '@mui/icons-material'
 
-export const ValidationRenderer = ({ data }) => {
+export const ValidationRenderer = ({ data, ...props }) => {
   return (
     <Stack direction="row" spacing={0.1} m={0}>
       {!data.isValid && (
@@ -21,6 +21,17 @@ export const ValidationRenderer = ({ data }) => {
             data-testid="validation-sign"
           >
             <DoneAll color="success" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.enableSave && (
+        <Tooltip title={'save'}>
+          <IconButton
+            aria-label="shows sign for saving"
+            data-testid="save-row"
+            onClick={()=> props.api.stopEditing()}
+          >
+            <Save color="primary" />
           </IconButton>
         </Tooltip>
       )}

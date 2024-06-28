@@ -16,7 +16,9 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
       serialNbr: undefined,
       latitude: undefined,
       longitude: undefined,
-      modified: undefined
+      modified: undefined,
+      isValid: false,
+      validationMsg: "Fill in the missing fields"
     }
     if (api) {
       // Add new row to grid
@@ -37,7 +39,7 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
           onError: (error) => {
             console.error('Error duplicated row:', error)
             if (onValidated) {
-              onValidated('error', error)
+              onValidated('error', error, api)
             }
           }
         })
@@ -50,7 +52,8 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
   const deleteRow = () => {
     const updatedRow = { ...data, deleted: true, modified: undefined }
     if (api) {
-      api.applyTransaction({ remove: [node.data] })
+      api.applyTransaction({ update: [updatedRow] })
+      api.applyTransaction({ remove: [updatedRow] })
       if(updatedRow.finalSupplyEquipmentId) {
         saveRow(updatedRow, {
           onSuccess: (response) => {
@@ -63,7 +66,7 @@ export const FinalSupplyEquipmentActions = ({ api, node, data, onValidated }) =>
             console.error('Error deleting row:', error)
             api.refreshCells()
             if (onValidated) {
-              onValidated('error', error)
+              onValidated('error', error, api)
             }
           }
         })

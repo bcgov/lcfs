@@ -13,6 +13,16 @@ export const finalSupplyEquipmentColDefs = (
   onValidated
 ) => [
   {
+    colId: 'validation',
+    cellRenderer: 'validationRenderer',
+    pinned: 'left',
+    maxWidth: 75,
+    editable: false,
+    suppressKeyboardEvent,
+    cellStyle: { backgroundColor: '#f2f2f2' },
+    filter: false
+  },
+  {
     colId: 'action',
     cellRenderer: FinalSupplyEquipmentActions,
     cellRendererParams: { api, onValidated },

@@ -54,6 +54,11 @@ export const DateRangeCellEditor = forwardRef(
           />}
         </InputMask>
         <PickerModal
+          initialDateRange={
+            (Array.isArray(value) && value[0])
+              ? ({ startDate: value[0], endDate: value[1] })
+              : ({ startDate: props.minDate, endDate: props.maxDate })
+          }
           minDate={props.minDate}
           maxDate={props.maxDate}
           hideDefaultRanges={true}
