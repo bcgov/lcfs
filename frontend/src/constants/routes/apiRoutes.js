@@ -33,10 +33,11 @@ export const apiRoutes = {
   getOtherUses: '/other-uses/list',
   getAllOtherUses: '/other-uses/list-all',
   otherUsesOptions: '/other-uses/table-options',
-  getComplianceReport: '/reports/:complianceReportId',
+  getComplianceReport: '/reports/:reportID',
+  getComplianceReportSummary: '/reports/:reportID/summary',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
   getFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse',
-  saveFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse/save'
+  saveFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse/save',
 }

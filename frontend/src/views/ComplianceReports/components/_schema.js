@@ -64,3 +64,26 @@ export const reportsColDefs = (t, bceidRole) => [
     valueFormatter: timezoneFormatter,
   }
 ]
+
+export const renewableFuelColumns = [
+  { id: 'line', label: 'Line' },
+  { id: 'description', label: 'Renewable fuel target summary' },
+  { id: 'gasoline', label: 'Gasoline', align: 'right' },
+  { id: 'diesel', label: 'Diesel', align: 'right' },
+  { id: 'jetFuel', label: 'Jet Fuel', align: 'right' },
+]
+
+export const lowCarbonColumns = [
+  { id: 'line', label: 'Line' },
+  { id: 'description', label: 'Low carbon fuel target summary' },
+  { id: 'value', label: 'Value', align: 'right' },
+]
+
+export const nonComplianceColumns = [
+  { id: 'line', label: 'Line' },
+  { id: 'description', label: 'Non-compliance Penalty Payable Summary' },
+  { id: 'gasoline', label: 'Gasoline', align: 'right' },
+  { id: 'diesel', label: 'Diesel', align: 'right' },
+  { id: 'jetFuel', label: 'Jet Fuel', align: 'right' },
+  { id: 'totalValue', label: 'Total Value', align: 'right' },
+]

@@ -37,3 +37,17 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
     ...options
   })
 }
+
+export const useGetComplianceReportSummary = (reportID, options) => {
+  const client = useApiService()
+  const path = apiRoutes.getComplianceReportSummary.replace(':reportID', reportID)
+  return useQuery({
+    queryKey: ['compliance-report-summary', reportID],
+    queryFn: async () => {
+      return (
+        await client.get(path)
+      ).data
+    },
+    ...options
+  })
+}

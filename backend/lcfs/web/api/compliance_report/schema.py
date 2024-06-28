@@ -121,3 +121,13 @@ class ComplianceReportCreateSchema(BaseSchema):
 class ComplianceReportListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     reports: List[ComplianceReportBaseSchema]
+
+
+class ComplianceReportSummaryRowSchema(BaseSchema):
+    line: int
+    description: str
+    gasoline: Optional[float] = 0
+    diesel: Optional[float] = 0
+    jet_fuel: Optional[float] = 0
+    value: Optional[float] = 0
+    total_value: Optional[float] = 0
