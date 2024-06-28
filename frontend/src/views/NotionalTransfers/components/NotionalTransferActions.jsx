@@ -32,7 +32,7 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
           onError: (error) => {
             console.error('Error duplicated row:', error)
             if (onValidated) {
-              onValidated('error', error)
+              onValidated('error', error, api)
             }
           }
         })
@@ -57,7 +57,7 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
           onError: (error) => {
             console.error('Error deleting row:', error)
             if (onValidated) {
-              onValidated(onValidated('error', error))
+              onValidated(onValidated('error', error, api))
             }
           }
         })

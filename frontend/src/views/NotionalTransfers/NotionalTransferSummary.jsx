@@ -1,16 +1,10 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { DownloadButton } from '@/components/DownloadButton'
-import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useApiService } from '@/services/useApiService'
-import { faCirclePlus, faEdit } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -108,35 +102,7 @@ export const NotionalTransferSummary = ({ compliancePeriod }) => {
           </BCAlert>
         )}
       </div>
-
-      <Stack
-        direction={{ md: 'column', lg: 'row' }}
-        spacing={{ xs: 2, sm: 2, md: 3 }}
-        useFlexGap
-        flexWrap="wrap"
-        mb={2}
-      >
-        <Typography variant="h5" color="primary" data-test="title">
-          {t('notionalTransfer:summaryTitle')}
-        </Typography>
-        <FontAwesomeIcon 
-          icon={faEdit} 
-          size={'lg'}
-          onClick={() => navigate(
-            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-              ':complianceReportId', 
-              complianceReportId
-            ).replace(':compliancePeriod', compliancePeriod))}
-        />
-        {/* <DownloadButton
-          onDownload={handleDownloadNotionalTransfers}
-          isDownloading={isDownloadingNotionalTransfers}
-          label={t('notionalTransfer:notionalTransferDownloadBtn')}
-          downloadLabel={`${t('notionalTransfer:notionalTransferDownloadingMsg')}...`}
-          dataTest="notional-transfer-download-btn"
-        /> */}
-      </Stack>
-      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+      <BCBox component="div" sx={{ height: '100%', width: '74rem' }}>
         <BCDataGridServer
           className={'ag-theme-material'}
           gridRef={gridRef}
@@ -151,6 +117,7 @@ export const NotionalTransferSummary = ({ compliancePeriod }) => {
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           highlightedRowId={highlightedId}
+          suppressPagination={true}
         />
       </BCBox>
     </Grid2>

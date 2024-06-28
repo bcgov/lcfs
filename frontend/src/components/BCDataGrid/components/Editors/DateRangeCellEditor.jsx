@@ -6,6 +6,7 @@ import { format } from 'date-fns'
 import ArrowCircleRightIcon from '@mui/icons-material/ArrowCircleRight'
 import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown'
 import InputMask from 'react-input-mask'
+import { isArray } from 'lodash'
 
 export const DateRangeCellEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
@@ -54,6 +55,11 @@ export const DateRangeCellEditor = forwardRef(
           />}
         </InputMask>
         <PickerModal
+          initialDateRange={
+            (isArray(value) && value[0])
+              ? ({ startDate: value[0], endDate: value[1] })
+              : ({ startDate: props.minDate, endDate: props.maxDate })
+          }
           minDate={props.minDate}
           maxDate={props.maxDate}
           hideDefaultRanges={true}

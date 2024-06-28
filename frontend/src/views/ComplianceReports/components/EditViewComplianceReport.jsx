@@ -19,9 +19,9 @@ import { constructAddress } from '@/utils/constructAddress'
 import { ActivityLinksList } from './ActivityLinkList'
 import { Introduction } from './Introduction'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import ReportDetailsAccordion from './ReportDetailsAccordion'
+import ReportDetailsAccordion from './ReportDetails'
 
-export const AddEditViewComplianceReport = ({ period }) => {
+export const EditViewComplianceReport = ({ period }) => {
   const { t } = useTranslation()
 
   const [modalData, setModalData] = useState(null)
@@ -168,12 +168,14 @@ export const AddEditViewComplianceReport = ({ period }) => {
                 </List>
               </BCBox>
             </Stack>
-            <ReportDetailsAccordion compliancePeriod={compliancePeriod} />
-            {/* controlled accordian */}
-            <Introduction
-              expanded={introExpanded}
-              handleChange={handleIntroExpansion}
-            />
+            <Stack direction="column" spacing={2} mt={2}>
+              <ReportDetailsAccordion compliancePeriod={compliancePeriod} />
+              {/* controlled accordian */}
+              <Introduction
+                expanded={introExpanded}
+                handleChange={handleIntroExpansion}
+              />
+            </Stack>
           </Stack>
         </>
       )}

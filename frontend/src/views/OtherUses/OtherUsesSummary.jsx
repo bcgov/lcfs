@@ -93,35 +93,6 @@ export const OtherUsesSummary = ({ compliancePeriod }) => {
           </BCAlert>
         )}
       </div>
-
-      <Stack
-        direction={{ md: 'column', lg: 'row' }}
-        spacing={{ xs: 2, sm: 2, md: 3 }}
-        useFlexGap
-        flexWrap="wrap"
-        mb={2}
-      >
-        <Typography variant="h5" color="primary" data-test="title">
-          {t('otherUses:summaryTitle')}
-        </Typography>
-        <FontAwesomeIcon
-          data-test='new-other-use-btn'
-          icon={faEdit} 
-          size={'lg'}
-          onClick={() => navigate(
-            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-              ':complianceReportId', 
-              complianceReportId
-            ).replace(':compliancePeriod', compliancePeriod))}
-        />
-        {/* <DownloadButton
-          onDownload={handleDownloadOtherUses}
-          isDownloading={isDownloadingOtherUses}
-          label={t('otherUses:otherUsesDownloadBtn')}
-          downloadLabel={`${t('otherUses:otherUsesDownloadingMsg')}...`}
-          dataTest="other-uses-download-btn"
-        /> */}
-      </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           className={'ag-theme-material'}

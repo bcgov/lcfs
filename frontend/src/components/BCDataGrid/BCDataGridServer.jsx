@@ -70,6 +70,7 @@ const BCDataGridServer = ({
   paginationPageSize,
   paginationPageSizeSelector,
   highlightedRowId,
+  suppressPagination,
   ...others
 }) => {
   // State declarations
@@ -284,6 +285,7 @@ const BCDataGridServer = ({
       {/* TablePagination components setup using Material UI,
        * so it looks similar to the one provided by ag-grid by default
        */}
+       {!suppressPagination &&
       <BCBox
         className="ag-grid-pagination-container"
         display="flex"
@@ -304,7 +306,7 @@ const BCDataGridServer = ({
           gridRef={gridRef}
           rowsPerPageOptions={paginationPageSizeSelector}
         />
-      </BCBox>
+      </BCBox>}
     </BCBox>
   )
 }
