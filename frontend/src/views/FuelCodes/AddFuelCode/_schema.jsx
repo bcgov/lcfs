@@ -1,9 +1,9 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { Typography } from '@mui/material'
-import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
 import { FuelCodeActions } from './components/FuelCodeActions'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 
 export const fuelCodeSchema = (t, optionsData) =>
   yup.object().shape({
@@ -89,11 +89,11 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
   {
     colId: 'validation',
     cellRenderer: 'validationRenderer',
+    cellRendererParams: { enableSave: true },
     pinned: 'left',
-    maxWidth: 75,
+    maxWidth: 100,
     editable: false,
-    suppressKeyboardEvent: (params) =>
-      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
@@ -103,8 +103,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     pinned: 'left',
     maxWidth: 110,
     editable: false,
-    suppressKeyboardEvent: (params) =>
-      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
