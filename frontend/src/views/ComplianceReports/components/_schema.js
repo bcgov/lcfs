@@ -66,24 +66,24 @@ export const reportsColDefs = (t, bceidRole) => [
 ]
 
 export const renewableFuelColumns = [
-  { id: 'line', label: 'Line' },
-  { id: 'description', label: 'Renewable fuel target summary' },
-  { id: 'gasoline', label: 'Gasoline', align: 'right' },
-  { id: 'diesel', label: 'Diesel', align: 'right' },
-  { id: 'jetFuel', label: 'Jet Fuel', align: 'right' },
+  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+  { id: 'description', label: 'Renewable fuel target summary', maxWidth: '300px' },
+  { id: 'gasoline', label: 'Gasoline', align: 'right', width: '150px' },
+  { id: 'diesel', label: 'Diesel', align: 'right', width: '150px' },
+  { id: 'jetFuel', label: 'Jet Fuel', align: 'right', width: '150px' },
 ]
 
 export const lowCarbonColumns = [
-  { id: 'line', label: 'Line' },
-  { id: 'description', label: 'Low carbon fuel target summary' },
-  { id: 'value', label: 'Value', align: 'right' },
+  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+  { id: 'description', label: 'Low carbon fuel target summary', maxWidth: '300px' },
+  { id: 'value', label: 'Value', align: 'center', width: '150px' },
 ]
 
 export const nonComplianceColumns = [
-  { id: 'line', label: 'Line' },
-  { id: 'description', label: 'Non-compliance Penalty Payable Summary' },
-  { id: 'gasoline', label: 'Gasoline', align: 'right' },
-  { id: 'diesel', label: 'Diesel', align: 'right' },
-  { id: 'jetFuel', label: 'Jet Fuel', align: 'right' },
-  { id: 'totalValue', label: 'Total Value', align: 'right' },
+  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+  { id: 'description', label: 'Non-compliance Penalty Payable Summary', maxWidth: '300px' },
+  { id: 'gasoline', label: 'Gasoline', align: 'right', width: '150px' },
+  { id: 'diesel', label: 'Diesel', align: 'right', width: '150px' },
+  { id: 'jetFuel', label: 'Jet Fuel', align: 'right', width: '150px' },
+  { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' },
 ]

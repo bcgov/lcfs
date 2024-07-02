@@ -139,17 +139,17 @@ class ComplianceReportServices:
         }
 
         summary_lines = {
-            1: {'gasoline': fossil_quantities.get('gasoline', 0), 'diesel': fossil_quantities.get('diesel', 0), 'jet_fuel': fossil_quantities.get('jet_fuel', 0)},
-            2: {'gasoline': renewable_quantities.get('gasoline', 0), 'diesel': renewable_quantities.get('diesel', 0), 'jet_fuel': renewable_quantities.get('jet_fuel', 0)},
-            3: {'gasoline': tracked_totals.get('gasoline', 0), 'diesel': tracked_totals.get('diesel', 0), 'jet_fuel': tracked_totals.get('jet_fuel', 0)},
-            4: {'gasoline': eligible_renewable_required, 'diesel': eligible_renewable_required, 'jet_fuel': eligible_renewable_required},
-            5: {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0},  # Notionally transferred value
-            6: {'gasoline': retained_renewables.get('gasoline', 0), 'diesel': retained_renewables.get('diesel', 0), 'jet_fuel': retained_renewables.get('jet_fuel', 0)},
-            7: {'gasoline': previous_retained.get('gasoline', 0), 'diesel': previous_retained.get('diesel', 0), 'jet_fuel': previous_retained.get('jet_fuel', 0)},
-            8: {'gasoline': deferred_renewables.get('gasoline', 0), 'diesel': deferred_renewables.get('diesel', 0), 'jet_fuel': deferred_renewables.get('jet_fuel', 0)},
-            9: {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0},  # Renewable obligation added from previous period
-            10: {'gasoline': net_renewable_supplied.get('gasoline', 0), 'diesel': net_renewable_supplied.get('diesel', 0), 'jet_fuel': net_renewable_supplied.get('jet_fuel', 0)},
-            11: {'gasoline': non_compliance_penalties.get('gasoline', 0), 'diesel': non_compliance_penalties.get('diesel', 0), 'jet_fuel': non_compliance_penalties.get('jet_fuel', 0)},
+            '1': {'gasoline': fossil_quantities.get('gasoline', 0), 'diesel': fossil_quantities.get('diesel', 0), 'jet_fuel': fossil_quantities.get('jet_fuel', 0)},
+            '2': {'gasoline': renewable_quantities.get('gasoline', 0), 'diesel': renewable_quantities.get('diesel', 0), 'jet_fuel': renewable_quantities.get('jet_fuel', 0)},
+            '3': {'gasoline': tracked_totals.get('gasoline', 0), 'diesel': tracked_totals.get('diesel', 0), 'jet_fuel': tracked_totals.get('jet_fuel', 0)},
+            '4': {'gasoline': eligible_renewable_required, 'diesel': eligible_renewable_required, 'jet_fuel': eligible_renewable_required},
+            '5': {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0},  # Notionally transferred value
+            '6': {'gasoline': retained_renewables.get('gasoline', 0), 'diesel': retained_renewables.get('diesel', 0), 'jet_fuel': retained_renewables.get('jet_fuel', 0)},
+            '7': {'gasoline': previous_retained.get('gasoline', 0), 'diesel': previous_retained.get('diesel', 0), 'jet_fuel': previous_retained.get('jet_fuel', 0)},
+            '8': {'gasoline': deferred_renewables.get('gasoline', 0), 'diesel': deferred_renewables.get('diesel', 0), 'jet_fuel': deferred_renewables.get('jet_fuel', 0)},
+            '9': {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0},  # Renewable obligation added from previous period
+            '10': {'gasoline': net_renewable_supplied.get('gasoline', 0), 'diesel': net_renewable_supplied.get('diesel', 0), 'jet_fuel': net_renewable_supplied.get('jet_fuel', 0)},
+            '11': {'gasoline': non_compliance_penalties.get('gasoline', 0), 'diesel': non_compliance_penalties.get('diesel', 0), 'jet_fuel': non_compliance_penalties.get('jet_fuel', 0)},
         }
 
         summary = [
@@ -167,17 +167,17 @@ class ComplianceReportServices:
 
     def calculate_low_carbon_fuel_target_summary(self) -> List[ComplianceReportSummaryRowSchema]:
         low_carbon_summary_lines = {
-            12: {'value': 7310},
-            13: {'value': 6650},
-            14: {'value': 660},
-            15: {'value': 0},
-            16: {'value': 0},
-            17: {'value': 0},
-            18: {'value': 0},
-            19: {'value': 0},
-            20: {'value': 0},
-            21: {'value': 0},
-            22: {'value': 0},
+            '12': {'value': 7310},
+            '13': {'value': 6650},
+            '14': {'value': 660},
+            '15': {'value': 0},
+            '16': {'value': 0},
+            '17': {'value': 0},
+            '18': {'value': 0},
+            '19': {'value': 0},
+            '20': {'value': 0},
+            '21': {'value': 0},
+            '22': {'value': 500},
         }
 
         low_carbon_fuel_target_summary = [
@@ -193,8 +193,9 @@ class ComplianceReportServices:
 
     def calculate_non_compliance_penalty_summary(self) -> List[ComplianceReportSummaryRowSchema]:
         non_compliance_summary_lines = {
-            11: {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0, 'total_value': 0},
-            21: {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0, 'total_value': 0},
+            '11': {'gasoline': 100, 'diesel': 0, 'jet_fuel': 0, 'total_value': 100},
+            '21': {'gasoline': 100, 'diesel': 0, 'jet_fuel': 0, 'total_value': 0},
+            '': {'gasoline': None, 'diesel': None, 'jet_fuel': None, 'total_value': 600}
         }
 
         non_compliance_penalty_summary = [
