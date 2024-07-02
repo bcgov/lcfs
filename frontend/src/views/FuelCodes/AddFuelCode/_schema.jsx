@@ -232,6 +232,29 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
+    field: 'carbonIntensity',
+    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellEditor: 'agNumberCellEditor',
+    cellEditorParams: {
+      precision: 2,
+      showStepperButtons: false
+    },
+    cellStyle: (params) => {
+      if (params.data.modified && !params.value) return { borderColor: 'red' }
+    },
+    type: 'numericColumn'
+  },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellEditor: 'agTextCellEditor',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellDataType: 'text'
+  },
+  {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
     cellEditor: 'autocompleteEditor',
@@ -301,29 +324,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     },
     minWidth: 300
   },
-  {
-    field: 'carbonIntensity',
-    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-    cellEditor: 'agNumberCellEditor',
-    cellEditorParams: {
-      precision: 2,
-      showStepperButtons: false
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && !params.value) return { borderColor: 'red' }
-    },
-    type: 'numericColumn'
-  },
-  {
-    field: 'edrms',
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-    cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
-    cellDataType: 'text'
-  },
+
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),

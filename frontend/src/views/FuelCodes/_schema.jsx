@@ -325,6 +325,31 @@ export const addEditSchema = {
       editable: false
     },
     {
+      field: 'carbonIntensity',
+      headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+      cellEditor: 'agNumberCellEditor',
+      cellEditorParams: {
+        precision: 2,
+        showStepperButtons: false
+      },
+      cellStyle: (params) => {
+        if (params.data.modified && !params.value) return { borderColor: 'red' }
+      },
+      type: 'numericColumn',
+      editable: isDraftOrNew
+    },
+    {
+      field: 'edrms',
+      headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+      cellEditor: 'agTextCellEditor',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      cellDataType: 'text',
+      editable: isDraftOrNew
+    },
+    {
       field: 'company',
       headerName: t('fuelCode:fuelCodeColLabels.company'),
       cellEditor: 'agTextCellEditor',
@@ -352,31 +377,7 @@ export const addEditSchema = {
       minWidth: 300,
       editable: isDraftOrNew
     },
-    {
-      field: 'carbonIntensity',
-      headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-      cellEditor: 'agNumberCellEditor',
-      cellEditorParams: {
-        precision: 2,
-        showStepperButtons: false
-      },
-      cellStyle: (params) => {
-        if (params.data.modified && !params.value) return { borderColor: 'red' }
-      },
-      type: 'numericColumn',
-      editable: isDraftOrNew
-    },
-    {
-      field: 'edrms',
-      headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-      cellEditor: 'agTextCellEditor',
-      cellStyle: (params) => {
-        if (params.data.modified && (!params.value || params.value === ''))
-          return { borderColor: 'red' }
-      },
-      cellDataType: 'text',
-      editable: isDraftOrNew
-    },
+
     {
       field: 'lastUpdated',
       headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
