@@ -37,7 +37,7 @@ export const OtherUsesSummary = ({ data }) => {
   }), [t])
 
   const columns = [
-    { headerName: "Fuel Type", field: "fuelType", floatingFilter: false },
+    { headerName: "Fuel Type", field: "fuelType", floatingFilter: false, width: '260px' },
     { headerName: "Fuel Category", field: "fuelCategory", floatingFilter: false },
     { headerName: "Quantity Supplied", field: "quantitySupplied", floatingFilter: false },
     { headerName: "Units", field: "units", floatingFilter: false },
