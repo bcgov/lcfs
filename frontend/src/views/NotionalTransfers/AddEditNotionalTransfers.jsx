@@ -84,7 +84,7 @@ export const AddEditNotionalTransfers = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const onValidated = (status, message, params) => {
+  const onValidated = (status, message, params, response) => {
     let errMsg = message
     if (status === 'error') {
       const field = t(`notionalTransfer:notionalTransferColLabels.${message.response?.data?.detail[0]?.loc[1]}`)

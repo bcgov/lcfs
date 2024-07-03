@@ -23,17 +23,17 @@ export const OtherUsesActions = ({ api, node, data, onValidated }) => {
       // Only save to db if original row was validated
       if(data.otherUsesId) {
         saveRow(rowData, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             rowData.modified = false
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row duplicated successfully.')
+              onValidated('success', 'Row duplicated successfully.',api, response)
             }
           },
           onError: (error) => {
             console.error('Error duplicating row:', error)
             if (onValidated) {
-              onValidated('error', `Error duplicating row: ${error.message}`)
+              onValidated('error', error, api)
             }
           }
         })
@@ -49,15 +49,15 @@ export const OtherUsesActions = ({ api, node, data, onValidated }) => {
       api.applyTransaction({ remove: [node.data] })
       if(updatedRow.otherUsesId) {
         saveRow(updatedRow, {
-          onSuccess: () => {
+          onSuccess: resp => {
             if (onValidated) {
-              onValidated('success', 'Row deleted successfully.')
+              onValidated('success', 'Row deleted successfully.', api, resp)
             }
           },
           onError: (error) => {
             console.error('Error deleting row:', error)
             if (onValidated) {
-              onValidated('error', `Error deleting row: ${error.message}`)
+              onValidated('error', error, api)
             }
           }
         })

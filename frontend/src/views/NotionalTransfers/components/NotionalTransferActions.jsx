@@ -22,11 +22,11 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
       // Only save to db if original row was validated
       if(data.notionalTransferId) {
         saveRow(rowData, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             rowData.modified = false
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row duplicated successfully.')
+              onValidated('success', 'Row duplicated successfully.',api, response)
             }
           },
           onError: (error) => {
@@ -49,9 +49,9 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
       api.applyTransaction({ remove: [node.data] })
       if(updatedRow.notionalTransferId) {
         saveRow(updatedRow, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             if (onValidated) {
-              onValidated('success', 'Row deleted successfully.')
+              onValidated('success', 'Row deleted successfully.', api, response)
             }
           },
           onError: (error) => {
