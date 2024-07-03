@@ -47,7 +47,7 @@ const ReportDetails = () => {
         component: (data) => <></>
       },
       {
-        name: t('report:activityLists.finalSupplyEquipment'),
+        name: t('finalSupplyEquipment:fseTitle'),
         action: () =>
           navigate(
             ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
