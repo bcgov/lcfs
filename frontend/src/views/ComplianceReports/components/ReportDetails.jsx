@@ -44,7 +44,7 @@ const ReportDetails = () => {
           isError: false,
           isFetched: true
         }),
-        component: (data) => <></>
+        component: (data) => <>Coming soon...</>
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
@@ -76,7 +76,7 @@ const ReportDetails = () => {
           isError: false,
           isFetched: true
         }),
-        component: (data) => <></>
+        component: (data) => <>Coming soon...</>
       },
       {
         name: t('report:activityLists.notionalTransfers'),
@@ -117,7 +117,7 @@ const ReportDetails = () => {
           isError: false,
           isFetched: true
         }),
-        component: (data) => <></>
+        component: (data) => <>Coming soon...</>
       }
     ],
     [t, navigate, compliancePeriod, complianceReportId]
