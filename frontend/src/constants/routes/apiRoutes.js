@@ -1,4 +1,5 @@
 export const apiRoutes = {
+  dummy: "/dummy",
   currentUser: '/users/current',
   exportUsers: '/users/export?format=xls',
   listUsers: '/users/list',
@@ -37,6 +38,6 @@ export const apiRoutes = {
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
-  getFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse',
-  saveFinalSupplyEquipments: '/organization/:orgID/reports/:reportID/fse/save'
+  getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
+  saveFinalSupplyEquipments: '/final-supply-equipments/save'
 }

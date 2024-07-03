@@ -18,7 +18,7 @@ export const Introduction = ({ expanded, handleChange }) => {
           id="compliance-report-intro"
           data-test="compliance-report-intro"
         >
-          <Typography color="primary" variant="h6">
+          <Typography color="primary" variant="h6" component="div" sx={{fontSize: '20px'}}>
             {t('report:introduction')}
           </Typography>
         </AccordionSummary>

@@ -1,10 +1,10 @@
 from typing import Optional, List
 from datetime import date
 
-from lcfs.web.api.base import BaseSchema
+from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
-from pydantic import Field, constr
+from pydantic import Field
 
 class FuelMeasurementTypeSchema(BaseSchema):
     fuel_measurement_type_id: int
@@ -50,3 +50,4 @@ class DeleteFinalSupplyEquipmentResponseSchema(BaseSchema):
 
 class FinalSupplyEquipmentsSchema(BaseSchema):
     final_supply_equipments: Optional[List[FinalSupplyEquipmentSchema]] = []
+    pagination: Optional[PaginationResponseSchema] = {}

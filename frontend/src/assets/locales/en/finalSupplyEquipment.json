@@ -30,6 +30,7 @@
     "supplyFrom": "Supply date range",
     "supplyFromDate": "Dates of supply from",
     "supplyToDate": "Dates of supply to",
+    "registrationNbr": "Registration #",
     "serialNbr": "Serial #",
     "manufacturer": "Manufacturer",
     "levelOfEquipment": "Level of equipment",
