@@ -14,11 +14,11 @@ import colors from '@/themes/base/colors.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
 import { constructAddress } from '@/utils/constructAddress'
 import { ActivityLinksList } from './ActivityLinkList'
 import { Introduction } from './Introduction'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import ReportDetails from './ReportDetails'
 
 export const EditViewComplianceReport = () => {
