@@ -35,6 +35,8 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
       defaultMinWidth: 50,
       defaultMaxWidth: 600
     },
+    enableCellTextSelection: true, // enables text selection on the grid
+    ensureDomOrder: true,
   }))
 
   const defaultColDef = useMemo(
