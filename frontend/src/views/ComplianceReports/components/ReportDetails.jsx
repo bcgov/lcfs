@@ -156,7 +156,7 @@ const ReportDetails = () => {
                 variant="h6"
                 color="primary"
                 component="div"
-                sx={{ fontSize: '20px' }}
+                sx={{ fontSize: '18px' }}
               >
                 {activity.name}&nbsp;&nbsp;
                 <Role
