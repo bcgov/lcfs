@@ -147,7 +147,7 @@ const ReportDetails = () => {
             onChange={handleChange(`panel${index}`)}
           >
             <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
+              expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
               aria-controls={`panel${index}-content`}
               id={`panel${index}-header`}
               data-test={`panel${index}-summary`}
@@ -167,7 +167,7 @@ const ReportDetails = () => {
                   ]}
                 >
                   <FontAwesomeIcon
-                  component="div"
+                    component="div"
                     icon={faEdit}
                     size={'lg'}
                     onClick={activity.action}

@@ -40,6 +40,7 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
+      filter: false,
     }),
     []
   )
