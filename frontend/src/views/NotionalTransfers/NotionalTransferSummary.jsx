@@ -1,40 +1,22 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { roles } from '@/constants/roles'
-import { ROUTES, apiRoutes } from '@/constants/routes'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
-export const NotionalTransferSummary = ({ compliancePeriod }) => {
-  const [isDownloadingNotionalTransfers, setIsDownloadingNotionalTransfers] = useState(false)
+export const NotionalTransferSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`notional-transfers-grid`)
-  const [searchParams] = useSearchParams()
-  const highlightedId = searchParams.get('hid')
   const { complianceReportId } = useParams()
 
-  const { data: currentUser } = useCurrentUser()
-
-  const userRoles = currentUser?.roles?.map((role) => role.name) || []
-
-  const isAuthorized = [
-    roles.analyst,
-    roles.compliance_manager,
-    roles.director,
-    roles.supplier
-  ].some((role) => userRoles.includes(role))
 
   const gridRef = useRef()
-  const apiService = useApiService()
   const { t } = useTranslation(['common', 'notionalTransfers'])
-  const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
@@ -69,30 +51,6 @@ export const NotionalTransferSummary = ({ compliancePeriod }) => {
     setGridKey(`notional-transfers-grid-${uuid()}`)
   }
 
-  const handleRowClicked = (params) => {
-    if (!isAuthorized) return
-    navigate(
-      ROUTES.ADMIN_NOTIONAL_TRANSFERS_VIEW.replace(
-        ':notionalTransferID',
-        params.data.notionalTransferId
-      )
-    )
-  }
-
-  const handleDownloadNotionalTransfers = async () => {
-    setIsDownloadingNotionalTransfers(true)
-    setAlertMessage('')
-    try {
-      await apiService.download(ROUTES.ADMIN_NOTIONAL_TRANSFERS + '/export')
-      setIsDownloadingNotionalTransfers(false)
-    } catch (error) {
-      console.error('Error downloading notional transfer information:', error)
-      setIsDownloadingNotionalTransfers(false)
-      setAlertMessage(t('notionalTransfer:notionalTransferDownloadFailMsg'))
-      setAlertSeverity('error')
-    }
-  }
-
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
       <div>
@@ -114,10 +72,8 @@ export const NotionalTransferSummary = ({ compliancePeriod }) => {
           getRowId={getRowId}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
-          handleRowClicked={handleRowClicked}
           enableCopyButton={false}
-          highlightedRowId={highlightedId}
-          suppressPagination={true}
+          suppressPagination={data?.length <= 10}
         />
       </BCBox>
     </Grid2>

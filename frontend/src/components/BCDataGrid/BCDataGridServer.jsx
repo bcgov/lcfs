@@ -42,6 +42,7 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * - exportName: The name to be used for the exported file and sheet.
  * - handleGridKey: Function to handle changes in the grid key.
  * - handleRowClicked: Function to handle row click events.
+ * - suppressPagination: Flag to suppress pagination in the grid.
  * - others: Other props that can be spread into the AG Grid component.
  *
  * TODO:
@@ -285,28 +286,29 @@ const BCDataGridServer = ({
       {/* TablePagination components setup using Material UI,
        * so it looks similar to the one provided by ag-grid by default
        */}
-       {!suppressPagination &&
-      <BCBox
-        className="ag-grid-pagination-container"
-        display="flex"
-        justifyContent="flex-start"
-        variant="outlined"
-        sx={{ maxHeight: '3.5rem', position: 'relative' }}
-      >
-        <BCPagination
-          page={page}
-          size={size}
-          total={total}
-          handleChangePage={handleChangePage}
-          handleChangeRowsPerPage={handleChangeRowsPerPage}
-          enableResetButton={enableResetButton}
-          enableCopyButton={enableCopyButton}
-          enableExportButton={enableExportButton}
-          exportName={exportName}
-          gridRef={gridRef}
-          rowsPerPageOptions={paginationPageSizeSelector}
-        />
-      </BCBox>}
+      {!suppressPagination && (
+        <BCBox
+          className="ag-grid-pagination-container"
+          display="flex"
+          justifyContent="flex-start"
+          variant="outlined"
+          sx={{ maxHeight: '3.5rem', position: 'relative' }}
+        >
+          <BCPagination
+            page={page}
+            size={size}
+            total={total}
+            handleChangePage={handleChangePage}
+            handleChangeRowsPerPage={handleChangeRowsPerPage}
+            enableResetButton={enableResetButton}
+            enableCopyButton={enableCopyButton}
+            enableExportButton={enableExportButton}
+            exportName={exportName}
+            gridRef={gridRef}
+            rowsPerPageOptions={paginationPageSizeSelector}
+          />
+        </BCBox>
+      )}
     </BCBox>
   )
 }
@@ -354,6 +356,7 @@ BCDataGridServer.propTypes = {
   enableExportButton: PropTypes.bool,
   exportName: PropTypes.string,
   gridOptions: PropTypes.object,
+  suppressPagination: PropTypes.bool,
   className: PropTypes.oneOf([
     'ag-theme-alpine',
     'ag-theme-alpine-dark',

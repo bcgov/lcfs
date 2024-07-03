@@ -1,6 +1,6 @@
 // react and npm library components
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 // mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
@@ -19,9 +19,9 @@ import { constructAddress } from '@/utils/constructAddress'
 import { ActivityLinksList } from './ActivityLinkList'
 import { Introduction } from './Introduction'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import ReportDetailsAccordion from './ReportDetails'
+import ReportDetails from './ReportDetails'
 
-export const EditViewComplianceReport = ({ period }) => {
+export const EditViewComplianceReport = () => {
   const { t } = useTranslation()
 
   const [modalData, setModalData] = useState(null)
@@ -168,14 +168,12 @@ export const EditViewComplianceReport = ({ period }) => {
                 </List>
               </BCBox>
             </Stack>
-            <Stack direction="column" spacing={2} mt={2}>
-              <ReportDetailsAccordion compliancePeriod={compliancePeriod} />
-              {/* controlled accordian */}
-              <Introduction
-                expanded={introExpanded}
-                handleChange={handleIntroExpansion}
-              />
-            </Stack>
+            <ReportDetails />
+            {/* controlled accordian */}
+            <Introduction
+              expanded={introExpanded}
+              handleChange={handleIntroExpansion}
+            />
           </Stack>
         </>
       )}
