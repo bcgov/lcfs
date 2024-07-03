@@ -152,12 +152,7 @@ const ReportDetails = () => {
               id={`panel${index}-header`}
               data-test={`panel${index}-summary`}
             >
-              <Typography
-                variant="h6"
-                color="primary"
-                component="div"
-                sx={{ fontSize: '18px' }}
-              >
+              <Typography variant="h6" color="primary" component="div">
                 {activity.name}&nbsp;&nbsp;
                 <Role
                   roles={[
