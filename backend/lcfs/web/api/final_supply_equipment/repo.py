@@ -4,7 +4,7 @@ from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from sqlalchemy import and_, delete, select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,6 @@ from fastapi import Depends
 
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
-from sqlalchemy import func
 
 logger = getLogger("compliance_reports_repo")
 
@@ -81,38 +80,7 @@ class FinalSupplyEquipmentRepository:
             .where(FinalSupplyEquipment.compliance_report_id == report_id)
         )
         return result.unique().scalars().all()
-
-    @repo_handler
-    async def get_fse_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
-    ) -> List[FinalSupplyEquipment]:
-        """
-        Retrieve a list of final supply equipment from the database with pagination
-        """
-        conditions = [FinalSupplyEquipment.compliance_report_id == compliance_report_id]
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
-        limit = pagination.size
-        query = (
-            select(FinalSupplyEquipment)
-            .options(
-                joinedload(FinalSupplyEquipment.fuel_measurement_type),
-                joinedload(FinalSupplyEquipment.intended_use_types),
-                joinedload(FinalSupplyEquipment.level_of_equipment),
-            )
-            .where(*conditions)
-        )
-        count_query = query.with_only_columns(
-            func.count(FinalSupplyEquipment.final_supply_equipment_id)
-        ).order_by(None)
-        total_count = (await self.db.execute(count_query)).scalar_one()
-        result = await self.db.execute(
-            query.offset(offset)
-            .limit(limit)
-            .order_by(FinalSupplyEquipment.create_date.desc())
-        )
-        final_supply_equipments = result.unique().scalars().all()
-        return final_supply_equipments, total_count
-
+    
     @repo_handler
     async def get_final_supply_equipment_by_id(self, final_supply_equipment_id: int) -> FinalSupplyEquipment:
         """
@@ -128,7 +96,7 @@ class FinalSupplyEquipmentRepository:
             .where(FinalSupplyEquipment.final_supply_equipment_id == final_supply_equipment_id)
         )
         return result.unique().scalar_one_or_none()
-
+    
     @repo_handler
     async def update_final_supply_equipment(self, final_supply_equipment: FinalSupplyEquipment) -> FinalSupplyEquipment:
         """
@@ -148,7 +116,7 @@ class FinalSupplyEquipmentRepository:
         await self.db.flush()
         await self.db.refresh(final_supply_equipment, ['fuel_measurement_type', 'level_of_equipment', 'intended_use_types'])
         return final_supply_equipment
-
+    
     @repo_handler
     async def delete_final_supply_equipment(self, final_supply_equipment_id: int):
         """Delete a final supply equipment from the database"""

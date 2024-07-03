@@ -1,9 +1,8 @@
 from logging import getLogger
-import math
+from typing import List
 from fastapi import Depends, Request
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
@@ -57,31 +56,14 @@ class FinalSupplyEquipmentServices:
 
 
     @service_handler
-    async def get_fse_list(self, compliance_report_id: int) -> FinalSupplyEquipmentsSchema:
+    async def get_fse_list(self, report_id: int) -> FinalSupplyEquipmentsSchema:
         """
         Get the list of FSEs for a given report.
         """
-        logger.info(f"Getting FSE list for report {compliance_report_id}")
-        fse_models = await self.repo.get_fse_list(compliance_report_id)
+        logger.info(f"Getting FSE list for report {report_id}")
+        fse_models = await self.repo.get_fse_list(report_id)
         fse_list = [FinalSupplyEquipmentSchema.model_validate(fse) for fse in fse_models]
         return FinalSupplyEquipmentsSchema(final_supply_equipments=fse_list)
-
-    @service_handler
-    async def get_final_supply_equipments_paginated(self, pagination: PaginationRequestSchema, compliance_report_id: int) -> FinalSupplyEquipmentsSchema:
-        """
-        Get the list of FSEs for a given report.
-        """
-        logger.info(f"Getting FSE list paginated for report {compliance_report_id}")
-        final_supply_equipments, total_count = await self.repo.get_fse_paginated(pagination, compliance_report_id)
-        return FinalSupplyEquipmentsSchema(
-            pagination=PaginationResponseSchema(
-                page=pagination.page,
-                size=pagination.size,
-                total=total_count,
-                total_pages=math.ceil(total_count / pagination.size),
-            ),
-            final_supply_equipments=[FinalSupplyEquipmentSchema.model_validate(fse) for fse in final_supply_equipments],
-        )
     
     @service_handler
     async def update_final_supply_equipment(self, fse_data: FinalSupplyEquipmentCreateSchema) -> FinalSupplyEquipmentSchema:

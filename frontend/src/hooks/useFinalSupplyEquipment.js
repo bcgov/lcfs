@@ -13,13 +13,22 @@ export const useFinalSupplyEquipmentOptions = (params, options) => {
   })
 }
 
-export const useGetFinalSupplyEquipments = (complianceReportId, pagination, options) => {
+export const useGetFinalSupplyEquipments = (
+  complianceReportId,
+  orgID,
+  options
+) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['final-supply-equipments', complianceReportId, pagination],
+    queryKey: ['final-supply-equipments', complianceReportId],
     queryFn: async () => {
-      const response = await client.post(apiRoutes.getAllFinalSupplyEquipments, { complianceReportId, ...pagination })
-      return response.data
+      return (
+        await client.get(
+          apiRoutes.getFinalSupplyEquipments
+            .replace(':orgID', orgID)
+            .replace(':reportID', complianceReportId)
+        )
+      ).data.finalSupplyEquipments
     },
     ...options
   })
