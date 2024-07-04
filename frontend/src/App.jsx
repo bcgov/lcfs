@@ -25,7 +25,7 @@ import { Login } from './components/Login'
 import { NotFound } from './components/NotFound'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
-import { AddEditViewComplianceReport } from './views/ComplianceReports/components/AddEditViewComplianceReport'
+import { EditViewComplianceReport } from './views/ComplianceReports/components/EditViewComplianceReport'
 import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
@@ -185,7 +185,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <AddEditViewComplianceReport />,
+        element: <EditViewComplianceReport />,
         handle: { title: '' }
       },
       {

@@ -120,8 +120,15 @@ const AddFuelCodeBase = () => {
     [gridApi, optionsData, t]
   )
 
-  const onValidated = (status, message) => {
-    setAlertMessage(message)
+  const onValidated = (status, message, params, response) => {
+    let errMsg = message
+    if (status === 'error') {
+      const field = t(`fuelCode:fuelCodeColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
+      errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
+      params.data.isValid = false
+      params.data.validationMsg = field + ' ' + message.response?.data?.detail[0]?.msg
+    }
+    setAlertMessage(errMsg)
     setAlertSeverity(status)
     alertRef.current?.triggerAlert()
   }

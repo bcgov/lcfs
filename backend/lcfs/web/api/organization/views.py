@@ -1,5 +1,4 @@
 from logging import getLogger
-from typing import List, Optional, Union
 
 from fastapi import (
     APIRouter,
@@ -11,8 +10,6 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import StreamingResponse
-from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
-from lcfs.web.api.final_supply_equipment.validation import FinalSupplyEquipmentValidation
 from starlette import status
 
 from lcfs.db import dependencies
@@ -33,12 +30,6 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
-    FinalSupplyEquipmentSchema,
-)
-from lcfs.web.api.final_supply_equipment.schema import (
-    DeleteFinalSupplyEquipmentResponseSchema,
-    FinalSupplyEquipmentCreateSchema,
-    FinalSupplyEquipmentsSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -302,54 +293,3 @@ async def get_compliance_report_by_id(
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     return await report_service.get_compliance_report_by_id(report_id)
-
-@router.post(
-    "/{organization_id}/reports/{report_id}/fse/save",
-    response_model=Union[FinalSupplyEquipmentSchema, DeleteFinalSupplyEquipmentResponseSchema],
-    status_code=status.HTTP_201_CREATED,
-)
-@roles_required("Supplier")
-@view_handler
-async def save_final_supply_equipment_row(request: Request,
-    organization_id: int,
-    response: Response = None,
-    report_id: int = None,
-    request_data: FinalSupplyEquipmentCreateSchema = Body(...),
-    fse_service: FinalSupplyEquipmentServices = Depends(),
-    org_validate: OrganizationValidation = Depends(),
-    fse_validate: FinalSupplyEquipmentValidation = Depends()):
-    """    Endpoint to save single final supply equipment row    """
-    fse_id: Optional[int] = request_data.final_supply_equipment_id
-
-    await org_validate.validate_organization_access(report_id)
-    await fse_validate.validate_fse_record(report_id, [request_data])
-    if request_data.deleted:
-        # Delete existing final supply equipment row
-        await fse_service.delete_final_supply_equipment(fse_id)
-        return DeleteFinalSupplyEquipmentResponseSchema(message="Final supply equipment row deleted successfully")
-    elif fse_id:
-        # Update existing final supply equipment row
-        return await fse_service.update_final_supply_equipment(request_data)
-    else:
-        # Create new final supply equipment row
-        return await fse_service.create_final_supply_equipment(request_data)
-
-
-@router.get(
-    "/{organization_id}/reports/{report_id}/fse",
-    response_model=FinalSupplyEquipmentsSchema,
-    status_code=status.HTTP_200_OK,
-)
-@roles_required("Supplier")
-@view_handler
-async def get_final_supply_equipments(
-    request: Request,
-    organization_id: int,
-    response: Response = None,
-    report_id: int = None,
-    fse_service: FinalSupplyEquipmentServices = Depends(),
-) -> FinalSupplyEquipmentsSchema:
-    """
-    Endpoint to get the list of all final supply equipments for the given compliance report.
-    """
-    return await fse_service.get_fse_list(report_id)
