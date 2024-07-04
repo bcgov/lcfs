@@ -1,7 +1,6 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import {
   CommonArrayRenderer,
-  FuelCodeStatusRenderer,
   FuelCodeStatusTextRenderer,
   TextRenderer
 } from '@/utils/cellRenderers'
@@ -29,6 +28,17 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer
   },
   {
+    field: 'carbonIntensity',
+    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellRenderer: TextRenderer,
+    type: 'numericColumn'
+  },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellRenderer: TextRenderer
+  },
+  {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
     cellRenderer: TextRenderer,
@@ -45,17 +55,6 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
     cellRenderer: TextRenderer,
     minWidth: 300
-  },
-  {
-    field: 'carbonIntensity',
-    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-    cellRenderer: TextRenderer,
-    type: 'numericColumn'
-  },
-  {
-    field: 'edrms',
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-    cellRenderer: TextRenderer
   },
   {
     field: 'applicationDate',
