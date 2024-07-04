@@ -15,7 +15,6 @@ import {
   useSaveFinalSupplyEquipment
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -30,17 +29,12 @@ export const AddEditFinalSupplyEquipments = () => {
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
-  const { data: currentUser } = useCurrentUser()
   const {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
   } = useFinalSupplyEquipmentOptions()
-  const { data: finalSupplyEquipments, isLoading: equipmentsLoading } =
-    useGetFinalSupplyEquipments(
-      complianceReportId,
-      currentUser?.organization?.organizationId
-    )
+  const { data, isLoading: equipmentsLoading } = useGetFinalSupplyEquipments(complianceReportId)
   const { mutate: saveRow } = useSaveFinalSupplyEquipment(params)
 
   const gridKey = 'add-final-supply-equipment'
@@ -84,8 +78,8 @@ export const AddEditFinalSupplyEquipments = () => {
       })
     }
 
-    if (finalSupplyEquipments && finalSupplyEquipments.length > 0) {
-      const rows = finalSupplyEquipments.map((row) => ({
+    if (data.finalSupplyEquipments && data.finalSupplyEquipments.length > 0) {
+      const rows = data.finalSupplyEquipments.map((row) => ({
         ...row,
         levelOfEquipment: row.levelOfEquipment.name,
         fuelMeasurementType: row.fuelMeasurementType.type,
