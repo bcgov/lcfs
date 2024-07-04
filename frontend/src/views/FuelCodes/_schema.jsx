@@ -174,15 +174,6 @@ export const addEditSchema = {
     props.api.stopEditing()
   },
 
-  onPrefixUpdate: (val, params) => {
-    if (val === 'BCLCF') {
-      params.node?.setData({
-        ...params.data,
-        fuelCode: '1000' + '.' + `${params.node?.rowIndex + 1}`
-      })
-    }
-  },
-
   fuelCodeSchema: (t, optionsData) =>
     yup.object().shape({
       prefix: yup
@@ -298,8 +289,6 @@ export const addEditSchema = {
         params.value ||
         (!params.value && <Typography variant="body4">Select</Typography>),
       cellEditorParams: {
-        onDynamicUpdate: addEditSchema.onPrefixUpdate, // to alter any other column based on the value selected.
-        // (ensure valueGetter is not added to the column which you want to update dynamically)
         options: optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
         multiple: false, // ability to select multiple values from dropdown
         disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
