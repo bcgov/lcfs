@@ -578,6 +578,30 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     minWidth: 290
   },
   {
+    field: 'facilityNameplateCapacityUnit',
+    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+    cellEditor: 'autocompleteEditor',
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      options: optionsData.facilityNameplateCapacityUnits,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
+    },
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    minWidth: 300
+  },
+  {
     field: 'feedstockTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     cellEditor: 'autocompleteEditor',
