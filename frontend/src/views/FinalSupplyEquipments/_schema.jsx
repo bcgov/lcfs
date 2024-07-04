@@ -13,6 +13,16 @@ export const finalSupplyEquipmentColDefs = (
   onValidated
 ) => [
   {
+    colId: 'validation',
+    cellRenderer: 'validationRenderer',
+    pinned: 'left',
+    maxWidth: 75,
+    editable: false,
+    suppressKeyboardEvent,
+    cellStyle: { backgroundColor: '#f2f2f2' },
+    filter: false
+  },
+  {
     colId: 'action',
     cellRenderer: FinalSupplyEquipmentActions,
     cellRendererParams: { api, onValidated },
@@ -71,58 +81,6 @@ export const finalSupplyEquipmentColDefs = (
       return true
     }
   },
-  // {
-  //   field: 'supplyFromDate',
-  //   headerName: t(
-  //     'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
-  //   ),
-  //   headerComponent: 'headerComponent',
-  //   width: 220,
-  //   cellRenderer: (params) => (
-  //     <Typography variant="body4">
-  //       {params.value ? params.value : 'YYYY-MM-DD'}
-  //     </Typography>
-  //   ),
-  //   suppressKeyboardEvent,
-  //   cellStyle: (params) => {
-  //     if (params.data.modified && (!params.value || params.value === ''))
-  //       return { borderColor: 'red' }
-  //   },
-  //   cellEditor: 'dateEditor',
-  //   cellEditorParams: {
-  //     minDate: moment(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
-  //     maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
-  //   }
-  // },
-  // {
-  //   field: 'supplyToDate',
-  //   headerComponent: 'headerComponent',
-  //   headerName: t(
-  //     'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
-  //   ),
-  //   width: 220,
-  //   cellRenderer: (params) => (
-  //     <Typography variant="body4">
-  //       {params.value ? params.value : 'YYYY-MM-DD'}
-  //     </Typography>
-  //   ),
-  //   suppressKeyboardEvent,
-  //   cellStyle: (params) => {
-  //     if (params.data.modified && (!params.value || params.value === ''))
-  //       return { borderColor: 'red' }
-  //   },
-  //   cellEditor: 'dateEditor',
-  //   cellEditorParams: {
-  //     minDate: moment(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
-  //     maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
-  //   },
-  //   valueSetter: (params) => {
-  //     if  (params.newValue > params.data.supplyFromDate) {
-  //       params.data[params.colDef.field] = params.newValue
-  //       return true
-  //     }
-  //   }
-  // },
   {
     field: 'serialNbr',
     headerComponent: 'headerComponent',
@@ -248,6 +206,10 @@ export const finalSupplyEquipmentColDefs = (
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
+    valueSetter: (params) => {
+      params.data[params.colDef.field] = params.newValue.toUpperCase()
+      return true
+    },
     cellEditor: 'textCellEditor',
     cellEditorParams: {
       mask: 'A1A 1A1',

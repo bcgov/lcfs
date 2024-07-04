@@ -22,18 +22,17 @@ export const FuelCodeActions = ({ api, node, data, onValidated }) => {
       // Only save to db if original row was validated
       if(data.fuelCodeId) {
         saveRow(rowData, {
-          onSuccess: () => {
+          onSuccess: (resp) => {
             rowData.modified = false
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row duplicated successfully.')
+              onValidated('success', 'Row duplicated successfully.', api, resp)
             }
           },
           onError: (error) => {
             console.error('Error duplicating row:', error)
             if (onValidated) {
-              console.log(error)
-              onValidated('error', `Error duplicating row: ${error.message}`)
+              onValidated('error', error, api)
             }
           }
         })

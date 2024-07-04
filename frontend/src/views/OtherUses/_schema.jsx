@@ -40,7 +40,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
       freeSolo: false,
       openOnFocus: true
     },
-    
+    suppressKeyboardEvent,
     cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
   },
@@ -56,6 +56,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
       freeSolo: false,
       openOnFocus: true
     },
+    suppressKeyboardEvent,
     cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
   },
@@ -84,6 +85,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
       freeSolo: false,
       openOnFocus: true
     },
+    suppressKeyboardEvent,
     cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
   },
@@ -99,6 +101,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
       freeSolo: false,
       openOnFocus: true
     },
+    suppressKeyboardEvent,
     cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
   },

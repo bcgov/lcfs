@@ -4,7 +4,7 @@ import { vi } from 'vitest'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
-import { AddEditViewComplianceReport } from '../AddEditViewComplianceReport'
+import { EditViewComplianceReport } from '../EditViewComplianceReport'
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import * as useOrganizationHook from '@/hooks/useOrganization'
@@ -68,7 +68,7 @@ vi.mock('../components/Introduction', () => ({
   Introduction: () => <div>Introduction</div>,
 }))
 
-describe('AddEditViewComplianceReport', () => {
+describe('EditViewComplianceReport', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
@@ -108,14 +108,14 @@ describe('AddEditViewComplianceReport', () => {
   })
 
   it('renders the component', async () => {
-    customRender(<AddEditViewComplianceReport />)
+    customRender(<EditViewComplianceReport />)
     await waitFor(() => {
       expect(screen.getByText('2023 report:complianceReport')).toBeInTheDocument()
     })
   })
 
   it('displays organization information', async () => {
-    customRender(<AddEditViewComplianceReport />)
+    customRender(<EditViewComplianceReport />)
     await waitFor(() => {
       expect(screen.getByText('Test Org')).toBeInTheDocument()
       expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
@@ -124,7 +124,7 @@ describe('AddEditViewComplianceReport', () => {
   })
 
   it('renders activity links and upload box', async () => {
-    customRender(<AddEditViewComplianceReport />)
+    customRender(<EditViewComplianceReport />)
     await waitFor(() => {
       expect(screen.getByText('Activity Links List')).toBeInTheDocument()
       expect(screen.getByText('report:uploadLabel')).toBeInTheDocument()
@@ -132,7 +132,7 @@ describe('AddEditViewComplianceReport', () => {
   })
 
   it('renders report components', async () => {
-    customRender(<AddEditViewComplianceReport />)
+    customRender(<EditViewComplianceReport />)
     await waitFor(() => {
       expect(screen.getByText('Report Details Accordion')).toBeInTheDocument()
       expect(screen.getByText('Compliance Report Summary')).toBeInTheDocument()
@@ -143,7 +143,7 @@ describe('AddEditViewComplianceReport', () => {
   it('displays an alert message when location state has a message', async () => {
     mockUseLocation.mockReturnValue({ state: { message: 'Test alert', severity: 'success' } })
 
-    customRender(<AddEditViewComplianceReport />)
+    customRender(<EditViewComplianceReport />)
     await waitFor(() => {
       expect(screen.getByText('Test alert')).toBeInTheDocument()
     })
@@ -155,7 +155,7 @@ describe('AddEditViewComplianceReport', () => {
       error: { message: 'Error fetching report' },
     })
 
-    customRender(<AddEditViewComplianceReport />)
+    customRender(<EditViewComplianceReport />)
     await waitFor(() => {
       expect(screen.getByText('Error fetching report')).toBeInTheDocument()
     })
