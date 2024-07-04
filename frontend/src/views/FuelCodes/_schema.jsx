@@ -114,6 +114,12 @@ export const fuelCodeColDefs = (t) => [
     type: 'numericColumn'
   },
   {
+    field: 'facilityNameplateCapacityUnit',
+    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+    cellRenderer: TextRenderer,
+    minWidth: 290
+  },
+  {
     field: 'feedstockTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     minWidth: 335,

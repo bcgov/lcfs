@@ -153,6 +153,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
