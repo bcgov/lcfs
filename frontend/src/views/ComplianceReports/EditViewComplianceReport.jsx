@@ -16,10 +16,11 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 // internal components
 import { constructAddress } from '@/utils/constructAddress'
-import { ActivityLinksList } from './ActivityLinkList'
-import { Introduction } from './Introduction'
+import { ActivityLinksList } from './components/ActivityLinkList'
+import { Introduction } from './components/Introduction'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import ReportDetails from './ReportDetails'
+import ComplianceReportSummary from './components/ComplianceReportSummary'
+import ReportDetails from './components/ReportDetails'
 
 export const EditViewComplianceReport = () => {
   const { t } = useTranslation()
@@ -169,7 +170,7 @@ export const EditViewComplianceReport = () => {
               </BCBox>
             </Stack>
             <ReportDetails />
-            {/* controlled accordian */}
+            <ComplianceReportSummary reportID={complianceReportId} />
             <Introduction
               expanded={introExpanded}
               handleChange={handleIntroExpansion}

@@ -64,3 +64,26 @@ export const reportsColDefs = (t, bceidRole) => [
     valueFormatter: timezoneFormatter,
   }
 ]
+
+export const renewableFuelColumns = [
+  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+  { id: 'description', label: 'Renewable fuel target summary', maxWidth: '300px' },
+  { id: 'gasoline', label: 'Gasoline', align: 'right', width: '150px' },
+  { id: 'diesel', label: 'Diesel', align: 'right', width: '150px' },
+  { id: 'jetFuel', label: 'Jet Fuel', align: 'right', width: '150px' },
+]
+
+export const lowCarbonColumns = [
+  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+  { id: 'description', label: 'Low carbon fuel target summary', maxWidth: '300px' },
+  { id: 'value', label: 'Value', align: 'center', width: '150px' },
+]
+
+export const nonComplianceColumns = [
+  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+  { id: 'description', label: 'Non-compliance penalty payable summary', maxWidth: '300px' },
+  { id: 'gasoline', label: 'Gasoline', align: 'right', width: '150px' },
+  { id: 'diesel', label: 'Diesel', align: 'right', width: '150px' },
+  { id: 'jetFuel', label: 'Jet Fuel', align: 'right', width: '150px' },
+  { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' },
+]
