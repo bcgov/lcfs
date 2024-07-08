@@ -45,7 +45,7 @@ const SummaryTable = ({ title, columns, data }) => {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    fontWeight: column.bold ? 'bold' : 'normal',
+                    fontWeight: (column.bold || (column.id === 'description' && !row.line)) ? 'bold' : 'normal',
                   }}
                 >
                   {row[column.id]}

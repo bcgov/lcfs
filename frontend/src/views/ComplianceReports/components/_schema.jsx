@@ -81,7 +81,7 @@ export const lowCarbonColumns = [
 
 export const nonComplianceColumns = [
   { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
-  { id: 'description', label: 'Non-compliance Penalty Payable Summary', maxWidth: '300px' },
+  { id: 'description', label: 'Non-compliance penalty payable summary', maxWidth: '300px' },
   { id: 'gasoline', label: 'Gasoline', align: 'right', width: '150px' },
   { id: 'diesel', label: 'Diesel', align: 'right', width: '150px' },
   { id: 'jetFuel', label: 'Jet Fuel', align: 'right', width: '150px' },

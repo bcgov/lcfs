@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { 
   Accordion, 
   AccordionSummary, 
@@ -16,6 +17,8 @@ import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 
 const ComplianceReportSummary = ({ reportID }) => {
+  const { t } = useTranslation(['report'])
+
   const { data, isLoading, isError, error } = useGetComplianceReportSummary(reportID)
 
   if (isLoading) {
@@ -23,7 +26,7 @@ const ComplianceReportSummary = ({ reportID }) => {
   }
 
   if (isError) {
-    return <Typography color="error">{error.message}</Typography>
+    return <Typography color="error">{t('report:errorRetrieving')}</Typography>
   }
 
   return (
@@ -35,7 +38,7 @@ const ComplianceReportSummary = ({ reportID }) => {
         >
           <BCBox>
             <BCTypography color="primary" variant="h5">
-              Summary & Declaration
+              {t('report:summaryAndDeclaration')}
             </BCTypography>
             <List sx={{ padding: 0, marginTop: 1, marginLeft: 3 }}>
               <ListItem sx={{ display: 'list-item', paddingLeft: 0, paddingRight: 0, listStyleType: 'disc' }}>
@@ -47,16 +50,28 @@ const ComplianceReportSummary = ({ reportID }) => {
                     '&:hover': { color: 'info.main' },
                   }}
                 >
-                  Add a renewable fuel retention or obligation deferral
+                  {t('report:addRenewableFuelRetention')}
                 </BCTypography>
               </ListItem>
             </List>
           </BCBox>
         </AccordionSummary>
         <AccordionDetails>
-          <SummaryTable title="Renewable Fuel Target Summary" columns={renewableFuelColumns} data={data.renewableFuelTargetSummary} />
-          <SummaryTable title="Low Carbon Fuel Target Summary" columns={lowCarbonColumns} data={data.lowCarbonFuelTargetSummary} />
-          <SummaryTable title="Non-compliance Penalty Payable Summary" columns={nonComplianceColumns} data={data.nonCompliancePenaltySummary} />
+          <SummaryTable 
+            title={t('report:renewableFuelTargetSummary')} 
+            columns={renewableFuelColumns} 
+            data={data.renewableFuelTargetSummary} 
+          />
+          <SummaryTable 
+            title={t('report:lowCarbonFuelTargetSummary')} 
+            columns={lowCarbonColumns} 
+            data={data.lowCarbonFuelTargetSummary} 
+          />
+          <SummaryTable 
+            title={t('report:nonCompliancePenaltySummary')} 
+            columns={nonComplianceColumns} 
+            data={data.nonCompliancePenaltySummary} 
+          />
           <SigningAuthorityDeclaration />
         </AccordionDetails>
       </Accordion>
