@@ -1,8 +1,9 @@
 // IDIR Cards
-export { AdminLinksCard } from './idir/AdminLinksCard'
+export { default as AdminLinksCard } from './idir/AdminLinksCard'
+export { default as DirectorReviewCard } from './idir/DirectorReviewCard'
 
 // BCeID Cards
-export { OrgDetailsCard } from './bceid/OrgDetailsCard'
-export { OrgBalanceCard } from './bceid/OrgBalanceCard'
-export { FeedbackCard } from './bceid/FeedbackCard'
-export { WebsiteCard } from './bceid/WebsiteCard'
+export { default as OrgDetailsCard } from './bceid/OrgDetailsCard'
+export { default as OrgBalanceCard } from './bceid/OrgBalanceCard'
+export { default as FeedbackCard } from './bceid/FeedbackCard'
+export { default as WebsiteCard } from './bceid/WebsiteCard'

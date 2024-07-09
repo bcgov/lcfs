@@ -1,29 +1,29 @@
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { Box, Tooltip, Fade } from '@mui/material';
-import InfoIcon from '@mui/icons-material/Info';
-import BCTypography from '@/components/BCTypography';
-import Loading from '@/components/Loading';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useCurrentOrgBalance } from '@/hooks/useOrganization';
+import React from 'react'
+import { useTranslation } from 'react-i18next'
+import { Box, Tooltip, Fade } from '@mui/material'
+import InfoIcon from '@mui/icons-material/Info'
+import BCTypography from '@/components/BCTypography'
+import Loading from '@/components/Loading'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 
-export const OrgBalanceCard = () => {
-  const { t } = useTranslation(['org']);
-  const { data: currentUser, isLoading: isUserLoading, isError: isUserError } = useCurrentUser();
-  const { data: orgBalance, isLoading: isBalanceLoading, isError: isBalanceError } = useCurrentOrgBalance();
+const OrgBalanceCard = () => {
+  const { t } = useTranslation(['org'])
+  const { data: currentUser, isLoading: isUserLoading, isError: isUserError } = useCurrentUser()
+  const { data: orgBalance, isLoading: isBalanceLoading, isError: isBalanceError } = useCurrentOrgBalance()
 
   const Content = () => {
     if (isUserLoading || isBalanceLoading) {
-      return <Loading message={t('org:loadingBalanceDetails')} />;
+      return <Loading message={t('org:loadingBalanceDetails')} />
     } else if (isUserError || isBalanceError || !orgBalance) {
       return (
         <BCTypography color="error" variant="body1" style={{ padding: '16px' }}>
           {t('org:unableToFetchBalanceDetails')}
         </BCTypography>
-      );
+      )
     } else {
       // Ensure reservedBalance is displayed as positive
-      const formattedReservedBalance = Math.abs(orgBalance.reservedBalance).toLocaleString();
+      const formattedReservedBalance = Math.abs(orgBalance.reservedBalance).toLocaleString()
 
       return (
         <>
@@ -52,13 +52,15 @@ export const OrgBalanceCard = () => {
             </Tooltip>
           </Box>
         </>
-      );
+      )
     }
-  };
+  }
 
   return (
     <Box p={2} paddingTop={4} paddingBottom={4} bgcolor="background.grey" display="flex" flexDirection="column" alignItems="center" justifyContent="center">
       <Content />
     </Box>
-  );
-};
+  )
+}
+
+export default OrgBalanceCard

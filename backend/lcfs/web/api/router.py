@@ -18,7 +18,8 @@ from lcfs.web.api import (
     compliance_report,
     notional_transfer,
     other_uses,
-    final_supply_equipment
+    final_supply_equipment,
+    dashboard
 )
 
 api_router = APIRouter()
@@ -65,3 +66,4 @@ api_router.include_router(
 api_router.include_router(
     final_supply_equipment.router, prefix="/final-supply-equipments", tags=["final_supply_equipments"]
 )
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
