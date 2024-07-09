@@ -14,7 +14,7 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from sqlalchemy import func
 
-logger = getLogger("compliance_reports_repo")
+logger = getLogger("final_supply_equipment_repo")
 
 
 class FinalSupplyEquipmentRepository:
