@@ -2,6 +2,7 @@ from fastapi.routing import APIRouter
 
 from lcfs.web.api import (
     echo,
+    fuel_supply,
     monitoring,
     redis,
     user,
@@ -33,6 +34,7 @@ api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(redis.router, prefix="/redis", tags=["redis"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )
@@ -66,4 +68,7 @@ api_router.include_router(
 api_router.include_router(
     final_supply_equipment.router, prefix="/final-supply-equipments", tags=["final_supply_equipments"]
 )
-api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(
+    fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]
+)
+
