@@ -3,9 +3,9 @@
     "title": "Director Review",
     "loadingMessage": "Loading director review items...",
     "thereAre": "There are:",
-    "transfersForReview": "{{count}} Transfer(s) for your review and statutory decision",
-    "complianceReportsForReview": "{{count}} Compliance report(s) awaiting your review",
-    "initiativeAgreementsForReview": "{{count}} Initiative agreement(s) awaiting your review",
-    "adminAdjustmentsForReview": "{{count}} Administrative adjustment(s) awaiting your review"
+    "transfersForReview": "Transfer(s) for your review and statutory decision",
+    "complianceReportsForReview": "Compliance report(s) awaiting your review",
+    "initiativeAgreementsForReview": "Initiative agreement(s) awaiting your review",
+    "adminAdjustmentsForReview": "Administrative adjustment(s) awaiting your review"
   }
 }

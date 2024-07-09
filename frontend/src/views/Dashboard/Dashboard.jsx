@@ -42,7 +42,7 @@ export const Dashboard = () => {
           order={{ xs: 1, sm: 1, md: 1, lg: 2 }}
           sx={{ bgcolor: { lg: 'background.grey' } }}
         >
-          <Box sx={{ mx: {lg: 2 }, mt: {lg: 5 } }} p={2} bgcolor="background.grey">
+          <Box sx={{ mx: {lg: 2 }, mt: {lg: 3 } }} p={2} bgcolor="background.grey">
             <Role roles={[roles.director]}>
               <DirectorReviewCard />
             </Role>
