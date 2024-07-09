@@ -3,18 +3,20 @@ from logging import getLogger
 from fastapi import APIRouter, Depends, status, Request, Body, Query
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.api.transaction.schema import TransactionListSchema, TransactionStatusSchema
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = getLogger("transaction")
 
 router = APIRouter()
 
+
 @router.post("/{organization_id}", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_transactions_paginated_by_org(
     request: Request,
     organization_id: int = None,
@@ -26,9 +28,10 @@ async def get_transactions_paginated_by_org(
     """
     return await service.get_transactions_paginated(pagination, organization_id)
 
+
 @router.get("/{organization_id}/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions_by_org(
     request: Request,
     organization_id: int = None,
@@ -40,9 +43,10 @@ async def export_transactions_by_org(
     """
     return await service.export_transactions(format, organization_id)
 
+
 @router.post("/", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_transactions_paginated(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -53,9 +57,10 @@ async def get_transactions_paginated(
     """
     return await service.get_transactions_paginated(pagination)
 
+
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions(
     request: Request,
     format: str = Query(default="xls", description="File export format"),
@@ -66,13 +71,14 @@ async def export_transactions(
     """
     return await service.export_transactions(format)
 
+
 @router.get(
     "/statuses/",
     response_model=List[TransactionStatusSchema],
     status_code=status.HTTP_200_OK,
 )
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
-@view_handler
+@view_handler(['*'])
 async def get_transaction_statuses(
     service: TransactionsService = Depends()
 ) -> List[TransactionStatusSchema]:

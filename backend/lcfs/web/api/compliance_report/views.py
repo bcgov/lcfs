@@ -26,7 +26,8 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("reports_view")
@@ -34,7 +35,7 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get("/compliance-periods", response_model=List[CompliancePeriodSchema], status_code=status.HTTP_200_OK)
-@view_handler
+@view_handler(['*'])
 async def get_compliance_periods(service: ComplianceReportServices = Depends()) -> CompliancePeriodSchema:
     """
     Get a list of compliance periods
@@ -47,8 +48,8 @@ async def get_compliance_periods(service: ComplianceReportServices = Depends()) 
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_compliance_reports(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -63,8 +64,8 @@ async def get_compliance_reports(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler
-@roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
+# @roles_required("Government")
 async def get_compliance_report_by_id(
     request: Request,
     report_id: int,

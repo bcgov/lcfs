@@ -35,8 +35,9 @@ from lcfs.web.api.user.schema import (
     UsersSchema,
 )
 
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.user.services import UserServices
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("user_view")
@@ -44,8 +45,8 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def export_users(
     request: Request,
     format: str = Query(default="xls", description="File export format"),
@@ -73,8 +74,8 @@ async def export_users(
 
 
 @router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_users(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -102,7 +103,7 @@ async def get_users(
 
 
 @router.get("/current", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@view_handler
+@view_handler(['*'])
 async def get_current_user(
     request: Request, response: Response = None
 ) -> UserBaseSchema:
@@ -115,8 +116,8 @@ async def get_current_user(
 
 
 @router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_user_by_id(
     request: Request,
     user_id: int,
@@ -130,8 +131,8 @@ async def get_user_by_id(
 
 
 @router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
-@roles_required("Administrator")
-@view_handler
+# @roles_required("Administrator")
+@view_handler([RoleEnum.ADMINISTRATOR])
 async def create_user(
     request: Request,
     response: Response = None,
@@ -146,8 +147,8 @@ async def create_user(
 
 
 @router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Administrator")
-@view_handler
+# @roles_required("Administrator")
+@view_handler([RoleEnum.ADMINISTRATOR])
 async def update_user(
     request: Request,
     response: Response = None,
@@ -164,8 +165,8 @@ async def update_user(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)
-@roles_required("Administrator")
-@view_handler
+# @roles_required("Administrator")
+@view_handler([RoleEnum.ADMINISTRATOR])
 async def delete_user(
     request: Request,
     response: Response = None,
@@ -182,8 +183,8 @@ async def delete_user(
 @router.get(
     "/{user_id}/roles", response_model=List[RoleSchema], status_code=status.HTTP_200_OK
 )
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_user_roles(
     request: Request,
     response: Response = None,
@@ -201,8 +202,8 @@ async def get_user_roles(
     response_model=List[UserHistorySchema],
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_user_activities(
     request: Request,
     response: Response = None,

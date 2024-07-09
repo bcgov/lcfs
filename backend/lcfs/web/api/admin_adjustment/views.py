@@ -3,13 +3,15 @@ from lcfs.db import dependencies
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema, AdminAdjustmentUpdateSchema
 from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
+
 @router.get("/{admin_adjustment_id}", response_model=AdminAdjustmentSchema)
-@view_handler
+@view_handler(['*'])
 async def get_admin_adjustment(
     admin_adjustment_id: int,
     service: AdminAdjustmentServices = Depends()
@@ -19,8 +21,8 @@ async def get_admin_adjustment(
 
 
 @router.put("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_200_OK)
-@view_handler
-@roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
+# @roles_required("Government")
 async def update_admin_adjustment(
     request: Request,
     admin_adjustment_data: AdminAdjustmentUpdateSchema = ...,
@@ -33,8 +35,8 @@ async def update_admin_adjustment(
 
 
 @router.post("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_201_CREATED)
-@roles_required("Government")
-@view_handler
+# @roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def create_admin_adjustment(
     request: Request,
     admin_adjustment_create: AdminAdjustmentCreateSchema = ...,

@@ -5,14 +5,15 @@ from lcfs.web.api.transfer.validation import TransferValidation
 from lcfs.db import dependencies
 from lcfs.web.api.transfer.schema import TransferCreateSchema, TransferSchema, TransferCategorySchema
 from lcfs.web.api.transfer.services import TransferServices
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
 @router.get("/", response_model=List[TransferSchema])
-@view_handler
+@view_handler(['*'])
 async def get_all_transfers(
     service: TransferServices = Depends()
 ):
@@ -21,7 +22,7 @@ async def get_all_transfers(
 
 
 @router.get("/{transfer_id}", response_model=TransferSchema)
-@view_handler
+@view_handler(['*'])
 async def get_transfer(
     transfer_id: int,
     service: TransferServices = Depends()
@@ -31,8 +32,8 @@ async def get_transfer(
 
 
 @router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
-@view_handler
-@roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
+# @roles_required("Government")
 async def government_update_transfer(
     request: Request,
     transfer_id: int,
@@ -47,8 +48,8 @@ async def government_update_transfer(
 
 
 @router.put('/{transfer_id}/category', response_model=TransferSchema, status_code=status.HTTP_200_OK)
-@view_handler
-@roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
+# @roles_required("Government")
 async def update_category(
     request: Request,
     transfer_id: int,
