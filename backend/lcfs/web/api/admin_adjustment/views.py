@@ -22,7 +22,6 @@ async def get_admin_adjustment(
 
 @router.put("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-# @roles_required("Government")
 async def update_admin_adjustment(
     request: Request,
     admin_adjustment_data: AdminAdjustmentUpdateSchema = ...,
@@ -35,7 +34,6 @@ async def update_admin_adjustment(
 
 
 @router.post("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_201_CREATED)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def create_admin_adjustment(
     request: Request,

@@ -45,7 +45,6 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_users(
     request: Request,
@@ -74,7 +73,6 @@ async def export_users(
 
 
 @router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_users(
     request: Request,
@@ -116,7 +114,6 @@ async def get_current_user(
 
 
 @router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_user_by_id(
     request: Request,
@@ -131,7 +128,6 @@ async def get_user_by_id(
 
 
 @router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
-# @roles_required("Administrator")
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def create_user(
     request: Request,
@@ -147,7 +143,6 @@ async def create_user(
 
 
 @router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Administrator")
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def update_user(
     request: Request,
@@ -165,7 +160,6 @@ async def update_user(
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_200_OK)
-# @roles_required("Administrator")
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def delete_user(
     request: Request,
@@ -183,7 +177,6 @@ async def delete_user(
 @router.get(
     "/{user_id}/roles", response_model=List[RoleSchema], status_code=status.HTTP_200_OK
 )
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_user_roles(
     request: Request,
@@ -202,7 +195,6 @@ async def get_user_roles(
     response_model=List[UserHistorySchema],
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_user_activities(
     request: Request,

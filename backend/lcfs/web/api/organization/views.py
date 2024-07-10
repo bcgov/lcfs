@@ -48,7 +48,6 @@ get_async_db = dependencies.get_async_db_session
     response_model=UsersSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier", "Government")
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_org_users(
     request: Request,
@@ -86,7 +85,6 @@ async def get_org_users(
     response_model=UserBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def get_user_by_id(
     request: Request,
@@ -105,7 +103,6 @@ async def get_user_by_id(
 @router.post(
     "/{organization_id}/users", response_model=None, status_code=status.HTTP_201_CREATED
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def create_user(
     request: Request,
@@ -128,7 +125,6 @@ async def create_user(
     response_model=UserBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def update_user(
     request: Request,
@@ -152,7 +148,6 @@ async def update_user(
     response_model=TransactionListSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def get_transactions_paginated_for_org(
     request: Request,
@@ -179,7 +174,6 @@ async def get_transactions_paginated_for_org(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def export_transactions_for_org(
     request: Request,
@@ -198,7 +192,6 @@ async def export_transactions_for_org(
     response_model=TransferSchema,
     status_code=status.HTTP_201_CREATED,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def create_transfer(
     request: Request,
@@ -220,7 +213,6 @@ async def create_transfer(
     response_model=TransferSchema,
     status_code=status.HTTP_201_CREATED,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def update_transfer(
     request: Request,
@@ -244,7 +236,6 @@ async def update_transfer(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def create_compliance_report(
     request: Request,
@@ -262,7 +253,6 @@ async def create_compliance_report(
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def get_compliance_reports(
     request: Request,
@@ -281,7 +271,6 @@ async def get_compliance_reports(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def get_compliance_report_by_id(
     request: Request,

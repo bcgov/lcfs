@@ -21,7 +21,6 @@ async def get_initiative_agreement(
 
 @router.put("/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-# @roles_required("Government")
 async def update_initiative_agreement(
     request: Request,
     initiative_agreement_data: InitiativeAgreementUpdateSchema = ...,
@@ -34,7 +33,6 @@ async def update_initiative_agreement(
 
 
 @router.post("/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_201_CREATED)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def create_initiative_agreement(
     request: Request,

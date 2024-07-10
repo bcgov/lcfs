@@ -33,7 +33,6 @@ async def get_transfer(
 
 @router.put("/{transfer_id}", response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-# @roles_required("Government")
 async def government_update_transfer(
     request: Request,
     transfer_id: int,
@@ -49,7 +48,6 @@ async def government_update_transfer(
 
 @router.put('/{transfer_id}/category', response_model=TransferSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-# @roles_required("Government")
 async def update_category(
     request: Request,
     transfer_id: int,

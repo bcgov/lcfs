@@ -33,7 +33,6 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_organizations(
     request: Request,
@@ -61,7 +60,6 @@ async def export_organizations(
 
 
 @router.post("/create", response_model=OrganizationResponseSchema, status_code=status.HTTP_201_CREATED)
-# @roles_required("Government", "Administrator")
 @view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
 async def create_organization(
     request: Request,
@@ -103,7 +101,6 @@ async def update_organization(
 
 
 @router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_organizations(
     request: Request,
@@ -179,7 +176,6 @@ async def get_externally_registered_organizations(
 
 
 @router.get("/balances/{organization_id}", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_balances(
     request: Request,

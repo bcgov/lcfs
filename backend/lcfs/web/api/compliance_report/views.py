@@ -48,7 +48,6 @@ async def get_compliance_periods(service: ComplianceReportServices = Depends()) 
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_compliance_reports(
     request: Request,
@@ -65,7 +64,6 @@ async def get_compliance_reports(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
-# @roles_required("Government")
 async def get_compliance_report_by_id(
     request: Request,
     report_id: int,

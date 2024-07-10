@@ -15,7 +15,6 @@ router = APIRouter()
 
 
 @router.post("/{organization_id}", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_transactions_paginated_by_org(
     request: Request,
@@ -30,7 +29,6 @@ async def get_transactions_paginated_by_org(
 
 
 @router.get("/{organization_id}/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions_by_org(
     request: Request,
@@ -45,7 +43,6 @@ async def export_transactions_by_org(
 
 
 @router.post("/", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_transactions_paginated(
     request: Request,
@@ -59,7 +56,6 @@ async def get_transactions_paginated(
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions(
     request: Request,

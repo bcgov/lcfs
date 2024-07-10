@@ -100,7 +100,6 @@ async def get_notional_transfer(
                          DeleteNotionalTransferResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def save_notional_transfer_row(
     request: Request,

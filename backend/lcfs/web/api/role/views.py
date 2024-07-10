@@ -23,7 +23,6 @@ app = FastAPI()
 
 
 @router.get("/", response_model=List[RoleSchema], status_code=status.HTTP_200_OK)
-# @roles_required("Government", "Supplier")
 @view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_roles(

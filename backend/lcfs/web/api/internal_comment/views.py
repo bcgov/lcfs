@@ -22,7 +22,6 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.post("/", response_model=InternalCommentResponseSchema, status_code=status.HTTP_201_CREATED)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def create_comment(
     request: Request,
@@ -44,7 +43,6 @@ async def create_comment(
 
 
 @router.get("/{entity_type}/{entity_id}", response_model=List[InternalCommentResponseSchema], status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_comments(
     request: Request,
@@ -68,7 +66,6 @@ async def get_comments(
 
 
 @router.put("/{internal_comment_id}", response_model=InternalCommentResponseSchema)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def update_comment(
     request: Request,

@@ -41,7 +41,6 @@ get_async_db = dependencies.get_async_db_session
 @router.get(
     "/table-options", response_model=TableOptionsSchema, status_code=status.HTTP_200_OK
 )
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
@@ -53,7 +52,6 @@ async def get_table_options(
 
 
 @router.post("/list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_fuel_codes(
     request: Request,
@@ -70,7 +68,6 @@ async def get_fuel_codes(
     response_model=str,
     status_code=status.HTTP_201_CREATED,
 )
-# @roles_required("Government")
 @view_handler([RoleEnum.GOVERNMENT])
 async def save_fuel_codes(
     request: Request,
@@ -159,7 +156,6 @@ async def get_use_of_a_carbon_intensities(
     response_model=Union[FuelCodeSchema, DeleteFuelCodeResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-# @roles_required("Administrator")
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def save_fuel_code_row(
     request: Request,

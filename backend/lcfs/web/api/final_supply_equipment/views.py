@@ -60,7 +60,6 @@ async def get_final_supply_equipments(
                          DeleteFinalSupplyEquipmentResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-# @roles_required("Supplier")
 @view_handler([RoleEnum.SUPPLIER])
 async def save_final_supply_equipment_row(request: Request,
                                           request_data: FinalSupplyEquipmentCreateSchema = Body(
