@@ -79,7 +79,7 @@ async def get_compliance_report_by_id(
     response_model=Dict[str, List[ComplianceReportSummaryRowSchema]],
     status_code=status.HTTP_200_OK
 )
-@view_handler
+@view_handler(['*'])
 async def get_compliance_report_summary(
     request: Request,
     report_id: int,

@@ -17,7 +17,8 @@ from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.final_supply_equipment.schema import DeleteFinalSupplyEquipmentResponseSchema, FSEOptionsSchema, FinalSupplyEquipmentCreateSchema, FinalSupplyEquipmentsSchema
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.final_supply_equipment.validation import FinalSupplyEquipmentValidation
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("fse_view")
@@ -31,8 +32,8 @@ async def get_fse_options(service: FinalSupplyEquipmentServices = Depends()) -> 
 
 
 @router.post("/list-all", response_model=FinalSupplyEquipmentsSchema, status_code=status.HTTP_200_OK)
-@roles_required("Supplier")
-@view_handler
+# @roles_required("Supplier")
+@view_handler([RoleEnum.SUPPLIER])
 async def get_final_supply_equipments(
     request: Request,
     request_data: CommmonPaginatedReportRequestSchema = Body(...),
@@ -53,18 +54,21 @@ async def get_final_supply_equipments(
     else:
         return await service.get_fse_list(compliance_report_id)
 
+
 @router.post(
     "/save",
-    response_model=Union[FinalSupplyEquipmentSchema, DeleteFinalSupplyEquipmentResponseSchema],
+    response_model=Union[FinalSupplyEquipmentSchema,
+                         DeleteFinalSupplyEquipmentResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-@roles_required("Supplier")
-@view_handler
+# @roles_required("Supplier")
+@view_handler([RoleEnum.SUPPLIER])
 async def save_final_supply_equipment_row(request: Request,
-    request_data: FinalSupplyEquipmentCreateSchema = Body(...),
-    fse_service: FinalSupplyEquipmentServices = Depends(),
-    report_validate: ComplianceReportValidation = Depends(),
-    fse_validate: FinalSupplyEquipmentValidation = Depends()):
+                                          request_data: FinalSupplyEquipmentCreateSchema = Body(
+                                              ...),
+                                          fse_service: FinalSupplyEquipmentServices = Depends(),
+                                          report_validate: ComplianceReportValidation = Depends(),
+                                          fse_validate: FinalSupplyEquipmentValidation = Depends()):
     """    Endpoint to save single final supply equipment row    """
     compliance_report_id = request_data.compliance_report_id
     fse_id: Optional[int] = request_data.final_supply_equipment_id
