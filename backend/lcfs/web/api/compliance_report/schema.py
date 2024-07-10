@@ -1,8 +1,8 @@
-from typing import Optional, List, Union
+from typing import Optional, List
 from datetime import datetime, date
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
-from lcfs.web.api.base import BaseSchema
+from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
 from pydantic import Field
 
@@ -121,3 +121,22 @@ class ComplianceReportCreateSchema(BaseSchema):
 class ComplianceReportListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     reports: List[ComplianceReportBaseSchema]
+
+
+class ComplianceReportSummaryRowSchema(BaseSchema):
+    line: Optional[str] = ''
+    description: Optional[str] = ''
+    gasoline: Optional[float] = 0
+    diesel: Optional[float] = 0
+    jet_fuel: Optional[float] = 0
+    value: Optional[float] = 0
+    total_value: Optional[float] = 0
+
+
+class CommmonPaginatedReportRequestSchema(BaseSchema):
+    compliance_report_id: int = Field(..., alias="complianceReportId")
+    filters: Optional[List[FilterModel]] = None
+    page: Optional[int] = None
+    size: Optional[int] = None
+    sort_orders: Optional[List[SortOrder]] = None
+

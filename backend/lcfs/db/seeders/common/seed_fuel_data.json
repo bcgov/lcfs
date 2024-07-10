@@ -184,6 +184,10 @@
     {
       "fuel_code_prefix_id": 1,
       "prefix": "BCLCF"
+    },
+    {
+      "fuel_code_prefix_id": 2,
+      "prefix": "PROXY"
     }
   ],
   "fuel_code_statuses": [

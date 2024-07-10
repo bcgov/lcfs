@@ -43,6 +43,7 @@
     "fuelProductionFacilityProvinceState": "FP facility province/state",
     "fuelProductionFacilityCountry": "FP facility country",
     "facilityNameplateCapacity": "Facility nameplate capacity",
+    "facilityNameplateCapacityUnit": "Unit",
     "feedstockTransportMode": "Feedstock transport mode",
     "finishedFuelTransportMode": "Finished fuel transport mode",
     "formerCompany": "Former company",

@@ -5,12 +5,12 @@ from logging import getLogger
 from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.db.models.user.UserRole import UserRole
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.exception.exceptions import ServiceException, DatabaseException, DataNotFoundException
 
 
 def role_enum_member(role):
+    from lcfs.db.models.user.UserRole import UserRole
+    from lcfs.db.models.user.Role import RoleEnum
     # If role is a RoleEnum member, return it directly
     if isinstance(role, RoleEnum):
         return role
@@ -22,6 +22,7 @@ def role_enum_member(role):
 
 
 def roles_required(*required_roles):
+    from lcfs.db.models.user.Role import RoleEnum
     def decorator(func):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):

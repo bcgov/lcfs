@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, func
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, func, Enum
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 from sqlalchemy.orm import relationship
+from .FuelType import QuantityUnitsEnum
 
 
 class FuelCode(BaseModel, Auditable, EffectiveDates):
@@ -68,6 +69,8 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     facility_nameplate_capacity = Column(
         Integer, nullable=True, comment="Nameplate capacity"
     )
+    facility_nameplate_capacity_unit = Column(Enum(QuantityUnitsEnum), nullable=True,
+                                              comment="Units of fuel quantity")
     former_company = Column(String(500), nullable=True,
                             comment="Former company")
     notes = Column(String(1000), nullable=True, comment="Notes")

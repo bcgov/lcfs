@@ -13,12 +13,12 @@ export const Introduction = ({ expanded, handleChange }) => {
     <>
       <Accordion expanded={expanded} onChange={handleChange()}>
         <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
+          expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
           id="compliance-report-intro"
           data-test="compliance-report-intro"
         >
-          <Typography color="primary" variant="h6">
+          <Typography color="primary" variant="h6" component="div">
             {t('report:introduction')}
           </Typography>
         </AccordionSummary>

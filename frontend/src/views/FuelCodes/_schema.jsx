@@ -1,7 +1,6 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import {
   CommonArrayRenderer,
-  FuelCodeStatusRenderer,
   FuelCodeStatusTextRenderer,
   TextRenderer
 } from '@/utils/cellRenderers'
@@ -29,6 +28,17 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer
   },
   {
+    field: 'carbonIntensity',
+    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellRenderer: TextRenderer,
+    type: 'numericColumn'
+  },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellRenderer: TextRenderer
+  },
+  {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
     cellRenderer: TextRenderer,
@@ -45,17 +55,6 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
     cellRenderer: TextRenderer,
     minWidth: 300
-  },
-  {
-    field: 'carbonIntensity',
-    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-    cellRenderer: TextRenderer,
-    type: 'numericColumn'
-  },
-  {
-    field: 'edrms',
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-    cellRenderer: TextRenderer
   },
   {
     field: 'applicationDate',
@@ -112,6 +111,12 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer,
     minWidth: 290,
     type: 'numericColumn'
+  },
+  {
+    field: 'facilityNameplateCapacityUnit',
+    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+    cellRenderer: TextRenderer,
+    minWidth: 290
   },
   {
     field: 'feedstockTransportMode',
@@ -172,15 +177,6 @@ export const addEditSchema = {
       addIndex: props.node?.rowIndex + 1
     })
     props.api.stopEditing()
-  },
-
-  onPrefixUpdate: (val, params) => {
-    if (val === 'BCLCF') {
-      params.node?.setData({
-        ...params.data,
-        fuelCode: '1000' + '.' + `${params.node?.rowIndex + 1}`
-      })
-    }
   },
 
   fuelCodeSchema: (t, optionsData) =>
@@ -298,8 +294,6 @@ export const addEditSchema = {
         params.value ||
         (!params.value && <Typography variant="body4">Select</Typography>),
       cellEditorParams: {
-        onDynamicUpdate: addEditSchema.onPrefixUpdate, // to alter any other column based on the value selected.
-        // (ensure valueGetter is not added to the column which you want to update dynamically)
         options: optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
         multiple: false, // ability to select multiple values from dropdown
         disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
@@ -323,6 +317,31 @@ export const addEditSchema = {
       headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
       cellDataType: 'text',
       editable: false
+    },
+    {
+      field: 'carbonIntensity',
+      headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+      cellEditor: 'agNumberCellEditor',
+      cellEditorParams: {
+        precision: 2,
+        showStepperButtons: false
+      },
+      cellStyle: (params) => {
+        if (params.data.modified && !params.value) return { borderColor: 'red' }
+      },
+      type: 'numericColumn',
+      editable: isDraftOrNew
+    },
+    {
+      field: 'edrms',
+      headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+      cellEditor: 'agTextCellEditor',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      cellDataType: 'text',
+      editable: isDraftOrNew
     },
     {
       field: 'company',
@@ -352,31 +371,7 @@ export const addEditSchema = {
       minWidth: 300,
       editable: isDraftOrNew
     },
-    {
-      field: 'carbonIntensity',
-      headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-      cellEditor: 'agNumberCellEditor',
-      cellEditorParams: {
-        precision: 2,
-        showStepperButtons: false
-      },
-      cellStyle: (params) => {
-        if (params.data.modified && !params.value) return { borderColor: 'red' }
-      },
-      type: 'numericColumn',
-      editable: isDraftOrNew
-    },
-    {
-      field: 'edrms',
-      headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-      cellEditor: 'agTextCellEditor',
-      cellStyle: (params) => {
-        if (params.data.modified && (!params.value || params.value === ''))
-          return { borderColor: 'red' }
-      },
-      cellDataType: 'text',
-      editable: isDraftOrNew
-    },
+
     {
       field: 'lastUpdated',
       headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),

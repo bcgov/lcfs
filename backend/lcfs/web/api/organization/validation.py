@@ -90,22 +90,3 @@ class OrganizationValidation:
             raise HTTPException(status_code=404, detail="Report not found")
         # TODO: validate each row data
         return
-
-    async def validate_organization_access(self, compliance_report_id: int):
-        compliance_report = await self.report_repo.get_compliance_report(
-            compliance_report_id
-        )
-        if not compliance_report:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found.",
-            )
-
-        organization_id = compliance_report.organization_id
-        user_organization_id = self.request.user.organization.organization_id
-
-        if organization_id != user_organization_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User does not have access to this compliance report.",
-            )
