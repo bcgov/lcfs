@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
 import { defaultColDef, notionalTransferColDefs } from './_schema'
 import { AddRowsButton } from './components/AddRowsButton'
-import { useNotionalTransferOptions, useGetNotionalTransfers, useSaveNotionalTransfer } from '@/hooks/useNotionalTransfer'
+import { useNotionalTransferOptions, useGetAllNotionalTransfers, useSaveNotionalTransfer } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
 
 export const AddEditNotionalTransfers = () => {
@@ -28,7 +28,7 @@ export const AddEditNotionalTransfers = () => {
   const { t } = useTranslation(['common', 'notionalTransfer'])
   const { complianceReportId } = useParams()
   const { data: optionsData, isLoading: optionsLoading, isFetched } = useNotionalTransferOptions()
-  const { data: notionalTransfers, isLoading: transfersLoading } = useGetNotionalTransfers(complianceReportId)
+  const { data: notionalTransfers, isLoading: transfersLoading } = useGetAllNotionalTransfers(complianceReportId)
   const { mutate: saveRow } = useSaveNotionalTransfer()
 
   const gridKey = 'add-notional-transfer'
@@ -72,7 +72,7 @@ export const AddEditNotionalTransfers = () => {
       try {
         setRowData(ensureRowIds(notionalTransfers))
       } catch (error) {
-        setAlertMessage(t('fuelCode:fuelCodeLoadFailMsg'))
+        setAlertMessage(t('errMsg:LoadFailMsg'))
         setAlertSeverity('error')
       }
     } else {
@@ -84,8 +84,15 @@ export const AddEditNotionalTransfers = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const onValidated = (status, message) => {
-    setAlertMessage(message)
+  const onValidated = (status, message, params, response) => {
+    let errMsg = message
+    if (status === 'error') {
+      const field = t(`notionalTransfer:notionalTransferColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
+      errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
+      params.data.isValid = false
+      params.data.validationMsg = field + ' ' + message.response?.data?.detail[0]?.msg
+    }
+    setAlertMessage(errMsg)
     setAlertSeverity(status)
     alertRef.current?.triggerAlert()
   }

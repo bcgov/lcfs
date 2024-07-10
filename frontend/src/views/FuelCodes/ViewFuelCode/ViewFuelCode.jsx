@@ -2,7 +2,10 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
+import BCModal from '@/components/BCModal'
+import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
+import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import {
@@ -11,21 +14,18 @@ import {
   useGetFuelCode,
   useUpdateFuelCode
 } from '@/hooks/useFuelCode'
+import withRole from '@/utils/withRole'
 import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { addEditSchema } from '../_schema'
-import withRole from '@/utils/withRole'
-import { roles } from '@/constants/roles'
-import BCModal from '@/components/BCModal'
-import BCTypography from '@/components/BCTypography'
-import { useQueryClient } from '@tanstack/react-query'
 
-const ViewFuelCode = () => {
+const ViewFuelCodeBase = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const { fuelCodeID } = useParams()
@@ -50,13 +50,18 @@ const ViewFuelCode = () => {
     useUpdateFuelCode(fuelCodeID, {
       onSuccess: () => {
         queryClient.invalidateQueries(['fuel-code', fuelCodeID])
-        navigate(ROUTES.ADMIN_FUEL_CODES + `?hid=${fuelCodeID}`)
+        navigate(ROUTES.FUELCODES + `?hid=${fuelCodeID}`)
+      },
+      onError: (error) => {
+        setAlertMessage(error.response.data.detail[0].msg)
+        setAlertSeverity('error')
+        alertRef.current?.triggerAlert()
       }
     })
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
     useDeleteFuelCode(fuelCodeID, {
       onSuccess: () => {
-        navigate(ROUTES.ADMIN_FUEL_CODES, {
+        navigate(ROUTES.FUELCODES, {
           state: {
             message: t('fuelCode:fuelCodeDeleteSuccessMsg'),
             severity: 'success'
@@ -325,6 +330,9 @@ const ViewFuelCode = () => {
   )
 }
 
-const AllowedRoles = [roles.analyst, roles.compliance_manager, roles.director]
-export const ViewFuelCodeWithRole = withRole(ViewFuelCode, AllowedRoles)
+export const ViewFuelCode = withRole(
+  ViewFuelCodeBase,
+  [roles.analyst],
+  ROUTES.DASHBOARD
+)
 ViewFuelCode.displayName = 'ViewFuelCode'

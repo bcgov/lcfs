@@ -1,9 +1,9 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { Typography } from '@mui/material'
-import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
 import { FuelCodeActions } from './components/FuelCodeActions'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 
 export const fuelCodeSchema = (t, optionsData) =>
   yup.object().shape({
@@ -89,11 +89,11 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
   {
     colId: 'validation',
     cellRenderer: 'validationRenderer',
+    cellRendererParams: { enableSave: true },
     pinned: 'left',
-    maxWidth: 75,
+    maxWidth: 100,
     editable: false,
-    suppressKeyboardEvent: (params) =>
-      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
@@ -103,8 +103,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     pinned: 'left',
     maxWidth: 110,
     editable: false,
-    suppressKeyboardEvent: (params) =>
-      params.event.key === KEY_ENTER || params.event.key === KEY_TAB,
+    suppressKeyboardEvent,
     filter: false
   },
   {
@@ -233,6 +232,29 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
+    field: 'carbonIntensity',
+    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellEditor: 'agNumberCellEditor',
+    cellEditorParams: {
+      precision: 2,
+      showStepperButtons: false
+    },
+    cellStyle: (params) => {
+      if (params.data.modified && !params.value) return { borderColor: 'red' }
+    },
+    type: 'numericColumn'
+  },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellEditor: 'agTextCellEditor',
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    cellDataType: 'text'
+  },
+  {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
     cellEditor: 'autocompleteEditor',
@@ -302,29 +324,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
     },
     minWidth: 300
   },
-  {
-    field: 'carbonIntensity',
-    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-    cellEditor: 'agNumberCellEditor',
-    cellEditorParams: {
-      precision: 2,
-      showStepperButtons: false
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && !params.value) return { borderColor: 'red' }
-    },
-    type: 'numericColumn'
-  },
-  {
-    field: 'edrms',
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-    cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
-    cellDataType: 'text'
-  },
+
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
@@ -577,6 +577,30 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
       showStepperButtons: false
     },
     minWidth: 290
+  },
+  {
+    field: 'facilityNameplateCapacityUnit',
+    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+    cellEditor: 'autocompleteEditor',
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      options: optionsData.facilityNameplateCapacityUnits,
+      multiple: false, // ability to select multiple values from dropdown
+      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+      freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
+      openOnFocus: true // this will open the dropdown on input focus
+    },
+    suppressKeyboardEvent: (params) => {
+      // return true (to suppress) if editing and user hit Enter key
+      return params.editing && params.event.key === KEY_ENTER
+    },
+    cellStyle: (params) => {
+      if (params.data.modified && (!params.value || params.value === ''))
+        return { borderColor: 'red' }
+    },
+    minWidth: 300
   },
   {
     field: 'feedstockTransportMode',

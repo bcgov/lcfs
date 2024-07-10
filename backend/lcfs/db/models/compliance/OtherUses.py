@@ -20,7 +20,7 @@ class OtherUses(BaseModel, Auditable):
     compliance_report = relationship('ComplianceReport', back_populates='other_uses')
     fuel_type = relationship('FuelType')
     fuel_category = relationship('FuelCategory')
-    expected_use_type = relationship('ExpectedUseType')
+    expected_use = relationship('ExpectedUseType')
 
     def __repr__(self):
         return f"<OtherUses(id={self.other_uses_id}, quantity_supplied={self.quantity_supplied})>"

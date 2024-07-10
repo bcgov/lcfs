@@ -1,7 +1,6 @@
 import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import {
   CommonArrayRenderer,
-  FuelCodeStatusRenderer,
   FuelCodeStatusTextRenderer,
   TextRenderer
 } from '@/utils/cellRenderers'
@@ -29,6 +28,17 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer
   },
   {
+    field: 'carbonIntensity',
+    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    cellRenderer: TextRenderer,
+    type: 'numericColumn'
+  },
+  {
+    field: 'edrms',
+    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    cellRenderer: TextRenderer
+  },
+  {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
     cellRenderer: TextRenderer,
@@ -45,17 +55,6 @@ export const fuelCodeColDefs = (t) => [
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
     cellRenderer: TextRenderer,
     minWidth: 300
-  },
-  {
-    field: 'carbonIntensity',
-    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-    cellRenderer: TextRenderer,
-    type: 'numericColumn'
-  },
-  {
-    field: 'edrms',
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-    cellRenderer: TextRenderer
   },
   {
     field: 'applicationDate',
@@ -112,6 +111,12 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer,
     minWidth: 290,
     type: 'numericColumn'
+  },
+  {
+    field: 'facilityNameplateCapacityUnit',
+    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+    cellRenderer: TextRenderer,
+    minWidth: 290
   },
   {
     field: 'feedstockTransportMode',
@@ -174,15 +179,6 @@ export const addEditSchema = {
     props.api.stopEditing()
   },
 
-  onPrefixUpdate: (val, params) => {
-    if (val === 'BCLCF') {
-      params.node?.setData({
-        ...params.data,
-        fuelCode: '1000' + '.' + `${params.node?.rowIndex + 1}`
-      })
-    }
-  },
-
   fuelCodeSchema: (t, optionsData) =>
     yup.object().shape({
       prefix: yup
@@ -206,8 +202,6 @@ export const addEditSchema = {
           field: t('fuelCode:fuelCodeColLabels.company')
         })
       ),
-      contactName: yup.string(),
-      contactEmail: yup.string(),
       carbonIntensity: yup.number().required(
         t('fuelCode:validateMsg.isRequired', {
           field: t('fuelCode:fuelCodeColLabels.carbonIntensity')
@@ -300,8 +294,6 @@ export const addEditSchema = {
         params.value ||
         (!params.value && <Typography variant="body4">Select</Typography>),
       cellEditorParams: {
-        onDynamicUpdate: addEditSchema.onPrefixUpdate, // to alter any other column based on the value selected.
-        // (ensure valueGetter is not added to the column which you want to update dynamically)
         options: optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
         multiple: false, // ability to select multiple values from dropdown
         disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
@@ -325,42 +317,6 @@ export const addEditSchema = {
       headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
       cellDataType: 'text',
       editable: false
-    },
-    {
-      field: 'company',
-      headerName: t('fuelCode:fuelCodeColLabels.company'),
-      cellEditor: 'agTextCellEditor',
-      cellDataType: 'text',
-      cellStyle: (params) => {
-        if (params.data.modified && (!params.value || params.value === ''))
-          return { borderColor: 'red' }
-      },
-      minWidth: 300,
-      editable: isDraftOrNew
-    },
-    {
-      field: 'contactName',
-      headerName: t('fuelCode:fuelCodeColLabels.contactName'),
-      cellEditor: 'agTextCellEditor',
-      cellDataType: 'text',
-      cellStyle: (params) => {
-        if (params.data.modified && (!params.value || params.value === ''))
-          return { borderColor: 'red' }
-      },
-      minWidth: 300,
-      editable: isDraftOrNew
-    },
-    {
-      field: 'contactEmail',
-      headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
-      cellEditor: 'agTextCellEditor',
-      cellDataType: 'text',
-      cellStyle: (params) => {
-        if (params.data.modified && (!params.value || params.value === ''))
-          return { borderColor: 'red' }
-      },
-      minWidth: 300,
-      editable: isDraftOrNew
     },
     {
       field: 'carbonIntensity',
@@ -387,6 +343,35 @@ export const addEditSchema = {
       cellDataType: 'text',
       editable: isDraftOrNew
     },
+    {
+      field: 'company',
+      headerName: t('fuelCode:fuelCodeColLabels.company'),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      minWidth: 300,
+      editable: isDraftOrNew
+    },
+    {
+      field: 'contactName',
+      headerName: t('fuelCode:fuelCodeColLabels.contactName'),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      minWidth: 300,
+      editable: isDraftOrNew
+    },
+    {
+      field: 'contactEmail',
+      headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      minWidth: 300,
+      editable: isDraftOrNew
+    },
+
     {
       field: 'lastUpdated',
       headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
@@ -626,6 +611,31 @@ export const addEditSchema = {
         showStepperButtons: false
       },
       minWidth: 290,
+      editable: isDraftOrNew
+    },
+    {
+      field: 'facilityNameplateCapacityUnit',
+      headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+      cellEditor: 'autocompleteEditor',
+      cellRenderer: (params) =>
+        params.value ||
+        (!params.value && <Typography variant="body4">Select</Typography>),
+      cellEditorParams: {
+        options: optionsData.facilityNameplateCapacityUnits,
+        multiple: false, // ability to select multiple values from dropdown
+        disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
+        freeSolo: false, // this will allow user to type in the input box or choose from the dropdown
+        openOnFocus: true // this will open the dropdown on input focus
+      },
+      suppressKeyboardEvent: (params) => {
+        // return true (to suppress) if editing and user hit Enter key
+        return params.editing && params.event.key === KEY_ENTER
+      },
+      cellStyle: (params) => {
+        if (params.data.modified && (!params.value || params.value === ''))
+          return { borderColor: 'red' }
+      },
+      minWidth: 300,
       editable: isDraftOrNew
     },
     {

@@ -1,7 +1,7 @@
 from typing import Optional, List
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, root_validator
 from enum import Enum
 
 
@@ -136,8 +136,8 @@ class FuelCodeSchema(BaseSchema):
     prefix_id: int
     fuel_code: str
     company: str
-    contact_name: str
-    contact_email: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     carbon_intensity: float
     edrms: str
     last_updated: datetime
@@ -153,6 +153,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
@@ -189,6 +190,7 @@ class TableOptionsSchema(BaseSchema):
     latest_fuel_codes: List[FuelCodeSchema]
     field_options: FieldOptions
     fp_locations: List[FPLocationsSchema]
+    facility_nameplate_capacity_units: List[FuelTypeQuantityUnitsEnumSchema]
 
 
 class FuelCodesSchema(BaseSchema):
@@ -208,8 +210,8 @@ class FuelCodeCreateSchema(BaseSchema):
     edrms: str
     last_updated: Optional[datetime] = None
     application_date: date
-    contact_name: str
-    contact_email: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
@@ -223,6 +225,7 @@ class FuelCodeCreateSchema(BaseSchema):
     fuel_production_facility_country: str
 
     facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
     feedstock_transport_mode: Optional[List[str]] = None
     finished_fuel_transport_mode: Optional[List[str]] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
@@ -236,6 +239,21 @@ class FuelCodeCreateSchema(BaseSchema):
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @root_validator(pre=True)
+    def check_capacity_and_unit(cls, values):
+        facility_nameplate_capacity = values.get('facilityNameplateCapacity')
+        facility_nameplate_capacity_unit = values.get(
+            'facilityNameplateCapacityUnit')
+
+        if facility_nameplate_capacity is None:
+            values['facilityNameplateCapacityUnit'] = None
+        elif facility_nameplate_capacity is not None and facility_nameplate_capacity_unit is None:
+            raise ValueError(
+                'facility_nameplate_capacity_unit must be provided when facility_nameplate_capacity is not None')
+
+        return values
+
 
 class DeleteFuelCodeResponseSchema(BaseSchema):
     message: str

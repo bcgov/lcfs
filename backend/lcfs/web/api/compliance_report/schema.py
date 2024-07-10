@@ -1,9 +1,10 @@
-from typing import Optional, List, Union
+from typing import Optional, List
 from datetime import datetime, date
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
-from lcfs.web.api.base import BaseSchema
+from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
+from pydantic import Field
 
 """
 Base - all shared attributes of a resource
@@ -21,9 +22,11 @@ class CompliancePeriodSchema(BaseSchema):
     expiration_date: Optional[datetime] = None
     display_order: Optional[int] = None
 
+
 class ComplianceReportOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
+
 
 class SummarySchema(BaseSchema):
     pass
@@ -54,10 +57,6 @@ class AllocationAgreementSchema(BaseSchema):
     pass
 
 
-class OtherUsesSchema(BaseSchema):
-    pass
-
-
 class FuelMeasurementTypeSchema(BaseSchema):
     fuel_measurement_type_id: int
     type: str
@@ -79,15 +78,15 @@ class FSEOptionsSchema(BaseSchema):
 
 
 class FinalSupplyEquipmentSchema(BaseSchema):
-    final_supply_equipment_id: Optional[int] = None
-    compliance_report_id: Optional[int] = None
+    final_supply_equipment_id: int
+    compliance_report_id: int
     supply_from_date: date
     supply_to_date: date
     serial_nbr: str
     manufacturer: str
-    level_of_equipment: str
-    fuel_measurement_type: str
-    intended_use: str
+    level_of_equipment: LevelOfEquipmentSchema
+    fuel_measurement_type: FuelMeasurementTypeSchema
+    intended_use_types: List[EndUseTypeSchema]
     street_address: str
     city: str
     postal_code: str
@@ -122,3 +121,22 @@ class ComplianceReportCreateSchema(BaseSchema):
 class ComplianceReportListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     reports: List[ComplianceReportBaseSchema]
+
+
+class ComplianceReportSummaryRowSchema(BaseSchema):
+    line: Optional[str] = ''
+    description: Optional[str] = ''
+    gasoline: Optional[float] = 0
+    diesel: Optional[float] = 0
+    jet_fuel: Optional[float] = 0
+    value: Optional[float] = 0
+    total_value: Optional[float] = 0
+
+
+class CommmonPaginatedReportRequestSchema(BaseSchema):
+    compliance_report_id: int = Field(..., alias="complianceReportId")
+    filters: Optional[List[FilterModel]] = None
+    page: Optional[int] = None
+    size: Optional[int] = None
+    sort_orders: Optional[List[SortOrder]] = None
+

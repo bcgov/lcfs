@@ -1,9 +1,8 @@
-import React from 'react'
-import PropTypes from 'prop-types'
-
-import { Divider, Toolbar } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
+import { Divider, Toolbar } from '@mui/material'
+import PropTypes from 'prop-types'
+import React from 'react'
 
 const MenuBar = (props) => {
   const { routes, data } = props
@@ -32,26 +31,29 @@ const MenuBar = (props) => {
           padding: 0
         }}
       >
-        {routes.map((route, index) => (
-          <React.Fragment key={route.name}>
-            <DefaultNavbarLink
-              icon={route.icon}
-              name={route.name}
-              route={route.route}
-              light={false}
-            />
-            {index !== routes.length - 1 && (
-              <Divider
-                orientation="vertical"
-                variant="middle"
-                flexItem
-                sx={({ palette: { secondary } }) => ({
-                  backgroundColor: secondary.main
-                })}
-              />
-            )}
-          </React.Fragment>
-        ))}
+        {routes.map(
+          (route, index) =>
+            !route.hide && (
+              <React.Fragment key={route.name}>
+                <DefaultNavbarLink
+                  icon={route.icon}
+                  name={route.name}
+                  route={route.route}
+                  light={false}
+                />
+                {index !== routes.length - 1 && (
+                  <Divider
+                    orientation="vertical"
+                    variant="middle"
+                    flexItem
+                    sx={({ palette: { secondary } }) => ({
+                      backgroundColor: secondary.main
+                    })}
+                  />
+                )}
+              </React.Fragment>
+            )
+        )}
       </BCBox>
       <div className="animation start-home"></div>
       <BCBox

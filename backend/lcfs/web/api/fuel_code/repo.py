@@ -19,6 +19,8 @@ from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRati
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
@@ -146,6 +148,24 @@ class FuelCodeRepository:
             .all()
         )
 
+    @repo_handler
+    async def get_units_of_measure(self) -> List[UnitOfMeasure]:
+        """Get all unit of measure options"""
+        return (await self.db.execute(select(UnitOfMeasure))).scalars().all()
+    
+    @repo_handler
+    async def get_expected_use_types(self) -> List[ExpectedUseType]:
+        """Get all expected use options"""
+        return (await self.db.execute(select(ExpectedUseType))).scalars().all()
+
+    @repo_handler
+    async def get_expected_use_type_by_name(self, name: str) -> ExpectedUseType:
+        """Get a expected use by its name"""
+        result = await self.db.execute(
+            select(ExpectedUseType).filter_by(name=name)
+        )
+        return result.scalar_one_or_none()
+    
     @repo_handler
     async def get_fuel_codes_paginated(
         self, pagination: PaginationRequestSchema

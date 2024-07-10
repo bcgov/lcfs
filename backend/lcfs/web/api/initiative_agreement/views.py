@@ -3,12 +3,14 @@ from fastapi import APIRouter, Depends, Request, status
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema, InitiativeAgreementSchema, InitiativeAgreementUpdateSchema
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 
+
 @router.get("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema)
-@view_handler
+@view_handler(['*'])
 async def get_initiative_agreement(
     initiative_agreement_id: int,
     service: InitiativeAgreementServices = Depends()
@@ -16,9 +18,9 @@ async def get_initiative_agreement(
     """Endpoint to fetch an initiative agreement by its ID."""
     return await service.get_initiative_agreement(initiative_agreement_id)
 
+
 @router.put("/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_200_OK)
-@view_handler
-@roles_required("Government")
+@view_handler([RoleEnum.GOVERNMENT])
 async def update_initiative_agreement(
     request: Request,
     initiative_agreement_data: InitiativeAgreementUpdateSchema = ...,
@@ -29,9 +31,9 @@ async def update_initiative_agreement(
     await validate.validate_initiative_agreement_update(request, initiative_agreement_data)
     return await service.update_initiative_agreement(initiative_agreement_data)
 
+
 @router.post("/", response_model=InitiativeAgreementSchema, status_code=status.HTTP_201_CREATED)
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def create_initiative_agreement(
     request: Request,
     initiative_agreement_create: InitiativeAgreementCreateSchema = ...,

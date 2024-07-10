@@ -1,4 +1,5 @@
 export const apiRoutes = {
+  dummy: '/dummy',
   currentUser: '/users/current',
   exportUsers: '/users/export?format=xls',
   listUsers: '/users/list',
@@ -27,10 +28,17 @@ export const apiRoutes = {
   notionalTransferOptions: '/notional-transfers/table-options',
   getNotionalTransfer: '/notional-transfers/:notionalTransferId',
   getNotionalTransfers: '/notional-transfers/list',
+  getAllNotionalTransfers: '/notional-transfers/list-all',
   saveNotionalTransfer: '/notional-transfers/save',
-  getComplianceReport: '/reports/:complianceReportId',
-  getOrgComplianceReport: '/organization/reports/:complianceReportId',
-  getOrgComplianceReports: '/organization/reports/list',
-  getExternalOrgs: '/organizations/registered/external',
-  getOrgBalance: '/organizations/current/balances'
+  saveOtherUses: '/other-uses/save',
+  getOtherUses: '/other-uses/list',
+  getAllOtherUses: '/other-uses/list-all',
+  otherUsesOptions: '/other-uses/table-options',
+  getComplianceReport: '/reports/:reportID',
+  getComplianceReportSummary: '/reports/:reportID/summary',
+  getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
+  getOrgComplianceReports: '/organization/:orgID/reports/list',
+  finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
+  getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
+  saveFinalSupplyEquipments: '/final-supply-equipments/save'
 }
