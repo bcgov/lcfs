@@ -16,8 +16,10 @@ export const ADMIN_ADJUSTMENT_VIEW = '/admin-adjustment/:transactionId'
 export const ORG_ADMIN_ADJUSTMENT_VIEW = '/org-admin-adjustment/:transactionId'
 export const ADMIN_ADJUSTMENT_EDIT = '/admin-adjustment/edit/:transactionId'
 export const INITIATIVE_AGREEMENT_VIEW = '/initiative-agreement/:transactionId'
-export const ORG_INITIATIVE_AGREEMENT_VIEW = '/org-initiative-agreement/:transactionId'
-export const INITIATIVE_AGREEMENT_EDIT = '/initiative-agreement/edit/:transactionId'
+export const ORG_INITIATIVE_AGREEMENT_VIEW =
+  '/org-initiative-agreement/:transactionId'
+export const INITIATIVE_AGREEMENT_EDIT =
+  '/initiative-agreement/edit/:transactionId'
 
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`
@@ -35,7 +37,7 @@ export const ORGANIZATIONS_EDITUSER = `${ORGANIZATIONS_VIEWUSER}/edit-user`
 export const REPORTS = '/compliance-reporting'
 export const REPORTS_VIEW = `${REPORTS}/:compliancePeriod/:complianceReportId`
 export const REPORTS_ADD_SUPPLY_OF_FUEL = `${REPORTS_VIEW}/supply-of-fuel`
-export const REPORTS_ADD_FSE = `${REPORTS_VIEW}/fse`
+export const REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS = `${REPORTS_VIEW}/final-supply-equipments`
 export const REPORTS_ADD_ALLOCATION_AGREEMENTS = `${REPORTS_VIEW}/allocation-agreements`
 export const REPORTS_ADD_NOTIONAL_TRANSFERS = `${REPORTS_VIEW}/notional-transfers`
 export const REPORTS_ADD_OTHER_USE_FUELS = `${REPORTS_VIEW}/fuels-other-use`
@@ -50,14 +52,11 @@ export const ADMIN_USERS_ADD = `${ADMIN_USERS}/add-user`
 export const ADMIN_USERS_VIEW = `${ADMIN_USERS}/:userID`
 export const ADMIN_USERS_EDIT = `${ADMIN_USERS_VIEW}/edit-user`
 export const ADMIN_USERACTIVITY = `${ADMIN}/user-activity`
-export const ADMIN_FUEL_CODES = `${ADMIN}/fuel-codes`
-export const ADMIN_FUEL_CODES_VIEW = `${ADMIN_FUEL_CODES}/:fuelCodeID`
-export const ADMIN_FUEL_CODES_EDIT = `${ADMIN_FUEL_CODES_VIEW}/edit`
-export const ADMIN_FUEL_CODES_ADD = `${ADMIN_FUEL_CODES}/add-fuel-code`
 export const ADMIN_COMPLIANCE_REPORTING = `${ADMIN}/compliance-reporting`
 
 export const FUELCODES = '/fuel-codes'
 export const FUELCODES_ADD = `${FUELCODES}/add-fuel-code`
+export const FUELCODES_VIEW = `${FUELCODES}/:fuelCodeID`
 
 export const FSE = '/fse' // might not need
 

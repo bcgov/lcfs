@@ -1,22 +1,17 @@
-import { PropTypes } from 'prop-types'
-// React components
-import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-// mui components
-import { AppBar, Tab, Tabs } from '@mui/material'
-import breakpoints from '@/themes/base/breakpoints'
 import BCBox from '@/components/BCBox'
-import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
-import { Users } from './components/Users'
-import { FuelCodes, AddFuelCode } from '@/views/FuelCodes'
 import {
-  ADMIN_USERS,
+  ADMIN_COMPLIANCE_REPORTING,
   ADMIN_USERACTIVITY,
-  ADMIN_FUEL_CODES,
-  ADMIN_COMPLIANCE_REPORTING
+  ADMIN_USERS
 } from '@/constants/routes/routes'
-// Internal components
+import breakpoints from '@/themes/base/breakpoints'
+import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
+import { AppBar, Tab, Tabs } from '@mui/material'
+import { PropTypes } from 'prop-types'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { Users } from './components/Users'
 
 function a11yProps(index) {
   return {
@@ -32,7 +27,6 @@ export function AdminMenu({ tabIndex }) {
   const paths = useMemo(() => [
     ADMIN_USERS,
     ADMIN_USERACTIVITY,
-    ADMIN_FUEL_CODES,
     ADMIN_COMPLIANCE_REPORTING
   ])
 
@@ -70,7 +64,6 @@ export function AdminMenu({ tabIndex }) {
         >
           <Tab label={t('Users')} wrapped {...a11yProps(0)} />
           <Tab label={t('UserActivity')} {...a11yProps(1)} />
-          <Tab label={t('FuelCodes')} {...a11yProps(2)} />
           <Tab label={t('ComplianceReporting')} {...a11yProps(3)} />
         </Tabs>
       </AppBar>
@@ -79,9 +72,6 @@ export function AdminMenu({ tabIndex }) {
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={1} component="div" mx={-3}>
         <>User activity</>
-      </AdminTabPanel>
-      <AdminTabPanel value={tabIndex} index={2} component="div" mx={-3}>
-        <FuelCodes />
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
         <>Compliance reporting</>

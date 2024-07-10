@@ -12,13 +12,13 @@ export const useNotionalTransferOptions = (params, options) => {
   })
 }
 
-export const useGetNotionalTransfers = (complianceReportId, options) => {
+export const useGetAllNotionalTransfers = (complianceReportId, options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['notional-transfers', complianceReportId],
     queryFn: async () => {
       return (
-        await client.post(apiRoutes.getNotionalTransfers, { complianceReportId })
+        await client.post(apiRoutes.getAllNotionalTransfers, { complianceReportId })
       ).data.notionalTransfers
     },
     ...options

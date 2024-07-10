@@ -66,17 +66,20 @@ function BCNavbar({
                 sx={{ div: { minWidth: '300px' } }}
                 MenuListProps={{ style: { minWidth: '300px' } }}
               >
-                {routes.map((link) => (
-                  <DefaultNavbarLink
-                    key={link.name}
-                    onClick={popupState.close}
-                    icon={link.icon}
-                    name={link.name}
-                    route={link.route}
-                    light={true}
-                    isMobileView={isMobileView}
-                  />
-                ))}
+                {routes.map(
+                  (link) =>
+                    !link.hide && (
+                      <DefaultNavbarLink
+                        key={link.name}
+                        onClick={popupState.close}
+                        icon={link.icon}
+                        name={link.name}
+                        route={link.route}
+                        light={true}
+                        isMobileView={isMobileView}
+                      />
+                    )
+                )}
               </Menu>
             ) : (
               <MenuBar

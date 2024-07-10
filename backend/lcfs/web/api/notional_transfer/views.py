@@ -23,9 +23,11 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     NotionalTransfersSchema,
     NotionalTransferTableOptionsSchema,
-    NotionalTransferListCreateSchema,
     ComplianceReportRequestSchema,
-    DeleteNotionalTransferResponseSchema
+    DeleteNotionalTransferResponseSchema,
+    PaginatedNotionalTransferRequestSchema,
+    NotionalTransfersSchema,
+    NotionalTransfersAllSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -48,7 +50,7 @@ async def get_table_options(
     return await service.get_table_options()
 
 
-@router.post("/list", response_model=NotionalTransfersSchema, status_code=status.HTTP_200_OK)
+@router.post("/list-all", response_model=NotionalTransfersAllSchema, status_code=status.HTTP_200_OK)
 @view_handler
 async def get_notional_transfers(
     request: Request,
@@ -59,6 +61,25 @@ async def get_notional_transfers(
     """Endpoint to get list of notional transfers for a compliance report"""
     return await service.get_notional_transfers(request_data.compliance_report_id)
 
+@router.post(
+    "/list",
+    response_model=NotionalTransfersSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler
+async def get_notional_transfers_paginated(
+    request: Request,
+    request_data: PaginatedNotionalTransferRequestSchema = Body(...),
+    service: NotionalTransferServices = Depends(),
+) -> NotionalTransfersSchema:
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters
+    )
+    compliance_report_id = request_data.compliance_report_id
+    return await service.get_notional_transfers_paginated(pagination, compliance_report_id)
 
 @router.get("/{notional_transfer_id}", status_code=status.HTTP_200_OK)
 @view_handler

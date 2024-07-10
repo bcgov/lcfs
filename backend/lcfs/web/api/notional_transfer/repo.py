@@ -4,14 +4,14 @@ from typing import List
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer, ReceivedOrTransferredEnum
-from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
 
 logger = getLogger("notional_transfer_repo")
@@ -57,6 +57,27 @@ class NotionalTransferRepository:
             )
             for nt in notional_transfers
         ]
+    
+    async def get_notional_transfers_paginated(
+        self, pagination: PaginationRequestSchema, compliance_report_id: int
+    ) -> List[NotionalTransferSchema]:
+        conditions = [NotionalTransfer.compliance_report_id == compliance_report_id]
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        limit = pagination.size
+
+        query = select(NotionalTransfer).options(
+            joinedload(NotionalTransfer.fuel_category)
+        ).where(*conditions)
+
+        count_query = query.with_only_columns(func.count()).order_by(None)
+        total_count = (await self.db.execute(count_query)).scalar()
+
+        result = await self.db.execute(
+            query.offset(offset).limit(limit).order_by(NotionalTransfer.create_date.desc())
+        )
+        notional_transfers = result.unique().scalars().all()
+
+        return notional_transfers, total_count
 
     @repo_handler
     async def save_notional_transfers(self, notional_transfers: List[NotionalTransfer]) -> str:

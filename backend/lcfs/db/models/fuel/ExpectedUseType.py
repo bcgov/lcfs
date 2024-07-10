@@ -12,7 +12,7 @@ class ExpectedUseType(BaseModel, Auditable, DisplayOrder, EffectiveDates):
     name = Column(Text, nullable=False, comment="Name of the expected use type")
     description = Column(Text, nullable=True, comment="Description of the expected use type")
 
-    other_uses = relationship('OtherUses', back_populates='expected_use_type')
+    other_uses = relationship('OtherUses', back_populates='expected_use')
 
     def __repr__(self):
         return f"<ExpectedUseType(id={self.expected_use_type_id}, name={self.name})>"

@@ -1,5 +1,4 @@
 from logging import getLogger
-from typing import List
 
 from fastapi import (
     APIRouter,
@@ -31,7 +30,6 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
-    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -164,14 +162,21 @@ async def get_transactions_paginated_for_org(
     Fetches a combined list of Issuances and Transfers, sorted by create_date, with pagination.
     """
     organization_id = request.user.organization.organization_id
-    paginated_transactions = await org_service.get_transactions_paginated(pagination, organization_id)
+    paginated_transactions = await org_service.get_transactions_paginated(
+        pagination, organization_id
+    )
     # for Organizations hide Recommended status.
-    for transaction in paginated_transactions['transactions']:
+    for transaction in paginated_transactions["transactions"]:
         if transaction.status == TransferStatusEnum.Recommended.value:
             transaction.status = TransferStatusEnum.Submitted.name
     return paginated_transactions
 
-@router.get("/transactions/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+
+@router.get(
+    "/transactions/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
 @roles_required("Supplier")
 @view_handler
 async def export_transactions_for_org(
@@ -251,7 +256,7 @@ async def create_compliance_report(
 
 
 @router.post(
-    "/reports/list",
+    "/{organization_id}/reports/list",
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -259,15 +264,18 @@ async def create_compliance_report(
 @view_handler
 async def get_compliance_reports(
     request: Request,
+    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     report_service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
     organization_id = request.user.organization.organization_id
-    return await report_service.get_compliance_reports_paginated(pagination, organization_id)
+    return await report_service.get_compliance_reports_paginated(
+        pagination, organization_id
+    )
 
 
 @router.get(
-    "/reports/{report_id}",
+    "/{organization_id}/reports/{report_id}",
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -275,6 +283,7 @@ async def get_compliance_reports(
 @view_handler
 async def get_compliance_report_by_id(
     request: Request,
+    organization_id: int,
     response: Response = None,
     report_id: int = None,
     report_service: ComplianceReportServices = Depends(),
@@ -284,26 +293,3 @@ async def get_compliance_report_by_id(
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     return await report_service.get_compliance_report_by_id(report_id)
-
-
-@router.post(
-    "/reports/{report_id}/fse",
-    response_model=ComplianceReportBaseSchema,
-    status_code=status.HTTP_201_CREATED,
-)
-@roles_required("Supplier")
-@view_handler
-async def save_final_supply_equipment_rows(
-    request: Request,
-    response: Response = None,
-    report_id: int = None,
-    fse_list: List[FinalSupplyEquipmentSchema] = Body(..., embed=False),
-    report_service: ComplianceReportServices = Depends(),
-    validate: OrganizationValidation = Depends(),
-) -> ComplianceReportBaseSchema:
-    """
-    Endpoint to save final supply equipment details
-    """
-    organization_id = request.user.organization.organization_id
-    await validate.save_final_supply_equipment_rows(organization_id, report_id, fse_list)
-    return await report_service.save_fse_list(report_id, fse_list)

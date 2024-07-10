@@ -15,6 +15,7 @@ from lcfs.db.seeders.dev.admin_adjustment_seeder import seed_admin_adjustments
 from lcfs.db.seeders.dev.fuel_code_seeder import seed_fuel_codes
 from lcfs.db.seeders.dev.finished_fuel_transfer_mode_seeder import seed_finished_fuel_transfer_modes
 from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import seed_feedstock_fuel_transfer_modes
+from lcfs.db.seeders.dev.expected_use_types_seeder import seed_expected_use_types
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ async def seed_dev():
             await seed_fuel_codes(session)
             await seed_finished_fuel_transfer_modes(session)
             await seed_feedstock_fuel_transfer_modes(session)
+            await seed_expected_use_types(session)
             
             # Update sequences after all seeders have run
             await update_sequences(session)

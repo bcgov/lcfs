@@ -42,6 +42,15 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
     }
   }
 
+  const handleKeyDown = (event) => {
+    if (onKeyDownCapture) {
+      onKeyDownCapture(event)
+    } else if (event.key === 'Tab') {
+      event.preventDefault()
+      props.api.tabToNextCell()
+    }
+  }
+
   return (
     <BCBox
       component="div"
@@ -71,7 +80,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         role="list-box"
         options={options}
         isOptionEqualToValue={(option, value) => option === value}
-        onKeyDownCapture={onKeyDownCapture}
+        onKeyDownCapture={handleKeyDown}
         onBlur={handleBlur}
         onPaste={(e) => onPaste(e, updateValue)}
         autoHighlight
@@ -91,6 +100,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
               aria-label={`select ${typeof option === 'string' ? option : option.label}`}
               data-testid={`select-${typeof option === 'string' ? option : option.label}`}
               {...propsIn}
+              tabIndex={0}
             >
               {multiple && (
                 <Checkbox
@@ -102,6 +112,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
                   style={{ marginRight: 8 }}
                   checked={selected || isOptionSelected}
                   inputProps={{ 'aria-label': 'controlled' }}
+                  tabIndex={-1}
                 />
               )}
               {typeof option === 'string' ? option : option.label}
@@ -119,6 +130,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
             inputProps={{
               ...params.inputProps,
               autoComplete: 'new-password', // disable autocomplete and autofill
+              tabIndex: 0,
             }}
           />
         )}

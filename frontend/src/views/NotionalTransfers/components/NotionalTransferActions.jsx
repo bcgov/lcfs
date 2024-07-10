@@ -22,18 +22,17 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
       // Only save to db if original row was validated
       if(data.notionalTransferId) {
         saveRow(rowData, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             rowData.modified = false
             api.refreshCells()
             if (onValidated) {
-              onValidated('success', 'Row duplicated successfully.')
+              onValidated('success', 'Row duplicated successfully.',api, response)
             }
           },
           onError: (error) => {
             console.error('Error duplicated row:', error)
             if (onValidated) {
-              console.log(error)
-              onValidated('error', `Error duplicated row: ${error.message}`)
+              onValidated('error', error, api)
             }
           }
         })
@@ -45,21 +44,20 @@ export const NotionalTransferActions = ({ api, node, data, onValidated }) => {
 
   const deleteRow = () => {
     console.log("ACTION - deleteRow", api)
-    const updatedRow = { ...data, deleted: true }
+    const updatedRow = { ...data, deleted: true, modified: undefined }
     if (api) {
       api.applyTransaction({ remove: [node.data] })
       if(updatedRow.notionalTransferId) {
         saveRow(updatedRow, {
-          onSuccess: () => {
+          onSuccess: (response) => {
             if (onValidated) {
-              onValidated('success', 'Row deleted successfully.')
+              onValidated('success', 'Row deleted successfully.', api, response)
             }
           },
           onError: (error) => {
             console.error('Error deleting row:', error)
             if (onValidated) {
-              console.log(error)
-              onValidated('error', `Error deleting row: ${error.message}`)
+              onValidated(onValidated('error', error, api))
             }
           }
         })

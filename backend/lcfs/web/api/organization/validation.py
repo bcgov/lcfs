@@ -70,7 +70,7 @@ class OrganizationValidation:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Validation for authorization failed.",
         )
-    
+
     async def create_compliance_report(self, organization_id, report_data: ComplianceReportCreateSchema):
         # Before creating ensure that there isn't any existing report for the given compliance period.
         period = await self.report_repo.get_compliance_period(report_data.compliance_period)
@@ -83,7 +83,7 @@ class OrganizationValidation:
                 detail="Duplicate report for the compliance period"
             )
         return
-    
+
     async def save_final_supply_equipment_rows(self,organization_id, report_id, fse_list):
         report = await self.report_repo.get_compliance_report_by_id(report_id)
         if not report:

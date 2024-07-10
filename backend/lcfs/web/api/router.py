@@ -16,7 +16,9 @@ from lcfs.web.api import (
     admin_adjustment,
     initiative_agreement,
     compliance_report,
-    notional_transfer
+    notional_transfer,
+    other_uses,
+    final_supply_equipment
 )
 
 api_router = APIRouter()
@@ -56,4 +58,10 @@ api_router.include_router(
 )
 api_router.include_router(
     notional_transfer.router, prefix="/notional-transfers", tags=["notional_transfers"]
+)
+api_router.include_router(
+    other_uses.router, prefix="/other-uses", tags=["other_uses"]
+)
+api_router.include_router(
+    final_supply_equipment.router, prefix="/final-supply-equipments", tags=["final_supply_equipments"]
 )

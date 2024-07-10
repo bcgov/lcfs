@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy import select, func
 from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,6 @@ async def seed_fuel_codes(session):
             "fuel_production_facility_city": "Vancouver",
             "fuel_production_facility_province_state": "British Columbia",
             "fuel_production_facility_country": "Canada",
-            "facility_nameplate_capacity": 123,
             "former_company": "ABC Company",
             "notes": "notes",
         },
@@ -50,6 +50,7 @@ async def seed_fuel_codes(session):
             "fuel_production_facility_province_state": "Washington",
             "fuel_production_facility_country": "United States",
             "facility_nameplate_capacity": 123,
+            "facility_nameplate_capacity_unit": QuantityUnitsEnum.Litres,
             "former_company": "ABC Company",
             "notes": "notes",
         },
@@ -73,6 +74,7 @@ async def seed_fuel_codes(session):
             "fuel_production_facility_province_state": "Alberta",
             "fuel_production_facility_country": "Canada",
             "facility_nameplate_capacity": 123,
+            "facility_nameplate_capacity_unit": QuantityUnitsEnum.Kilograms,
             "former_company": "ABC Company",
             "notes": "notes",
         },
@@ -95,7 +97,6 @@ async def seed_fuel_codes(session):
             "fuel_production_facility_city": "San Diego",
             "fuel_production_facility_province_state": "California",
             "fuel_production_facility_country": "United States",
-            "facility_nameplate_capacity": 123,
             "former_company": "ABC Company",
             "notes": "notes",
         },
@@ -118,7 +119,6 @@ async def seed_fuel_codes(session):
             "fuel_production_facility_city": "Toronto",
             "fuel_production_facility_province_state": "Ontario",
             "fuel_production_facility_country": "Canada",
-            "facility_nameplate_capacity": 123,
             "former_company": "ABC Company",
             "notes": "notes",
         },
@@ -142,6 +142,7 @@ async def seed_fuel_codes(session):
             "fuel_production_facility_province_state": "Oregon",
             "fuel_production_facility_country": "United States",
             "facility_nameplate_capacity": 123,
+            "facility_nameplate_capacity_unit": QuantityUnitsEnum.Litres,
             "former_company": "ABC Company",
             "notes": "notes",
         },
