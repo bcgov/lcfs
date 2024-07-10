@@ -32,8 +32,7 @@ async def get_fse_options(service: FinalSupplyEquipmentServices = Depends()) -> 
 
 
 @router.post("/list-all", response_model=FinalSupplyEquipmentsSchema, status_code=status.HTTP_200_OK)
-# @roles_required("Supplier")
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler(['*'])
 async def get_final_supply_equipments(
     request: Request,
     request_data: CommmonPaginatedReportRequestSchema = Body(...),
