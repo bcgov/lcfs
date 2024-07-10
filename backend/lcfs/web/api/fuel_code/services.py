@@ -194,7 +194,7 @@ class FuelCodeServices:
         if not fuel_code:
             raise ValueError("Fuel code not found")
 
-        for field, value in fuel_code_data.model_dump(exclude={'feedstock_fuel_transport_modes', 'finished_fuel_transport_modes'}).items():
+        for field, value in fuel_code_data.model_dump(exclude={'feedstock_fuel_transport_modes', 'finished_fuel_transport_modes', 'facility_nameplate_capacity_unit'}).items():
             setattr(fuel_code, field, value)
 
         fuel_code.feedstock_fuel_transport_modes.clear()
@@ -222,6 +222,14 @@ class FuelCodeServices:
                 )
 
                 fuel_code.finished_fuel_transport_modes.append(finished_mode)
+
+        facility_nameplate_capacity_units_enum = (
+            QuantityUnitsEnum(
+                fuel_code_data.facility_nameplate_capacity_unit).name
+            if fuel_code_data.facility_nameplate_capacity_unit is not None
+            else None
+        )
+        fuel_code.facility_nameplate_capacity_unit = facility_nameplate_capacity_units_enum
 
         if fuel_code_data.status == 'Approved':
             fuel_code.fuel_status_id = (await self.get_fuel_code_status(fuel_code_data.status)).fuel_code_status_id

@@ -51,6 +51,11 @@ const ViewFuelCodeBase = () => {
       onSuccess: () => {
         queryClient.invalidateQueries(['fuel-code', fuelCodeID])
         navigate(ROUTES.FUELCODES + `?hid=${fuelCodeID}`)
+      },
+      onError: (error) => {
+        setAlertMessage(error.response.data.detail[0].msg)
+        setAlertSeverity('error')
+        alertRef.current?.triggerAlert()
       }
     })
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
