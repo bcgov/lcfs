@@ -188,7 +188,6 @@ const ViewFuelCodeBase = () => {
     gridApi.stopEditing(false)
     const row = gridApi.getDisplayedRowAtIndex(0)
     await validationHandler(row)
-    console.log(1231231)
     const data = {
       ...row.data,
       lastUpdated: new Date(),
