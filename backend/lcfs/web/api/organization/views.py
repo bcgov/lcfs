@@ -22,6 +22,7 @@ from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSche
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
+from lcfs.web.api.transaction.schema import TransfersInProgressSchema
 from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
     TransferSchema,
@@ -353,3 +354,22 @@ async def get_final_supply_equipments(
     Endpoint to get the list of all final supply equipments for the given compliance report.
     """
     return await fse_service.get_fse_list(report_id)
+
+
+@router.get(
+    "/{organization_id}/count-transfers-in-progress",
+    response_model=TransfersInProgressSchema,
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Supplier")
+@view_handler
+async def count_org_transfers_in_progress(
+    request: Request,
+    organization_id: int,
+    response: Response = None,
+    org_service: OrganizationService = Depends(),
+) -> TransfersInProgressSchema:
+    """
+    Endpoint to get the number of transfers in progress for an organization.
+    """
+    return await org_service.count_transfers_in_progress(organization_id)

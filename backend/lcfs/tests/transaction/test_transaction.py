@@ -8,7 +8,14 @@ from httpx import AsyncClient
 
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
-from lcfs.web.api.transaction.schema import TransactionListSchema
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
+from lcfs.web.api.transaction.schema import (
+    TransactionListSchema,
+    TransfersInProgressSchema,
+    InitiativeAgreementsInProgressSchema,
+    AdminAdjustmentsInProgressSchema
+)
 
 
 # Tests for exporting transactions
@@ -168,3 +175,104 @@ async def test_get_transactions_paginated_not_found(client: AsyncClient, fastapi
 
     # Check the status code
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+@pytest.mark.anyio
+async def test_count_transfers_in_progress(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models):
+    transfer_submitted = Transfer(
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
+        quantity=10,
+        transfer_category_id=1,
+        current_status_id=4,
+        recommendation=TransferRecommendationEnum.Record,
+    )
+
+    transfer_recommended = Transfer(
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
+        quantity=10,
+        transfer_category_id=1,
+        current_status_id=5,
+        recommendation=TransferRecommendationEnum.Record,
+    )
+
+    await add_models([transfer_submitted, transfer_recommended])
+
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("count_transfers_in_progress")
+    response = await client.get(url)
+
+    # Check the status code
+    assert response.status_code == status.HTTP_200_OK
+
+    # Check if the count is as expected
+    content = TransfersInProgressSchema(**response.json())
+    assert content.transfers_in_progress == 2
+
+@pytest.mark.anyio
+async def test_count_initiative_agreements_in_progress(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models):
+    ia_draft = InitiativeAgreement(
+        compliance_units=1,
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        gov_comment="comment",
+        to_organization_id=2,
+        current_status_id=1
+    )
+
+    ia_recommended = InitiativeAgreement(
+        compliance_units=1,
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        gov_comment="comment",
+        to_organization_id=2,
+        current_status_id=2
+    )
+
+    await add_models([ia_draft, ia_recommended])
+
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("count_initiative_agreements_in_progress")
+    response = await client.get(url)
+
+    # Check the status code
+    assert response.status_code == status.HTTP_200_OK
+
+    # Check if the count is as expected
+    content = InitiativeAgreementsInProgressSchema(**response.json())
+    assert content.initiative_agreements_in_progress == 2
+
+@pytest.mark.anyio
+async def test_count_admin_adjustments_in_progress(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models):
+    aa_draft = AdminAdjustment(
+        compliance_units=1,
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        gov_comment="comment",
+        to_organization_id=2,
+        current_status_id=1
+    )
+
+    aa_recommended = AdminAdjustment(
+        compliance_units=1,
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        gov_comment="comment",
+        to_organization_id=2,
+        current_status_id=2
+    )
+
+    await add_models([aa_draft, aa_recommended])
+
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("count_admin_adjustments_in_progress")
+    response = await client.get(url)
+
+    # Check the status code
+    assert response.status_code == status.HTTP_200_OK
+
+    # Check if the count is as expected
+    content = AdminAdjustmentsInProgressSchema(**response.json())
+    assert content.admin_adjustments_in_progress == 2

@@ -40,3 +40,47 @@ export const useTransactionStatuses = (options) => {
     ...options
   })
 }
+
+export const useTransactionsOrgTransfersInProgress = (orgID, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['transaction-org-transfers-in-progress', orgID],
+    queryFn: async () => 
+      (await client.get(`/organization/${orgID}/count-transfers-in-progress`)).data,
+    ...options
+  })
+}
+
+export const useTransactionsTransfersInProgress = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['transaction-transfers-in-progress'],
+    queryFn: async () => 
+      (await client.get(`/transactions/count-transfers-in-progress`)).data,
+    ...options
+  })
+}
+
+export const useTransactionsInitiativeAgreementsInProgress = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['transaction-initiative-agreements-in-progress'],
+    queryFn: async () => 
+      (await client.get(`/transactions/count-initiative-agreements-in-progress`)).data,
+    ...options
+  })
+}
+
+export const useTransactionsAdminAdjustmentsInProgress = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['transaction-admin-adjustments-in-progress'],
+    queryFn: async () => 
+      (await client.get(`/transactions/count-admin-adjustments-in-progress`)).data,
+    ...options
+  })
+}

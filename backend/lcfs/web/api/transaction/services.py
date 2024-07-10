@@ -9,7 +9,13 @@ from sqlalchemy import or_, and_
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.transaction.TransactionView import TransactionView
-from lcfs.web.api.transaction.schema import TransactionStatusSchema, TransactionViewSchema
+from lcfs.web.api.transaction.schema import (
+    TransactionStatusSchema,
+    TransactionViewSchema,
+    TransfersInProgressSchema,
+    InitiativeAgreementsInProgressSchema,
+    AdminAdjustmentsInProgressSchema
+)
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
     FilterModel,
@@ -181,3 +187,36 @@ class TransactionsService:
             media_type=FILE_MEDIA_TYPE[export_format.upper()].value,
             headers=headers,
         )
+
+    @service_handler
+    async def count_transfers_in_progress(self) -> TransfersInProgressSchema:
+        """
+        Count the number of transfers in progress.
+
+        Returns:
+            TransfersInProgressSchema: The number of transfers in progress wrapped in a schema.
+        """
+        count = await self.repo.count_transfers_in_progress()
+        return TransfersInProgressSchema(transfers_in_progress=count)
+
+    @service_handler
+    async def count_initiative_agreements_in_progress(self) -> InitiativeAgreementsInProgressSchema:
+        """
+        Count the number of initiative agreements in progress.
+
+        Returns:
+            InitiativeAgreementsInProgressSchema: The number of initiative agreements in progress wrapped in a schema.
+        """
+        count = await self.repo.count_initiative_agreements_in_progress()
+        return InitiativeAgreementsInProgressSchema(initiative_agreements_in_progress=count)
+
+    @service_handler
+    async def count_admin_adjustments_in_progress(self) -> AdminAdjustmentsInProgressSchema:
+        """
+        Count the number of admin adjustments in progress.
+
+        Returns:
+            AdminAdjustmentsInProgressSchema: The number of admin adjustments in progress wrapped in a schema.
+        """
+        count = await self.repo.count_admin_adjustments_in_progress()
+        return AdminAdjustmentsInProgressSchema(admin_adjustments_in_progress=count)
