@@ -8,7 +8,7 @@ from starlette import status
 
 from lcfs.db import dependencies
 
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.db.models.organization.OrganizationStatus import OrgStatusEnum
 
@@ -24,6 +24,7 @@ from .schema import (
     OrganizationBalanceResponseSchema,
     OrganizationUpdateSchema
 )
+from lcfs.db.models.user.Role import RoleEnum
 
 
 logger = getLogger("organizations_service")
@@ -32,8 +33,7 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def export_organizations(
     request: Request,
     service: OrganizationsService = Depends()
@@ -60,8 +60,7 @@ async def export_organizations(
 
 
 @router.post("/create", response_model=OrganizationResponseSchema, status_code=status.HTTP_201_CREATED)
-@roles_required("Government", "Administrator")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
 async def create_organization(
     request: Request,
     organization_data: OrganizationCreateSchema,
@@ -79,7 +78,7 @@ async def create_organization(
     response_model=OrganizationResponseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler
+@view_handler(['*'])
 async def get_organization(
     request: Request,
     organization_id: int,
@@ -90,7 +89,7 @@ async def get_organization(
 
 
 @router.put("/{organization_id}")
-@view_handler
+@view_handler(['*'])
 async def update_organization(
     request: Request,
     organization_id: int,
@@ -102,8 +101,7 @@ async def update_organization(
 
 
 @router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_organizations(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -120,7 +118,7 @@ async def get_organizations(
     status_code=status.HTTP_200_OK,
 )
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
-@view_handler
+@view_handler(['*'])
 async def get_organization_statuses(
     service: OrganizationsService = Depends()
 ) -> List[OrganizationStatusSchema]:
@@ -134,7 +132,7 @@ async def get_organization_statuses(
     status_code=status.HTTP_200_OK,
 )
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
-@view_handler
+@view_handler(['*'])
 async def get_organization_types(
     service: OrganizationsService = Depends()
 ) -> List[OrganizationTypeSchema]:
@@ -144,7 +142,7 @@ async def get_organization_types(
 
 @router.get("/names/", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
 @cache(expire=1)  # cache for 1 hour
-@view_handler
+@view_handler(['*'])
 async def get_organization_names(service: OrganizationsService = Depends()):
     '''Fetch all organization names'''
 
@@ -156,7 +154,7 @@ async def get_organization_names(service: OrganizationsService = Depends()):
 
 
 @router.get("/registered/external", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
-@view_handler
+@view_handler(['*'])
 async def get_externally_registered_organizations(
     request: Request,
     service: OrganizationsService = Depends()
@@ -178,8 +176,7 @@ async def get_externally_registered_organizations(
 
 
 @router.get("/balances/{organization_id}", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_balances(
     request: Request,
     organization_id: int,
@@ -202,7 +199,7 @@ async def get_balances(
 
 
 @router.get("/current/balances", response_model=OrganizationBalanceResponseSchema, status_code=status.HTTP_200_OK)
-@view_handler
+@view_handler(['*'])
 async def get_balances(
     request: Request,
     service: OrganizationsService = Depends()

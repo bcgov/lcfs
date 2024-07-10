@@ -13,7 +13,8 @@ from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
 from lcfs.web.api.role.schema import RoleSchema
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("role_view")
@@ -22,8 +23,7 @@ app = FastAPI()
 
 
 @router.get("/", response_model=List[RoleSchema], status_code=status.HTTP_200_OK)
-@roles_required("Government", "Supplier")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_roles(
     request: Request,
@@ -31,5 +31,6 @@ async def get_roles(
     service: RoleServices = Depends(),
     response: Response = None,
 ) -> List[RoleSchema]:
-    logger.info(f"Retrieving roles: government_roles_only : {government_roles_only}")
+    logger.info(f'''Retrieving roles: government_roles_only : {
+                government_roles_only}''')
     return await service.get_roles(government_roles_only)

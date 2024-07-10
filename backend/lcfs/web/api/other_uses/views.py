@@ -16,7 +16,7 @@ from fastapi import (
 from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.schema import (
     OtherUsesCreateSchema,
@@ -31,6 +31,7 @@ from lcfs.web.api.other_uses.schema import (
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("other_uses_view")
@@ -40,7 +41,7 @@ get_async_db = dependencies.get_async_db_session
 @router.get(
     "/table-options", response_model=OtherUsesTableOptionsSchema, status_code=status.HTTP_200_OK
 )
-@view_handler
+@view_handler(['*'])
 # @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
     request: Request,
@@ -49,8 +50,9 @@ async def get_table_options(
     """Endpoint to retrieve table options related to other uses"""
     return await service.get_table_options()
 
+
 @router.post("/list-all", response_model=OtherUsesAllSchema, status_code=status.HTTP_200_OK)
-@view_handler
+@view_handler(['*'])
 async def get_other_uses(
     request: Request,
     request_data: ComplianceReportRequestSchema = Body(...),
@@ -60,12 +62,13 @@ async def get_other_uses(
     """Endpoint to get list of other uses for a compliance report"""
     return await service.get_other_uses(request_data.compliance_report_id)
 
+
 @router.post(
     "/list",
     response_model=OtherUsesListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler
+@view_handler(['*'])
 async def get_other_uses_paginated(
     request: Request,
     request_data: PaginatedOtherUsesRequestSchema = Body(...),
@@ -80,13 +83,13 @@ async def get_other_uses_paginated(
     compliance_report_id = request_data.compliance_report_id
     return await service.get_other_uses_paginated(pagination, compliance_report_id)
 
+
 @router.post(
     "/save",
     response_model=Union[OtherUsesSchema, DeleteOtherUsesResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Supplier")
-@view_handler
+@view_handler([RoleEnum.SUPPLIER])
 async def save_other_uses_row(
     request: Request,
     request_data: OtherUsesCreateSchema = Body(...),
