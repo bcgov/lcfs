@@ -76,6 +76,7 @@ async def export_transactions(
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler(['*'])
 async def get_transaction_statuses(
+    request: Request,
     service: TransactionsService = Depends()
 ) -> List[TransactionStatusSchema]:
     '''Fetch all transaction statuses'''

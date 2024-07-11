@@ -120,6 +120,7 @@ async def get_organizations(
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler(['*'])
 async def get_organization_statuses(
+    request: Request,
     service: OrganizationsService = Depends()
 ) -> List[OrganizationStatusSchema]:
     '''Fetch all organization statuses'''
@@ -134,6 +135,7 @@ async def get_organization_statuses(
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler(['*'])
 async def get_organization_types(
+    request: Request,
     service: OrganizationsService = Depends()
 ) -> List[OrganizationTypeSchema]:
     '''Fetch all organization types'''
@@ -143,7 +145,7 @@ async def get_organization_types(
 @router.get("/names/", response_model=List[OrganizationSummaryResponseSchema], status_code=status.HTTP_200_OK)
 @cache(expire=1)  # cache for 1 hour
 @view_handler(['*'])
-async def get_organization_names(service: OrganizationsService = Depends()):
+async def get_organization_names(request: Request, service: OrganizationsService = Depends()):
     '''Fetch all organization names'''
 
     # Set the default sorting order

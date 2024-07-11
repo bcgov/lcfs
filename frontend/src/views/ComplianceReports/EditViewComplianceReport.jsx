@@ -7,7 +7,9 @@ import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { Stack, Typography, List, ListItemButton } from '@mui/material'
+import { Stack, Typography, List, ListItemButton, Fab, Tooltip } from '@mui/material'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 // styles
 import colors from '@/themes/base/colors.js'
 // hooks
@@ -22,24 +24,52 @@ import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
 
+const iconStyle = {
+  width: '2rem', 
+  height: '2rem',
+  color: colors.white.main
+}
 export const EditViewComplianceReport = () => {
   const { t } = useTranslation()
-
+  const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [introExpanded, setIntroExpanded] = useState(true)
+  const [introExpanded, setIntroExpanded] = useState(location.state && location.state?.newReport)
 
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const alertRef = useRef()
 
   const { compliancePeriod, complianceReportId } = useParams()
-  const location = useLocation()
+  const [isAtTop, setIsAtTop] = useState(true);
+
+  const scrollToTopOrBottom = () => {
+    if (isAtTop) {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth'
+      });
+      setIsAtTop(false);
+    } else {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      setIsAtTop(true);
+    }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      setIsAtTop(scrollTop === 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // hooks
-  const {
-    data: currentUser,
-    isLoading: isCurrentUserLoading
-  } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } = useCurrentUser()
   const {
     data: reportData,
     isLoading: isReportLoading,
@@ -169,13 +199,32 @@ export const EditViewComplianceReport = () => {
                 </List>
               </BCBox>
             </Stack>
-            <ReportDetails />
-            <ComplianceReportSummary reportID={complianceReportId} />
+            <ReportDetails collapseAll={location.state && location.state?.newReport}/>
+            <ComplianceReportSummary reportID={complianceReportId} collapseAll={location.state && location.state?.newReport}/>
             <Introduction
               expanded={introExpanded}
               handleChange={handleIntroExpansion}
             />
           </Stack>
+          <Tooltip 
+            title={isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')} 
+            placement="left" 
+            arrow
+          >
+            <Fab
+              color="secondary"
+              size="large"
+              aria-label={isAtTop ? "scroll to bottom" : "scroll to top"}
+              onClick={scrollToTopOrBottom}
+              sx={{
+                position: 'fixed',
+                bottom: 75,
+                right: 24
+              }}
+            >
+              {isAtTop ? <KeyboardArrowDownIcon sx={iconStyle} /> : <KeyboardArrowUpIcon sx={iconStyle}/>}
+            </Fab>
+          </Tooltip>
         </>
       )}
     </>

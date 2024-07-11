@@ -27,7 +27,7 @@ get_async_db = dependencies.get_async_db_session
 
 @router.get("/table-options", response_model=FSEOptionsSchema, status_code=status.HTTP_200_OK)
 @view_handler(['*'])
-async def get_fse_options(service: FinalSupplyEquipmentServices = Depends()) -> FSEOptionsSchema:
+async def get_fse_options(request: Request, service: FinalSupplyEquipmentServices = Depends()) -> FSEOptionsSchema:
     return await service.get_fse_options()
 
 

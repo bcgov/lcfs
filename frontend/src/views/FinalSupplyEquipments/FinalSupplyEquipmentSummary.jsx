@@ -54,7 +54,7 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
     { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'), field: "manufacturer" },
     { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'), field: "levelOfEquipment", valueGetter: (params) => params.data.levelOfEquipment.name },
     { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'), field: "fuelMeasurementType", valueGetter: (params) => params.data.fuelMeasurementType.type },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'), field: "intendedUses", valueGetter: (params) => params.data.intendedUseTypes.map((use) => use.type).join(', '), cellRenderer: CommonArrayRenderer },
+    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'), field: "intendedUses", valueGetter: (params) => params.data.intendedUseTypes.map((use) => use.type).join(', '), cellRenderer: CommonArrayRenderer, cellRendererParams: { marginTop: '0.7em' } },
     { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'), field: "streetAddress" },
     { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'), field: "city" },
     { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'), field: "postalCode" },
