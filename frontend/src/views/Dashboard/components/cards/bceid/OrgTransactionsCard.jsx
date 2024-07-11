@@ -67,7 +67,7 @@ export function OrgTransactionsCard() {
 
   const { data: currentUserData } = useCurrentUser()
   const { data: orgData, isLoading: orgLoading } = useOrganization()
-  const { data: transfersInProgressData, isLoading: transfersLoading } = useTransactionsOrgTransfersInProgress(currentUserData?.organization.organizationId)
+  const { data: transfersInProgressData, isLoading: transfersLoading } = useTransactionsOrgTransfersInProgress()
 
   if (orgLoading || transfersLoading) {
     return <Loading message={t('org:cards.orgTransactions.loading')} />

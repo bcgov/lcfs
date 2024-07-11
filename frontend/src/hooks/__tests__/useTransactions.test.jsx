@@ -47,13 +47,13 @@ describe('useTransactionsOrgTransfersInProgress', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data).toEqual({ transfers_in_progress: 5 })
-    expect(mockGet).toHaveBeenCalledWith('/organization/1/count-transfers-in-progress')
+    expect(mockGet).toHaveBeenCalledWith('/organization/count-transfers-in-progress')
   })
 
   it('handles errors correctly', async () => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
-    const { result } = renderHook(() => useTransactionsOrgTransfersInProgress(1), {
+    const { result } = renderHook(() => useTransactionsOrgTransfersInProgress(), {
       wrapper: createWrapper(),
     })
 

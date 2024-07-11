@@ -41,13 +41,13 @@ export const useTransactionStatuses = (options) => {
   })
 }
 
-export const useTransactionsOrgTransfersInProgress = (orgID, options) => {
+export const useTransactionsOrgTransfersInProgress = (options) => {
   const client = useApiService()
 
   return useQuery({
-    queryKey: ['transaction-org-transfers-in-progress', orgID],
+    queryKey: ['transaction-org-transfers-in-progress'],
     queryFn: async () => 
-      (await client.get(`/organization/${orgID}/count-transfers-in-progress`)).data,
+      (await client.get(`/organization/count-transfers-in-progress`)).data,
     ...options
   })
 }

@@ -297,7 +297,7 @@ async def get_compliance_report_by_id(
 
 
 @router.get(
-    "/{organization_id}/count-transfers-in-progress",
+    "/count-transfers-in-progress",
     response_model=TransfersInProgressSchema,
     status_code=status.HTTP_200_OK,
 )
@@ -305,11 +305,11 @@ async def get_compliance_report_by_id(
 @view_handler
 async def count_org_transfers_in_progress(
     request: Request,
-    organization_id: int,
     response: Response = None,
     org_service: OrganizationService = Depends(),
 ) -> TransfersInProgressSchema:
     """
     Endpoint to get the number of transfers in progress for an organization.
     """
+    organization_id = request.user.organization.organization_id
     return await org_service.count_transfers_in_progress(organization_id)
