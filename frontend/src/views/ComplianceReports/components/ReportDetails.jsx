@@ -22,7 +22,7 @@ import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/Final
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 
-const ReportDetails = ({ collapseAll }) => {
+const ReportDetails = () => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
@@ -123,9 +123,7 @@ const ReportDetails = ({ collapseAll }) => {
     [t, navigate, compliancePeriod, complianceReportId]
   )
 
-  const [expanded, setExpanded] = useState(() =>
-    collapseAll ? [] : activityList.map((_, index) => `panel${index}`)
-  )
+  const [expanded, setExpanded] = useState(() => activityList.map((_, index) => `panel${index}`))
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded((prev) =>

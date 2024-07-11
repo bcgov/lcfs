@@ -33,7 +33,6 @@ export const EditViewComplianceReport = () => {
   const { t } = useTranslation()
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [introExpanded, setIntroExpanded] = useState(location.state && location.state?.newReport)
 
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -82,10 +81,6 @@ export const EditViewComplianceReport = () => {
   const { data: orgData, isLoading } = useOrganization(
     reportData?.data?.organizationId
   )
-
-  const handleIntroExpansion = (panel) => (event, isExpanded) => {
-    setIntroExpanded(!introExpanded)
-  }
 
   useEffect(() => {
     if (location.state?.message) {
@@ -199,22 +194,25 @@ export const EditViewComplianceReport = () => {
                 </List>
               </BCBox>
             </Stack>
-            <ReportDetails collapseAll={location.state && location.state?.newReport}/>
-            <ComplianceReportSummary reportID={complianceReportId} collapseAll={location.state && location.state?.newReport}/>
-            <Introduction
-              expanded={introExpanded}
-              handleChange={handleIntroExpansion}
-            />
+            {!location.state?.newReport && (
+              <>
+                <ReportDetails />
+                <ComplianceReportSummary reportID={complianceReportId} />
+              </>
+            )}
+            <Introduction expanded={location.state?.newReport} />
           </Stack>
-          <Tooltip 
-            title={isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')} 
-            placement="left" 
+          <Tooltip
+            title={
+              isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')
+            }
+            placement="left"
             arrow
           >
             <Fab
               color="secondary"
               size="large"
-              aria-label={isAtTop ? "scroll to bottom" : "scroll to top"}
+              aria-label={isAtTop ? 'scroll to bottom' : 'scroll to top'}
               onClick={scrollToTopOrBottom}
               sx={{
                 position: 'fixed',
@@ -222,7 +220,11 @@ export const EditViewComplianceReport = () => {
                 right: 24
               }}
             >
-              {isAtTop ? <KeyboardArrowDownIcon sx={iconStyle} /> : <KeyboardArrowUpIcon sx={iconStyle}/>}
+              {isAtTop ? (
+                <KeyboardArrowDownIcon sx={iconStyle} />
+              ) : (
+                <KeyboardArrowUpIcon sx={iconStyle} />
+              )}
             </Fab>
           </Tooltip>
         </>

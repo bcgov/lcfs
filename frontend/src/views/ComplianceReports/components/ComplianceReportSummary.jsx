@@ -16,7 +16,7 @@ import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 
-const ComplianceReportSummary = ({ reportID, collapseAll }) => {
+const ComplianceReportSummary = ({ reportID }) => {
   const { t } = useTranslation(['report'])
 
   const { data, isLoading, isError, error } = useGetComplianceReportSummary(reportID)
@@ -31,7 +31,7 @@ const ComplianceReportSummary = ({ reportID, collapseAll }) => {
 
   return (
     <>
-      <Accordion expanded={!collapseAll}>
+      <Accordion defaultExpanded>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
