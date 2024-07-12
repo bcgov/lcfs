@@ -79,7 +79,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     minWidth: '155',
     cellEditorParams: {
       options: optionsData.unitsOfMeasure
-        .map((obj) => obj.name),
+        .map((obj) => obj),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
