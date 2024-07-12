@@ -1,13 +1,14 @@
 import React from 'react';
 import { Grid, Box } from '@mui/material';
 import { Role } from '@/components/Role';
-import { govRoles, nonGovRoles } from '@/constants/roles';
+import { govRoles, nonGovRoles, roles } from '@/constants/roles';
 import {
   AdminLinksCard,
   OrgDetailsCard,
   OrgBalanceCard,
   FeedbackCard,
-  WebsiteCard
+  WebsiteCard,
+  DirectorReviewCard
 } from './components/cards';
 
 export const Dashboard = () => {
@@ -19,7 +20,6 @@ export const Dashboard = () => {
         justifyContent={{ md: 'center' }}
         data-test="dashboard-container"
       >
-
         {/* Left Section */}
         <Grid
           item 
@@ -42,8 +42,10 @@ export const Dashboard = () => {
           order={{ xs: 1, sm: 1, md: 1, lg: 2 }}
           sx={{ bgcolor: { lg: 'background.grey' } }}
         >
-          <Box sx={{ mx: {lg: 2 }, mt: {lg: 5 } }} p={2} bgcolor="background.grey">
-            placeholder
+          <Box sx={{ mx: {lg: 2 }, mt: {lg: 3 } }} p={2} bgcolor="background.grey">
+            <Role roles={[roles.director]}>
+              <DirectorReviewCard />
+            </Role>
           </Box>
         </Grid>
 

@@ -19,7 +19,8 @@ from lcfs.web.api import (
     compliance_report,
     notional_transfer,
     other_uses,
-    final_supply_equipment
+    final_supply_equipment,
+    dashboard
 )
 
 api_router = APIRouter()
@@ -33,6 +34,7 @@ api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(redis.router, prefix="/redis", tags=["redis"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )
@@ -69,3 +71,4 @@ api_router.include_router(
 api_router.include_router(
     fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]
 )
+

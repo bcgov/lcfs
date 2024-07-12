@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Box } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
-export const WebsiteCard = () => {
+const WebsiteCard = () => {
   const { t } = useTranslation(['common'])
 
   return (
@@ -19,3 +19,5 @@ export const WebsiteCard = () => {
     </Box>
   )
 }
+
+export default WebsiteCard
