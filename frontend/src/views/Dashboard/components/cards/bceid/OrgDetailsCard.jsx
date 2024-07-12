@@ -11,7 +11,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 
-export const OrgDetailsCard = () => {
+const OrgDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
   const { data: orgData, isLoading: orgLoading } = useOrganization()
   const navigate = useNavigate()

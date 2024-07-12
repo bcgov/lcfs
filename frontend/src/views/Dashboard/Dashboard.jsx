@@ -8,6 +8,7 @@ import {
   OrgBalanceCard,
   FeedbackCard,
   WebsiteCard,
+  DirectorReviewCard,
   TransactionsCard,
   OrgTransactionsCard
 } from './components/cards'
@@ -21,7 +22,6 @@ export const Dashboard = () => {
         justifyContent={{ md: 'center' }}
         data-test="dashboard-container"
       >
-
         {/* Left Section */}
         <Grid
           item 
@@ -50,6 +50,9 @@ export const Dashboard = () => {
             </Role>
             <Role roles={[roles.transfers]}>
               <OrgTransactionsCard />
+            </Role>
+            <Role roles={[roles.director]}>
+              <DirectorReviewCard />
             </Role>
           </Box>
         </Grid>

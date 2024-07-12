@@ -257,6 +257,7 @@ export const Transactions = () => {
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           highlightedRowId={highlightedId}
+          defaultFilterModel={location.state?.filters}
         />
       </BCBox>
     </>
