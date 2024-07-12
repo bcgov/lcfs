@@ -1,15 +1,17 @@
-import React from 'react';
-import { Grid, Box } from '@mui/material';
-import { Role } from '@/components/Role';
-import { govRoles, nonGovRoles, roles } from '@/constants/roles';
+import React from 'react'
+import { Grid, Box } from '@mui/material'
+import { Role } from '@/components/Role'
+import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 import {
   AdminLinksCard,
   OrgDetailsCard,
   OrgBalanceCard,
   FeedbackCard,
   WebsiteCard,
-  DirectorReviewCard
-} from './components/cards';
+  DirectorReviewCard,
+  TransactionsCard,
+  OrgTransactionsCard
+} from './components/cards'
 
 export const Dashboard = () => {
   return (
@@ -42,7 +44,13 @@ export const Dashboard = () => {
           order={{ xs: 1, sm: 1, md: 1, lg: 2 }}
           sx={{ bgcolor: { lg: 'background.grey' } }}
         >
-          <Box sx={{ mx: {lg: 2 }, mt: {lg: 3 } }} p={2} bgcolor="background.grey">
+          <Box sx={{ mx: {lg: 2 }, mt: {lg: 5}, mb: {lg: 3}, bgcolor: { lg: 'background.grey' }, px: { lg: 1 } }}>
+            <Role roles={[roles.analyst, roles.director]}>
+              <TransactionsCard />
+            </Role>
+            <Role roles={[roles.transfers]}>
+              <OrgTransactionsCard />
+            </Role>
             <Role roles={[roles.director]}>
               <DirectorReviewCard />
             </Role>
@@ -56,7 +64,7 @@ export const Dashboard = () => {
           order={{ xs: 2, sm: 3, md: 3, lg: 3 }}
           sx={{ bgcolor: { lg: 'background.grey' } }}
         >
-          <Box sx={{ mx: {lg: 2 }, my: {lg: 5 } }}>
+          <Box sx={{ mr: {lg: 3 }, my: {lg: 5 } }}>
             <Role roles={nonGovRoles}>
               <OrgDetailsCard />
             </Role>
@@ -68,5 +76,5 @@ export const Dashboard = () => {
 
       </Grid>
     </Box>
-  );
-};
+  )
+}

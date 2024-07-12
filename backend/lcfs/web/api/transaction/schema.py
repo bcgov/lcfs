@@ -77,3 +77,15 @@ class TransactionViewSchema(BaseSchema):
 class TransactionListSchema(BaseSchema):
     pagination: PaginationResponseSchema
     transactions: List[TransactionViewSchema]
+
+
+class TransfersInProgressSchema(BaseSchema):
+    transfers_in_progress: int
+
+
+class InitiativeAgreementsInProgressSchema(BaseSchema):
+    initiative_agreements_in_progress: int
+
+
+class AdminAdjustmentsInProgressSchema(BaseSchema):
+    admin_adjustments_in_progress: int

@@ -19,7 +19,7 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
         position: fixed ? 'fixed' : 'relative',
         top: fixed && 0,
         left: fixed && 0,
-        margin: fixed ? 0 : '30px'
+        margin: fixed ? 0 : '10px'
       }}
       data-test="loading"
     >

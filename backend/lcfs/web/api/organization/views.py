@@ -19,6 +19,7 @@ from lcfs.web.api.user.schema import UserBaseSchema, UserCreateSchema, UsersSche
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
+from lcfs.web.api.transaction.schema import TransfersInProgressSchema
 from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
     TransferSchema,
@@ -284,3 +285,22 @@ async def get_compliance_report_by_id(
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     return await report_service.get_compliance_report_by_id(report_id)
+
+
+@router.get(
+    "/count-transfers-in-progress",
+    response_model=TransfersInProgressSchema,
+    status_code=status.HTTP_200_OK,
+)
+@roles_required("Supplier")
+@view_handler
+async def count_org_transfers_in_progress(
+    request: Request,
+    response: Response = None,
+    org_service: OrganizationService = Depends(),
+) -> TransfersInProgressSchema:
+    """
+    Endpoint to get the number of transfers in progress for an organization.
+    """
+    organization_id = request.user.organization.organization_id
+    return await org_service.count_transfers_in_progress(organization_id)

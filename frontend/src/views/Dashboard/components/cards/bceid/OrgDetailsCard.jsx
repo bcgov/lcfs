@@ -18,6 +18,7 @@ const OrgDetailsCard = () => {
   return (
     <BCWidgetCard
       component="div"
+      disableHover={true}
       title={t('org:orgDetailsLabel')}
       content={
         orgLoading ? (
@@ -79,8 +80,8 @@ const OrgDetailsCard = () => {
                       '&:hover': { color: 'info.main' }
                     }}
                   >
-                    {t('org:createNewUsrLabel')}&nbsp;
-                    <FontAwesomeIcon icon={faShareFromSquare} />
+                    {t('org:createNewUsrLabel')}
+                    <FontAwesomeIcon icon={faShareFromSquare} style={{ color: '#578260', marginLeft: 6 }} />
                   </BCTypography>
                 </ListItemButton>
               </List>

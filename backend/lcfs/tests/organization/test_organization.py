@@ -8,7 +8,7 @@ from httpx import AsyncClient
 
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
-from lcfs.web.api.transaction.schema import TransactionListSchema
+from lcfs.web.api.transaction.schema import TransactionListSchema, TransfersInProgressSchema
 
 
 # Tests for exporting transactions
@@ -89,3 +89,54 @@ async def test_get_transactions_paginated_for_org_not_found(client: AsyncClient,
 
     # Check the status code
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+@pytest.mark.anyio
+async def test_count_transfers_in_progress(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models):
+    transfer_draft = Transfer(
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
+        quantity=10,
+        transfer_category_id=1,
+        current_status_id=1,
+        recommendation=TransferRecommendationEnum.Record,
+    )
+
+    transfer_sent = Transfer(
+        from_organization_id=1,
+        to_organization_id=2,
+        agreement_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
+        quantity=10,
+        transfer_category_id=1,
+        current_status_id=3,
+        recommendation=TransferRecommendationEnum.Record,
+    )
+
+    transfer_submitted = Transfer(
+        from_organization_id=2,
+        to_organization_id=1,
+        agreement_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
+        quantity=10,
+        transfer_category_id=1,
+        current_status_id=4,
+        recommendation=TransferRecommendationEnum.Record,
+    )
+
+    await add_models([transfer_draft, transfer_sent, transfer_submitted])
+
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+    url = fastapi_app.url_path_for("count_org_transfers_in_progress", organization_id=1)
+    response = await client.get(url)
+
+    # Check the status code
+    assert response.status_code == status.HTTP_200_OK
+
+    # Check if the count is as expected
+    content = TransfersInProgressSchema(**response.json())
+    assert content.transfers_in_progress == 3
