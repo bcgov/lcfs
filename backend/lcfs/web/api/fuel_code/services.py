@@ -176,6 +176,7 @@ class FuelCodeServices:
         """
         Create a new fuel code.
         """
+        fuel_code.status = "Draft"
         fuel_code_model = await self.convert_to_model(fuel_code)
         fuel_code_model.fuel_status_id = 1  # set to draft by default
 
