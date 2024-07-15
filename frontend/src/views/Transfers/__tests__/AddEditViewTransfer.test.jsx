@@ -1,17 +1,11 @@
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import * as useTransferHooks from '@/hooks/useTransfer'
 import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
 import theme from '@/themes'
 import { ThemeProvider, useMediaQuery } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor
-} from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { useTranslation } from 'react-i18next'
 import {
   MemoryRouter,
@@ -21,7 +15,6 @@ import {
 } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AddEditViewTransfer } from '../AddEditViewTransfer'
-import * as transferHooks from '@/hooks/useTransfer'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -83,19 +76,7 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-const createMutate = vi.fn()
-const updateMutate = vi.fn()
-
-vi.mock('@/hooks/useTransfer', async () => ({
-  useCreateUpdateTransfer: vi.fn(() => ({
-    mutate: createMutate,
-    isPending: false
-  })),
-  useTransfer: vi.fn().mockReturnValue({
-    data: {}
-  }),
-  useUpdateCategory: vi.fn(() => ({ mutate: updateMutate }))
-}))
+vi.mock('@/hooks/useTransfer')
 
 const renderComponent = (handleMode = 'edit') => {
   const queryClient = new QueryClient()
@@ -121,12 +102,22 @@ describe('AddEditViewTransfer Component Tests', () => {
     cleanup()
     vi.restoreAllMocks()
   })
+  beforeEach(() => {
+    vi.mocked(useTransferHooks.useCreateUpdateTransfer).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false
+    })
+    vi.mocked(useTransferHooks.useUpdateCategory).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false
+    })
+  })
   it('renders loading when transfer data is loading', async () => {
     useMatches.mockReturnValue([{ handle: { mode: 'add' } }])
     useParams.mockReturnValue({
       transferId: 1
     })
-    useTransfer.mockReturnValue({
+    vi.mocked(useTransferHooks.useTransfer).mockReturnValue({
       isLoading: true
     })
     useLocation.mockReturnValue({
