@@ -1,5 +1,6 @@
 from logging import getLogger
 import math
+import re
 from fastapi import Depends, Request
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
@@ -120,12 +121,67 @@ class FinalSupplyEquipmentServices:
     @service_handler
     async def create_final_supply_equipment(self, fse_data: FinalSupplyEquipmentCreateSchema) -> FinalSupplyEquipmentSchema:
         """Create a new final supply equipment"""
+        # Generate the registration number
+        registration_nbr = await self.generate_registration_number(fse_data.postal_code)
+
         final_supply_equipment = await self.convert_to_fse_model(fse_data)
+        final_supply_equipment.registration_nbr = registration_nbr
         created_equipment = await self.repo.create_final_supply_equipment(final_supply_equipment)
+
+        # Increment the sequence number for the postal code if creation was successful
+        if created_equipment:
+            await self.repo.increment_sequence_by_postal_code(fse_data.postal_code)
+
         return FinalSupplyEquipmentSchema.model_validate(created_equipment)
-        
+
 
     @service_handler
     async def delete_final_supply_equipment(self, final_supply_equipment_id: int) -> str:
         """Delete a final supply equipment"""
         return await self.repo.delete_final_supply_equipment(final_supply_equipment_id)
+
+
+    @service_handler
+    async def generate_registration_number(self, postal_code: str) -> str:
+        """
+        Generate a unique registration number for a Final Supply Equipment (FSE).
+
+        The registration number is composed of the organization ID, the last three characters of the postal code, 
+        and a sequential number. The sequential number resets for each new postal code.
+
+        Args:
+            postal_code (str): The postal code of the FSE.
+
+        Returns:
+            str: The generated unique registration number.
+
+        Raises:
+            ValueError: If the postal code is not a valid Canadian postal code, if the organization ID is not available, 
+                        or if the maximum registration numbers for the given postal code is exceeded.
+        """
+        # Validate the postal code format
+        postal_code_pattern = re.compile(r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$")
+        if not postal_code_pattern.match(postal_code):
+            raise ValueError("Invalid Canadian postal code format")
+
+        # Retrieve the organization ID from the user's request
+        org_id = self.request.user.organization.organization_id
+        if not org_id:
+            raise ValueError("Organization ID is not available")
+        formatted_org_id = f"{org_id:04}"
+
+        # Extract the last 3 characters of the postal code
+        last_three_postal = postal_code[-3:].upper()
+
+        # Retrieve the current sequence number for a given postal code
+        current_number = await self.repo.get_current_sequence_by_postal_code(postal_code)
+        next_number = current_number + 1
+
+        # Ensure the sequential number is within the 001-999 range
+        if next_number > 999:
+            raise ValueError("Exceeded maximum registration numbers for the given postal code")
+
+        formatted_next_number = f"{next_number:03d}"
+
+        # Concatenate to form the registration number and return it
+        return f"{formatted_org_id}-{last_three_postal}-{formatted_next_number}"
