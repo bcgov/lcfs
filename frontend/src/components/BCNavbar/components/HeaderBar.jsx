@@ -8,9 +8,7 @@ import BCTypography from '@/components/BCTypography'
 // Images & Icons
 import logoDark from '@/assets/images/logo-banner.svg'
 
-const HeaderBar = (props) => {
-  const { isMobileView, popupState, data } = props
-
+const HeaderBar = ({ isMobileView = false, popupState = {}, data = {} }) => {
   return (
     <Toolbar
       sx={({
@@ -77,12 +75,6 @@ const HeaderBar = (props) => {
       </BCBox>
     </Toolbar>
   )
-}
-
-HeaderBar.defaultProps = {
-  isMobileView: false,
-  popupState: {},
-  data: {}
 }
 
 HeaderBar.propTypes = {

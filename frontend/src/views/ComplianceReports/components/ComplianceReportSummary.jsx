@@ -33,7 +33,7 @@ const ComplianceReportSummary = ({ reportID }) => {
     <>
       <Accordion defaultExpanded>
         <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
+          expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
         >
           <BCBox>

@@ -11,7 +11,7 @@ from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.fuel_code.schema import (
     AdditionalCarbonIntensitySchema,
@@ -191,6 +191,7 @@ class FuelCodeServices:
         """
         Create a new fuel code.
         """
+        fuel_code.status = FuelCodeStatusEnum.Draft
         fuel_code_model = await self.convert_to_model(fuel_code)
         fuel_code_model.fuel_status_id = 1  # set to draft by default
 

@@ -23,6 +23,7 @@ const SigningAuthority = () => {
         mx={2}
       >
         <FormControlLabel
+          data-test="signing-authority"
           control={
             <Checkbox
               {...register('signingAuthorityDeclaration')}

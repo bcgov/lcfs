@@ -12,6 +12,7 @@ router = APIRouter()
 @router.get("/{initiative_agreement_id}", response_model=InitiativeAgreementSchema)
 @view_handler(['*'])
 async def get_initiative_agreement(
+    request: Request,
     initiative_agreement_id: int,
     service: InitiativeAgreementServices = Depends()
 ):

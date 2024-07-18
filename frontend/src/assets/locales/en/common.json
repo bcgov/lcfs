@@ -49,5 +49,7 @@
       "title": "Low Carbon Fuel Standard",
       "link": "Visit our website at:<br /><a href=\"http://gov.bc.ca/lowcarbonfuels\" aria-label=\"Visit the LCFS Website\">gov.bc.ca/lowcarbonfuels</a>"
     }
-  }
+  },
+  "scrollToTop": "Scroll to top",
+  "scrollToBottom": "Scroll to bottom"
 }

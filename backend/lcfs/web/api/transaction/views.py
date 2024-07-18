@@ -82,10 +82,12 @@ async def export_transactions(
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 @view_handler(['*'])
 async def get_transaction_statuses(
+    request: Request,
     service: TransactionsService = Depends()
 ) -> List[TransactionStatusSchema]:
     '''Fetch all transaction statuses'''
     return await service.get_transaction_statuses()
+
 
 @router.get(
     "/count-transfers-in-progress",
@@ -102,6 +104,7 @@ async def count_transfers_in_progress(
     """
     return await service.count_transfers_in_progress()
 
+
 @router.get(
     "/count-initiative-agreements-in-progress",
     response_model=InitiativeAgreementsInProgressSchema,
@@ -116,6 +119,7 @@ async def count_initiative_agreements_in_progress(
     Endpoint to get the number of initiative agreements in progress.
     """
     return await service.count_initiative_agreements_in_progress()
+
 
 @router.get(
     "/count-admin-adjustments-in-progress",

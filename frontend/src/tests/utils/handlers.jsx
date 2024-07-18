@@ -26,6 +26,8 @@ export const handlers = [
       transferCategory: null
     })
   )
+  // http.get(api + apiRoutes.getExternalOrgs, () => HttpResponse.json({})),
+  // http.get(api + apiRoutes.getOrgBalance, () => HttpResponse.json({}))
   // http.get(api + apiRoutes.openapi, () =>
   //   HttpResponse.json({ firstName: 'John', lastName: 'Doe' })
   // )
