@@ -1,15 +1,16 @@
 from logging import getLogger
 from fastapi import APIRouter, Depends, Request
-from lcfs.web.core.decorators import roles_required, view_handler
+from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.dashboard.services import DashboardServices
 from lcfs.web.api.dashboard.schema import DirectorReviewCountsSchema
+from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("dashboard_view")
 
+
 @router.get("/director-review-counts", response_model=DirectorReviewCountsSchema)
-@roles_required("Director")
-@view_handler
+@view_handler([RoleEnum.DIRECTOR])
 async def get_director_review_counts(
     request: Request,
     service: DashboardServices = Depends(),

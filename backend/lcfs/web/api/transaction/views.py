@@ -87,13 +87,13 @@ async def get_transaction_statuses(
     '''Fetch all transaction statuses'''
     return await service.get_transaction_statuses()
 
+
 @router.get(
     "/count-transfers-in-progress",
     response_model=TransfersInProgressSchema,
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def count_transfers_in_progress(
     request: Request,
     service: TransactionsService = Depends(),
@@ -103,13 +103,13 @@ async def count_transfers_in_progress(
     """
     return await service.count_transfers_in_progress()
 
+
 @router.get(
     "/count-initiative-agreements-in-progress",
     response_model=InitiativeAgreementsInProgressSchema,
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def count_initiative_agreements_in_progress(
     request: Request,
     service: TransactionsService = Depends(),
@@ -119,13 +119,13 @@ async def count_initiative_agreements_in_progress(
     """
     return await service.count_initiative_agreements_in_progress()
 
+
 @router.get(
     "/count-admin-adjustments-in-progress",
     response_model=AdminAdjustmentsInProgressSchema,
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Government")
-@view_handler
+@view_handler([RoleEnum.GOVERNMENT])
 async def count_admin_adjustments_in_progress(
     request: Request,
     service: TransactionsService = Depends(),
