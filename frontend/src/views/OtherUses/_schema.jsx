@@ -79,7 +79,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     minWidth: '155',
     cellEditorParams: {
       options: optionsData.unitsOfMeasure
-        .map((obj) => obj.name),
+        .map((obj) => obj),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -110,8 +110,7 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
     headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined,
-    hide: (params) => params.data.expectedUse === 'Other'
+    editable: (params) => params.data.expectedUse === 'Other',
   }
 ]
 

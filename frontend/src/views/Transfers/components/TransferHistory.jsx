@@ -1,5 +1,8 @@
 import BCBox from '@/components/BCBox'
-import { TRANSFER_STATUSES, TRANSFER_RECOMMENDATION } from '@/constants/statuses'
+import {
+  TRANSFER_STATUSES,
+  TRANSFER_RECOMMENDATION
+} from '@/constants/statuses'
 import { useTransfer } from '@/hooks/useTransfer'
 import { Typography } from '@mui/material'
 import dayjs from 'dayjs'
@@ -18,16 +21,18 @@ function TransferHistory({ transferHistory }) {
   const { t } = useTranslation(['common', 'transfer'])
 
   const getTransferStatusLabel = (status) => {
-    const basePath = 'transfer:transferHistory';
-    const statusNotFound = 'Status not found';
-  
+    const basePath = 'transfer:transferHistory'
+    const statusNotFound = 'Status not found'
+
     if (status === TRANSFER_STATUSES.RECOMMENDED) {
-      const recommendation = transferData.recommendation === TRANSFER_RECOMMENDATION.RECORD
-        ? 'RecommendedRecord' : 'RecommendedRefuse';
-      return t(`${basePath}.${recommendation}`);
+      const recommendation =
+        transferData.recommendation === TRANSFER_RECOMMENDATION.RECORD
+          ? 'RecommendedRecord'
+          : 'RecommendedRefuse'
+      return t(`${basePath}.${recommendation}`)
     }
-    
-    return t(`${basePath}.${status}`, statusNotFound);
+
+    return t(`${basePath}.${status}`, statusNotFound)
   }
 
   const dateCutoffMonths = {
@@ -53,7 +58,7 @@ function TransferHistory({ transferHistory }) {
   }
 
   return (
-    <BCBox mt={2}>
+    <BCBox mt={2} data-test="transfer-history">
       <Typography variant="h6" color="primary">
         {t('transfer:txnHistory')}
       </Typography>

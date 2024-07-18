@@ -87,6 +87,7 @@ async def get_transaction_statuses(
     '''Fetch all transaction statuses'''
     return await service.get_transaction_statuses()
 
+
 @router.get(
     "/count-transfers-in-progress",
     response_model=TransfersInProgressSchema,
@@ -102,6 +103,7 @@ async def count_transfers_in_progress(
     """
     return await service.count_transfers_in_progress()
 
+
 @router.get(
     "/count-initiative-agreements-in-progress",
     response_model=InitiativeAgreementsInProgressSchema,
@@ -116,6 +118,7 @@ async def count_initiative_agreements_in_progress(
     Endpoint to get the number of initiative agreements in progress.
     """
     return await service.count_initiative_agreements_in_progress()
+
 
 @router.get(
     "/count-admin-adjustments-in-progress",
