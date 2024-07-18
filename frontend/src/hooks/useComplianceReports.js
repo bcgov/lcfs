@@ -7,6 +7,9 @@ export const useCompliancePeriod = (options) => {
   return useQuery({
     queryKey: ['compliance-periods'],
     queryFn: () => client.get(apiRoutes.getCompliancePeriods),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 60 * 60 * 1000, // 1 hour
+    refetchInterval: 10 * 60 * 1000, // 10 minutes (optional)
     ...options
   })
 }

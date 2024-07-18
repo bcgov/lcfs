@@ -1,4 +1,5 @@
 from logging import getLogger
+from lcfs.db.models.user.Role import RoleEnum
 from fastapi import APIRouter, Depends, Request
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.dashboard.services import DashboardServices
