@@ -165,10 +165,9 @@ class FinalSupplyEquipmentServices:
             raise ValueError("Invalid Canadian postal code format")
 
         # Retrieve the organization ID from the user's request
-        org_id = self.request.user.organization.organization_id
-        if not org_id:
+        org_code = self.request.user.organization.organization_code
+        if not org_code:
             raise ValueError("Organization ID is not available")
-        formatted_org_id = f"{org_id:04}"
 
         # Extract the last 3 characters of the postal code
         last_three_postal = postal_code[-3:].upper()
@@ -184,4 +183,4 @@ class FinalSupplyEquipmentServices:
         formatted_next_number = f"{next_number:03d}"
 
         # Concatenate to form the registration number and return it
-        return f"{formatted_org_id}-{last_three_postal}-{formatted_next_number}"
+        return f"{org_code}-{last_three_postal}-{formatted_next_number}"
