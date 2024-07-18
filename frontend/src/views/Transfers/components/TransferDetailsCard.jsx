@@ -29,7 +29,7 @@ export const TransferDetailsCard = ({
 
   const totalValue = (quantity * pricePerUnit).toFixed(2)
   return (
-    <BCBox>
+    <BCBox data-test="transfer-details-card">
       <Stack
         spacing={4}
         direction={{ xs: 'column', sm: 'row' }}

@@ -12,7 +12,22 @@ import GitHubIcon from '@mui/icons-material/GitHub'
 // BCGov React base styles
 import typography from '@/themes/base/typography'
 
-function Footer({ repoDetails, links }) {
+function Footer({
+  repoDetails = {
+    href: 'https://github.com/bcgov/lcfs/releases/tag/v0.2.0',
+    name: 'v0.2.0',
+    id: 'footer-about-version',
+    label: 'LCFS repository changelog'
+  },
+  links = [
+    {
+      href: '/',
+      name: 'Home',
+      id: 'footer-home',
+      label: 'Home page of LCFS'
+    }
+  ]
+}) {
   const { size } = typography
 
   const renderLinks = () =>
@@ -115,24 +130,6 @@ function Footer({ repoDetails, links }) {
       </BCBox>
     </BCBox>
   )
-}
-
-// Setting default values for the props of Footer
-Footer.defaultProps = {
-  links: [
-    {
-      href: '/',
-      name: 'Home',
-      id: 'footer-home',
-      label: 'Home page of LCFS'
-    }
-  ],
-  repoDetails: {
-    href: 'https://github.com/bcgov/lcfs/releases/tag/v0.2.0',
-    name: 'v0.2.0',
-    id: 'footer-about-version',
-    label: 'LCFS repository changelog'
-  }
 }
 
 // Typechecking props for the Footer

@@ -1,5 +1,5 @@
 export const apiRoutes = {
-  dummy: "/dummy",
+  dummy: '/dummy',
   currentUser: '/users/current',
   exportUsers: '/users/export?format=xls',
   listUsers: '/users/list',
