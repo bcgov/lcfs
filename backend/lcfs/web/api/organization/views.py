@@ -292,8 +292,7 @@ async def get_compliance_report_by_id(
     response_model=TransfersInProgressSchema,
     status_code=status.HTTP_200_OK,
 )
-@roles_required("Supplier")
-@view_handler
+@view_handler([RoleEnum.SUPPLIER])
 async def count_org_transfers_in_progress(
     request: Request,
     response: Response = None,
