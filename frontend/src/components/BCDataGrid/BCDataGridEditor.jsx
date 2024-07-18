@@ -187,6 +187,7 @@ const BCDataGridEditor = ({
       <AgGridReact
         gridKey={gridKey}
         gridRef={gridRef}
+        stopEditingWhenCellsLoseFocus={true}
         gridApi={gridApi}
         className={className}
         columnDefs={columnDefs}

@@ -56,7 +56,7 @@ class OtherUsesServices:
         return OtherUsesTableOptionsSchema(
             fuel_categories=[OtherUsesFuelCategorySchema.model_validate(category) for category in table_options["fuel_categories"]],
             fuel_types=[FuelTypeSchema.model_validate(fuel_type) for fuel_type in table_options["fuel_types"]],
-            units_of_measure=[UnitOfMeasureSchema.model_validate(unit) for unit in table_options["units_of_measure"]],
+            units_of_measure=table_options["units_of_measure"],
             expected_uses=[ExpectedUseTypeSchema.model_validate(use) for use in table_options["expected_uses"]],
         )
 
