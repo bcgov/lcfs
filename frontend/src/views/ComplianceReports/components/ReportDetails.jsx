@@ -123,9 +123,7 @@ const ReportDetails = () => {
     [t, navigate, compliancePeriod, complianceReportId]
   )
 
-  const [expanded, setExpanded] = useState(() =>
-    activityList.map((_, index) => `panel${index}`)
-  )
+  const [expanded, setExpanded] = useState(() => activityList.map((_, index) => `panel${index}`))
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded((prev) =>

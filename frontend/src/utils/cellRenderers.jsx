@@ -185,7 +185,7 @@ export const CommonArrayRenderer = (props) => {
       sx={{
         width: '100%',
         height: '80%',
-        marginTop: '0.2em',
+        marginTop: props.marginTop || '0.2em',
         display: 'flex',
         justifyContent: 'flex-start',
         alignItems: 'center'

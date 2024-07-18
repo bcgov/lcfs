@@ -13,7 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useTranslation } from 'react-i18next'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 
-export const NewComplianceReportButton = ({ handleNewReport }) => {
+export const NewComplianceReportButton = ({ handleNewReport, isButtonLoading, setIsButtonLoading }) => {
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
@@ -29,6 +29,7 @@ export const NewComplianceReportButton = ({ handleNewReport }) => {
 
   const handleComplianceOptionClick = (option) => {
     setAnchorEl(null)
+    setIsButtonLoading(true)
     handleNewReport(option)
   }
 
@@ -38,7 +39,7 @@ export const NewComplianceReportButton = ({ handleNewReport }) => {
     <div>
       <BCButton
         ref={buttonRef}
-        isLoading={isLoading}
+        isLoading={isLoading || isButtonLoading}
         variant="contained"
         size="small"
         color="primary"
@@ -56,7 +57,7 @@ export const NewComplianceReportButton = ({ handleNewReport }) => {
       >
         {t('report:newReportBtn')}
       </BCButton>
-      {isFetched && (
+      {isFetched && !isButtonLoading && (
         <Menu
           sx={{ '.MuiMenu-list': { py: 0 } }}
           anchorEl={anchorEl}

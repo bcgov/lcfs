@@ -7,18 +7,18 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useTranslation } from 'react-i18next'
 
-export const Introduction = ({ expanded, handleChange }) => {
+export const Introduction = ({ expanded }) => {
   const { t } = useTranslation()
   return (
     <>
-      <Accordion expanded={expanded} onChange={handleChange()}>
+      <Accordion expanded={expanded}>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
           id="compliance-report-intro"
           data-test="compliance-report-intro"
         >
-          <Typography color="primary" variant="h6" component="div">
+          <Typography color="primary" variant="h5" component="div">
             {t('report:introduction')}
           </Typography>
         </AccordionSummary>
