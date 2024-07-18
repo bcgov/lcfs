@@ -4,7 +4,7 @@ import { Box, Icon } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import MailIcon from '@mui/icons-material/Mail';
 
-export const FeedbackCard = () => {
+const FeedbackCard = () => {
   const { t } = useTranslation(['common'])
 
   return (
@@ -23,3 +23,5 @@ export const FeedbackCard = () => {
     </Box>
   )
 }
+
+export default FeedbackCard

@@ -11,7 +11,7 @@ import {
 } from '@mui/material'
 
 export const CommentList = ({ comments }) => (
-  <BCBox mt={2}>
+  <BCBox mt={2} data-test="comment-list">
     <Typography variant="h6" color="primary">
       Comments
     </Typography>

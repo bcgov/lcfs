@@ -36,7 +36,10 @@ get_async_db = dependencies.get_async_db_session
 
 @router.get("/compliance-periods", response_model=List[CompliancePeriodSchema], status_code=status.HTTP_200_OK)
 @view_handler(['*'])
-async def get_compliance_periods(request: Request, service: ComplianceReportServices = Depends()) -> CompliancePeriodSchema:
+async def get_compliance_periods(
+    request: Request,
+    service: ComplianceReportServices = Depends()
+) -> CompliancePeriodSchema:
     """
     Get a list of compliance periods
     """

@@ -9,15 +9,14 @@ const DisclaimerBanner = ({ messages }) => {
         backgroundColor: colors.background.grey,
         color: colors.grey[700],
         marginTop: 2,
-        marginBottom: 7,
-        padding: '15px 20px',
-        fontSize: '14px',
+        marginBottom: 4,
+        padding: '10px 15px',
         border: `1px solid ${colors.borderDivider.nav}`,
-        borderRadius: '6px'
+        borderRadius: '5px'
       }}
     >
       {messages.map((message, index) => (
-        <Typography key={index} variant="body2">
+        <Typography key={index} variant="body2" sx={{ fontSize: '14px'}}>
           {message}
         </Typography>
       ))}

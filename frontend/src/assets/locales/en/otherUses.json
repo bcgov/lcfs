@@ -31,7 +31,7 @@
     "legalName": "Legal Name",
     "units": "Units",
     "expectedUse": "Expected Use",
-    "otherExpectedUse": "Rationale",
+    "otherExpectedUse": "If other, enter expected use",
     "rationale": "Rationale",
     "lastUpdated": "Last updated",
     "status": "Status",

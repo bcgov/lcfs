@@ -148,6 +148,7 @@ export const ComplianceReports = () => {
             gridKey={gridKey}
             getRowId={getRowId}
             // defaultSortModel={defaultSortModel}
+            defaultFilterModel={location.state?.filters}
             gridOptions={gridOptions}
             handleGridKey={handleGridKey}
             handleRowClicked={handleRowClicked}

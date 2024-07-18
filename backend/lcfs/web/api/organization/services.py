@@ -21,6 +21,7 @@ from lcfs.db.models.transaction.TransactionView import TransactionView
 from lcfs.web.api.transaction.schema import TransactionViewSchema
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.user.schema import UsersSchema
+from lcfs.web.api.transaction.schema import TransfersInProgressSchema
 
 logger = getLogger("organization_services")
 
@@ -130,3 +131,17 @@ class OrganizationService:
                 total_pages=math.ceil(total_count / pagination.size),
             ),
         }
+
+    @service_handler
+    async def count_transfers_in_progress(self, organization_id: int) -> TransfersInProgressSchema:
+        """
+        Count the number of transfers in progress for an organization.
+
+        Args:
+            organization_id (int): The ID of the organization for which to count transfers in progress.
+
+        Returns:
+            TransfersInProgressSchema: The number of transfers in progress wrapped in a schema.
+        """
+        count = await self.transaction_repo.count_org_transfers_in_progress(organization_id)
+        return TransfersInProgressSchema(transfers_in_progress=count)

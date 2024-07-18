@@ -13,7 +13,14 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
-import { transactionsColDefs } from './_schema'
+import {
+  transactionsColDefs,
+  defaultSortModel,
+  filter_in_progress_transfers,
+  filter_in_progress_org_transfers,
+  filter_in_progress_initiative_agreements,
+  filter_in_progress_admin_adjustments
+} from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ORGANIZATION_STATUSES, TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
 import { roles, govRoles } from '@/constants/roles'
@@ -29,6 +36,12 @@ export const Transactions = () => {
 
   const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
+
+  const filterType = searchParams.get('filter')
+  const inProgressTransfers = filterType === 'in-progress-transfers'
+  const inProgressOrgTransfers = filterType === 'in-progress-org-transfers'
+  const inProgressInitiativeAgreements = filterType === 'in-progress-initiative-agreements'
+  const inProgressAdminAdjustments = filterType === 'in-progress-admin-adjustments'
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -46,7 +59,6 @@ export const Transactions = () => {
     return params.data.transactionType.toLowerCase() + '-' + params.data.transactionId
   }, [])
 
-  const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
   const [selectedOrgId, setSelectedOrgId] = useState(null)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,7 +90,7 @@ export const Transactions = () => {
         (!fromOrganization && (
           status === TRANSACTION_STATUSES.DRAFT
         ))
-      );
+      )
 
       const routeType = isEditScenario ? 'edit' : 'view'
 
@@ -102,29 +114,29 @@ export const Transactions = () => {
   // Determine the appropriate API endpoint
   const getApiEndpoint = useCallback(() => {
     if (hasRoles(roles.supplier)) {
-      return apiRoutes.orgTransactions;
+      return apiRoutes.orgTransactions
     } else if (selectedOrgId) {
-      return apiRoutes.filteredTransactionsByOrg.replace(':orgID', selectedOrgId);
+      return apiRoutes.filteredTransactionsByOrg.replace(':orgID', selectedOrgId)
     }
-    return apiRoutes.transactions;
-  }, [selectedOrgId, currentUser, hasRoles]);
+    return apiRoutes.transactions
+  }, [selectedOrgId, currentUser, hasRoles])
 
   // Determine the appropriate export API endpoint
   const getExportApiEndpoint = useCallback(() => {
     if (hasRoles(roles.supplier)) {
-      return apiRoutes.exportOrgTransactions;
+      return apiRoutes.exportOrgTransactions
     } else if (selectedOrgId) {
-      return apiRoutes.exportFilteredTransactionsByOrg.replace(':orgID', selectedOrgId);
+      return apiRoutes.exportFilteredTransactionsByOrg.replace(':orgID', selectedOrgId)
     }
-    return apiRoutes.exportTransactions;
-  }, [selectedOrgId, currentUser, hasRoles]);
+    return apiRoutes.exportTransactions
+  }, [selectedOrgId, currentUser, hasRoles])
 
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
     setAlertMessage('')
     try {
-      const endpoint = getExportApiEndpoint();
-      await apiService.download(`${endpoint}`);
+      const endpoint = getExportApiEndpoint()
+      await apiService.download(`${endpoint}`)
       setIsDownloadingTransactions(false)
     } catch (error) {
       console.error('Error downloading transactions information:', error)
@@ -134,7 +146,15 @@ export const Transactions = () => {
     }
   }
 
-  const apiEndpoint = useMemo(() => getApiEndpoint(), [getApiEndpoint]);
+  const apiEndpoint = useMemo(() => getApiEndpoint(), [getApiEndpoint])
+
+  const filterModel = useMemo(() => {
+    if (inProgressTransfers) return filter_in_progress_transfers
+    if (inProgressOrgTransfers) return filter_in_progress_org_transfers
+    if (inProgressInitiativeAgreements) return filter_in_progress_initiative_agreements
+    if (inProgressAdminAdjustments) return filter_in_progress_admin_adjustments
+    return []
+  }, [inProgressTransfers, inProgressOrgTransfers, inProgressInitiativeAgreements, inProgressAdminAdjustments])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -231,11 +251,13 @@ export const Transactions = () => {
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}
+          defaultFilterModel={filterModel}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           highlightedRowId={highlightedId}
+          defaultFilterModel={location.state?.filters}
         />
       </BCBox>
     </>

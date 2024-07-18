@@ -17,6 +17,7 @@ export const AgreementDate = () => {
     <LabelBox
       label={t('transfer:agrDateLabel')}
       description={t('transfer:agrDateDescText')}
+      data-test="agreement-date"
     >
       <Box
         display="flex"

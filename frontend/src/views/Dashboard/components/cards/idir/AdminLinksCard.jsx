@@ -8,7 +8,7 @@ import BCTypography from '@/components/BCTypography'
 import { List, ListItemButton } from '@mui/material'
 import { roles } from '@/constants/roles'
 
-export const AdminLinksCard = () => {
+const AdminLinksCard = () => {
   const { t } = useTranslation(['common', 'admin'])
   const adminLinks = useMemo(
     () => [
