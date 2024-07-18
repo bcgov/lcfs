@@ -100,8 +100,22 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 495
   },
   {
-    field: 'fuelProductionFacilityLocation',
-    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityLocation'),
+    field: 'fuelProductionFacilityCity',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
+    cellRenderer: TextRenderer,
+    minWidth: 325
+  },
+  {
+    field: 'fuelProductionFacilityProvinceState',
+    headerName: t(
+      'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
+    ),
+    cellRenderer: TextRenderer,
+    minWidth: 325
+  },
+  {
+    field: 'fuelProductionFacilityCountry',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
     cellRenderer: TextRenderer,
     minWidth: 325
   },

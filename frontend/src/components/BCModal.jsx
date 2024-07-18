@@ -7,14 +7,14 @@ import {
   DialogActions,
   IconButton,
   Divider,
-  Box,
+  Box
 } from '@mui/material'
 import { Close, Warning } from '@mui/icons-material'
 import BCButton from './BCButton'
 import colors from '@/themes/base/colors'
 
 const BCModal = (props) => {
-  const { open, onClose, data } = props
+  const { open, onClose, data = null } = props
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
@@ -38,13 +38,21 @@ const BCModal = (props) => {
 
   const handlePrimaryButtonClick = async () => {
     // Blocks repeat clicks of the button
-    if(isLoading) { return }
+    if (isLoading) {
+      return
+    }
     setIsLoading(true)
     await primaryButtonAction()
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      data-test="modal"
+    >
       <DialogTitle>{title}</DialogTitle>
       <IconButton
         aria-label="close"
@@ -77,7 +85,10 @@ const BCModal = (props) => {
       <DialogActions>
         <BCButton
           variant="outlined"
-          id={'modal-btn-' + secondaryButtonText.toLowerCase().replaceAll(' ', '-')}
+          id={
+            'modal-btn-' +
+            secondaryButtonText.toLowerCase().replaceAll(' ', '-')
+          }
           color={secondaryButtonColor ?? 'dark'}
           onClick={secondaryButtonAction ?? onClose}
         >
@@ -86,7 +97,9 @@ const BCModal = (props) => {
         {customButtons}
         <BCButton
           variant="contained"
-          id={'modal-btn-' + primaryButtonText.toLowerCase().replaceAll(' ', '-')}
+          id={
+            'modal-btn-' + primaryButtonText.toLowerCase().replaceAll(' ', '-')
+          }
           color={primaryButtonColor ?? 'primary'}
           autoFocus
           onClick={handlePrimaryButtonClick}
@@ -114,10 +127,6 @@ BCModal.propTypes = {
     secondaryButtonColor: PropTypes.string,
     customButtons: PropTypes.node
   })
-}
-
-BCModal.defaultProps = {
-  data: null
 }
 
 export default BCModal
