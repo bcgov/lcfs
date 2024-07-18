@@ -251,7 +251,7 @@ export const Transactions = () => {
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}
-          defaultFilterModel={filterModel}
+          // defaultFilterModel={filterModel}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}

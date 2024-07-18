@@ -9,6 +9,7 @@ import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import {
   useAddFuelCodes,
   useFuelCodeOptions,
+  useFuelCodeSearch,
   useSaveFuelCode
 } from '@/hooks/useFuelCode'
 import { useApiService } from '@/services/useApiService'
@@ -23,6 +24,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
 import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
+import { isEqual } from '@/utils/eventHandlers'
 
 const AddFuelCodeBase = () => {
   const [rowData, setRowData] = useState([])
@@ -30,7 +32,7 @@ const AddFuelCodeBase = () => {
   const [columnApi, setColumnApi] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-
+  const [focusedCell, setFocusedCell] = useState()
   const gridRef = useRef(null)
   const alertRef = useRef()
   const apiService = useApiService()
@@ -43,13 +45,14 @@ const AddFuelCodeBase = () => {
 
   const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(() => ({
+    editType: undefined,
     overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
     autoSizeStrategy: {
       type: 'fitCellContents',
       defaultMinWidth: 50,
       defaultMaxWidth: 600
     }
-  }))
+  }),[t])
   // const getRowId = useCallback((params) => params.data.fuelCodeId, [])
 
   useEffect(() => {
@@ -68,21 +71,16 @@ const AddFuelCodeBase = () => {
       .then((resp) => {
         return resp.data
       })
-  }, [apiService])
+  }, [apiService, fuelCodeId])
 
   const onGridReady = (params) => {
     setGridApi(params.api)
     setColumnApi(params.columnApi)
 
     if (!fuelCodeId) {
-      const cachedRowData = JSON.parse(localStorage.getItem(gridKey))
-      if (cachedRowData && cachedRowData.length > 0) {
-        setRowData(cachedRowData)
-      } else {
-        const id = uuid()
-        const emptyRow = { id }
-        setRowData([emptyRow])
-      }
+      const id = uuid()
+      const emptyRow = { id, prefix: 'BCLCF' }
+      setRowData([emptyRow])
     } else {
       try {
         const data = fetchData()
@@ -122,11 +120,29 @@ const AddFuelCodeBase = () => {
 
   const onValidated = (status, message, params, response) => {
     let errMsg = message
+    const columnHandlerList = ['fuelCode', 'fuelProductionFacilityCity', 'fuelProductionFacilityProvinceState']
     if (status === 'error') {
+      if (focusedCell && columnHandlerList.some((item) => focusedCell.column.colId.includes(item))) {
+        switch (focusedCell.column.colId) {
+          case 'fuelCode':
+            gridApi.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: 'carbonIntensity'
+            })
+            setFocusedCell(undefined)
+            break
+          case 'fuelProductionFacilityCity':
+          case 'fuelProductionFacilityProvinceState':
+            gridApi.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: 'facilityNameplateCapacity'
+            })
+            setFocusedCell(undefined)
+            break
+        }
+      }
       const field = message.response?.data?.detail[0]?.loc[1]
-        ? t(
-            `fuelCode:fuelCodeColLabels.${message.response?.data?.detail[0]?.loc[1]}`
-          )
+        ? t(`fuelCode:fuelCodeColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
         : ''
 
       errMsg = `Error updating row: ${field} ${message.response?.data?.detail[0]?.msg}`
@@ -149,6 +165,7 @@ const AddFuelCodeBase = () => {
     (params) => {
       params.node.setData({ ...params.data, modified: true })
       const focusedCell = params.api.getFocusedCell()
+      setFocusedCell(focusedCell)
       if (focusedCell.column.colId === 'fuelCode') {
         const fuelCodeData = optionsData.latestFuelCodes.find(
           (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
@@ -220,12 +237,14 @@ const AddFuelCodeBase = () => {
     [validationHandler, gridApi, optionsData]
   )
 
-  const saveData = useCallback(() => {
-    const allRowData = []
-    gridApi.forEachNode((node) => allRowData.push(node.data))
-    const modifiedRows = allRowData.filter((row) => row.modified)
-    // Add your API call to save modified rows here
-  }, [gridApi])
+  const onCellValueChanged = useCallback((params) => {
+    if (!isEqual(params.oldValue, params.newValue)) {
+      params.data.modified = true
+    }
+    if (params.column.colId === 'fuelCode') {
+      console.log(params.node.data)
+    }
+  },[])
 
   const statusBarComponent = useMemo(
     () => (
@@ -344,9 +363,9 @@ const AddFuelCodeBase = () => {
             columnApi={columnApi}
             gridOptions={gridOptions}
             getRowNodeId={(data) => data.id}
-            saveData={saveData}
             defaultStatusBar={false}
             statusBarComponent={statusBarComponent}
+            onCellValueChanged={onCellValueChanged}
             // onRowEditingStarted={onRowEditingStarted}
             onRowEditingStopped={onRowEditingStopped}
             saveRow={saveRow}

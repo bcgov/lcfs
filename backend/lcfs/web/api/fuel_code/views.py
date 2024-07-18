@@ -26,6 +26,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateSchema,
     FuelCodesSchema,
     FuelCodeSchema,
+    SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
     DeleteFuelCodeResponseSchema
@@ -48,8 +49,23 @@ async def get_table_options(
     service: FuelCodeServices = Depends(),
 ):
     """Endpoint to retrieve table options related to fuel codes"""
+    logger.info("Retrieving table options")
     return await service.get_table_options()
 
+@router.get("/search", response_model=SearchFuelCodeList, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def search_table_options_strings(
+    request: Request,
+    fuel_code: Optional[str] = Query(None, alias="fuelCode", description="Fuel code for filtering options"),
+    prefix: Optional[str] = Query(None, alias="prefix", description="Prefix for filtering options"),
+    distinct_search: Optional[bool] = Query(False, alias="distinctSearch", description="Based on flag retrieve entire row data or just the list of distinct values"),
+    service: FuelCodeServices = Depends(),
+):
+    """Endpoint to search fuel codes based on a query string"""
+    if (fuel_code):
+        logger.info(f"Searching for fuel code: {fuel_code} with prfix: {prefix}")
+        return await service.search_fuel_code(fuel_code, prefix, distinct_search)
+    return
 
 @router.post("/list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])

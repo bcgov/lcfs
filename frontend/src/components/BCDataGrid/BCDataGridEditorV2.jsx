@@ -21,32 +21,27 @@ import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import { isEqual } from '@/utils/eventHandlers'
+import AutocompleteCellEditor from './components/Editors/AutocompleteCellEditor'
 
-const BCDataGridEditor = ({
-  gridOptions,
-  onGridReady,
-  gridApi,
-  columnApi,
-  rowData,
-  gridKey,
-  getRowNodeId,
-  gridRef,
-  columnDefs,
-  defaultColDef,
-  highlightedRowId,
-  className,
-  defaultStatusBar,
-  onRowEditingStarted,
-  onRowEditingStopped,
-  tabToNextCellHandler,
-  saveRow,
-  onValidated,
-  ...props
-}) => {
+const BCDataGridEditorV2 = (props) => {
+  const {
+    gridApi,
+    gridKey,
+    className,
+    columnDefs,
+    defaultColDef,
+    gridRef,
+    rowData,
+    getRowNodeId,
+    gridOptions,
+    onGridReady,
+  } = props
+  // Register the Custom ag-grid components.
   const frameworkComponents = useMemo(
     () => ({
       asyncValidationEditor: AsyncValidationEditor,
       autocompleteEditor: AutocompleteEditor,
+      autocompleteCellEditor: AutocompleteCellEditor,
       dateEditor: DateEditor,
       actionsRenderer: ActionsRenderer,
       asyncSuggestionEditor: AsyncSuggestionEditor,
@@ -58,7 +53,7 @@ const BCDataGridEditor = ({
     }),
     []
   )
-
+  // Add ability to copy paste the rows directly on to the table from excel sheet
   const handleExcelPaste = useCallback(
     (params) => {
       const newData = []
@@ -94,14 +89,11 @@ const BCDataGridEditor = ({
     }
   }, [handleExcelPaste, props.handlePaste])
 
+  // Loading overlay component 
   const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
-  const tabToNextCell = useCallback((params) => {
-    if (tabToNextCellHandler) {
-      tabToNextCellHandler(params)
-    }
-    return params.nextCellPosition
-  }, [tabToNextCellHandler])
-
+  // action to perform when next cell is tabbed
+  const tabToNextCell = useCallback((params) => params.nextCellPosition, [])
+  // default grid options for the ag-grid.
   const defaultGridOptions = useMemo(() => ({
     undoRedoCellEditing: true,
     undoRedoCellEditingLimit: 5,
@@ -128,59 +120,7 @@ const BCDataGridEditor = ({
         colKey: params.api.getDisplayedCenterColumns()[0].colId,
       })
     },
-    getRowStyle: highlightedRowId
-      ? (params) => {
-        if (params.node.id === highlightedRowId) {
-          return { backgroundColor: '#fade81' }
-        }
-      }
-      : undefined,
-  }), [highlightedRowId, frameworkComponents, tabToNextCell])
-
-  const onRowEditingStartedHandler = useCallback((params) => {
-    params.api.refreshCells({
-      columns: ['action'],
-      rowNodes: [params.node],
-      force: true,
-    })
-    if (onRowEditingStarted) {
-      onRowEditingStarted(params)
-    }
-  }, [onRowEditingStarted])
-
-  const onRowEditingStoppedHandler = useCallback((params) => {
-    if (onRowEditingStopped) {
-      onRowEditingStopped(params)
-    }
-    // Check if any data field has changed
-    if (params.data.modified && !params.data.deleted) {
-      onValidated('pending', 'Updating row...')
-      saveRow(params.data, {
-        onSuccess: (resp) => {
-          params.data.modified = false
-          params.data.isValid = true
-          if (onValidated) {
-            onValidated('success', 'Row updated successfully.', params, resp)
-          }
-          params.api.refreshCells()
-        },
-        onError: (error) => {
-          params.data.isValid = false
-          params.api.refreshCells()
-          if (onValidated) {
-            if (error.code === 'ERR_BAD_REQUEST') {
-              onValidated('error', error, params)
-              // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
-            } else {
-              onValidated('error', `Error updating row: ${error.message}`)
-            }
-          }
-        }
-      })
-    }
-  
-    params.api.redrawRows({ rowNodes: [params.node] })
-  }, [onRowEditingStopped, onValidated, saveRow])
+  }), [frameworkComponents, tabToNextCell])
   
   function onCellValueChanged(params) {
     if (!isEqual(params.oldValue, params.newValue)) {
@@ -203,9 +143,7 @@ const BCDataGridEditor = ({
         onGridReady={onGridReady}
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
-        onCellValueChanged={props.onCellValueChanged || onCellValueChanged}
-        onRowEditingStarted={onRowEditingStartedHandler}
-        onRowEditingStopped={onRowEditingStoppedHandler}
+        onCellValueChanged={onCellValueChanged}
         loadingOverlayComponent={loadingOverlayComponent}
         {...props}
       />
@@ -227,7 +165,7 @@ const BCDataGridEditor = ({
   )
 }
 
-BCDataGridEditor.propTypes = {
+BCDataGridEditorV2.propTypes = {
   defaultStatusBar: PropTypes.bool,
   statusBarComponent: PropTypes.node,
   onGridReady: PropTypes.func.isRequired,
@@ -255,7 +193,7 @@ BCDataGridEditor.propTypes = {
   ]),
 }
 
-BCDataGridEditor.defaultProps = {
+BCDataGridEditorV2.defaultProps = {
   highlightedRowId: null,
   gridRef: null,
   gridKey: `bcgrid-key-<unique-id>`,
@@ -269,4 +207,4 @@ BCDataGridEditor.defaultProps = {
   onValidated: null,
 }
 
-export default BCDataGridEditor
+export default BCDataGridEditorV2

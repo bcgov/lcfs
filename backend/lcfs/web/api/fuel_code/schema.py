@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
 from pydantic import Field, field_validator, root_validator
@@ -65,6 +65,7 @@ class FinishedFuelTransportModeSchema(BaseSchema):
 
 class FuelCodePrefixSchema(BaseSchema):
     fuel_code_prefix_id: int
+    next_fuel_code: Optional[str] = None
     prefix: str
 
 
@@ -192,10 +193,12 @@ class TableOptionsSchema(BaseSchema):
     fp_locations: List[FPLocationsSchema]
     facility_nameplate_capacity_units: List[FuelTypeQuantityUnitsEnumSchema]
 
+class SearchFuelCodeList(BaseSchema):
+    fuel_codes: Union[List[str], List[FuelCodeSchema]]
 
 class FuelCodesSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]
-    pagination: PaginationResponseSchema
+    pagination: Optional[PaginationResponseSchema] = None
 
 
 class FuelCodeCreateSchema(BaseSchema):
