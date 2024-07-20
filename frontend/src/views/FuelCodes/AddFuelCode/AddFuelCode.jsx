@@ -121,8 +121,6 @@ const AddFuelCodeBase = () => {
           feedstock: fuelCodeData.feedstock,
           feedstockLocation: fuelCodeData.feedstockLocation,
           feedstockMisc: fuelCodeData.feedstockMisc,
-          fuelProductionFacilityLocation:
-            fuelCodeData.fuelProductionFacilityLocation,
           feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
             (mode) => mode.feedstockFuelTransportMode.transportMode
           ),

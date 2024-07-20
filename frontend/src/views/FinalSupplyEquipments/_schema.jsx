@@ -73,7 +73,7 @@ export const finalSupplyEquipmentColDefs = (
       maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
     },
     valueGetter: (params) => {
-      return [params.data.supplyFromDate, params.data.supplyToDate]
+      return [params.data.supplyFromDate || `${compliancePeriod}-01-01`, params.data.supplyToDate || `${compliancePeriod}-12-31`]
     },
     valueSetter: (params) => {
       params.data.supplyFromDate = params.newValue[0]

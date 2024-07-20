@@ -73,15 +73,15 @@ export const AddEditViewTransfer = () => {
   // Fetch current user details
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: toOrgData } = useRegExtOrgs()
-  const isGovernmentUser = currentUser?.isGovernmentUser
-  const currentUserOrgId = currentUser?.organization?.organizationId
+  const isGovernmentUser = currentUser.isGovernmentUser
+  const currentUserOrgId = currentUser.organization.organizationId
   const alertRef = useRef()
 
   const methods = useForm({
     resolver: yupResolver(AddEditTransferSchema),
     mode: 'onChange',
     defaultValues: {
-      fromOrganizationId: currentUser?.organization?.organizationId,
+      fromOrganizationId: currentUser?.organization?.organizationId || '',
       agreementDate: '',
       toOrganizationId: null,
       quantity: null,
@@ -147,7 +147,8 @@ export const AddEditViewTransfer = () => {
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
         recommendation: transferData.recommendation,
-        signingAuthorityDeclaration: methods.getValues().signingAuthorityDeclaration ?? false
+        signingAuthorityDeclaration:
+          methods.getValues().signingAuthorityDeclaration ?? false
       })
     }
     if (isLoadingError || queryState.status === 'error') {
@@ -158,7 +159,15 @@ export const AddEditViewTransfer = () => {
       )
       setAlertSeverity('error')
     }
-  }, [isFetched, transferId, isLoadingError, transferData, queryState, methods, t])
+  }, [
+    isFetched,
+    transferId,
+    isLoadingError,
+    transferData,
+    queryState,
+    methods,
+    t
+  ])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -170,7 +179,7 @@ export const AddEditViewTransfer = () => {
   // update status for the transfer via mutation function.
   const {
     mutate: createUpdateTransfer,
-    isLoading: isUpdatingTransfer,
+    isPending: isUpdatingTransfer,
     isError: isUpdateTransferError
   } = useCreateUpdateTransfer(currentUserOrgId, transferId, {
     onSuccess: (response, variables) => {
@@ -303,7 +312,7 @@ export const AddEditViewTransfer = () => {
 
   const title = useMemo(() => {
     const formattedTransferId = `CUT${transferId}`
-    
+
     if (!editorMode) {
       return `${t('transfer:transferID')} ${formattedTransferId}`
     }
@@ -312,8 +321,6 @@ export const AddEditViewTransfer = () => {
         return t('transfer:newTransfer')
       case 'edit':
         return `${t('transfer:editTransferID')} ${formattedTransferId}`
-      default:
-        return `${t('transfer:transferID')} ${formattedTransferId}`
     }
   }, [editorMode, mode, t, transferId])
 
@@ -380,6 +387,7 @@ export const AddEditViewTransfer = () => {
           sx={{ width: '50%', alignContent: 'center', margin: 'auto' }}
         >
           <Stepper
+            data-test="stepper"
             activeStep={steps.indexOf(transferStatus)}
             alternativeLabel={!isMobileSize}
             orientation={isMobileSize ? 'vertical' : 'horizontal'}
@@ -455,6 +463,7 @@ export const AddEditViewTransfer = () => {
               spacing={2}
             >
               <BCButton
+                data-test="button-cluster-back"
                 variant="outlined"
                 color="primary"
                 style={{
@@ -475,6 +484,7 @@ export const AddEditViewTransfer = () => {
                   config && (
                     <Role key={config.label}>
                       <BCButton
+                        data-test={config.id}
                         id={config.id}
                         size="small"
                         variant={config.variant}

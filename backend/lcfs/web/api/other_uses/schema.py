@@ -61,7 +61,7 @@ class OtherUsesFuelCategorySchema(BaseSchema):
 class OtherUsesTableOptionsSchema(BaseSchema):
     fuel_categories: List[OtherUsesFuelCategorySchema]
     fuel_types: List[FuelTypeSchema]
-    units_of_measure: List[UnitOfMeasureSchema]
+    units_of_measure: List[str]
     expected_uses: List[ExpectedUseTypeSchema]
 
 class OtherUsesCreateSchema(BaseSchema):

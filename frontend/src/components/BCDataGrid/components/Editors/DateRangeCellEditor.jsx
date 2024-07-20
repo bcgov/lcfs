@@ -25,8 +25,8 @@ export const DateRangeCellEditor = forwardRef(
     const handleSetDateRangeOnSubmit = (dateRange) => {
       handleClose() // close the modal
       const formattedRange = [
-        format(new Date(dateRange.startDate), 'yyyy-MM-dd'),
-        format(new Date(dateRange.endDate), 'yyyy-MM-dd')
+        format(new Date(dateRange.startDate.toUTCString()), 'yyyy-MM-dd'),
+        format(new Date(dateRange.endDate.toUTCString()), 'yyyy-MM-dd')
       ]
       onValueChange(formattedRange)
     }
@@ -37,30 +37,43 @@ export const DateRangeCellEditor = forwardRef(
     }
     return (
       <>
-        <InputMask mask="9999-99-99 to 9999-99-99" value={value} disabled={false} onChange={handleTextFieldChange}>
-          {()=><TextField
-            ref={ref}
-            fullWidth
-            margin="0"
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={handleClick}>
-                    <CalendarTodayIcon />
-                  </IconButton>
-                </InputAdornment>
-              )
-            }}
-          />}
+        <InputMask
+          mask="9999-99-99 to 9999-99-99"
+          value={value}
+          disabled={false}
+          onChange={handleTextFieldChange}
+        >
+          {() => (
+            <TextField
+              ref={ref}
+              fullWidth
+              margin="0"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={handleClick}>
+                      <CalendarTodayIcon />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+          )}
         </InputMask>
         <PickerModal
           initialDateRange={
-            (Array.isArray(value) && value[0])
-              ? ({ startDate: value[0], endDate: value[1] })
-              : ({ startDate: props.minDate, endDate: props.maxDate })
+            Array.isArray(value) && value[0]
+              ? {
+                  startDate: new Date(value[0] + 'T08:00:00.000Z'),
+                  endDate: new Date(value[1] + 'T08:00:00.000Z')
+                }
+              : {
+                  startDate: new Date(props.minDate + 'T08:00:00.000Z'),
+                  endDate: new Date(props.maxDate + 'T08:00:00.000Z')
+                }
           }
-          minDate={props.minDate}
-          maxDate={props.maxDate}
+          minDate={new Date(props.minDate + 'T08:00:00.000Z')}
+          maxDate={new Date(props.maxDate + 'T08:00:00.000Z')}
           hideDefaultRanges={true}
           customProps={{
             onSubmit: (range) => handleSetDateRangeOnSubmit(range),

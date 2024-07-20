@@ -13,10 +13,7 @@ async def seed_expected_use_types(session):
 
     expected_use_types_to_seed = [
         {'name': 'Heating oil', 'description': 'Fuel used for heating purposes'},
-        {'name': 'Power generation', 'description': 'Fuel used for generating power'},
-        {'name': 'Industrial processes', 'description': 'Fuel used in various industrial processes'},
-        {'name': 'Residential use', 'description': 'Fuel used for residential purposes'},
-        {'name': 'Commercial use', 'description': 'Fuel used for commercial purposes'}
+        {'name': 'Other', 'description': 'Other type of fuel description'}
     ]
 
     try:

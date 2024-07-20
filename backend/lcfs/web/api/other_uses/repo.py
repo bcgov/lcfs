@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
@@ -28,8 +29,9 @@ class OtherUsesRepository:
         """Get all table options"""
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.fuel_code_repo.get_fuel_types()
-        units_of_measure = await self.fuel_code_repo.get_units_of_measure()
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
+        units_of_measure = [unit.value for unit in QuantityUnitsEnum]
+
         return {
             "fuel_types": fuel_types,
             "fuel_categories": fuel_categories,

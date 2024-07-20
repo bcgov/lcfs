@@ -144,6 +144,7 @@ export const AddEditOtherUses = () => {
             statusBarComponent={statusBarComponent}
             saveRow={saveRow}
             onValidated={onValidated}
+            stopEditingWhenCellsLoseFocus={true}
           />
         </BCBox>
         <Stack

@@ -66,7 +66,7 @@ export const TransferDetails = () => {
     )
   }
   return (
-    <BCBox>
+    <BCBox data-test="transfer-details">
       <LabelBox label={t('transfer:detailsLabel')}>
         <BCTypography variant="body4" component="div">
           <BCTypography fontWeight="bold" variant="body4" component="span">
@@ -79,7 +79,7 @@ export const TransferDetails = () => {
             placeholder={t('common:quantity')}
             size="small"
             error={!!errors.quantity}
-            helperText={errors.quantity?.message}
+            helperext={errors.quantity?.message}
             sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
           />
           {t('transfer:complianceUnitsTo')}
@@ -107,7 +107,7 @@ export const TransferDetails = () => {
                   labelId="to-organization-select-label"
                   {...field}
                   error={!!errors.toOrganizationId}
-                  helperText={errors.toOrganizationId?.message}
+                  // helperText={errors.toOrganizationId?.message}
                   displayEmpty
                   MenuProps={{
                     sx: {

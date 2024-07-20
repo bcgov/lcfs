@@ -19,11 +19,11 @@ import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
 import { reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
-import Loading from '@/components/Loading'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
+  const [isButtonLoading, setIsButtonLoading] = useState(false)
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`compliance-reports-grid`)
 
@@ -69,17 +69,19 @@ export const ComplianceReports = () => {
           status: 'created'
         })
       )
+      setIsButtonLoading(false)
       setAlertSeverity('success')
       navigate(
         ROUTES.REPORTS_VIEW.replace(
           ':compliancePeriod',
           response.data.compliancePeriod.description
         ).replace(':complianceReportId', response.data.complianceReportId),
-        { state: { data: response.data } }
+        { state: { data: response.data, newReport: true } }
       )
       alertRef.current.triggerAlert()
     },
     onError: (_error, _variables) => {
+      setIsButtonLoading(false)
       const errorMsg = _error.response.data?.detail
       setAlertMessage(errorMsg)
       setAlertSeverity('error')
@@ -87,9 +89,11 @@ export const ComplianceReports = () => {
     }
   })
 
-  if (isCreating) {
-    return <Loading />
-  }
+  useEffect(() => {
+    if (isCreating) {
+      setIsButtonLoading(true)
+    }
+  }, [isCreating])
   return (
     <>
       <div>
@@ -124,6 +128,8 @@ export const ComplianceReports = () => {
                 status: COMPLIANCE_REPORT_STATUSES.DRAFT
               })
             }}
+            isButtonLoading={isButtonLoading}
+            setIsButtonLoading={setIsButtonLoading}
           />
         </Role>
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
