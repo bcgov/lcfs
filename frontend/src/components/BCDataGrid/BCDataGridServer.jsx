@@ -105,11 +105,13 @@ const BCDataGridServer = ({
           setPage(resp.data.pagination.page)
           setRowData(resp.data[apiData])
           setIsError(false)
+          setLoading(false)
         })
         .catch((err) => {
           setRowData([])
           setIsError(true)
           setError(err.message)
+          setLoading(false)
         }),
     [apiService, apiEndpoint, page, size, sortModel]
   )
@@ -167,6 +169,7 @@ const BCDataGridServer = ({
 
   // Callback for handling the first rendering of data
   const onFirstDataRendered = useCallback((params) => {
+    setLoading(false)
     params.api.hideOverlay()
   })
 
