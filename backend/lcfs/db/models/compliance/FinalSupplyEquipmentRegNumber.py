@@ -1,5 +1,5 @@
 from lcfs.db.base import BaseModel
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint
 
 class FinalSupplyEquipmentRegNumber(BaseModel):
     """
@@ -7,8 +7,12 @@ class FinalSupplyEquipmentRegNumber(BaseModel):
     to generate unique registration numbers for final supply equipment.
     """
 
-    __tablename__ = "final_supply_equipment_reg_numbers"
-    __table_args__ = {"comment": "Tracks the highest sequence numbers for final supply equipment registration numbers by postal code."}
+    __tablename__ = "final_supply_equipment_reg_number"
+    __table_args__ = (
+        PrimaryKeyConstraint('organization_code', 'postal_code'),
+        {"comment": "Tracks the highest sequence numbers for final supply equipment registration numbers by postal code and organization code."}
+    )
 
-    postal_code = Column(String, primary_key=True, comment="The postal code for the final supply equipment.")
+    organization_code = Column(String, nullable=False, comment="The organization code for the final supply equipment.")
+    postal_code = Column(String, nullable=False, comment="The postal code for the final supply equipment.")
     current_sequence_number = Column(Integer, nullable=False, comment="Current sequence number used for the postal code.")

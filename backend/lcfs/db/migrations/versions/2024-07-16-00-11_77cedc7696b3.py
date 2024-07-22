@@ -1,4 +1,4 @@
-"""Add final_supply_equipment_reg_numbers table to track the highest sequence numbers for final_supply_equipment
+"""Add final_supply_equipment_reg_number table to track the highest sequence numbers for final_supply_equipment
 
 Revision ID: 77cedc7696b3
 Revises: c87bf3db0117
@@ -18,11 +18,17 @@ depends_on = None
 
 def upgrade() -> None:
     op.create_table(
-        "final_supply_equipment_reg_numbers",
+        "final_supply_equipment_reg_number",
+        sa.Column(
+            "organization_code",
+            sa.String(),
+            nullable=False,
+            comment="Organization Code"
+        ),
         sa.Column(
             "postal_code",
             sa.String(),
-            primary_key=True,
+            nullable=False,
             comment="Postal code"
         ),
         sa.Column(
@@ -47,6 +53,13 @@ def upgrade() -> None:
         )
     )
 
+    op.create_index(
+        "idx_organization_code_postal_code",
+        "final_supply_equipment_reg_number",
+        ["organization_code", "postal_code"]
+    )
+
 
 def downgrade() -> None:
-    op.drop_table("final_supply_equipment_reg_numbers")
+    op.drop_index("idx_organization_code_postal_code", table_name="final_supply_equipment_reg_number")
+    op.drop_table("final_supply_equipment_reg_number")

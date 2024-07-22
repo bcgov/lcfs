@@ -23,7 +23,7 @@ def upgrade() -> None:
             "registration_nbr",
             sa.String(),
             nullable=True,
-            comment="Unique registration number in format ORGID-POSTAL-SEQ (e.g., 0055-0B9-001)",
+            comment="Unique registration number in format ORGCODE-POSTAL-SEQ (e.g., AB55-V3B0G2-001)",
         ),
     )
     op.create_index(

@@ -22,7 +22,7 @@ class FinalSupplyEquipment(BaseModel, Auditable):
     compliance_report_id = Column(Integer, ForeignKey("compliance_report.compliance_report_id"), nullable=False, comment="The foreign key referencing the compliance report.", index=True)
     supply_from_date = Column(Date, nullable=False, comment="The date from which the equipment is supplied.")
     supply_to_date = Column(Date, nullable=False, comment="The date until which the equipment is supplied.")
-    registration_nbr = Column(String, index=True, comment="Unique registration number in format ORGID-POSTAL-SEQ (e.g., 0055-0B9-001)")
+    registration_nbr = Column(String, index=True, comment="Unique registration number in format ORGCODE-POSTAL-SEQ (e.g., AB55-V3B0G2-001)")
     serial_nbr = Column(String, nullable=False, comment="The serial number of the equipment.")
     manufacturer = Column(String, nullable=False, comment="The manufacturer of the equipment.")
     level_of_equipment_id = Column(Integer, ForeignKey("level_of_equipment.level_of_equipment_id"), nullable=False, comment="The foreign key referencing the level of equipment.", index=True)

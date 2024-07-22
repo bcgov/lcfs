@@ -157,26 +157,36 @@ class FinalSupplyEquipmentRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_current_sequence_by_postal_code(self, postal_code: str) -> int:
+    async def get_current_seq_by_org_and_postal_code(self, organization_code: str, postal_code: str) -> int:
         """
-        Retrieve the current sequence number for a given postal code.
+        Retrieve the current sequence number for a given organization code and postal code.
         """
         result = await self.db.execute(
             select(FinalSupplyEquipmentRegNumber.current_sequence_number)
-            .where(FinalSupplyEquipmentRegNumber.postal_code == postal_code)
+            .where(
+                and_(
+                    FinalSupplyEquipmentRegNumber.organization_code == organization_code,
+                    FinalSupplyEquipmentRegNumber.postal_code == postal_code
+                )
+            )
         )
         current_sequence_number = result.scalar()
         return current_sequence_number if current_sequence_number is not None else 0
 
     @repo_handler
-    async def increment_sequence_by_postal_code(self, postal_code: str) -> int:
+    async def increment_seq_by_org_and_postal_code(self, organization_code: str, postal_code: str) -> int:
         """
-        Increment and return the next sequence number for a given postal code.
+        Increment and return the next sequence number for a given organization code and postal code.
         """
         # Try to update the existing sequence
         result = await self.db.execute(
             update(FinalSupplyEquipmentRegNumber)
-            .where(FinalSupplyEquipmentRegNumber.postal_code == postal_code)
+            .where(
+                and_(
+                    FinalSupplyEquipmentRegNumber.organization_code == organization_code,
+                    FinalSupplyEquipmentRegNumber.postal_code == postal_code
+                )
+            )
             .values(current_sequence_number=FinalSupplyEquipmentRegNumber.current_sequence_number + 1)
             .returning(FinalSupplyEquipmentRegNumber.current_sequence_number)
         )
@@ -185,6 +195,7 @@ class FinalSupplyEquipmentRepository:
         if sequence_number is None:
             # If no existing sequence, insert a new one
             new_record = FinalSupplyEquipmentRegNumber(
+                organization_code=organization_code,
                 postal_code=postal_code,
                 current_sequence_number=1
             )

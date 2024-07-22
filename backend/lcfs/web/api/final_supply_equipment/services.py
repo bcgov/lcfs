@@ -130,7 +130,8 @@ class FinalSupplyEquipmentServices:
 
         # Increment the sequence number for the postal code if creation was successful
         if created_equipment:
-            await self.repo.increment_sequence_by_postal_code(fse_data.postal_code)
+            org_code = self.request.user.organization.organization_code
+            await self.repo.increment_seq_by_org_and_postal_code(org_code, fse_data.postal_code)
 
         return FinalSupplyEquipmentSchema.model_validate(created_equipment)
 
@@ -169,11 +170,8 @@ class FinalSupplyEquipmentServices:
         if not org_code:
             raise ValueError("Organization ID is not available")
 
-        # Extract the last 3 characters of the postal code
-        last_three_postal = postal_code[-3:].upper()
-
         # Retrieve the current sequence number for a given postal code
-        current_number = await self.repo.get_current_sequence_by_postal_code(postal_code)
+        current_number = await self.repo.get_current_seq_by_org_and_postal_code(org_code, postal_code)
         next_number = current_number + 1
 
         # Ensure the sequential number is within the 001-999 range
@@ -182,5 +180,8 @@ class FinalSupplyEquipmentServices:
 
         formatted_next_number = f"{next_number:03d}"
 
+        # Remove the space in the postal code
+        postal_code_no_space = postal_code.replace(" ", "")
+
         # Concatenate to form the registration number and return it
-        return f"{org_code}-{last_three_postal}-{formatted_next_number}"
+        return f"{org_code}-{postal_code_no_space}-{formatted_next_number}"
