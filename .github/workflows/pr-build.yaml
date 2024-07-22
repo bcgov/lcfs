@@ -12,5 +12,5 @@ jobs:
     steps:
 
       - name: Run build
-        run: echo "well done for pr build"
+        run: echo "well done for pr build ..."
 
