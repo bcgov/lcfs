@@ -350,6 +350,27 @@ class FuelCodeRepository:
                 fuel_code_results.append(fc)
             return fuel_code_results
 
+    def format_decimal(self, value):
+        parts = str(value).split('.')
+        # Format the integer part to always have 3 digits
+        formatted_integer = f"{int(parts[0]):03d}"
+        if len(parts) > 1:
+            return f"{formatted_integer}.{parts[1]}"
+        else:
+            return formatted_integer
+
+    @repo_handler
+    async def validate_fuel_code(self, fuel_code: str, prefix: str) -> str:
+        # check if the fuel_code already exists
+        query = select(FuelCode).where(
+            and_(FuelCode.fuel_code == fuel_code, func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
+        )
+        result = (await self.db.execute(query)).scalar_one_or_none()
+        if result:
+            fuel_code_prefix = fuel_code.split('.')[0]
+            return await self.get_next_available_sub_version_fuel_code_by_prefix(fuel_code_prefix, prefix)
+        else:
+            return fuel_code
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
         query = text("""
@@ -375,7 +396,7 @@ class FuelCodeRepository:
             FROM next_code;
             """)
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
-        return result
+        return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(self, input_version: str, prefix: str) -> str:
         query = text(
@@ -415,7 +436,7 @@ class FuelCodeRepository:
             """
         )
         result = (await self.db.execute(query, {"input_version": int(input_version), "prefix": prefix})).scalar_one_or_none()
-        return result
+        return self.format_decimal(result)
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
         subquery = (

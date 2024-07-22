@@ -85,7 +85,7 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
-export const fuelCodeColDefs = (t, optionsData, api, client) => [
+export const fuelCodeColDefs = (t, optionsData, api, onValidated, client) => [
   {
     colId: 'validation',
     cellRenderer: 'validationRenderer',
@@ -99,7 +99,7 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
   {
     colId: 'action',
     cellRenderer: FuelCodeActions,
-    // cellRendererParams: { api, onValidated },
+    cellRendererParams: { api, onValidated },
     pinned: 'left',
     maxWidth: 110,
     editable: false,
@@ -119,10 +119,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
       values: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix)
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
     },
     minWidth: 135,
     valueGetter: (params) => params.data.prefix || 'BCLCF'
@@ -152,10 +148,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
       title: 'fuelCode'
     }),
     suppressKeyboardEvent,
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     valueGetter: (params) => {
       if (!params.data.fuelCode) {
         const prefix = params.data.prefix || 'BCLCF'
@@ -186,10 +178,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     headerComponent: 'headerComponent',
     headerName: t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellDataType: 'text'
   },
   {
@@ -197,10 +185,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     headerComponent: 'headerComponent',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellEditor: 'asyncSuggestionEditor',
     cellEditorParams: (params) => ({
       queryKey: 'company-name-search',
@@ -265,10 +249,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellEditor: 'dateEditor'
   },
   {
@@ -327,10 +307,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
       openOnFocus: true // this will open the dropdown on input focus
     },
     suppressKeyboardEvent,
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     minWidth: 300
   },
   {
@@ -339,10 +315,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'autocompleteEditor',
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -362,10 +334,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'autocompleteEditor',
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -385,10 +353,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'autocompleteEditor',
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -408,10 +372,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'autocompleteEditor',
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -441,10 +401,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'autocompleteEditor',
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -472,10 +428,6 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     cellEditor: 'autocompleteEditor',
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),

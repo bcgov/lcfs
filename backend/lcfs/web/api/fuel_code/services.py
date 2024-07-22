@@ -204,9 +204,10 @@ class FuelCodeServices:
         Create a new fuel code.
         """
         fuel_code.status = FuelCodeStatusEnum.Draft
+        fuel_code_value = await self.repo.validate_fuel_code(fuel_code.fuel_code, fuel_code.prefix)
+        fuel_code.fuel_code = fuel_code_value
         fuel_code_model = await self.convert_to_model(fuel_code)
         fuel_code_model.fuel_status_id = 1  # set to draft by default
-
         return await self.repo.create_fuel_code(fuel_code_model)
 
     @service_handler

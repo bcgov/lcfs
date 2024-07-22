@@ -34,7 +34,7 @@ const AddFuelCodeBase = () => {
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [focusedCell, setFocusedCell] = useState(null)
   const [cloneFuelCodeId, setCloneFuelCodeId] = useState(null)
-  const [prefix, setPrefix] = useState('BCLCF');
+  const [prefix, setPrefix] = useState('BCLCF')
   const [paramsData, setParamsData] = useState({})
   const gridRef = useRef(null)
   const alertRef = useRef()
@@ -47,15 +47,18 @@ const AddFuelCodeBase = () => {
   const { mutate: saveRow } = useSaveFuelCode()
 
   const gridKey = 'add-fuel-code'
-  const gridOptions = useMemo(() => ({
-    editType: undefined,
-    overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
-    autoSizeStrategy: {
-      type: 'fitCellContents',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    }
-  }),[t])
+  const gridOptions = useMemo(
+    () => ({
+      editType: undefined,
+      overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
+      autoSizeStrategy: {
+        type: 'fitCellContents',
+        defaultMinWidth: 50,
+        defaultMaxWidth: 600
+      }
+    }),
+    [t]
+  )
   // const getRowId = useCallback((params) => params.data.fuelCodeId, [])
 
   useEffect(() => {
@@ -121,174 +124,140 @@ const AddFuelCodeBase = () => {
   //   [gridApi, optionsData, t]
   // )
 
-  // const onValidated = (status, message, params, response) => {
-  //   let errMsg = message
-  //   const columnHandlerList = ['fuelCode', 'fuelProductionFacilityCity', 'fuelProductionFacilityProvinceState']
-  //   if (status === 'error') {
-  //     if (focusedCell && columnHandlerList.some((item) => focusedCell.column.colId.includes(item))) {
-  //       switch (focusedCell.column.colId) {
-  //         case 'fuelCode':
-  //           gridApi.startEditingCell({
-  //             rowIndex: focusedCell.rowIndex,
-  //             colKey: 'carbonIntensity'
-  //           })
-  //           setFocusedCell(undefined)
-  //           break
-  //         case 'fuelProductionFacilityCity':
-  //         case 'fuelProductionFacilityProvinceState':
-  //           gridApi.startEditingCell({
-  //             rowIndex: focusedCell.rowIndex,
-  //             colKey: 'facilityNameplateCapacity'
-  //           })
-  //           setFocusedCell(undefined)
-  //           break
-  //       }
-  //     }
-  //     const field = message.response?.data?.detail[0]?.loc[1]
-  //       ? t(`fuelCode:fuelCodeColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
-  //       : ''
+  const onValidated = (status, message, params, response) => {
+    let errMsg = message
+    const columnHandlerList = ['fuelCode', 'fuelProductionFacilityCity', 'fuelProductionFacilityProvinceState']
+    if (status === 'error') {
+      if (focusedCell && columnHandlerList.some((item) => focusedCell.column.colId.includes(item))) {
+        switch (focusedCell.column.colId) {
+          case 'fuelCode':
+            gridApi.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: 'carbonIntensity'
+            })
+            setFocusedCell(undefined)
+            break
+          case 'fuelProductionFacilityCity':
+          case 'fuelProductionFacilityProvinceState':
+            gridApi.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: 'facilityNameplateCapacity'
+            })
+            setFocusedCell(undefined)
+            break
+        }
+      }
+      const field = message.response?.data?.detail[0]?.loc[1]
+        ? t(`fuelCode:fuelCodeColLabels.${message.response?.data?.detail[0]?.loc[1]}`)
+        : ''
 
-  //     errMsg = `Error updating row: ${field} ${message.response?.data?.detail[0]?.msg}`
-  //     params.data.isValid = false
-  //     params.data.validationMsg = `${field} ${message.response?.data?.detail[0]?.msg}`
-  //   }
-  //   setAlertMessage(errMsg)
-  //   setAlertSeverity(status)
-  //   alertRef.current?.triggerAlert()
-  // }
+      errMsg = `Error updating row: ${field} ${message.response?.data?.detail[0]?.msg}`
+      params.data.isValid = false
+      params.data.validationMsg = `${field} ${message.response?.data?.detail[0]?.msg}`
+    }
+    setAlertMessage(errMsg)
+    setAlertSeverity(status)
+    alertRef.current?.triggerAlert()
+  }
 
-  // const onRowEditingStarted = useCallback(
-  //   (params) => {
-  //     if (params.data.modified && params.data.isValid) validationHandler(params)
-  //   },
-  //   [validationHandler]
-  // )
-
-  // const onRowEditingStopped = useCallback(
-  //   (params) => {
-  //     params.node.setData({ ...params.data, modified: true })
-  //     const focusedCell = params.api.getFocusedCell()
-  //     setFocusedCell(focusedCell)
-  //     if (focusedCell.column.colId === 'fuelCode') {
-  //       const fuelCodeData = optionsData.latestFuelCodes.find(
-  //         (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
-  //       )
-  //       const updatedData = {
-  //         ...params.data,
-  //         prefix: fuelCodeData.fuelCodePrefix.prefix,
-  //         company: fuelCodeData.company,
-  //         fuel: fuelCodeData.fuelCodeType.fuelType,
-  //         feedstock: fuelCodeData.feedstock,
-  //         feedstockLocation: fuelCodeData.feedstockLocation,
-  //         feedstockMisc: fuelCodeData.feedstockMisc,
-  //         feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
-  //           (mode) => mode.feedstockFuelTransportMode.transportMode
-  //         ),
-  //         finishedFuelTransportMode:
-  //           fuelCodeData.finishedFuelTransportModes.map(
-  //             (mode) => mode.finishedFuelTransportMode.transportMode
-  //           ),
-  //         formerCompany: fuelCodeData.formerCompany,
-  //         contactName: fuelCodeData.contactName,
-  //         contactEmail: fuelCodeData.contactEmail
-  //       }
-  //       gridApi.applyTransaction({ update: [updatedData] })
-  //       gridApi.startEditingCell({
-  //         rowIndex: focusedCell.rowIndex,
-  //         colKey: 'company'
-  //       })
-  //     } else if (focusedCell.column.colId === 'fuelProductionFacilityCity') {
-  //       const location = optionsData.fpLocations.find(
-  //         (location) =>
-  //           location.fuelProductionFacilityCity ===
-  //           params.data.fuelProductionFacilityCity
-  //       )
-  //       const updatedData = {
-  //         ...params.data,
-  //         fuelProductionFacilityProvinceState:
-  //           location.fuelProductionFacilityProvinceState,
-  //         fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
-  //       }
-  //       gridApi.applyTransaction({ update: [updatedData] })
-  //       gridApi.startEditingCell({
-  //         rowIndex: focusedCell.rowIndex,
-  //         colKey: 'facilityNameplateCapacity'
-  //       })
-  //     } else if (
-  //       focusedCell.column.colId === 'fuelProductionFacilityProvinceState'
-  //     ) {
-  //       const location = optionsData.fpLocations.find(
-  //         (location) =>
-  //           location.fuelProductionFacilityProvinceState ===
-  //           params.data.fuelProductionFacilityProvinceState
-  //       )
-  //       const updatedData = {
-  //         ...params.data,
-  //         fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
-  //       }
-  //       gridApi.applyTransaction({ update: [updatedData] })
-  //       gridApi.startEditingCell({
-  //         rowIndex: focusedCell.rowIndex,
-  //         colKey: 'facilityNameplateCapacity'
-  //       })
-  //     } else {
-  //       validationHandler(params)
-  //     }
-  //   },
-  //   [validationHandler, gridApi, optionsData]
-  // )
-  const { data: clonedFuelCodeData, isLoading: isFuelCodeLoading, refetch } = useQuery({
+  const {
+    data: clonedFuelCodeData,
+    isLoading: isFuelCodeLoading,
+    refetch
+  } = useQuery({
     queryKey: ['fuelCode', cloneFuelCodeId, prefix],
-    queryFn: async ({queryKey}) => {
+    queryFn: async ({ queryKey }) => {
       // eslint-disable-next-line no-unused-vars
       const [_, cloneFuelCodeId, prefix] = queryKey
       let path = apiRoutes.fuelCodeSearch
-      path +=  'prefix=' + (prefix || 'BCLCF') + '&distinctSearch=false&fuelCode=' + cloneFuelCodeId
+      path +=
+        'prefix=' +
+        (prefix || 'BCLCF') +
+        '&distinctSearch=false&fuelCode=' +
+        cloneFuelCodeId
       const response = await apiService.get(path)
       return response.data.fuelCodes[0]
     },
     enabled: !!cloneFuelCodeId
   })
-  const onCellValueChanged = useCallback((params) => {
-    if (!isEqual(params.oldValue, params.newValue)) {
-      params.data.modified = true
-    }
-    if (params.column.colId === 'fuelCode') {
-      setCloneFuelCodeId(params.newValue)
-      setPrefix(params.data.prefix)
-      setFocusedCell(params.column.colId)
-      setParamsData(params.data)
-      refetch()
-    }
-  },[refetch])
-
-  useEffect(()=>{
-    if (focusedCell === 'fuelCode' && !isFuelCodeLoading && clonedFuelCodeData) {
+  const onCellValueChanged = useCallback(
+    (params) => {
+      if (!isEqual(params.oldValue, params.newValue)) {
+        params.data.modified = true
+      }
+      if (params.column.colId === 'fuelCode') {
+        setCloneFuelCodeId(params.newValue)
+        setPrefix(params.data.prefix)
+        setFocusedCell(params.column.colId)
+        setParamsData(params.data)
+        refetch()
+      } else if (params.column.colId === 'fuelProductionFacilityCity') {
+        const location = optionsData.fpLocations?.find(
+          (location) => location.fuelProductionFacilityCity === params.newValue
+        )
         const updatedData = {
-          ...paramsData,
-          fuelCode: clonedFuelCodeData.fuelCode,
-          prefix: clonedFuelCodeData.fuelCodePrefix?.prefix || prefix,
-          company: clonedFuelCodeData.company,
-          fuel: clonedFuelCodeData.fuelCodeType?.fuelType,
-          feedstock: clonedFuelCodeData.feedstock,
-          feedstockLocation: clonedFuelCodeData.feedstockLocation,
-          feedstockMisc: clonedFuelCodeData.feedstockMisc,
-          feedstockTransportMode:
-            clonedFuelCodeData.feedstockFuelTransportModes?.map(
-              (mode) => mode.feedstockFuelTransportMode.transportMode
-            ),
-          finishedFuelTransportMode:
-            clonedFuelCodeData.finishedFuelTransportModes?.map(
-              (mode) => mode.finishedFuelTransportMode.transportMode
-            ),
-          formerCompany: clonedFuelCodeData.formerCompany,
-          contactName: clonedFuelCodeData.contactName,
-          contactEmail: clonedFuelCodeData.contactEmail
+          ...params.data,
+          fuelProductionFacilityProvinceState:
+            location.fuelProductionFacilityProvinceState,
+          fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
         }
         gridApi.applyTransaction({ update: [updatedData] })
-        setFocusedCell(undefined)
+      } else if (
+        params.column.colId === 'fuelProductionFacilityProvinceState'
+      ) {
+        const location = optionsData.fpLocations?.find(
+          (location) =>
+            location.fuelProductionFacilityProvinceState ===
+            params.data.fuelProductionFacilityProvinceState
+        )
+        const updatedData = {
+          ...params.data,
+          fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
+        }
+        gridApi.applyTransaction({ update: [updatedData] })
+      }
+    },
+    [gridApi, optionsData, refetch]
+  )
+
+  useEffect(() => {
+    if (
+      focusedCell === 'fuelCode' &&
+      !isFuelCodeLoading &&
+      clonedFuelCodeData
+    ) {
+      const updatedData = {
+        ...paramsData,
+        fuelCode: clonedFuelCodeData.fuelCode,
+        prefix: clonedFuelCodeData.fuelCodePrefix?.prefix || prefix,
+        company: clonedFuelCodeData.company,
+        fuel: clonedFuelCodeData.fuelCodeType?.fuelType,
+        feedstock: clonedFuelCodeData.feedstock,
+        feedstockLocation: clonedFuelCodeData.feedstockLocation,
+        feedstockMisc: clonedFuelCodeData.feedstockMisc,
+        feedstockTransportMode:
+          clonedFuelCodeData.feedstockFuelTransportModes?.map(
+            (mode) => mode.feedstockFuelTransportMode.transportMode
+          ),
+        finishedFuelTransportMode:
+          clonedFuelCodeData.finishedFuelTransportModes?.map(
+            (mode) => mode.finishedFuelTransportMode.transportMode
+          ),
+        formerCompany: clonedFuelCodeData.formerCompany,
+        contactName: clonedFuelCodeData.contactName,
+        contactEmail: clonedFuelCodeData.contactEmail
+      }
+      gridApi.applyTransaction({ update: [updatedData] })
+      setFocusedCell(undefined)
     }
-  }, [isFuelCodeLoading, clonedFuelCodeData, focusedCell, paramsData, gridApi, prefix])
+  }, [
+    isFuelCodeLoading,
+    clonedFuelCodeData,
+    focusedCell,
+    paramsData,
+    gridApi,
+    prefix
+  ])
 
   const statusBarComponent = useMemo(
     () => (
@@ -316,57 +285,6 @@ const AddFuelCodeBase = () => {
         alertRef.current.triggerAlert()
       }
     })
-
-  const getTransportModeIds = useCallback(
-    (transportMode) => {
-      const transportModeIds = []
-      if (transportMode) {
-        transportMode.forEach((mode) => {
-          const foundMode = optionsData.transportModes.find(
-            (elm) => elm.transportMode === mode
-          )
-          if (foundMode) {
-            transportModeIds.push({
-              fuelCodeId: null,
-              transportModeId: foundMode.transportModeId
-            })
-          }
-        })
-      }
-      return transportModeIds
-    },
-    [optionsData]
-  )
-
-  // const handleSaveDraftCodes = async () => {
-  //   gridApi.stopEditing(false)
-  //   const allRowData = []
-  //   gridApi.forEachNode(async (row) => {
-  //     await validationHandler(row)
-  //     const data = {
-  //       ...row.data,
-  //       lastUpdated: new Date(),
-  //       prefixId: optionsData.fuelCodePrefixes.find(
-  //         (elm) => elm.prefix === row.data.prefix
-  //       ).fuelCodePrefixId,
-  //       fuelTypeId: optionsData.fuelTypes.find(
-  //         (elm) => elm.fuelType === row.data.fuel
-  //       ).fuelTypeId,
-  //       feedstockFuelTransportModes: getTransportModeIds(
-  //         row.data.feedstockTransportMode
-  //       ),
-  //       finishedFuelTransportModes: getTransportModeIds(
-  //         row.data.finishedFuelTransportMode
-  //       ),
-  //       fuelCodeId: null,
-  //       status: FUEL_CODE_STATUSES.DRAFT,
-  //       fuelCode: String(row.data.fuelCode)
-  //     }
-  //     allRowData.push(data)
-  //   })
-
-  //   addFuelCodes({ data: allRowData })
-  // }
 
   if (isLoading || isAddFuelCodeLoading) {
     return <Loading />
@@ -398,7 +316,7 @@ const AddFuelCodeBase = () => {
             className="ag-theme-quartz"
             getRowId={(params) => params.data.id}
             gridRef={gridRef}
-            columnDefs={fuelCodeColDefs(t, optionsData, gridApi, apiService)}
+            columnDefs={fuelCodeColDefs(t, optionsData, gridApi, onValidated, apiService)}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
@@ -410,11 +328,8 @@ const AddFuelCodeBase = () => {
             defaultStatusBar={false}
             statusBarComponent={statusBarComponent}
             onCellValueChanged={onCellValueChanged}
-            stopEditingWhenCellsLoseFocus={true}
-            // onRowEditingStarted={onRowEditingStarted}
-            // onRowEditingStopped={onRowEditingStopped}
             saveRow={saveRow}
-            // onValidated={onValidated}
+            onValidated={onValidated}
           />
         </BCBox>
         <Stack
