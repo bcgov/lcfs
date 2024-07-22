@@ -83,19 +83,19 @@ export const transactionsColDefs = (t) => [
 export const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
 
 // Filters
-export const filter_in_progress_org_transfers = [
+export const filterInProgressOrgTransfers = [
   { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'Transfer' },
   { filterType: 'set', type: 'set', field: 'status', filter: ['Draft', 'Sent', 'Submitted'] }
 ]
-export const filter_in_progress_transfers = [
+export const filterInProgressTransfers = [
   { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'Transfer' },
   { filterType: 'set', type: 'set', field: 'status', filter: ['Submitted', 'Recommended'] }
 ]
-export const filter_in_progress_initiative_agreements = [
+export const filterInProgressInitiativeAgreements = [
   { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'InitiativeAgreement' },
   { filterType: 'set', type: 'set', field: 'status', filter: ['Draft', 'Recommended'] }
 ]
-export const filter_in_progress_admin_adjustments = [
+export const filterInProgressAdminAdjustments = [
   { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'AdminAdjustment' },
   { filterType: 'set', type: 'set', field: 'status', filter: ['Draft', 'Recommended'] }
 ]
