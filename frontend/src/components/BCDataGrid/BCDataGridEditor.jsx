@@ -38,7 +38,6 @@ const BCDataGridEditor = ({
   defaultStatusBar,
   onRowEditingStarted,
   onRowEditingStopped,
-  tabToNextCellHandler,
   saveRow,
   onValidated,
   ...props
@@ -95,12 +94,7 @@ const BCDataGridEditor = ({
   }, [handleExcelPaste, props.handlePaste])
 
   const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
-  const tabToNextCell = useCallback((params) => {
-    if (tabToNextCellHandler) {
-      tabToNextCellHandler(params)
-    }
-    return params.nextCellPosition
-  }, [tabToNextCellHandler])
+  const tabToNextCell = useCallback((params) => params.nextCellPosition, [])
 
   const defaultGridOptions = useMemo(() => ({
     undoRedoCellEditing: true,
@@ -204,7 +198,7 @@ const BCDataGridEditor = ({
         onGridReady={onGridReady}
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
-        onCellValueChanged={props.onCellValueChanged || onCellValueChanged}
+        onCellValueChanged={onCellValueChanged}
         onRowEditingStarted={onRowEditingStartedHandler}
         onRowEditingStopped={onRowEditingStoppedHandler}
         loadingOverlayComponent={loadingOverlayComponent}

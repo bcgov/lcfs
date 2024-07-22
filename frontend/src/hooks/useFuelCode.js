@@ -11,22 +11,6 @@ export const useFuelCodeOptions = (params, options) => {
     ...options
   })
 }
-export const useFuelCodeSearch = (params, options) => {
-  const client = useApiService()
-  let path = apiRoutes.fuelCodeSearch
-  // eslint-disable-next-line chai-friendly/no-unused-expressions, no-return-assign
-  params && Object.keys(params.queryParams).forEach(key => path += (params.queryParams[key] && params.queryParams[key] !== '') ? `${key}=${params.queryParams[key]}&` : '')
-  return useQuery({
-    queryKey: ['fuel-code-search'],
-    queryFn: async () => {
-      const response = await client.get(path)
-      return response.data
-    },
-    enabled: params?.options?.enabled,
-    retry: params.options.retry,
-    ...options
-  })
-}
 
 export const useAddFuelCodes = (options) => {
   const client = useApiService()
