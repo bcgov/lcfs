@@ -2,7 +2,7 @@ name: Label Triggered Build
 
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize]
 
 env:
   VERSION: 0.2.0
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4.1.1
         with: 
           ref: ${{ github.event.pull_request.head.ref }} 
-          
+
       - name: verify ref
         run: |
           pwd
