@@ -36,8 +36,8 @@ jobs:
       - name: verify ref
         run: |
           pwd
-          ls -l 
-          echo .github/workflows/pr-build.yaml
+          ls -la
+          cat .github/workflows/pr-build.yaml
 
       # - name: Log in to Openshift
       #   uses: redhat-actions/oc-login@v1.3
