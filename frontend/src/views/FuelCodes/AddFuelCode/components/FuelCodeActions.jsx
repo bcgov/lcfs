@@ -52,10 +52,10 @@ export const FuelCodeActions = ({ api, node, data, onValidated }) => {
     console.log("ACTION - deleteRow", api)
     const updatedRow = { ...data, deleted: true }
     if (api) {
-      api.applyTransaction({ remove: [node.data] })
       if(updatedRow.fuelCodeId) {
         saveRow(updatedRow, {
           onSuccess: () => {
+            api.applyTransaction({ remove: [node.data] })
             if (onValidated) {
               onValidated('success', 'Row deleted successfully.')
             }

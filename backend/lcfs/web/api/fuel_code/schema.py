@@ -240,16 +240,16 @@ class FuelCodeCreateSchema(BaseSchema):
     id: Optional[str] = None
     fuel_code_id: Optional[int] = None
     status: Optional[str] = None
-    prefix: str
+    prefix: Optional[str] = None
     prefix_id: Optional[int] = None
     fuel_code: str
-    company: str
     carbon_intensity: float
     edrms: str
+    company: str
     last_updated: Optional[datetime] = None
-    application_date: date
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
+    application_date: date
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
