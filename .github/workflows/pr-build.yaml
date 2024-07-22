@@ -40,26 +40,26 @@ jobs:
           echo ${{ env.GIT_URL }}
           echo ${{ env.GIT_REF }}
 
-      # - name: Log in to Openshift
-      #   uses: redhat-actions/oc-login@v1.3
-      #   with:
-      #     openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
-      #     openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
-      #     insecure_skip_tls_verify: true
-      #     namespace: ${{ env.TOOLS_NAMESPACE }}
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
 
-      # - name: Build LCFS Backend
-      #   run: |
-      #     cd openshift/templates
-      #     oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-      #     sleep 5s
-      #     oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
-      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
+      - name: Build LCFS Backend
+        run: |
+          cd openshift/templates
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 5s
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
-      # - name: Build LCFS Frontend
-      #   run: |
-      #     cd openshift/templates
-      #     oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
-      #     sleep 5s
-      #     oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
-      #     oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
+      - name: Build LCFS Frontend
+        run: |
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
+          sleep 5s
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
