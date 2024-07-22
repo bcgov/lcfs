@@ -44,13 +44,17 @@ class FuelCodeServices:
         return SearchFuelCodeList(fuel_codes=result)
     
     @service_handler
-    async def search_company(self, fuel_code, prefix, distinct_search):
-        if distinct_search:
-            result = await self.repo.get_distinct_fuel_codes_by_code(fuel_code, prefix)
-        else: 
-            result = await self.repo.get_fuel_code_by_code_prefix(fuel_code, prefix)
-        return SearchFuelCodeList(fuel_codes=result)
-        
+    async def search_company(self, company):
+        return await self.repo.get_distinct_company_names(company)        
+    
+    @service_handler
+    async def search_contact_name(self, company, contact_name):
+        return await self.repo.get_contact_names_by_company(company, contact_name)      
+    
+    @service_handler
+    async def search_contact_email(self, company, contact_name, contact_email):
+        return await self.repo.get_contact_email_by_company_and_name(company, contact_name, contact_email)      
+
     @service_handler
     async def get_table_options(self) -> TableOptionsSchema:
         """

@@ -137,15 +137,19 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditor: 'asyncSuggestionEditor',
     cellEditorParams: (params) => ({
-      queryKey: "fuel-code-search",
-      queryFn: async (inputValue) => {
+      queryKey: 'fuel-code-search',
+      queryFn: async ({ queryKey }) => {
         let path = apiRoutes.fuelCodeSearch
-        path +=  'prefix=' + (params.data.prefix || 'BCLCF') + '&distinctSearch=true&fuelCode=' + inputValue.queryKey[1]
+        path +=
+          'prefix=' +
+          (params.data.prefix || 'BCLCF') +
+          '&distinctSearch=true&fuelCode=' +
+          queryKey[1]
         const response = await client.get(path)
         return response.data
       },
       optionLabel: 'fuelCodes',
-      title: 'fuelCode',
+      title: 'fuelCode'
     }),
     suppressKeyboardEvent,
     cellStyle: (params) => {
@@ -155,7 +159,9 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     valueGetter: (params) => {
       if (!params.data.fuelCode) {
         const prefix = params.data.prefix || 'BCLCF'
-        return optionsData?.fuelCodePrefixes?.find((obj) => obj.prefix === prefix)?.nextFuelCode
+        return optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === prefix
+        )?.nextFuelCode
       }
       return params.data.fuelCode
     },
@@ -197,15 +203,14 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     },
     cellEditor: 'asyncSuggestionEditor',
     cellEditorParams: (params) => ({
-      queryKey: "fuel-code-search",
-      queryFn: async (inputValue) => {
+      queryKey: 'company-name-search',
+      queryFn: async ({ queryKey }) => {
         let path = apiRoutes.fuelCodeSearch
-        path +=  'prefix=' + (params.data.prefix || 'BCLCF') + '&distinctSearch=true&fuelCode=' + inputValue.queryKey[1]
+        path += 'company=' + queryKey[1]
         const response = await client.get(path)
         return response.data
       },
-      optionLabel: 'fuelCodes',
-      title: 'fuelCode',
+      title: 'company'
     }),
     suppressKeyboardEvent,
     minWidth: 300
@@ -213,38 +218,38 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
   {
     field: 'contactName',
     headerName: t('fuelCode:fuelCodeColLabels.contactName'),
-    cellEditor: 'autocompleteEditor',
+    cellEditor: 'asyncSuggestionEditor',
     cellDataType: 'text',
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditorParams: {
-      noLabel: true,
-      options: optionsData.fieldOptions.contactName,
-      multiple: false, // ability to select multiple values from dropdown
-      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
-      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
-      openOnFocus: true // this will open the dropdown on input focus
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'contact-name-search',
+      queryFn: async ({ queryKey }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += 'company=' + params.data.company + '&contactName=' + queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'contactName',
+      enabled: params.data.company !== ''
+    }),
     suppressKeyboardEvent,
     minWidth: 300
   },
   {
     field: 'contactEmail',
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
-    cellEditor: 'autocompleteEditor',
+    cellEditor: 'asyncSuggestionEditor',
     cellDataType: 'text',
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditorParams: {
-      noLabel: true,
-      options: optionsData.fieldOptions.contactEmail,
-      multiple: false, // ability to select multiple values from dropdown
-      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
-      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
-      openOnFocus: true // this will open the dropdown on input focus
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'contact-email-search',
+      queryFn: async ({ queryKey }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += 'company=' + params.data.company + '&contactName=' + params.data.contactName + '&contactEmail=' + queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'contactEmail',
+      enabled: params.data.company !== '' && params.data.contactName !== ''
+    }),
     suppressKeyboardEvent,
     minWidth: 300
   },
@@ -519,7 +524,11 @@ export const fuelCodeColDefs = (t, optionsData, api, client) => [
     },
     suppressKeyboardEvent,
     cellStyle: (params) => {
-      if (params.data.modified && params.data.facilityNameplateCapacity && (!params.value || params.value === ''))
+      if (
+        params.data.modified &&
+        params.data.facilityNameplateCapacity &&
+        (!params.value || params.value === '')
+      )
         return { borderColor: 'red' }
     },
     minWidth: 300

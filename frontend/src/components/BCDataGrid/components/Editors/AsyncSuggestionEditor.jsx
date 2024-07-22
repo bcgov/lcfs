@@ -21,7 +21,7 @@ export const AsyncSuggestionEditor = forwardRef(
       (newInputValue) =>
         debounce((newInputValue) => {
           setInputValue(newInputValue)
-        }, props.debounce || 500),
+        }, props.debounceValue || 500), // by default 1/2 second delay between calls
       [inputValue]
     )
 
@@ -63,7 +63,7 @@ export const AsyncSuggestionEditor = forwardRef(
           getOptionLabel={(option) =>
             typeof option === 'string' ? option : option.title
           }
-          options={options ? options[props.optionLabel].map(item=> ({title: item})) : []}
+          options={options ? Array.isArray(options) ? options.map(item=> ({title: item})) : options[props.optionLabel].map(item=> ({title: item})) : []}
           includeInputInList
           value={value}
           onInputChange={handleInputChange}

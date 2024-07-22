@@ -282,13 +282,38 @@ class FuelCodeRepository:
         await self.db.execute(update(FuelCode).where(FuelCode.fuel_code_id == fuel_code_id).values(fuel_status_id=3))
 
     @repo_handler
+    async def get_distinct_company_names(self, company: str) -> List[str]:
+        query = select(distinct(FuelCode.company)).where(
+            func.lower(FuelCode.company).like(func.lower(company + "%"))
+        ).order_by(FuelCode.company).limit(10)
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_contact_names_by_company(self, company: str, contact_name: str) -> List[str]:
+        query = select(distinct(FuelCode.contact_name)).where(and_(
+            func.lower(FuelCode.company) == func.lower(company),
+            func.lower(FuelCode.contact_name).like(func.lower(contact_name + "%")))
+        ).order_by(FuelCode.contact_name).limit(10)
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_contact_email_by_company_and_name(self, company: str, contact_name: str, contact_email: str) -> List[str]:
+        query = select(distinct(FuelCode.contact_email)).where(and_(
+            func.lower(FuelCode.company) == func.lower(company),
+            func.lower(FuelCode.contact_name) == func.lower(contact_name)),
+            func.lower(FuelCode.contact_email).like(func.lower(contact_email + "%"))
+        ).order_by(FuelCode.contact_email).limit(10)
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
     async def get_distinct_fuel_codes_by_code(
         self, fuel_code: str, prefix: str
     ) -> List[str]:
         query = (
             select(distinct(FuelCode.fuel_code)
             ).join(FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
-            ).where(and_(FuelCode.fuel_code.like(fuel_code + "%"),FuelCodePrefix.prefix == prefix))
+            ).where(and_(FuelCode.fuel_code.like(fuel_code + "%"),func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
+            ).order_by(FuelCode.fuel_code).limit(10)
         )
 
         return (await self.db.execute(query)).scalars().all()
