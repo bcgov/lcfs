@@ -25,6 +25,8 @@ jobs:
 
     env:
       PRE_RELEASE: ${{ github.event.pull_request.number }}
+      GIT_URL: https://github.com/bcgov/lcfs.git 
+      GIT_REF: ${{ github.event.pull_request.head.ref }}
 
     steps:
 
@@ -38,6 +40,9 @@ jobs:
           pwd
           ls -la
           cat .github/workflows/pr-build.yaml
+          echo ${{ env.PRE_RELEASE }}
+          echo ${{ env.GIT_URL }}
+          echo ${{ env.GIT_REF }}
 
       # - name: Log in to Openshift
       #   uses: redhat-actions/oc-login@v1.3
