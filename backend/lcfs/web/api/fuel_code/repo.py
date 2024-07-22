@@ -22,7 +22,7 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.fuel_code.schema import FuelCodeSchema
+from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
 
 logger = getLogger("fuel_code_repo")
@@ -311,9 +311,19 @@ class FuelCodeRepository:
                 and_(FuelCode.fuel_code == fuel_code, FuelCodePrefix.prefix == prefix)
             )
         )
-
+        input_version = fuel_code.split('.')[0]
         results = (await self.db.execute(query)).unique().scalars().all()
-        return [FuelCodeSchema.model_validate(fuel_code) for fuel_code in results]
+        fuel_code_val = await self.get_next_available_sub_version_fuel_code_by_prefix(input_version, prefix)
+        if (results is None or len(results) < 1):
+            fc = FuelCodeCloneSchema(fuel_code=fuel_code_val, prefix=prefix)
+            return [fc]
+        else:
+            fuel_code_results = []
+            for fuel_code in results:
+                fc = FuelCodeCloneSchema.model_validate(fuel_code)
+                fc.fuel_code = fuel_code_val
+                fuel_code_results.append(fc)
+            return fuel_code_results
 
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
@@ -340,6 +350,46 @@ class FuelCodeRepository:
             FROM next_code;
             """)
         result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
+        return result
+
+    async def get_next_available_sub_version_fuel_code_by_prefix(self, input_version: str, prefix: str) -> str:
+        query = text(
+            """
+            WITH split_versions AS (
+                SELECT 
+                    fuel_code,
+                    CAST(SPLIT_PART(fuel_code, '.', 1) AS INTEGER) AS main_version,
+                    CAST(SPLIT_PART(fuel_code, '.', 2) AS INTEGER) AS sub_version
+                FROM fuel_code fc
+                JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
+                WHERE fcp.prefix = :prefix
+            ),
+            sub_versions AS (
+                SELECT 
+                    main_version,
+                    sub_version
+                FROM split_versions
+                WHERE main_version = :input_version
+            ),
+            all_sub_versions AS (
+                SELECT generate_series(0, COALESCE((SELECT MAX(sub_version) FROM sub_versions), -1)) AS sub_version
+            ),
+            missing_sub_versions AS (
+                SELECT a.sub_version
+                FROM all_sub_versions a
+                LEFT JOIN sub_versions s ON a.sub_version = s.sub_version
+                WHERE s.sub_version IS NULL
+                ORDER BY a.sub_version
+                LIMIT 1
+            )
+            SELECT 
+                :input_version || '.' || 
+                COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR, 
+                        (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR) 
+                AS next_available_version
+            """
+        )
+        result = (await self.db.execute(query, {"input_version": int(input_version), "prefix": prefix})).scalar_one_or_none()
         return result
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:

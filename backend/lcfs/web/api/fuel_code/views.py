@@ -56,6 +56,7 @@ async def get_table_options(
 @view_handler([RoleEnum.GOVERNMENT])
 async def search_table_options_strings(
     request: Request,
+    company: Optional[str] = Query(None, alias="company", description="Company for filtering options"),
     fuel_code: Optional[str] = Query(None, alias="fuelCode", description="Fuel code for filtering options"),
     prefix: Optional[str] = Query(None, alias="prefix", description="Prefix for filtering options"),
     distinct_search: Optional[bool] = Query(False, alias="distinctSearch", description="Based on flag retrieve entire row data or just the list of distinct values"),
@@ -65,7 +66,12 @@ async def search_table_options_strings(
     if (fuel_code):
         logger.info(f"Searching for fuel code: {fuel_code} with prfix: {prefix}")
         return await service.search_fuel_code(fuel_code, prefix, distinct_search)
-    return
+    # elif (company):
+    #     logger.info(f"Searching for company: {company} with prefix: {prefix}")
+    #     return await service.search_company(company)
+    else:
+        logger.info("Invalid search parameters")
+        return {"error": "Invalid search parameters"}
 
 @router.post("/list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])

@@ -166,6 +166,41 @@ class FuelCodeSchema(BaseSchema):
     finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
         None
     )
+class FuelCodeCloneSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
+    fuel_status_id: Optional[int] = None
+    prefix_id: Optional[int] = None
+    fuel_code: Optional[str] = None
+    company: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    carbon_intensity: Optional[float] = None
+    edrms: Optional[str] = None
+    last_updated: Optional[datetime] = None
+    application_date: Optional[date] = None
+    approval_date: Optional[date] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    fuel_type_id: Optional[int] = None
+    feedstock: Optional[str] = None
+    feedstock_location: Optional[str] = None
+    feedstock_misc: Optional[str] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
+    facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
+    former_company: Optional[str] = None
+    notes: Optional[str] = None
+    fuel_code_status: Optional[FuelCodeStatusSchema] = None
+    fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
+    fuel_code_type: Optional[FuelTypeSchema] = None
+    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
+        None
+    )
+    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
+        None
+    )
 
 
 class FieldOptions(BaseSchema):
@@ -194,7 +229,7 @@ class TableOptionsSchema(BaseSchema):
     facility_nameplate_capacity_units: List[FuelTypeQuantityUnitsEnumSchema]
 
 class SearchFuelCodeList(BaseSchema):
-    fuel_codes: Union[List[str], List[FuelCodeSchema]]
+    fuel_codes: Union[List[str], List[FuelCodeCloneSchema]]
 
 class FuelCodesSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]

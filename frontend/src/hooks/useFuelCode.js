@@ -22,6 +22,7 @@ export const useFuelCodeSearch = (params, options) => {
       const response = await client.get(path)
       return response.data
     },
+    enabled: params?.options?.enabled,
     retry: params.options.retry,
     ...options
   })

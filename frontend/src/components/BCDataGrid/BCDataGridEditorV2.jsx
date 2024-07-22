@@ -21,27 +21,32 @@ import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import { isEqual } from '@/utils/eventHandlers'
-import AutocompleteCellEditor from './components/Editors/AutocompleteCellEditor'
 
-const BCDataGridEditorV2 = (props) => {
-  const {
-    gridApi,
-    gridKey,
-    className,
-    columnDefs,
-    defaultColDef,
-    gridRef,
-    rowData,
-    getRowNodeId,
-    gridOptions,
-    onGridReady,
-  } = props
-  // Register the Custom ag-grid components.
+const BCDataGridEditorV2 = ({
+  gridOptions={},
+  onGridReady={},
+  gridApi=null,
+  columnApi=null,
+  rowData=[],
+  gridKey='bcgrid-key-unique-id',
+  getRowNodeId=uuid(),
+  gridRef=null,
+  columnDefs={},
+  defaultColDef={},
+  highlightedRowId=null,
+  className='ag-theme-quartz',
+  // defaultStatusBar,
+  // onRowEditingStarted,
+  // onRowEditingStopped,
+  // tabToNextCellHandler,
+  saveRow=null,
+  onValidated=null,
+  ...props
+}) => {
   const frameworkComponents = useMemo(
     () => ({
       asyncValidationEditor: AsyncValidationEditor,
       autocompleteEditor: AutocompleteEditor,
-      autocompleteCellEditor: AutocompleteCellEditor,
       dateEditor: DateEditor,
       actionsRenderer: ActionsRenderer,
       asyncSuggestionEditor: AsyncSuggestionEditor,
@@ -53,7 +58,7 @@ const BCDataGridEditorV2 = (props) => {
     }),
     []
   )
-  // Add ability to copy paste the rows directly on to the table from excel sheet
+
   const handleExcelPaste = useCallback(
     (params) => {
       const newData = []
@@ -89,11 +94,39 @@ const BCDataGridEditorV2 = (props) => {
     }
   }, [handleExcelPaste, props.handlePaste])
 
-  // Loading overlay component 
   const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
-  // action to perform when next cell is tabbed
   const tabToNextCell = useCallback((params) => params.nextCellPosition, [])
-  // default grid options for the ag-grid.
+
+  const onCellEditingStopped = useCallback(
+    (params) => {
+      if (params.data.modified && !params.data.deleted) {
+        onValidated('pending', 'Updating row...')
+        saveRow(params.data, {
+          onSuccess: (resp) => {
+            params.data.modified = false
+            params.data.isValid = true
+            if (onValidated) {
+              onValidated('success', 'Row updated successfully.', params, resp)
+            }
+            params.api.refreshCells()
+          },
+          onError: (error) => {
+            params.data.isValid = false
+            params.api.refreshCells()
+            if (onValidated) {
+              if (error.code === 'ERR_BAD_REQUEST') {
+                onValidated('error', error, params)
+                // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
+              } else {
+                onValidated('error', `Error updating row: ${error.message}`)
+              }
+            }
+          }
+        })
+      }
+    },
+    [saveRow]
+  )
   const defaultGridOptions = useMemo(() => ({
     undoRedoCellEditing: true,
     undoRedoCellEditingLimit: 5,
@@ -120,8 +153,15 @@ const BCDataGridEditorV2 = (props) => {
         colKey: params.api.getDisplayedCenterColumns()[0].colId,
       })
     },
-  }), [frameworkComponents, tabToNextCell])
-  
+    getRowStyle: highlightedRowId
+      ? (params) => {
+        if (params.node.id === highlightedRowId) {
+          return { backgroundColor: '#fade81' }
+        }
+      }
+      : undefined,
+  }), [highlightedRowId, frameworkComponents, tabToNextCell])
+
   function onCellValueChanged(params) {
     if (!isEqual(params.oldValue, params.newValue)) {
       params.data.modified = true
@@ -133,6 +173,7 @@ const BCDataGridEditorV2 = (props) => {
       <AgGridReact
         gridKey={gridKey}
         gridRef={gridRef}
+        stopEditingWhenCellsLoseFocus={props.stopEditingWhenCellsLoseFocus ?? false}
         gridApi={gridApi}
         className={className}
         columnDefs={columnDefs}
@@ -143,7 +184,8 @@ const BCDataGridEditorV2 = (props) => {
         onGridReady={onGridReady}
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
-        onCellValueChanged={onCellValueChanged}
+        onCellValueChanged={props.onCellValueChanged || onCellValueChanged}
+        onCellEditingStopped={props.onCellEditingStopped || onCellEditingStopped}
         loadingOverlayComponent={loadingOverlayComponent}
         {...props}
       />
@@ -191,20 +233,6 @@ BCDataGridEditorV2.propTypes = {
     'ag-theme-balham-dark',
     'ag-theme-balham-auto-dark',
   ]),
-}
-
-BCDataGridEditorV2.defaultProps = {
-  highlightedRowId: null,
-  gridRef: null,
-  gridKey: `bcgrid-key-<unique-id>`,
-  defaultStatusBar: true,
-  statusBarComponent: null,
-  gridApi: null,
-  columnApi: null,
-  loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
-  className: 'ag-theme-quartz',
-  getRowNodeId: uuid(),
-  onValidated: null,
 }
 
 export default BCDataGridEditorV2

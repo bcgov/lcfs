@@ -1,10 +1,9 @@
-import { KEY_ENTER, KEY_TAB } from '@/constants/common'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { Typography } from '@mui/material'
 import * as yup from 'yup'
 import { FuelCodeActions } from './components/FuelCodeActions'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
-import { useFuelCodeSearch } from '@/hooks/useFuelCode'
+import { apiRoutes } from '@/constants/routes'
 
 export const fuelCodeSchema = (t, optionsData) =>
   yup.object().shape({
@@ -86,13 +85,13 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
-export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
+export const fuelCodeColDefs = (t, optionsData, api, client) => [
   {
     colId: 'validation',
     cellRenderer: 'validationRenderer',
-    cellRendererParams: { enableSave: true },
+    cellRendererParams: { enableSave: false },
     pinned: 'left',
-    maxWidth: 100,
+    maxWidth: 60,
     editable: false,
     suppressKeyboardEvent,
     filter: false
@@ -100,7 +99,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
   {
     colId: 'action',
     cellRenderer: FuelCodeActions,
-    cellRendererParams: { api, onValidated },
+    // cellRendererParams: { api, onValidated },
     pinned: 'left',
     maxWidth: 110,
     editable: false,
@@ -138,13 +137,15 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditor: 'asyncSuggestionEditor',
     cellEditorParams: (params) => ({
-      apiQuery: useFuelCodeSearch,
+      queryKey: "fuel-code-search",
+      queryFn: async (inputValue) => {
+        let path = apiRoutes.fuelCodeSearch
+        path +=  'prefix=' + (params.data.prefix || 'BCLCF') + '&distinctSearch=true&fuelCode=' + inputValue.queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
       optionLabel: 'fuelCodes',
       title: 'fuelCode',
-      queryParams: {
-        prefix: params.data.prefix || 'BCLCF',
-        distinctSearch: true,
-      }
     }),
     suppressKeyboardEvent,
     cellStyle: (params) => {
@@ -162,6 +163,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
   },
   {
     field: 'carbonIntensity',
+    headerComponent: 'headerComponent',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
@@ -175,6 +177,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
   },
   {
     field: 'edrms',
+    headerComponent: 'headerComponent',
     headerName: t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => {
@@ -185,24 +188,25 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated) => [
   },
   {
     field: 'company',
+    headerComponent: 'headerComponent',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
-    cellEditor: 'autocompleteEditor',
     cellDataType: 'text',
     cellStyle: (params) => {
       if (params.data.modified && (!params.value || params.value === ''))
         return { borderColor: 'red' }
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditorParams: {
-      noLabel: true,
-      options: optionsData.fieldOptions.company,
-      multiple: false, // ability to select multiple values from dropdown
-      disableCloseOnSelect: false, // if multiple is true, this will prevent closing dropdown on selecting an option
-      freeSolo: true, // this will allow user to type in the input box or choose from the dropdown
-      openOnFocus: true // this will open the dropdown on input focus
-    },
+    cellEditor: 'asyncSuggestionEditor',
+    cellEditorParams: (params) => ({
+      queryKey: "fuel-code-search",
+      queryFn: async (inputValue) => {
+        let path = apiRoutes.fuelCodeSearch
+        path +=  'prefix=' + (params.data.prefix || 'BCLCF') + '&distinctSearch=true&fuelCode=' + inputValue.queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      optionLabel: 'fuelCodes',
+      title: 'fuelCode',
+    }),
     suppressKeyboardEvent,
     minWidth: 300
   },

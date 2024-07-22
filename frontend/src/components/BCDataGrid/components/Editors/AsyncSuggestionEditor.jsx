@@ -4,18 +4,17 @@ import BCBox from '@/components/BCBox'
 import { debounce } from 'lodash'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
+import { useQuery } from '@tanstack/react-query'
 
 export const AsyncSuggestionEditor = forwardRef(
-  ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
+  ({ value='', onValueChange, eventKey, rowIndex, column, enabled=true, ...props }, ref) => {
     const [inputValue, setInputValue] = useState('')
-    const { data: options, isLoading } = props.apiQuery({
-      options: {
-        enabled: inputValue !== '', // Fetch only when inputValue is not empty
-        retry: false,
-        refetchOnWindowFocus: false // Prevent refetching on window focus
-      },
-      enabled: inputValue !== '',
-      queryParams: { [props.title]: inputValue, ...props.queryParams}, // Pass additional query parameters
+    const { data: options, isLoading } = useQuery({
+      queryKey: [props.queryKey || 'async-suggestion', inputValue],
+      queryFn: props.queryFn,
+      enabled: inputValue !== '' && enabled,
+      retry: false,
+      refetchOnWindowFocus: false,
     })
 
     const debouncedSetInputValue = useMemo(

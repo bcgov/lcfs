@@ -42,6 +42,14 @@ class FuelCodeServices:
         else: 
             result = await self.repo.get_fuel_code_by_code_prefix(fuel_code, prefix)
         return SearchFuelCodeList(fuel_codes=result)
+    
+    @service_handler
+    async def search_company(self, fuel_code, prefix, distinct_search):
+        if distinct_search:
+            result = await self.repo.get_distinct_fuel_codes_by_code(fuel_code, prefix)
+        else: 
+            result = await self.repo.get_fuel_code_by_code_prefix(fuel_code, prefix)
+        return SearchFuelCodeList(fuel_codes=result)
         
     @service_handler
     async def get_table_options(self) -> TableOptionsSchema:
