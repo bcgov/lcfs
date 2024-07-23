@@ -169,7 +169,7 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated, client) => [
       showStepperButtons: false
     },
     cellStyle: (params) => {
-      if (params.data.modified && !params.value) return { borderColor: 'red' }
+      if (params.data.modified && params.data.carbonIntensity ==='') return { borderColor: 'red' }
     },
     type: 'numericColumn'
   },
@@ -196,6 +196,14 @@ export const fuelCodeColDefs = (t, optionsData, api, onValidated, client) => [
       },
       title: 'company'
     }),
+    valueSetter: (params) => {
+      params.data.company = params.newValue
+      if (params.newValue === '') {
+        params.data.contactName = ''
+        params.data.contactEmail = ''
+      }
+      return true
+    },
     suppressKeyboardEvent,
     minWidth: 300
   },

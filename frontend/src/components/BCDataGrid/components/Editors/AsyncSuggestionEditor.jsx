@@ -68,7 +68,7 @@ export const AsyncSuggestionEditor = forwardRef(
           value={value}
           onInputChange={handleInputChange}
           onKeyDownCapture={handleKeyDown}
-          loading={isLoading}
+          // loading={isLoading}
           noOptionsText="No suggestions..."
           renderInput={(params) => <TextField {...params} fullWidth />}
           renderOption={(props, option, { inputValue }) => {

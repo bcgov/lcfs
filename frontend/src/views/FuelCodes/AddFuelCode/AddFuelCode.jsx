@@ -5,7 +5,6 @@ import BCDataGridEditorV2 from '@/components/BCDataGrid/BCDataGridEditorV2'
 import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
-import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import {
   useAddFuelCodes,
   useFuelCodeOptions,
@@ -21,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
+import { defaultColDef, fuelCodeColDefs } from './_schema'
 import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
 import { isEqual } from '@/utils/eventHandlers'
 import { useQuery } from '@tanstack/react-query'
@@ -85,7 +84,13 @@ const AddFuelCodeBase = () => {
 
     if (!fuelCodeId) {
       const id = uuid()
-      const emptyRow = { id, prefix: 'BCLCF' }
+      const emptyRow = {
+        id,
+        prefix: 'BCLCF',
+        fuelCode: optionsData.fuelCodePrefixes.find(
+          (item) => item.prefix === 'BCLCF'
+        ).nextFuelCode
+      }
       setRowData([emptyRow])
     } else {
       try {
