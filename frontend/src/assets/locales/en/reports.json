@@ -42,5 +42,7 @@
   "signingAuthorityDeclaration": "Signing authority declaration",
   "declarationText": "I certify that the information in this report is true and complete to the best of my knowledge and I understand that I may be required to provide to the Director records evidencing the truth of that information.",
   "submitReport": "Submit Report",
-  "pleaseCheckDeclaration": "Please certify the information before submitting"
+  "pleaseCheckDeclaration": "Please certify the information before submitting",
+  "expandAll": "expand all",
+  "collapseAll": "collapse all"
 }

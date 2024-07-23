@@ -6,10 +6,11 @@ import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useFuelCodeOptions, useSaveFuelCode } from '@/hooks/useFuelCode'
+import { useApiService } from '@/services/useApiService'
 import withRole from '@/utils/withRole'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Stack, Typography } from '@mui/material'
+import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -20,13 +21,13 @@ import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
 
 const AddFuelCodeBase = () => {
   const [rowData, setRowData] = useState([])
-
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelCode'])
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
   const { mutateAsync: saveRow } = useSaveFuelCode()
+  const apiService = useApiService()
 
   const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(
@@ -236,7 +237,7 @@ const AddFuelCodeBase = () => {
         </div>
         <BCGridEditor
           gridRef={gridRef}
-          columnDefs={fuelCodeColDefs(t, optionsData, gridRef.current?.api)}
+          columnDefs={fuelCodeColDefs(t, optionsData, apiService)}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}

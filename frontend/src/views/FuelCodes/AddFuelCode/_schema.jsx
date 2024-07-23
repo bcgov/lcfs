@@ -1,10 +1,12 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
+  AsyncSuggestionEditor,
   AutocompleteEditor,
-  DateEditor
+  HeaderComponent
 } from '@/components/BCDataGrid/components'
-import { KEY_ENTER, KEY_TAB } from '@/constants/common'
+import { apiRoutes } from '@/constants/routes'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
 import * as yup from 'yup'
 
@@ -88,7 +90,7 @@ export const fuelCodeSchema = (t, optionsData) =>
     )
   })
 
-export const fuelCodeColDefs = (t, optionsData) => [
+export const fuelCodeColDefs = (t, optionsData, client) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -102,121 +104,54 @@ export const fuelCodeColDefs = (t, optionsData) => [
   },
   {
     field: 'prefix',
+    headerComponent: HeaderComponent,
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-    cellEditor: AutocompleteEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
-      options: optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
+      values: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix)
     },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
-    cellDataType: 'text',
-    minWidth: 135
+    minWidth: 135,
+    valueGetter: (params) => params.data.prefix || 'BCLCF'
   },
   {
     field: 'fuelCode',
+    headerComponent: HeaderComponent,
     headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'text',
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditor: AutocompleteEditor,
-    cellEditorParams: {
-      onDynamicUpdate: (val, params) => params.api.stopEditing(),
-      options: optionsData.latestFuelCodes.map((obj) => obj.fuelCode),
-      optionLabel: 'fuelCode',
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true,
-      onKeyDownCapture: (e) => {
-        const allowedKeys = [
-          'Backspace',
-          'ArrowLeft',
-          'ArrowRight',
-          'Delete',
-          'Tab',
-          'Escape',
-          'Enter',
-          'Home',
-          'End',
-          'Control',
-          'Meta',
-          'Shift',
-          'Alt'
-        ]
-
-        if (
-          (e.ctrlKey || e.metaKey) &&
-          ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase())
-        ) {
-          return
-        }
-
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-          return
-        }
-
-        if (allowedKeys.includes(e.key)) {
-          return
-        }
-
-        const charCode = e.which ? e.which : e.keyCode
-        if (e.key === '.' || charCode < 48 || charCode > 57) {
-          e.preventDefault()
-        }
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-code-search',
+      queryFn: async ({ queryKey }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path +=
+          'prefix=' +
+          (params.data.prefix || 'BCLCF') +
+          '&distinctSearch=true&fuelCode=' +
+          queryKey[1]
+        const response = await client.get(path)
+        return response.data
       },
-      onPaste: (e, onChange) => {
-        e.preventDefault()
-        const paste = (e.clipboardData || window.clipboardData).getData('text')
-        const cleaned = paste.split('.')[0].replace(/[^0-9]/g, '')
-
-        onChange(cleaned)
-      },
-      onBlur: (e, onChange) => {
-        if (!e.target.value) {
-          return
-        }
-
-        if (
-          optionsData.latestFuelCodes.find(
-            (item) => item.fuelCode === e.target.value
-          )
-        ) {
-          return
-        }
-
-        const match = optionsData.latestFuelCodes.find(
-          (item) => item.fuelCode.split('.')[0] === e.target.value
-        )
-
-        const newValue = match ? match.fuelCode : `${e.target.value}.0`
-
-        onChange(newValue)
+      optionLabel: 'fuelCodes',
+      title: 'fuelCode'
+    }),
+    suppressKeyboardEvent,
+    valueGetter: (params) => {
+      if (!params.data.fuelCode) {
+        const prefix = params.data.prefix || 'BCLCF'
+        return optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === prefix
+        )?.nextFuelCode
       }
-    },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
+      return params.data.fuelCode
     },
     tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
     field: 'carbonIntensity',
+    headerComponent: HeaderComponent,
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
@@ -224,145 +159,141 @@ export const fuelCodeColDefs = (t, optionsData) => [
       showStepperButtons: false
     },
     cellStyle: (params) => {
-      if (params.data.modified && !params.value) return { borderColor: 'red' }
+      if (params.data.modified && params.data.carbonIntensity === '')
+        return { borderColor: 'red' }
     },
     type: 'numericColumn'
   },
   {
     field: 'edrms',
+    headerComponent: HeaderComponent,
     headerName: t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellDataType: 'text'
   },
   {
     field: 'company',
+    headerComponent: HeaderComponent,
     headerName: t('fuelCode:fuelCodeColLabels.company'),
-    cellEditor: AutocompleteEditor,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'company-name-search',
+      queryFn: async ({ queryKey }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += 'company=' + queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'company'
+    }),
+    valueSetter: (params) => {
+      params.data.company = params.newValue
+      if (params.newValue === '') {
+        params.data.contactName = ''
+        params.data.contactEmail = ''
+      }
+      return true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditorParams: {
-      noLabel: true,
-      options: optionsData.fieldOptions.company,
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
-    },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
+    suppressKeyboardEvent,
     minWidth: 300
   },
   {
     field: 'contactName',
     headerName: t('fuelCode:fuelCodeColLabels.contactName'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AsyncSuggestionEditor,
     cellDataType: 'text',
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditorParams: {
-      noLabel: true,
-      options: optionsData.fieldOptions.contactName,
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
-    },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'contact-name-search',
+      queryFn: async ({ queryKey }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += 'company=' + params.data.company + '&contactName=' + queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'contactName',
+      enabled: params.data.company !== ''
+    }),
+    suppressKeyboardEvent,
     minWidth: 300
   },
   {
     field: 'contactEmail',
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AsyncSuggestionEditor,
     cellDataType: 'text',
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
-    cellEditorParams: {
-      noLabel: true,
-      options: optionsData.fieldOptions.contactEmail,
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
-    },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'contact-email-search',
+      queryFn: async ({ queryKey }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path +=
+          'company=' +
+          params.data.company +
+          '&contactName=' +
+          params.data.contactName +
+          '&contactEmail=' +
+          queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'contactEmail',
+      enabled: params.data.company !== '' && params.data.contactName !== ''
+    }),
+    suppressKeyboardEvent,
     minWidth: 300
   },
 
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    maxWidth: 180,
-    minWidth: 180,
+    maxWidth: 220,
+    minWidth: 220,
     cellRenderer: (params) => (
       <Typography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </Typography>
     ),
-    suppressKeyboardEvent: (params) =>
-      params.editing &&
-      (params.event.key === KEY_ENTER || params.event.key === KEY_TAB),
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
-    cellEditor: DateEditor
+    suppressKeyboardEvent,
+    cellEditor: 'dateEditor'
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    maxWidth: 180,
-    minWidth: 180,
+    maxWidth: 220,
+    minWidth: 220,
     cellRenderer: (params) => (
       <Typography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </Typography>
     ),
-    suppressKeyboardEvent: (params) => params.editing,
-    cellEditor: DateEditor
+    suppressKeyboardEvent,
+    cellEditor: 'dateEditor'
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    maxWidth: 180,
-    minWidth: 180,
+    maxWidth: 220,
+    minWidth: 220,
     cellRenderer: (params) => (
       <Typography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </Typography>
     ),
-    suppressKeyboardEvent: (params) => params.editing,
-    cellEditor: DateEditor
+    suppressKeyboardEvent,
+    cellEditor: 'dateEditor'
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
-    maxWidth: 180,
-    minWidth: 180,
+    maxWidth: 220,
+    minWidth: 220,
     cellRenderer: (params) => (
       <Typography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
       </Typography>
     ),
-    suppressKeyboardEvent: (params) => params.editing,
-    cellEditor: DateEditor
+    suppressKeyboardEvent,
+    cellEditor: 'dateEditor'
   },
   {
     field: 'fuel',
@@ -380,24 +311,15 @@ export const fuelCodeColDefs = (t, optionsData) => [
       freeSolo: false,
       openOnFocus: true
     },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
+    suppressKeyboardEvent,
     minWidth: 300
   },
   {
     field: 'feedstock',
     headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -414,12 +336,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'feedstockLocation',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -436,12 +355,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'feedstockMisc',
     headerName: t('fuelCode:fuelCodeColLabels.misc'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -458,12 +374,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'fuelProductionFacilityCity',
     headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -490,12 +403,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
     headerName: t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -520,12 +430,9 @@ export const fuelCodeColDefs = (t, optionsData) => [
   {
     field: 'fuelProductionFacilityCountry',
     headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
-        return { borderColor: 'red' }
-    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -572,11 +479,13 @@ export const fuelCodeColDefs = (t, optionsData) => [
       freeSolo: false,
       openOnFocus: true
     },
-    suppressKeyboardEvent: (params) => {
-      return params.editing && params.event.key === KEY_ENTER
-    },
+    suppressKeyboardEvent,
     cellStyle: (params) => {
-      if (params.data.modified && (!params.value || params.value === ''))
+      if (
+        params.data.modified &&
+        params.data.facilityNameplateCapacity &&
+        (!params.value || params.value === '')
+      )
         return { borderColor: 'red' }
     },
     minWidth: 300
@@ -600,7 +509,7 @@ export const fuelCodeColDefs = (t, optionsData) => [
       openOnFocus: true,
       disableCloseOnSelect: true
     },
-    suppressKeyboardEvent: (params) => params.editing,
+    suppressKeyboardEvent,
     minWidth: 325
   },
   {
@@ -622,13 +531,14 @@ export const fuelCodeColDefs = (t, optionsData) => [
       openOnFocus: true,
       disableCloseOnSelect: true
     },
-    suppressKeyboardEvent: (params) => params.editing,
+    suppressKeyboardEvent,
     minWidth: 325
   },
   {
     field: 'formerCompany',
     headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: 'autocompleteEditor',
+    suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
       noLabel: true,
