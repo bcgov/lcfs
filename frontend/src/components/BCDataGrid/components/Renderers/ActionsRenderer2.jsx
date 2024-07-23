@@ -10,20 +10,22 @@ export const ActionsRenderer2 = (props) => {
     <Stack direction="row" spacing={0.1} m={0}>
       {props.enableDuplicate && (
         <Tooltip title="duplicate">
-          <IconButton
-            aria-label="copy the data to new row"
-            data-testid="duplicate-button"
-            data-action="duplicate"
-            color="primary"
-            disabled={props.data.validationStatus !== 'success'}
-          >
-            <Queue
-              style={{ pointerEvents: 'none' }}
-              sx={{
-                transform: 'scaleX(-1)'
-              }}
-            />
-          </IconButton>
+          <span>
+            <IconButton
+              aria-label="copy the data to new row"
+              data-testid="duplicate-button"
+              data-action="duplicate"
+              color="primary"
+              disabled={props.data.validationStatus !== 'success'}
+            >
+              <Queue
+                style={{ pointerEvents: 'none' }}
+                sx={{
+                  transform: 'scaleX(-1)'
+                }}
+              />
+            </IconButton>
+          </span>
         </Tooltip>
       )}
       {props.enableEdit && !isCurrentRowEditing && (

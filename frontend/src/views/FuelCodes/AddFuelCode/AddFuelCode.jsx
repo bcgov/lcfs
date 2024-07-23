@@ -61,7 +61,7 @@ const AddFuelCodeBase = () => {
     params.api.sizeColumnsToFit()
   }, [])
 
-  const onRowEditingStopped = useCallback(
+  const onCellEditingStopped = useCallback(
     async (params) => {
       params.node.updateData({ validationStatus: 'pending' })
 
@@ -241,7 +241,7 @@ const AddFuelCodeBase = () => {
           onGridReady={onGridReady}
           rowData={rowData}
           gridOptions={gridOptions}
-          onRowEditingStopped={onRowEditingStopped}
+          onCellEditingStopped={onCellEditingStopped}
           loading={isLoading}
           onAction={onAction}
         />

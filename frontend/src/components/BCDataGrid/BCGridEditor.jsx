@@ -24,7 +24,7 @@ import { v4 as uuid } from 'uuid'
 export const BCGridEditor = ({
   gridRef,
   handlePaste,
-  onRowEditingStopped,
+  onCellEditingStopped,
   onCellValueChanged,
   onAction,
   ...props
@@ -67,15 +67,15 @@ export const BCGridEditor = ({
     }
   }, [handleExcelPaste, handlePaste])
 
-  const handleOnRowEditingStopped = useCallback(
+  const handleOnCellEditingStopped = useCallback(
     async (params) => {
       if (params.data.modified && !params.data.deleted) {
-        if (onRowEditingStopped) {
-          onRowEditingStopped(params)
+        if (onCellEditingStopped) {
+          onCellEditingStopped(params)
         }
       }
     },
-    [onRowEditingStopped]
+    [onCellEditingStopped]
   )
 
   const handleOnCellValueChanged = useCallback(
@@ -113,15 +113,14 @@ export const BCGridEditor = ({
       <BCGridBase
         ref={ref}
         className="ag-theme-quartz"
-        onRowEditingStopped={handleOnRowEditingStopped}
         onCellValueChanged={handleOnCellValueChanged}
         onFirstDataRendered={onFirstDataRendered}
         undoRedoCellEditing
         undoRedoCellEditingLimit={5}
-        editType="fullRow"
         enableBrowserTooltips
         getRowId={(params) => params.data.id}
         onCellClicked={onCellClicked}
+        onCellEditingStopped={handleOnCellEditingStopped}
         {...props}
       />
     </BCBox>
