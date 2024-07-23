@@ -1,58 +1,36 @@
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
-import {
-  ActionsRenderer,
-  AsyncSuggestionEditor,
-  AsyncValidationEditor,
-  AutocompleteEditor,
-  DateEditor,
-  DateRangeCellEditor,
-  HeaderComponent,
-  LargeTextareaEditor,
-  TextCellEditor,
-  ValidationRenderer
-} from '@/components/BCDataGrid/components'
 import { isEqual } from '@/utils/eventHandlers'
+import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
 import Papa from 'papaparse'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import PropTypes from 'prop-types'
+import { useCallback, useEffect, useRef } from 'react'
 import { v4 as uuid } from 'uuid'
 
+/**
+ * @typedef {import('ag-grid-community').GridOptions} GridOptions
+ * @typedef {import('react').MutableRefObject} MutableRefObject
+ *
+ * @typedef {Object} BCGridEditorProps
+ * @property {React.Ref<any>} gridRef
+ * @property {Function} handlePaste
+ * @property {Function} onAction
+ *
+ * @param {BCGridEditorProps & GridOptions} props
+ * @returns {JSX.Element}
+ */
 export const BCGridEditor = ({
-  statusBarComponent,
-  handlePaste,
-  onRowEditingStarted,
-  onRowEditingStopped,
-  onValidated,
-  saveRow,
-  gridOptions,
-  columnDefs,
-  defaultColDef,
-  rowData,
-  onGridReady,
-  loading,
   gridRef,
+  handlePaste,
+  onRowEditingStopped,
+  onCellValueChanged,
+  onAction,
   ...props
 }) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
-
-  const components = useMemo(
-    () => ({
-      asyncValidationEditor: AsyncValidationEditor,
-      autocompleteEditor: AutocompleteEditor,
-      dateEditor: DateEditor,
-      actionsRenderer: ActionsRenderer,
-      asyncSuggestionEditor: AsyncSuggestionEditor,
-      validationRenderer: ValidationRenderer,
-      dateRangeCellEditor: DateRangeCellEditor,
-      largeTextareaEditor: LargeTextareaEditor,
-      textCellEditor: TextCellEditor,
-      headerComponent: HeaderComponent
-    }),
-    []
-  )
 
   const handleExcelPaste = useCallback(
     (params) => {
@@ -89,65 +67,29 @@ export const BCGridEditor = ({
     }
   }, [handleExcelPaste, handlePaste])
 
-  const tabToNextCell = useCallback((params) => params.nextCellPosition, [])
-
-  const onRowEditingStartedHandler = useCallback(
-    (params) => {
-      params.api.refreshCells({
-        columns: ['action'],
-        rowNodes: [params.node],
-        force: true
-      })
-      if (onRowEditingStarted) {
-        onRowEditingStarted(params)
-      }
-    },
-    [onRowEditingStarted]
-  )
-
-  const onRowEditingStoppedHandler = useCallback(
-    (params) => {
-      // Check if any data field has changed
+  const handleOnRowEditingStopped = useCallback(
+    async (params) => {
       if (params.data.modified && !params.data.deleted) {
-        onValidated('pending', 'Updating row...')
-        saveRow(params.data, {
-          onSuccess: (resp) => {
-            params.data.modified = false
-            params.data.isValid = true
-            if (onValidated) {
-              onValidated('success', 'Row updated successfully.', params, resp)
-            }
-            params.api.refreshCells()
-          },
-          onError: (error) => {
-            params.data.isValid = false
-            params.api.refreshCells()
-            if (onValidated) {
-              if (error.code === 'ERR_BAD_REQUEST') {
-                onValidated('error', error, params)
-                // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
-              } else {
-                onValidated('error', `Error updating row: ${error.message}`)
-              }
-            }
-          }
-        })
-      }
-
-      params.api.redrawRows({ rowNodes: [params.node] })
-
-      if (onRowEditingStopped) {
-        onRowEditingStopped(params)
+        if (onRowEditingStopped) {
+          onRowEditingStopped(params)
+        }
       }
     },
-    [onRowEditingStopped, onValidated, saveRow]
+    [onRowEditingStopped]
   )
 
-  const onCellValueChanged = useCallback((params) => {
-    if (!isEqual(params.oldValue, params.newValue)) {
-      params.data.modified = true
-    }
-  }, [])
+  const handleOnCellValueChanged = useCallback(
+    (params) => {
+      if (!isEqual(params.oldValue, params.newValue)) {
+        params.data.modified = true
+      }
+      if (onCellValueChanged) {
+        onCellValueChanged(params)
+      }
+      params.api.refreshCells()
+    },
+    [onCellValueChanged]
+  )
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.startEditingCell({
@@ -156,44 +98,41 @@ export const BCGridEditor = ({
     })
   }, [])
 
+  const onCellClicked = (params) => {
+    if (
+      params.column.colId === 'action' &&
+      params.event.target.dataset.action &&
+      onAction
+    ) {
+      onAction(params.event.target.dataset.action, params)
+    }
+  }
+
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
       <BCGridBase
         ref={ref}
-        components={components}
-        tabToNextCell={tabToNextCell}
-        onRowEditingStarted={onRowEditingStartedHandler}
-        onRowEditingStopped={onRowEditingStoppedHandler}
-        onCellValueChanged={onCellValueChanged}
+        className="ag-theme-quartz"
+        onRowEditingStopped={handleOnRowEditingStopped}
+        onCellValueChanged={handleOnCellValueChanged}
         onFirstDataRendered={onFirstDataRendered}
         undoRedoCellEditing
         undoRedoCellEditingLimit={5}
         editType="fullRow"
         enableBrowserTooltips
-        gridOptions={gridOptions}
-        className="ag-theme-quartz"
-        columnDefs={columnDefs}
-        defaultColDef={defaultColDef}
-        rowData={rowData}
-        onGridReady={onGridReady}
         getRowId={(params) => params.data.id}
-        loading={loading}
+        onCellClicked={onCellClicked}
         {...props}
       />
-      <BCBox
-        display="flex"
-        justifyContent="flex-start"
-        variant="outlined"
-        sx={{
-          maxHeight: '4.5rem',
-          position: 'relative',
-          border: 'none',
-          borderRadius: '0px 0px 4px 4px',
-          overflow: 'hidden'
-        }}
-      >
-        {statusBarComponent}
-      </BCBox>
     </BCBox>
   )
+}
+
+BCGridEditor.propTypes = {
+  gridRef: PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
+  handlePaste: PropTypes.func,
+  onAction: PropTypes.func,
+
+  onRowEditingStopped: PropTypes.func,
+  onCellValueChanged: PropTypes.func
 }

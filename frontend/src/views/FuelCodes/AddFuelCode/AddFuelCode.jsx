@@ -1,4 +1,5 @@
-import BCAlert from '@/components/BCAlert'
+import { BCAlert2 } from '@/components/BCAlert'
+import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
@@ -14,21 +15,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelCodeColDefs, fuelCodeSchema } from './_schema'
+import { defaultColDef, fuelCodeColDefs } from './_schema'
 import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
 
 const AddFuelCodeBase = () => {
   const [rowData, setRowData] = useState([])
-  const [gridApi, setGridApi] = useState(null)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
 
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelCode'])
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
-  const { mutate: saveRow } = useSaveFuelCode()
+  const { mutateAsync: saveRow } = useSaveFuelCode()
 
   const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(
@@ -45,12 +43,13 @@ const AddFuelCodeBase = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
+      alertRef.current?.triggerAlert({
+        message: location.state.message,
+        severity: location.state.severity || 'info'
+      })
     }
   }, [location.state])
   const onGridReady = useCallback((params) => {
-    setGridApi(params.api)
     const cachedRowData = JSON.parse(localStorage.getItem(gridKey))
     if (cachedRowData && cachedRowData.length > 0) {
       setRowData(cachedRowData)
@@ -62,59 +61,26 @@ const AddFuelCodeBase = () => {
     params.api.sizeColumnsToFit()
   }, [])
 
-  const validationHandler = useCallback(
-    async (row) => {
-      try {
-        await fuelCodeSchema(t, optionsData).validate(row.data)
-        const updatedRow = { ...row.data, isValid: true, validationMsg: '' }
-        gridApi.applyTransaction({ update: [updatedRow] })
-        setAlertMessage(`Validated fuel code`)
-        setAlertSeverity('success')
-        alertRef.current?.triggerAlert()
-      } catch (err) {
-        const updatedRow = {
-          ...row.data,
-          isValid: false,
-          validationMsg: err.errors[0]
-        }
-        gridApi.applyTransaction({ update: [updatedRow] })
-        setAlertMessage(err.errors[0])
-        setAlertSeverity('error')
-        alertRef.current?.triggerAlert()
-        // throw new Error()
-      }
-    },
-    [gridApi, optionsData, t]
-  )
-
-  const onValidated = (status, message, params, response) => {
-    let errMsg = message
-    if (status === 'error') {
-      const field = message.response?.data?.detail[0]?.loc[1]
-        ? t(
-            `fuelCode:fuelCodeColLabels.${message.response?.data?.detail[0]?.loc[1]}`
-          )
-        : ''
-
-      errMsg = `Error updating row: ${field} ${message.response?.data?.detail[0]?.msg}`
-      params.data.isValid = false
-      params.data.validationMsg = `${field} ${message.response?.data?.detail[0]?.msg}`
-    }
-    setAlertMessage(errMsg)
-    setAlertSeverity(status)
-    alertRef.current?.triggerAlert()
-  }
-
   const onRowEditingStopped = useCallback(
-    (params) => {
-      params.node.setData({ ...params.data, modified: true })
-      const focusedCell = params.api.getFocusedCell()
-      if (focusedCell.column.colId === 'fuelCode') {
+    async (params) => {
+      params.node.updateData({ validationStatus: 'pending' })
+
+      alertRef.current?.triggerAlert({
+        message: 'Updating row...',
+        severity: 'pending'
+      })
+
+      let updatedData = params.data
+      console.log(updatedData)
+      if (params.data.fuelCode !== undefined) {
         const fuelCodeData = optionsData.latestFuelCodes.find(
-          (fuelCode) => fuelCode.fuelCode === params.data.fuelCode
+          (fuelCode) =>
+            fuelCode.fuelCode.split('.')[0] ===
+            params.data.fuelCode.split('.')[0]
         )
-        const updatedData = {
-          ...params.data,
+
+        updatedData = {
+          ...updatedData,
           prefix: fuelCodeData.fuelCodePrefix.prefix,
           company: fuelCodeData.company,
           fuel: fuelCodeData.fuelCodeType.fuelType,
@@ -132,60 +98,129 @@ const AddFuelCodeBase = () => {
           contactName: fuelCodeData.contactName,
           contactEmail: fuelCodeData.contactEmail
         }
-        gridApi.applyTransaction({ update: [updatedData] })
-        gridApi.startEditingCell({
-          rowIndex: focusedCell.rowIndex,
-          colKey: 'company'
-        })
-      } else if (focusedCell.column.colId === 'fuelProductionFacilityCity') {
+      }
+      if (params.data.fuelProductionFacilityCity !== undefined) {
         const location = optionsData.fpLocations.find(
           (location) =>
             location.fuelProductionFacilityCity ===
             params.data.fuelProductionFacilityCity
         )
-        const updatedData = {
-          ...params.data,
+        updatedData = {
+          ...updatedData,
           fuelProductionFacilityProvinceState:
             location.fuelProductionFacilityProvinceState,
           fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
         }
-        gridApi.applyTransaction({ update: [updatedData] })
-        gridApi.startEditingCell({
-          rowIndex: focusedCell.rowIndex,
-          colKey: 'facilityNameplateCapacity'
-        })
-      } else if (
-        focusedCell.column.colId === 'fuelProductionFacilityProvinceState'
-      ) {
+      }
+      if (params.data.fuelProductionFacilityProvinceState) {
         const location = optionsData.fpLocations.find(
           (location) =>
             location.fuelProductionFacilityProvinceState ===
             params.data.fuelProductionFacilityProvinceState
         )
-        const updatedData = {
-          ...params.data,
+        updatedData = {
+          ...updatedData,
           fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
         }
-        gridApi.applyTransaction({ update: [updatedData] })
-        gridApi.startEditingCell({
-          rowIndex: focusedCell.rowIndex,
-          colKey: 'facilityNameplateCapacity'
-        })
-      } else {
-        validationHandler(params)
       }
+
+      try {
+        await saveRow(updatedData)
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'success',
+          modified: false
+        }
+        alertRef.current?.triggerAlert({
+          message: 'Row updated successfully.',
+          severity: 'success'
+        })
+      } catch (error) {
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+
+        if (error.code === 'ERR_BAD_REQUEST') {
+          const field = error.response?.data?.detail[0]?.loc[1]
+            ? t(
+                `fuelCode:fuelCodeColLabels.${error.response?.data?.detail[0]?.loc[1]}`
+              )
+            : ''
+          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+
+          alertRef.current?.triggerAlert({
+            message: errMsg,
+            severity: 'error'
+          })
+        } else {
+          alertRef.current?.triggerAlert({
+            message: `Error updating row: ${error.message}`,
+            severity: 'error'
+          })
+        }
+      }
+
+      params.node.updateData(updatedData)
     },
-    [validationHandler, gridApi, optionsData]
+    [optionsData, saveRow, t]
   )
 
-  const statusBarComponent = useMemo(
-    () => (
-      <Box component="div" m={2}>
-        <AddRowsDropdownButton gridApi={gridApi} />
-      </Box>
-    ),
-    [gridApi]
-  )
+  const onAction = async (action, params) => {
+    if (action === 'delete') {
+      const updatedRow = { ...params.data, deleted: true }
+
+      params.api.applyTransaction({ remove: [params.node.data] })
+      if (updatedRow.fuelCodeId) {
+        try {
+          await saveRow(updatedRow)
+          alertRef.current?.triggerAlert({
+            message: 'Row deleted successfully.',
+            severity: 'success'
+          })
+        } catch (error) {
+          alertRef.current?.triggerAlert({
+            message: `Error deleting row: ${error.message}`,
+            severity: 'error'
+          })
+        }
+      }
+    }
+    if (action === 'duplicate') {
+      const rowData = {
+        ...params.data,
+        id: uuid(),
+        fuelCodeId: null,
+        modified: true
+      }
+      console.log(rowData)
+
+      params.api.applyTransaction({
+        add: [rowData],
+        addIndex: params.node?.rowIndex + 1
+      })
+      if (params.data.fuelCodeId) {
+        saveRow(rowData, {
+          onSuccess: (resp) => {
+            params.api.refreshCells()
+            rowData.modified = false
+            params.data.validationStatus = 'error'
+            alertRef.current?.triggerAlert({
+              message: 'Row duplicated successfully.',
+              severity: 'success'
+            })
+          },
+          onError: (error) => {
+            params.data.validationStatus = 'error'
+            alertRef.current?.triggerAlert({
+              message: `Error deleting row: ${error.message}`,
+              severity: 'error'
+            })
+          }
+        })
+      }
+    }
+  }
 
   if (isLoading) {
     return <Loading />
@@ -194,18 +229,7 @@ const AddFuelCodeBase = () => {
   return (
     isFetched && (
       <Grid2 className="add-edit-fuel-code-container" mx={-1}>
-        <div>
-          {alertMessage && (
-            <BCAlert
-              ref={alertRef}
-              data-test="alert-box"
-              severity={alertSeverity}
-              delay={5000}
-            >
-              {alertMessage}
-            </BCAlert>
-          )}
-        </div>
+        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelCode:newFuelCodeTitle')}
@@ -213,22 +237,29 @@ const AddFuelCodeBase = () => {
         </div>
         <BCGridEditor
           gridRef={gridRef}
-          columnDefs={fuelCodeColDefs(
-            t,
-            optionsData,
-            gridRef.current?.api,
-            onValidated
-          )}
+          columnDefs={fuelCodeColDefs(t, optionsData, gridRef.current?.api)}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}
           gridOptions={gridOptions}
-          statusBarComponent={statusBarComponent}
           onRowEditingStopped={onRowEditingStopped}
-          saveRow={saveRow}
-          onValidated={onValidated}
           loading={isLoading}
+          onAction={onAction}
         />
+        <BCBox
+          display="flex"
+          justifyContent="flex-start"
+          variant="outlined"
+          sx={{
+            maxHeight: '4.5rem',
+            position: 'relative',
+            border: 'none',
+            borderRadius: '0px 0px 4px 4px',
+            overflow: 'hidden'
+          }}
+        >
+          <AddRowsDropdownButton gridApi={gridRef.current?.api} />
+        </BCBox>
         <Stack
           direction={{ md: 'column', lg: 'row' }}
           spacing={{ xs: 2, sm: 2, md: 3 }}

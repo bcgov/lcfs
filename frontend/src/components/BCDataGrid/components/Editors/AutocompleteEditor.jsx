@@ -1,9 +1,16 @@
-import React, { forwardRef, useState } from 'react'
-import { Autocomplete, Box, Checkbox, Chip, Stack, TextField } from '@mui/material'
+import BCBox from '@/components/BCBox'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
+import {
+  Autocomplete,
+  Box,
+  Checkbox,
+  Chip,
+  Stack,
+  TextField
+} from '@mui/material'
 import PropTypes from 'prop-types'
-import BCBox from '@/components/BCBox'
+import { forwardRef, useState } from 'react'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
 const checkedIcon = <CheckBoxIcon fontSize="medium" />
@@ -59,15 +66,15 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
       sx={{
         '& .MuiAutocomplete-inputRoot': {
           paddingBottom: '4px',
-          backgroundColor: '#fff',
-        },
+          backgroundColor: '#fff'
+        }
       }}
     >
       <Autocomplete
         sx={{
           '.MuiOutlinedInput-root': {
-            padding: '2px 0px 2px 0px',
-          },
+            padding: '2px 0px 2px 0px'
+          }
         }}
         openOnFocus={openOnFocus}
         value={selectedValues}
@@ -75,7 +82,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         multiple={multiple}
         disableCloseOnSelect={disableCloseOnSelect}
         limitTags={limitTags}
-        id="bc-column-set-filter"
+        // id="bc-column-set-filter"
         className="bc-column-set-filter ag-input-field ag-checkbox-input"
         role="list-box"
         options={options}
@@ -87,18 +94,27 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
         size="medium"
         freeSolo={freeSolo}
         autoSelect={autoSelect}
-        getOptionLabel={(option) => typeof option === 'string' ? option : option.label || ''}
-        renderOption={(propsIn, option, { selected }) => {
-          const isOptionSelected = Array.isArray(selectedValues) && selectedValues.includes(option)
+        getOptionLabel={(option) =>
+          typeof option === 'string' ? option : option.label || ''
+        }
+        renderOption={({ key, ...propsIn }, option, { selected }) => {
+          const isOptionSelected =
+            Array.isArray(selectedValues) && selectedValues.includes(option)
           return (
             <Box
               component="li"
-              key={typeof option === 'string' ? option : option.label}
-              className={`${selected || isOptionSelected ? 'selected' : ''} ag-custom-component-popup`}
+              key={key}
+              className={`${
+                selected || isOptionSelected ? 'selected' : ''
+              } ag-custom-component-popup`}
               role="option"
               sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
-              aria-label={`select ${typeof option === 'string' ? option : option.label}`}
-              data-testid={`select-${typeof option === 'string' ? option : option.label}`}
+              aria-label={`select ${
+                typeof option === 'string' ? option : option.label
+              }`}
+              data-testid={`select-${
+                typeof option === 'string' ? option : option.label
+              }`}
               {...propsIn}
               tabIndex={0}
             >
@@ -124,13 +140,17 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
             className="ag-input-field ag-checkbox-input"
             role="presentation"
             {...params}
-            label={colDef?.cellEditorParams?.noLabel ? null : colDef?.cellEditorParams?.label || 'Select'}
+            label={
+              colDef?.cellEditorParams?.noLabel
+                ? null
+                : colDef?.cellEditorParams?.label || 'Select'
+            }
             variant="outlined"
             size="medium"
             inputProps={{
               ...params.inputProps,
               autoComplete: 'new-password', // disable autocomplete and autofill
-              tabIndex: 0,
+              tabIndex: 0
             }}
           />
         )}
@@ -139,10 +159,24 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
 
           return (
             <Stack direction="row" spacing={1}>
-              {value.slice(0, limitTags).map((option, index) => index < limitTags && (
-                <Chip component="span" {...getTagProps({ index })} key={typeof option === 'string' ? option : option.label} label={typeof option === 'string' ? option : option.label} />
-              ))}
-              {numTags > limitTags && <Chip label={` +${numTags - limitTags}`} size="small" />}
+              {value
+                .slice(0, limitTags)
+                .map(
+                  (option, index) =>
+                    index < limitTags && (
+                      <Chip
+                        component="span"
+                        {...getTagProps({ index })}
+                        key={typeof option === 'string' ? option : option.label}
+                        label={
+                          typeof option === 'string' ? option : option.label
+                        }
+                      />
+                    )
+                )}
+              {numTags > limitTags && (
+                <Chip label={` +${numTags - limitTags}`} size="small" />
+              )}
             </Stack>
           )
         }}
@@ -163,14 +197,14 @@ AutocompleteEditor.propTypes = {
   selectedValues: PropTypes.array,
   options: PropTypes.array.isRequired,
   freeSolo: PropTypes.bool,
-  onBlur: PropTypes.func,
+  onBlur: PropTypes.func
 }
 
 AutocompleteEditor.defaultProps = {
   openOnFocus: true,
   multiple: false,
   disableCloseOnSelect: false,
-  freeSolo: false,
+  freeSolo: false
 }
 
 AutocompleteEditor.displayName = 'AutocompleteEditor'

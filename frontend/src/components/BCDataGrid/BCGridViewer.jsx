@@ -7,6 +7,11 @@ import '@ag-grid-community/styles/ag-theme-material.css'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
 export const BCGridViewer = ({
+  gridRef,
+  loading,
+  defaultColDef,
+  columnDefs,
+  gridOptions,
   suppressPagination,
   paginationPageSize = 10,
   defaultSortModel = [],
@@ -19,14 +24,10 @@ export const BCGridViewer = ({
   query,
   queryParams = {},
   dataKey,
-  defaultColDef,
   gridKey,
-  gridOptions,
-  columnDefs,
   getRowId,
   onRowClicked,
   autoSizeStrategy,
-  gridRef,
   ...props
 }) => {
   const localRef = useRef(null)
@@ -168,15 +169,15 @@ export const BCGridViewer = ({
       <BCGridBase
         ref={ref}
         className={'ag-theme-material'}
-        loading={isLoading}
+        loading={isLoading || loading}
         defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
+        columnDefs={columnDefs}
         gridOptions={gridOptions}
         rowData={!isLoading && data[dataKey]}
         onGridReady={onGridReady}
         onSortChanged={onSortChanged}
         onFilterChanged={onFilterChanged}
         onFirstDataRendered={onFirstDataRendered}
-        columnDefs={columnDefs}
         onRowClicked={onRowClicked}
         getRowId={getRowId}
         autoSizeStrategy={autoSizeStrategy}
