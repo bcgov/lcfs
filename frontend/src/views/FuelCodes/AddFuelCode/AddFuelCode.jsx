@@ -71,7 +71,7 @@ const AddFuelCodeBase = () => {
       })
 
       let updatedData = params.data
-      console.log(updatedData)
+
       if (params.data.fuelCode !== undefined) {
         const fuelCodeData = optionsData.latestFuelCodes.find(
           (fuelCode) =>
@@ -193,7 +193,6 @@ const AddFuelCodeBase = () => {
         fuelCodeId: null,
         modified: true
       }
-      console.log(rowData)
 
       params.api.applyTransaction({
         add: [rowData],
