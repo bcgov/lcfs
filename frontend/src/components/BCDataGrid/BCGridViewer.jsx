@@ -103,7 +103,6 @@ export const BCGridViewer = ({
       ...defaultFilterModel
     ]
     setFilterModel(filterArr)
-    // save the filter state in browser cache.
     localStorage.setItem(
       `${gridKey}-filter`,
       JSON.stringify(ref.current?.api.getFilterModel())
@@ -113,7 +112,6 @@ export const BCGridViewer = ({
   const onSortChanged = useCallback(() => {
     setPage(1)
 
-    // forming the sortModel that fits with backend schema structure
     const sortTemp = ref.current?.api
       .getColumnState()
       .filter((col) => col.sort)
@@ -125,7 +123,6 @@ export const BCGridViewer = ({
         }
       })
     setSortModel(sortTemp)
-    // save the sort state in browser cache.
     localStorage.setItem(
       `${gridKey}-column`,
       JSON.stringify(ref.current?.api.getColumnState())
@@ -138,9 +135,9 @@ export const BCGridViewer = ({
       sortable: true,
       filter: true,
       filterParams: {
-        maxNumConditions: 1 // maximum allowed conditions is 1, if more then one needs to be implemented, then backend should also be ready to cater
+        maxNumConditions: 1
       },
-      floatingFilter: true, // enables the filter boxes under the header label
+      floatingFilter: true,
       floatingFilterComponentParams: {
         browserAutoComplete: false
       }
