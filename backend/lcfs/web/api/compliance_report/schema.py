@@ -82,6 +82,7 @@ class FinalSupplyEquipmentSchema(BaseSchema):
     compliance_report_id: int
     supply_from_date: date
     supply_to_date: date
+    registration_nbr: str
     serial_nbr: str
     manufacturer: str
     level_of_equipment: LevelOfEquipmentSchema
