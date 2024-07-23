@@ -1,8 +1,7 @@
-import { IconButton, Tooltip, Stack } from '@mui/material'
-import { Edit, Delete, Save, Cancel, Queue } from '@mui/icons-material'
+import { Cancel, Delete, Edit, Queue } from '@mui/icons-material'
+import { IconButton, Stack, Tooltip } from '@mui/material'
 
 export const ActionsRenderer2 = (props) => {
-  console.log(props)
   const isCurrentRowEditing = props.api
     .getEditingCells()
     .some((cell) => cell.rowIndex === props.node.rowIndex)
