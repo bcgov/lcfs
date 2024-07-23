@@ -2,6 +2,7 @@ import { IconButton, Tooltip, Stack } from '@mui/material'
 import { Delete, Queue } from '@mui/icons-material'
 import { v4 as uuid } from 'uuid'
 import { useSaveFuelCode } from '@/hooks/useFuelCode'
+import { isValid } from 'date-fns'
 
 export const FuelCodeActions = ({ api, node, data, onValidated }) => {
   const { mutate: saveRow } = useSaveFuelCode()
@@ -14,16 +15,21 @@ export const FuelCodeActions = ({ api, node, data, onValidated }) => {
       modified: true
     }
     if (api) {
-      // Add new row to grid
-      api.applyTransaction({
-        add: [rowData],
-        addIndex: node?.rowIndex + 1,
-      })
       // Only save to db if original row was validated
-      if(data.fuelCodeId) {
+      if(data.isValid) {
         saveRow(rowData, {
           onSuccess: (resp) => {
-            rowData.modified = false
+            const updatedData = {
+              ...resp.data,
+              id: uuid(),
+              modified: false,
+              isValid: false
+            }
+            // Add new row to grid
+            api.applyTransaction({
+              add: [updatedData],
+              addIndex: node?.rowIndex + 1,
+            })
             api.refreshCells()
             if (onValidated) {
               onValidated('success', 'Row duplicated successfully.', api, resp)
@@ -46,10 +52,10 @@ export const FuelCodeActions = ({ api, node, data, onValidated }) => {
     console.log("ACTION - deleteRow", api)
     const updatedRow = { ...data, deleted: true }
     if (api) {
-      api.applyTransaction({ remove: [node.data] })
       if(updatedRow.fuelCodeId) {
         saveRow(updatedRow, {
           onSuccess: () => {
+            api.applyTransaction({ remove: [node.data] })
             if (onValidated) {
               onValidated('success', 'Row deleted successfully.')
             }

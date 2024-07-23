@@ -11,17 +11,18 @@ const checkedIcon = <CheckBoxIcon fontSize="medium" />
 export const AutocompleteEditor = forwardRef((props, ref) => {
   const {
     value,
+    apiFn = () => ({ data: props.options, isLoading: false, isFetched: true }),
+    options = [],
     onValueChange,
     limitTags = 2,
-    options,
-    multiple,
-    disableCloseOnSelect,
-    openOnFocus,
+    multiple = false,
+    disableCloseOnSelect = false,
+    openOnFocus = true,
     onDynamicUpdate,
     onKeyDownCapture,
     onBlur,
     onPaste,
-    freeSolo,
+    freeSolo = false,
     autoSelect,
     colDef
   } = props
@@ -163,14 +164,14 @@ AutocompleteEditor.propTypes = {
   selectedValues: PropTypes.array,
   options: PropTypes.array.isRequired,
   freeSolo: PropTypes.bool,
-  onBlur: PropTypes.func,
+  onBlur: PropTypes.func
 }
 
 AutocompleteEditor.defaultProps = {
   openOnFocus: true,
   multiple: false,
   disableCloseOnSelect: false,
-  freeSolo: false,
+  freeSolo: false
 }
 
 AutocompleteEditor.displayName = 'AutocompleteEditor'

@@ -16,10 +16,10 @@ import { Role } from '@/components/Role'
 import {
   transactionsColDefs,
   defaultSortModel,
-  filter_in_progress_transfers,
-  filter_in_progress_org_transfers,
-  filter_in_progress_initiative_agreements,
-  filter_in_progress_admin_adjustments
+  filterInProgressTransfers,
+  filterInProgressOrgTransfers,
+  filterInProgressInitiativeAgreements,
+  filterInProgressAdminAdjustments
 } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ORGANIZATION_STATUSES, TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
@@ -149,10 +149,10 @@ export const Transactions = () => {
   const apiEndpoint = useMemo(() => getApiEndpoint(), [getApiEndpoint])
 
   const filterModel = useMemo(() => {
-    if (inProgressTransfers) return filter_in_progress_transfers
-    if (inProgressOrgTransfers) return filter_in_progress_org_transfers
-    if (inProgressInitiativeAgreements) return filter_in_progress_initiative_agreements
-    if (inProgressAdminAdjustments) return filter_in_progress_admin_adjustments
+    if (inProgressTransfers) return filterInProgressTransfers
+    if (inProgressOrgTransfers) return filterInProgressOrgTransfers
+    if (inProgressInitiativeAgreements) return filterInProgressInitiativeAgreements
+    if (inProgressAdminAdjustments) return filterInProgressAdminAdjustments
     return []
   }, [inProgressTransfers, inProgressOrgTransfers, inProgressInitiativeAgreements, inProgressAdminAdjustments])
 
@@ -251,7 +251,7 @@ export const Transactions = () => {
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}
-          defaultFilterModel={filterModel}
+          // defaultFilterModel={filterModel}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}

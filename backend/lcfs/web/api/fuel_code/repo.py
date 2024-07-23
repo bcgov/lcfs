@@ -4,7 +4,7 @@ from typing import List
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import select, func, update
+from sqlalchemy import and_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -22,7 +22,7 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.fuel_code.schema import FuelCodeSchema
+from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
 
 logger = getLogger("fuel_code_repo")
@@ -152,7 +152,7 @@ class FuelCodeRepository:
     async def get_units_of_measure(self) -> List[UnitOfMeasure]:
         """Get all unit of measure options"""
         return (await self.db.execute(select(UnitOfMeasure))).scalars().all()
-    
+
     @repo_handler
     async def get_expected_use_types(self) -> List[ExpectedUseType]:
         """Get all expected use options"""
@@ -165,7 +165,7 @@ class FuelCodeRepository:
             select(ExpectedUseType).filter_by(name=name)
         )
         return result.scalar_one_or_none()
-    
+
     @repo_handler
     async def get_fuel_codes_paginated(
         self, pagination: PaginationRequestSchema
@@ -223,7 +223,7 @@ class FuelCodeRepository:
         await self.db.flush()
 
         return "fuel codes added successfully"
-    
+
     @repo_handler
     async def create_fuel_code(self, fuel_code: FuelCode) -> FuelCode:
         """
@@ -280,6 +280,163 @@ class FuelCodeRepository:
     @repo_handler
     async def delete_fuel_code(self, fuel_code_id: int):
         await self.db.execute(update(FuelCode).where(FuelCode.fuel_code_id == fuel_code_id).values(fuel_status_id=3))
+
+    @repo_handler
+    async def get_distinct_company_names(self, company: str) -> List[str]:
+        query = select(distinct(FuelCode.company)).where(
+            func.lower(FuelCode.company).like(func.lower(company + "%"))
+        ).order_by(FuelCode.company).limit(10)
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_contact_names_by_company(self, company: str, contact_name: str) -> List[str]:
+        query = select(distinct(FuelCode.contact_name)).where(and_(
+            func.lower(FuelCode.company) == func.lower(company),
+            func.lower(FuelCode.contact_name).like(func.lower(contact_name + "%")))
+        ).order_by(FuelCode.contact_name).limit(10)
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_contact_email_by_company_and_name(self, company: str, contact_name: str, contact_email: str) -> List[str]:
+        query = select(distinct(FuelCode.contact_email)).where(and_(
+            func.lower(FuelCode.company) == func.lower(company),
+            func.lower(FuelCode.contact_name) == func.lower(contact_name)),
+            func.lower(FuelCode.contact_email).like(func.lower(contact_email + "%"))
+        ).order_by(FuelCode.contact_email).limit(10)
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_distinct_fuel_codes_by_code(
+        self, fuel_code: str, prefix: str
+    ) -> List[str]:
+        query = (
+            select(distinct(FuelCode.fuel_code)
+            ).join(FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
+            ).where(and_(FuelCode.fuel_code.like(fuel_code + "%"),func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
+            ).order_by(FuelCode.fuel_code).limit(10)
+        )
+
+        return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_fuel_code_by_code_prefix(self, fuel_code: str, prefix: str) -> List[str]:
+        query = (
+            select(FuelCode).options(
+            joinedload(FuelCode.fuel_code_status),
+            joinedload(FuelCode.fuel_code_prefix),
+            joinedload(FuelCode.fuel_code_type)
+            .joinedload(FuelType.provision_1),
+            joinedload(FuelCode.fuel_code_type)
+            .joinedload(FuelType.provision_2),
+            joinedload(FuelCode.feedstock_fuel_transport_modes)
+            .joinedload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
+            joinedload(FuelCode.finished_fuel_transport_modes)
+            .joinedload(FinishedFuelTransportMode.finished_fuel_transport_mode),
+            ).where(
+                and_(FuelCode.fuel_code == fuel_code, FuelCodePrefix.prefix == prefix)
+            )
+        )
+        input_version = fuel_code.split('.')[0]
+        results = (await self.db.execute(query)).unique().scalars().all()
+        fuel_code_val = await self.get_next_available_sub_version_fuel_code_by_prefix(input_version, prefix)
+        if (results is None or len(results) < 1):
+            fc = FuelCodeCloneSchema(fuel_code=fuel_code_val, prefix=prefix)
+            return [fc]
+        else:
+            fuel_code_results = []
+            for fuel_code in results:
+                fc = FuelCodeCloneSchema.model_validate(fuel_code)
+                fc.fuel_code = fuel_code_val
+                fuel_code_results.append(fc)
+            return fuel_code_results
+
+    def format_decimal(self, value):
+        parts = str(value).split('.')
+        # Format the integer part to always have 3 digits
+        formatted_integer = f"{int(parts[0]):03d}"
+        if len(parts) > 1:
+            return f"{formatted_integer}.{parts[1]}"
+        else:
+            return formatted_integer
+
+    @repo_handler
+    async def validate_fuel_code(self, fuel_code: str, prefix: str) -> str:
+        # check if the fuel_code already exists
+        query = select(FuelCode).where(
+            and_(FuelCode.fuel_code == fuel_code, func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
+        )
+        result = (await self.db.execute(query)).scalar_one_or_none()
+        if result:
+            fuel_code_prefix = fuel_code.split('.')[0]
+            return await self.get_next_available_sub_version_fuel_code_by_prefix(fuel_code_prefix, prefix)
+        else:
+            return fuel_code
+    @repo_handler
+    async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
+        query = text("""
+            WITH parsed_codes AS (
+                SELECT SPLIT_PART(fc.fuel_code, '.', 1)::INTEGER AS base_code
+                FROM fuel_code fc
+                JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
+                WHERE fcp.prefix = :prefix
+            ),
+            all_possible_codes AS (
+                SELECT generate_series(1, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 0) + 1) AS base_code
+            ),
+            available_codes AS (
+                SELECT base_code
+                FROM all_possible_codes
+                WHERE base_code NOT IN (SELECT base_code FROM parsed_codes)
+            ),
+            next_code AS (
+                SELECT MIN(base_code) AS next_base_code
+                FROM available_codes
+            )
+            SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
+            FROM next_code;
+            """)
+        result = (await self.db.execute(query, {"prefix": prefix})).scalar_one_or_none()
+        return self.format_decimal(result)
+
+    async def get_next_available_sub_version_fuel_code_by_prefix(self, input_version: str, prefix: str) -> str:
+        query = text(
+            """
+            WITH split_versions AS (
+                SELECT 
+                    fuel_code,
+                    CAST(SPLIT_PART(fuel_code, '.', 1) AS INTEGER) AS main_version,
+                    CAST(SPLIT_PART(fuel_code, '.', 2) AS INTEGER) AS sub_version
+                FROM fuel_code fc
+                JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
+                WHERE fcp.prefix = :prefix
+            ),
+            sub_versions AS (
+                SELECT 
+                    main_version,
+                    sub_version
+                FROM split_versions
+                WHERE main_version = :input_version
+            ),
+            all_sub_versions AS (
+                SELECT generate_series(0, COALESCE((SELECT MAX(sub_version) FROM sub_versions), -1)) AS sub_version
+            ),
+            missing_sub_versions AS (
+                SELECT a.sub_version
+                FROM all_sub_versions a
+                LEFT JOIN sub_versions s ON a.sub_version = s.sub_version
+                WHERE s.sub_version IS NULL
+                ORDER BY a.sub_version
+                LIMIT 1
+            )
+            SELECT 
+                :input_version || '.' || 
+                COALESCE((SELECT sub_version FROM missing_sub_versions)::VARCHAR, 
+                        (SELECT COALESCE(MAX(sub_version), -1) + 1 FROM sub_versions)::VARCHAR) 
+                AS next_available_version
+            """
+        )
+        result = (await self.db.execute(query, {"input_version": int(input_version), "prefix": prefix})).scalar_one_or_none()
+        return self.format_decimal(result)
 
     async def get_latest_fuel_codes(self) -> List[FuelCodeSchema]:
         subquery = (
