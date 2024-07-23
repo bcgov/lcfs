@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { LabelBox } from './LabelBox'
@@ -13,19 +13,24 @@ import {
   TextField,
   Grid,
   InputLabel
-} from '@mui/material';
+} from '@mui/material'
 import { dateFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
-import Loading from '@/components/Loading';
+import Loading from '@/components/Loading'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '../AddEditViewTransaction'
 
 export const TransactionDetails = ({ transactionId, isEditable }) => {
-  const { t } = useTranslation(['txn']);
-  
+  const { t } = useTranslation(['txn'])
+
   const {
     watch,
     register,
-    formState: { errors }
+    formState: { errors },
+    control
   } = useFormContext()
 
   const { data: orgData } = useRegExtOrgs()
@@ -38,14 +43,16 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   const currentDate = new Date()
   const maxDate = dateFormatter(currentDate)
 
-  const selectedOrgId = watch('toOrganizationId');
-  const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId);
+  const selectedOrgId = watch('toOrganizationId')
+  const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId)
 
-  // Fetching organizartion balance
+  // Fetching organization balance
   const displayBalance = () => {
-    if (!orgBalanceInfo) return t('txn:loadingBalance');
-    return `${orgBalanceInfo.totalBalance.toLocaleString()} (${orgBalanceInfo.reservedBalance.toLocaleString()} ${t('txn:inReserve')})`;
-  };
+    if (!orgBalanceInfo) return t('txn:loadingBalance')
+    return `${orgBalanceInfo.totalBalance.toLocaleString()} (${Math.abs(
+      orgBalanceInfo.reservedBalance
+    ).toLocaleString()} ${t('txn:inReserve')})`
+  }
 
   // Render form error messages
   const renderError = (fieldName, sameAsField = null) => {
@@ -73,7 +80,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   }
 
   if (!orgData || orgData.length === 0) {
-    return <Loading message={t('txn:loadingBalance')} />;
+    return <Loading message={t('txn:loadingBalance')} />
   }
 
   return (
@@ -81,22 +88,22 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
       <LabelBox>
         <BCBox m={1}>
           <Grid container spacing={3}>
-            <Grid item xs={12} style={{ display: transactionId ? 'none' : 'block' }}>
+            <Grid
+              item
+              xs={12}
+              style={{ display: transactionId ? 'none' : 'block' }}
+            >
               <Controller
                 name="txnType"
+                control={control}
                 defaultValue=""
                 render={({ field }) => (
-                  <RadioGroup
-                    id="txnType"
-                    name="txnType"
-                    row
-                    {...field}
-                  >
+                  <RadioGroup id="txnType" name="txnType" row {...field}>
                     <FormControlLabel
-                      value="initiativeAgreement"
+                      value={INITIATIVE_AGREEMENT}
                       control={
-                        <Radio 
-                          data-test="txn-type-initiative-agreement" 
+                        <Radio
+                          data-test="txn-type-initiative-agreement"
                           disabled={!!transactionId || !isEditable}
                         />
                       }
@@ -108,7 +115,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                       sx={{ alignItems: 'center', marginRight: 8 }}
                     />
                     <FormControlLabel
-                      value="administrativeAdjustment"
+                      value={ADMIN_ADJUSTMENT}
                       control={
                         <Radio
                           data-test="txn-type-administrative-adjustment"
@@ -124,8 +131,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                     />
                   </RadioGroup>
                 )}
-              >
-              </Controller>
+              />
               {renderError('txnType')}
             </Grid>
 
@@ -151,7 +157,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
               >
                 <Controller
                   name="toOrganizationId"
-                  // control={control} // Note: control needs to be passed down from the parent component
+                  control={control}
                   displayEmpty
                   render={({ field }) => (
                     <Select
@@ -159,7 +165,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                       labelId="organization-select-label"
                       {...field}
                       error={!!errors.toOrganizationId}
-                      helperText={errors.toOrganizationId?.message}
+                      // helperText={errors.toOrganizationId?.message}
                       displayEmpty
                       disabled={!isEditable}
                       MenuProps={{
@@ -214,7 +220,12 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
             <Grid item lg={8} md={12} xs={12}>
               <BCBox>
                 <InputLabel htmlFor="complianceUnits" sx={{ pb: 1 }}>
-                  <BCTypography variant="body3" dangerouslySetInnerHTML={{ __html:t('txn:complianceUnits')}}></BCTypography>
+                  <BCTypography
+                    variant="body3"
+                    dangerouslySetInnerHTML={{
+                      __html: t('txn:complianceUnits')
+                    }}
+                  ></BCTypography>
                 </InputLabel>
                 <TextField
                   data-test="compliance-units"
@@ -229,12 +240,15 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
           </Grid>
         </BCBox>
 
-        <BCBox sx={{bgcolor: '#f2f2f2'}} p={3} m={1} mt={4}>
+        <BCBox sx={{ bgcolor: '#f2f2f2' }} p={3} m={1} mt={4}>
           <Grid container>
             <Grid item lg={12}>
               <BCBox>
                 <InputLabel htmlFor="orgLegalName" sx={{ pb: 1 }}>
-                  <BCTypography variant="body3" dangerouslySetInnerHTML={{ __html:t('txn:effectiveDate')}}></BCTypography>
+                  <BCTypography
+                    variant="body3"
+                    dangerouslySetInnerHTML={{ __html: t('txn:effectiveDate') }}
+                  ></BCTypography>
                 </InputLabel>
                 <TextField
                   data-test="txn-effective-date"
@@ -248,12 +262,17 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                   }}
                   size="small"
                   error={!!errors.transactionEffectiveDate}
-                  helperText={errors.transactionEffectiveDate ? errors.transactionEffectiveDate.message : ''}
+                  helperText={
+                    errors.transactionEffectiveDate
+                      ? errors.transactionEffectiveDate.message
+                      : ''
+                  }
                 />
               </BCBox>
             </Grid>
             <Grid item lg={12} mt={3}>
-              <BCTypography variant="body3"
+              <BCTypography
+                variant="body3"
                 sx={{
                   '& p': {
                     marginBottom: '16px'
@@ -262,9 +281,8 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                     marginBottom: '0'
                   }
                 }}
-                dangerouslySetInnerHTML={{ __html:t('txn:description')}}
-              >
-              </BCTypography>
+                dangerouslySetInnerHTML={{ __html: t('txn:description') }}
+              ></BCTypography>
             </Grid>
           </Grid>
         </BCBox>

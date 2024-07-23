@@ -1,8 +1,9 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatus, InitiativeAgreementStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus, InitiativeAgreementStatusEnum
 
 logger = logging.getLogger(__name__)
+
 
 async def seed_initiative_agreement_statuses(session):
     """
@@ -13,15 +14,19 @@ async def seed_initiative_agreement_statuses(session):
     """
     initiative_agreement_statuses_to_seed = [
         {
+            "initiative_agreement_status_id": 1,
             "status": InitiativeAgreementStatusEnum.Draft,
         },
         {
+            "initiative_agreement_status_id": 2,
             "status": InitiativeAgreementStatusEnum.Recommended,
         },
         {
+            "initiative_agreement_status_id": 3,
             "status": InitiativeAgreementStatusEnum.Approved,
         },
         {
+            "initiative_agreement_status_id": 4,
             "status": InitiativeAgreementStatusEnum.Deleted,
         },
     ]
@@ -29,7 +34,8 @@ async def seed_initiative_agreement_statuses(session):
     try:
         for status_data in initiative_agreement_statuses_to_seed:
             exists = await session.execute(
-                select(InitiativeAgreementStatus).where(InitiativeAgreementStatus.status == status_data["status"])
+                select(InitiativeAgreementStatus).where(
+                    InitiativeAgreementStatus.status == status_data["status"])
             )
             if not exists.scalars().first():
                 status = InitiativeAgreementStatus(**status_data)
@@ -37,6 +43,7 @@ async def seed_initiative_agreement_statuses(session):
 
         await session.commit()
     except Exception as e:
-        logger.error("Error occurred while seeding initiative agreement statuses: %s", e)
+        logger.error(
+            "Error occurred while seeding initiative agreement statuses: %s", e)
         await session.rollback()
         raise

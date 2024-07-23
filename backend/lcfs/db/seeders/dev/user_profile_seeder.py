@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.user.UserProfile import UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ async def seed_user_profiles(session):
     # Define the user profiles to seed
     user_profiles_to_seed = [
         {
+            "user_profile_id": 1,
             "keycloak_email": "alex.zorkin@gov.bc.ca",
             "keycloak_username": "ALZORKIN",
             "email": "alex.zorkin@gov.bc.ca",
@@ -28,6 +29,7 @@ async def seed_user_profiles(session):
             "last_name": "Zorkin",
         },
         {
+            "user_profile_id": 2,
             "keycloak_email": "hamed.valiollahibayeki@gov.bc.ca",
             "keycloak_username": "HVALIOLL",
             "email": "hamed.valiollahibayeki@gov.bc.ca",
@@ -40,6 +42,7 @@ async def seed_user_profiles(session):
             "last_name": "Bayeki",
         },
         {
+            "user_profile_id": 3,
             "keycloak_email": "kevin.hashimoto@gov.bc.ca",
             "keycloak_username": "KHASHIMO",
             "email": "kevin.hashimoto@gov.bc.ca",
@@ -52,6 +55,7 @@ async def seed_user_profiles(session):
             "last_name": "Hashimoto",
         },
         {
+            "user_profile_id": 4,
             "keycloak_email": "prashanth.venkateshappa@gov.bc.ca",
             "keycloak_username": "PVENKATE",
             "email": "prashanth.venkateshappa@gov.bc.ca",
@@ -64,6 +68,7 @@ async def seed_user_profiles(session):
             "last_name": "V",
         },
         {
+            "user_profile_id": 5,
             "keycloak_email": "justin.lepitzki@gov.bc.ca",
             "keycloak_username": "JLEPITZ",
             "email": "justin.lepitzki@gov.bc.ca",
@@ -76,6 +81,7 @@ async def seed_user_profiles(session):
             "last_name": "Lepitzki",
         },
         {
+            "user_profile_id": 6,
             "keycloak_email": "lindsy.grunert@gov.bc.ca",
             "keycloak_username": "LGRUNERT",
             "email": "lindsy.grunert@gov.bc.ca",
@@ -88,6 +94,7 @@ async def seed_user_profiles(session):
             "last_name": "Grunert",
         },
         {
+            "user_profile_id": 7,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "lcfs1",
             "email": "tfrs@gov.bc.ca",
@@ -100,6 +107,7 @@ async def seed_user_profiles(session):
             "last_name": "Doe",
         },
         {
+            "user_profile_id": 8,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS2",
             "email": "tfrs@gov.bc.ca",
@@ -112,6 +120,7 @@ async def seed_user_profiles(session):
             "last_name": "Smith",
         },
         {
+            "user_profile_id": 9,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS3",
             "email": "tfrs@gov.bc.ca",
@@ -124,6 +133,7 @@ async def seed_user_profiles(session):
             "last_name": "Woo",
         },
         {
+            "user_profile_id": 10,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS4",
             "email": "tfrs@gov.bc.ca",
@@ -136,6 +146,7 @@ async def seed_user_profiles(session):
             "last_name": "Lee",
         },
         {
+            "user_profile_id": 11,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS5",
             "email": "tfrs@gov.bc.ca",
@@ -148,6 +159,7 @@ async def seed_user_profiles(session):
             "last_name": "Clark",
         },
         {
+            "user_profile_id": 12,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS6",
             "email": "tfrs@gov.bc.ca",
@@ -160,6 +172,7 @@ async def seed_user_profiles(session):
             "last_name": "Wilson",
         },
         {
+            "user_profile_id": 13,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS7",
             "email": "tfrs@gov.bc.ca",
@@ -172,6 +185,7 @@ async def seed_user_profiles(session):
             "last_name": "Teller",
         },
         {
+            "user_profile_id": 14,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS8",
             "email": "tfrs@gov.bc.ca",
@@ -184,6 +198,7 @@ async def seed_user_profiles(session):
             "last_name": "Bell",
         },
         {
+            "user_profile_id": 15,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS9",
             "email": "tfrs@gov.bc.ca",
@@ -196,6 +211,7 @@ async def seed_user_profiles(session):
             "last_name": "Martin",
         },
         {
+            "user_profile_id": 16,
             "keycloak_email": "tfrs@gov.bc.ca",
             "keycloak_username": "LCFS10",
             "email": "tfrs@gov.bc.ca",
@@ -208,6 +224,7 @@ async def seed_user_profiles(session):
             "last_name": "Thomas",
         },
         {
+            "user_profile_id": 17,
             "keycloak_email": "kailee.douglas@gov.bc.ca",
             "keycloak_username": "KADOUGLA",
             "email": "kailee.douglas@gov.bc.ca",
@@ -220,6 +237,7 @@ async def seed_user_profiles(session):
             "last_name": "Douglas",
         },
         {
+            "user_profile_id": 18,
             "keycloak_email": "alasdair.ring@gov.bc.ca",
             "keycloak_username": "AIRING",
             "email": "alasdair.ring@gov.bc.ca",
@@ -232,6 +250,7 @@ async def seed_user_profiles(session):
             "last_name": "Ring",
         },
         {
+            "user_profile_id": 19,
             "keycloak_email": "rebekah.ford@gov.bc.ca",
             "keycloak_username": "RRFORD",
             "email": "rebekah.ford@gov.bc.ca",

@@ -47,7 +47,8 @@ export const buttonClusterConfigFn = ({
   t,
   setModalData,
   createUpdateAdminAdjustment,
-  createUpdateInitiativeAgreement
+  createUpdateInitiativeAgreement,
+  internalComment
 }) => {
   const transactionButtons = {
     saveDraft: {
@@ -61,10 +62,12 @@ export const buttonClusterConfigFn = ({
         mutationFn({
           data: {
             ...formData,
+            internalComment,
             currentStatus: TRANSACTION_STATUSES.DRAFT
           }
         })
-      }
+      },
+      disabled: !hasRoles(roles.analyst)
     },
     deleteDraft: {
       ...redOutlinedButton(
@@ -89,7 +92,8 @@ export const buttonClusterConfigFn = ({
           title: t('confirmation'),
           content: t(`${transactionType}:deleteDraftConfirmText`)
         })
-      }
+      },
+      disabled: !hasRoles(roles.analyst)
     },
     recommendTransaction: {
       ...containedButton(
@@ -103,6 +107,7 @@ export const buttonClusterConfigFn = ({
             await mutationFn({
               data: {
                 ...formData,
+                internalComment,
                 currentStatus: TRANSACTION_STATUSES.RECOMMENDED
               }
             })
@@ -113,7 +118,34 @@ export const buttonClusterConfigFn = ({
           title: t('confirmation'),
           content: t(`${transactionType}:recommendConfirmText`)
         })
-      }
+      },
+      disabled: !hasRoles(roles.analyst)
+    },
+    returnTransaction: {
+      ...outlinedButton(
+        t(`txn:actionBtns.returnToAnalystBtn`),
+      ),
+      id: 'return-to-analyst-btn',
+      handler: async (formData) => {
+        setModalData({
+          primaryButtonAction: async () => {
+            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            await mutationFn({
+              data: {
+                ...formData,
+                currentStatus: TRANSACTION_STATUSES.DRAFT
+              }
+            })
+          },
+          primaryButtonText: t(`txn:actionBtns.returnToAnalystBtn`),
+          primaryButtonColor: 'primary',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('txn:returnConfirmText'),
+          warningText: t('txn:returnWarningText')
+        })
+      },
+      disabled: !hasRoles(roles.director)
     },
     approveTransaction: {
       ...containedButton(
@@ -170,7 +202,7 @@ export const buttonClusterConfigFn = ({
   const buttons = {
     New: [transactionButtons.saveDraft, transactionButtons.recommendTransaction],
     Draft: [transactionButtons.deleteDraft, transactionButtons.saveDraft, transactionButtons.recommendTransaction],
-    Recommended: [transactionButtons.deleteTransaction, transactionButtons.approveTransaction],
+    Recommended: [transactionButtons.deleteTransaction, transactionButtons.returnTransaction, transactionButtons.approveTransaction],
     Approved: [],
     Deleted: []
   }

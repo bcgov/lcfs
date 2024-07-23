@@ -1,6 +1,6 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
+from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 
 logger = logging.getLogger(__name__)
 
@@ -13,16 +13,26 @@ async def seed_transactions(session):
     """
 
     transactions_to_seed = [
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 1},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 2},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 3},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 4},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 5},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 6},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 7},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 8},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 9},
-        {'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 10}
+        {"transaction_id": 1,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 1},
+        {"transaction_id": 2,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 2},
+        {"transaction_id": 3,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 3},
+        {"transaction_id": 4,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 4},
+        {"transaction_id": 5,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 5},
+        {"transaction_id": 6,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 6},
+        {"transaction_id": 7,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 7},
+        {"transaction_id": 8,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 8},
+        {"transaction_id": 9,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 9},
+        {"transaction_id": 10,
+            'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 10}
     ]
 
     try:
@@ -31,11 +41,11 @@ async def seed_transactions(session):
             exists = await session.execute(
                 select(Transaction).where(
                     Transaction.compliance_units ==
-                        transaction_data["compliance_units"],
+                    transaction_data["compliance_units"],
                     Transaction.transaction_action ==
-                        transaction_data["transaction_action"],
+                    transaction_data["transaction_action"],
                     Transaction.organization_id ==
-                        transaction_data["organization_id"],
+                    transaction_data["organization_id"],
                 )
             )
             if not exists.scalars().first():

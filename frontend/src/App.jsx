@@ -3,10 +3,7 @@ import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
 import { AdminMenu } from './views/Admin/AdminMenu'
 import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
-import {
-  ComplianceReports,
-  ViewComplianceReport
-} from './views/ComplianceReports'
+import { ComplianceReports } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
 import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
@@ -16,7 +13,11 @@ import {
   AddEditOrg,
   ViewOrganization
 } from './views/Organizations'
-import { Transactions, AddEditViewTransaction } from './views/Transactions'
+import {
+  Transactions,
+  AddEditViewTransaction,
+  ViewOrgTransaction
+} from './views/Transactions'
 import { AddEditViewTransfer } from './views/Transfers'
 import { AddEditUser } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
@@ -24,6 +25,10 @@ import { Login } from './components/Login'
 import { NotFound } from './components/NotFound'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
+import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComplianceReport'
+import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
+import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
+import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 
 const router = createBrowserRouter([
   {
@@ -176,12 +181,12 @@ const router = createBrowserRouter([
       {
         path: ROUTES.REPORTS,
         element: <ComplianceReports />,
-        handle: { title: 'ComplianceReports' }
+        handle: { title: 'Compliance reporting' }
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <ViewComplianceReport />,
-        handle: { title: 'View Compliance Report' }
+        element: <EditViewComplianceReport />,
+        handle: { title: '' }
       },
       {
         path: ROUTES.NOTIFICATIONS,
@@ -207,16 +212,6 @@ const router = createBrowserRouter([
         path: ROUTES.ADMIN_USERACTIVITY,
         element: <AdminMenu tabIndex={1} />,
         handle: { title: 'User activity' }
-      },
-      {
-        path: ROUTES.ADMIN_FUEL_CODES,
-        element: <AdminMenu tabIndex={2} />,
-        handle: { title: 'Fuel codes' }
-      },
-      {
-        path: ROUTES.ADMIN_FUEL_CODES_ADD,
-        element: <AddFuelCode />,
-        handle: { title: 'Add fuel code' }
       },
       {
         path: ROUTES.ADMIN_COMPLIANCE_REPORTING,
@@ -249,7 +244,7 @@ const router = createBrowserRouter([
         handle: { title: 'Add Fuel Code' }
       },
       {
-        path: ROUTES.ADMIN_FUEL_CODES_VIEW,
+        path: ROUTES.FUELCODES_VIEW,
         element: <ViewFuelCode />,
         handle: { title: 'Fuel Code' }
       },
@@ -275,6 +270,13 @@ const router = createBrowserRouter([
         }
       },
       {
+        path: ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
+        element: <ViewOrgTransaction />,
+        handle: {
+          title: 'Admin Adjustment'
+        }
+      },
+      {
         path: ROUTES.ADMIN_ADJUSTMENT_EDIT,
         element: <AddEditViewTransaction />,
         handle: {
@@ -291,11 +293,42 @@ const router = createBrowserRouter([
         }
       },
       {
+        path: ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
+        element: <ViewOrgTransaction />,
+        handle: {
+          title: 'Initiative Agreement'
+        }
+      },
+      {
         path: ROUTES.INITIATIVE_AGREEMENT_EDIT,
         element: <AddEditViewTransaction />,
         handle: {
           title: 'Edit Initiative Agreement',
           mode: 'edit'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS,
+        element: <AddEditNotionalTransfers />,
+        handle: {
+          title: 'New Notional Transfer',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_OTHER_USE_FUELS,
+        element: <AddEditOtherUses />,
+        handle: {
+          title: 'New Fuel for Other Use',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS,
+        element: <AddEditFinalSupplyEquipments />,
+        handle: {
+          title: 'Final Supply Equipment',
+          mode: 'add'
         }
       }
     ]

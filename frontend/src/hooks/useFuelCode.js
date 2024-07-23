@@ -69,3 +69,18 @@ export const useDeleteFuelCode = (fuelCodeID, options) => {
     }
   })
 }
+
+export const useSaveFuelCode = (options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    ...options,
+    mutationFn: async (data) => {
+      return await client.post(apiRoutes.saveFuelCode, data)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['fuel-codes'])
+    },
+  })
+}

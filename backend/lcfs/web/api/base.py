@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 from typing_extensions import deprecated
-from sqlalchemy import and_
+from sqlalchemy import and_, cast, Date, func
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
@@ -46,8 +46,10 @@ class SortOrder(BaseSchema):
 class FilterModel(BaseSchema):
     filter_type: str = Field(Query(default="text", alias="filterType"))
     type: str = Field(Query(default="contains", alias="type"))
-    filter: Any = Field(Query(default="", alias="filter"))
+    filter: Optional[Any] = None
     field: str = Field(Query(default="", alias="field"))
+    date_from: Optional[str] = Field(Query(default="", alias="dateFrom"))
+    date_to: Optional[str] = Field(Query(default="", alias="dateTo"))
 
     @classmethod
     def validate_field(cls, value):
@@ -200,15 +202,27 @@ def apply_date_filter_conditions(field, filter_value, filter_option):
        filter_value: The value to filter by
        filter_option: The filtering operation
     """
+    if isinstance(filter_value, list) and len(filter_value) <= 1:
+        filter_value = filter_value[0]
     date_filter_mapping = {
-        "equals": field == filter_value,
-        "notEqual": field != filter_value,
-        "greaterThan": field > filter_value,
-        "lessThan": field < filter_value,
-        "inRange": and_(field >= filter_value[0], field <= filter_value[1]),
+        "equals": cast(field, Date) == func.date(filter_value),
+        "notEqual": cast(field, Date) != func.date(filter_value),
+        "greaterThan": cast(field, Date) > func.date(filter_value),
+        "lessThan": cast(field, Date) < func.date(filter_value),
+        "inRange": and_(cast(field, Date) >= func.date(filter_value[0]), cast(field, Date) <= func.date(filter_value[1])),
     }
 
     return date_filter_mapping.get(filter_option)
+
+def apply_set_filter_conditions(field, filter_values):
+    """
+    Apply set filtering conditions based on the filter values.
+
+    Args:
+       field: The field to filter on
+       filter_values: The set of values to filter by
+    """
+    return field.in_(filter_values)
 
 
 def apply_generic_filter_conditions(field, filter_value, filter_option):
@@ -237,7 +251,7 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
         field: The field to filter on
         filter_value: The value to filter by
         filter_option: The filtering operation
-        filter_type: The type of the field (text, number, date)
+        filter_type: The type of the field (text, number, date, set)
     """
     try:
         # Handle generic filter options (blank, notBlank, empty)
@@ -251,6 +265,8 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
             return apply_number_filter_conditions(field, filter_value, filter_option)
         elif filter_type == "date":
             return apply_date_filter_conditions(field, filter_value, filter_option)
+        elif filter_type == "set":
+            return apply_set_filter_conditions(field, filter_value)
         else:
             raise HTTPException(
                 status_code=400,

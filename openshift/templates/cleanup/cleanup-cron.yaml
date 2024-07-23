@@ -23,6 +23,7 @@ objects:
         metadata:
           creationTimestamp: null
         spec:
+          backoffLimit: 0
           template:
             metadata:
               creationTimestamp: null
@@ -80,7 +81,9 @@ objects:
 
                           echo "==========> Removing expired pods"
 
-                          oc -n $namespace get pods | grep -E "Completed|Error|ContainerStatusUnknown" | grep -v crunchy | grep -v spilo | awk '{print $1}' | xargs oc -n $namespace delete pod || true
+                          oc -n $namespace get pods | grep Completed | awk '{print $1}' | xargs oc -n $namespace delete pod || true
+
+                          oc -n $namespace get pods | grep -E "Error|ContainerStatusUnknown" | grep -v crunchy | grep -v spilo | awk '{print $1}' | xargs oc -n $namespace delete pod || true
 
                           env=$(echo $namespace | awk -F '-' '{print $NF}')
 
@@ -98,7 +101,7 @@ objects:
                           
                       done
 
-              restartPolicy: OnFailure
+              restartPolicy: Never
               terminationGracePeriodSeconds: 30
               dnsPolicy: ClusterFirst
               securityContext: {}

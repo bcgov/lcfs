@@ -2,6 +2,7 @@ from fastapi.routing import APIRouter
 
 from lcfs.web.api import (
     echo,
+    fuel_supply,
     monitoring,
     redis,
     user,
@@ -14,7 +15,12 @@ from lcfs.web.api import (
     internal_comment,
     fuel_code,
     admin_adjustment,
-    initiative_agreement
+    initiative_agreement,
+    compliance_report,
+    notional_transfer,
+    other_uses,
+    final_supply_equipment,
+    dashboard
 )
 
 api_router = APIRouter()
@@ -28,6 +34,7 @@ api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(redis.router, prefix="/redis", tags=["redis"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )
@@ -49,3 +56,19 @@ api_router.include_router(
 api_router.include_router(
     initiative_agreement.router, prefix="/initiative-agreements", tags=["initiative_agreements"]
 )
+api_router.include_router(
+    compliance_report.router, prefix="/reports", tags=["compliance_reports"]
+)
+api_router.include_router(
+    notional_transfer.router, prefix="/notional-transfers", tags=["notional_transfers"]
+)
+api_router.include_router(
+    other_uses.router, prefix="/other-uses", tags=["other_uses"]
+)
+api_router.include_router(
+    final_supply_equipment.router, prefix="/final-supply-equipments", tags=["final_supply_equipments"]
+)
+api_router.include_router(
+    fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]
+)
+

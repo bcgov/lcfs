@@ -38,6 +38,7 @@ class InitiativeAgreementBaseSchema(BaseSchema):
     transaction_effective_date: Optional[date] = None
     to_organization_id: int
     gov_comment: Optional[str] = None
+    internal_comment: Optional[str] = None
 
     @field_validator('compliance_units')
     def validate_compliance_units(cls, v):
@@ -52,6 +53,8 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     initiative_agreement_id: int
     to_organization: OrganizationSchema
     history: Optional[List[InitiativeAgreementHistorySchema]]
+    returned: Optional[bool] = False
+    create_date: datetime
 
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str

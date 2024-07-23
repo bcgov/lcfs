@@ -11,13 +11,14 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 
-export const OrgDetailsCard = () => {
+const OrgDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
   const { data: orgData, isLoading: orgLoading } = useOrganization()
   const navigate = useNavigate()
   return (
     <BCWidgetCard
       component="div"
+      disableHover={true}
       title={t('org:orgDetailsLabel')}
       content={
         orgLoading ? (
@@ -79,8 +80,8 @@ export const OrgDetailsCard = () => {
                       '&:hover': { color: 'info.main' }
                     }}
                   >
-                    {t('org:createNewUsrLabel')}&nbsp;
-                    <FontAwesomeIcon icon={faShareFromSquare} />
+                    {t('org:createNewUsrLabel')}
+                    <FontAwesomeIcon icon={faShareFromSquare} style={{ color: '#578260', marginLeft: 6 }} />
                   </BCTypography>
                 </ListItemButton>
               </List>

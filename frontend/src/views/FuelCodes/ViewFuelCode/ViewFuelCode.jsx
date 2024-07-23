@@ -2,7 +2,10 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
+import BCModal from '@/components/BCModal'
+import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
+import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import {
@@ -11,26 +14,25 @@ import {
   useGetFuelCode,
   useUpdateFuelCode
 } from '@/hooks/useFuelCode'
+import withRole from '@/utils/withRole'
 import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { addEditSchema } from '../_schema'
-import withRole from '@/utils/withRole'
-import { roles } from '@/constants/roles'
-import BCModal from '@/components/BCModal'
-import BCTypography from '@/components/BCTypography'
 
-const ViewFuelCode = () => {
+const ViewFuelCodeBase = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const { fuelCodeID } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'fuelCode'])
+  const queryClient = useQueryClient()
 
   const [rowData, setRowData] = useState([])
   const [gridApi, setGridApi] = useState(null)
@@ -47,13 +49,24 @@ const ViewFuelCode = () => {
   const { mutate: updateFuelCode, isPending: isUpdateFuelCodePending } =
     useUpdateFuelCode(fuelCodeID, {
       onSuccess: () => {
-        navigate(ROUTES.ADMIN_FUEL_CODES + `?hid=${fuelCodeID}`)
+        queryClient.invalidateQueries(['fuel-code', fuelCodeID])
+        navigate(ROUTES.FUELCODES + `?hid=${fuelCodeID}`)
+      },
+      onError: (error) => {
+        setAlertMessage(error.response.data.detail[0].msg)
+        setAlertSeverity('error')
+        alertRef.current?.triggerAlert()
       }
     })
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
     useDeleteFuelCode(fuelCodeID, {
       onSuccess: () => {
-        navigate(ROUTES.ADMIN_FUEL_CODES)
+        navigate(ROUTES.FUELCODES, {
+          state: {
+            message: t('fuelCode:fuelCodeDeleteSuccessMsg'),
+            severity: 'success'
+          }
+        })
       }
     })
 
@@ -177,7 +190,7 @@ const ViewFuelCode = () => {
     await validationHandler(row)
     const data = {
       ...row.data,
-      lastUpdated: new Date().toISOString().split('T')[0],
+      lastUpdated: new Date(),
       prefixId: optionsData.fuelCodePrefixes.find(
         (elm) => elm.prefix === row.data.prefix
       ).fuelCodePrefixId,
@@ -205,7 +218,7 @@ const ViewFuelCode = () => {
   if (isLoading || isFuelCodeDataLoading) {
     return <Loading />
   }
-  console.log(fuelCodeData)
+
   return (
     isFetched && (
       <>
@@ -241,7 +254,8 @@ const ViewFuelCode = () => {
               columnDefs={addEditSchema.fuelCodeColDefs(
                 t,
                 optionsData,
-                fuelCodeData.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT
+                fuelCodeData.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT,
+                gridApi
               )}
               defaultColDef={addEditSchema.defaultColDef}
               onGridReady={onGridReady}
@@ -316,6 +330,9 @@ const ViewFuelCode = () => {
   )
 }
 
-const AllowedRoles = [roles.analyst, roles.compliance_manager, roles.director]
-export const ViewFuelCodeWithRole = withRole(ViewFuelCode, AllowedRoles)
+export const ViewFuelCode = withRole(
+  ViewFuelCodeBase,
+  [roles.analyst],
+  ROUTES.DASHBOARD
+)
 ViewFuelCode.displayName = 'ViewFuelCode'

@@ -9,13 +9,13 @@ const OrganizationList = ({ onOrgChange }) => {
   const { t } = useTranslation(['transaction'])
   const { data, isLoading } = useOrganizationNames()
   const [optionsList, setOptionsList] = useState([])
-  const [org, setOrg] = useState(t('txn:allOrganizations'))
-
+  const [org, setOrg] = useState(null)
+  
   useEffect(() => {
     if (!isLoading) {
       const formattedData = data.map(org => ({
         ...org,
-        label: `${org.name} - ${t('txn:complianceBalance')} ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: org.reservedBalance })} ${t('txn:inReserve')})`
+        label: `${org.name} ${t('txn:complianceUnitsBalance')}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: Math.abs(org.reservedBalance) })} ${t('txn:inReserve')})`
       }));
 
       setOptionsList([
@@ -25,9 +25,9 @@ const OrganizationList = ({ onOrgChange }) => {
     }
   }, [data, isLoading, t])
 
-  const onInputBoxChanged = (event, input) => {
+  const onInputBoxChanged = (event, input) => {    
     if (!input || input.name === t('txn:allOrganizations')) {
-      setOrg(t('txn:allOrganizations'))
+      setOrg(null)
       onOrgChange(null)
     } else {
       setOrg(input.label)
@@ -37,7 +37,7 @@ const OrganizationList = ({ onOrgChange }) => {
 
   return (
     <Box component="div" mb={2}>
-      <Typography variant="body2" fontWeight="bold" color="primary">
+      <Typography variant="body2" color="primary">
         {org}
       </Typography>
       <Stack

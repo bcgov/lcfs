@@ -36,6 +36,7 @@ class AdminAdjustmentBaseSchema(BaseSchema):
     transaction_effective_date: Optional[date] = None
     to_organization_id: int
     gov_comment: Optional[str] = None
+    internal_comment: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -44,6 +45,8 @@ class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):
     admin_adjustment_id: int
     to_organization: OrganizationSchema
     history: Optional[List[AdminAdjustmentHistorySchema]]
+    returned: Optional[bool] = False
+    create_date: datetime
 
 class AdminAdjustmentCreateSchema(AdminAdjustmentBaseSchema):
     current_status: str

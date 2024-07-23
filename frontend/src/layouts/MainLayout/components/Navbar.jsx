@@ -1,15 +1,16 @@
-// @mui components
 import BCNavbar from '@/components/BCNavbar'
-import { HeaderComponent } from './HeaderComponent'
-import { Logout } from './Logout'
+import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useTranslation } from 'react-i18next'
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { HeaderComponent } from './HeaderComponent'
+import { Logout } from './Logout'
 
 export const Navbar = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
+
   // Nav Links
   const navMenuItems = useMemo(
     () =>
@@ -20,6 +21,13 @@ export const Navbar = () => {
             { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
             { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
             { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
+            {
+              name: t('FuelCodes'),
+              route: ROUTES.FUELCODES,
+              hide: !currentUser.roles.find(
+                (role) => role.name === roles.analyst
+              )
+            },
             { name: t('Administration'), route: ROUTES.ADMIN }
           ]
         : // BCeID Routes

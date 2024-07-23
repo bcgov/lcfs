@@ -1,11 +1,38 @@
-import { numberFormatter, currencyFormatter, dateFormatter } from '@/utils/formatters'
+import { 
+  numberFormatter, 
+  currencyFormatter, 
+  dateFormatter, 
+  spacesFormatter 
+} from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
+const prefixMap = {
+  "Transfer": "CUT",
+  "AdminAdjustment": "AA",
+  "InitiativeAgreement": "IA"
+};
+
 export const transactionsColDefs = (t) => [
-  { colId: 'transactionId', field: 'transactionId', headerName: t('txn:txnColLabels.txnId'), width: 120 },
-  { colId: 'transactionType', field: 'transactionType', headerName: t('txn:txnColLabels.type'), width: 150 },
+  { 
+    colId: 'transactionId', 
+    field: 'transactionId', 
+    headerName: t('txn:txnColLabels.txnId'), 
+    width: 175,
+    valueGetter: (params) => {
+      const transactionType = params.data.transactionType;
+      const prefix = prefixMap[transactionType] || '';
+      return `${prefix}${params.data.transactionId}`;
+    }
+  },
+  { 
+    colId: 'transactionType', 
+    field: 'transactionType', 
+    headerName: t('txn:txnColLabels.type'), 
+    valueFormatter: spacesFormatter,
+    width: 222 
+  },
   { colId: 'fromOrganization', field: 'fromOrganization', headerName: t('txn:txnColLabels.organizationFrom'), minWidth: 300, flex: 2 },
   { colId: 'toOrganization', field: 'toOrganization', headerName: t('txn:txnColLabels.organizationTo'), minWidth: 300, flex: 2 },
   {
@@ -53,7 +80,22 @@ export const transactionsColDefs = (t) => [
   },
 ];
 
-export const defaultSortModel = [{ field: 'txnId', direction: 'asc' }]
-export const defaultFilterModel = [
-  { filterType: 'text', type: 'equals', field: 'isActive', filter: 'Active' }
+export const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
+
+// Filters
+export const filterInProgressOrgTransfers = [
+  { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'Transfer' },
+  { filterType: 'set', type: 'set', field: 'status', filter: ['Draft', 'Sent', 'Submitted'] }
+]
+export const filterInProgressTransfers = [
+  { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'Transfer' },
+  { filterType: 'set', type: 'set', field: 'status', filter: ['Submitted', 'Recommended'] }
+]
+export const filterInProgressInitiativeAgreements = [
+  { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'InitiativeAgreement' },
+  { filterType: 'set', type: 'set', field: 'status', filter: ['Draft', 'Recommended'] }
+]
+export const filterInProgressAdminAdjustments = [
+  { filterType: 'text', type: 'equals', field: 'transactionType', filter: 'AdminAdjustment' },
+  { filterType: 'set', type: 'set', field: 'status', filter: ['Draft', 'Recommended'] }
 ]

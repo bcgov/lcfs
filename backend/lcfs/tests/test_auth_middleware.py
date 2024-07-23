@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from httpx import Response
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_200_OK
 from lcfs.services.keycloak.authentication import UserAuthentication
-from lcfs.db.models.UserProfile import UserProfile
+from lcfs.db.models.user.UserProfile import UserProfile
 from fastapi import HTTPException
 from lcfs.settings import settings
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -84,3 +84,34 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.logout()
   })
 })
+
+Cypress.Commands.add('setIDIRRoles', (role) => {
+  // Roles ['analyst', 'compliance manager', 'director']
+  cy.visit('/admin/users')
+
+  // Find the row with the specified name and click it
+  cy.contains('a', Cypress.env('admin_idir_email'))
+  .should('be.visible')
+    .click();
+
+  cy.url().should('match', /\/admin\/users\/\d+/);
+
+  // click edit button
+  cy.get('button[aria-label="edit"]').click();
+
+  // Ensure the URL has changed to the user edit page
+  cy.url().should('include', '/edit-user');
+
+  const roleToSelect = role.toLowerCase()
+  cy.get(`input[type="radio"][value="${roleToSelect}"]`).check()
+
+  // Save the changes by clicking the button with data-test=saveUser
+  cy.get('button[data-test="saveUser"]').click()
+
+  cy.wait(3000)
+
+  cy.get("[data-test='alert-box'] .MuiBox-root").should(
+    'contain',
+    'User has been successfully saved.'
+  )
+})

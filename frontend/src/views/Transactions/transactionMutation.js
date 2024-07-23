@@ -34,20 +34,31 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
     const idPrefix = transactionType === ADMIN_ADJUSTMENT ? 'adminadjustment-' : 'initiativeagreement-'
     const txnId = response.data[idField]
     const { editRoute, viewRoute } = getTransactionRoutes(transactionType, txnId)
-
+    
+    // Check if returned flag is true
+    const isReturned = response.data.returned
+  
     // Invalidate relevant queries
-    queryClient.invalidateQueries([transactionType, transactionId]);
-
+    queryClient.invalidateQueries([transactionType, transactionId])
+  
     // Set the message and state for navigating
     const message = t(`${transactionType}:actionMsgs.${transactionId ? 'updatedText' : 'createdText'}`)
     const navigateState = {
       state: { message, severity: 'success' }
     }
-
-    if (status === TRANSACTION_STATUSES.DRAFT) {
+  
+    if (status === TRANSACTION_STATUSES.DRAFT && !isReturned) {
       navigate(editRoute, navigateState)
-    } else if (status === TRANSACTION_STATUSES.RECOMMENDED ||
-      status === TRANSACTION_STATUSES.APPROVED) {
+    } else if (status === TRANSACTION_STATUSES.DRAFT && isReturned) {
+      navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
+        state: {
+          message: t(`${transactionType}:actionMsgs.successText`, {
+            status: 'returned'
+          }),
+          severity: 'success'
+        }
+      })
+    } else if (status === TRANSACTION_STATUSES.RECOMMENDED || status === TRANSACTION_STATUSES.APPROVED) {
       navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
         state: {
           message: t(`${transactionType}:actionMsgs.successText`, {
@@ -62,7 +73,8 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
       setAlertMessage(t(`${transactionType}:actionMsgs.successText`, { status: 'saved' }))
       setAlertSeverity('success')
     }
-    if(alertRef?.current){
+
+    if (alertRef?.current) {
       alertRef.current.triggerAlert()
     }
     window.scrollTo(0, 0)

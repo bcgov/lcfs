@@ -188,7 +188,7 @@ export const ViewOrganization = () => {
               </BCTypography>
               <Typography variant="body4">
                 {orgBalaceInfo?.totalBalance.toLocaleString()} (
-                {orgBalaceInfo?.reservedBalance.toLocaleString()})
+                {Math.abs(orgBalaceInfo?.reservedBalance).toLocaleString()})
               </Typography>
             </Role>
           </BCBox>
@@ -203,11 +203,11 @@ export const ViewOrganization = () => {
               {t('org:serviceAddrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.orgAddress)}
+              {constructAddress(orgData?.orgAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {constructAddress(orgData.orgAttorneyAddress)}
+              {constructAddress(orgData?.orgAttorneyAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
             <BCTypography variant="body4">
@@ -273,6 +273,7 @@ export const ViewOrganization = () => {
                 variant="outlined"
                 size="small"
                 color="primary"
+                data-test="show-inactive-btn"
                 sx={{
                   textTransform: 'none',
                   marginRight: '8px',
@@ -286,7 +287,7 @@ export const ViewOrganization = () => {
                 </BCTypography>
               </BCButton>
             </BCBox>
-            <BCTypography variant="h5" mt={1} color="primary">
+            <BCTypography variant="h5" mt={1} color="primary" data-test="active-users-heading">
               {t('org:activeUsersBtn')}
             </BCTypography>
           </>
@@ -296,6 +297,7 @@ export const ViewOrganization = () => {
               variant="outlined"
               size="small"
               color="primary"
+              data-test="show-active-btn"
               sx={{
                 textTransform: 'none',
                 marginRight: '8px',
@@ -308,7 +310,7 @@ export const ViewOrganization = () => {
                 {t('org:showActiveUsersBtn')}
               </BCTypography>
             </BCButton>
-            <BCTypography variant="h5" mt={1} color="primary">
+            <BCTypography variant="h5" mt={1} color="primary" data-test="inactive-users-heading">
               {t('org:inactiveUsersBtn')}
             </BCTypography>
           </>

@@ -104,3 +104,28 @@ export function calculateRowHeight(actualWidth, roles) {
 
   return totalHeight
 }
+
+export const timezoneFormatter = ({ value }) => {
+  const date = new Date(value)
+  // Format the date and time parts
+  const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Vancouver',
+    timeZoneName: 'short'
+  }
+
+  const formattedDate = date.toLocaleString('en-CA', options)
+  return formattedDate.replace(',', '').replaceAll('.', '')
+}
+
+export const spacesFormatter = (params) => {
+  if (params.value != null) {
+    return params.value.replace(/([A-Z])/g, ' $1').trim();
+  }
+  return params.value;
+}

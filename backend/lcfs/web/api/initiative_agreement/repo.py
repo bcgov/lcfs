@@ -1,12 +1,13 @@
 from fastapi import Depends
+from datetime import datetime
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.db.models.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.InitiativeAgreementStatus import InitiativeAgreementStatus
-from lcfs.db.models.InitiativeAgreementHistory import InitiativeAgreementHistory
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus
+from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import InitiativeAgreementHistory
 from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema
 
 from lcfs.db.dependencies import get_async_db_session
@@ -86,10 +87,44 @@ class InitiativeAgreementRepository:
         return new_history_record
 
     @repo_handler
+    async def update_initiative_agreement_history(
+        self, 
+        initiative_agreement_id: int, 
+        initiative_agreement_status_id: int, 
+        user_profile_id: int
+    ) -> InitiativeAgreementHistory:
+        """
+        Updates an initiative agreement history record in the database.
+
+        Args:
+            initiative_agreement_id (int): The ID of the initiative agreement to which this history record relates.
+            initiative_agreement_status_id (int): The status ID that describes the current state of the initiative agreement.
+            user_profile_id (int): The ID of the user who made the change.
+
+        Returns:
+            InitiativeAgreementHistory: The updated initiative agreement history record.
+        """
+        existing_history = await self.db.scalar(
+            select(InitiativeAgreementHistory).where(
+                and_(
+                    InitiativeAgreementHistory.initiative_agreement_id == initiative_agreement_id,
+                    InitiativeAgreementHistory.initiative_agreement_status_id == initiative_agreement_status_id,
+                )
+            )
+        )
+        existing_history.create_date = datetime.now()
+        existing_history.update_date = datetime.now()
+        existing_history.user_profile_id = user_profile_id
+        self.db.add(existing_history)
+        await self.db.flush()
+        return existing_history
+
+    @repo_handler
     async def refresh_initiative_agreement(self, initiative_agreement: InitiativeAgreement) -> InitiativeAgreement:
         """
         Commits and refreshes an initiative agreement object in db session
 
         """
+        await self.db.flush()
         await self.db.refresh(initiative_agreement)
         return initiative_agreement

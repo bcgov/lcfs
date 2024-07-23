@@ -1,7 +1,7 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from datetime import date
-from pydantic import Field, field_validator
+from datetime import date, datetime
+from pydantic import Field, field_validator, root_validator
 from enum import Enum
 
 
@@ -11,10 +11,32 @@ class FuelCodeStatusEnumSchema(str, Enum):
     Deleted = "Deleted"
 
 
+class FuelTypeQuantityUnitsEnumSchema(str, Enum):
+    Litres = 'L'
+    Kilograms = "kg"
+    Kilowatt_hour = 'kWh'
+    Cubic_metres = 'm3'
+
+
+class ProvisionOfTheActSchema(BaseSchema):
+    provision_of_the_act_id: int
+    name: str
+
+
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: Optional[bool] = None
+    provision_1_id: Optional[int] = None
+    provision_2_id: Optional[int] = None
+    default_carbon_intensity: Optional[float] = None
+    provision_1: Optional[ProvisionOfTheActSchema] = None
+    provision_2: Optional[ProvisionOfTheActSchema] = None
+    units: FuelTypeQuantityUnitsEnumSchema
+
+    @field_validator("default_carbon_intensity")
+    def quantize_default_carbon_intensity(cls, value):
+        return round(value, 2)
 
 
 class FuelCodeStatusSchema(BaseSchema):
@@ -43,6 +65,7 @@ class FinishedFuelTransportModeSchema(BaseSchema):
 
 class FuelCodePrefixSchema(BaseSchema):
     fuel_code_prefix_id: int
+    next_fuel_code: Optional[str] = None
     prefix: str
 
 
@@ -108,21 +131,17 @@ class AdditionalCarbonIntensitySchema(BaseSchema):
         return round(value, 2)
 
 
-class TableOptionsSchema(BaseSchema):
-    fuel_types: List[FuelTypeSchema]
-    transport_modes: List[TransportModeSchema]
-    fuel_code_prefixes: List[FuelCodePrefixSchema]
-
-
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_status_id: Optional[int] = None
     prefix_id: int
     fuel_code: str
     company: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     carbon_intensity: float
     edrms: str
-    last_updated: date
+    last_updated: datetime
     application_date: date
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
@@ -131,8 +150,46 @@ class FuelCodeSchema(BaseSchema):
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
-    fuel_production_facility_location: Optional[str] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
+    former_company: Optional[str] = None
+    notes: Optional[str] = None
+    fuel_code_status: Optional[FuelCodeStatusSchema] = None
+    fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
+    fuel_code_type: Optional[FuelTypeSchema] = None
+    feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
+        None
+    )
+    finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
+        None
+    )
+class FuelCodeCloneSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
+    fuel_status_id: Optional[int] = None
+    prefix_id: Optional[int] = None
+    fuel_code: Optional[str] = None
+    company: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    carbon_intensity: Optional[float] = None
+    edrms: Optional[str] = None
+    last_updated: Optional[datetime] = None
+    application_date: Optional[date] = None
+    approval_date: Optional[date] = None
+    effective_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    fuel_type_id: Optional[int] = None
+    feedstock: Optional[str] = None
+    feedstock_location: Optional[str] = None
+    feedstock_misc: Optional[str] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
+    facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
@@ -146,33 +203,67 @@ class FuelCodeSchema(BaseSchema):
     )
 
 
+class FieldOptions(BaseSchema):
+    company: List[str]
+    feedstock: List[str]
+    feedstock_location: List[str]
+    feedstock_misc: List[str]
+    former_company: List[str]
+    contact_name: List[str]
+    contact_email: List[str]
+
+
+class FPLocationsSchema(BaseSchema):
+    fuel_production_facility_city: str
+    fuel_production_facility_province_state: str
+    fuel_production_facility_country: str
+
+
+class TableOptionsSchema(BaseSchema):
+    fuel_types: List[FuelTypeSchema]
+    transport_modes: List[TransportModeSchema]
+    fuel_code_prefixes: List[FuelCodePrefixSchema]
+    latest_fuel_codes: List[FuelCodeSchema]
+    field_options: FieldOptions
+    fp_locations: List[FPLocationsSchema]
+    facility_nameplate_capacity_units: List[FuelTypeQuantityUnitsEnumSchema]
+
+class SearchFuelCodeList(BaseSchema):
+    fuel_codes: Union[List[str], List[FuelCodeCloneSchema]]
+
 class FuelCodesSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]
-    pagination: PaginationResponseSchema
+    pagination: Optional[PaginationResponseSchema] = None
 
 
 class FuelCodeCreateSchema(BaseSchema):
     id: Optional[str] = None
     fuel_code_id: Optional[int] = None
-    status: str
-    prefix: str
-    prefix_id: int
+    status: Optional[str] = None
+    prefix: Optional[str] = None
+    prefix_id: Optional[int] = None
     fuel_code: str
-    company: str
     carbon_intensity: float
     edrms: str
-    last_updated: date
+    company: str
+    last_updated: Optional[datetime] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
     application_date: date
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
     fuel: str = None  # Fuel Type
-    fuel_type_id: int
+    fuel_type_id: Optional[int] = None
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
-    fuel_production_facility_location: str
+    fuel_production_facility_city: str
+    fuel_production_facility_province_state: str
+    fuel_production_facility_country: str
+
     facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
     feedstock_transport_mode: Optional[List[str]] = None
     finished_fuel_transport_mode: Optional[List[str]] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
@@ -185,3 +276,22 @@ class FuelCodeCreateSchema(BaseSchema):
     notes: Optional[str] = None
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
+    deleted: Optional[bool] = None
+
+    @root_validator(pre=True)
+    def check_capacity_and_unit(cls, values):
+        facility_nameplate_capacity = values.get('facilityNameplateCapacity')
+        facility_nameplate_capacity_unit = values.get(
+            'facilityNameplateCapacityUnit')
+
+        if facility_nameplate_capacity is None:
+            values['facilityNameplateCapacityUnit'] = None
+        elif facility_nameplate_capacity is not None and facility_nameplate_capacity_unit is None:
+            raise ValueError(
+                'facility_nameplate_capacity_unit must be provided when facility_nameplate_capacity is not None')
+
+        return values
+
+
+class DeleteFuelCodeResponseSchema(BaseSchema):
+    message: str

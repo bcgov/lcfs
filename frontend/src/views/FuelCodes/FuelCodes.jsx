@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
 
-export const FuelCodes = () => {
+const FuelCodesBase = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -71,10 +71,7 @@ export const FuelCodes = () => {
     if (!isAuthorized) return
     console.log(isAuthorized)
     navigate(
-      ROUTES.ADMIN_FUEL_CODES_VIEW.replace(
-        ':fuelCodeID',
-        params.data.fuelCodeId
-      )
+      ROUTES.FUELCODES_VIEW.replace(':fuelCodeID', params.data.fuelCodeId)
     )
   }
 
@@ -82,7 +79,7 @@ export const FuelCodes = () => {
     setIsDownloadingFuelCodes(true)
     setAlertMessage('')
     try {
-      await apiService.download(ROUTES.ADMIN_FUEL_CODES + '/export')
+      await apiService.download(ROUTES.FUELCODES + '/export')
       setIsDownloadingFuelCodes(false)
     } catch (error) {
       console.error('Error downloading fuel code information:', error)
@@ -121,7 +118,7 @@ export const FuelCodes = () => {
               <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
             }
             data-test="new-fuel-code-btn"
-            onClick={() => navigate(ROUTES.ADMIN_FUEL_CODES_ADD)}
+            onClick={() => navigate(ROUTES.FUELCODES_ADD)}
           >
             <Typography variant="subtitle2">
               {t('fuelCode:newFuelCodeBtn')}
@@ -132,8 +129,8 @@ export const FuelCodes = () => {
           onDownload={handleDownloadFuelCodes}
           isDownloading={isDownloadingFuelCodes}
           label={t('fuelCode:fuelCodeDownloadBtn')}
-          downloadLabel={`${t('fuelCode:fuelCodeDownloadBtn')}...`}
-          data-test="fuel-code-download-btn"
+          downloadLabel={`${t('fuelCode:fuelCodeDownloadingMsg')}...`}
+          dataTest="fuel-code-download-btn"
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
@@ -156,6 +153,9 @@ export const FuelCodes = () => {
   )
 }
 
-const AllowedRoles = [roles.administrator, roles.government]
-export const FuelCodesWithRole = withRole(FuelCodes, AllowedRoles)
+export const FuelCodes = withRole(
+  FuelCodesBase,
+  [roles.analyst],
+  ROUTES.DASHBOARD
+)
 FuelCodes.displayName = 'FuelCodes'

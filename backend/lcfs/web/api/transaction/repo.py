@@ -11,10 +11,10 @@ from sqlalchemy import select, update, func, desc, asc, and_, case, or_
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.models.Transaction import Transaction, TransactionActionEnum
-from lcfs.db.models.TransactionView import TransactionView
-from lcfs.db.models.TransactionStatusView import TransactionStatusView
-from lcfs.db.models.TransferStatus import TransferStatus
+from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
+from lcfs.db.models.transaction.TransactionView import TransactionView, TransactionViewTypeEnum
+from lcfs.db.models.transaction.TransactionStatusView import TransactionStatusView
+from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 
 
 class EntityType(Enum):
@@ -336,3 +336,106 @@ class TransactionRepository:
 
         # Directly fetching string representations of the statuses
         return [status[0] for status in result.fetchall()]
+
+    @repo_handler
+    async def count_org_transfers_in_progress(self, organization_id: int) -> int:
+        """
+        Count the number of transfers in progress for an organization.
+
+        Args:
+            organization_id (int): The ID of the organization for which to count transfers in progress.
+
+        Returns:
+            int: The number of transfers in progress.
+        """
+        query = (
+            select(func.count())
+            .select_from(TransactionView)
+            .where(
+                TransactionView.transaction_type == TransactionViewTypeEnum.Transfer.value,
+                or_(
+                    and_(
+                        TransactionView.status == TransferStatusEnum.Draft.value,
+                        TransactionView.from_organization_id == organization_id,
+                    ),
+                    and_(
+                        TransactionView.status.in_([
+                            TransferStatusEnum.Sent.value,
+                            TransferStatusEnum.Submitted.value,
+                        ]),
+                        or_(
+                            TransactionView.from_organization_id == organization_id,
+                            TransactionView.to_organization_id == organization_id,
+                        ),
+                    ),
+                ),
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none() or 0
+
+    @repo_handler
+    async def count_transfers_in_progress(self) -> int:
+        """
+        Count the number of transfers in progress.
+
+        Returns:
+            int: The number of transfers in progress.
+        """
+        query = (
+            select(func.count())
+            .select_from(TransactionView)
+            .where(
+                TransactionView.transaction_type == TransactionViewTypeEnum.Transfer.value,
+                or_(
+                    TransactionView.status == TransferStatusEnum.Submitted.value,
+                    TransactionView.status == TransferStatusEnum.Recommended.value
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none() or 0
+
+    @repo_handler
+    async def count_initiative_agreements_in_progress(self) -> int:
+        """
+        Count the number of initiative agreements in progress.
+
+        Returns:
+            int: The number of initiative agreements in progress.
+        """
+        query = (
+            select(func.count())
+            .select_from(TransactionView)
+            .where(
+                TransactionView.transaction_type == TransactionViewTypeEnum.InitiativeAgreement.value,
+                or_(
+                    TransactionView.status == TransferStatusEnum.Draft.value,
+                    TransactionView.status == TransferStatusEnum.Recommended.value
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none() or 0
+
+    @repo_handler
+    async def count_admin_adjustments_in_progress(self) -> int:
+        """
+        Count the number of admin adjustments in progress.
+
+        Returns:
+            int: The number of admin adjustments in progress.
+        """
+        query = (
+            select(func.count())
+            .select_from(TransactionView)
+            .where(
+                TransactionView.transaction_type == TransactionViewTypeEnum.AdminAdjustment.value,
+                or_(
+                    TransactionView.status == TransferStatusEnum.Draft.value,
+                    TransactionView.status == TransferStatusEnum.Recommended.value
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none() or 0

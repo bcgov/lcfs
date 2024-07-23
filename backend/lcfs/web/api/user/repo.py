@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.UserRole import UserRole
-from lcfs.db.models.UserLoginHistory import UserLoginHistory
-from lcfs.db.models.Organization import Organization
-from lcfs.db.models.Role import Role, RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.UserRole import UserRole
+from lcfs.db.models.user.UserLoginHistory import UserLoginHistory
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,

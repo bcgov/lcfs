@@ -31,8 +31,10 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
 const Crumb = () => {
   const location = useLocation()
   const matches = useMatches()
-  const { userID, orgID } = useParams()
-  const pathnames = location.pathname.split('/').filter((x) => x)
+  const reportPathRegex = /^\d{4}-Compliance-report$/
+  const { userID, orgID, complianceReportId, compliancePeriod } = useParams()
+  const path = location.pathname.replace(`/compliance-reporting/${compliancePeriod}/${complianceReportId}`, `/compliance-reporting/${compliancePeriod}-Compliance-report`)
+  const pathnames = path.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
 
   // Mapping for custom breadcrumb labels and routes
@@ -42,7 +44,9 @@ const Crumb = () => {
     'add-org': { label: 'Add organization', route: '/add-org' },
     'edit-org': { label: 'Edit organization', route: '/edit-org' },
     'initiative-agreement': { label: 'Transactions', route: '/transactions' },
-    'admin-adjustment': { label: 'Transactions', route: '/transactions' }
+    'org-initiative-agreement': { label: 'Transactions', route: '/transactions' },
+    'admin-adjustment': { label: 'Transactions', route: '/transactions' },
+    'org-admin-adjustment': { label: 'Transactions', route: '/transactions' }
   }
 
   return (
@@ -74,8 +78,11 @@ const Crumb = () => {
         {pathnames.map((name, index) => {
           const isLast = index === pathnames.length - 1
           const customCrumb = customBreadcrumbs[name] || {}
-          const routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
-          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replace('-', ' ')
+          let routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
+          if (reportPathRegex.test(name)) {
+            routeTo = `compliance-reporting/${compliancePeriod}/${complianceReportId}` 
+          }
+          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
 
           return isLast ? (
             <StyledBreadcrumb

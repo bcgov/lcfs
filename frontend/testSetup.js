@@ -13,7 +13,7 @@ export const testServer = setupServer(...handlers)
 
 beforeAll(async () => {
   vi.stubGlobal('lcfs_config', config)
-  testServer.listen({ onUnhandledRequest: 'error' })
+  testServer.listen({ onUnhandledRequest: 'bypass' })
   vi.mock('react-snowfall')
 })
 

@@ -26,10 +26,11 @@ from lcfs.services.redis.dependency import get_redis_pool
 from lcfs.settings import settings
 from lcfs.web.application import get_app
 from lcfs.db.seeders.seed_database import seed_database
-from lcfs.db.models.Role import RoleEnum
-from lcfs.db.models.UserProfile import UserProfile
-from lcfs.db.models.UserRole import UserRole
-from lcfs.db.models.Role import Role
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.UserRole import UserRole
+from lcfs.db.models.user.Role import Role
+from lcfs.db.models.organization.Organization import Organization
 
 logging.getLogger('faker').setLevel(logging.INFO)
 
@@ -200,6 +201,12 @@ class MockAuthenticationBackend(AuthenticationBackend):
             last_name="User",
             is_active=True
         )
+
+        organization = Organization(
+            organization_id=1,
+            name="Test"
+        )
+        user.organization = organization
 
         # Create UserRole instances based on the RoleEnum members provided
         user.user_roles = [

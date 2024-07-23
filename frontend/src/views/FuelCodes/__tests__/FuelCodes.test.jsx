@@ -14,6 +14,28 @@ import { getByDataTest } from '@/tests/utils/testHelpers'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: () => ({
+    keycloak: {
+      token: 'mock-token',
+      authenticated: true,
+      initialized: true
+    }
+  })
+}))
+
+// Mocking Keycloak and Current User
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    data: {
+      roles: [
+        { name: 'Administrator' },
+        { name: 'Government' }
+      ]
+    }
+  })
+}))
+
 // Mock the specific import of BCDataGridServer
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   // Replace BCDataGridServer with a dummy component
@@ -21,16 +43,35 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   default: () => <div data-test="mockedBCDataGridServer"></div>
 }))
 
-// You need to mock the entire module where useApiService is exported
-vi.mock('@/services/useApiService', () => ({
-  useApiService: () => ({
-    download: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)))
-  })
-}))
+// Mock the specific import of useApiService
+vi.mock('@/services/useApiService', () => {
+  const mockDownload = vi.fn(() => Promise.resolve()) // Adjust as necessary for download
+  const mockPost = vi.fn(() =>
+    Promise.resolve({
+      data: {
+        pagination: {
+          total: 100, // Example total number of items
+          page: 1,   // Current page number
+        },
+        fuelCodes: [ // Array of items representing fuel codes
+          { fuelCodeId: '001', name: 'Fuel Code 1' },
+          { fuelCodeConsoleId: '002', name: 'Fuel Code 2' }
+        ]
+      }
+    })
+  )
 
-const renderComponent = () => {
+  return {
+    useApiService: () => ({
+      download: mockDownload,
+      post: mockPost
+    })
+  }
+})
+
+const WrapperComponent = () => {
   const queryClient = new QueryClient()
-  render(
+  return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <Router>
@@ -42,38 +83,35 @@ const renderComponent = () => {
 }
 
 describe('FuelCodes Component Tests', () => {
-  beforeEach(() => {
-    renderComponent()
-  })
-
   afterEach(() => {
     cleanup()
     vi.resetAllMocks() // Reset mocks to their initial state after each test
   })
 
   test('renders title correctly', () => {
-    const { getByTestId } = render(<FuelCodes />, { wrapper: Router })
-    const title = getByTestId('title')
+    render(WrapperComponent())
+    const title = screen.getByTestId('title');
+    expect(title).toBeInTheDocument();
     expect(title.textContent).toBe('Fuel codes')
   })
 
   test('clicking new fuel code button redirects to add page', () => {
-    const { getByTestId } = render(<FuelCodes />, { wrapper: Router })
+    const { getByTestId } = render(WrapperComponent())
     const newFuelCodeBtn = getByTestId('new-fuel-code-btn')
     fireEvent.click(newFuelCodeBtn)
-    expect(window.location.pathname).toBe('/admin/fuel-codes/add')
+    expect(window.location.pathname).toBe('/admin/fuel-codes/add-fuel-code')
   })
 
   test('displays alert message on download failure', async () => {
     // Mocking API service to simulate download failure
     const mockApiService = {
-      download: jest.fn().mockRejectedValue(new Error('Download failed'))
+      download: vi.fn().mockRejectedValue(new Error('Download failed'))
     }
-    jest.mock('@/services/useApiService', () => ({
+    vi.mock('@/services/useApiService', () => ({
       useApiService: () => mockApiService
     }))
 
-    const { getByTestId } = render(<FuelCodes />, { wrapper: Router })
+    const { getByTestId } = render(WrapperComponent())
     const downloadBtn = getByTestId('fuel-code-download-btn')
     fireEvent.click(downloadBtn)
 
@@ -86,6 +124,10 @@ describe('FuelCodes Component Tests', () => {
   })
 
   describe('Download fuel codes information', () => {
+    beforeEach(() => {
+      render(WrapperComponent())
+    })
+
     it('initially shows the download fuel codes button with correct text and enabled', () => {
       const downloadButton = getByDataTest('fuel-code-download-btn')
       expect(downloadButton).toBeInTheDocument()
@@ -93,6 +135,13 @@ describe('FuelCodes Component Tests', () => {
     })
 
     it('shows downloading text and disables the download fuel codes button during download', async () => {
+      const mockApiService = {
+        download: vi.fn(() => new Promise(() => {})), // Unresolving promise
+      }
+      vi.mock('@/services/useApiService', () => ({
+        useApiService: () => mockApiService
+      }))
+
       const downloadButton = getByDataTest('fuel-code-download-btn')
       fireEvent.click(downloadButton)
 
@@ -101,9 +150,9 @@ describe('FuelCodes Component Tests', () => {
         expect(downloadButton).toHaveTextContent(
           /Downloading fuel codes information.../i
         )
+        // Then, check if the button gets disabled
+        expect(downloadButton).toBeDisabled()
       })
-      // Then, check if the button gets disabled
-      expect(downloadButton).toBeDisabled()
     })
 
     it('shows an error message if the download fuel codes fails', async () => {
@@ -114,7 +163,7 @@ describe('FuelCodes Component Tests', () => {
       }))
 
       cleanup()
-      renderComponent()
+      render(WrapperComponent())
 
       const downloadButton = getByDataTest('fuel-code-download-btn')
       fireEvent.click(downloadButton)

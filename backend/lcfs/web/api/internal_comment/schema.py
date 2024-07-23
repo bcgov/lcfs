@@ -14,8 +14,8 @@ class BaseConfig:
 # --------------------------------------
 class EntityTypeEnum(str, Enum):
     TRANSFER = "Transfer"
-    INITIATIVE_AGREEMENT = "InitiativeAgreement"
-    ADMIN_ADJUSTMENT = "AdminAdjustment"
+    INITIATIVE_AGREEMENT = "initiativeAgreement"
+    ADMIN_ADJUSTMENT = "administrativeAdjustment"
     ASSESSMENT = "Assessment"
 
 class AudienceScopeEnum(str, Enum):
