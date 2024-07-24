@@ -20,16 +20,16 @@ jobs:
       IDIR_TEST_PASS: ${{ secrets.IDIR_TEST_PASS }},
       BCEID_TEST_USER: ${{ secrets.BCEID_TEST_USER }},
       BCEID_TEST_PASS: ${{ secrets.BCEID_TEST_PASS }},
-      admin_idir_username: ${{ secrets.admin_idir_username }},
-      admin_idir_password: ${{ secrets.admin_idir_password }},
-      org1_bceid_username: ${{ secrets.org1_bceid_username }},
-      org1_bceid_password: ${{ secrets.org1_bceid_password }},
-      org1_bceid_id: ${{ secrets.org1_bceid_id }},
-      org1_bceid_userId: ${{ secrets.org1_bceid_userId }},
-      org2_bceid_username: ${{ secrets.org2_bceid_username }},
-      org2_bceid_password: ${{ secrets.org2_bceid_password }},
-      org2_bceid_id: ${{ secrets.org2_bceid_id }},
-      org2_bceid_userId: ${{ secrets.org2_bceid_userId }}
+      admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }},
+      admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }},
+      org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }},
+      org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }},
+      org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }},
+      org1_bceid_userId: ${{ secrets.ORG1_BCEID_USERID }},
+      org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }},
+      org2_bceid_password: ${{ secrets.ORG2_BCEID_PASSWORD }},
+      org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }},
+      org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
     steps:
       # Checkout the PR branch
       - name: Checkout Target Branch
