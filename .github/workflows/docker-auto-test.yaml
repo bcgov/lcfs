@@ -1,0 +1,109 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches:
+      - '*'  # This will trigger the workflow for PRs to any branch
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14.2
+        env:
+          POSTGRES_DB: lcfs
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      redis:
+        image: bitnami/redis:6.2.5
+        env:
+          REDIS_PASSWORD: development_only
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}  # This checks out the PR branch
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+
+    - name: Run backend tests
+      run: |
+        cd backend
+        pytest
+      env:
+        LCFS_DB_HOST: localhost
+        LCFS_DB_PORT: 5432
+        LCFS_DB_USER: lcfs
+        LCFS_DB_PASS: development_only
+        LCFS_DB_BASE: lcfs
+        LCFS_REDIS_HOST: localhost
+        LCFS_REDIS_PORT: 6379
+        LCFS_REDIS_PASSWORD: development_only
+        APP_ENVIRONMENT: test
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test
+
+    - name: Build and start services
+      run: docker-compose up -d
+    - name: Debug Secrets
+      run: |
+        echo "ADMIN_IDIR_USERNAME is set: ${{ secrets.ADMIN_IDIR_USERNAME != '' }}"
+        echo "ADMIN_IDIR_PASSWORD is set: ${{ secrets.ADMIN_IDIR_PASSWORD != '' }}"
+        echo "ORG1_BCEID_USERNAME is set: ${{ secrets.ORG1_BCEID_USERNAME != '' }}"
+        echo "ORG1_BCEID_PASSWORD is set: ${{ secrets.ORG1_BCEID_PASSWORD != '' }}"
+        echo "ORG1_BCEID_ID is set: ${{ secrets.ORG1_BCEID_ID != '' }}"
+        echo "ORG1_BCEID_USERID is set: ${{ secrets.ORG1_BCEID_USERID != '' }}"
+        echo "ORG2_BCEID_USERNAME is set: ${{ secrets.ORG2_BCEID_USERNAME != '' }}"
+        echo "ORG2_BCEID_PASSWORD is set: ${{ secrets.ORG2_BCEID_PASSWORD != '' }}"
+        echo "ORG2_BCEID_ID is set: ${{ secrets.ORG2_BCEID_ID != '' }}"
+        echo "ORG2_BCEID_USERID is set: ${{ secrets.ORG2_BCEID_USERID != '' }}"
+    - name: Run Cypress tests
+      uses: cypress-io/github-action@v5
+      with:
+        command: npm run test:e2e
+        wait-on: 'http://localhost:3000, http://localhost:8000'
+        working-directory: frontend
+      env:
+        admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
+        admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+        org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
+        org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }}
+        org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }}
+        org1_bceid_userId: ${{ secrets.ORG1_BCEID_USERID }}
+        org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }}
+        org2_bceid_password: ${{ secrets.ORG2_BCEID_PASSWORD }}
+        org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }}
+        org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
+
+    - name: Stop services
+      if: always()
+      run: docker-compose down
