@@ -6,7 +6,6 @@ import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useFuelCodeOptions, useSaveFuelCode } from '@/hooks/useFuelCode'
-import { useApiService } from '@/services/useApiService'
 import withRole from '@/utils/withRole'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -27,9 +26,8 @@ const AddFuelCodeBase = () => {
   const { t } = useTranslation(['common', 'fuelCode'])
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
   const { mutateAsync: saveRow } = useSaveFuelCode()
-  const apiService = useApiService()
+  const [errors, setErrors] = useState({})
 
-  const gridKey = 'add-fuel-code'
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
@@ -50,15 +48,9 @@ const AddFuelCodeBase = () => {
       })
     }
   }, [location.state])
+
   const onGridReady = useCallback((params) => {
-    const cachedRowData = JSON.parse(localStorage.getItem(gridKey))
-    if (cachedRowData && cachedRowData.length > 0) {
-      setRowData(cachedRowData)
-    } else {
-      const id = uuid()
-      const emptyRow = { id }
-      setRowData([emptyRow])
-    }
+    setRowData([{ id: uuid() }])
     params.api.sizeColumnsToFit()
   }, [])
 
@@ -73,7 +65,7 @@ const AddFuelCodeBase = () => {
 
       let updatedData = params.data
 
-      if (params.data.fuelCode !== undefined) {
+      if (params.data.fuelCode !== undefined && params.data.fuelCode) {
         const fuelCodeData = optionsData.latestFuelCodes.find(
           (fuelCode) =>
             fuelCode.fuelCode.split('.')[0] ===
@@ -125,7 +117,16 @@ const AddFuelCodeBase = () => {
         }
       }
 
+      // clean up any null or empty string values
+      updatedData = Object.entries(updatedData)
+        .filter(([, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => {
+          acc[key] = value
+          return acc
+        }, {})
+
       try {
+        setErrors({})
         await saveRow(updatedData)
         updatedData = {
           ...updatedData,
@@ -137,6 +138,11 @@ const AddFuelCodeBase = () => {
           severity: 'success'
         })
       } catch (error) {
+        const errArr = {
+          [params.data.id]: error.response.data.detail.map((err) => err.loc[1])
+        }
+        setErrors(errArr)
+
         updatedData = {
           ...updatedData,
           validationStatus: 'error'
@@ -188,10 +194,13 @@ const AddFuelCodeBase = () => {
       }
     }
     if (action === 'duplicate') {
+      const newRowID = uuid()
       const rowData = {
         ...params.data,
-        id: uuid(),
+        id: newRowID,
         fuelCodeId: null,
+        fuelCode: null,
+        validationStatus: 'error',
         modified: true
       }
 
@@ -199,26 +208,13 @@ const AddFuelCodeBase = () => {
         add: [rowData],
         addIndex: params.node?.rowIndex + 1
       })
-      if (params.data.fuelCodeId) {
-        saveRow(rowData, {
-          onSuccess: (resp) => {
-            params.api.refreshCells()
-            rowData.modified = false
-            params.data.validationStatus = 'error'
-            alertRef.current?.triggerAlert({
-              message: 'Row duplicated successfully.',
-              severity: 'success'
-            })
-          },
-          onError: (error) => {
-            params.data.validationStatus = 'error'
-            alertRef.current?.triggerAlert({
-              message: `Error deleting row: ${error.message}`,
-              severity: 'error'
-            })
-          }
-        })
-      }
+
+      setErrors({ [newRowID]: 'fuelCode' })
+
+      alertRef.current?.triggerAlert({
+        message: 'Error updating row: Fuel code Field required',
+        severity: 'error'
+      })
     }
   }
 
@@ -237,7 +233,7 @@ const AddFuelCodeBase = () => {
         </div>
         <BCGridEditor
           gridRef={gridRef}
-          columnDefs={fuelCodeColDefs(t, optionsData, apiService)}
+          columnDefs={fuelCodeColDefs(optionsData, errors)}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}

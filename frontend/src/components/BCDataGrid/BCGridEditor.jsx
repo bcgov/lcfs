@@ -91,13 +91,6 @@ export const BCGridEditor = ({
     [onCellValueChanged]
   )
 
-  const onFirstDataRendered = useCallback((params) => {
-    params.api.startEditingCell({
-      rowIndex: 0,
-      colKey: params.api.getDisplayedCenterColumns()[0].colId
-    })
-  }, [])
-
   const onCellClicked = (params) => {
     if (
       params.column.colId === 'action' &&
@@ -114,7 +107,6 @@ export const BCGridEditor = ({
         ref={ref}
         className="ag-theme-quartz"
         onCellValueChanged={handleOnCellValueChanged}
-        onFirstDataRendered={onFirstDataRendered}
         undoRedoCellEditing
         undoRedoCellEditingLimit={5}
         enableBrowserTooltips

@@ -38,6 +38,7 @@ export const BCGridViewer = ({
   const [sortModel, setSortModel] = useState(defaultSortModel)
   const [filterModel, setFilterModel] = useState(defaultFilterModel)
 
+  // TODO: remove this dependency. instead, feed this component with the data that the query would return. page,size,sortmodel,filtermodel are dependencies so figure out a way to extract that out of the component or just move those out to the parent component.
   const { data, error, isError, isLoading } = query(
     {
       page,

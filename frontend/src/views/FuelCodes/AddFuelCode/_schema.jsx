@@ -2,6 +2,7 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
   AutocompleteEditor,
+  DateEditor,
   HeaderComponent
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
@@ -9,43 +10,45 @@ import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
 import * as yup from 'yup'
+import i18n from '@/i18n'
 
-export const fuelCodeSchema = (t, optionsData) =>
+// TODO: remove this. we are moving to serverside validation. make sure there are no components that use this
+export const fuelCodeSchema = (optionsData) =>
   yup.object().shape({
     prefix: yup
       .string()
       .oneOf(
         optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
-        t('fuelCode:validateMsg.prefix')
+        i18n.t('fuelCode:validateMsg.prefix')
       )
       .required(
-        t('fuelCode:validateMsg.isRequired', {
-          field: t('fuelCode:fuelCodeColLabels.prefix')
+        i18n.t('fuelCode:validateMsg.isRequired', {
+          field: i18n.t('fuelCode:fuelCodeColLabels.prefix')
         })
       ),
     fuelCode: yup.number().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.fuelCode')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.fuelCode')
       })
     ),
     company: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.company')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.company')
       })
     ),
     carbonIntensity: yup.number().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.carbonIntensity')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.carbonIntensity')
       })
     ),
     edrms: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.edrms')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.edrms')
       })
     ),
     applicationDate: yup.date().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.applicationDate')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.applicationDate')
       })
     ),
     fuel: yup
@@ -54,43 +57,60 @@ export const fuelCodeSchema = (t, optionsData) =>
         optionsData.fuelTypes
           .filter((fuel) => !fuel.fossilDerived)
           .map((obj) => obj.fuelType),
-        t('fuelCode:validateMsg.fuel')
+        i18n.t('fuelCode:validateMsg.fuel')
       )
       .required(
-        t('fuelCode:validateMsg.isRequired', {
-          field: t('fuelCode:fuelCodeColLabels.fuel')
+        i18n.t('fuelCode:validateMsg.isRequired', {
+          field: i18n.t('fuelCode:fuelCodeColLabels.fuel')
         })
       ),
     feedstock: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.feedstock')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.feedstock')
       })
     ),
     feedstockLocation: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.feedstockLocation')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.feedstockLocation')
       })
     ),
     fuelProductionFacilityCity: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity')
       })
     ),
     fuelProductionFacilityProvinceState: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t(
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t(
           'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
         )
       })
     ),
     fuelProductionFacilityCountry: yup.string().required(
-      t('fuelCode:validateMsg.isRequired', {
-        field: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry')
+      i18n.t('fuelCode:validateMsg.isRequired', {
+        field: i18n.t(
+          'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
+        )
       })
     )
   })
 
-export const fuelCodeColDefs = (t, optionsData, client) => [
+const cellErrorStyle = (params, errors) => {
+  if (
+    errors[params.data.id] &&
+    errors[params.data.id].includes(params.colDef.field)
+  ) {
+    return {
+      borderColor: 'red'
+    }
+  } else {
+    return {
+      borderColor: 'unset'
+    }
+  }
+}
+
+export const fuelCodeColDefs = (optionsData, errors) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -105,26 +125,37 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   {
     field: 'prefix',
     headerComponent: HeaderComponent,
-    headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-    cellEditor: 'agSelectCellEditor',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
+    cellEditor: AutocompleteEditor,
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditorParams: {
-      values: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix)
+      options: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix),
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
     },
-    minWidth: 135,
-    valueGetter: (params) => params.data.prefix || 'BCLCF'
+    cellStyle: (params) => cellErrorStyle(params, errors),
+    suppressKeyboardEvent,
+    minWidth: 135
+    // valueGetter: (params) => params.data.prefix || 'BCLCF'
   },
   {
     field: 'fuelCode',
     headerComponent: HeaderComponent,
-    headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'text',
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
+    cellStyle: (params) => cellErrorStyle(params, errors),
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
+      // TODO: move these react query params out of here.
       queryKey: 'fuel-code-search',
-      queryFn: async ({ queryKey }) => {
+      queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
         path +=
           'prefix=' +
@@ -138,48 +169,46 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       title: 'fuelCode'
     }),
     suppressKeyboardEvent,
-    valueGetter: (params) => {
-      if (!params.data.fuelCode) {
-        const prefix = params.data.prefix || 'BCLCF'
-        return optionsData?.fuelCodePrefixes?.find(
-          (obj) => obj.prefix === prefix
-        )?.nextFuelCode
-      }
-      return params.data.fuelCode
-    },
+    // valueGetter: (params) => {
+    //   if (!params.data.fuelCode) {
+    //     const prefix = params.data.prefix || 'BCLCF'
+    //     return optionsData?.fuelCodePrefixes?.find(
+    //       (obj) => obj.prefix === prefix
+    //     )?.nextFuelCode
+    //   }
+    //   return params.data.fuelCode
+    // },
     tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
     field: 'carbonIntensity',
     headerComponent: HeaderComponent,
-    headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
       precision: 2,
       showStepperButtons: false
     },
-    cellStyle: (params) => {
-      if (params.data.modified && params.data.carbonIntensity === '')
-        return { borderColor: 'red' }
-    },
+    cellStyle: (params) => cellErrorStyle(params, errors),
     type: 'numericColumn'
   },
   {
     field: 'edrms',
     headerComponent: HeaderComponent,
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellDataType: 'text'
+    cellDataType: 'text',
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'company',
     headerComponent: HeaderComponent,
-    headerName: t('fuelCode:fuelCodeColLabels.company'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.company'),
     cellDataType: 'text',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'company-name-search',
-      queryFn: async ({ queryKey }) => {
+      queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
         path += 'company=' + queryKey[1]
         const response = await client.get(path)
@@ -187,6 +216,7 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       },
       title: 'company'
     }),
+    cellStyle: (params) => cellErrorStyle(params, errors),
     valueSetter: (params) => {
       params.data.company = params.newValue
       if (params.newValue === '') {
@@ -200,12 +230,12 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'contactName',
-    headerName: t('fuelCode:fuelCodeColLabels.contactName'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.contactName'),
     cellEditor: AsyncSuggestionEditor,
     cellDataType: 'text',
     cellEditorParams: (params) => ({
       queryKey: 'contact-name-search',
-      queryFn: async ({ queryKey }) => {
+      queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
         path += 'company=' + params.data.company + '&contactName=' + queryKey[1]
         const response = await client.get(path)
@@ -219,12 +249,12 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'contactEmail',
-    headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.contactEmail'),
     cellEditor: AsyncSuggestionEditor,
     cellDataType: 'text',
     cellEditorParams: (params) => ({
       queryKey: 'contact-email-search',
-      queryFn: async ({ queryKey }) => {
+      queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
         path +=
           'company=' +
@@ -245,7 +275,7 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
 
   {
     field: 'applicationDate',
-    headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.applicationDate'),
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: (params) => (
@@ -254,11 +284,12 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellEditor: 'dateEditor'
+    cellEditor: DateEditor,
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'approvalDate',
-    headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.approvalDate'),
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: (params) => (
@@ -267,11 +298,11 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellEditor: 'dateEditor'
+    cellEditor: DateEditor
   },
   {
     field: 'effectiveDate',
-    headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.effectiveDate'),
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: (params) => (
@@ -280,11 +311,11 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellEditor: 'dateEditor'
+    cellEditor: DateEditor
   },
   {
     field: 'expirationDate',
-    headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.expiryDate'),
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: (params) => (
@@ -293,11 +324,11 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellEditor: 'dateEditor'
+    cellEditor: DateEditor
   },
   {
     field: 'fuel',
-    headerName: t('fuelCode:fuelCodeColLabels.fuel'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -316,8 +347,8 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'feedstock',
-    headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstock'),
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: (params) =>
@@ -331,14 +362,16 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       freeSolo: true,
       openOnFocus: true
     },
+    cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 300
   },
   {
     field: 'feedstockLocation',
-    headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockLocation'),
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
+    cellStyle: (params) => cellErrorStyle(params, errors),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -354,8 +387,8 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'feedstockMisc',
-    headerName: t('fuelCode:fuelCodeColLabels.misc'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.misc'),
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: (params) =>
@@ -373,13 +406,14 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'fuelProductionFacilityCity',
-    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
+    cellStyle: (params) => cellErrorStyle(params, errors),
     cellEditorParams: {
       onDynamicUpdate: (val, params) => params.api.stopEditing(),
       noLabel: true,
@@ -400,10 +434,10 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'fuelProductionFacilityProvinceState',
-    headerName: t(
+    headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
-    cellEditor: 'autocompleteEditor',
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: (params) =>
@@ -425,12 +459,15 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       freeSolo: true,
       openOnFocus: true
     },
+    cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 325
   },
   {
     field: 'fuelProductionFacilityCountry',
-    headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t(
+      'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
+    ),
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: (params) =>
@@ -451,11 +488,12 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       freeSolo: true,
       openOnFocus: true
     },
+    cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 325
   },
   {
     field: 'facilityNameplateCapacity',
-    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
     cellEditor: 'agNumberCellEditor',
     type: 'numericColumn',
     cellEditorParams: {
@@ -467,7 +505,9 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'facilityNameplateCapacityUnit',
-    headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
+    headerName: i18n.t(
+      'fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'
+    ),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -480,19 +520,11 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellStyle: (params) => {
-      if (
-        params.data.modified &&
-        params.data.facilityNameplateCapacity &&
-        (!params.value || params.value === '')
-      )
-        return { borderColor: 'red' }
-    },
     minWidth: 300
   },
   {
     field: 'feedstockTransportMode',
-    headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
       params.value ? (
@@ -514,7 +546,7 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'finishedFuelTransportMode',
-    headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
       params.value ? (
@@ -536,8 +568,8 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'formerCompany',
-    headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.formerCompany'),
+    cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
@@ -552,7 +584,7 @@ export const fuelCodeColDefs = (t, optionsData, client) => [
   },
   {
     field: 'notes',
-    headerName: t('fuelCode:fuelCodeColLabels.notes'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.notes'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     minWidth: 600

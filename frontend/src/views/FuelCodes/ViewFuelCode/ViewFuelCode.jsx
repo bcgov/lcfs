@@ -107,7 +107,7 @@ const ViewFuelCodeBase = () => {
 
   const validationHandler = async (row) => {
     try {
-      await addEditSchema.fuelCodeSchema(t, optionsData).validate(row.data)
+      await addEditSchema.fuelCodeSchema(optionsData).validate(row.data)
       setAlertMessage(`Validated fuel code`)
       setAlertSeverity('success')
       row.setData({
