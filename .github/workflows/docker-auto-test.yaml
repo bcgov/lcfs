@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Testing pipeline
 
 on:
   pull_request:
@@ -101,7 +101,7 @@ jobs:
       continue-on-error: true
       run: |
         cd frontend
-        npm run test -- --reporter=junit --outputFile=vitest-results.xml
+        npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
       env:
         CI: true
 
@@ -118,7 +118,7 @@ jobs:
       uses: cypress-io/github-action@v5
       with:
         command: npm run cypress:run -- --reporter junit --reporter-options "mochaFile=cypress-results/results-[hash].xml"
-        wait-on: 'http://localhost:3000, http://localhost:8000'
+        wait-on: 'http://localhost:3000'
         working-directory: frontend
       env:
         admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
