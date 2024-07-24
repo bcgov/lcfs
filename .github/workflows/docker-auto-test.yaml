@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Testing pipeline
 
 on:
   pull_request:
@@ -79,7 +79,9 @@ jobs:
       run: |
         cd frontend
         npm test
-
+    - name: Fix docker-compose.yml
+      run: |
+          sed -i 's/LCFS_RELOAD: true/LCFS_RELOAD: "true"/' docker-compose.yml
     - name: Build and start services
       run: |
         docker-compose build
