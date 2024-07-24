@@ -86,7 +86,6 @@ export const BCGridEditor = ({
       if (onCellValueChanged) {
         onCellValueChanged(params)
       }
-      params.api.refreshCells()
     },
     [onCellValueChanged]
   )

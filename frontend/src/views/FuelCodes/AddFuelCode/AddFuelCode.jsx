@@ -56,69 +56,17 @@ const AddFuelCodeBase = () => {
 
   const onCellEditingStopped = useCallback(
     async (params) => {
-      params.node.updateData({ validationStatus: 'pending' })
+      if (params.oldValue === params.newValue) return
+
+      params.node.updateData({ ...params.data, validationStatus: 'pending' })
 
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
         severity: 'pending'
       })
 
-      let updatedData = params.data
-
-      if (params.data.fuelCode !== undefined && params.data.fuelCode) {
-        const fuelCodeData = optionsData.latestFuelCodes.find(
-          (fuelCode) =>
-            fuelCode.fuelCode.split('.')[0] ===
-            params.data.fuelCode.split('.')[0]
-        )
-
-        updatedData = {
-          ...updatedData,
-          prefix: fuelCodeData.fuelCodePrefix.prefix,
-          company: fuelCodeData.company,
-          fuel: fuelCodeData.fuelCodeType.fuelType,
-          feedstock: fuelCodeData.feedstock,
-          feedstockLocation: fuelCodeData.feedstockLocation,
-          feedstockMisc: fuelCodeData.feedstockMisc,
-          feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
-            (mode) => mode.feedstockFuelTransportMode.transportMode
-          ),
-          finishedFuelTransportMode:
-            fuelCodeData.finishedFuelTransportModes.map(
-              (mode) => mode.finishedFuelTransportMode.transportMode
-            ),
-          formerCompany: fuelCodeData.formerCompany,
-          contactName: fuelCodeData.contactName,
-          contactEmail: fuelCodeData.contactEmail
-        }
-      }
-      if (params.data.fuelProductionFacilityCity !== undefined) {
-        const location = optionsData.fpLocations.find(
-          (location) =>
-            location.fuelProductionFacilityCity ===
-            params.data.fuelProductionFacilityCity
-        )
-        updatedData = {
-          ...updatedData,
-          fuelProductionFacilityProvinceState:
-            location.fuelProductionFacilityProvinceState,
-          fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
-        }
-      }
-      if (params.data.fuelProductionFacilityProvinceState) {
-        const location = optionsData.fpLocations.find(
-          (location) =>
-            location.fuelProductionFacilityProvinceState ===
-            params.data.fuelProductionFacilityProvinceState
-        )
-        updatedData = {
-          ...updatedData,
-          fuelProductionFacilityCountry: location.fuelProductionFacilityCountry
-        }
-      }
-
       // clean up any null or empty string values
-      updatedData = Object.entries(updatedData)
+      let updatedData = Object.entries(params.data)
         .filter(([, value]) => value !== null && value !== '')
         .reduce((acc, [key, value]) => {
           acc[key] = value
@@ -170,7 +118,7 @@ const AddFuelCodeBase = () => {
 
       params.node.updateData(updatedData)
     },
-    [optionsData, saveRow, t]
+    [saveRow, t]
   )
 
   const onAction = async (action, params) => {

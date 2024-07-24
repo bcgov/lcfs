@@ -10,15 +10,15 @@ import {
   TextField
 } from '@mui/material'
 import PropTypes from 'prop-types'
-import { forwardRef, useState } from 'react'
+import { useState } from 'react'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
 const checkedIcon = <CheckBoxIcon fontSize="medium" />
 
-export const AutocompleteEditor = forwardRef((props, ref) => {
+export const AutocompleteEditor = (props) => {
   const {
     value,
-    apiFn = () => ({ data: props.options, isLoading: false, isFetched: true }),
+
     options = [],
     onValueChange,
     limitTags = 2,
@@ -184,7 +184,7 @@ export const AutocompleteEditor = forwardRef((props, ref) => {
       />
     </BCBox>
   )
-})
+}
 
 AutocompleteEditor.propTypes = {
   value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),

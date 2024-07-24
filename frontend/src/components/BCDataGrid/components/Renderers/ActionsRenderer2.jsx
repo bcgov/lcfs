@@ -45,7 +45,7 @@ export const ActionsRenderer2 = (props) => {
           </IconButton>
         </Tooltip>
       )}
-      {props.enableDelete && !isCurrentRowEditing && (
+      {props.enableDelete && (
         <Tooltip title="Delete">
           <IconButton
             aria-label="delete row"

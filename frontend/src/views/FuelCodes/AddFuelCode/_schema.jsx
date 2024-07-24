@@ -56,7 +56,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
     minWidth: 135
-    // valueGetter: (params) => params.data.prefix || 'BCLCF'
   },
   {
     field: 'fuelCode',
@@ -85,16 +84,36 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       title: 'fuelCode'
     }),
     suppressKeyboardEvent,
-    // valueGetter: (params) => {
-    //   if (!params.data.fuelCode) {
-    //     const prefix = params.data.prefix || 'BCLCF'
-    //     return optionsData?.fuelCodePrefixes?.find(
-    //       (obj) => obj.prefix === prefix
-    //     )?.nextFuelCode
-    //   }
-    //   return params.data.fuelCode
-    // },
-    tooltipValueGetter: (p) => 'select the next fuel code version'
+    tooltipValueGetter: (p) => 'select the next fuel code version',
+    valueSetter: (params) => {
+      params.data.fuelCode = params.newValue
+
+      const fuelCodeData = optionsData.latestFuelCodes.find(
+        (fuelCode) =>
+          fuelCode.fuelCode.split('.')[0] === params.newValue.split('.')[0]
+      )
+
+      params.data.prefix = fuelCodeData.fuelCodePrefix.prefix
+      params.data.company = fuelCodeData.company
+      params.data.fuel = fuelCodeData.fuelCodeType.fuelType
+      params.data.feedstock = fuelCodeData.feedstock
+      params.data.feedstockLocation = fuelCodeData.feedstockLocation
+      params.data.feedstockMisc = fuelCodeData.feedstockMisc
+      params.data.feedstockTransportMode =
+        fuelCodeData.feedstockFuelTransportModes.map(
+          (mode) => mode.feedstockFuelTransportMode.transportMode
+        )
+
+      params.data.finishedFuelTransportMode =
+        fuelCodeData.finishedFuelTransportModes.map(
+          (mode) => mode.finishedFuelTransportMode.transportMode
+        )
+      params.data.formerCompany = fuelCodeData.formerCompany
+      params.data.contactName = fuelCodeData.contactName
+      params.data.contactEmail = fuelCodeData.contactEmail
+
+      return true
+    }
   },
   {
     field: 'carbonIntensity',
@@ -346,7 +365,21 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       freeSolo: true,
       openOnFocus: true
     },
-    minWidth: 325
+    minWidth: 325,
+    valueSetter: (params) => {
+      params.data.fuelProductionFacilityCity = params.newValue
+
+      const location = optionsData.fpLocations.find(
+        (location) => location.fuelProductionFacilityCity === params.newValue
+      )
+
+      params.data.fuelProductionFacilityProvinceState =
+        location.fuelProductionFacilityProvinceState
+      params.data.fuelProductionFacilityCountry =
+        location.fuelProductionFacilityCountry
+
+      return true
+    }
   },
   {
     field: 'fuelProductionFacilityProvinceState',
@@ -376,7 +409,19 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       openOnFocus: true
     },
     cellStyle: (params) => cellErrorStyle(params, errors),
-    minWidth: 325
+    minWidth: 325,
+    valueSetter: (params) => {
+      params.data.fuelProductionFacilityProvinceState = params.newValue
+
+      const location = optionsData.fpLocations.find(
+        (location) =>
+          location.fuelProductionFacilityProvinceState === params.newValue
+      )
+      params.data.fuelProductionFacilityCountry =
+        location.fuelProductionFacilityCountry
+
+      return true
+    }
   },
   {
     field: 'fuelProductionFacilityCountry',
