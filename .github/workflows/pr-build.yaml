@@ -9,7 +9,7 @@ env:
   GIT_URL: https://github.com/bcgov/lcfs.git 
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
-  PRE_RELEASE: ${{ github.event.pull_request.number }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
   GIT_REF: ${{ github.event.pull_request.head.ref }}
 
 concurrency:
@@ -36,7 +36,7 @@ jobs:
           pwd
           ls -la
           cat .github/workflows/pr-build.yaml
-          echo ${{ env.PRE_RELEASE }}
+          echo ${{ env.PR_NUMBER }}
           echo ${{ env.GIT_URL }}
           echo ${{ env.GIT_REF }}
 
@@ -51,15 +51,56 @@ jobs:
       - name: Build LCFS Backend
         run: |
           cd openshift/templates
-          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
           sleep 5s
-          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.VERSION }}-${{ env.PR_NUMBER }}-1
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
 
       - name: Build LCFS Frontend
         run: |
           cd openshift/templates
-          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
           sleep 5s
-          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }}-1
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }}-1
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
+
+          
+  deploy:
+    if: contains(github.event.pull_request.labels.*.name, 'build')
+    name: Deploy LCFS
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [build]
+
+    steps:
+      
+      - name: Checkout Manifest repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: bcgov-c/tenant-gitops-d2bd59
+          ref: main
+          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+      
+      - name: Update frontend tag
+        uses: mikefarah/yq@v4.40.5
+        with:
+            cmd: |
+                yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+                yq -i '.route.host = "lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+                yq -i '.volumes[0].configMap.name = "lcfs-frontend-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+                yq -i '.apiBase = "https://lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/api"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+                yq -i '.keycloak.postLogoutUrl = "https://lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+                yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i '.env.LCFS_DB_HOST = "lcfs-postgresql-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i '.env.LCFS_REDIS_HOST = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+
+      - name: GitHub Commit & Push
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+          git add lcfs/charts/lcfs-backend/values-dev-pr.yaml
+          git commit -m "Pull request build for ${{ env.VERSION }}-${{ env.PR_NUMBER }}"
+          git push
+      
