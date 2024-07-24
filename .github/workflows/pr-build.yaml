@@ -101,8 +101,8 @@ jobs:
                 yq -i '.keycloak.postLogoutUrl = "https://lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
                 yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i '.env.LCFS_DB_HOST = "lcfs-postgresql-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i '.env.LCFS_REDIS_HOST = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgresql-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
 
       # There is no need to push the changes back to deployment repo as argocd is not used for the pr build deployment
       # - name: GitHub Commit & Push
