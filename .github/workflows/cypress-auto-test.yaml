@@ -16,10 +16,6 @@ jobs:
     # In order for Cypress to run well, it needs to be fed the needed parameters.
     # The below is a mix of Cypress environment variables (All capital) and ones that are needed for this specific set of scripts (Mix of capital and lowercase)
     env:
-      IDIR_TEST_USER: ${{ secrets.IDIR_TEST_USER }},
-      IDIR_TEST_PASS: ${{ secrets.IDIR_TEST_PASS }},
-      BCEID_TEST_USER: ${{ secrets.BCEID_TEST_USER }},
-      BCEID_TEST_PASS: ${{ secrets.BCEID_TEST_PASS }},
       admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }},
       admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }},
       org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }},
