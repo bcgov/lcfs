@@ -6,94 +6,10 @@ import {
   HeaderComponent
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
+import i18n from '@/i18n'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
-import * as yup from 'yup'
-import i18n from '@/i18n'
-
-// TODO: remove this. we are moving to serverside validation. make sure there are no components that use this
-export const fuelCodeSchema = (optionsData) =>
-  yup.object().shape({
-    prefix: yup
-      .string()
-      .oneOf(
-        optionsData.fuelCodePrefixes.map((obj) => obj.prefix),
-        i18n.t('fuelCode:validateMsg.prefix')
-      )
-      .required(
-        i18n.t('fuelCode:validateMsg.isRequired', {
-          field: i18n.t('fuelCode:fuelCodeColLabels.prefix')
-        })
-      ),
-    fuelCode: yup.number().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.fuelCode')
-      })
-    ),
-    company: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.company')
-      })
-    ),
-    carbonIntensity: yup.number().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.carbonIntensity')
-      })
-    ),
-    edrms: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.edrms')
-      })
-    ),
-    applicationDate: yup.date().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.applicationDate')
-      })
-    ),
-    fuel: yup
-      .string()
-      .oneOf(
-        optionsData.fuelTypes
-          .filter((fuel) => !fuel.fossilDerived)
-          .map((obj) => obj.fuelType),
-        i18n.t('fuelCode:validateMsg.fuel')
-      )
-      .required(
-        i18n.t('fuelCode:validateMsg.isRequired', {
-          field: i18n.t('fuelCode:fuelCodeColLabels.fuel')
-        })
-      ),
-    feedstock: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.feedstock')
-      })
-    ),
-    feedstockLocation: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.feedstockLocation')
-      })
-    ),
-    fuelProductionFacilityCity: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity')
-      })
-    ),
-    fuelProductionFacilityProvinceState: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t(
-          'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
-        )
-      })
-    ),
-    fuelProductionFacilityCountry: yup.string().required(
-      i18n.t('fuelCode:validateMsg.isRequired', {
-        field: i18n.t(
-          'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
-        )
-      })
-    )
-  })
 
 const cellErrorStyle = (params, errors) => {
   if (
