@@ -56,6 +56,7 @@ jobs:
         cd backend
         poetry config virtualenvs.create false
         poetry install
+        pip install pytest-github-actions-annotate-failures
 
     - name: Install frontend dependencies
       run: |
@@ -76,7 +77,7 @@ jobs:
       continue-on-error: true
       run: |
         cd backend
-        poetry run pytest
+        poetry run pytest --junitxml=pytest-results.xml
       env:
         LCFS_DB_HOST: localhost
         LCFS_DB_PORT: 5432
@@ -88,19 +89,35 @@ jobs:
         LCFS_REDIS_PASSWORD: development_only
         APP_ENVIRONMENT: test
 
+    - name: Upload pytest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-results
+        path: backend/pytest-results.xml
+
     - name: Run frontend tests
       id: frontend_tests
       continue-on-error: true
       run: |
         cd frontend
-        npm test
+        npm run test -- --reporter=junit --outputFile=vitest-results.xml
+      env:
+        CI: true
+
+    - name: Upload Vitest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: vitest-results
+        path: frontend/vitest-results.xml
 
     - name: Run Cypress tests
       id: cypress_tests
       continue-on-error: true
       uses: cypress-io/github-action@v5
       with:
-        command: npm run cypress:run
+        command: npm run cypress:run -- --reporter junit --reporter-options "mochaFile=cypress-results/results-[hash].xml"
         wait-on: 'http://localhost:3000, http://localhost:8000'
         working-directory: frontend
       env:
@@ -115,9 +132,31 @@ jobs:
         org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }}
         org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
 
+    - name: Upload Cypress results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: cypress-results
+        path: frontend/cypress-results
+  
     - name: Stop services
       if: always()
       run: docker-compose down
+
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          backend/pytest-results.xml
+          frontend/vitest-results.xml
+          frontend/cypress-results/**/*.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        comment_title: "Test Results"
+        check_name: "Test Results"
+        fail_on: "errors"
+        report_individual_runs: "true"
+        deduplicate_classes_by_file_name: "true"
 
     - name: Check test results
       if: always()
