@@ -1,4 +1,4 @@
-name: Testing pipeline
+name: CI/CD Pipeline
 
 on:
   pull_request:
@@ -24,6 +24,30 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Cache npm dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Cache Docker images
+      uses: actions/cache@v3
+      with:
+        path: /var/lib/docker
+        key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-docker-
+
     - name: Install Poetry
       run: pip install poetry==1.6.1
 
@@ -32,6 +56,11 @@ jobs:
         cd backend
         poetry config virtualenvs.create false
         poetry install
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
 
     - name: Fix docker-compose.yml
       run: |
@@ -58,11 +87,6 @@ jobs:
         LCFS_REDIS_PORT: 6379
         LCFS_REDIS_PASSWORD: development_only
         APP_ENVIRONMENT: test
-
-    - name: Install frontend dependencies
-      run: |
-        cd frontend
-        npm ci
 
     - name: Run frontend tests
       id: frontend_tests
