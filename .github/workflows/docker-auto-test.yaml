@@ -35,22 +35,26 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: '3.10.13'
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16'
+        node-version: '20'
+
+    - name: Install Poetry
+      run: pip install poetry==1.6.1
 
     - name: Install backend dependencies
       run: |
         cd backend
-        pip install -r requirements.txt
+        poetry config virtualenvs.create false
+        poetry install
 
     - name: Run backend tests
       run: |
         cd backend
-        pytest
+        poetry run pytest
       env:
         LCFS_DB_HOST: localhost
         LCFS_DB_PORT: 5432
@@ -73,23 +77,14 @@ jobs:
         npm test
 
     - name: Build and start services
-      run: docker-compose up -d
-    - name: Debug Secrets
       run: |
-        echo "ADMIN_IDIR_USERNAME is set: ${{ secrets.ADMIN_IDIR_USERNAME != '' }}"
-        echo "ADMIN_IDIR_PASSWORD is set: ${{ secrets.ADMIN_IDIR_PASSWORD != '' }}"
-        echo "ORG1_BCEID_USERNAME is set: ${{ secrets.ORG1_BCEID_USERNAME != '' }}"
-        echo "ORG1_BCEID_PASSWORD is set: ${{ secrets.ORG1_BCEID_PASSWORD != '' }}"
-        echo "ORG1_BCEID_ID is set: ${{ secrets.ORG1_BCEID_ID != '' }}"
-        echo "ORG1_BCEID_USERID is set: ${{ secrets.ORG1_BCEID_USERID != '' }}"
-        echo "ORG2_BCEID_USERNAME is set: ${{ secrets.ORG2_BCEID_USERNAME != '' }}"
-        echo "ORG2_BCEID_PASSWORD is set: ${{ secrets.ORG2_BCEID_PASSWORD != '' }}"
-        echo "ORG2_BCEID_ID is set: ${{ secrets.ORG2_BCEID_ID != '' }}"
-        echo "ORG2_BCEID_USERID is set: ${{ secrets.ORG2_BCEID_USERID != '' }}"
+        docker-compose build
+        docker-compose up -d
+
     - name: Run Cypress tests
       uses: cypress-io/github-action@v5
       with:
-        command: npm run test:e2e
+        command: npm run cypress:run
         wait-on: 'http://localhost:3000, http://localhost:8000'
         working-directory: frontend
       env:
