@@ -53,7 +53,7 @@ jobs:
           cd openshift/templates
           oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
           sleep 5s
-          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.VERSION }}-${{ env.PR_NUMBER }}-1
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-backend-${{ env.DEV_NAMESPACE }}-${{ env.VERSION }}-${{ env.PR_NUMBER }}-1
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
 
       - name: Build LCFS Frontend
@@ -61,7 +61,7 @@ jobs:
           cd openshift/templates
           oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
           sleep 5s
-          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }}-1
+          oc -n ${{ env.TOOLS_NAMESPACE }} wait --for=condition=Complete --timeout=900s build/lcfs-frontend${{ env.DEV_NAMESPACE }}-${{ env.VERSION }}-${{ env.PR_NUMBER }}-1
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
 
           
@@ -116,4 +116,3 @@ jobs:
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} .
           cd ../lcfs-backend-pr
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} .
-          
