@@ -1,125 +1,125 @@
-# Workflow starts automatically on push or can be triggered manually.
-# This is a desirable pattern as it allows for adhoc test runs without a code push
-name: Cypress tests
-on: [push, workflow_dispatch]
-# on:
-#   push:
-#     branches:
-#       - 'release-0.2.0'
-#   pull_request:
-#   workflow_dispatch:
-jobs:
-  cypress-run:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    # In order for Cypress to run well, it needs to be fed the needed parameters.
-    # The below is a mix of Cypress environment variables (All capital) and ones that are needed for this specific set of scripts (Mix of capital and lowercase)
-    env:
-      admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }},
-      admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }},
-      org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }},
-      org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }},
-      org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }},
-      org1_bceid_userId: ${{ secrets.ORG1_BCEID_USERID }},
-      org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }},
-      org2_bceid_password: ${{ secrets.ORG2_BCEID_PASSWORD }},
-      org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }},
-      org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
-    steps:
-      # Checkout the PR branch
-      - name: Checkout Target Branch
-        uses: actions/checkout@v4
+# # Workflow starts automatically on push or can be triggered manually.
+# # This is a desirable pattern as it allows for adhoc test runs without a code push
+# name: Cypress tests
+# on: [push, workflow_dispatch]
+# # on:
+# #   push:
+# #     branches:
+# #       - 'release-0.2.0'
+# #   pull_request:
+# #   workflow_dispatch:
+# jobs:
+#   cypress-run:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       fail-fast: false
+#     # In order for Cypress to run well, it needs to be fed the needed parameters.
+#     # The below is a mix of Cypress environment variables (All capital) and ones that are needed for this specific set of scripts (Mix of capital and lowercase)
+#     env:
+#       admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }},
+#       admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }},
+#       org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }},
+#       org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }},
+#       org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }},
+#       org1_bceid_userId: ${{ secrets.ORG1_BCEID_USERID }},
+#       org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }},
+#       org2_bceid_password: ${{ secrets.ORG2_BCEID_PASSWORD }},
+#       org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }},
+#       org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
+#     steps:
+#       # Checkout the PR branch
+#       - name: Checkout Target Branch
+#         uses: actions/checkout@v4
 
-      # We are cache-ing our node modules to slightly speed up execution in the future.
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v4
-        env:
-          cache-name: cache-node-modules
-        with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
-        name: List the state of node modules
-        continue-on-error: true
-        run: npm list
-      - name: Install dependencies
-        run: sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev
+#       # We are cache-ing our node modules to slightly speed up execution in the future.
+#       - name: Cache node modules
+#         id: cache-npm
+#         uses: actions/cache@v4
+#         env:
+#           cache-name: cache-node-modules
+#         with:
+#           # npm cache files are stored in `~/.npm` on Linux/macOS
+#           path: ~/.npm
+#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+#           restore-keys: |
+#             ${{ runner.os }}-build-${{ env.cache-name }}-
+#             ${{ runner.os }}-build-
+#             ${{ runner.os }}-
+#       - if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+#         name: List the state of node modules
+#         continue-on-error: true
+#         run: npm list
+#       - name: Install dependencies
+#         run: sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev
       
 
-      # Many solutions have an API and APP that start fairly slow (specifically when not many resources are available).
-      # Since the APP needs the API and Cypress needs the APP, we first have to test if the API is running and accessible.
-      # Often an OK from the OpenShift deploy does not automatically mean that the API/APP is functional and/or reachable.
-      # We like to use a straightforward CURL command, which we have included as a script in this repo.
-      # - name: Wait for API response
-      #   env:
-      #     url: ${{ secrets.CYPRESS_API_HOST }}
-      #     code: 200 # The HTML Code we expect to get back
-      #     wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
-      #     max_attempts: 5
-      #   run: |
-      #     cd frontend
-      #     chmod +x waitforconnection.sh
-      #     bash ./waitforconnection.sh
+#       # Many solutions have an API and APP that start fairly slow (specifically when not many resources are available).
+#       # Since the APP needs the API and Cypress needs the APP, we first have to test if the API is running and accessible.
+#       # Often an OK from the OpenShift deploy does not automatically mean that the API/APP is functional and/or reachable.
+#       # We like to use a straightforward CURL command, which we have included as a script in this repo.
+#       # - name: Wait for API response
+#       #   env:
+#       #     url: ${{ secrets.CYPRESS_API_HOST }}
+#       #     code: 200 # The HTML Code we expect to get back
+#       #     wait_time: 10 # Wait time in seconds between each attempt total wait time = wait_time * max_attempts
+#       #     max_attempts: 5
+#       #   run: |
+#       #     cd frontend
+#       #     chmod +x waitforconnection.sh
+#       #     bash ./waitforconnection.sh
 
-      # - name: Wait for APP response
-      #   env:
-      #     url: ${{ secrets.CYPRESS_HOST }}
-      #     code: 200
-      #     wait_time: 10
-      #     max_attempts: 5
-      #   run: |
-      #     cd frontend
-      #     chmod +x waitforconnection.sh
-      #     bash ./waitforconnection.sh
+#       # - name: Wait for APP response
+#       #   env:
+#       #     url: ${{ secrets.CYPRESS_HOST }}
+#       #     code: 200
+#       #     wait_time: 10
+#       #     max_attempts: 5
+#       #   run: |
+#       #     cd frontend
+#       #     chmod +x waitforconnection.sh
+#       #     bash ./waitforconnection.sh
 
-      # This is the actual Cypress action, invoked with a set of extra parameters.
-      # Wait-on/wait-on-timeout: This is the Cypress way of waiting for a response from the application under test, but it does not address the API readiness hence the above Waits.
-      # record: Switches on recording to the cloud-based Cypress dahsboard
-      # install-command: Since we are forcing our libraries (keycloak) to be installed because of version issues, we have to specify "npm ci -f" to install as the normal "npm ci" would results in errors.
-      # If you do not run additional libraries or forced the libraries to install, the this option can be left out.
-      # working-directory: points to where you test scripts are located
-      # browser: Specifies which browser you want to use. The default is 'Electron', but we would typically user 'Chrome' as this represent the majority of our users.
-      # ci-build-id: to communicate the PR/Build number to the Cypress Dashboard
-      # - name: E2E Smoke tests
-      #   uses: cypress-io/github-action@v6
-      #   # let's give this action an ID so we can refer
-      #   # to its output values later
-      #   id: smoke
-      #   continue-on-error: false
-      #   with:
-      #     wait-on: ${{ secrets.CYPRESS_HOST }}
-      #     wait-on-timeout: 120
-      #     start: npm run cypress:dev
-      #     install-command: npm ci -f
-      #     working-directory: frontend
-      #     browser: chrome
-      #     ci-build-id: ${{ github.event.number }}
-      - name: Install Dependencies
-        run: npm ci -f
-        working-directory: frontend
+#       # This is the actual Cypress action, invoked with a set of extra parameters.
+#       # Wait-on/wait-on-timeout: This is the Cypress way of waiting for a response from the application under test, but it does not address the API readiness hence the above Waits.
+#       # record: Switches on recording to the cloud-based Cypress dahsboard
+#       # install-command: Since we are forcing our libraries (keycloak) to be installed because of version issues, we have to specify "npm ci -f" to install as the normal "npm ci" would results in errors.
+#       # If you do not run additional libraries or forced the libraries to install, the this option can be left out.
+#       # working-directory: points to where you test scripts are located
+#       # browser: Specifies which browser you want to use. The default is 'Electron', but we would typically user 'Chrome' as this represent the majority of our users.
+#       # ci-build-id: to communicate the PR/Build number to the Cypress Dashboard
+#       # - name: E2E Smoke tests
+#       #   uses: cypress-io/github-action@v6
+#       #   # let's give this action an ID so we can refer
+#       #   # to its output values later
+#       #   id: smoke
+#       #   continue-on-error: false
+#       #   with:
+#       #     wait-on: ${{ secrets.CYPRESS_HOST }}
+#       #     wait-on-timeout: 120
+#       #     start: npm run cypress:dev
+#       #     install-command: npm ci -f
+#       #     working-directory: frontend
+#       #     browser: chrome
+#       #     ci-build-id: ${{ github.event.number }}
+#       - name: Install Dependencies
+#         run: npm ci -f
+#         working-directory: frontend
 
-      - name: Run Cypress Tests
-        run: npm run cypress:dev
-        working-directory: frontend
+#       - name: Run Cypress Tests
+#         run: npm run cypress:dev
+#         working-directory: frontend
         
-      - name: Debug Cypress Run
-        if: failure()
-        run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
-      - uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: /home/runner/work/lcfs/lcfs/frontend/cypress/screenshots
+#       - name: Debug Cypress Run
+#         if: failure()
+#         run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
+#       - uses: actions/upload-artifact@v3
+#         if: failure()
+#         with:
+#           name: cypress-screenshots
+#           path: /home/runner/work/lcfs/lcfs/frontend/cypress/screenshots
 
-      # For review/debug purposes, just print out key parameters
-      - name: Print Env Vars
-        run: |
-          echo Git Base Ref: ${{ github.base_ref }}
-          echo Git Change ID: ${{ github.event.number }}
+#       # For review/debug purposes, just print out key parameters
+#       - name: Print Env Vars
+#         run: |
+#           echo Git Base Ref: ${{ github.base_ref }}
+#           echo Git Change ID: ${{ github.event.number }}

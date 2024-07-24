@@ -52,6 +52,8 @@ jobs:
         poetry install
 
     - name: Run backend tests
+      id: backend_tests
+      continue-on-error: true
       run: |
         cd backend
         poetry run pytest
@@ -72,6 +74,8 @@ jobs:
         npm ci
 
     - name: Run frontend tests
+      id: frontend_tests
+      continue-on-error: true
       run: |
         cd frontend
         npm test
@@ -82,9 +86,11 @@ jobs:
         docker-compose up -d
 
     - name: Run Cypress tests
+      id: cypress_tests
+      continue-on-error: true
       uses: cypress-io/github-action@v5
       with:
-        command: npm run cypress:run
+        command: npm run test:e2e
         wait-on: 'http://localhost:3000, http://localhost:8000'
         working-directory: frontend
       env:
@@ -102,3 +108,15 @@ jobs:
     - name: Stop services
       if: always()
       run: docker-compose down
+
+    - name: Check test results
+      if: always()
+      run: |
+        if [ "${{ steps.backend_tests.outcome }}" == "failure" ] || \
+           [ "${{ steps.frontend_tests.outcome }}" == "failure" ] || \
+           [ "${{ steps.cypress_tests.outcome }}" == "failure" ]; then
+          echo "One or more tests failed"
+          exit 1
+        else
+          echo "All tests passed"
+        fi
