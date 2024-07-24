@@ -81,7 +81,7 @@ jobs:
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
       
-      - name: Update frontend tag
+      - name: Update values-dev-pr.yaml for frentend and backend
         uses: mikefarah/yq@v4.40.5
         with:
             cmd: |
@@ -95,12 +95,25 @@ jobs:
                 yq -i '.env.LCFS_DB_HOST = "lcfs-postgresql-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i '.env.LCFS_REDIS_HOST = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
 
-      - name: GitHub Commit & Push
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git add lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-          git add lcfs/charts/lcfs-backend/values-dev-pr.yaml
-          git commit -m "Pull request build for ${{ env.VERSION }}-${{ env.PR_NUMBER }}"
-          git push
+      # There is no need to push the changes back to deployment repo as argocd is not used for the pr build deployment
+      # - name: GitHub Commit & Push
+      #   run: |
+      #     git config --global user.email "actions@github.com"
+      #     git config --global user.name "GitHub Actions"
+      #     git add lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+      #     git add lcfs/charts/lcfs-backend/values-dev-pr.yaml
+      #     git commit -m "Pull request build for ${{ env.VERSION }}-${{ env.PR_NUMBER }}"
+      #     git push
       
+      - name: Helm Deployment 
+        shell: bash {0}
+        run: |
+          cd lcfs/charts/lcfs-postgres-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} .
+          cd ../lcfs-redis-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} .
+          cd ../lcfs-frontend-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} .
+          cd ../lcfs-backend-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} .
+          
