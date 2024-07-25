@@ -21,16 +21,21 @@ from lcfs.web.api.compliance_report.constants import (
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
 )
+from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 
 logger = getLogger(__name__)
 
 
 class ComplianceReportServices:
     def __init__(
-        self, request: Request = None, repo: ComplianceReportRepository = Depends()
+        self,
+        request: Request = None, repo: ComplianceReportRepository = Depends(),
+        notional_transfer_service: NotionalTransferServices = Depends(
+            NotionalTransferServices),
     ) -> None:
         self.request = request
         self.repo = repo
+        self.notional_transfer_service = notional_transfer_service
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -102,6 +107,12 @@ class ComplianceReportServices:
         renewable_quantities = {'gasoline': 5000,
                                 'diesel': 15000, 'jet_fuel': 1000}
         previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
+
+        notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
+
+        print(notional_transfers)
+
+        # aggregate notional transfer values and send to calculate_renewable_fuel_target_summary
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities, renewable_quantities, previous_retained)
