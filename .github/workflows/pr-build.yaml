@@ -3,7 +3,10 @@ name: PR Build on Dev
 on:
   pull_request:
     types: [labeled, synchronize]
-
+    paths:
+      - frontend/**
+      - backend/**
+      
 env:
   VERSION: 0.2.0
   GIT_URL: https://github.com/bcgov/lcfs.git 
