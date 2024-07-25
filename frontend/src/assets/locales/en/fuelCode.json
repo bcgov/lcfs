@@ -22,6 +22,7 @@
   "addRow": "Add row",
   "rows": "rows",
   "fuelCodeColLabels": {
+    "fuelCodeId": "Fuel Code Id",
     "status": "Status",
     "prefix": "Prefix",
     "fuelCode": "Fuel code",

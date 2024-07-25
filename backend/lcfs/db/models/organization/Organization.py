@@ -1,8 +1,19 @@
-from sqlalchemy import Column, BigInteger, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
-
+import string
+import random
+from sqlalchemy import Column, BigInteger, Integer, String, ForeignKey, event, select
+from sqlalchemy.orm import relationship, Session
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
+def generate_unique_code(session):
+    """Generates a unique 4-character alphanumeric code."""
+    characters = string.ascii_uppercase + string.digits
+    while True:
+        code = ''.join(random.choices(characters, k=4))
+        result = session.execute(
+            select(Organization).filter_by(organization_code=code).limit(1)
+        )
+        if not result.scalar():
+            return code
 
 class Organization(BaseModel, Auditable, EffectiveDates):
     __tablename__ = 'organization'
@@ -13,6 +24,8 @@ class Organization(BaseModel, Auditable, EffectiveDates):
 
     organization_id = Column(Integer, primary_key=True, autoincrement=True,
                              comment="Unique identifier for the organization")
+    organization_code = Column(String(4), unique=True, nullable=False,
+                               comment="Unique 4-character alphanumeric ID")
     name = Column(String(500), comment="Organization's legal name")
     operating_name = Column(
         String(500), comment="Organization's Operating name")
@@ -68,4 +81,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
                                   foreign_keys="[Transfer.to_organization_id]", 
                                   back_populates='to_organization')
     compliance_reports = relationship('ComplianceReport', back_populates='organization')
-    
+
+@event.listens_for(Organization, 'before_insert')
+def receive_before_insert(mapper, connection, target):
+    session = Session(bind=connection)
+    target.organization_code = generate_unique_code(session)
+    session.close()

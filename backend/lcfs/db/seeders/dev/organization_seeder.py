@@ -16,6 +16,7 @@ async def seed_organizations(session):
     organizations_to_seed = [
         {
             "organization_id": 1,
+            "organization_code": "7QEV",
             "name": "LCFS Org 1",
             "operating_name": 'LCFS Org 1',
             "email": "tfrs@gov.bc.ca",
@@ -28,6 +29,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 2,
+            "organization_code": "DI8C",
             "name": "LCFS Org 2",
             "operating_name": 'LCFS Org 2',
             "email": "tfrs@gov.bc.ca",
@@ -40,6 +42,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 3,
+            "organization_code": "QBE4",
             "name": "LCFS Org 3",
             "operating_name": 'LCFS Org 3',
             "email": "tfrs@gov.bc.ca",
@@ -52,6 +55,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 4,
+            "organization_code": "NC12",
             "name": "LCFS Org 4",
             "operating_name": 'LCFS Org 4',
             "email": "tfrs@gov.bc.ca",
@@ -64,6 +68,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 5,
+            "organization_code": "PQ9T",
             "name": "LCFS Org 5",
             "operating_name": 'LCFS Org 5',
             "email": "tfrs@gov.bc.ca",
@@ -76,6 +81,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 6,
+            "organization_code": "5LJR",
             "name": "LCFS Org 6",
             "operating_name": 'LCFS Org 6',
             "email": "tfrs@gov.bc.ca",
@@ -88,6 +94,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 7,
+            "organization_code": "W3UI",
             "name": "LCFS Org 7",
             "operating_name": 'LCFS Org 7',
             "email": "tfrs@gov.bc.ca",
@@ -100,6 +107,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 8,
+            "organization_code": "MLPR",
             "name": "LCFS Org 8",
             "operating_name": 'LCFS Org 8',
             "email": "tfrs@gov.bc.ca",
@@ -112,6 +120,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 9,
+            "organization_code": "076Q",
             "name": "LCFS Org 9",
             "operating_name": 'LCFS Org 9',
             "email": "tfrs@gov.bc.ca",
@@ -124,6 +133,7 @@ async def seed_organizations(session):
         },
         {
             "organization_id": 10,
+            "organization_code": "GJI7",
             "name": "LCFS Org 10",
             "operating_name": 'LCFS Org 10',
             "email": "tfrs@gov.bc.ca",

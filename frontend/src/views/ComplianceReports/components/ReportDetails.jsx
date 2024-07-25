@@ -6,6 +6,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   Typography,
+  Link,
   CircularProgress
 } from '@mui/material'
 import { faEdit } from '@fortawesome/free-solid-svg-icons'
@@ -124,6 +125,7 @@ const ReportDetails = () => {
   )
 
   const [expanded, setExpanded] = useState(() => activityList.map((_, index) => `panel${index}`))
+  const [allExpanded, setAllExpanded] = useState(true)
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded((prev) =>
@@ -131,10 +133,27 @@ const ReportDetails = () => {
     )
   }
 
+  const handleExpandAll = () => {
+    setExpanded(activityList.map((_, index) => `panel${index}`))
+    setAllExpanded(true)
+  }
+
+  const handleCollapseAll = () => {
+    setExpanded([])
+    setAllExpanded(false)
+  }
+
   return (
     <>
       <Typography color="primary" variant="h5" mb={2} component="div">
         {t('report:reportDetails')}
+        <Link component="button" variant="body2" onClick={handleExpandAll} sx={{ ml: 2, mr: 1, textDecoration: 'underline' }}>
+          {t('report:expandAll')}
+        </Link>
+        |
+        <Link component="button" variant="body2" onClick={handleCollapseAll} sx={{ ml: 1, textDecoration: 'underline' }}>
+          {t('report:collapseAll')}
+        </Link>
       </Typography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)

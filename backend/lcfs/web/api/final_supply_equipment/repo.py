@@ -1,11 +1,12 @@
 from logging import getLogger
 from typing import List
 from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import FinalSupplyEquipmentRegNumber
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -154,3 +155,52 @@ class FinalSupplyEquipmentRepository:
         """Delete a final supply equipment from the database"""
         await self.db.execute(delete(FinalSupplyEquipment).where(FinalSupplyEquipment.final_supply_equipment_id == final_supply_equipment_id))
         await self.db.flush()
+
+    @repo_handler
+    async def get_current_seq_by_org_and_postal_code(self, organization_code: str, postal_code: str) -> int:
+        """
+        Retrieve the current sequence number for a given organization code and postal code.
+        """
+        result = await self.db.execute(
+            select(FinalSupplyEquipmentRegNumber.current_sequence_number)
+            .where(
+                and_(
+                    FinalSupplyEquipmentRegNumber.organization_code == organization_code,
+                    FinalSupplyEquipmentRegNumber.postal_code == postal_code
+                )
+            )
+        )
+        current_sequence_number = result.scalar()
+        return current_sequence_number if current_sequence_number is not None else 0
+
+    @repo_handler
+    async def increment_seq_by_org_and_postal_code(self, organization_code: str, postal_code: str) -> int:
+        """
+        Increment and return the next sequence number for a given organization code and postal code.
+        """
+        # Try to update the existing sequence
+        result = await self.db.execute(
+            update(FinalSupplyEquipmentRegNumber)
+            .where(
+                and_(
+                    FinalSupplyEquipmentRegNumber.organization_code == organization_code,
+                    FinalSupplyEquipmentRegNumber.postal_code == postal_code
+                )
+            )
+            .values(current_sequence_number=FinalSupplyEquipmentRegNumber.current_sequence_number + 1)
+            .returning(FinalSupplyEquipmentRegNumber.current_sequence_number)
+        )
+        sequence_number = result.scalar()
+
+        if sequence_number is None:
+            # If no existing sequence, insert a new one
+            new_record = FinalSupplyEquipmentRegNumber(
+                organization_code=organization_code,
+                postal_code=postal_code,
+                current_sequence_number=1
+            )
+            self.db.add(new_record)
+            await self.db.flush()
+            sequence_number = 1
+
+        return sequence_number

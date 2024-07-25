@@ -1,3 +1,4 @@
+import asyncio
 from logging import getLogger
 import math
 from typing import List
@@ -20,6 +21,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeSchema,
     FuelCodesSchema,
     FuelTypeSchema,
+    SearchFuelCodeList,
     TransportModeSchema,
     FuelCodePrefixSchema,
     TableOptionsSchema,
@@ -32,6 +34,26 @@ logger = getLogger("fuel_code_services")
 class FuelCodeServices:
     def __init__(self, repo: FuelCodeRepository = Depends(FuelCodeRepository)) -> None:
         self.repo = repo
+
+    @service_handler
+    async def search_fuel_code(self, fuel_code, prefix, distinct_search):
+        if distinct_search:
+            result = await self.repo.get_distinct_fuel_codes_by_code(fuel_code, prefix)
+        else: 
+            result = await self.repo.get_fuel_code_by_code_prefix(fuel_code, prefix)
+        return SearchFuelCodeList(fuel_codes=result)
+    
+    @service_handler
+    async def search_company(self, company):
+        return await self.repo.get_distinct_company_names(company)        
+    
+    @service_handler
+    async def search_contact_name(self, company, contact_name):
+        return await self.repo.get_contact_names_by_company(company, contact_name)      
+    
+    @service_handler
+    async def search_contact_email(self, company, contact_name, contact_email):
+        return await self.repo.get_contact_email_by_company_and_name(company, contact_name, contact_email)      
 
     @service_handler
     async def get_table_options(self) -> TableOptionsSchema:
@@ -60,6 +82,14 @@ class FuelCodeServices:
         field_options = {key: sorted(list(values))
                          for key, values in field_options_results_dict.items()}
 
+        # Get next available fuel code for each prefix
+        fuel_code_prefixes_with_next = []
+        for prefix in fuel_code_prefixes:
+            next_code = await self.repo.get_next_available_fuel_code_by_prefix(prefix.prefix)
+            schema = FuelCodePrefixSchema.model_validate(prefix)
+            schema.next_fuel_code = next_code
+            fuel_code_prefixes_with_next.append(schema)
+
         return {
             "fuel_types": [
                 FuelTypeSchema.model_validate(fuel_type) for fuel_type in fuel_types
@@ -68,10 +98,7 @@ class FuelCodeServices:
                 TransportModeSchema.model_validate(transport_mode)
                 for transport_mode in transport_modes
             ],
-            "fuel_code_prefixes": [
-                FuelCodePrefixSchema.model_validate(fuel_code_prefix)
-                for fuel_code_prefix in fuel_code_prefixes
-            ],
+            "fuel_code_prefixes": fuel_code_prefixes_with_next,
             "latest_fuel_codes": latest_fuel_codes,
             "field_options": field_options,
             "fp_locations": list(set(fp_locations)),
@@ -177,9 +204,10 @@ class FuelCodeServices:
         Create a new fuel code.
         """
         fuel_code.status = FuelCodeStatusEnum.Draft
+        fuel_code_value = await self.repo.validate_fuel_code(fuel_code.fuel_code, fuel_code.prefix)
+        fuel_code.fuel_code = fuel_code_value
         fuel_code_model = await self.convert_to_model(fuel_code)
         fuel_code_model.fuel_status_id = 1  # set to draft by default
-
         return await self.repo.create_fuel_code(fuel_code_model)
 
     @service_handler

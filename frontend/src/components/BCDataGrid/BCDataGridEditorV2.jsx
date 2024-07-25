@@ -22,24 +22,25 @@ import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import { isEqual } from '@/utils/eventHandlers'
 
-const BCDataGridEditor = ({
-  gridOptions,
-  onGridReady,
-  gridApi,
-  columnApi,
-  rowData,
-  gridKey,
-  getRowNodeId,
-  gridRef,
-  columnDefs,
-  defaultColDef,
-  highlightedRowId,
-  className,
-  defaultStatusBar,
-  onRowEditingStarted,
-  onRowEditingStopped,
-  saveRow,
-  onValidated,
+const BCDataGridEditorV2 = ({
+  gridOptions={},
+  onGridReady={},
+  gridApi=null,
+  columnApi=null,
+  rowData=[],
+  gridKey='bcgrid-key-unique-id',
+  getRowNodeId=uuid(),
+  gridRef=null,
+  columnDefs={},
+  defaultColDef={},
+  highlightedRowId=null,
+  className='ag-theme-quartz',
+  // defaultStatusBar,
+  // onRowEditingStarted,
+  // onRowEditingStopped,
+  // tabToNextCellHandler,
+  saveRow=null,
+  onValidated=null,
   ...props
 }) => {
   const frameworkComponents = useMemo(
@@ -96,6 +97,36 @@ const BCDataGridEditor = ({
   const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
   const tabToNextCell = useCallback((params) => params.nextCellPosition, [])
 
+  const onCellEditingStopped = useCallback(
+    (params) => {
+      if (params.data.modified && !params.data.deleted) {
+        onValidated('pending', 'Updating row...')
+        saveRow(params.data, {
+          onSuccess: (resp) => {
+            params.data.modified = false
+            params.data.isValid = true
+            if (onValidated) {
+              onValidated('success', 'Row updated successfully.', params, resp)
+            }
+            params.api.refreshCells()
+          },
+          onError: (error) => {
+            params.data.isValid = false
+            params.api.refreshCells()
+            if (onValidated) {
+              if (error.code === 'ERR_BAD_REQUEST') {
+                onValidated('error', error, params)
+                // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
+              } else {
+                onValidated('error', `Error updating row: ${error.message}`)
+              }
+            }
+          }
+        })
+      }
+    },
+    [saveRow]
+  )
   const defaultGridOptions = useMemo(() => ({
     undoRedoCellEditing: true,
     undoRedoCellEditingLimit: 5,
@@ -131,51 +162,6 @@ const BCDataGridEditor = ({
       : undefined,
   }), [highlightedRowId, frameworkComponents, tabToNextCell])
 
-  const onRowEditingStartedHandler = useCallback((params) => {
-    params.api.refreshCells({
-      columns: ['action'],
-      rowNodes: [params.node],
-      force: true,
-    })
-    if (onRowEditingStarted) {
-      onRowEditingStarted(params)
-    }
-  }, [onRowEditingStarted])
-
-  const onRowEditingStoppedHandler = useCallback((params) => {
-    if (onRowEditingStopped) {
-      onRowEditingStopped(params)
-    }
-    // Check if any data field has changed
-    if (params.data.modified && !params.data.deleted) {
-      onValidated('pending', 'Updating row...')
-      saveRow(params.data, {
-        onSuccess: (resp) => {
-          params.data.modified = false
-          params.data.isValid = true
-          if (onValidated) {
-            onValidated('success', 'Row updated successfully.', params, resp)
-          }
-          params.api.refreshCells()
-        },
-        onError: (error) => {
-          params.data.isValid = false
-          params.api.refreshCells()
-          if (onValidated) {
-            if (error.code === 'ERR_BAD_REQUEST') {
-              onValidated('error', error, params)
-              // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
-            } else {
-              onValidated('error', `Error updating row: ${error.message}`)
-            }
-          }
-        }
-      })
-    }
-  
-    params.api.redrawRows({ rowNodes: [params.node] })
-  }, [onRowEditingStopped, onValidated, saveRow])
-  
   function onCellValueChanged(params) {
     if (!isEqual(params.oldValue, params.newValue)) {
       params.data.modified = true
@@ -198,9 +184,8 @@ const BCDataGridEditor = ({
         onGridReady={onGridReady}
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
-        onCellValueChanged={onCellValueChanged}
-        onRowEditingStarted={onRowEditingStartedHandler}
-        onRowEditingStopped={onRowEditingStoppedHandler}
+        onCellValueChanged={props.onCellValueChanged || onCellValueChanged}
+        onCellEditingStopped={props.onCellEditingStopped || onCellEditingStopped}
         loadingOverlayComponent={loadingOverlayComponent}
         {...props}
       />
@@ -222,7 +207,7 @@ const BCDataGridEditor = ({
   )
 }
 
-BCDataGridEditor.propTypes = {
+BCDataGridEditorV2.propTypes = {
   defaultStatusBar: PropTypes.bool,
   statusBarComponent: PropTypes.node,
   onGridReady: PropTypes.func.isRequired,
@@ -250,18 +235,4 @@ BCDataGridEditor.propTypes = {
   ]),
 }
 
-BCDataGridEditor.defaultProps = {
-  highlightedRowId: null,
-  gridRef: null,
-  gridKey: `bcgrid-key-<unique-id>`,
-  defaultStatusBar: true,
-  statusBarComponent: null,
-  gridApi: null,
-  columnApi: null,
-  loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
-  className: 'ag-theme-quartz',
-  getRowNodeId: uuid(),
-  onValidated: null,
-}
-
-export default BCDataGridEditor
+export default BCDataGridEditorV2
