@@ -7,13 +7,31 @@ on:
 
 jobs:
 
+  get-version:
+    name: Retrieve version
+    runs-on: ubuntu-latest
+  
+    outputs:
+      output1: ${{ steps.get-version.outputs.VERSION }}
+    
+    steps:
+      - id: get-version
+        run: |
+          default-release=${{ github.event.repository.default_branch }}
+          version=$(echo "$default-release" | sed -E 's/release-(.*)/\1/')
+          echo "VERSION=$version" >> $GITHUB_OUTPUT
+
   devops-test:
 
     name: Devops test
     runs-on: ubuntu-latest
+    needs: [get-version]
+
+    env:
+      VERSION: ${{ needs.get-version.outputs.output1 }}
 
     steps:
       
-      - name: print default branch name
+      - name: print version
         run: |
-          echo "The default branch is ${{ github.event.repository.default_branch }}"
+          echo "The default branch is ${{ env.VERSION }}"
