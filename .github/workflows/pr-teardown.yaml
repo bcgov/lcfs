@@ -5,7 +5,16 @@ on:
     types: [unlabeled]
 
 jobs:
-  build:
+
+  verify:
+    name: Verify this workflow started
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: print info
+        run: echo "confirm that this job has started"
+
+  teardown:
     if: contains(github.event.pull_request.labels.*.name, 'build')
     name: PR Teardown
     runs-on: ubuntu-latest
