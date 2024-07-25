@@ -1,4 +1,4 @@
-name: Label Triggered Build
+name: PR Build on Dev
 
 on:
   pull_request:
@@ -111,16 +111,6 @@ jobs:
                 yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-
-      # There is no need to push the changes back to deployment repo as argocd is not used for the pr build deployment
-      # - name: GitHub Commit & Push
-      #   run: |
-      #     git config --global user.email "actions@github.com"
-      #     git config --global user.name "GitHub Actions"
-      #     git add lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-      #     git add lcfs/charts/lcfs-backend/values-dev-pr.yaml
-      #     git commit -m "Pull request build for ${{ env.VERSION }}-${{ env.PR_NUMBER }}"
-      #     git push
       
       - name: Helm Deployment 
         shell: bash {0}
