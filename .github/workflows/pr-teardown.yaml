@@ -12,7 +12,7 @@ jobs:
     steps:
 
       - name: print info
-        run: echo "confirm that this job has started"
+        run: echo "confirm that this job has started..."
 
   teardown:
     if: contains(github.event.pull_request.labels.*.name, 'build')
