@@ -32,6 +32,12 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         comment="The reserved balance of compliance units for the specified organization."
     )
+    count_transfers_in_progress = Column(
+        Integer,
+        server_default='0',
+        nullable=False,
+        comment="The count of transfers in progress for the specified organization."
+    )
 
     organization_status_id = Column(Integer, ForeignKey(
         'organization_status.organization_status_id'))

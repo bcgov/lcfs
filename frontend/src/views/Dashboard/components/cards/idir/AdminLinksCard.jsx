@@ -9,19 +9,19 @@ import { List, ListItemButton } from '@mui/material'
 import { roles } from '@/constants/roles'
 
 const AdminLinksCard = () => {
-  const { t } = useTranslation(['common', 'admin'])
+  const { t } = useTranslation(['dashboard'])
   const adminLinks = useMemo(
     () => [
       {
-        title: t('admin:mngGovUsrsLabel'),
+        title: t('dashboard:adminLinks.mngGovUsrsLabel'),
         route: ROUTES.ADMIN_USERS
       },
       {
-        title: t('admin:addEditOrgsLabel'),
+        title: t('dashboard:adminLinks.addEditOrgsLabel'),
         route: ROUTES.ORGANIZATIONS
       },
       {
-        title: t('admin:usrActivity'),
+        title: t('dashboard:adminLinks.usrActivity'),
         route: ROUTES.ADMIN_USERACTIVITY
       }
     ],
@@ -32,9 +32,10 @@ const AdminLinksCard = () => {
   return (
     <BCWidgetCard
       component="div"
+      disableHover={true}
       color="nav"
       icon="admin"
-      title={t('Administration')}
+      title={t('dashboard:adminLinks.administration')}
       content={
         <List component="div" sx={{ maxWidth: '100%' }}>
           {adminLinks.map((link, index) => (

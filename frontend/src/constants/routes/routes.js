@@ -5,10 +5,6 @@ export const TRANSACTIONS = '/transactions'
 export const TRANSACTIONS_ADD = `${TRANSACTIONS}/add`
 export const TRANSACTIONS_EDIT = `${TRANSACTIONS}/edit/:transactionId`
 export const TRANSACTIONS_VIEW = `${TRANSACTIONS}/:transactionId`
-export const TRANSACTIONS_FILTER_IN_PROGRESS_TRANSFERS = `${TRANSACTIONS}/?filter=in-progress-transfers`
-export const TRANSACTIONS_FILTER_IN_PROGRESS_ORG_TRANSFERS = `${TRANSACTIONS}/?filter=in-progress-org-transfers`
-export const TRANSACTIONS_FILTER_IN_PROGRESS_INITIATIVE_AGREEMENT = `${TRANSACTIONS}/?filter=in-progress-initiative-agreements`
-export const TRANSACTIONS_FILTER_IN_PROGRESS_ADMIN_ADJUSTMENT = `${TRANSACTIONS}/?filter=in-progress-admin-adjustments`
 
 export const TRANSFERS = '/transfers'
 export const TRANSFERS_ADD = `${TRANSFERS}/add`

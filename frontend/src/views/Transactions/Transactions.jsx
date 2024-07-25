@@ -15,11 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import {
   transactionsColDefs,
-  defaultSortModel,
-  filter_in_progress_transfers,
-  filter_in_progress_org_transfers,
-  filter_in_progress_initiative_agreements,
-  filter_in_progress_admin_adjustments
+  defaultSortModel
 } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ORGANIZATION_STATUSES, TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
@@ -36,12 +32,6 @@ export const Transactions = () => {
 
   const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
-
-  const filterType = searchParams.get('filter')
-  const inProgressTransfers = filterType === 'in-progress-transfers'
-  const inProgressOrgTransfers = filterType === 'in-progress-org-transfers'
-  const inProgressInitiativeAgreements = filterType === 'in-progress-initiative-agreements'
-  const inProgressAdminAdjustments = filterType === 'in-progress-admin-adjustments'
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -148,14 +138,6 @@ export const Transactions = () => {
 
   const apiEndpoint = useMemo(() => getApiEndpoint(), [getApiEndpoint])
 
-  const filterModel = useMemo(() => {
-    if (inProgressTransfers) return filter_in_progress_transfers
-    if (inProgressOrgTransfers) return filter_in_progress_org_transfers
-    if (inProgressInitiativeAgreements) return filter_in_progress_initiative_agreements
-    if (inProgressAdminAdjustments) return filter_in_progress_admin_adjustments
-    return []
-  }, [inProgressTransfers, inProgressOrgTransfers, inProgressInitiativeAgreements, inProgressAdminAdjustments])
-
   useEffect(() => {
     if (location.state?.message) {
       setAlertMessage(location.state.message)
@@ -251,13 +233,12 @@ export const Transactions = () => {
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}
-          defaultFilterModel={filterModel}
+          defaultFilterModel={location.state?.filters}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           highlightedRowId={highlightedId}
-          defaultFilterModel={location.state?.filters}
         />
       </BCBox>
     </>
