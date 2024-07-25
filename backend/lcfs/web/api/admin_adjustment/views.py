@@ -13,6 +13,7 @@ get_async_db = dependencies.get_async_db_session
 @router.get("/{admin_adjustment_id}", response_model=AdminAdjustmentSchema)
 @view_handler(['*'])
 async def get_admin_adjustment(
+    request: Request,
     admin_adjustment_id: int,
     service: AdminAdjustmentServices = Depends()
 ):
