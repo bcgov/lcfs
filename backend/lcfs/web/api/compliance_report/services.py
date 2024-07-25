@@ -143,7 +143,7 @@ class ComplianceReportServices:
 
         non_compliance_penalties = {
             category: max(0, eligible_renewable_required -
-                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE
+                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category]
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
