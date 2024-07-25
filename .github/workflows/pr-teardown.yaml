@@ -4,22 +4,39 @@ on:
   pull_request:
     types: [unlabeled]
 
+env:
+  VERSION: 0.2.0
+  DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true  
+
 jobs:
-
-  verify:
-    name: Verify this workflow started
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: print info
-        run: echo "confirm that this job has started"
 
   teardown:
     if: contains(github.event.pull_request.labels.*.name, 'build')
     name: PR Teardown
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
 
-      - name: Run PR Teardown
-        run: echo "PR Teardopwn on Dev ..."
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.DEV_NAMESPACE }}
+
+      - name: Teardown the pull request
+        run: |
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-frontend-dev-${{ env.PR_NUMBER }}
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-backend-dev-${{ env.PR_NUMBER }}
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-redis-dev-${{ env.PR_NUMBER }}
+          helm -n ${{ env.DEV_NAMESPACE }} uninstall lcfs-postgres-dev-${{ env.PR_NUMBER }}
+          helm -n ${{ env.DEV_NAMESPACE }} delete pvc -l app.kubernetes.io/instance=lcfs-postgres-dev-${{ env.PR_NUMBER }}
+          helm -n ${{ env.DEV_NAMESPACE }} delete pvc -l app.kubernetes.io/instance=lcfs-redis-dev-${{ env.PR_NUMBER }}
+
