@@ -81,6 +81,28 @@ export const useSaveFuelCode = (options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['fuel-codes'])
-    },
+    }
+  })
+}
+
+export const useGetFuelCodes = (
+  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  options
+) => {
+  const client = useApiService()
+
+  return useQuery({
+    ...options,
+    queryKey: ['fuel-codes', page, size, sortOrders, filters],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getFuelCodes, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data
+    }
   })
 }
