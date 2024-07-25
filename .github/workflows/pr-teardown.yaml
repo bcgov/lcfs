@@ -1,0 +1,25 @@
+name: PR Teardown on Dev
+
+on:
+  pull_request:
+    types: [unlabeled]
+
+jobs:
+
+  verify:
+    name: Verify this workflow started
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: print info
+        run: echo "confirm that this job has started"
+
+  teardown:
+    if: contains(github.event.pull_request.labels.*.name, 'build')
+    name: PR Teardown
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Run PR Teardown
+        run: echo "PR Teardopwn on Dev ..."
