@@ -32,7 +32,7 @@ jobs:
       - id: get-version
         run: |
           echo "11111"
-          echo "${{ toJSON(github.event.pull_request.labels) }}" | jq -r '.[].name'
+          echo "${{ toJSON(github.event.pull_request.labels) }}"
           echo "22222"
           echo ${{github.event.pull_request.base.ref}}
           echo "33333"
