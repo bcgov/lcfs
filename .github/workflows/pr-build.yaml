@@ -55,7 +55,6 @@ jobs:
         run: |
           pwd
           ls -la
-          cat .github/workflows/pr-build.yaml
           echo ${{ env.PR_NUMBER }}
           echo ${{ env.GIT_URL }}
           echo ${{ env.GIT_REF }}
