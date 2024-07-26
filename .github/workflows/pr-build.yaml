@@ -21,7 +21,7 @@ concurrency:
 jobs:
 
   get-version:
-    if: contains(github.event.pull_request.labels.*.name, 'build') 
+    if: contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch
     name: Retrieve version
     runs-on: ubuntu-latest
   
