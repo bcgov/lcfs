@@ -12,6 +12,7 @@ An official online application designed for fuel and electricity suppliers in Br
 - **ORM**: Employs SQLAlchemy for database entity mapping.
 - **Validation**: Utilizes Pydantic for data validation within FastAPI.
 - **Bundling**: Leverages Webpack for optimizing frontend assets.
+- 
 - **Testing**: Uses Jest for frontend unit tests and Cypress for end-to-end testing.
 
 ## Getting Started
