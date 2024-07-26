@@ -5,7 +5,6 @@ on:
     types: [unlabeled]
 
 env:
-  VERSION: 0.2.0
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
   PR_NUMBER: ${{ github.event.pull_request.number }}
 
