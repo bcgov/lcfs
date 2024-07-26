@@ -2,7 +2,7 @@ name: PR Teardown on Dev
 
 on:
   pull_request:
-    types: [unlabeled]
+    types: [unlabeled, closed]
 
 env:
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
@@ -15,7 +15,9 @@ concurrency:
 jobs:
 
   teardown:
-    if: github.event.label.name == 'build'
+    if: >
+      (github.event.action == 'unlabeled' && github.event.label.name == 'build') || 
+      (github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'build') )
     name: PR Teardown
     runs-on: ubuntu-latest
     timeout-minutes: 60
