@@ -1,0 +1,18 @@
+{
+  "noFuelSuppliesFound": "No fuel supplies found",
+  "fuelSupplyColLabels": {
+    "fuelType": "Fuel type",
+    "fuelCategory": "Fuel category",
+    "endUse": "End use",
+    "determiningCarbonIntensity": "Determining carbon intensity",
+    "fuelCode": "Fuel code",
+    "quantitySupplied": "Quantity supplied",
+    "units": "Units",
+    "complianceUnits": "Compliance units",
+    "ciLimit": "CI limit",
+    "ciOfFuel": "CI of fuel",
+    "energyDensity": "Energy density",
+    "eer": "EER",
+    "energy": "Energy"
+  }
+}

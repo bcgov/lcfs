@@ -22,6 +22,8 @@ import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
 import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
+import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
+import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
 
 const ReportDetails = () => {
   const { t } = useTranslation()
@@ -31,7 +33,7 @@ const ReportDetails = () => {
   const activityList = useMemo(
     () => [
       {
-        name: t('report:activityLists.supplyOfFuel'),
+        name: t('report:fuelSupply'),
         action: () =>
           navigate(
             ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
@@ -39,13 +41,11 @@ const ReportDetails = () => {
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)
           ),
-        useFetch: async () => ({
-          data: [],
-          isLoading: false,
-          isError: false,
-          isFetched: true
-        }),
-        component: (data) => <>Coming soon...</>
+        useFetch: useGetFuelSupplies,
+        component: (data) =>
+          data.fuelSupplies.length > 0 && (
+            <FuelSupplySummary data={data} />
+          )
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),

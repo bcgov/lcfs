@@ -172,7 +172,7 @@ class FuelSupplyRepository:
         Retrieve the list of fuel supplied information for a given compliance report.
         """
         query = self.query.where(FuelSupply.compliance_report_id == compliance_report_id)
-        results = (await self.db.execute(query)).scalars().all()
+        results = (await self.db.execute(query)).unique().scalars().all()
         return results
 
     @repo_handler
