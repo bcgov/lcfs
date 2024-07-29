@@ -111,12 +111,19 @@ class ComplianceReportServices:
         notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
 
         notional_transfers_sums = {
-            transfer.fuel_category.replace(" ", "_").lower(): sum(
-                t.quantity for t in notional_transfers.notional_transfers
-                if t.fuel_category.replace(" ", "_").lower() == transfer.fuel_category.replace(" ", "_").lower()
-            )
-            for transfer in notional_transfers.notional_transfers
+            'gasoline': 0,
+            'diesel': 0,
+            'jet_fuel': 0
         }
+
+        for transfer in notional_transfers.notional_transfers:
+            # Normalize the fuel category key
+            normalized_category = transfer.fuel_category.replace(
+                " ", "_").lower()
+
+            # Update the corresponding category sum
+            if normalized_category in notional_transfers_sums:
+                notional_transfers_sums[normalized_category] += transfer.quantity
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums)
