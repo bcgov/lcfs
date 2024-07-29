@@ -13,6 +13,7 @@ import initiativeAgreementEn from '@/assets/locales/en/initiativeAgreement.json'
 import notionalTransferEn from '@/assets/locales/en/notionalTransfer.json'
 import otherUsesEn from '@/assets/locales/en/otherUses.json'
 import finalSupplyEquipmentEn from '@/assets/locales/en/finalSupplyEquipment.json'
+import fuelSupplyEn from '@/assets/locales/en/fuelSupply.json'
 import dashboardEn from '@/assets/locales/en/dashboard.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
@@ -32,6 +33,7 @@ const resources = {
     notionalTransfer: notionalTransferEn,
     otherUses: otherUsesEn,
     finalSupplyEquipment: finalSupplyEquipmentEn,
+    fuelSupply: fuelSupplyEn,
     dashboard: dashboardEn
   }
 }
