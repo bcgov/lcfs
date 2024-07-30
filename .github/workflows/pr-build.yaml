@@ -43,8 +43,8 @@ jobs:
         run: |
 
           pr_deployed=$(helm -n ${{ env.DEV_NAMESPACE }} list | grep lcfs-frontend-dev- | wc -l | tr -d '[:space:]')
-          if [ "$pr_deployed" -gt 2 ]; then
-            echo "There are at least 3 pull requests have been deployed on dev. Please uninstalled one of them in order to to have space to deploy this pull request. Exiting with code 99"
+          if [ "$pr_deployed" -gt 1 ]; then
+            echo "There are at least 2 pull requests have been deployed on dev. Please uninstalled one of them in order to to have space to deploy this pull request. Exiting with code 99"
             exit 99
           else
             echo "There are $pr_deployed pull request builds on dev. Will deploy a new one."
