@@ -6,7 +6,6 @@ from fastapi import Depends, Request
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
     ComplianceReportBaseSchema,
@@ -16,28 +15,20 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema
 )
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
-from lcfs.web.api.compliance_report.constants import (
-    RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
-    LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
-    NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
-    PRESCRIBED_PENALTY_RATE,
-)
-from lcfs.web.api.notional_transfer.services import NotionalTransferServices
+from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.api.compliance_report.summary import ComplianceReportSummaryCalculatorService
+from lcfs.web.api.compliance_report.update import ComplianceReportUpdateService
 
 logger = getLogger(__name__)
 
-
 class ComplianceReportServices:
     def __init__(
-        self,
-        request: Request = None, repo: ComplianceReportRepository = Depends(),
-        notional_transfer_service: NotionalTransferServices = Depends(
-            NotionalTransferServices),
+        self, request: Request = None, repo: ComplianceReportRepository = Depends()
     ) -> None:
         self.request = request
         self.repo = repo
-        self.notional_transfer_service = notional_transfer_service
+        self.summary_calculator = ComplianceReportSummaryCalculatorService()
+        self.updater = ComplianceReportUpdateService(repo, request)
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -61,7 +52,6 @@ class ComplianceReportServices:
                 status=draft_status,
             )
         )
-        # Add a new compliance history record for the new draft report
         await self.repo.add_compliance_report_history(report, self.request.user)
 
         return report
@@ -102,35 +92,14 @@ class ComplianceReportServices:
     async def get_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
 
-        # Placeholder values for demonstration purposes
-        # need to get these values from the db after fuel supply is implemented
-        fossil_quantities = {'gasoline': 10000,
-                             'diesel': 20000, 'jet_fuel': 3000}
-        renewable_quantities = {'gasoline': 5000,
-                                'diesel': 15000, 'jet_fuel': 1000}
+        fossil_quantities = {'gasoline': 10000, 'diesel': 20000, 'jet_fuel': 3000}
+        renewable_quantities = {'gasoline': 5000, 'diesel': 15000, 'jet_fuel': 1000}
         previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
 
-        notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
-
-        notional_transfers_sums = {
-            'gasoline': 0,
-            'diesel': 0,
-            'jet_fuel': 0
-        }
-
-        for transfer in notional_transfers.notional_transfers:
-            # Normalize the fuel category key
-            normalized_category = transfer.fuel_category.replace(
-                " ", "_").lower()
-
-            # Update the corresponding category sum
-            if normalized_category in notional_transfers_sums:
-                notional_transfers_sums[normalized_category] += transfer.quantity
-
-        renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
-            fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums)
-        low_carbon_fuel_target_summary = self.calculate_low_carbon_fuel_target_summary()
-        non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
+        renewable_fuel_target_summary = self.summary_calculator.calculate_renewable_fuel_target_summary(
+            fossil_quantities, renewable_quantities, previous_retained)
+        low_carbon_fuel_target_summary = self.summary_calculator.calculate_low_carbon_fuel_target_summary()
+        non_compliance_penalty_summary = self.summary_calculator.calculate_non_compliance_penalty_summary()
 
         summary = {
             'renewableFuelTargetSummary': renewable_fuel_target_summary,
@@ -140,215 +109,7 @@ class ComplianceReportServices:
 
         return summary
 
-    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, notional_transfers_sums: dict) -> List[ComplianceReportSummaryRowSchema]:
-        # line 3
-        tracked_totals = {
-            category: fossil_quantities.get(
-                category, 0) + renewable_quantities.get(category, 0)
-            for category in ['gasoline', 'diesel', 'jet_fuel']
-        }
-
-        # line 4
-        # This should be calculated based on some business logic or configuration
-        eligible_renewable_required = 40000
-
-        # line 5
-        notionally_transferred_renewables = {
-            'gasoline': 1000, 'diesel': 1500, 'jet_fuel': 2000}
-
-        # line 6
-        retained_renewables = {
-            category: min(0.05 * eligible_renewable_required,
-                          previous_retained.get(category, 0))
-            for category in ['gasoline', 'diesel', 'jet_fuel']
-        }
-
-        # line 8
-        # These should be calculated based on some business logic
-        deferred_renewables = {'gasoline': 9000,
-                               'diesel': 2000, 'jet_fuel': 5000}
-
-        # line 9
-        renewables_added = {'gasoline': 1000, 'diesel': 2000, 'jet_fuel': 3000}
-
-        # line 10
-        net_renewable_supplied = {
-            category:
-                # line 2
-                renewable_quantities.get(category, 0) +
-                # line 5
-                notionally_transferred_renewables.get(category, 0) -
-                # line 6
-                retained_renewables.get(category, 0) +
-                # line 7
-                previous_retained.get(category, 0) +
-                # line 8
-                deferred_renewables.get(category, 0) -
-                # line 9
-                renewables_added.get(category, 0)
-            for category in ['gasoline', 'diesel', 'jet_fuel']
-        }
-
-        # line 11
-        non_compliance_penalties = {
-            category: max(0, eligible_renewable_required -
-                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category]
-            for category in ['gasoline', 'diesel', 'jet_fuel']
-        }
-
-        summary_lines = {
-            '1': {'gasoline': fossil_quantities.get('gasoline', 0), 'diesel': fossil_quantities.get('diesel', 0), 'jet_fuel': fossil_quantities.get('jet_fuel', 0)},
-            '2': {'gasoline': renewable_quantities.get('gasoline', 0), 'diesel': renewable_quantities.get('diesel', 0), 'jet_fuel': renewable_quantities.get('jet_fuel', 0)},
-            '3': {'gasoline': tracked_totals.get('gasoline', 0), 'diesel': tracked_totals.get('diesel', 0), 'jet_fuel': tracked_totals.get('jet_fuel', 0)},
-            '4': {'gasoline': eligible_renewable_required, 'diesel': eligible_renewable_required, 'jet_fuel': eligible_renewable_required},
-            # Notionally transferred value
-            '5': notional_transfers_sums,
-            '6': {'gasoline': retained_renewables.get('gasoline', 0), 'diesel': retained_renewables.get('diesel', 0), 'jet_fuel': retained_renewables.get('jet_fuel', 0)},
-            '7': {'gasoline': previous_retained.get('gasoline', 0), 'diesel': previous_retained.get('diesel', 0), 'jet_fuel': previous_retained.get('jet_fuel', 0)},
-            '8': {'gasoline': deferred_renewables.get('gasoline', 0), 'diesel': deferred_renewables.get('diesel', 0), 'jet_fuel': deferred_renewables.get('jet_fuel', 0)},
-            # Renewable obligation added from previous period
-            '9': {'gasoline': renewables_added.get('gasoline', 0), 'diesel': renewables_added.get('diesel', 0), 'jet_fuel': renewables_added.get('jet_fuel', 0)},
-            '10': {'gasoline': net_renewable_supplied.get('gasoline', 0), 'diesel': net_renewable_supplied.get('diesel', 0), 'jet_fuel': net_renewable_supplied.get('jet_fuel', 0)},
-            '11': {'gasoline': non_compliance_penalties.get('gasoline', 0), 'diesel': non_compliance_penalties.get('diesel', 0), 'jet_fuel': non_compliance_penalties.get('jet_fuel', 0)},
-        }
-
-        summary = [
-            ComplianceReportSummaryRowSchema(
-                line=line,
-                description=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line],
-                gasoline=values.get('gasoline', 0),
-                diesel=values.get('diesel', 0),
-                jet_fuel=values.get('jet_fuel', 0)
-            )
-            for line, values in summary_lines.items()
-        ]
-
-        return summary
-
-    def calculate_low_carbon_fuel_target_summary(self) -> List[ComplianceReportSummaryRowSchema]:
-
-        # replace 200 with sum of export fuels when export fuels is ready
-        complianceUnitsExport = 200 * -1
-
-        low_carbon_summary_lines = {
-            '12': {'value': 7310},
-            '13': {'value': 6650},
-            '14': {'value': 660},
-            '15': {'value': 0},
-            '16': {'value': 0},
-            '17': {'value': 0},
-            '18': {'value': 0},
-            '19': {'value': complianceUnitsExport},
-            '20': {'value': 0},
-            '21': {'value': 0},
-            '22': {'value': 500},
-        }
-
-        low_carbon_fuel_target_summary = [
-            ComplianceReportSummaryRowSchema(
-                line=line,
-                description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line],
-                value=values.get('value', 0)
-            )
-            for line, values in low_carbon_summary_lines.items()
-        ]
-
-        return low_carbon_fuel_target_summary
-
-    def calculate_non_compliance_penalty_summary(self) -> List[ComplianceReportSummaryRowSchema]:
-        non_compliance_summary_lines = {
-            '11': {'gasoline': 100, 'diesel': 0, 'jet_fuel': 0, 'total_value': 100},
-            '21': {'gasoline': 100, 'diesel': 0, 'jet_fuel': 0, 'total_value': 0},
-            '': {'gasoline': None, 'diesel': None, 'jet_fuel': None, 'total_value': 600}
-        }
-
-        non_compliance_penalty_summary = [
-            ComplianceReportSummaryRowSchema(
-                line=line,
-                description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line],
-                gasoline=values.get('gasoline', 0),
-                diesel=values.get('diesel', 0),
-                jet_fuel=values.get('jet_fuel', 0),
-                total_value=values.get('total_value', 0)
-            )
-            for line, values in non_compliance_summary_lines.items()
-        ]
-
-        return non_compliance_penalty_summary
-
     @service_handler
     async def update_compliance_report(self, report_id: int, report_data: ComplianceReportUpdateSchema) -> ComplianceReportBaseSchema:
         """Updates an existing compliance report."""
-        report = await self.repo.get_compliance_report(report_id)
-        if not report:
-            raise DataNotFoundException(f"Compliance report with ID {report_id} not found")
-
-        new_status = await self.repo.get_compliance_report_status_by_desc(report_data.status)
-        status_has_changed = report.status != new_status
-
-        # Update fields
-        report.status = new_status
-        report.supplemental_note = report_data.supplemental_note
-
-        if status_has_changed:
-            # Handle status-specific actions
-            await self.handle_status_change(report, new_status.status)
-
-            # Add a new compliance report history record
-            await self.repo.add_compliance_report_history(report, self.request.user)
-
-        updated_report = await self.repo.update_compliance_report(report)
-        return updated_report
-
-    async def handle_status_change(self, report: ComplianceReport, new_status: ComplianceReportStatusEnum):
-        """Handle status-specific actions based on the new status."""
-        status_handlers = {
-            ComplianceReportStatusEnum.Draft: self.handle_draft_status,
-            ComplianceReportStatusEnum.Submitted: self.handle_submitted_status,
-            ComplianceReportStatusEnum.Recommended_by_analyst: self.handle_recommended_by_analyst_status,
-            ComplianceReportStatusEnum.Recommended_by_manager: self.handle_recommended_by_manager_status,
-            ComplianceReportStatusEnum.Assessed: self.handle_assessed_status,
-            ComplianceReportStatusEnum.ReAssessed: self.handle_reassessed_status,
-        }
-        
-        handler = status_handlers.get(new_status)
-        if handler:
-            await handler(report)
-        else:
-            raise ServiceException(f"Unsupported status change to {new_status}")
-
-    async def handle_draft_status(self, report: ComplianceReport):
-        """Handle actions when a report is set to Draft status."""
-        # Implement logic for Draft status
-        # This might include resetting certain fields or flags
-        pass
-
-    async def handle_submitted_status(self, report: ComplianceReport):
-        """Handle actions when a report is Submitted."""
-        # Implement logic for Submitted status
-        # This might include locking certain fields, initiating a review process, etc.
-        pass
-
-    async def handle_recommended_by_analyst_status(self, report: ComplianceReport):
-        """Handle actions when a report is Recommended by analyst."""
-        # Implement logic for Recommended by analyst status
-        # This might include notifying a manager, updating review flags, etc.
-        pass
-
-    async def handle_recommended_by_manager_status(self, report: ComplianceReport):
-        """Handle actions when a report is Recommended by manager."""
-        # Implement logic for Recommended by manager status
-        # This might include preparing the report for final assessment, notifying relevant parties, etc.
-        pass
-
-    async def handle_assessed_status(self, report: ComplianceReport):
-        """Handle actions when a report is Assessed."""
-        # Implement logic for Assessed status
-        # This might include finalizing the report, calculating any relevant metrics or penalties, etc.
-        pass
-
-    async def handle_reassessed_status(self, report: ComplianceReport):
-        """Handle actions when a report is ReAssessed."""
-        # Implement logic for ReAssessed status
-        # This might include resetting certain fields, initiating a new review process, etc.
-        pass
+        return await self.updater.update_compliance_report(report_id, report_data)
