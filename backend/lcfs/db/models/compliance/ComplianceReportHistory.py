@@ -13,7 +13,7 @@ class ComplianceReportHistory(BaseModel, Auditable):
     status_id = Column(Integer, ForeignKey('compliance_report_status.compliance_report_status_id'), nullable=False, comment="Foreign key to the compliance report status")
     user_profile_id = Column(Integer, ForeignKey("user_profile.user_profile_id"), comment="Identifier for the user associated with the status change")
 
-    compliance_report = relationship('ComplianceReport', back_populates='history')
+    compliance_report = relationship('ComplianceReport', back_populates='compliance_history')
     status = relationship('ComplianceReportStatus')
     user_profile = relationship('UserProfile')
 

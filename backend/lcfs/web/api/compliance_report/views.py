@@ -23,7 +23,8 @@ from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
-    ComplianceReportSummaryRowSchema
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportUpdateSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.core.decorators import view_handler
@@ -90,3 +91,20 @@ async def get_compliance_report_summary(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     return await service.get_compliance_report_summary(report_id)
+
+@view_handler(['*'])
+@router.put(
+    "/{report_id}",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def update_compliance_report(
+    request: Request,
+    report_id: int,
+    report_data: ComplianceReportUpdateSchema,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """Update an existing compliance report."""
+     # TODO role validation for different status updates need to be added here
+    return await service.update_compliance_report(report_id, report_data)

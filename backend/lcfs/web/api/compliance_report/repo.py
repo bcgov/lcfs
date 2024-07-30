@@ -367,3 +367,16 @@ class ComplianceReportRepository:
     @repo_handler
     async def get_expected_use(self, expected_use_type_id: int) -> ExpectedUseType:
         return await self.db.scalar(select(ExpectedUseType).where(ExpectedUseType.expected_use_type_id == expected_use_type_id))
+
+    @repo_handler
+    async def update_compliance_report(self, report: ComplianceReport) -> ComplianceReportBaseSchema:
+        """Persists the changes made to the ComplianceReport object to the database."""
+        await self.db.flush()
+        await self.db.refresh(report, [
+            "compliance_period",
+            "organization",
+            "status",
+            "summary",
+            "history",
+        ])
+        return ComplianceReportBaseSchema.model_validate(report)

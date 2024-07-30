@@ -6,15 +6,17 @@ from fastapi import Depends, Request
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
-    ComplianceReportSummaryRowSchema
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportUpdateSchema
 )
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
@@ -226,3 +228,80 @@ class ComplianceReportServices:
         ]
 
         return non_compliance_penalty_summary
+
+    @service_handler
+    async def update_compliance_report(self, report_id: int, report_data: ComplianceReportUpdateSchema) -> ComplianceReportBaseSchema:
+        """Updates an existing compliance report."""
+        report = await self.repo.get_compliance_report(report_id)
+        if not report:
+            raise DataNotFoundException(f"Compliance report with ID {report_id} not found")
+
+        new_status = await self.repo.get_compliance_report_status_by_desc(report_data.status)
+        status_has_changed = report.status != new_status
+
+        # Update fields
+        report.status = new_status
+        report.supplemental_note = report_data.supplemental_note
+
+        if status_has_changed:
+            # Handle status-specific actions
+            await self.handle_status_change(report, new_status.status)
+
+            # Add a new compliance report history record
+            await self.repo.add_compliance_report_history(report, self.request.user)
+
+        updated_report = await self.repo.update_compliance_report(report)
+        return updated_report
+
+    async def handle_status_change(self, report: ComplianceReport, new_status: ComplianceReportStatusEnum):
+        """Handle status-specific actions based on the new status."""
+        status_handlers = {
+            ComplianceReportStatusEnum.Draft: self.handle_draft_status,
+            ComplianceReportStatusEnum.Submitted: self.handle_submitted_status,
+            ComplianceReportStatusEnum.Recommended_by_analyst: self.handle_recommended_by_analyst_status,
+            ComplianceReportStatusEnum.Recommended_by_manager: self.handle_recommended_by_manager_status,
+            ComplianceReportStatusEnum.Assessed: self.handle_assessed_status,
+            ComplianceReportStatusEnum.ReAssessed: self.handle_reassessed_status,
+        }
+        
+        handler = status_handlers.get(new_status)
+        if handler:
+            await handler(report)
+        else:
+            raise ServiceException(f"Unsupported status change to {new_status}")
+
+    async def handle_draft_status(self, report: ComplianceReport):
+        """Handle actions when a report is set to Draft status."""
+        # Implement logic for Draft status
+        # This might include resetting certain fields or flags
+        pass
+
+    async def handle_submitted_status(self, report: ComplianceReport):
+        """Handle actions when a report is Submitted."""
+        # Implement logic for Submitted status
+        # This might include locking certain fields, initiating a review process, etc.
+        pass
+
+    async def handle_recommended_by_analyst_status(self, report: ComplianceReport):
+        """Handle actions when a report is Recommended by analyst."""
+        # Implement logic for Recommended by analyst status
+        # This might include notifying a manager, updating review flags, etc.
+        pass
+
+    async def handle_recommended_by_manager_status(self, report: ComplianceReport):
+        """Handle actions when a report is Recommended by manager."""
+        # Implement logic for Recommended by manager status
+        # This might include preparing the report for final assessment, notifying relevant parties, etc.
+        pass
+
+    async def handle_assessed_status(self, report: ComplianceReport):
+        """Handle actions when a report is Assessed."""
+        # Implement logic for Assessed status
+        # This might include finalizing the report, calculating any relevant metrics or penalties, etc.
+        pass
+
+    async def handle_reassessed_status(self, report: ComplianceReport):
+        """Handle actions when a report is ReAssessed."""
+        # Implement logic for ReAssessed status
+        # This might include resetting certain fields, initiating a new review process, etc.
+        pass

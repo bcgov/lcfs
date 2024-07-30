@@ -49,7 +49,7 @@ const SigningAuthorityDeclaration = () => {
           alignItems: 'flex-start'
         }}
       />
-      <BCButton
+      {/* <BCButton
         variant="contained"
         color="primary"
         style={{
@@ -65,7 +65,7 @@ const SigningAuthorityDeclaration = () => {
         >
           {t('report:submitReport')}
         </BCTypography>
-      </BCButton>
+      </BCButton> */}
     </Paper>
   )
 }

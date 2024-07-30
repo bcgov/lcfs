@@ -3,7 +3,6 @@ from .AllocationTransactionType import AllocationTransactionType
 from .CompliancePeriod import CompliancePeriod
 from .ComplianceReport import ComplianceReport
 from .ComplianceReportHistory import ComplianceReportHistory
-from .ComplianceReportSnapshot import ComplianceReportSnapshot
 from .ComplianceReportStatus import ComplianceReportStatus
 from .ComplianceReportSummary import ComplianceReportSummary
 from .FinalSupplyEquipment import FinalSupplyEquipment
@@ -19,7 +18,6 @@ __all__ = [
     "CompliancePeriod",
     "ComplianceReport",
     "ComplianceReportHistory",
-    "ComplianceReportSnapshot",
     "ComplianceReportStatus",
     "ComplianceReportSummary",
     "FinalSupplyEquipment",

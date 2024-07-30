@@ -141,3 +141,7 @@ class CommmonPaginatedReportRequestSchema(BaseSchema):
     size: Optional[int] = None
     sort_orders: Optional[List[SortOrder]] = None
 
+
+class ComplianceReportUpdateSchema(BaseSchema):
+    status: str
+    supplemental_note: Optional[str] = None
