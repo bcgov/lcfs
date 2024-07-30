@@ -120,6 +120,7 @@ const FuelCodesBase = () => {
           gridKey={'fuel-codes-grid'}
           columnDefs={fuelCodeColDefs(t)}
           query={useGetFuelCodes}
+          queryParams={{ cacheTime: 0, staleTime: 0 }}
           dataKey={'fuelCodes'}
           getRowId={getRowId}
           onRowClicked={handleRowClicked}

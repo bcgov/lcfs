@@ -17,8 +17,7 @@ const checkedIcon = <CheckBoxIcon fontSize="medium" />
 
 export const AutocompleteEditor = (props) => {
   const {
-    value,
-
+    value='',
     options = [],
     onValueChange,
     limitTags = 2,
@@ -199,13 +198,6 @@ AutocompleteEditor.propTypes = {
   options: PropTypes.array.isRequired,
   freeSolo: PropTypes.bool,
   onBlur: PropTypes.func
-}
-
-AutocompleteEditor.defaultProps = {
-  openOnFocus: true,
-  multiple: false,
-  disableCloseOnSelect: false,
-  freeSolo: false
 }
 
 AutocompleteEditor.displayName = 'AutocompleteEditor'

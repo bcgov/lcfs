@@ -42,20 +42,29 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'prefix',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
-    cellEditor: AutocompleteEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
-      options: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
+      values: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix)
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
-    suppressKeyboardEvent,
-    minWidth: 135
+    minWidth: 135,
+    valueGetter: (params) => params.data.prefix || 'BCLCF',
+    valueSetter: (params) => {
+      if (params.newValue !== params.oldValue) {
+        params.data.prefix = params.newValue
+        params.data.fuelCode = optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === params.newValue
+        )?.nextFuelCode
+        params.data.company = undefined
+        params.data.fuel = undefined
+        params.data.feedstock = undefined
+        params.data.feedstockLocation = undefined
+        params.data.feedstockTransportMode = undefined
+        params.data.finishedFuelTransportMode = undefined
+        params.data.formerCompany = undefined
+        params.data.contactName = undefined
+        params.data.contactEmail = undefined
+      }
+    }
   },
   {
     field: 'fuelCode',
@@ -84,36 +93,16 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       title: 'fuelCode'
     }),
     suppressKeyboardEvent,
-    tooltipValueGetter: (p) => 'select the next fuel code version',
-    valueSetter: (params) => {
-      params.data.fuelCode = params.newValue
-
-      const fuelCodeData = optionsData.latestFuelCodes.find(
-        (fuelCode) =>
-          fuelCode.fuelCode.split('.')[0] === params.newValue.split('.')[0]
-      )
-
-      params.data.prefix = fuelCodeData.fuelCodePrefix.prefix
-      params.data.company = fuelCodeData.company
-      params.data.fuel = fuelCodeData.fuelCodeType.fuelType
-      params.data.feedstock = fuelCodeData.feedstock
-      params.data.feedstockLocation = fuelCodeData.feedstockLocation
-      params.data.feedstockMisc = fuelCodeData.feedstockMisc
-      params.data.feedstockTransportMode =
-        fuelCodeData.feedstockFuelTransportModes.map(
-          (mode) => mode.feedstockFuelTransportMode.transportMode
-        )
-
-      params.data.finishedFuelTransportMode =
-        fuelCodeData.finishedFuelTransportModes.map(
-          (mode) => mode.finishedFuelTransportMode.transportMode
-        )
-      params.data.formerCompany = fuelCodeData.formerCompany
-      params.data.contactName = fuelCodeData.contactName
-      params.data.contactEmail = fuelCodeData.contactEmail
-
-      return true
-    }
+    valueGetter: (params) => {
+      if (!params.data.fuelCode) {
+        const prefix = params.data.prefix || 'BCLCF'
+        return optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === prefix
+        )?.nextFuelCode
+      }
+      return params.data.fuelCode
+    },
+    tooltipValueGetter: (p) => 'select the next fuel code version'
   },
   {
     field: 'carbonIntensity',
