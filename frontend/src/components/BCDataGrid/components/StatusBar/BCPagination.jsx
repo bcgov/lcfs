@@ -5,16 +5,16 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import { BCPaginationActions } from './BCPaginationActions'
 
 export const BCPagination = ({
-  total,
-  page,
+  total = 0,
+  page = 1,
   handleChangePage,
-  size,
+  size = 10,
   handleChangeRowsPerPage,
-  enableResetButton,
-  enableCopyButton,
-  enableExportButton,
-  exportName,
-  gridRef
+  enableResetButton = false,
+  enableCopyButton = false,
+  enableExportButton = false,
+  exportName = 'ExportData',
+  gridRef = null
 }) => {
   return (
       <TablePagination
@@ -65,18 +65,8 @@ export const BCPagination = ({
   )
 }
 
-BCPagination.defaultProps = {
-  enableCopyButton: false,
-  enableResetButton: false,
-  enableExportButton: false,
-  exportName: 'ExportData',
-  page: 1,
-  size: 10,
-  total: 0,
-  gridRef: null,
-  rowsPerPageOptions: [10, 20, 50, 100]
-}
 BCPagination.displayName = 'BCPagination'
+
 BCPagination.propTypes = {
   enableCopyButton: PropTypes.bool,
   enableResetButton: PropTypes.bool,

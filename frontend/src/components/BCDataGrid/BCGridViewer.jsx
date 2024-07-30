@@ -19,7 +19,7 @@ export const BCGridViewer = ({
   paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
   exportName = 'ExportData',
   enableExportButton = false,
-  enableCopyButton = true,
+  enableCopyButton = false,
   enableResetButton = false,
   query,
   queryParams = {},
