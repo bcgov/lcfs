@@ -33,8 +33,16 @@ jobs:
     steps:
       - id: get-version
         run: |
-          version=$(echo "${{ github.event.repository.default_branch }}" | sed -E 's/release-(.*)/\1/')
-          echo "VERSION=$version" >> $GITHUB_OUTPUT
+
+          pr-deployed=$(helm -n ${{ env.DEV_NAMESPACE }} list | grep lcfs-frontend-dev- | wc -l | tr -d '[:space:]')
+          if [ "$pr-deployed" -gt 2 ]; then
+            echo "There are at least 3 pull requests have been deployed on dev. Please uninstalled one of them in order to to have space to deploy this pull request. Exiting with code 99"
+            exit 99
+          else
+            echo "There are $pr-deployed pull request builds on dev. Will deploy a new one."
+            version=$(echo "${{ github.event.repository.default_branch }}" | sed -E 's/release-(.*)/\1/')
+            echo "VERSION=$version" >> $GITHUB_OUTPUT
+          fi
 
   build:
     if: >
