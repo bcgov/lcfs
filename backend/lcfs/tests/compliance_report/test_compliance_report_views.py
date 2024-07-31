@@ -1,8 +1,12 @@
-import pytest
+import warnings
 import json
+from datetime import datetime
+import pytest
 from httpx import AsyncClient
 from fastapi import FastAPI, status
-from pathlib import Path
+from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 
 
 @pytest.mark.anyio
@@ -96,3 +100,243 @@ async def test_get_reports_paginated_for_org_successful(
     # check if pagination is working as expected
     content = json.loads(response.content.decode("utf-8"))
     assert content["pagination"]["page"] == 1
+
+@pytest.mark.anyio
+async def test_get_compliance_report_summary_line_12(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
+):
+    compliance_report = ComplianceReport(
+        compliance_period_id=15, # 2024
+        organization_id=1, # LCFS Org 1
+        status_id=6 # Recorded
+    )
+
+    transfer_out1 = Transfer(
+        from_organization_id=1, # LCFS Org 1
+        to_organization_id=2, # LCFS Org 2
+        agreement_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_out2 = Transfer(
+        from_organization_id=1, # LCFS Org 1
+        to_organization_id=2, # LCFS Org 2
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_out3 = Transfer(
+        from_organization_id=2, # LCFS Org 2
+        to_organization_id=1, # LCFS Org 1
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_out4 = Transfer(
+        from_organization_id=1, # LCFS Org 1
+        to_organization_id=2, # LCFS Org 2
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_out5 = Transfer(
+        from_organization_id=1, # LCFS Org 1
+        to_organization_id=2, # LCFS Org 2
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=5, # Recommended
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+
+    await add_models([
+        compliance_report, transfer_out1, transfer_out2, transfer_out3, transfer_out4, transfer_out5
+    ])
+
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        url = fastapi_app.url_path_for("get_compliance_report_summary", report_id=compliance_report.compliance_report_id)
+        response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+
+    content = json.loads(response.content.decode("utf-8"))
+    assert "lowCarbonFuelTargetSummary" in content
+    low_carbon_fuel_target_summary = content["lowCarbonFuelTargetSummary"]
+    assert any(row['line'] == '12' and row['value'] == 200 for row in low_carbon_fuel_target_summary)
+
+
+@pytest.mark.anyio
+async def test_get_compliance_report_summary_line_13(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
+):
+    compliance_report = ComplianceReport(
+        compliance_period_id=15, # 2024
+        organization_id=1, # LCFS Org 1
+        status_id=6 # Recorded
+    )
+
+    transfer_in1 = Transfer(
+        from_organization_id=2, # LCFS Org 2
+        to_organization_id=1, # LCFS Org 1
+        agreement_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_in2 = Transfer(
+        from_organization_id=2, # LCFS Org 2
+        to_organization_id=1, # LCFS Org 1
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_in3 = Transfer(
+        from_organization_id=1, # LCFS Org 1
+        to_organization_id=2, # LCFS Org 2
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_in4 = Transfer(
+        from_organization_id=2, # LCFS Org 2
+        to_organization_id=1, # LCFS Org 1
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=6, # Recorded
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+    transfer_in5 = Transfer(
+        from_organization_id=2, # LCFS Org 2
+        to_organization_id=1, # LCFS Org 1
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
+        price_per_unit=1.0,
+        quantity=100,
+        transfer_category_id=1, # A
+        current_status_id=5, # Recommended
+        recommendation=TransferRecommendationEnum.Record,
+        effective_status=True
+    )
+
+    await add_models([
+        compliance_report, transfer_in1, transfer_in2, transfer_in3, transfer_in4, transfer_in5
+    ])
+
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        url = fastapi_app.url_path_for("get_compliance_report_summary", report_id=compliance_report.compliance_report_id)
+        response = await client.get(url)
+
+    assert response.status_code == status.HTTP_200_OK
+
+    content = json.loads(response.content.decode("utf-8"))
+    assert "lowCarbonFuelTargetSummary" in content
+    low_carbon_fuel_target_summary = content["lowCarbonFuelTargetSummary"]
+    assert any(row['line'] == '13' and row['value'] == 200 for row in low_carbon_fuel_target_summary)
+
+
+@pytest.mark.anyio
+async def test_get_compliance_report_summary_line_14(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
+):
+    compliance_report = ComplianceReport(
+        compliance_period_id=15, # 2024
+        organization_id=1, # LCFS Org 1
+        status_id=6 # Recorded
+    )
+
+    issued_units1 = InitiativeAgreement(
+        compliance_units=75,
+        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
+        gov_comment="Issued units 1",
+        to_organization_id=1, # LCFS Org 1
+        current_status_id=3 # Approved
+    )
+    issued_units2 = InitiativeAgreement(
+        compliance_units=25,
+        transaction_effective_date=datetime.strptime("2024-02-01", "%Y-%m-%d").date(),
+        gov_comment="Issued units 2",
+        to_organization_id=1, # LCFS Org 1
+        current_status_id=3 # Approved
+    )
+    issued_units3 = InitiativeAgreement(
+        compliance_units=25,
+        transaction_effective_date=datetime.strptime("2024-02-01", "%Y-%m-%d").date(),
+        gov_comment="Issued units 2",
+        to_organization_id=2, # LCFS Org 2
+        current_status_id=3 # Approved
+    )
+    issued_units4 = InitiativeAgreement(
+        compliance_units=25,
+        transaction_effective_date=datetime.strptime("2023-02-01", "%Y-%m-%d").date(),
+        gov_comment="Issued units 2",
+        to_organization_id=2, # LCFS Org 2
+        current_status_id=3 # Approved
+    )
+    issued_units5 = InitiativeAgreement(
+        compliance_units=25,
+        transaction_effective_date=datetime.strptime("2023-02-01", "%Y-%m-%d").date(),
+        gov_comment="Issued units 2",
+        to_organization_id=2, # LCFS Org 2
+        current_status_id=1 # Draft
+    )
+
+    await add_models([compliance_report, issued_units1, issued_units2, issued_units3, issued_units4, issued_units5])
+
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        url = fastapi_app.url_path_for("get_compliance_report_summary", report_id=compliance_report.compliance_report_id)
+        response = await client.get(url)
+
+    content = json.loads(response.content.decode("utf-8"))
+    assert "lowCarbonFuelTargetSummary" in content
+    low_carbon_fuel_target_summary = content["lowCarbonFuelTargetSummary"]
+    assert any(row['line'] == '14' and row['value'] == 100 for row in low_carbon_fuel_target_summary)
