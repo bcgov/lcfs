@@ -4,8 +4,9 @@ import BCButton from '@/components/BCButton'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useFuelCodeOptions, useSaveFuelCode } from '@/hooks/useFuelCode'
+import { useQuery } from '@tanstack/react-query'
 import withRole from '@/utils/withRole'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -17,16 +18,44 @@ import { useLocation } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelCodeColDefs } from './_schema'
 import { AddRowsDropdownButton } from './components/AddRowsDropdownButton'
+import { useApiService } from '@/services/useApiService'
 
 const AddFuelCodeBase = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
+  const [gridApi, setGridApi] = useState()
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelCode'])
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
   const { mutateAsync: saveRow } = useSaveFuelCode()
   const [errors, setErrors] = useState({})
+  const [focusedCell, setFocusedCell] = useState(null)
+  const [cloneFuelCodeId, setCloneFuelCodeId] = useState(null)
+  const [prefix, setPrefix] = useState('BCLCF')
+  const [paramsData, setParamsData] = useState({})
+  const apiService = useApiService()
+
+  const {
+    data: clonedFuelCodeData,
+    isLoading: isFuelCodeLoading,
+    refetch
+  } = useQuery({
+    queryKey: ['fuelCode', cloneFuelCodeId, prefix],
+    queryFn: async ({ queryKey }) => {
+      // eslint-disable-next-line no-unused-vars
+      const [_, cloneFuelCodeId, prefix] = queryKey
+      let path = apiRoutes.fuelCodeSearch
+      path +=
+        'prefix=' +
+        (prefix || 'BCLCF') +
+        '&distinctSearch=false&fuelCode=' +
+        cloneFuelCodeId
+      const response = await apiService.get(path)
+      return response.data.fuelCodes[0]
+    },
+    enabled: !!cloneFuelCodeId
+  })
 
   const gridOptions = useMemo(
     () => ({
@@ -49,11 +78,66 @@ const AddFuelCodeBase = () => {
     }
   }, [location.state])
 
-  const onGridReady = useCallback((params) => {
-    setRowData([{ id: uuid() }])
-    params.api.sizeColumnsToFit()
-  }, [])
+  const onGridReady = useCallback(
+    (params) => {
+      setGridApi(params.api)
+      setRowData([
+        {
+          id: uuid(),
+          prefix: 'BCLCF',
+          fuelCode: optionsData?.fuelCodePrefixes?.find(
+            (item) => item.prefix === 'BCLCF'
+          ).nextFuelCode
+        }
+      ])
+      params.api.sizeColumnsToFit()
+    },
+    [optionsData]
+  )
 
+  const onCellValueChanged = useCallback((params) => {
+    if (params.column.colId === 'fuelCode') {
+      setCloneFuelCodeId(params.newValue)
+      setPrefix(params.data.prefix)
+      setFocusedCell(params.column.colId)
+      setParamsData(params.data)
+      refetch()
+    }
+  }, [refetch])
+
+  useEffect(() => {
+    if (
+      focusedCell === 'fuelCode' &&
+      !isFuelCodeLoading &&
+      clonedFuelCodeData
+    ) {
+      const updatedData = {
+        ...paramsData,
+        fuelCode: clonedFuelCodeData.fuelCode,
+        prefix: clonedFuelCodeData.fuelCodePrefix?.prefix || prefix,
+        company: clonedFuelCodeData.company,
+        fuel: clonedFuelCodeData.fuelCodeType?.fuelType,
+        feedstock: clonedFuelCodeData.feedstock,
+        feedstockLocation: clonedFuelCodeData.feedstockLocation,
+        feedstockMisc: clonedFuelCodeData.feedstockMisc,
+        feedstockTransportMode:
+          clonedFuelCodeData.feedstockFuelTransportModes?.map(
+            (mode) => mode.feedstockFuelTransportMode.transportMode
+          ),
+        finishedFuelTransportMode:
+          clonedFuelCodeData.finishedFuelTransportModes?.map(
+            (mode) => mode.finishedFuelTransportMode.transportMode
+          ),
+        formerCompany: clonedFuelCodeData.formerCompany,
+        contactName: clonedFuelCodeData.contactName,
+        contactEmail: clonedFuelCodeData.contactEmail
+      }
+      gridApi.applyTransaction({ update: [updatedData] })
+      setFocusedCell(undefined)
+    }
+  }, [isFuelCodeLoading, clonedFuelCodeData, focusedCell, paramsData, prefix, gridApi])
+
+  
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
@@ -187,6 +271,7 @@ const AddFuelCodeBase = () => {
           rowData={rowData}
           gridOptions={gridOptions}
           onCellEditingStopped={onCellEditingStopped}
+          onCellValueChanged={onCellValueChanged}
           loading={isLoading}
           onAction={onAction}
         />
