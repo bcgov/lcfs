@@ -29,6 +29,8 @@ from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHi
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 
 logger = getLogger("compliance_reports_repo")
 
@@ -367,3 +369,45 @@ class ComplianceReportRepository:
     @repo_handler
     async def get_expected_use(self, expected_use_type_id: int) -> ExpectedUseType:
         return await self.db.scalar(select(ExpectedUseType).where(ExpectedUseType.expected_use_type_id == expected_use_type_id))
+
+    @repo_handler
+    async def get_transferred_out_compliance_units(
+        self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> int:
+        result = await self.db.scalar(
+            select(func.sum(Transfer.quantity))
+            .where(
+                Transfer.agreement_date.between(compliance_period_start, compliance_period_end),
+                Transfer.from_organization_id == organization_id,
+                Transfer.current_status_id == 6 # Recorded
+            )
+        )
+        return result or 0
+
+    @repo_handler
+    async def get_received_compliance_units(
+        self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> int:
+        result = await self.db.scalar(
+            select(func.sum(Transfer.quantity))
+            .where(
+                Transfer.agreement_date.between(compliance_period_start, compliance_period_end),
+                Transfer.to_organization_id == organization_id,
+                Transfer.current_status_id == 6 # Recorded
+            )
+        )
+        return result or 0
+
+    @repo_handler
+    async def get_issued_compliance_units(
+        self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> int:
+        result = await self.db.scalar(
+            select(func.sum(InitiativeAgreement.compliance_units))
+            .where(
+                InitiativeAgreement.transaction_effective_date.between(compliance_period_start, compliance_period_end),
+                InitiativeAgreement.to_organization_id == organization_id,
+                InitiativeAgreement.current_status_id == 3 # Approved
+            )
+        )
+        return result or 0

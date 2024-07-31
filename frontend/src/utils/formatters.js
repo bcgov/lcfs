@@ -1,12 +1,21 @@
 import { ROLES_BADGE_SIZE } from '@/constants/common'
 
+/**
+ * Formats a number with commas and specified decimal places.
+ *
+ * @param {Object|number|string} params - The input parameter which can be an object with a `value` property, a number, or a string.
+ * @param {number|string} [params.value] - The value to be formatted, if params is an object.
+ * @returns {string} - The formatted number as a string, or the original value if it cannot be parsed as a number.
+ */
 export const numberFormatter = (params) => {
-  if (params.value != null) {
-    return parseInt(params.value).toLocaleString() // Use toLocaleString() to format numbers with commas
-  } else if (params !== null) {
-    return parseInt(params).toLocaleString()
-  }
-  return params.value
+  if (params == null || (typeof params === 'object' && params.value == null)) return ''
+
+  const value = params.value ?? params
+  const parsedValue = parseFloat(value)
+  
+  if (isNaN(parsedValue)) return value
+
+  return parsedValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 10 })
 }
 
 export const currencyFormatter = (params) => {
