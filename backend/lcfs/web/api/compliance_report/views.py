@@ -27,6 +27,8 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
+from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -85,12 +87,12 @@ async def get_compliance_report_by_id(
 async def get_compliance_report_summary(
     request: Request,
     report_id: int,
-    service: ComplianceReportServices = Depends()
+    summary_service: ComplianceReportSummaryService = Depends()
 ) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
-    return await service.get_compliance_report_summary(report_id)
+    return await summary_service.get_compliance_report_summary(report_id)
 
 @view_handler(['*'])
 @router.put(
@@ -103,8 +105,8 @@ async def update_compliance_report(
     request: Request,
     report_id: int,
     report_data: ComplianceReportUpdateSchema,
-    service: ComplianceReportServices = Depends(),
+    update_service: ComplianceReportUpdateService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """Update an existing compliance report."""
      # TODO role validation for different status updates need to be added here
-    return await service.update_compliance_report(report_id, report_data)
+    return await update_service.update_compliance_report(report_id, report_data)

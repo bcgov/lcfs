@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
@@ -20,11 +20,12 @@ from lcfs.web.api.base import (
 )
 from lcfs.db.models.compliance import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema, ComplianceReportSummaryRowSchema
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
@@ -380,3 +381,55 @@ class ComplianceReportRepository:
             "history",
         ])
         return ComplianceReportBaseSchema.model_validate(report)
+
+    @repo_handler
+    async def save_compliance_report_summary(self, report_id: int, summary: Dict[str, List[ComplianceReportSummaryRowSchema]]):
+        """
+        Save the compliance report summary to the database.
+        
+        :param report_id: The ID of the compliance report
+        :param summary: The generated summary data
+        """
+        existing_summary = await self.db.execute(
+            select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
+        )
+        existing_summary = existing_summary.scalar_one_or_none()
+
+        if existing_summary:
+            summary_obj = existing_summary
+        else:
+            summary_obj = ComplianceReportSummary(compliance_report_id=report_id)
+
+        # Update renewable fuel target summary
+        for row in summary.get('renewableFuelTargetSummary', []):
+            line_number = row.line
+            for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
+                column_name = f"line_{line_number}_{row.description.lower().replace(' ', '_')}_{fuel_type}"
+                setattr(summary_obj, column_name, getattr(row, fuel_type))
+
+        # Update low carbon fuel target summary
+        for row in summary.get('lowCarbonFuelTargetSummary', []):
+            column_name = f"line_{row.line}_{row.description.lower().replace(' ', '_')}"
+            setattr(summary_obj, column_name, row.value)
+
+        # Update non-compliance penalty summary
+        non_compliance_summary = summary.get('nonCompliancePenaltySummary', [])
+        for row in non_compliance_summary:
+            if row.line == '11':
+                summary_obj.line_11_fossil_derived_base_fuel_gasoline = row.gasoline
+                summary_obj.line_11_fossil_derived_base_fuel_diesel = row.diesel
+                summary_obj.line_11_fossil_derived_base_fuel_jet_fuel = row.jet_fuel
+                summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
+            elif row.line == '21':
+                summary_obj.line_21_non_compliance_penalty_payable = row.total_value
+            elif row.line == '':  # Total row
+                summary_obj.total_non_compliance_penalty_payable = row.total_value
+
+        summary_obj.version += 1
+        summary_obj.is_locked = False  # Or set based on some condition
+
+        if not existing_summary:
+            self.db.add(summary_obj)
+
+        await self.db.commit()
+        logger.info(f"Saved summary for compliance report {report_id}")

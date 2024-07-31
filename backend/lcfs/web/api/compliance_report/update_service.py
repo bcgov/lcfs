@@ -4,11 +4,18 @@ from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportSta
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportUpdateSchema
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
 
 class ComplianceReportUpdateService:
-    def __init__(self, repo: ComplianceReportRepository = Depends(), request: Request = None):
+    def __init__(
+        self, 
+        repo: ComplianceReportRepository = Depends(), 
+        request: Request = None,
+        summary_service: ComplianceReportSummaryService = Depends()
+    ):
         self.repo = repo
         self.request = request
+        self.summary_service = summary_service
 
     async def update_compliance_report(self, report_id: int, report_data: ComplianceReportUpdateSchema) -> ComplianceReport:
         """Updates an existing compliance report."""
@@ -26,6 +33,7 @@ class ComplianceReportUpdateService:
         if status_has_changed:
             await self.handle_status_change(report, new_status.status)
 
+            # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
 
         updated_report = await self.repo.update_compliance_report(report)
@@ -55,8 +63,12 @@ class ComplianceReportUpdateService:
 
     async def handle_submitted_status(self, report: ComplianceReport):
         """Handle actions when a report is Submitted."""
-        # Implement logic for Submitted status
-        pass
+        # Create compliance report summary
+        summary = await self.summary_service.get_compliance_report_summary(report.compliance_report_id)
+        
+        # Save the summary to the database
+        # Assuming there's a method in the repo to save the summary
+        await self.repo.save_compliance_report_summary(report.compliance_report_id, summary)
 
     async def handle_recommended_by_analyst_status(self, report: ComplianceReport):
         """Handle actions when a report is Recommended by analyst."""

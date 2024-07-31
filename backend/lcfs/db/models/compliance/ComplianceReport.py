@@ -15,10 +15,11 @@ class ComplianceReport(BaseModel, Auditable):
     
     compliance_report_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the compliance report")
     compliance_period_id = Column(Integer, ForeignKey('compliance_period.compliance_period_id'), nullable=False, comment="Foreign key to the compliance period")
-    report_type = Column(SQLEnum(ReportType), nullable=False)
     organization_id = Column(Integer, ForeignKey('organization.organization_id'), nullable=False, comment="Identifier for the organization")
     current_status_id = Column(Integer, ForeignKey('compliance_report_status.compliance_report_status_id'), nullable=True, comment="Identifier for the current compliance report status")
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'), nullable=True, comment="Identifier for the transaction")
+
+    report_type = Column(SQLEnum(ReportType), nullable=False)
     nickname = Column(String, nullable=True, comment="Nickname for the compliance report")
     supplemental_note = Column(String, nullable=True, comment="Supplemental note for the compliance report")
 

@@ -2,8 +2,10 @@ from logging import getLogger
 import math
 from typing import List, Dict
 from fastapi import Depends, Request
+from sqlalchemy import select
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
@@ -16,8 +18,8 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.api.compliance_report.summary import ComplianceReportSummaryCalculatorService
-from lcfs.web.api.compliance_report.update import ComplianceReportUpdateService
+from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
+from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 
 logger = getLogger(__name__)
 
@@ -27,8 +29,8 @@ class ComplianceReportServices:
     ) -> None:
         self.request = request
         self.repo = repo
-        self.summary_calculator = ComplianceReportSummaryCalculatorService()
-        self.updater = ComplianceReportUpdateService(repo, request)
+        self.summary_service = ComplianceReportSummaryService()
+        self.update_service = ComplianceReportUpdateService(repo, request)
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -89,27 +91,14 @@ class ComplianceReportServices:
         return report
 
     @service_handler
-    async def get_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
-        """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
+    async def get_supplemental_reports(self, original_report_id: int) -> List[SupplementalReport]:
+        """
+        Retrieve all supplemental reports for a given original compliance report,
+        ordered by version.
+        """
+        query = select(SupplementalReport).where(
+            SupplementalReport.original_report_id == original_report_id
+        ).order_by(SupplementalReport.version)
 
-        fossil_quantities = {'gasoline': 10000, 'diesel': 20000, 'jet_fuel': 3000}
-        renewable_quantities = {'gasoline': 5000, 'diesel': 15000, 'jet_fuel': 1000}
-        previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
-
-        renewable_fuel_target_summary = self.summary_calculator.calculate_renewable_fuel_target_summary(
-            fossil_quantities, renewable_quantities, previous_retained)
-        low_carbon_fuel_target_summary = self.summary_calculator.calculate_low_carbon_fuel_target_summary()
-        non_compliance_penalty_summary = self.summary_calculator.calculate_non_compliance_penalty_summary()
-
-        summary = {
-            'renewableFuelTargetSummary': renewable_fuel_target_summary,
-            'lowCarbonFuelTargetSummary': low_carbon_fuel_target_summary,
-            'nonCompliancePenaltySummary': non_compliance_penalty_summary
-        }
-
-        return summary
-
-    @service_handler
-    async def update_compliance_report(self, report_id: int, report_data: ComplianceReportUpdateSchema) -> ComplianceReportBaseSchema:
-        """Updates an existing compliance report."""
-        return await self.updater.update_compliance_report(report_id, report_data)
+        result = await self.repo.db.execute(query)
+        return result.scalars().all()
