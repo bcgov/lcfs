@@ -74,7 +74,7 @@ export const AddEditViewTransfer = () => {
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: toOrgData } = useRegExtOrgs()
   const isGovernmentUser = currentUser.isGovernmentUser
-  const currentUserOrgId = currentUser.organization.organizationId
+  const currentUserOrgId = currentUser?.organization?.organizationId
   const alertRef = useRef()
 
   const methods = useForm({

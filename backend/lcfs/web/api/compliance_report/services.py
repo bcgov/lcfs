@@ -1,6 +1,7 @@
 from logging import getLogger
 import math
 from typing import List, Dict
+from datetime import datetime
 from fastapi import Depends, Request
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -95,6 +96,15 @@ class ComplianceReportServices:
     async def get_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
 
+        # Fetch the compliance report details
+        compliance_report = await self.repo.get_compliance_report_by_id(report_id)
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        compliance_period_start = compliance_report.compliance_period.effective_date
+        compliance_period_end = compliance_report.compliance_period.expiration_date
+        organization_id = compliance_report.organization_id
+
         # Placeholder values for demonstration purposes
         # need to get these values from the db after fuel supply is implemented
         fossil_quantities = {'gasoline': 10000,
@@ -105,7 +115,9 @@ class ComplianceReportServices:
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities, renewable_quantities, previous_retained)
-        low_carbon_fuel_target_summary = self.calculate_low_carbon_fuel_target_summary()
+        low_carbon_fuel_target_summary = await self.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start, compliance_period_end, organization_id
+        )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
 
         summary = {
@@ -176,15 +188,27 @@ class ComplianceReportServices:
 
         return summary
 
-    def calculate_low_carbon_fuel_target_summary(self) -> List[ComplianceReportSummaryRowSchema]:
+    async def calculate_low_carbon_fuel_target_summary(
+            self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> List[ComplianceReportSummaryRowSchema]:
 
         # replace 200 with sum of export fuels when export fuels is ready
         complianceUnitsExport = 200 * -1
 
+        compliance_units_transferred_out = await self.repo.get_transferred_out_compliance_units(
+            compliance_period_start, compliance_period_end, organization_id
+        )
+        compliance_units_received = await self.repo.get_received_compliance_units(
+            compliance_period_start, compliance_period_end, organization_id
+        )
+        compliance_units_issued = await self.repo.get_issued_compliance_units(
+            compliance_period_start, compliance_period_end, organization_id
+        )
+
         low_carbon_summary_lines = {
-            '12': {'value': 7310},
-            '13': {'value': 6650},
-            '14': {'value': 660},
+            '12': {'value': compliance_units_transferred_out},
+            '13': {'value': compliance_units_received},
+            '14': {'value': compliance_units_issued},
             '15': {'value': 0},
             '16': {'value': 0},
             '17': {'value': 0},
