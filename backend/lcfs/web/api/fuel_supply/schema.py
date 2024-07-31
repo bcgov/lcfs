@@ -34,21 +34,21 @@ class UnitOfMeasureSchema(BaseSchema):
 
 class EnergyDensitySchema(BaseSchema):
     energy_density_id: int
-    energy_density: float
-    unit: UnitOfMeasureSchema
+    density: float
+    # unit: UnitOfMeasureSchema
 
 
 class EndUseTypeSchema(BaseSchema):
     end_use_type_id: int
-    end_use_type: str
-    end_use_sub_type: Optional[str]
+    type: str
+    sub_type: Optional[str]
 
 
 class EnergyEffectivenessRatioSchema(BaseSchema):
     eer_id: Optional[int]
-    fuel_category: FuelCategorySchema
-    end_use_type: Optional[EndUseTypeSchema]
-    energy_effectiveness_ratio: float
+    # fuel_category: FuelCategorySchema
+    # end_use_type: Optional[EndUseTypeSchema]
+    ratio: float
 
 
 class TargetCarbonIntensitySchema(BaseSchema):
@@ -71,13 +71,13 @@ class FuelTypeSchema(BaseSchema):
     fuel_type: str
     fossil_derived: bool
     default_carbon_intensity: float
-    unit: str
-    energy_density: Optional[EnergyDensitySchema]
-    provisions: List[ProvisionOfTheActSchema]
-    fuel_categories: List[FuelCategorySchema]
-    eer_ratios: List[EnergyEffectivenessRatioSchema]
-    target_carbon_intensities: List[TargetCarbonIntensitySchema]
-    fuel_codes: Optional[List[FuelCodeSchema]] = []
+    # unit: str
+    energy_density: List[EnergyDensitySchema]
+    # provisions: List[ProvisionOfTheActSchema]
+    # fuel_categories: List[FuelCategorySchema]
+    energy_effectiveness_ratio: List[EnergyEffectivenessRatioSchema]
+    # target_carbon_intensities: List[TargetCarbonIntensitySchema]
+    # fuel_codes: Optional[List[FuelCodeSchema]] = []
 
 
 class FuelTypeOptionsResponse(BaseSchema):
@@ -117,6 +117,8 @@ class FuelSupplySchema(BaseSchema):
     end_use_id: Optional[int] = None
     fuel_category: Optional[FuelCategoryResponseSchema] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

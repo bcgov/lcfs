@@ -1,4 +1,5 @@
 {
+  "noFuelSuppliesFound": "No fuel supplies found",
   "fuelSupplyTitle": "Supply of fuels",
   "addFuelSupplyRowsTitle": "Add new supply of fuel",
   "fuelSupplySubtitle": "Report the fuel volumes supplied for various uses.",

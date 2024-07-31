@@ -281,8 +281,9 @@ async def get_compliance_report_by_id(
     report_service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
-    Endpoint to get information of a user by ID
-    This endpoint returns the information of a user by ID, including their roles and organization.
+    Endpoint to get information of a report by ID
+    This endpoint returns the information of a report by ID,
+        including its organization, compliance_period and status.
     """
     return await report_service.get_compliance_report_by_id(report_id)
 

@@ -46,4 +46,5 @@ export const apiRoutes = {
   getAllFuelSupplies: '/fuel-supply/list-all',
   saveFuelSupplies: '/fuel-supply/save',
   directorReviewCounts: '/dashboard/director-review-counts/',
+  getAllFuelSupplies: '/fuel-supply/list-all',
 }
