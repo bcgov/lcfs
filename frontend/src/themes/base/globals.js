@@ -98,7 +98,7 @@ const globals = {
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
   },
-  '.ag-theme-material .ag-grid-pagination-container': {
+  '.bc-grid-container .ag-grid-pagination-container': {
     border: 'none',
     borderBottom: `1px solid ${grey[700]}`
   },

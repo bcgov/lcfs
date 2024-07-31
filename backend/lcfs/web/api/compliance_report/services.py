@@ -21,16 +21,21 @@ from lcfs.web.api.compliance_report.constants import (
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
 )
+from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 
 logger = getLogger(__name__)
 
 
 class ComplianceReportServices:
     def __init__(
-        self, request: Request = None, repo: ComplianceReportRepository = Depends()
+        self,
+        request: Request = None, repo: ComplianceReportRepository = Depends(),
+        notional_transfer_service: NotionalTransferServices = Depends(
+            NotionalTransferServices),
     ) -> None:
         self.request = request
         self.repo = repo
+        self.notional_transfer_service = notional_transfer_service
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -103,8 +108,25 @@ class ComplianceReportServices:
                                 'diesel': 15000, 'jet_fuel': 1000}
         previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
 
+        notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
+
+        notional_transfers_sums = {
+            'gasoline': 0,
+            'diesel': 0,
+            'jet_fuel': 0
+        }
+
+        for transfer in notional_transfers.notional_transfers:
+            # Normalize the fuel category key
+            normalized_category = transfer.fuel_category.replace(
+                " ", "_").lower()
+
+            # Update the corresponding category sum
+            if normalized_category in notional_transfers_sums:
+                notional_transfers_sums[normalized_category] += transfer.quantity
+
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
-            fossil_quantities, renewable_quantities, previous_retained)
+            fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums)
         low_carbon_fuel_target_summary = self.calculate_low_carbon_fuel_target_summary()
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
 
@@ -116,34 +138,59 @@ class ComplianceReportServices:
 
         return summary
 
-    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict) -> List[ComplianceReportSummaryRowSchema]:
+    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, notional_transfers_sums: dict) -> List[ComplianceReportSummaryRowSchema]:
+        # line 3
         tracked_totals = {
             category: fossil_quantities.get(
                 category, 0) + renewable_quantities.get(category, 0)
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
+        # line 4
         # This should be calculated based on some business logic or configuration
         eligible_renewable_required = 40000
 
+        # line 5
+        notionally_transferred_renewables = {
+            'gasoline': 1000, 'diesel': 1500, 'jet_fuel': 2000}
+
+        # line 6
         retained_renewables = {
             category: min(0.05 * eligible_renewable_required,
                           previous_retained.get(category, 0))
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
+        # line 8
         # These should be calculated based on some business logic
-        deferred_renewables = {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0}
+        deferred_renewables = {'gasoline': 9000,
+                               'diesel': 2000, 'jet_fuel': 5000}
 
+        # line 9
+        renewables_added = {'gasoline': 1000, 'diesel': 2000, 'jet_fuel': 3000}
+
+        # line 10
         net_renewable_supplied = {
-            category: renewable_quantities.get(category, 0) - retained_renewables.get(
-                category, 0) - deferred_renewables.get(category, 0) + previous_retained.get(category, 0)
+            category:
+                # line 2
+                renewable_quantities.get(category, 0) +
+                # line 5
+                notionally_transferred_renewables.get(category, 0) -
+                # line 6
+                retained_renewables.get(category, 0) +
+                # line 7
+                previous_retained.get(category, 0) +
+                # line 8
+                deferred_renewables.get(category, 0) -
+                # line 9
+                renewables_added.get(category, 0)
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
+        # line 11
         non_compliance_penalties = {
             category: max(0, eligible_renewable_required -
-                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE
+                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category]
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
@@ -153,12 +200,12 @@ class ComplianceReportServices:
             '3': {'gasoline': tracked_totals.get('gasoline', 0), 'diesel': tracked_totals.get('diesel', 0), 'jet_fuel': tracked_totals.get('jet_fuel', 0)},
             '4': {'gasoline': eligible_renewable_required, 'diesel': eligible_renewable_required, 'jet_fuel': eligible_renewable_required},
             # Notionally transferred value
-            '5': {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0},
+            '5': notional_transfers_sums,
             '6': {'gasoline': retained_renewables.get('gasoline', 0), 'diesel': retained_renewables.get('diesel', 0), 'jet_fuel': retained_renewables.get('jet_fuel', 0)},
             '7': {'gasoline': previous_retained.get('gasoline', 0), 'diesel': previous_retained.get('diesel', 0), 'jet_fuel': previous_retained.get('jet_fuel', 0)},
             '8': {'gasoline': deferred_renewables.get('gasoline', 0), 'diesel': deferred_renewables.get('diesel', 0), 'jet_fuel': deferred_renewables.get('jet_fuel', 0)},
             # Renewable obligation added from previous period
-            '9': {'gasoline': 0, 'diesel': 0, 'jet_fuel': 0},
+            '9': {'gasoline': renewables_added.get('gasoline', 0), 'diesel': renewables_added.get('diesel', 0), 'jet_fuel': renewables_added.get('jet_fuel', 0)},
             '10': {'gasoline': net_renewable_supplied.get('gasoline', 0), 'diesel': net_renewable_supplied.get('diesel', 0), 'jet_fuel': net_renewable_supplied.get('jet_fuel', 0)},
             '11': {'gasoline': non_compliance_penalties.get('gasoline', 0), 'diesel': non_compliance_penalties.get('diesel', 0), 'jet_fuel': non_compliance_penalties.get('jet_fuel', 0)},
         }

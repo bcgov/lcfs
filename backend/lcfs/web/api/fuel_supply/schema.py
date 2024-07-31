@@ -61,7 +61,7 @@ class TargetCarbonIntensitySchema(BaseSchema):
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
-    fuel_code_perfix_id: int
+    fuel_code_prefix_id: int
     fuel_code: str
     fuel_code_carbon_intensity: float
 

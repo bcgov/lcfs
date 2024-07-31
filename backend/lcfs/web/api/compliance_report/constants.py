@@ -33,4 +33,8 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     '': "Total non-compliance penalty payable (Line 11 + Line 22 + Line 28)"
 }
 
-PRESCRIBED_PENALTY_RATE = 1.0  # Example penalty rate
+PRESCRIBED_PENALTY_RATE = {
+    'gasoline': 0.3,
+    'diesel': 0.45,
+    'jet_fuel': 0.5
+}

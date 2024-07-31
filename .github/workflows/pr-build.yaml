@@ -31,10 +31,26 @@ jobs:
       output1: ${{ steps.get-version.outputs.VERSION }}
     
     steps:
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
+
       - id: get-version
         run: |
-          version=$(echo "${{ github.event.repository.default_branch }}" | sed -E 's/release-(.*)/\1/')
-          echo "VERSION=$version" >> $GITHUB_OUTPUT
+
+          pr_deployed=$(helm -n ${{ env.DEV_NAMESPACE }} list | grep lcfs-frontend-dev- | wc -l | tr -d '[:space:]')
+          if [ "$pr_deployed" -gt 1 ]; then
+            echo "There are at least 2 pull requests have been deployed on dev. Please uninstalled one of them in order to to have space to deploy this pull request. Exiting with code 99"
+            exit 99
+          else
+            echo "There are $pr_deployed pull request builds on dev. Will deploy a new one."
+            version=$(echo "${{ github.event.repository.default_branch }}" | sed -E 's/release-(.*)/\1/')
+            echo "VERSION=$version" >> $GITHUB_OUTPUT
+          fi
 
   build:
     if: >

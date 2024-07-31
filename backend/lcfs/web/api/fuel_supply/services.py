@@ -68,19 +68,22 @@ class FuelSupplyServices:
                 fuel_code_prefix_id=row_data["fuel_code_prefix_id"],
                 fuel_code_carbon_intensity=round(row_data["fuel_code_carbon_intensity"], 2)
             ) if row_data["fuel_code_id"] else None
-            # Find the existing fuel type if it exists
+        # Find the existing fuel type if it exists
         existing_fuel_type = next(
                 (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
             )
 
         if existing_fuel_type:
-                # Append to the existing fuel type's
+            # Append to the existing fuel type's
             existing_fuel_type.fuel_categories.append(fuel_category) if not next(
                 (fc for fc in existing_fuel_type.fuel_categories if fc.fuel_category == row_data["category"]), None
             ) else None
-            existing_fuel_type.provisions.append(provision) if not next(
-                (p for p in existing_fuel_type.provisions if p.provision == row_data["provision_of_the_act"]), None
-            ) else None
+            # Only add provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
+            if (row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)" and fuel_code) or row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)":
+                existing_fuel_type.provisions.append(provision) if not next(
+                    (p for p in existing_fuel_type.provisions if p.provision == row_data["provision_of_the_act"]), None
+                ) else None
+        
             existing_fuel_type.eer_ratios.append(eer) if not next(
                 (e for e in existing_fuel_type.eer_ratios if e.end_use_type == row_data["end_use_type"] and e.fuel_category == fuel_category), None
             ) else None
@@ -101,7 +104,9 @@ class FuelSupplyServices:
                         energy_density=round(row_data["energy_density"], 2),
                         unit=unit,
                     )
-                # Create a new fuel type and append
+            # Only include provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
+            provisions = [provision] if (row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)" and fuel_code) or (row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)") else []
+            # Create a new fuel type and append
             fuel_type = FuelTypeSchema(
                     fuel_type_id=row_data["fuel_type_id"],
                     fuel_type=row_data["fuel_type"],
@@ -110,7 +115,7 @@ class FuelSupplyServices:
                     unit=row_data["unit"].value,
                     energy_density=energy_density if row_data["energy_density_id"] else None,
                     fuel_categories=[fuel_category],
-                    provisions=[provision],
+                    provisions=provisions,
                     eer_ratios=[eer],
                     target_carbon_intensities=[tci],
                     fuel_codes=[fuel_code] if fuel_code else [],
