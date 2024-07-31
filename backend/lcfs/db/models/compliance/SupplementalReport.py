@@ -18,12 +18,12 @@ class SupplementalReport(BaseModel, Auditable):
     previous_report_id = Column(Integer, ForeignKey('supplemental_report.supplemental_report_id'), nullable=True, comment="Foreign key to the previous supplemental report")
     version = Column(Integer, nullable=False, comment="Version number of the supplemental report")
     report_type = Column(SQLEnum(SupplementalReportType), nullable=False, comment="Type of supplemental report")
-    status_id = Column(Integer, ForeignKey('compliance_report_status.compliance_report_status_id'), nullable=False, comment="Identifier for the compliance report status")
+    current_status_id = Column(Integer, ForeignKey('compliance_report_status.compliance_report_status_id'), nullable=False, comment="Identifier for the compliance report status")
     
     # Relationships
     original_report = relationship('ComplianceReport', back_populates='supplemental_reports')
     previous_report = relationship('SupplementalReport', remote_side=[supplemental_report_id])
-    status = relationship('ComplianceReportStatus')
+    current_status = relationship('ComplianceReportStatus')
     fuel_supplies = relationship('FuelSupply', back_populates='supplemental_report')
 
     def __repr__(self):

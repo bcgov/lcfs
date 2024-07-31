@@ -31,8 +31,8 @@ class ComplianceReport(BaseModel, Auditable):
     
     # Tracking relationships
     supplemental_reports = relationship('SupplementalReport', back_populates='original_report', order_by='SupplementalReport.version')
-    compliance_history = relationship('ComplianceReportHistory', back_populates='compliance_report')
-    compliance_summaries = relationship('ComplianceReportSummary', back_populates='compliance_report')
+    history = relationship('ComplianceReportHistory', back_populates='compliance_report')
+    summaries = relationship('ComplianceReportSummary', back_populates='compliance_report')
 
     # Schedule relationships
     notional_transfers = relationship('NotionalTransfer', back_populates='compliance_report')

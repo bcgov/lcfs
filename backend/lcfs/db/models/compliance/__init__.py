@@ -11,6 +11,7 @@ from .FuelSupply import FuelSupply
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
+from .SupplementalReport import SupplementalReport
 
 __all__ = [
     "AllocationAgreement",
@@ -20,6 +21,7 @@ __all__ = [
     "ComplianceReportHistory",
     "ComplianceReportStatus",
     "ComplianceReportSummary",
+    "SupplementalReport",
     "FinalSupplyEquipment",
     "FuelMeasurementType",
     "FuelSupply",
