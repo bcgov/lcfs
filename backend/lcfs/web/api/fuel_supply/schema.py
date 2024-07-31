@@ -35,7 +35,6 @@ class UnitOfMeasureSchema(BaseSchema):
 class EnergyDensitySchema(BaseSchema):
     energy_density_id: int
     density: float
-    # unit: UnitOfMeasureSchema
 
 
 class EndUseTypeSchema(BaseSchema):
@@ -46,8 +45,6 @@ class EndUseTypeSchema(BaseSchema):
 
 class EnergyEffectivenessRatioSchema(BaseSchema):
     eer_id: Optional[int]
-    # fuel_category: FuelCategorySchema
-    # end_use_type: Optional[EndUseTypeSchema]
     ratio: float
 
 
@@ -71,13 +68,8 @@ class FuelTypeSchema(BaseSchema):
     fuel_type: str
     fossil_derived: bool
     default_carbon_intensity: float
-    # unit: str
     energy_density: List[EnergyDensitySchema]
-    # provisions: List[ProvisionOfTheActSchema]
-    # fuel_categories: List[FuelCategorySchema]
     energy_effectiveness_ratio: List[EnergyEffectivenessRatioSchema]
-    # target_carbon_intensities: List[TargetCarbonIntensitySchema]
-    # fuel_codes: Optional[List[FuelCodeSchema]] = []
 
 
 class FuelTypeOptionsResponse(BaseSchema):
