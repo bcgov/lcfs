@@ -70,6 +70,21 @@ export const AddEditFuelSupplies = () => {
     }
   }, [errors, optionsData])
 
+  useEffect(() => {
+    if (data?.fuelSupplies?.length > 0) {
+      const updatedRowData = data.fuelSupplies.map((item) => ({
+        ...item,
+        fuelCategory: item.fuelCategory?.category,
+        fuelType: item.fuelType?.fuelType,
+        provisionOfTheAct: item.provisionOfTheAct?.name,
+        fuelCode: item.fuelCode?.fuelCode,
+        endUse: item.endUse?.type || 'Any',
+        id: uuid()
+      }))
+      setRowData(updatedRowData)
+    }
+  }, [data])
+
   const onCellValueChanged = useCallback(
     async (params) => {
       if (
@@ -288,6 +303,7 @@ export const AddEditFuelSupplies = () => {
           onCellValueChanged={onCellValueChanged}
           onCellEditingStopped={onCellEditingStopped}
           onAction={onAction}
+          setRowData={setRowData}
           stopEditingWhenCellsLoseFocus
         />
       </BCBox>

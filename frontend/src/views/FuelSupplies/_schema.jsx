@@ -78,6 +78,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
+    valueGetter: (params) => params.data.fuelType,
     valueSetter: (params) => {
       if (params.newValue) {
         const fuelType = optionsData?.fuelTypes?.find(
