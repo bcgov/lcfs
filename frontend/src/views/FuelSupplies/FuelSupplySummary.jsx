@@ -51,17 +51,17 @@ export const FuelSupplySummary = ({ data }) => {
   const columns = useMemo(() => ([
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'), field: "fuelType", valueGetter: (params) => params.data.fuelType?.fuelType },
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategory'), field: "fuelCategory", valueGetter: (params) => params.data.fuelCategory?.category },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType.type },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType?.type || 'Any' },
     { headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'), field: "determiningCarbonIntensity", valueGetter: params => params.data.provisionOfTheAct?.name },
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
     { headerName: t('fuelSupply:fuelSupplyColLabels.quantitySupplied'), field: "quantity" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: "units" }, // add new column
+    { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: "units" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.ciLimit'), field: "ciLimit" }, // add new column
-    { headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'), field: "ciOfFuel" }, // add new column
-    { headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'), field: "energyDensity" }, // add new column
-    { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: "eer" }, // add new column
-    { headerName: t('fuelSupply:fuelSupplyColLabels.energy'), field: "energy" }, // add new column
+    { headerName: t('fuelSupply:fuelSupplyColLabels.ciLimit'), field: "ciLimit" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'), field: "ciOfFuel" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'), field: "energyDensity" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: "eer" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.energy'), field: "energy" },
   ]), [t])
 
   const getRowId = (params) => {
