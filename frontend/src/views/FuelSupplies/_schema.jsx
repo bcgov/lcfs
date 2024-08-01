@@ -269,55 +269,6 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    valueSetter: (params) => {
-      params.data.quantity = params.newValue
-      const energyContent =
-        (params.data.energyDensity ||
-          optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )?.energyDensity.energyDensity) * params.newValue
-      const ciLimit =
-        optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.targetCarbonIntensities.find(
-            (item) =>
-              item.fuelCategory.fuelCategory === params.data.fuelCategory
-          )?.targetCarbonIntensity || 0
-      const effectiveCarbonIntensity = /Fuel code/i.test(
-        params.data.determiningCarbonIntensity
-      )
-        ? optionsData?.fuelTypes
-            ?.find((obj) => params.data.fuelType === obj.fuelType)
-            ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-            ?.fuelCodeCarbonIntensity
-        : optionsData &&
-          optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )?.defaultCarbonIntensity
-      const eerOptions = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      let eer =
-        eerOptions &&
-        eerOptions?.eerRatios.find(
-          (item) =>
-            item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUse
-        )?.energyEffectivenessRatio
-      if (!eer) {
-        eer = eerOptions?.eerRatios?.find(
-          (item) =>
-            item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType === null
-        )?.energyEffectivenessRatio
-      }
-      params.data.energy = energyContent.toFixed(0)
-      params.data.complianceUnits = (
-        ((Number(ciLimit) * Number(eer) - effectiveCarbonIntensity) *
-          energyContent) /
-        1000000
-      ).toFixed(0)
-    },
     cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
@@ -357,7 +308,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciLimit'),
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors),
-    valueSetter: (params) =>
+    valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.targetCarbonIntensities.find(
@@ -369,7 +320,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors),
-    valueSetter: (params) => {
+    valueGetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
         return optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)

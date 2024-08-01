@@ -70,36 +70,77 @@ export const AddEditFuelSupplies = () => {
     }
   }, [errors, optionsData])
 
-  const onCellValueChanged = useCallback((params) => {
-    if (params.column.colId === 'quantity') {
-      const quantity = parseInt(params.newValue)
-      const fuelType = params.data.fuelType
-      const fuelTypeData = optionsData.fuelTypes.find(
-        (ft) => ft.fuelType === fuelType
-      )
-
-      if (fuelTypeData && quantity > fuelTypeData.maxQuantity) {
-        alertRef.current?.triggerAlert({
-          message: t('fuelSupply:quantityExceedsMax', {
-            maxQuantity: fuelTypeData.maxQuantity
-          }),
-          severity: 'error'
-        })
-        params.node.updateData({
-          ...params.data,
-          quantity: fuelTypeData.maxQuantity
-        })
+  const onCellValueChanged = useCallback(
+    async (params) => {
+      if (params.column.colId === 'quantity') {
+        const energyDensity =
+          params.node.data.energyDensity ||
+          optionsData?.fuelTypes?.find(
+            (obj) => params.node.data.fuelType === obj.fuelType
+          )?.energyDensity.energyDensity
+        const ciLimit =
+          optionsData?.fuelTypes
+            ?.find((obj) => params.node.data.fuelType === obj.fuelType)
+            ?.targetCarbonIntensities.find(
+              (item) =>
+                item.fuelCategory.fuelCategory === params.node.data.fuelCategory
+            )?.targetCarbonIntensity || 0
+        const effectiveCarbonIntensity = /Fuel code/i.test(
+          params.node.data.determiningCarbonIntensity
+        )
+          ? optionsData?.fuelTypes
+              ?.find((obj) => params.node.data.fuelType === obj.fuelType)
+              ?.fuelCodes.find((item) => item.fuelCode === params.node.data.fuelCode)
+              ?.fuelCodeCarbonIntensity
+          : optionsData &&
+            optionsData?.fuelTypes?.find(
+              (obj) => params.node.data.fuelType === obj.fuelType
+            )?.defaultCarbonIntensity
+        const eerOptions = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+        let eer =
+          eerOptions &&
+          eerOptions?.eerRatios.find(
+            (item) =>
+              item.fuelCategory.fuelCategory === params.node.data.fuelCategory &&
+              item.endUseType?.type === params.node.data.endUse
+          )?.energyEffectivenessRatio
+        if (!eer) {
+          eer = eerOptions?.eerRatios?.find(
+            (item) =>
+              item.fuelCategory.fuelCategory === params.node.data.fuelCategory &&
+              item.endUseType === null
+          )?.energyEffectivenessRatio
+        }
+        const energyContent = (energyDensity * params.newValue).toFixed(0)
+        const complianceUnits = (
+          ((Number(ciLimit) * Number(eer) - effectiveCarbonIntensity) *
+            energyContent) /
+          1000000
+        ).toFixed(0)
+        const updatedData = {
+          ...params.node.data,
+          energy: energyContent,
+          ciLimit,
+          eer,
+          endUse: params.node.data.endUse || null,
+          ciOfFuel: effectiveCarbonIntensity,
+          complianceUnits: Number(complianceUnits),
+          energyDensity
+        }
+        params.api.applyTransaction({ update: [updatedData] })
+        console.log(params.node.data)
       }
-    }
-
-    params.node.updateData({ ...params.data, modified: true })
-  })
+    },
+    [optionsData]
+  )
 
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
 
-      params.node.updateData({ ...params.data, validationStatus: 'pending' })
+      params.node.updateData({ ...params.node.data, validationStatus: 'pending' })
 
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
@@ -107,7 +148,7 @@ export const AddEditFuelSupplies = () => {
       })
 
       // clean up any null or empty string values
-      let updatedData = Object.entries(params.data)
+      let updatedData = Object.entries(params.node.data)
         .filter(([, value]) => value !== null && value !== '')
         .reduce((acc, [key, value]) => {
           acc[key] = value
@@ -128,7 +169,7 @@ export const AddEditFuelSupplies = () => {
         })
       } catch (error) {
         const errArr = {
-          [params.data.id]: error.response.data.detail.map((err) => err.loc[1])
+          [params.node.data.id]: error.response?.data?.detail?.map((err) => err.loc[1])
         }
         setErrors(errArr)
 
@@ -164,7 +205,7 @@ export const AddEditFuelSupplies = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete') {
-      const updatedRow = { ...params.data, deleted: true }
+      const updatedRow = { ...params.node.data, deleted: true }
 
       params.api.applyTransaction({ remove: [params.node.data] })
       if (updatedRow.fuelSupplyId) {
@@ -185,7 +226,7 @@ export const AddEditFuelSupplies = () => {
     if (action === 'duplicate') {
       const newRowID = uuid()
       const rowData = {
-        ...params.data,
+        ...params.node.data,
         id: newRowID,
         fuelSupplyId: null,
         fuelSupply: null,
