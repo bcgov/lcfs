@@ -163,8 +163,23 @@ class FuelSupplyServices:
         if not existing_fs:
             raise ValueError("fuel supply record not found")
 
-        for key, value in fs_data.dict().items():
-            if key != "fuel_supply_id" and value is not None:
+        for key, value in fs_data.model_dump().items():
+            if (
+                key
+                not in [
+                    "fuel_supply_id" "id",
+                    "fuel_type",
+                    "fuel_category",
+                    "provision_of_the_act",
+                    "end_use",
+                    "fuel_code",
+                    "units",
+                    "deleted",
+                ]
+                and value is not None
+            ):
+                if key == "units":
+                    value = QuantityUnitsEnum(value)
                 setattr(existing_fs, key, value)
 
         updated_transfer = await self.repo.update_fuel_supply(existing_fs)

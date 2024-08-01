@@ -37,7 +37,7 @@ export const FuelSupplySummary = ({ data }) => {
     },
     enableCellTextSelection: true, // enables text selection on the grid
     ensureDomOrder: true,
-  }))
+  }),[t])
 
   const defaultColDef = useMemo(
     () => ({

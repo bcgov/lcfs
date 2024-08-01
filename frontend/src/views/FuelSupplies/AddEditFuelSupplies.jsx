@@ -148,9 +148,9 @@ export const AddEditFuelSupplies = () => {
                 params.node.data.fuelCategory && item.endUseType === null
           )?.energyEffectivenessRatio
         }
-        const energyContent = (energyDensity * params.newValue).toFixed(0)
+        const energyContent = (energyDensity * Number(params.newValue)).toFixed(0)
         const complianceUnits = (
-          ((Number(ciLimit) * Number(eer) - effectiveCarbonIntensity) *
+          ((Number(ciLimit) * Number(eer) - Number(effectiveCarbonIntensity)) *
             energyContent) /
           1000000
         ).toFixed(0)
