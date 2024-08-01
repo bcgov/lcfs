@@ -33,8 +33,11 @@ export const AddEditFuelSupplies = () => {
   } = useFuelSupplyOptions({ compliancePeriod })
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } =
-    useGetFuelSupplies(complianceReportId)
+  const {
+    data,
+    isLoading: fuelSuppliesLoading,
+    isFetched: isFuelSuppliesFetched
+  } = useGetFuelSupplies(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
@@ -276,37 +279,39 @@ export const AddEditFuelSupplies = () => {
   }
 
   return (
-    <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
-      <BCAlert2 ref={alertRef} data-test="alert-box" />
-      <div className="header">
-        <Typography variant="h5" color="primary">
-          {t('fuelSupply:addFuelSupplyRowsTitle')}
-        </Typography>
-        <Typography
-          variant="body4"
-          color="primary"
-          sx={{ marginY: '2rem' }}
-          component="div"
-        >
-          {t('fuelSupply:fuelSupplySubtitle')}
-        </Typography>
-      </div>
-      <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-        <BCGridEditor
-          gridRef={gridRef}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          onGridReady={onGridReady}
-          rowData={rowData}
-          gridOptions={gridOptions}
-          loading={optionsLoading || fuelSuppliesLoading}
-          onCellValueChanged={onCellValueChanged}
-          onCellEditingStopped={onCellEditingStopped}
-          onAction={onAction}
-          setRowData={setRowData}
-          stopEditingWhenCellsLoseFocus
-        />
-      </BCBox>
-    </Grid2>
+    isFetched &&
+    isFuelSuppliesFetched && (
+      <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
+        <BCAlert2 ref={alertRef} data-test="alert-box" />
+        <div className="header">
+          <Typography variant="h5" color="primary">
+            {t('fuelSupply:addFuelSupplyRowsTitle')}
+          </Typography>
+          <Typography
+            variant="body4"
+            color="primary"
+            sx={{ marginY: '2rem' }}
+            component="div"
+          >
+            {t('fuelSupply:fuelSupplySubtitle')}
+          </Typography>
+        </div>
+        <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
+          <BCGridEditor
+            gridRef={gridRef}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            onGridReady={onGridReady}
+            rowData={rowData}
+            gridOptions={gridOptions}
+            loading={optionsLoading || fuelSuppliesLoading}
+            onCellValueChanged={onCellValueChanged}
+            onCellEditingStopped={onCellEditingStopped}
+            onAction={onAction}
+            stopEditingWhenCellsLoseFocus
+          />
+        </BCBox>
+      </Grid2>
+    )
   )
 }
