@@ -13,6 +13,7 @@ function BCWidgetCard({ color, title, content, style, disableHover }) {
         '&:hover': {
           transform: disableHover ? 'none' : 'scale(1.02)',
         },
+        mb: 5,
         ...style
       }}
     >

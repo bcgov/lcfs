@@ -45,7 +45,7 @@ export const Dashboard = () => {
           sx={{ bgcolor: { lg: 'background.grey' } }}
         >
           <Box sx={{ mx: {lg: 2 }, mt: {lg: 5}, mb: {lg: 3}, bgcolor: { lg: 'background.grey' }, px: { lg: 1 } }}>
-            <Role roles={[roles.analyst, roles.director]}>
+            <Role roles={[roles.analyst, roles.compliance_manager]}>
               <TransactionsCard />
             </Role>
             <Role roles={[roles.transfers]}>
