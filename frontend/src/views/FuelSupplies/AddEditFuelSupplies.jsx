@@ -57,11 +57,14 @@ export const AddEditFuelSupplies = () => {
     }
   }, [location.state])
 
-  const onGridReady = (params) => {
-    setGridApi(params.api)
-    setRowData([{ id: uuid() }])
-    params.api.sizeColumnsToFit()
-  }
+  const onGridReady = useCallback(
+    async (params) => {
+      setGridApi(params.api)
+      setRowData([...(data || { id: uuid() })])
+      params.api.sizeColumnsToFit()
+    },
+    [data]
+  )
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
@@ -91,8 +94,8 @@ export const AddEditFuelSupplies = () => {
     async (params) => {
       if (params.column.colId === 'fuelType') {
         const options = optionsData?.fuelTypes
-        ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-        ?.fuelCategories.map((item) => item.fuelCategory)
+          ?.find((obj) => params.node.data.fuelType === obj.fuelType)
+          ?.fuelCategories.map((item) => item.fuelCategory)
         if (options.length === 1) {
           params.node.setDataValue('fuelCategory', options[0])
         }
