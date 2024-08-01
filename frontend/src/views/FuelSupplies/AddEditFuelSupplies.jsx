@@ -33,11 +33,8 @@ export const AddEditFuelSupplies = () => {
   } = useFuelSupplyOptions({ compliancePeriod })
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const {
-    data,
-    isLoading: fuelSuppliesLoading,
-    isFetched: isFuelSuppliesFetched
-  } = useGetFuelSupplies(complianceReportId)
+  const { data, isLoading: fuelSuppliesLoading } =
+    useGetFuelSupplies(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
@@ -74,7 +71,7 @@ export const AddEditFuelSupplies = () => {
   }, [errors, optionsData])
 
   useEffect(() => {
-    if (data?.fuelSupplies?.length > 0) {
+    if (!fuelSuppliesLoading && data?.fuelSupplies?.length > 0) {
       const updatedRowData = data.fuelSupplies.map((item) => ({
         ...item,
         fuelCategory: item.fuelCategory?.category,
@@ -85,11 +82,21 @@ export const AddEditFuelSupplies = () => {
         id: uuid()
       }))
       setRowData(updatedRowData)
+    } else {
+      setRowData([{ id: uuid() }])
     }
-  }, [data])
+  }, [data, fuelSuppliesLoading])
 
   const onCellValueChanged = useCallback(
     async (params) => {
+      if (params.column.colId === 'fuelType') {
+        const options = optionsData?.fuelTypes
+        ?.find((obj) => params.node.data.fuelType === obj.fuelType)
+        ?.fuelCategories.map((item) => item.fuelCategory)
+        if (options.length === 1) {
+          params.node.setDataValue('fuelCategory', options[0])
+        }
+      }
       if (
         params.column.colId === 'quantity' &&
         params.node.data.fuelType &&
@@ -154,8 +161,7 @@ export const AddEditFuelSupplies = () => {
           complianceUnits: Number(complianceUnits),
           energyDensity
         }
-        params.api.applyTransaction({ update: [updatedData] })
-        console.log(params.node.data)
+        params.node.updateData(updatedData)
       }
     },
     [optionsData]
@@ -280,7 +286,7 @@ export const AddEditFuelSupplies = () => {
 
   return (
     isFetched &&
-    isFuelSuppliesFetched && (
+    !fuelSuppliesLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
         <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
