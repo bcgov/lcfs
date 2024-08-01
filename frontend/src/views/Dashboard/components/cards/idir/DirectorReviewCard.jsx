@@ -106,12 +106,12 @@ const DirectorReviewCard = () => {
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Reviewed')}
+                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Approved')}
               >
                 {renderLinkWithCount(
                   t('dashboard:directorReview.initiativeAgreementsForReview'),
                   counts?.initiativeAgreements || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Reviewed')
+                  () => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Approved')
                 )}
               </ListItemButton>
               <ListItemButton
