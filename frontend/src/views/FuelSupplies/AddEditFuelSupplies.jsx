@@ -72,7 +72,12 @@ export const AddEditFuelSupplies = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
-      if (params.column.colId === 'quantity') {
+      if (
+        params.column.colId === 'quantity' &&
+        params.node.data.fuelType &&
+        params.node.data.fuelCategory &&
+        params.node.data.provisionOfTheAct
+      ) {
         const energyDensity =
           params.node.data.energyDensity ||
           optionsData?.fuelTypes?.find(
@@ -90,8 +95,9 @@ export const AddEditFuelSupplies = () => {
         )
           ? optionsData?.fuelTypes
               ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-              ?.fuelCodes.find((item) => item.fuelCode === params.node.data.fuelCode)
-              ?.fuelCodeCarbonIntensity
+              ?.fuelCodes.find(
+                (item) => item.fuelCode === params.node.data.fuelCode
+              )?.fuelCodeCarbonIntensity
           : optionsData &&
             optionsData?.fuelTypes?.find(
               (obj) => params.node.data.fuelType === obj.fuelType
@@ -103,14 +109,15 @@ export const AddEditFuelSupplies = () => {
           eerOptions &&
           eerOptions?.eerRatios.find(
             (item) =>
-              item.fuelCategory.fuelCategory === params.node.data.fuelCategory &&
+              item.fuelCategory.fuelCategory ===
+                params.node.data.fuelCategory &&
               item.endUseType?.type === params.node.data.endUse
           )?.energyEffectivenessRatio
         if (!eer) {
           eer = eerOptions?.eerRatios?.find(
             (item) =>
-              item.fuelCategory.fuelCategory === params.node.data.fuelCategory &&
-              item.endUseType === null
+              item.fuelCategory.fuelCategory ===
+                params.node.data.fuelCategory && item.endUseType === null
           )?.energyEffectivenessRatio
         }
         const energyContent = (energyDensity * params.newValue).toFixed(0)
@@ -140,7 +147,10 @@ export const AddEditFuelSupplies = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
-      params.node.updateData({ ...params.node.data, validationStatus: 'pending' })
+      params.node.updateData({
+        ...params.node.data,
+        validationStatus: 'pending'
+      })
 
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
@@ -169,7 +179,9 @@ export const AddEditFuelSupplies = () => {
         })
       } catch (error) {
         const errArr = {
-          [params.node.data.id]: error.response?.data?.detail?.map((err) => err.loc[1])
+          [params.node.data.id]: error.response?.data?.detail?.map(
+            (err) => err.loc[1]
+          )
         }
         setErrors(errArr)
 

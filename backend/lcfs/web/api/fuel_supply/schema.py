@@ -170,6 +170,7 @@ class FuelSupplyCreateSchema(BaseSchema):
     eer: float
     energy: float
     custom_fuel_id: Optional[int] = None
+    deleted: Optional[bool] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

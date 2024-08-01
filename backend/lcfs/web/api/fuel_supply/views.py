@@ -15,13 +15,13 @@ from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
     FuelSupplyCreateSchema,
-    FuelSupplySchema,
     FuelTypeOptionsResponse,
     CommmonPaginatedReportRequestSchema,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
 from lcfs.web.core.decorators import view_handler
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
@@ -34,7 +34,7 @@ get_async_db = dependencies.get_async_db_session
     response_model=FuelTypeOptionsResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_fs_table_options(
     request: Request, compliancePeriod: str, service: FuelSupplyServices = Depends()
 ) -> FuelTypeOptionsResponse:
@@ -78,13 +78,14 @@ async def save_fuel_supply_row(
     request: Request,
     request_data: FuelSupplyCreateSchema = Body(...),
     fs_service: FuelSupplyServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelSupplyValidation = Depends(),
 ):
     """Endpoint to save single fuel supply row"""
     compliance_report_id = request_data.compliance_report_id
     fs_id: Optional[int] = request_data.fuel_supply_id
 
-    await fs_validate.validate_organization_access(compliance_report_id)
+    await report_validate.validate_organization_access(compliance_report_id)
 
     if request_data.deleted:
         # Delete existing fuel supply row

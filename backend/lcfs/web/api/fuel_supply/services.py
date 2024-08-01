@@ -3,7 +3,7 @@ import math
 from fastapi import Depends, Request
 
 
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.FuelSupply import FuelSupply, QuantityUnitsEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
@@ -173,7 +173,21 @@ class FuelSupplyServices:
     @service_handler
     async def create_fuel_supply(self, fs_data: FuelSupplySchema) -> FuelSupplySchema:
         """Create a new fuel supply record"""
-        fuel_supply = FuelSupply(**fs_data.model_dump())
+        fuel_supply = FuelSupply(
+            **fs_data.model_dump(
+                exclude={
+                    "id",
+                    "fuel_type",
+                    "fuel_category",
+                    "provision_of_the_act",
+                    "end_use",
+                    "fuel_code",
+                    "units",
+                    "deleted",
+                }
+            )
+        )
+        fuel_supply.units = QuantityUnitsEnum(fs_data.units)
         created_equipment = await self.repo.create_fuel_supply(fuel_supply)
         return FuelSupplySchema.model_validate(created_equipment)
 
