@@ -11,6 +11,7 @@ class ComplianceReportSummary(BaseModel, Auditable):
     
     summary_id = Column(Integer, primary_key=True, autoincrement=True)
     compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False)
+    supplemental_report_id = Column(Integer, ForeignKey('supplemental_report.supplemental_report_id'), nullable=True)
     quarter = Column(Integer, nullable=True)  # Null for annual reports
     version = Column(Integer, nullable=False, default=1)
     is_locked = Column(Boolean, default=False)
@@ -59,6 +60,7 @@ class ComplianceReportSummary(BaseModel, Auditable):
     Column("total_non_compliance_penalty_payable", Float, nullable=False, default=0)
 
     compliance_report = relationship('ComplianceReport', back_populates='summaries')
+    supplemental_report = relationship('SupplementalReport', back_populates='summaries')
 
     def __repr__(self):
         return f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter}, version={self.version})>"

@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Any, Tuple
+from sqlalchemy import Float
 from fastapi import Depends
 from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
 from lcfs.web.api.compliance_report.constants import (
@@ -7,6 +8,8 @@ from lcfs.web.api.compliance_report.constants import (
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
 )
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -169,3 +172,54 @@ class ComplianceReportSummaryService:
         ]
 
         return non_compliance_penalty_summary
+
+    async def compare_summaries(self, report_id: int, summary_1_id: int, summary_2_id: int) -> Dict[str, Dict[str, Any]]:
+        """
+        Compare two compliance report summaries and return the values and delta for each field.
+        
+        :param report_id: The ID of the original compliance report
+        :param summary_1_id: The ID of the first summary to compare
+        :param summary_2_id: The ID of the second summary to compare
+        :return: A dictionary containing the values and delta for each field
+        """
+        summary_1 = await self.repo.get_summary_by_id(summary_1_id)
+        summary_2 = await self.repo.get_summary_by_id(summary_2_id)
+
+        if not summary_1 or not summary_2:
+            raise ValueError(f"One or both summaries not found: {summary_1_id}, {summary_2_id}")
+
+        if summary_1.compliance_report_id != report_id or summary_2.compliance_report_id != report_id:
+            raise ValueError(f"Summaries do not belong to the specified report: {report_id}")
+
+        comparison = {}
+
+        # Compare all float fields
+        float_columns = [c.name for c in ComplianceReportSummary.__table__.columns if isinstance(c.type, Float)]
+        for column in float_columns:
+            value_1 = getattr(summary_1, column)
+            value_2 = getattr(summary_2, column)
+            delta = value_2 - value_1
+            comparison[column] = {
+                'summary_1_value': value_1,
+                'summary_2_value': value_2,
+                'delta': delta
+            }
+
+        return comparison
+
+    @service_handler
+    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+        """
+        Get a list of all summary versions for a given report, including the original and all supplementals.
+        
+        :param report_id: The ID of the original compliance report
+        :return: A list of tuples containing (summary_id, version, type)
+        """
+        return await self.repo.get_summary_versions(report_id)
+
+    @service_handler
+    async def get_compliance_report_summary(self, summary_id: int) -> ComplianceReportSummary:
+        """
+        Get a specific compliance report summary by its ID.
+        """
+        return await self.repo.get_summary_by_id(summary_id)

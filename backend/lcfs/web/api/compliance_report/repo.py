@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from datetime import datetime
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
@@ -8,7 +8,7 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
-from sqlalchemy import func, select, and_, asc, desc, delete
+from sqlalchemy import func, select, and_, asc, desc, case
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -433,3 +433,25 @@ class ComplianceReportRepository:
 
         await self.db.commit()
         logger.info(f"Saved summary for compliance report {report_id}")
+
+    @repo_handler
+    async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
+        query = select(ComplianceReportSummary).where(ComplianceReportSummary.summary_id == summary_id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+        query = select(
+            ComplianceReportSummary.summary_id,
+            ComplianceReportSummary.version,
+            case(
+                (ComplianceReportSummary.supplemental_report_id.is_(None), 'Original'),
+                else_='Supplemental'
+            ).label('type')
+        ).where(
+            ComplianceReportSummary.compliance_report_id == report_id
+        ).order_by(ComplianceReportSummary.version)
+        
+        result = await self.db.execute(query)
+        return result.all()

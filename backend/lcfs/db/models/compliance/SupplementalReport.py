@@ -25,6 +25,7 @@ class SupplementalReport(BaseModel, Auditable):
     previous_report = relationship('SupplementalReport', remote_side=[supplemental_report_id])
     current_status = relationship('ComplianceReportStatus')
     fuel_supplies = relationship('FuelSupply', back_populates='supplemental_report')
+    summaries = relationship('ComplianceReportSummary', back_populates='supplemental_report')
 
     def __repr__(self):
         return f"<SupplementalReport(id={self.supplemental_report_id}, type={self.report_type}, version={self.version})>"
