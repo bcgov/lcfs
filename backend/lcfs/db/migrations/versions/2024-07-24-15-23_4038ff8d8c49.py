@@ -1,7 +1,7 @@
 """add mv_transaction_count to calculate the number of transactions in progress for IDIR users 
 
 Revision ID: 4038ff8d8c49
-Revises: c84d9bf8d3a6
+Revises: 123456789abc
 Create Date: 2024-07-24 15:23:16.053654
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "4038ff8d8c49"
-down_revision = "c84d9bf8d3a6"
+down_revision = "123456789abc"
 branch_labels = None
 depends_on = None
 

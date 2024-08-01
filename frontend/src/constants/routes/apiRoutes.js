@@ -42,7 +42,7 @@ export const apiRoutes = {
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
   getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
   saveFinalSupplyEquipments: '/final-supply-equipments/save',
-  directorReviewCounts: '/dashboard/director-review-counts/',
-  TransactionCounts: '/dashboard/transaction-counts/',
-  OrgTransactionCounts: '/dashboard/org-transaction-counts/',
+  directorReviewCounts: '/dashboard/director-review-counts',
+  TransactionCounts: '/dashboard/transaction-counts',
+  OrgTransactionCounts: '/dashboard/org-transaction-counts',
 }
