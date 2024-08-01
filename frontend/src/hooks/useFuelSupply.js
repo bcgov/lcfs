@@ -34,9 +34,8 @@ export const useSaveFuelSupply = (params, options) => {
     ...options,
     mutationFn: async (data) => {
       const modifedData = {
+        complianceReportId: params.complianceReportId,
         ...data,
-        levelOfEquipment: data.levelOfEquipment?.name || data.levelOfEquipment,
-        fuelMeasurementType: data.fuelMeasurementType?.type || data.fuelMeasurementType
       }
       return await client.post(
         apiRoutes.saveFuelSupplies

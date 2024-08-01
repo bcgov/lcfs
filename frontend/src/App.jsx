@@ -29,7 +29,7 @@ import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComp
 import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
-import { AddEditFuelSupplies } from './views/FuelSupply/AddEditFuelSupplies'
+import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 
 const router = createBrowserRouter([
   {

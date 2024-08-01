@@ -80,17 +80,19 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     editable: true,
     valueSetter: (params) => {
       if (params.newValue) {
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => obj.fuelType === params.newValue
+        )
         params.data.fuelType = params.newValue
+        params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = undefined
         params.data.fuelCategory = undefined
         params.data.endUse = ''
         params.data.eer = undefined
-        params.data.determiningCarbonIntensity = undefined
+        params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
-        params.data.quantitySupplied = undefined
-        params.data.units = optionsData?.fuelTypes?.find(
-          (obj) => obj.fuelType === params.newValue
-        ).unit
+        params.data.quantity = undefined
+        params.data.units = fuelType?.unit
       }
       return true
     },
@@ -130,11 +132,16 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
+        params.data.fuelCategoryId = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.fuelCategories?.find(
+            (obj) => params.newValue === obj.fuelCategory
+          )?.fuelCategoryId
         params.data.endUse = undefined
         params.data.eer = undefined
-        params.data.determiningCarbonIntensity = undefined
+        params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
-        params.data.quantitySupplied = undefined
+        params.data.quantity = undefined
       }
       return true
     },
@@ -169,7 +176,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
               (item) =>
                 item.fuelCategory.fuelCategory === params.data.fuelCategory
             )
-            ?.map((item) => item.endUseType?.endUseType)
+            ?.map((item) => item.endUseType?.type)
             .sort()
         )
       ].filter((item) => item != null) || ['Any'],
@@ -192,11 +199,9 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     minWidth: 260
   },
   {
-    field: 'determiningCarbonIntensity',
+    field: 'provisionOfTheAct',
     headerComponent: HeaderComponent,
-    headerName: i18n.t(
-      'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
-    ),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheAct'),
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
       params.value ||
@@ -204,7 +209,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     cellEditorParams: (params) => ({
       values: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.provisions.map((item) => item.provision)
+        ?.provisions.map((item) => item.name)
         .sort()
     }),
     cellStyle: (params) => cellErrorStyle(params, errors),
@@ -212,7 +217,12 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     minWidth: 370,
     valueSetter: (params) => {
       if (params.newValue) {
-        params.data.determiningCarbonIntensity = params.newValue
+        params.data.provisionOfTheAct = params.newValue
+        params.data.provisionOfTheActId = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.provisions.find(
+            (item) => item.name === params.newValue
+          )?.provisionOfTheActId
         params.data.fuelCode = undefined
       }
       return true
@@ -236,7 +246,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-        /Fuel code/i.test(params.data.determiningCarbonIntensity)
+        /Fuel code/i.test(params.data.provisionOfTheAct)
           ? { backgroundColor: '#fff', borderColor: 'unset' }
           : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
@@ -247,12 +257,12 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-      /Fuel code/i.test(params.data.determiningCarbonIntensity)
+      /Fuel code/i.test(params.data.provisionOfTheAct)
   },
   {
-    field: 'quantitySupplied',
+    field: 'quantity',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantitySupplied'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
       precision: 0,
@@ -260,7 +270,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
       showStepperButtons: false
     },
     valueSetter: (params) => {
-      params.data.quantitySupplied = params.newValue
+      params.data.quantity = params.newValue
       const energyContent =
         (params.data.energyDensity ||
           optionsData?.fuelTypes?.find(
@@ -292,7 +302,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.endUseType === params.data.endUse
+            item.endUseType?.type === params.data.endUse
         )?.energyEffectivenessRatio
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(
@@ -302,10 +312,11 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         )?.energyEffectivenessRatio
       }
       params.data.energy = energyContent.toFixed(0)
-      params.data.complianceUnits =
-        (((Number(ciLimit) * Number(eer) - effectiveCarbonIntensity) *
+      params.data.complianceUnits = (
+        ((Number(ciLimit) * Number(eer) - effectiveCarbonIntensity) *
           energyContent) /
-        1000000).toFixed(0)
+        1000000
+      ).toFixed(0)
     },
     cellStyle: (params) => cellErrorStyle(params, errors)
   },
@@ -346,19 +357,19 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciLimit'),
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors),
-    valueGetter: (params) =>
+    valueSetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.targetCarbonIntensities.find(
           (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
-        ).targetCarbonIntensity || 0
+        )?.targetCarbonIntensity || 0
   },
   {
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors),
-    valueGetter: (params) => {
+    valueSetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
         return optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -417,7 +428,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.endUseType === params.data.endUse
+            item.endUseType?.type === params.data.endUse
         )
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(

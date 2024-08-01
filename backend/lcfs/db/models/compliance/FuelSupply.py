@@ -1,6 +1,13 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey
+import enum
+from sqlalchemy import Column, Integer, Float, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
+
+class QuantityUnitsEnum(enum.Enum):
+    Litres = 'L'
+    Kilograms = "kg"
+    Kilowatt_hour = 'kWh'
+    Cubic_metres = 'm3'
 
 class FuelSupply(BaseModel, Auditable):
     __tablename__ = 'fuel_supply'
@@ -10,9 +17,16 @@ class FuelSupply(BaseModel, Auditable):
     
     fuel_supply_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the fuel supply")
     compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
+    # data columns
     quantity = Column(Integer, nullable=False, comment="Quantity of fuel supplied")
+    units = Column(Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity")
     compliance_units = Column(Integer, nullable=True, comment="Compliance units for the fuel supply")
+    ci_limit = Column(Float, nullable=True, comment="CI limit for the fuel supply")
+    ci_of_fuel = Column(Float, nullable=True, comment="CI of fuel for the fuel supply")
+    energy_density = Column(Float, nullable=True, comment="Energy density of the fuel supplied")
+    eer = Column(Float, nullable=True, comment="Energy effectiveness ratio of the fuel supplied")
     energy = Column(Float, nullable=True, comment="Energy content of the fuel supplied")
+    # relational columns
     fuel_category_id = Column(Integer, ForeignKey('fuel_category.fuel_category_id'), nullable=False, comment="Foreign key to the fuel category")
     fuel_code_id = Column(Integer, ForeignKey('fuel_code.fuel_code_id'), nullable=True, comment="Foreign key to the fuel code")
     fuel_type_id = Column(Integer, ForeignKey('fuel_type.fuel_type_id'), nullable=False, comment="Foreign key to the fuel type")

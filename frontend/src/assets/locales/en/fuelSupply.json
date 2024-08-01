@@ -1,5 +1,6 @@
 {
   "fuelSupplyTitle": "Supply of fuels",
+  "noFuelSuppliesFound": "No fuel supplies found",
   "addFuelSupplyRowsTitle": "Add new supply of fuel",
   "fuelSupplySubtitle": "Report the fuel volumes supplied for various uses.",
   "fuelSupplyDownloadBtn": "Download as excel",
@@ -15,9 +16,9 @@
     "fuelTypeOther": "Fuel type other",
     "fuelCategory": "Fuel catgory",
     "endUse": "End use",
-    "determiningCarbonIntensity": "Determining carbon intensity",
+    "provisionOfTheAct": "Determining carbon intensity",
     "fuelCode": "Fuel code",
-    "quantitySupplied": "Quantity supplied",
+    "quantity": "Quantity supplied",
     "units": "Units",
     "complianceUnits": "Compliance units",
     "ciLimit": "CI limit",

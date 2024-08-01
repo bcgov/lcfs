@@ -14,6 +14,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
+    FuelSupplyCreateSchema,
     FuelSupplySchema,
     FuelTypeOptionsResponse,
     CommmonPaginatedReportRequestSchema,
@@ -41,7 +42,7 @@ async def get_fs_table_options(
 
 
 @router.post(
-    "/list-all", response_model=FuelSupplySchema, status_code=status.HTTP_200_OK
+    "/list-all", response_model=FuelSuppliesSchema, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def get_fuel_supply(
@@ -69,13 +70,13 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplySchema, DeleteFuelSupplyResponseSchema],
+    response_model=Union[FuelSupplyCreateSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def save_fuel_supply_row(
     request: Request,
-    request_data: FuelSupplySchema = Body(...),
+    request_data: FuelSupplyCreateSchema = Body(...),
     fs_service: FuelSupplyServices = Depends(),
     fs_validate: FuelSupplyValidation = Depends(),
 ):
