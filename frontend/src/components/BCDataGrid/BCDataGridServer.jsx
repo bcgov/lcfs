@@ -83,6 +83,7 @@ const BCDataGridServer = ({
   const [rowData, setRowData] = useState()
   const [isError, setIsError] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
   // Fetch data from the API
   const apiService = useApiService()
@@ -91,30 +92,38 @@ const BCDataGridServer = ({
       apiService({
         method: 'post',
         url: apiEndpoint,
-        data: { page, size, sortOrders: sortModel, filters: filterModel, ...apiParams }
+        data: {
+          page,
+          size,
+          sortOrders: sortModel,
+          filters: filterModel,
+          ...apiParams
+        }
       })
         .then((resp) => {
           setTotal(resp.data.pagination.total)
           setPage(resp.data.pagination.page)
           setRowData(resp.data[apiData])
           setIsError(false)
+          setLoading(false)
         })
         .catch((err) => {
           setRowData([])
           setIsError(true)
           setError(err.message)
+          setLoading(false)
         }),
     [apiService, apiEndpoint, page, size, sortModel]
   )
 
   // Hanlde page change
   const handleChangePage = useCallback((event, newPage) => {
-    gridRef.current.api.showLoadingOverlay()
+    setLoading(true)
     setPage(newPage + 1)
   })
   // Handle change in rows per page
   const handleChangeRowsPerPage = useCallback((event) => {
-    gridRef.current.api.showLoadingOverlay()
+    setLoading(true)
     setSize(parseInt(event.target.value, 10))
     setPage(1)
   })
@@ -160,6 +169,7 @@ const BCDataGridServer = ({
 
   // Callback for handling the first rendering of data
   const onFirstDataRendered = useCallback((params) => {
+    setLoading(false)
     params.api.hideOverlay()
   })
 
@@ -167,7 +177,7 @@ const BCDataGridServer = ({
   const onFilterChanged = useCallback(() => {
     setPage(1)
     setRowData([])
-    gridRef.current.api.showLoadingOverlay()
+    setLoading(true)
     const filterModel = gridRef?.current?.api.getFilterModel()
     const filterArr = [
       ...Object.entries(filterModel).map(([field, value]) => {
@@ -187,7 +197,7 @@ const BCDataGridServer = ({
   const onSortChanged = useCallback(() => {
     setPage(1)
     // setRowData([])
-    gridRef.current.api.showLoadingOverlay()
+    setLoading(true)
     // forming the sortModel that fits with backend schema structure
     const sortTemp = gridRef?.current?.api
       .getColumnState()
@@ -281,6 +291,7 @@ const BCDataGridServer = ({
         getRowId={getRowId}
         loadingOverlayComponent={loadingOverlayComponent}
         domLayout="autoHeight"
+        loading={loading}
         {...others}
       />
       {/* TablePagination components setup using Material UI,

@@ -1,4 +1,5 @@
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material'
+import { numberFormatter } from '@/utils/formatters'
 
 const SummaryTable = ({ title, columns, data }) => {
   return (
@@ -48,7 +49,7 @@ const SummaryTable = ({ title, columns, data }) => {
                     fontWeight: (column.bold || (column.id === 'description' && !row.line)) ? 'bold' : 'normal',
                   }}
                 >
-                  {row[column.id]}
+                  {numberFormatter(row[column.id])}
                 </TableCell>
               ))}
             </TableRow>

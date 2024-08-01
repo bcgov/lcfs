@@ -1,0 +1,38 @@
+name: Devops Test
+
+on:
+  push:
+    branches: [ devops-test-pipeline-0.2.0 ]
+  workflow_dispatch:
+
+jobs:
+
+  get-version:
+    name: Retrieve version
+    runs-on: ubuntu-latest
+  
+    outputs:
+      output1: ${{ steps.get-version.outputs.VERSION }}
+    
+    steps:
+      - id: get-version
+        run: |
+          version=$(echo "${{ github.event.repository.default_branch }}" | sed -E 's/release-(.*)/\1/')
+          echo "VERSION=$version" >> $GITHUB_OUTPUT
+
+  devops-test:
+
+    name: Devops test
+    runs-on: ubuntu-latest
+    needs: [get-version]
+
+    env:
+      VERSION: ${{ needs.get-version.outputs.output1 }}
+
+    steps:
+      
+      - name: print version
+        run: |
+          echo "The default branch is ${{ env.VERSION }}"
+
+          

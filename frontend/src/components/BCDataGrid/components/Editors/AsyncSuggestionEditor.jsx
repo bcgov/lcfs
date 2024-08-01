@@ -1,107 +1,121 @@
-import { forwardRef, useState, useMemo } from 'react'
-import { Box, TextField, Autocomplete, Grid } from '@mui/material'
 import BCBox from '@/components/BCBox'
-import { debounce } from 'lodash'
-import parse from 'autosuggest-highlight/parse'
-import match from 'autosuggest-highlight/match'
+import { useApiService } from '@/services/useApiService'
+import { Autocomplete, Box, Grid, TextField } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
+import match from 'autosuggest-highlight/match'
+import parse from 'autosuggest-highlight/parse'
+import { debounce } from 'lodash'
+import { useMemo, useState } from 'react'
 
-export const AsyncSuggestionEditor = forwardRef(
-  ({ value='', onValueChange, eventKey, rowIndex, column, enabled=true, ...props }, ref) => {
-    const [inputValue, setInputValue] = useState('')
-    const { data: options, isLoading } = useQuery({
-      queryKey: [props.queryKey || 'async-suggestion', inputValue],
-      queryFn: props.queryFn,
-      enabled: inputValue !== '' && enabled,
-      retry: false,
-      refetchOnWindowFocus: false,
-    })
+export const AsyncSuggestionEditor = ({
+  value = '',
+  onValueChange,
+  enabled = true,
+  queryKey,
+  queryFn,
+  debounceValue,
+  onKeyDownCapture,
+  api,
+  optionLabel
+}) => {
+  const [inputValue, setInputValue] = useState('')
+  const apiService = useApiService()
+  const { data: options } = useQuery({
+    queryKey: [queryKey || 'async-suggestion', inputValue],
+    queryFn: async ({ queryKey }) => queryFn({ client: apiService, queryKey }),
+    enabled: inputValue !== '' && enabled,
+    retry: false,
+    refetchOnWindowFocus: false
+  })
 
-    const debouncedSetInputValue = useMemo(
-      (newInputValue) =>
-        debounce((newInputValue) => {
-          setInputValue(newInputValue)
-        }, props.debounceValue || 500), // by default 1/2 second delay between calls
-      [inputValue]
-    )
+  const debouncedSetInputValue = useMemo(
+    () =>
+      debounce((newInputValue) => {
+        setInputValue(newInputValue)
+      }, debounceValue || 500), // by default 1/2 second delay between calls
+    [debounceValue]
+  )
 
-    const handleInputChange = (event, newInputValue) => {
-      debouncedSetInputValue(newInputValue)
-      // Update the value based on the input
-      onValueChange(newInputValue)
+  const handleInputChange = (_, newInputValue) => {
+    debouncedSetInputValue(newInputValue)
+    // Update the value based on the input
+    onValueChange(newInputValue)
+  }
+
+  const handleKeyDown = (event) => {
+    if (onKeyDownCapture) {
+      onKeyDownCapture(event)
+    } else if (event.key === 'Tab') {
+      event.preventDefault()
+      api.tabToNextCell()
     }
+  }
 
-    const handleKeyDown = (event) => {
-      if (props.onKeyDownCapture) {
-        props.onKeyDownCapture(event)
-      } else if (event.key === 'Tab') {
-        event.preventDefault()
-        props.api.tabToNextCell()
-      }
-    }
-
-    return (
-      <BCBox
-        component="div"
-        aria-label="Select options from the drop down"
-        data-testid="ag-grid-editor-select-options"
+  return (
+    <BCBox
+      component="div"
+      aria-label="Select options from the drop down"
+      data-testid="ag-grid-editor-select-options"
+      sx={{
+        '& .MuiAutocomplete-inputRoot': {
+          paddingBottom: '4px',
+          backgroundColor: '#fff'
+        }
+      }}
+    >
+      <Autocomplete
         sx={{
-          '& .MuiAutocomplete-inputRoot': {
-            paddingBottom: '4px',
-            backgroundColor: '#fff'
+          '.MuiOutlinedInput-root': {
+            padding: '2px 0px 2px 0px'
           }
         }}
-      >
-        <Autocomplete
-          sx={{
-            '.MuiOutlinedInput-root': {
-              padding: '2px 0px 2px 0px'
-            }
-          }}
-          freeSolo
-          id="async-search-editor"
-          getOptionLabel={(option) =>
-            typeof option === 'string' ? option : option.title
-          }
-          options={options ? Array.isArray(options) ? options.map(item=> ({title: item})) : options[props.optionLabel].map(item=> ({title: item})) : []}
-          includeInputInList
-          value={value}
-          onInputChange={handleInputChange}
-          onKeyDownCapture={handleKeyDown}
-          // loading={isLoading}
-          noOptionsText="No suggestions..."
-          renderInput={(params) => <TextField {...params} fullWidth />}
-          renderOption={(props, option, { inputValue }) => {
-            const matches = match(option.title, inputValue, {
-              insideWords: true
-            })
-            const parts = parse(option.title, matches)
+        freeSolo
+        id="async-search-editor"
+        getOptionLabel={(option) =>
+          typeof option === 'string' ? option : option.title
+        }
+        options={
+          options
+            ? Array.isArray(options)
+              ? options.map((item) => ({ title: item }))
+              : options[optionLabel].map((item) => ({ title: item }))
+            : []
+        }
+        includeInputInList
+        value={value}
+        onInputChange={handleInputChange}
+        onKeyDownCapture={handleKeyDown}
+        // loading={isLoading}
+        noOptionsText="No suggestions..."
+        renderInput={(params) => <TextField {...params} fullWidth />}
+        renderOption={({ key, ...props }, option, { inputValue }) => {
+          const matches = match(option.title, inputValue, {
+            insideWords: true
+          })
+          const parts = parse(option.title, matches)
 
-            return (
-              <li {...props}>
-                <Grid container alignItems="center">
-                  <Grid
-                    item
-                    sx={{ width: 'calc(100% - 44px)', wordWrap: 'break-word' }}
-                  >
-                    {parts.map((part, index) => (
-                      <Box
-                        key={index}
-                        component="span"
-                        sx={{ fontWeight: part.highlight ? 'bold' : 'regular' }}
-                      >
-                        {part.text}
-                      </Box>
-                    ))}
-                  </Grid>
+          return (
+            <li key={key} {...props}>
+              <Grid container alignItems="center">
+                <Grid
+                  item
+                  sx={{ width: 'calc(100% - 44px)', wordWrap: 'break-word' }}
+                >
+                  {parts.map((part, index) => (
+                    <Box
+                      key={index}
+                      component="span"
+                      sx={{ fontWeight: part.highlight ? 'bold' : 'regular' }}
+                    >
+                      {part.text}
+                    </Box>
+                  ))}
                 </Grid>
-              </li>
-            )
-          }}
-        />
-      </BCBox>
-    )
-  }
-)
-
-AsyncSuggestionEditor.displayName = 'AsyncSuggestionEditor'
+              </Grid>
+            </li>
+          )
+        }}
+      />
+    </BCBox>
+  )
+}

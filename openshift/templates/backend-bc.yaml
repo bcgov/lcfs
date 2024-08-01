@@ -71,6 +71,4 @@ objects:
                 name: artifacts-default-gyszor
                 key: password
       type: Docker
-    triggers:
-    - type: ConfigChange
-    - type: ImageChange
+    triggers: []

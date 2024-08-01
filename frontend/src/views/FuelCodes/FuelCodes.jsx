@@ -1,30 +1,28 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import { ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetFuelCodes } from '@/hooks/useFuelCode'
 import { useApiService } from '@/services/useApiService'
 import withRole from '@/utils/withRole'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
 
 const FuelCodesBase = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [gridKey, setGridKey] = useState(`fuel-codes-grid`)
-  const [searchParams] = useSearchParams()
-  const highlightedId = searchParams.get('hid')
 
   const { data: currentUser } = useCurrentUser()
 
@@ -36,7 +34,6 @@ const FuelCodesBase = () => {
     roles.director
   ].some((role) => userRoles.includes(role))
 
-  const gridRef = useRef()
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'fuelCodes'])
   const navigate = useNavigate()
@@ -49,27 +46,12 @@ const FuelCodesBase = () => {
     }
   }, [location.state])
 
-  const gridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: t('fuelCode:noFuelCodesFound'),
-    autoSizeStrategy: {
-      type: 'fitCellContents',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    }
-  }))
-
   const getRowId = (params) => {
-    return params.data.fuelCodeId
-  }
-
-  const handleGridKey = () => {
-    // setGridKey(`fuel-codes-grid-${uuid()}`)
-    setGridKey(`fuel-codes-grid-<unique-id>`)
+    return params.data.fuelCodeId.toString()
   }
 
   const handleRowClicked = (params) => {
     if (!isAuthorized) return
-    console.log(isAuthorized)
     navigate(
       ROUTES.FUELCODES_VIEW.replace(':fuelCodeID', params.data.fuelCodeId)
     )
@@ -134,19 +116,19 @@ const FuelCodesBase = () => {
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
-          className={'ag-theme-material'}
-          gridRef={gridRef}
-          apiEndpoint={apiRoutes.getFuelCodes}
-          apiData={'fuelCodes'}
+        <BCGridViewer
+          gridKey={'fuel-codes-grid'}
           columnDefs={fuelCodeColDefs(t)}
-          gridKey={gridKey}
+          query={useGetFuelCodes}
+          queryParams={{ cacheTime: 0, staleTime: 0 }}
+          dataKey={'fuelCodes'}
           getRowId={getRowId}
-          gridOptions={gridOptions}
-          handleGridKey={handleGridKey}
-          handleRowClicked={handleRowClicked}
-          enableCopyButton={false}
-          highlightedRowId={highlightedId}
+          onRowClicked={handleRowClicked}
+          overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
+          autoSizeStrategy={{
+            defaultMinWidth: 50,
+            defaultMaxWidth: 600
+          }}
         />
       </BCBox>
     </Grid2>
