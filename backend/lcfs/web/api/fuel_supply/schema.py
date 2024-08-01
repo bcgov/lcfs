@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -148,18 +148,19 @@ class FuelSupplySchema(BaseSchema):
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
 
+
 class FuelSupplyCreateSchema(BaseSchema):
     fuel_supply_id: Optional[int] = None
     compliance_report_id: int
-    fuel_type: str
+    fuel_type: Union[str, FuelTypeSchema]
     fuel_type_id: int
-    fuel_category: str
+    fuel_category: Union[str, FuelCategoryResponseSchema]
     fuel_category_id: int
-    end_use_type: Optional[str] = None
-    end_use_id: Optional[int] = None    
-    provision_of_the_act: str
+    end_use_type: Optional[Union[str, EndUseTypeSchema]] = None
+    end_use_id: Optional[int] = None
+    provision_of_the_act: Union[str, ProvisionOfTheActSchema]
     provision_of_the_act_id: int
-    fuel_code: Optional[str] = None
+    fuel_code: Optional[Union[str, FuelCodeSchema]] = None
     fuel_code_id: Optional[int] = None
     quantity: int
     units: str

@@ -209,7 +209,7 @@ class FuelSupplyRepository:
         updated_fuel_supply = await self.db.merge(fuel_supply)
         await self.db.flush()
         await self.db.refresh(fuel_supply,
-            ["fuel_catgory", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
         )
         return updated_fuel_supply
 
@@ -222,7 +222,7 @@ class FuelSupplyRepository:
         await self.db.flush()
         await self.db.refresh(
             fuel_supply,
-            ["fuel_catgory", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
         )
         return fuel_supply
 
