@@ -12,17 +12,17 @@ import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 
 const OrgDetailsCard = () => {
-  const { t } = useTranslation(['common', 'org'])
+  const { t } = useTranslation(['dashboard'])
   const { data: orgData, isLoading: orgLoading } = useOrganization()
   const navigate = useNavigate()
   return (
     <BCWidgetCard
       component="div"
       disableHover={true}
-      title={t('org:orgDetailsLabel')}
+      title={t('dashboard:orgDetails.orgDetailsLabel')}
       content={
         orgLoading ? (
-          <Loading message={t('org:orgDetailsLoadingMsg')} />
+          <Loading message={t('dashboard:orgDetails.orgDetailsLoadingMsg')} />
         ) : (
           <>
             <Stack>
@@ -63,7 +63,7 @@ const OrgDetailsCard = () => {
                       '&:hover': { color: 'info.main' }
                     }}
                   >
-                    {t('Users')}
+                    {t('dashboard:orgDetails.users')}
                   </BCTypography>
                 </ListItemButton>
                 <ListItemButton
@@ -80,7 +80,7 @@ const OrgDetailsCard = () => {
                       '&:hover': { color: 'info.main' }
                     }}
                   >
-                    {t('org:createNewUsrLabel')}
+                    {t('dashboard:orgDetails.createNewUsrLabel')}
                     <FontAwesomeIcon icon={faShareFromSquare} style={{ color: '#578260', marginLeft: 6 }} />
                   </BCTypography>
                 </ListItemButton>

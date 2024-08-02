@@ -15,9 +15,8 @@ const CountDisplay = ({ count }) => (
     component="span"
     variant="h3"
     sx={{
-      fontWeight: 'bold',
       color: 'success.main',
-      marginRight: 3
+      marginX: 3
     }}
   >
     {count}
@@ -25,7 +24,7 @@ const CountDisplay = ({ count }) => (
 )
 
 const DirectorReviewCard = () => {
-  const { t } = useTranslation(['common', 'dashboard'])
+  const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
   const { data: counts, isLoading } = useDirectorReviewCounts()
 
@@ -66,6 +65,7 @@ const DirectorReviewCard = () => {
   return (
     <BCWidgetCard
       component="div"
+      disableHover={true}
       title={t('dashboard:directorReview.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }} // Reduce padding of the card content
       content={
@@ -73,15 +73,14 @@ const DirectorReviewCard = () => {
           <Loading message={t('dashboard:directorReview.loadingMessage')} />
         ) : (
           <Stack spacing={1}>
-            <BCTypography variant="body1" sx={{ marginBottom: 0 }}>{t('dashboard:directorReview.thereAre')}</BCTypography>
+            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>{t('dashboard:directorReview.thereAre')}</BCTypography>
             <List 
               component="div" 
               sx={{ 
                 maxWidth: '100%', 
                 padding: 0,
                 '& .MuiListItemButton-root': {
-                  padding: '2px 0',
-                  marginLeft: 2
+                  padding: '2px 0'
                 },
               }}
             >
@@ -90,7 +89,7 @@ const DirectorReviewCard = () => {
                 onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', 'Recommended')}
               >
                 {renderLinkWithCount(
-                  t('dashboard:directorReview.transfersForReview', { count: counts?.transfers || 0 }),
+                  t('dashboard:directorReview.transfersForReview'),
                   counts?.transfers || 0,
                   () => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', 'Recommended')
                 )}
@@ -100,19 +99,19 @@ const DirectorReviewCard = () => {
                 onClick={() => handleComplianceNavigation(ROUTES.REPORTS, 'Recommended_by_manager')}
               >
                 {renderLinkWithCount(
-                  t('dashboard:directorReview.complianceReportsForReview', { count: counts?.complianceReports || 0 }),
+                  t('dashboard:directorReview.complianceReportsForReview'),
                   counts?.complianceReports || 0,
                   () => handleComplianceNavigation(ROUTES.REPORTS, 'Recommended_by_manager')
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Reviewed')}
+                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Approved')}
               >
                 {renderLinkWithCount(
-                  t('dashboard:directorReview.initiativeAgreementsForReview', { count: counts?.initiativeAgreements || 0 }),
+                  t('dashboard:directorReview.initiativeAgreementsForReview'),
                   counts?.initiativeAgreements || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Reviewed')
+                  () => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Approved')
                 )}
               </ListItemButton>
               <ListItemButton
@@ -120,7 +119,7 @@ const DirectorReviewCard = () => {
                 onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', 'Recommended')}
               >
                 {renderLinkWithCount(
-                  t('dashboard:directorReview.adminAdjustmentsForReview', { count: counts?.adminAdjustments || 0 }),
+                  t('dashboard:directorReview.adminAdjustmentsForReview'),
                   counts?.adminAdjustments || 0,
                   () => handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', 'Recommended')
                 )}
