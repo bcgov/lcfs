@@ -133,8 +133,10 @@ class ComplianceReportServices:
                 " ", "_").lower()
 
             # Update the corresponding category sum
-            if normalized_category in notional_transfers_sums:
+            if transfer.received_or_transferred.lower() == "received":
                 notional_transfers_sums[normalized_category] += transfer.quantity
+            elif transfer.received_or_transferred.lower() == "transferred":
+                notional_transfers_sums[normalized_category] -= transfer.quantity
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums, compliance_period=compliance_period_start.year
