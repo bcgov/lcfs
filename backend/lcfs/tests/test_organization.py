@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
 
-from lcfs.web.api.organizations.schema import OrganizationListSchema, OrganizationTypeEnum
+from lcfs.web.api.organizations.schema import OrganizationListSchema, OrganizationStatusEnum, OrganizationSummaryResponseSchema, OrganizationTypeEnum
 
 
 @pytest.mark.anyio
@@ -233,8 +233,10 @@ async def test_get_externally_registered_organizations(
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert isinstance(data, list)
-    assert all("name" in org and "organization_id" in org for org in data)
+    for org in data:
+        org_model = OrganizationSummaryResponseSchema(**org)
+        assert org_model.organization_id is not None
+        assert org_model.org_status.status == OrganizationStatusEnum.REGISTERED
 
 @pytest.mark.anyio
 async def test_get_balances(
@@ -246,11 +248,10 @@ async def test_get_balances(
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert "organization_id" in data
-    assert "name" in data
-    assert "registered" in data
-    assert "total_balance" in data
-    assert "reserved_balance" in data
+    assert data.organization_id == organization_id
+    assert data.name is not None
+    assert data.total_balance >= 0
+    assert data.reserved_balance >= 0
 
 @pytest.mark.anyio
 async def test_get_current_balances(
@@ -261,11 +262,9 @@ async def test_get_current_balances(
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert "organization_id" in data
-    assert "name" in data
-    assert "registered" in data
-    assert "total_balance" in data
-    assert "reserved_balance" in data
+    assert data.name is not None
+    assert data.total_balance >= 0
+    assert data.reserved_balance >= 0
 
 @pytest.mark.anyio
 async def test_create_organization_unauthorized(
