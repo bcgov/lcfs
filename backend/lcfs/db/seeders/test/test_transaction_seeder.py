@@ -1,42 +1,33 @@
 import logging
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 
 logger = logging.getLogger(__name__)
 
+
 async def seed_test_transactions(session):
     """
-    Seeds transactions into the database, if they do not already exist.
-
-    Args
+    Seeds initial transaction for organizations into the database, if they do not already exist.
+    Args:
+        session: The database session for committing the new records.
     """
+
     transactions_to_seed = [
-        {
-            "compliance_units": 100,
-            "organization_id": 1,
-            "transaction_action": TransactionActionEnum.Adjustment,
-        },
-        {
-            "compliance_units": -50,
-            "organization_id": 2,
-            "transaction_action": TransactionActionEnum.Reserved,
-        },
-        {
-            "compliance_units": -50,
-            "organization_id": 1,
-            "transaction_action": TransactionActionEnum.Released,
-        },
+        {"transaction_id": 1, 'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 1},
+        {"transaction_id": 2, 'compliance_units': 1000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 1}
     ]
 
     try:
         for transaction_data in transactions_to_seed:
-            # Check if a Transaction with the same attributes already exists
+            # Check if the transaction already exists
             exists = await session.execute(
                 select(Transaction).where(
-                    Transaction.compliance_units == transaction_data["compliance_units"],
-                    Transaction.organization_id == transaction_data["organization_id"],
-                    Transaction.transaction_action == transaction_data["transaction_action"]
+                    Transaction.compliance_units ==
+                    transaction_data["compliance_units"],
+                    Transaction.transaction_action ==
+                    transaction_data["transaction_action"],
+                    Transaction.organization_id ==
+                    transaction_data["organization_id"],
                 )
             )
             if not exists.scalars().first():
@@ -44,8 +35,6 @@ async def seed_test_transactions(session):
                 session.add(transaction)
 
         await session.commit()
-        logger.info("Transaction seeding completed successfully.")
-    except SQLAlchemyError as e:
-        logger.error(f"Error occurred while seeding transactions: {e}")
-        await session.rollback()
+    except Exception as e:
+        logger.error("Error occurred while seeding transactions: %s", e)
         raise

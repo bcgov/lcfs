@@ -88,9 +88,9 @@ async def test_keycloak_user_not_found(user_auth_backend, dbsession_factory):
 
     # Set test user 
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': '',
-        'idir_username': '',
-        'email': '',
+        'preferred_username': 'random_lcfs1',
+        'idir_username': 'random_lcfs1',
+        'email': 'random_lcfs1@gov.bc.ca',
         'identity_provider': 'idir',
     }
 
