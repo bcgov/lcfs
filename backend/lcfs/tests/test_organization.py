@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
 
+from lcfs.web.api.organizations.schema import OrganizationListSchema, OrganizationTypeEnum
+
 
 @pytest.mark.anyio
 async def test_export_success(
@@ -183,5 +185,19 @@ async def test_get_organizations_list(
     response = await client.post(
         url, json={"page": 1, "size": 5, "sortOrders": [], "filters": []}
     )
+
+    data = OrganizationListSchema(**response.json())
+    assert data.pagination.size == 5
+    assert data.pagination.page == 1
+    assert len(data.organizations) > 0
+    assert data.organizations[0].org_type.org_type == OrganizationTypeEnum.FUEL_SUPPLIER
     assert response.status_code == status.HTTP_200_OK
-    assert isinstance(response.json(), list)
+
+@pytest.mark.anyio
+async def test_get_organization_statuses_list(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("get_organization_statuses")
+    response = await client.get(url)    
+    assert response.status_code == status.HTTP_200_OK
