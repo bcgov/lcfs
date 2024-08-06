@@ -20,7 +20,16 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
     fuel_type_id = Column(
         Integer, primary_key=True, autoincrement=True)
     fuel_type = Column(Text, nullable=False)
-    fossil_derived = Column(Boolean, default=False)
+    fossil_derived = Column(
+        Boolean,
+        default=False,
+        comment="Indicates whether the fuel is fossil-derived"
+    )
+    other_uses_fossil_derived = Column(
+        Boolean,
+        default=False,
+        comment="Indicates whether the fuel is fossil-derived for other uses"
+    )
     provision_1_id = Column(Integer, ForeignKey(
         "provision_of_the_act.provision_of_the_act_id"), nullable=True)
     provision_2_id = Column(Integer, ForeignKey(
