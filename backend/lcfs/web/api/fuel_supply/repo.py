@@ -172,7 +172,7 @@ class FuelSupplyRepository:
         Retrieve the list of fuel supplied information for a given compliance report.
         """
         query = self.query.where(FuelSupply.compliance_report_id == compliance_report_id)
-        results = (await self.db.execute(query)).scalars().all()
+        results = (await self.db.execute(query)).unique().scalars().all()
         return results
 
     @repo_handler
@@ -209,7 +209,7 @@ class FuelSupplyRepository:
         updated_fuel_supply = await self.db.merge(fuel_supply)
         await self.db.flush()
         await self.db.refresh(fuel_supply,
-            ["fuel_catgory", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
         )
         return updated_fuel_supply
 
@@ -222,7 +222,7 @@ class FuelSupplyRepository:
         await self.db.flush()
         await self.db.refresh(
             fuel_supply,
-            ["fuel_catgory", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
         )
         return fuel_supply
 

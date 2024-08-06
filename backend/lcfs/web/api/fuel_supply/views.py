@@ -14,13 +14,14 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
-    FuelSupplySchema,
+    FuelSupplyCreateSchema,
     FuelTypeOptionsResponse,
     CommmonPaginatedReportRequestSchema,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
 from lcfs.web.core.decorators import view_handler
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
@@ -33,7 +34,7 @@ get_async_db = dependencies.get_async_db_session
     response_model=FuelTypeOptionsResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_fs_table_options(
     request: Request, compliancePeriod: str, service: FuelSupplyServices = Depends()
 ) -> FuelTypeOptionsResponse:
@@ -41,7 +42,7 @@ async def get_fs_table_options(
 
 
 @router.post(
-    "/list-all", response_model=FuelSupplySchema, status_code=status.HTTP_200_OK
+    "/list-all", response_model=FuelSuppliesSchema, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def get_fuel_supply(
@@ -69,26 +70,28 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplySchema, DeleteFuelSupplyResponseSchema],
+    response_model=Union[FuelSupplyCreateSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def save_fuel_supply_row(
     request: Request,
-    request_data: FuelSupplySchema = Body(...),
+    request_data: FuelSupplyCreateSchema = Body(...),
     fs_service: FuelSupplyServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelSupplyValidation = Depends(),
 ):
     """Endpoint to save single fuel supply row"""
     compliance_report_id = request_data.compliance_report_id
     fs_id: Optional[int] = request_data.fuel_supply_id
 
-    await fs_validate.validate_organization_access(compliance_report_id)
+    await report_validate.validate_organization_access(compliance_report_id)
 
     if request_data.deleted:
         # Delete existing fuel supply row
         await fs_service.delete_fuel_supply(fs_id)
         return DeleteFuelSupplyResponseSchema(
+            success= True,
             message="fuel supply row deleted successfully"
         )
     elif fs_id:
