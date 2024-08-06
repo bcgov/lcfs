@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
 
-from lcfs.web.api.organizations.schema import OrganizationListSchema, OrganizationStatusEnum, OrganizationSummaryResponseSchema, OrganizationTypeEnum
+from lcfs.web.api.organizations.schema import OrganizationBalanceResponseSchema, OrganizationListSchema, OrganizationStatusEnum, OrganizationSummaryResponseSchema, OrganizationTypeEnum
 
 
 @pytest.mark.anyio
@@ -247,7 +247,7 @@ async def test_get_balances(
     url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    data = response.json()
+    data = OrganizationBalanceResponseSchema(**response.json())
     assert data.organization_id == organization_id
     assert data.name is not None
     assert data.total_balance >= 0
@@ -261,7 +261,7 @@ async def test_get_current_balances(
     url = fastapi_app.url_path_for("get_balances")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
-    data = response.json()
+    data = OrganizationBalanceResponseSchema(**response.json())
     assert data.name is not None
     assert data.total_balance >= 0
     assert data.reserved_balance >= 0
