@@ -201,3 +201,112 @@ async def test_get_organization_statuses_list(
     url = fastapi_app.url_path_for("get_organization_statuses")
     response = await client.get(url)    
     assert response.status_code == status.HTTP_200_OK
+
+@pytest.mark.anyio
+async def test_get_organization_types_list(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("get_organization_types")
+    response = await client.get(url)    
+    assert response.status_code == status.HTTP_200_OK
+
+@pytest.mark.anyio
+async def test_get_organization_names(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Government"])
+    url = fastapi_app.url_path_for("get_organization_names")
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert all("name" in org for org in data)
+
+@pytest.mark.anyio
+async def test_get_externally_registered_organizations(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+    url = fastapi_app.url_path_for("get_externally_registered_organizations")
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list)
+    assert all("name" in org and "organization_id" in org for org in data)
+
+@pytest.mark.anyio
+async def test_get_balances(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Government"])
+    organization_id = 1  # Assuming this organization exists
+    url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "organization_id" in data
+    assert "name" in data
+    assert "registered" in data
+    assert "total_balance" in data
+    assert "reserved_balance" in data
+
+@pytest.mark.anyio
+async def test_get_current_balances(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+    url = fastapi_app.url_path_for("get_balances")
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "organization_id" in data
+    assert "name" in data
+    assert "registered" in data
+    assert "total_balance" in data
+    assert "reserved_balance" in data
+
+@pytest.mark.anyio
+async def test_create_organization_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+    url = fastapi_app.url_path_for("create_organization")
+    payload = {
+        "name": "Test Organization",
+        "operatingName": "Test Operating name",
+        "email": "test@example.com",
+        "phone": "1234567890",
+        "edrmsRecord": "EDRMS123",
+        "organizationStatusId": 1,
+        "organizationTypeId": 1,
+        "address": {
+            "name": "Test Address",
+            "streetAddress": "123 Test St",
+            "city": "Test City",
+            "provinceState": "Test Province",
+            "country": "Test Country",
+            "postalcodeZipcode": "12345"
+        },
+        "attorneyAddress": {
+            "name": "Test Attorney Address",
+            "streetAddress": "456 Attorney St",
+            "city": "Attorney City",
+            "provinceState": "Attorney Province",
+            "country": "Attorney Country",
+            "postalcodeZipcode": "67890"
+        }
+    }
+    response = await client.post(url, json=payload)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+@pytest.mark.anyio
+async def test_get_balances_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+) -> None:
+    set_mock_user_roles(fastapi_app, ["Supplier"])
+    organization_id = 1
+    url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
