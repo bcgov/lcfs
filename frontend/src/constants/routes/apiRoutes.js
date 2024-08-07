@@ -42,5 +42,10 @@ export const apiRoutes = {
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
   getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
   saveFinalSupplyEquipments: '/final-supply-equipments/save',
+  fuelSupplyOptions: '/fuel-supply/table-options?',
+  getAllFuelSupplies: '/fuel-supply/list-all',
+  saveFuelSupplies: '/fuel-supply/save',
   directorReviewCounts: '/dashboard/director-review-counts/',
+  TransactionCounts: '/dashboard/transaction-counts',
+  OrgTransactionCounts: '/dashboard/org-transaction-counts',
 }

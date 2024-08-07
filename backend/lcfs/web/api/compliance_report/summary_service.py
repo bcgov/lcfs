@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Tuple
 from sqlalchemy import Float
 from fastapi import Depends
+from datetime import datetime
 from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
@@ -9,28 +10,61 @@ from lcfs.web.api.compliance_report.constants import (
     PRESCRIBED_PENALTY_RATE,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-
+from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
 class ComplianceReportSummaryService:
-    def __init__(self, repo: ComplianceReportRepository = Depends()):
+    def __init__(
+            self, 
+            repo: ComplianceReportRepository = Depends(),
+            notional_transfer_service: NotionalTransferServices = Depends(
+                NotionalTransferServices),
+            ):
         self.repo = repo
+        self.notional_transfer_service = notional_transfer_service
 
     @service_handler
-    async def get_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+        """
+        Get a list of all summary versions for a given report, including the original and all supplementals.
+        
+        :param report_id: The ID of the original compliance report
+        :return: A list of tuples containing (summary_id, version, type)
+        """
+        return await self.repo.get_summary_versions(report_id)
+
+    @service_handler
+    async def get_compliance_report_summary(self, summary_id: int) -> ComplianceReportSummary:
+        """
+        Get a specific compliance report summary by its ID.
+        """
+        return await self.repo.get_summary_by_id(summary_id)
+
+    @service_handler
+    async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
+        
+        # Fetch the compliance report details
+        compliance_report = await self.repo.get_compliance_report_by_id(report_id)
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found.")
 
-        fossil_quantities = await self.repo.get_fossil_quantities(report_id)
-        renewable_quantities = await self.repo.get_renewable_quantities(report_id)
-        previous_retained = await self.repo.get_previous_retained(report_id)
-        notional_transfers = await self.repo.get_notional_transfers(report_id)
+        compliance_period_start = compliance_report.compliance_period.effective_date
+        compliance_period_end = compliance_report.compliance_period.expiration_date
+        organization_id = compliance_report.organization_id
 
-        fossil_quantities = {'gasoline': 10000, 'diesel': 20000, 'jet_fuel': 3000}
-        renewable_quantities = {'gasoline': 5000, 'diesel': 15000, 'jet_fuel': 1000}
+        # Fetch fuel quantities
+        fuel_quantities = await self.repo.calculate_fuel_quantities(report_id)
+        fossil_quantities = fuel_quantities['fossil_fuel_quantities']
+        renewable_quantities = fuel_quantities['renewable_fuel_quantities']
+
+        # Placeholder values for demonstration purposes
+        # need to get these values from the db after fuel supply is implemented
         previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
 
+        notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
 
         notional_transfers_sums = {
             'gasoline': 0,
@@ -39,13 +73,22 @@ class ComplianceReportSummaryService:
         }
 
         for transfer in notional_transfers.notional_transfers:
-            normalized_category = transfer.fuel_category.replace(" ", "_").lower()
-            if normalized_category in notional_transfers_sums:
+            # Normalize the fuel category key
+            normalized_category = transfer.fuel_category.replace(
+                " ", "_").lower()
+
+            # Update the corresponding category sum
+            if transfer.received_or_transferred.lower() == "received":
                 notional_transfers_sums[normalized_category] += transfer.quantity
+            elif transfer.received_or_transferred.lower() == "transferred":
+                notional_transfers_sums[normalized_category] -= transfer.quantity
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
-            fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums)
-        low_carbon_fuel_target_summary = self.calculate_low_carbon_fuel_target_summary()
+            fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums, compliance_period=compliance_period_start.year
+        )
+        low_carbon_fuel_target_summary = await self.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start, compliance_period_end, organization_id
+        )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
 
         summary = {
@@ -56,42 +99,66 @@ class ComplianceReportSummaryService:
 
         return summary
 
-    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, notional_transfers_sums: dict) -> List[ComplianceReportSummaryRowSchema]:
+    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, notional_transfers_sums: dict, compliance_period: datetime) -> List[ComplianceReportSummaryRowSchema]:
+        # line 3
         tracked_totals = {
             category: fossil_quantities.get(
                 category, 0) + renewable_quantities.get(category, 0)
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
-        eligible_renewable_required = 40000
+        # line 4
+        if 2024 <= compliance_period <= 2027:
+            jet_fuel_percentage = 0 / 100
+        elif compliance_period == 2028:
+            jet_fuel_percentage = 1 / 100
+        elif compliance_period == 2029:
+            jet_fuel_percentage = 2 / 100
+        else:
+            jet_fuel_percentage = 3 / 100
 
-        notionally_transferred_renewables = {
-            'gasoline': 1000, 'diesel': 1500, 'jet_fuel': 2000}
+        eligible_renewable_fuel_required = {
+            'gasoline': tracked_totals['gasoline'] * 0.05,
+            'diesel': tracked_totals['diesel'] * 0.04,
+            'jet_fuel': tracked_totals['jet_fuel'] * jet_fuel_percentage,
+        }
 
+        # line 6
         retained_renewables = {
-            category: min(0.05 * eligible_renewable_required,
+            category: min(0.05 * eligible_renewable_fuel_required.get(category, 0),
                           previous_retained.get(category, 0))
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
+        # line 8
+        # These should be calculated based on some business logic
         deferred_renewables = {'gasoline': 9000,
                                'diesel': 2000, 'jet_fuel': 5000}
 
+        # line 9
         renewables_added = {'gasoline': 1000, 'diesel': 2000, 'jet_fuel': 3000}
 
+        # line 10
         net_renewable_supplied = {
             category:
+                # line 2
                 renewable_quantities.get(category, 0) +
-                notionally_transferred_renewables.get(category, 0) -
+                # line 5
+                notional_transfers_sums.get(category, 0) -
+                # line 6
                 retained_renewables.get(category, 0) +
+                # line 7
                 previous_retained.get(category, 0) +
+                # line 8
                 deferred_renewables.get(category, 0) -
+                # line 9
                 renewables_added.get(category, 0)
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
+        # line 11
         non_compliance_penalties = {
-            category: max(0, eligible_renewable_required -
+            category: max(0, eligible_renewable_fuel_required.get(category, 0) -
                           net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category]
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
@@ -100,11 +167,13 @@ class ComplianceReportSummaryService:
             '1': {'gasoline': fossil_quantities.get('gasoline', 0), 'diesel': fossil_quantities.get('diesel', 0), 'jet_fuel': fossil_quantities.get('jet_fuel', 0)},
             '2': {'gasoline': renewable_quantities.get('gasoline', 0), 'diesel': renewable_quantities.get('diesel', 0), 'jet_fuel': renewable_quantities.get('jet_fuel', 0)},
             '3': {'gasoline': tracked_totals.get('gasoline', 0), 'diesel': tracked_totals.get('diesel', 0), 'jet_fuel': tracked_totals.get('jet_fuel', 0)},
-            '4': {'gasoline': eligible_renewable_required, 'diesel': eligible_renewable_required, 'jet_fuel': eligible_renewable_required},
+            '4': {'gasoline': eligible_renewable_fuel_required.get('gasoline', 0), 'diesel': eligible_renewable_fuel_required.get('diesel', 0), 'jet_fuel': eligible_renewable_fuel_required.get('jet_fuel', 0)},
+            # Notionally transferred value
             '5': notional_transfers_sums,
             '6': {'gasoline': retained_renewables.get('gasoline', 0), 'diesel': retained_renewables.get('diesel', 0), 'jet_fuel': retained_renewables.get('jet_fuel', 0)},
             '7': {'gasoline': previous_retained.get('gasoline', 0), 'diesel': previous_retained.get('diesel', 0), 'jet_fuel': previous_retained.get('jet_fuel', 0)},
             '8': {'gasoline': deferred_renewables.get('gasoline', 0), 'diesel': deferred_renewables.get('diesel', 0), 'jet_fuel': deferred_renewables.get('jet_fuel', 0)},
+            # Renewable obligation added from previous period
             '9': {'gasoline': renewables_added.get('gasoline', 0), 'diesel': renewables_added.get('diesel', 0), 'jet_fuel': renewables_added.get('jet_fuel', 0)},
             '10': {'gasoline': net_renewable_supplied.get('gasoline', 0), 'diesel': net_renewable_supplied.get('diesel', 0), 'jet_fuel': net_renewable_supplied.get('jet_fuel', 0)},
             '11': {'gasoline': non_compliance_penalties.get('gasoline', 0), 'diesel': non_compliance_penalties.get('diesel', 0), 'jet_fuel': non_compliance_penalties.get('jet_fuel', 0)},
@@ -123,14 +192,27 @@ class ComplianceReportSummaryService:
 
         return summary
 
-    def calculate_low_carbon_fuel_target_summary(self) -> List[ComplianceReportSummaryRowSchema]:
+    async def calculate_low_carbon_fuel_target_summary(
+            self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> List[ComplianceReportSummaryRowSchema]:
 
+        # replace 200 with sum of export fuels when export fuels is ready
         complianceUnitsExport = 200 * -1
 
+        compliance_units_transferred_out = await self.repo.get_transferred_out_compliance_units(
+            compliance_period_start, compliance_period_end, organization_id
+        )
+        compliance_units_received = await self.repo.get_received_compliance_units(
+            compliance_period_start, compliance_period_end, organization_id
+        )
+        compliance_units_issued = await self.repo.get_issued_compliance_units(
+            compliance_period_start, compliance_period_end, organization_id
+        )
+
         low_carbon_summary_lines = {
-            '12': {'value': 7310},
-            '13': {'value': 6650},
-            '14': {'value': 660},
+            '12': {'value': compliance_units_transferred_out},
+            '13': {'value': compliance_units_received},
+            '14': {'value': compliance_units_issued},
             '15': {'value': 0},
             '16': {'value': 0},
             '17': {'value': 0},
@@ -206,20 +288,3 @@ class ComplianceReportSummaryService:
             }
 
         return comparison
-
-    @service_handler
-    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
-        """
-        Get a list of all summary versions for a given report, including the original and all supplementals.
-        
-        :param report_id: The ID of the original compliance report
-        :return: A list of tuples containing (summary_id, version, type)
-        """
-        return await self.repo.get_summary_versions(report_id)
-
-    @service_handler
-    async def get_compliance_report_summary(self, summary_id: int) -> ComplianceReportSummary:
-        """
-        Get a specific compliance report summary by its ID.
-        """
-        return await self.repo.get_summary_by_id(summary_id)

@@ -8,17 +8,17 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 
 const OrgBalanceCard = () => {
-  const { t } = useTranslation(['org'])
+  const { t } = useTranslation(['dashboard'])
   const { data: currentUser, isLoading: isUserLoading, isError: isUserError } = useCurrentUser()
   const { data: orgBalance, isLoading: isBalanceLoading, isError: isBalanceError } = useCurrentOrgBalance()
 
   const Content = () => {
     if (isUserLoading || isBalanceLoading) {
-      return <Loading message={t('org:loadingBalanceDetails')} />
+      return <Loading message={t('dashboard:orgBalance.loading')} />
     } else if (isUserError || isBalanceError || !orgBalance) {
       return (
         <BCTypography color="error" variant="body1" style={{ padding: '16px' }}>
-          {t('org:unableToFetchBalanceDetails')}
+          {t('dashboard:orgBalance.unableToFetchBalanceDetails')}
         </BCTypography>
       )
     } else {
@@ -28,23 +28,23 @@ const OrgBalanceCard = () => {
       return (
         <>
           <BCTypography style={{ fontSize: '18px', color: '#003366', marginBottom: '-2px' }} gutterBottom>
-            <strong>{currentUser?.organization?.name || t('org:org')}</strong>
+            <strong>{currentUser?.organization?.name || t('dashboard:orgBalance.org')}</strong>
           </BCTypography>
           <BCTypography style={{ fontSize: '16px', color: '#003366', marginBottom: '-4px' }}>
-            {t('org:hasABalanceOf')}
+            {t('dashboard:orgBalance.hasABalanceOf')}
           </BCTypography>
           <BCTypography style={{ fontSize: '32px', color: '#578260', marginBottom: '-4px' }} component="span">
             {orgBalance.totalBalance.toLocaleString()}
           </BCTypography>
           <BCTypography style={{ fontSize: '18px', color: '#003366', marginBottom: '-5px' }}>
-            <strong>{t('org:complianceUnits')}</strong>
+            <strong>{t('dashboard:orgBalance.complianceUnits')}</strong>
           </BCTypography>
           <Box display="flex" alignItems="center" mt={1}>
             <BCTypography style={{ fontSize: '22px', color: '#578260' }} component="span">
-              ({formattedReservedBalance} {t('org:inReserve')})
+              ({formattedReservedBalance} {t('dashboard:orgBalance.inReserve')})
             </BCTypography>
             <Tooltip
-                title={t('org:inReserveTooltip')}
+                title={t('dashboard:orgBalance.inReserveTooltip')}
                 TransitionComponent={Fade}
                 arrow
               >

@@ -64,7 +64,7 @@ class ComplianceReportUpdateService:
     async def handle_submitted_status(self, report: ComplianceReport):
         """Handle actions when a report is Submitted."""
         # Create compliance report summary
-        summary = await self.summary_service.get_compliance_report_summary(report.compliance_report_id)
+        summary = await self.summary_service.calculate_compliance_report_summary(report.compliance_report_id)
         
         # Save the summary to the database
         # Assuming there's a method in the repo to save the summary

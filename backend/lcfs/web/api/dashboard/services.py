@@ -2,7 +2,11 @@ from logging import getLogger
 from fastapi import Depends
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.dashboard.repo import DashboardRepository
-from lcfs.web.api.dashboard.schema import DirectorReviewCountsSchema
+from lcfs.web.api.dashboard.schema import (
+    DirectorReviewCountsSchema,
+    TransactionCountsSchema,
+    OrganizarionTransactionCountsSchema
+)
 
 logger = getLogger("dashboard_services")
 
@@ -13,10 +17,28 @@ class DashboardServices:
     @service_handler
     async def get_director_review_counts(self) -> DirectorReviewCountsSchema:
         counts = await self.repo.get_director_review_counts()
-        
+
         return DirectorReviewCountsSchema(
             transfers=counts.get('transfers', 0),
             compliance_reports=counts.get('compliance_reports', 0),
             initiative_agreements=counts.get('initiative_agreements', 0),
             admin_adjustments=counts.get('admin_adjustments', 0)
+        )
+
+    @service_handler
+    async def get_transaction_counts(self) -> TransactionCountsSchema:
+        counts = await self.repo.get_transaction_counts()
+
+        return TransactionCountsSchema(
+            transfers=counts.get('transfers', 0),
+            initiative_agreements=counts.get('initiative_agreements', 0),
+            admin_adjustments=counts.get('admin_adjustments', 0)
+        )
+
+    @service_handler
+    async def get_org_transaction_counts(self, organization_id) -> OrganizarionTransactionCountsSchema:
+        counts = await self.repo.get_org_transaction_counts(organization_id)
+
+        return OrganizarionTransactionCountsSchema(
+            transfers=counts.get('transfers', 0)
         )

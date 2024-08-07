@@ -89,6 +89,7 @@ async def get_organization(
 
 
 @router.put("/{organization_id}")
+# FIXME: should we be allowing any user to update the organizaiton details?
 @view_handler(['*'])
 async def update_organization(
     request: Request,

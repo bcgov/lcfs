@@ -42,6 +42,9 @@ class AdminAdjustmentServices:
         status_has_changed = admin_adjustment.current_status != new_status
 
         # Update the fields except for 'current_status'
+        # FIXME: 1. if the transaction is not in Draft status then don't update the effective date, compliance units and organization details
+        # FIXME: 2. a draft transaction can be approved directly by the Director via backend api.
+        # FIXME: 3. should the Director/Compliance Manager be allowed to change the draft transaction to recommend? A validation may be required? NOTE: please confirm
         for field, value in admin_adjustment_data.dict(exclude_unset=True).items():
             if field != 'current_status':
                 setattr(admin_adjustment, field, value)

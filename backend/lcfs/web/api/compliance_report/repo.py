@@ -1,5 +1,6 @@
 from logging import getLogger
 from typing import List, Optional, Dict, Tuple
+from collections import defaultdict
 from datetime import datetime
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
@@ -30,6 +31,11 @@ from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHi
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.fuel.FuelClass import FuelClass
 
 logger = getLogger("compliance_reports_repo")
 
@@ -455,3 +461,116 @@ class ComplianceReportRepository:
         
         result = await self.db.execute(query)
         return result.all()
+
+    async def get_transferred_out_compliance_units(
+        self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> int:
+        result = await self.db.scalar(
+            select(func.sum(Transfer.quantity))
+            .where(
+                Transfer.agreement_date.between(compliance_period_start, compliance_period_end),
+                Transfer.from_organization_id == organization_id,
+                Transfer.current_status_id == 6 # Recorded
+            )
+        )
+        return result or 0
+
+    @repo_handler
+    async def get_received_compliance_units(
+        self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> int:
+        result = await self.db.scalar(
+            select(func.sum(Transfer.quantity))
+            .where(
+                Transfer.agreement_date.between(compliance_period_start, compliance_period_end),
+                Transfer.to_organization_id == organization_id,
+                Transfer.current_status_id == 6 # Recorded
+            )
+        )
+        return result or 0
+
+    @repo_handler
+    async def get_issued_compliance_units(
+        self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
+    ) -> int:
+        result = await self.db.scalar(
+            select(func.sum(InitiativeAgreement.compliance_units))
+            .where(
+                InitiativeAgreement.transaction_effective_date.between(compliance_period_start, compliance_period_end),
+                InitiativeAgreement.to_organization_id == organization_id,
+                InitiativeAgreement.current_status_id == 3 # Approved
+            )
+        )
+        return result or 0
+
+    @repo_handler
+    async def calculate_fuel_quantities(self, compliance_report_id: int) -> Dict[str, Dict[str, float]]:
+        fossil_fuel_quantities = await self._calculate_fuel_quantities(compliance_report_id, fossil_derived=True)
+        renewable_fuel_quantities = await self._calculate_fuel_quantities(compliance_report_id, fossil_derived=False)
+
+        return {
+            'fossil_fuel_quantities': fossil_fuel_quantities,
+            'renewable_fuel_quantities': renewable_fuel_quantities
+        }
+
+    async def _calculate_fuel_quantities(self, compliance_report_id: int, fossil_derived: bool) -> Dict[str, float]:
+        fuel_quantities = defaultdict(float)
+
+        def aggregate_fuel_quantities(result):
+            for row in result:
+                fuel_category = row.category.lower().replace(' ', '_')
+                fuel_quantities[fuel_category] += row.quantity
+
+        # Aggregate fuel supply quantities
+        fuel_supply_query = (
+            select(
+                FuelCategory.category,
+                func.coalesce(func.sum(FuelSupply.quantity), 0).label('quantity')
+            )
+            .select_from(FuelSupply)
+            .join(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
+            .join(FuelCategory, FuelSupply.fuel_category_id == FuelCategory.fuel_category_id)
+            .where(
+                FuelSupply.compliance_report_id == compliance_report_id,
+                FuelType.fossil_derived.is_(fossil_derived)
+            )
+            .group_by(FuelCategory.category)
+        )
+        aggregate_fuel_quantities(await self.db.execute(fuel_supply_query))
+
+        # Aggregate other uses quantities
+        other_uses_query = (
+            select(
+                FuelCategory.category,
+                func.coalesce(func.sum(OtherUses.quantity_supplied), 0).label('quantity')
+            )
+            .select_from(OtherUses)
+            .join(FuelType, OtherUses.fuel_type_id == FuelType.fuel_type_id)
+            .join(FuelCategory, OtherUses.fuel_category_id == FuelCategory.fuel_category_id)
+            .where(
+                OtherUses.compliance_report_id == compliance_report_id,
+                FuelType.other_uses_fossil_derived.is_(fossil_derived)
+            )
+            .group_by(FuelCategory.category)
+        )
+        aggregate_fuel_quantities(await self.db.execute(other_uses_query))
+
+        # Aggregate allocation agreement quantities for renewable fuels
+        if not fossil_derived:
+            allocation_agreement_query = (
+                select(
+                    FuelCategory.category,
+                    func.coalesce(func.sum(AllocationAgreement.quantity), 0).label('quantity')
+                )
+                .select_from(AllocationAgreement)
+                .join(FuelType, AllocationAgreement.fuel_type_id == FuelType.fuel_type_id)
+                .join(FuelCategory, AllocationAgreement.fuel_category_id == FuelCategory.fuel_category_id)
+                .where(
+                    AllocationAgreement.compliance_report_id == compliance_report_id,
+                    FuelType.fossil_derived.is_(False)
+                )
+                .group_by(FuelCategory.category)
+            )
+            aggregate_fuel_quantities(await self.db.execute(allocation_agreement_query))
+
+        return dict(fuel_quantities)

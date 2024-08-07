@@ -86,7 +86,7 @@ export const AutocompleteEditor = (props) => {
         className="bc-column-set-filter ag-input-field ag-checkbox-input"
         role="list-box"
         options={options}
-        isOptionEqualToValue={(option, value) => option === value}
+        // isOptionEqualToValue={(option, value) => option === value}
         onKeyDownCapture={handleKeyDown}
         onBlur={handleBlur}
         onPaste={(e) => onPaste(e, updateValue)}

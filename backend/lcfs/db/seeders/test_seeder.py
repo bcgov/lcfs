@@ -2,6 +2,7 @@ import logging
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from lcfs.db.seeders.test.test_admin_adjustment_seeder import seed_test_admin_adjustments
 from lcfs.settings import settings
 
 from lcfs.db.seeders.test.test_organization_seeder import seed_test_organizations
@@ -24,7 +25,8 @@ async def seed_test():
             await seed_test_organizations(session)
             await seed_test_user_profiles(session)
             await seed_test_user_roles(session)
-            # await seed_test_transactions(session)
+            await seed_test_transactions(session)
+            await seed_test_admin_adjustments(session)
             # await seed_test_transfers(session)
             logger.info("Test database seeding completed successfully.")
         except Exception as e:
