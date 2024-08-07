@@ -22,7 +22,7 @@ class ComplianceReportStatus(BaseModel, EffectiveDates):
     display_order = Column(Integer, nullable=True, comment="Display order for the compliance report status")
     status = Column(Enum(ComplianceReportStatusEnum), nullable=False, comment="Status of the compliance report")
 
-    compliance_reports = relationship('ComplianceReport', back_populates='status')
+    compliance_reports = relationship('ComplianceReport', back_populates='current_status')
 
     def __repr__(self):
         return f"<ComplianceReportStatus(id={self.compliance_report_status_id}, status={self.status})>"

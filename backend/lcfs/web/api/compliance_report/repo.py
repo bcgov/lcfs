@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 from collections import defaultdict
 from datetime import datetime
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
@@ -9,7 +9,7 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
-from sqlalchemy import func, select, and_, asc, desc, delete
+from sqlalchemy import func, select, and_, asc, desc, case
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -21,11 +21,12 @@ from lcfs.web.api.base import (
 )
 from lcfs.db.models.compliance import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema, ComplianceReportSummaryRowSchema
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
@@ -191,8 +192,7 @@ class ComplianceReportRepository:
                 "notional_transfers",
                 "organization",
                 "other_uses",
-                "snapshots",
-                "status",
+                "current_status",
             ],
         )
         return ComplianceReportBaseSchema.model_validate(report)
@@ -204,7 +204,7 @@ class ComplianceReportRepository:
         """
         history = ComplianceReportHistory(
             compliance_report_id=report.compliance_report_id,
-            status_id=report.status_id,
+            status_id=report.current_status_id,
             user_profile_id=user.user_profile_id,
         )
         self.db.add(history)
@@ -237,7 +237,7 @@ class ComplianceReportRepository:
             .options(
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.status),
+                joinedload(ComplianceReport.current_status),
             )
             .where(and_(*conditions))
         )
@@ -250,7 +250,7 @@ class ComplianceReportRepository:
                     ComplianceReportStatus, "status")
                 query = query.join(
                     ComplianceReportStatus,
-                    ComplianceReport.status_id
+                    ComplianceReport.current_status_id
                     == ComplianceReportStatus.compliance_report_status_id,
                 )
             elif order.field == "compliance_period":
@@ -298,7 +298,7 @@ class ComplianceReportRepository:
                     .options(
                         joinedload(ComplianceReport.organization),
                         joinedload(ComplianceReport.compliance_period),
-                        joinedload(ComplianceReport.status),
+                        joinedload(ComplianceReport.current_status),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -375,6 +375,92 @@ class ComplianceReportRepository:
         return await self.db.scalar(select(ExpectedUseType).where(ExpectedUseType.expected_use_type_id == expected_use_type_id))
 
     @repo_handler
+    async def update_compliance_report(self, report: ComplianceReport) -> ComplianceReportBaseSchema:
+        """Persists the changes made to the ComplianceReport object to the database."""
+        await self.db.flush()
+        await self.db.refresh(report, [
+            "compliance_period",
+            "organization",
+            "current_status",
+            "summary",
+            "history",
+        ])
+        return ComplianceReportBaseSchema.model_validate(report)
+
+    @repo_handler
+    async def save_compliance_report_summary(self, report_id: int, summary: Dict[str, List[ComplianceReportSummaryRowSchema]]):
+        """
+        Save the compliance report summary to the database.
+        
+        :param report_id: The ID of the compliance report
+        :param summary: The generated summary data
+        """
+        existing_summary = await self.db.execute(
+            select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
+        )
+        existing_summary = existing_summary.scalar_one_or_none()
+
+        if existing_summary:
+            summary_obj = existing_summary
+        else:
+            summary_obj = ComplianceReportSummary(compliance_report_id=report_id)
+
+        # Update renewable fuel target summary
+        for row in summary.get('renewableFuelTargetSummary', []):
+            line_number = row.line
+            for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
+                column_name = f"line_{line_number}_{row.description.lower().replace(' ', '_')}_{fuel_type}"
+                setattr(summary_obj, column_name, getattr(row, fuel_type))
+
+        # Update low carbon fuel target summary
+        for row in summary.get('lowCarbonFuelTargetSummary', []):
+            column_name = f"line_{row.line}_{row.description.lower().replace(' ', '_')}"
+            setattr(summary_obj, column_name, row.value)
+
+        # Update non-compliance penalty summary
+        non_compliance_summary = summary.get('nonCompliancePenaltySummary', [])
+        for row in non_compliance_summary:
+            if row.line == '11':
+                summary_obj.line_11_fossil_derived_base_fuel_gasoline = row.gasoline
+                summary_obj.line_11_fossil_derived_base_fuel_diesel = row.diesel
+                summary_obj.line_11_fossil_derived_base_fuel_jet_fuel = row.jet_fuel
+                summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
+            elif row.line == '21':
+                summary_obj.line_21_non_compliance_penalty_payable = row.total_value
+            elif row.line == '':  # Total row
+                summary_obj.total_non_compliance_penalty_payable = row.total_value
+
+        summary_obj.version += 1
+        summary_obj.is_locked = False  # Or set based on some condition
+
+        if not existing_summary:
+            self.db.add(summary_obj)
+
+        await self.db.commit()
+        logger.info(f"Saved summary for compliance report {report_id}")
+
+    @repo_handler
+    async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
+        query = select(ComplianceReportSummary).where(ComplianceReportSummary.summary_id == summary_id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+        query = select(
+            ComplianceReportSummary.summary_id,
+            ComplianceReportSummary.version,
+            case(
+                (ComplianceReportSummary.supplemental_report_id.is_(None), 'Original'),
+                else_='Supplemental'
+            ).label('type')
+        ).where(
+            ComplianceReportSummary.compliance_report_id == report_id
+        ).order_by(ComplianceReportSummary.version)
+        
+        result = await self.db.execute(query)
+        return result.all()
+
     async def get_transferred_out_compliance_units(
         self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int
     ) -> int:

@@ -3,7 +3,7 @@ import math
 from fastapi import Depends, Request
 
 
-from lcfs.db.models.compliance.FuelSupply import FuelSupply, QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelSupply import FuelSupply, ChangeType, QuantityUnitsEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
@@ -210,3 +210,97 @@ class FuelSupplyServices:
     async def delete_fuel_supply(self, fuel_supply_id: int) -> str:
         """Delete a fuel supply record"""
         return await self.repo.delete_fuel_supply(fuel_supply_id)
+    
+    # TODO Left here for example for version tracking work
+    @service_handler
+    async def create_supplemental_fuel_supply(self, supplemental_report_id: int, data: dict):
+        new_supply = FuelSupply(
+            supplemental_report_id=supplemental_report_id,
+            change_type=ChangeType.CREATE,
+            **data
+        )
+        return await self.repo.create_fuel_supply(new_supply)
+
+    @service_handler
+    async def update_supplemental_fuel_supply(self, supplemental_report_id: int, original_fuel_supply_id: int, data: dict):
+        updated_supply = FuelSupply(
+            supplemental_report_id=supplemental_report_id,
+            previous_fuel_supply_id=original_fuel_supply_id,
+            change_type=ChangeType.UPDATE,
+            **data
+        )
+        return await self.repo.create_fuel_supply(updated_supply)
+
+    @service_handler
+    async def delete_supplemental_fuel_supply(self, supplemental_report_id: int, original_fuel_supply_id: int):
+        delete_record = FuelSupply(
+            supplemental_report_id=supplemental_report_id,
+            previous_fuel_supply_id=original_fuel_supply_id,
+            change_type=ChangeType.DELETE,
+            quantity=None  # or any appropriate default value
+        )
+        return await self.repo.create_fuel_supply(delete_record)
+
+    @service_handler
+    async def get_effective_fuel_supplies(self, report_id: int, is_supplemental: bool = False):
+        if is_supplemental:
+            report = await self.repo.get_supplemental_report(report_id)
+            if not report:
+                raise ValueError("Supplemental report not found")
+            original_report_id = report.original_report_id
+        else:
+            original_report_id = report_id
+            report = await self.repo.get_compliance_report(report_id)
+            if not report:
+                raise ValueError("Compliance report not found")
+
+        # Get all supplemental reports in order
+        supplemental_reports = await self.repo.get_supplemental_reports(original_report_id)
+
+        # Start with the original report's fuel supplies
+        original_supplies = await self.repo.get_fuel_supplies(original_report_id)
+
+        effective_supplies = {supply.fuel_supply_id: supply for supply in original_supplies}
+
+        # Apply changes from each supplemental report up to the desired version
+        for supp_report in supplemental_reports:
+            supp_supplies = await self.repo.get_fuel_supplies(supp_report.supplemental_report_id, is_supplemental=True)
+
+            for supply in supp_supplies:
+                if supply.change_type == ChangeType.DELETE:
+                    effective_supplies.pop(supply.previous_fuel_supply_id, None)
+                elif supply.change_type == ChangeType.UPDATE:
+                    effective_supplies[supply.previous_fuel_supply_id] = supply
+                else:  # CREATE
+                    effective_supplies[supply.fuel_supply_id] = supply
+
+            if is_supplemental and supp_report.supplemental_report_id == report_id:
+                break
+
+        return list(effective_supplies.values())
+
+    @service_handler
+    async def get_fuel_supply_changes(self, original_report_id: int, supplemental_report_id: int):
+        original_supplies = await self.get_effective_fuel_supplies(original_report_id)
+        supplemental_supplies = await self.get_effective_fuel_supplies(supplemental_report_id, is_supplemental=True)
+
+        changes = []
+
+        # Check for updates and deletes
+        for original_supply in original_supplies:
+            supplemental_supply = next((s for s in supplemental_supplies if s.previous_fuel_supply_id == original_supply.fuel_supply_id), None)
+            if not supplemental_supply:
+                changes.append({"type": ChangeType.DELETE, "original": original_supply, "updated": None})
+            elif original_supply != supplemental_supply:
+                changes.append({
+                    "type": ChangeType.UPDATE, 
+                    "original": original_supply, 
+                    "updated": supplemental_supply
+                })
+
+        # Check for new records
+        for supplemental_supply in supplemental_supplies:
+            if supplemental_supply.change_type == ChangeType.CREATE:
+                changes.append({"type": ChangeType.CREATE, "original": None, "updated": supplemental_supply})
+
+        return changes

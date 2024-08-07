@@ -102,10 +102,10 @@ class ComplianceReportBaseSchema(BaseSchema):
     compliance_period: CompliancePeriodSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
-    summary_id: Optional[int] = None
-    summary: Optional[SummarySchema]
-    status_id: int
-    status: ComplianceReportStatusSchema
+    # summary_id: Optional[int] = None
+    # summary: Optional[SummarySchema]
+    current_status_id: int
+    current_status: ComplianceReportStatusSchema
     transaction_id: Optional[int] = None
     # transaction: Optional[TransactionBaseSchema] = None
     nickname: Optional[str] = None
@@ -141,3 +141,7 @@ class CommmonPaginatedReportRequestSchema(BaseSchema):
     size: Optional[int] = None
     sort_orders: Optional[List[SortOrder]] = None
 
+
+class ComplianceReportUpdateSchema(BaseSchema):
+    status: str
+    supplemental_note: Optional[str] = None
