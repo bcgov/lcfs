@@ -107,6 +107,8 @@ class FinalSupplyEquipmentServices:
                 intended_use_types.append(intended_use_type)
             else:
                 intended_use_types.append(next((intended_use_type for intended_use_type in existing_fse.intended_use_types if intended_use_type.type == intended_use), None))
+        existing_fse.supply_from_date = fse_data.supply_from_date
+        existing_fse.supply_to_date = fse_data.supply_to_date
         existing_fse.intended_use_types = intended_use_types
         existing_fse.street_address = fse_data.street_address
         existing_fse.city = fse_data.city
