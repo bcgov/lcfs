@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "37721d823e5e"
-down_revision = "13b4b52bfc3a"
+down_revision = "85db2e78f8aa"
 branch_labels = None
 depends_on = None
 
@@ -32,7 +32,7 @@ def upgrade() -> None:
         'compliance_reports' AS transaction_type,
         COUNT(*) FILTER (
             WHERE
-                cr.status_id = 4  -- Recommended by Manager
+                cr.current_status_id = 4  -- Recommended by Manager
         ) AS count_for_review
     FROM compliance_report cr
     UNION ALL

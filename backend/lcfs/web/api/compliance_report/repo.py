@@ -192,8 +192,7 @@ class ComplianceReportRepository:
                 "notional_transfers",
                 "organization",
                 "other_uses",
-                "snapshots",
-                "status",
+                "current_status",
             ],
         )
         return ComplianceReportBaseSchema.model_validate(report)
@@ -205,7 +204,7 @@ class ComplianceReportRepository:
         """
         history = ComplianceReportHistory(
             compliance_report_id=report.compliance_report_id,
-            status_id=report.status_id,
+            status_id=report.current_status_id,
             user_profile_id=user.user_profile_id,
         )
         self.db.add(history)
@@ -238,7 +237,7 @@ class ComplianceReportRepository:
             .options(
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.status),
+                joinedload(ComplianceReport.current_status),
             )
             .where(and_(*conditions))
         )
@@ -251,7 +250,7 @@ class ComplianceReportRepository:
                     ComplianceReportStatus, "status")
                 query = query.join(
                     ComplianceReportStatus,
-                    ComplianceReport.status_id
+                    ComplianceReport.current_status_id
                     == ComplianceReportStatus.compliance_report_status_id,
                 )
             elif order.field == "compliance_period":
@@ -299,7 +298,7 @@ class ComplianceReportRepository:
                     .options(
                         joinedload(ComplianceReport.organization),
                         joinedload(ComplianceReport.compliance_period),
-                        joinedload(ComplianceReport.status),
+                        joinedload(ComplianceReport.current_status),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -382,7 +381,7 @@ class ComplianceReportRepository:
         await self.db.refresh(report, [
             "compliance_period",
             "organization",
-            "status",
+            "current_status",
             "summary",
             "history",
         ])

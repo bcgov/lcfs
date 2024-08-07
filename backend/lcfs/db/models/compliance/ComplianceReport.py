@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SQLEnum
+import enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
-from enum import Enum
 
-class ReportType(Enum):
+class ReportType(enum.Enum):
     ANNUAL = 'Annual'
     QUARTERLY = 'Quarterly'
 
@@ -19,7 +19,7 @@ class ComplianceReport(BaseModel, Auditable):
     current_status_id = Column(Integer, ForeignKey('compliance_report_status.compliance_report_status_id'), nullable=True, comment="Identifier for the current compliance report status")
     transaction_id = Column(Integer, ForeignKey('transaction.transaction_id'), nullable=True, comment="Identifier for the transaction")
 
-    report_type = Column(SQLEnum(ReportType), nullable=False)
+    report_type = Column(Enum(ReportType), nullable=False, default=ReportType.ANNUAL)
     nickname = Column(String, nullable=True, comment="Nickname for the compliance report")
     supplemental_note = Column(String, nullable=True, comment="Supplemental note for the compliance report")
 

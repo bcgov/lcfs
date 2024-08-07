@@ -1,4 +1,4 @@
-"""supplemental reports with version tracking
+"""Add supplemental reports with version tracking
 
 Revision ID: 85db2e78f8aa
 Revises: 123456789abc
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "85db2e78f8aa"
-down_revision = "bf94d60c0da5"
+down_revision = "13b4b52bfc3a"
 branch_labels = None
 depends_on = None
 

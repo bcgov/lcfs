@@ -53,7 +53,7 @@ class ComplianceReportServices:
             ComplianceReport(
                 compliance_period=period,
                 organization_id=organization_id,
-                status=draft_status,
+                current_status=draft_status,
             )
         )
         await self.repo.add_compliance_report_history(report, self.request.user)
