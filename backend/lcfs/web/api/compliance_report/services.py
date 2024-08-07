@@ -111,12 +111,13 @@ class ComplianceReportServices:
         compliance_period_end = compliance_report.compliance_period.expiration_date
         organization_id = compliance_report.organization_id
 
+        # Fetch fuel quantities
+        fuel_quantities = await self.repo.calculate_fuel_quantities(report_id)
+        fossil_quantities = fuel_quantities['fossil_fuel_quantities']
+        renewable_quantities = fuel_quantities['renewable_fuel_quantities']
+
         # Placeholder values for demonstration purposes
         # need to get these values from the db after fuel supply is implemented
-        fossil_quantities = {'gasoline': 10000,
-                             'diesel': 20000, 'jet_fuel': 3000}
-        renewable_quantities = {'gasoline': 5000,
-                                'diesel': 15000, 'jet_fuel': 1000}
         previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
 
         notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
