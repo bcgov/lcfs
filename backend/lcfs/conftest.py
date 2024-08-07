@@ -1,6 +1,7 @@
 from typing import Any, AsyncGenerator, List, Callable
 
 import pytest
+import warnings
 import subprocess
 import logging
 from fakeredis import FakeServer, aioredis
@@ -291,3 +292,12 @@ async def update_model(dbsession):
             await dbsession.rollback()
             raise
     return _update
+
+
+@pytest.fixture(autouse=True)
+def ignore_specific_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="This endpoint is accessible by all roles")
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        # Add more specific warnings to ignore as needed
+        yield

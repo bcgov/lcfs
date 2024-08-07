@@ -17,7 +17,7 @@ class AdminAdjustmentValidation:
         # Retrieve the current admin adjustment data from the database
         admin_adjustment = await self.service.get_admin_adjustment(adjustment_data.admin_adjustment_id)
 
-        if admin_adjustment.current_status.status == AdminAdjustmentStatusEnum.Approved:
+        if admin_adjustment.current_status.status == AdminAdjustmentStatusEnum.Approved.name:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Editing a processed admin adjustment is not allowed."
