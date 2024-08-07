@@ -59,6 +59,7 @@ def upgrade() -> None:
                 create_type=False,
             ),
             nullable=False,
+            server_default="SUPPLEMENTAL",
             comment="Type of supplemental report",
         ),
         sa.Column(
@@ -126,6 +127,7 @@ def upgrade() -> None:
                 "ANNUAL", "QUARTERLY", name="reporttype", create_type=False
             ),
             nullable=False,
+            server_default="ANNUAL",
         ),
     )
     op.drop_constraint(

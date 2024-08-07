@@ -83,6 +83,9 @@ export const EditViewComplianceReport = () => {
     currentUser?.organization?.organizationId,
     complianceReportId
   )
+  // TODO Temp Fix
+  const currentStatus = 'test' // reportData?.data?.currentStatus?.status
+  
   const { data: orgData, isLoading } = useOrganization(
     reportData?.data?.organizationId
   )
@@ -234,7 +237,7 @@ export const EditViewComplianceReport = () => {
             <Introduction expanded={location.state?.newReport} />
           </Stack>
           <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
-        {buttonClusterConfig[reportData.status]?.map((config) => (
+        {buttonClusterConfig[currentStatus]?.map((config) => (
           config && (
             <BCButton
               key={config.id}
