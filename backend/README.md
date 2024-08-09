@@ -179,4 +179,4 @@ poetry run pytest -s -v
 Options:
 
 -   `-s`: Disables per-test capturing of stdout/stderr. This is useful for observing print statements and other console outputs in real time.
--   `-v`: Verbose mode. Provides detailed information about each test being run.
+-   `-v`: Verbose mode. Provides detailed information about each test being run...
