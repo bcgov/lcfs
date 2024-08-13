@@ -225,6 +225,7 @@ const AddFuelCodeBase = () => {
           onAction={onAction}
           stopEditingWhenCellsLoseFocus
           showAddRowsButton={true}
+          context={{ errors }}
         />
         <Stack
           direction={{ md: 'column', lg: 'row' }}

@@ -18,6 +18,24 @@ const cellErrorStyle = (params) => {
   return { borderColor: 'unset' }
 }
 
+const createCellRenderer = (field, customRenderer = null) => {
+  const CellRenderer = (params) => {
+    const hasError = params.data.id && params.context.errors[params.data.id]?.includes(field);
+    const content = customRenderer ? customRenderer(params) : (
+      params.value || (!params.value && <Typography variant="body4">Select</Typography>)
+    );
+    return (
+      <div style={{ color: hasError ? 'red' : 'inherit' }}>
+        {content}
+      </div>
+    );
+  };
+
+  CellRenderer.displayName = `CellRenderer_${field}`;
+
+  return CellRenderer;
+};
+
 export const fuelCodeColDefs = (optionsData, errors) => [
   validation,
   actions({
@@ -56,28 +74,14 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       }
       return true
     },
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('prefix')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || 'BCLCF'}
-        </div>
-      )
-    }
+    cellRenderer: createCellRenderer('prefix', (params) => params.value || 'BCLCF')
   },
   {
     field: 'fuelCode',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('fuelCode')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('fuelCode'),
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'fuel-code-search',
@@ -116,14 +120,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       showStepperButtons: false
     },
     type: 'numericColumn',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('carbonIntensity')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value}
-        </div>
-      )
-    }
+    cellRenderer: createCellRenderer('carbonIntensity'),
   },
   {
     field: 'edrms',
@@ -131,14 +128,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('edrms')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value}
-        </div>
-      )
-    }
+    cellRenderer: createCellRenderer('edrms'),
   },
   {
     field: 'company',
@@ -154,7 +144,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
         const response = await client.get(path)
         return response.data
       },
-      title: 'company'
+      title: 'company',
+      api: params.api,
     }),
     valueSetter: (params) => {
       params.data.company = params.newValue
@@ -166,14 +157,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     minWidth: 300,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('company')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    }
+    cellRenderer: createCellRenderer('company'),
   },
   {
     field: 'contactName',
@@ -193,14 +177,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     }),
     suppressKeyboardEvent,
     minWidth: 300,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('contactName')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    }
+    cellRenderer: createCellRenderer('contactName'),
   },
   {
     field: 'contactEmail',
@@ -226,28 +203,18 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     }),
     suppressKeyboardEvent,
     minWidth: 300,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('contactEmail')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    }
+    cellRenderer: createCellRenderer('contactEmail'),
   },
   {
     field: 'applicationDate',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.applicationDate'),
     maxWidth: 220,
     minWidth: 200,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('applicationDate')
-      return (
-        <Typography variant="body4" style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value ? params.value : 'YYYY-MM-DD'}
-        </Typography>
-      )
-    },
+    cellRenderer: createCellRenderer('applicationDate', (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    )),
     suppressKeyboardEvent,
     cellEditor: DateEditor
   },
@@ -256,14 +223,12 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.approvalDate'),
     maxWidth: 220,
     minWidth: 220,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('approvalDate')
-      return (
-        <Typography variant="body4" style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value ? params.value : 'YYYY-MM-DD'}
-        </Typography>
-      )
-    },
+    cellRenderer: createCellRenderer('approvalDate', (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    )),
+    
     suppressKeyboardEvent,
     cellEditor: DateEditor
   },
@@ -272,14 +237,11 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.effectiveDate'),
     maxWidth: 220,
     minWidth: 220,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('effectiveDate')
-      return (
-        <Typography variant="body4" style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value ? params.value : 'YYYY-MM-DD'}
-        </Typography>
-      )
-    },
+    cellRenderer: createCellRenderer('effectiveDate', (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    )),
     suppressKeyboardEvent,
     cellEditor: DateEditor
   },
@@ -288,14 +250,11 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.expiryDate'),
     maxWidth: 220,
     minWidth: 220,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('expirationDate')
-      return (
-        <Typography variant="body4" style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value ? params.value : 'YYYY-MM-DD'}
-        </Typography>
-      )
-    },
+    cellRenderer: createCellRenderer('expirationDate', (params) => (
+      <Typography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </Typography>
+    )),
     suppressKeyboardEvent,
     cellEditor: DateEditor
   },
@@ -303,14 +262,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'fuel',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('fuel')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('fuel'),
     cellEditorParams: {
       options: optionsData.fuelTypes
         .filter((fuel) => !fuel.fossilDerived)
@@ -329,14 +281,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('feedstock')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('feedstock'),
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.feedstock,
@@ -353,14 +298,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('feedstockLocation')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('feedstockLocation'),
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.feedstockLocation,
@@ -377,14 +315,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('feedstockMisc')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('feedstockMisc'),
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.feedstockMisc,
@@ -401,14 +332,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('fuelProductionFacilityCity')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('fuelProductionFacilityCity'),
     cellEditorParams: {
       onDynamicUpdate: (val, params) => params.api.stopEditing(),
       noLabel: true,
@@ -449,14 +373,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('fuelProductionFacilityProvinceState')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('fuelProductionFacilityProvinceState'),
     cellEditorParams: {
       onDynamicUpdate: (val, params) => params.api.stopEditing(),
       noLabel: true,
@@ -495,14 +412,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('fuelProductionFacilityCountry')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('fuelProductionFacilityCountry'),
     cellEditorParams: {
       noLabel: true,
       options: [
@@ -530,14 +440,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('facilityNameplateCapacity')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('facilityNameplateCapacity'),
     minWidth: 290
   },
   {
@@ -546,14 +449,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       'fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'
     ),
     cellEditor: AutocompleteEditor,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('facilityNameplateCapacityUnit')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('facilityNameplateCapacityUnit'),
     cellEditorParams: {
       options: optionsData.facilityNameplateCapacityUnits,
       multiple: false,
@@ -568,18 +464,9 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'feedstockTransportMode',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('feedstockTransportMode')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value ? (
-            <CommonArrayRenderer {...params} />
-          ) : (
-            <Typography variant="body4">Select</Typography>
-          )}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('feedstockTransportMode', (params) => (
+      params.value ? <CommonArrayRenderer {...params} /> : <Typography variant="body4">Select</Typography>
+    )),
     cellRendererParams: {
       disableLink: true
     },
@@ -596,18 +483,9 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'finishedFuelTransportMode',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('finishedFuelTransportMode')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value ? (
-            <CommonArrayRenderer {...params} />
-          ) : (
-            <Typography variant="body4">Select</Typography>
-          )}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) => (
+      params.value ? <CommonArrayRenderer {...params} /> : <Typography variant="body4">Select</Typography>
+    )),
     cellRendererParams: {
       disableLink: true
     },
@@ -626,14 +504,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('formerCompany')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value || (!params.value && <Typography variant="body4">Select</Typography>)}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('formerCompany'),
     cellEditorParams: {
       noLabel: true,
       options: optionsData.fieldOptions.formerCompany,
@@ -649,14 +520,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.notes'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellRenderer: (params) => {
-      const hasError = errors[params.data.id]?.includes('notes')
-      return (
-        <div style={{ color: hasError ? 'red' : 'inherit' }}>
-          {params.value}
-        </div>
-      )
-    },
+    cellRenderer: createCellRenderer('notes'),
     minWidth: 600
   }
 ]
