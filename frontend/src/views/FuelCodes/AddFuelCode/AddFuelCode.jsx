@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
@@ -19,11 +19,20 @@ import { defaultColDef, fuelCodeColDefs } from './_schema'
 
 const AddFuelCodeBase = () => {
   const [rowData, setRowData] = useState([])
+  const [errors, setErrors] = useState({})
+  const [columnDefs, setColumnDefs] = useState([])
   const gridRef = useRef(null)
   const alertRef = useRef()
   const { t } = useTranslation(['common', 'fuelCode'])
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
   const { mutateAsync: saveRow } = useSaveFuelCode()
+
+  useEffect(() => {
+    if (optionsData) {
+      const updatedColumnDefs = fuelCodeColDefs(optionsData, errors)
+      setColumnDefs(updatedColumnDefs)
+    }
+  }, [errors, optionsData])
 
   const onGridReady = useCallback(
     (params) => {
@@ -50,27 +59,77 @@ const AddFuelCodeBase = () => {
       ).nextFuelCode
     }
 
+    params.api.applyTransaction({ update: [updatedData] })
+  }, [optionsData])
+
+  const onCellEditingStopped = useCallback(async (params) => {
+    if (params.oldValue === params.newValue) return
+
+    params.node.updateData({
+      ...params.node.data,
+      validationStatus: 'pending'
+    })
+
+    alertRef.current?.triggerAlert({
+      message: 'Updating row...',
+      severity: 'pending'
+    })
+
+    let updatedData = Object.entries(params.node.data)
+      .filter(([, value]) => value !== null && value !== '')
+      .reduce((acc, [key, value]) => {
+        acc[key] = value
+        return acc
+      }, {})
+
     try {
-      const response = await saveRow(updatedData)
-      params.api.applyTransaction({ update: [{ ...response.data, modified: false, validationStatus: 'success' }] })
+      setErrors({})
+      await saveRow(updatedData)
+      updatedData = {
+        ...updatedData,
+        validationStatus: 'success',
+        modified: false
+      }
       alertRef.current?.triggerAlert({
         message: 'Row updated successfully.',
         severity: 'success'
       })
     } catch (error) {
       console.error('Error updating row:', error)
-      params.api.applyTransaction({ update: [{ ...updatedData, isValid: false, validationStatus: 'error', validationMsg: error.response?.data?.detail }] })
-      alertRef.current?.triggerAlert({
-        message: `Error updating row: ${error.message}`,
-        severity: 'error'
-      })
-    }
-  }, [saveRow, optionsData])
 
-  const onCellEditingStopped = useCallback(async (params) => {
-    if (params.oldValue === params.newValue) return
-    await onCellValueChanged(params)
-  }, [onCellValueChanged])
+      const errArr = {
+        [params.node.data.id]: error.response?.data?.detail?.map(
+          (err) => err.loc[1]
+        )
+      }
+      setErrors(errArr)
+
+      updatedData = {
+        ...updatedData,
+        validationStatus: 'error'
+      }
+
+      if (error.response?.data?.detail && error.response.data.detail.length > 0) {
+        const firstError = error.response.data.detail[0]
+        const field = firstError.loc[1]
+          ? t(`fuelCode:fuelCodeColLabels.${firstError.loc[1]}`)
+          : ''
+        const errMsg = `Error updating row: ${field} ${firstError.msg}`
+
+        alertRef.current?.triggerAlert({
+          message: errMsg,
+          severity: 'error'
+        })
+      } else {
+        alertRef.current?.triggerAlert({
+          message: `Error updating row: ${error.message}`,
+          severity: 'error'
+        })
+      }
+    }
+
+    params.node.updateData(updatedData)
+  }, [saveRow, t])
 
   const onAction = useCallback(async (action, params) => {
     if (action === 'duplicate') {
@@ -157,7 +216,7 @@ const AddFuelCodeBase = () => {
         </div>
         <BCGridEditor
           gridRef={gridRef}
-          columnDefs={fuelCodeColDefs(optionsData)}
+          columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}
