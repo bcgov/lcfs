@@ -25,7 +25,8 @@
     "ciOfFuel": "CI of fuel",
     "energyDensity": "Energy density",
     "eer": "EER",
-    "energy": "Energy"
+    "energy": "Energy",
+    "determiningCarbonIntensity": "Determining carbon intensity"
   },
   "validateMsg": {
     "isRequired": "{{field}} is required"
