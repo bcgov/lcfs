@@ -1,25 +1,22 @@
 import { BCAlert2 } from '@/components/BCAlert'
-import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import BCDataGridEditor from '@/components/BCDataGrid/BCDataGridEditor'
+import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
 import {
   useGetAllOtherUses,
   useOtherUsesOptions,
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
+import { cleanEmptyStringValues } from '@/utils/formatters'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Stack, Typography } from '@mui/material'
+import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, otherUsesColDefs } from './_schema'
-import { AddRowsButton } from './components/AddRowsButton'
-import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { cleanEmptyStringValues } from '@/utils/formatters'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -263,14 +260,8 @@ export const AddEditOtherUses = () => {
           loading={optionsLoading || usesLoading}
           onAction={onAction}
           onCellEditingStopped={onCellEditingStopped}
+          showAddRowsButton
         />
-
-        <Box component="div" m={2}>
-          <AddRowsButton
-            gridApi={gridRef.current?.api}
-            complianceReportId={complianceReportId}
-          />
-        </Box>
 
         <Stack
           direction={{ md: 'column', lg: 'row' }}

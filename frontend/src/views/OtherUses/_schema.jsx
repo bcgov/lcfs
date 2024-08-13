@@ -1,10 +1,8 @@
-import { KEY_ENTER, KEY_TAB } from '@/constants/common'
-import { Typography } from '@mui/material'
-import { OtherUsesActions } from './components/OtherUsesActions'
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
-import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { AutocompleteEditor } from '@/components/BCDataGrid/components'
+import i18n from '@/i18n'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { Typography } from '@mui/material'
 
 const cellErrorStyle = (params, errors) => {
   if (
