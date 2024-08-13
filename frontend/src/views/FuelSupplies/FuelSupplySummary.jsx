@@ -54,7 +54,7 @@ export const FuelSupplySummary = ({ data }) => {
     { headerName: t('fuelSupply:fuelSupplyColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType?.type || 'Any' },
     { headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'), field: "determiningCarbonIntensity", valueGetter: params => params.data.provisionOfTheAct?.name },
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.quantitySupplied'), field: "quantity" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.quantity'), field: "quantity" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: "units" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.ciLimit'), field: "ciLimit" },
