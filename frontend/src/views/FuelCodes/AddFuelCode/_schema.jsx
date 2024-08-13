@@ -1,4 +1,4 @@
-import { actions, validation } from '@/components/BCDataGrid/columns'
+import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import {
   AsyncSuggestionEditor,
   AutocompleteEditor,
@@ -8,25 +8,17 @@ import {
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
 import { CommonArrayRenderer } from '@/utils/cellRenderers'
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
+import { actions, validation } from '@/components/BCDataGrid/columns'
 
-const cellErrorStyle = (params, errors) => {
-  if (
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    return {
-      borderColor: 'red'
-    }
-  } else {
-    return {
-      borderColor: 'unset'
-    }
+const cellErrorStyle = (params) => {
+  if (params.data.validationMsg && params.data.validationMsg[params.colDef.field]) {
+    return { borderColor: 'red' }
   }
+  return { borderColor: 'unset' }
 }
 
-export const fuelCodeColDefs = (optionsData, errors) => [
+export const fuelCodeColDefs = (optionsData) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -34,8 +26,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   }),
   {
     field: 'id',
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
     hide: true
   },
   {
@@ -64,6 +54,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
         params.data.contactName = undefined
         params.data.contactEmail = undefined
       }
+      return true
     }
   },
   {
@@ -74,10 +65,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
-      // TODO: move these react query params out of here.
       queryKey: 'fuel-code-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
@@ -113,7 +102,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       precision: 2,
       showStepperButtons: false
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
     type: 'numericColumn'
   },
   {
@@ -121,8 +109,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellDataType: 'text'
   },
   {
     field: 'company',
@@ -140,7 +127,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       },
       title: 'company'
     }),
-    cellStyle: (params) => cellErrorStyle(params, errors),
     valueSetter: (params) => {
       params.data.company = params.newValue
       if (params.newValue === '') {
@@ -196,7 +182,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     minWidth: 300
   },
-
   {
     field: 'applicationDate',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.applicationDate'),
@@ -208,8 +193,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellEditor: DateEditor,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellEditor: DateEditor
   },
   {
     field: 'approvalDate',
@@ -286,7 +270,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       freeSolo: true,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 300
   },
   {
@@ -295,7 +278,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -337,7 +319,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
     cellEditorParams: {
       onDynamicUpdate: (val, params) => params.api.stopEditing(),
       noLabel: true,
@@ -397,7 +378,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       freeSolo: true,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 325,
     valueSetter: (params) => {
       params.data.fuelProductionFacilityProvinceState = params.newValue
@@ -438,7 +418,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       freeSolo: true,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 325
   },
   {
@@ -547,5 +526,6 @@ export const defaultColDef = {
   filter: true,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  cellStyle: cellErrorStyle
 }
