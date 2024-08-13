@@ -1,3 +1,4 @@
+import math
 from typing import List, Dict, Any, Tuple
 from sqlalchemy import Float
 from fastapi import Depends
@@ -15,13 +16,14 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
+
 class ComplianceReportSummaryService:
     def __init__(
-            self, 
+            self,
             repo: ComplianceReportRepository = Depends(),
             notional_transfer_service: NotionalTransferServices = Depends(
                 NotionalTransferServices),
-            ):
+    ):
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
 
@@ -29,7 +31,7 @@ class ComplianceReportSummaryService:
     async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
         """
         Get a list of all summary versions for a given report, including the original and all supplementals.
-        
+
         :param report_id: The ID of the original compliance report
         :return: A list of tuples containing (summary_id, version, type)
         """
@@ -45,7 +47,7 @@ class ComplianceReportSummaryService:
     @service_handler
     async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
-        
+
         # Fetch the compliance report details
         compliance_report = await self.repo.get_compliance_report_by_id(report_id)
         if not compliance_report:
@@ -158,8 +160,12 @@ class ComplianceReportSummaryService:
 
         # line 11
         non_compliance_penalties = {
-            category: max(0, eligible_renewable_fuel_required.get(category, 0) -
-                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category]
+            category: (
+                None if max(0, eligible_renewable_fuel_required.get(category, 0) -
+                            net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category] == 0
+                else f"""${math.ceil(max(0, eligible_renewable_fuel_required.get(category, 0) -
+                                         net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category] * 100) / 100:,.2f}"""
+            )
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
@@ -258,7 +264,7 @@ class ComplianceReportSummaryService:
     async def compare_summaries(self, report_id: int, summary_1_id: int, summary_2_id: int) -> Dict[str, Dict[str, Any]]:
         """
         Compare two compliance report summaries and return the values and delta for each field.
-        
+
         :param report_id: The ID of the original compliance report
         :param summary_1_id: The ID of the first summary to compare
         :param summary_2_id: The ID of the second summary to compare
@@ -268,15 +274,18 @@ class ComplianceReportSummaryService:
         summary_2 = await self.repo.get_summary_by_id(summary_2_id)
 
         if not summary_1 or not summary_2:
-            raise ValueError(f"One or both summaries not found: {summary_1_id}, {summary_2_id}")
+            raise ValueError(f"""One or both summaries not found: {
+                             summary_1_id}, {summary_2_id}""")
 
         if summary_1.compliance_report_id != report_id or summary_2.compliance_report_id != report_id:
-            raise ValueError(f"Summaries do not belong to the specified report: {report_id}")
+            raise ValueError(
+                f"""Summaries do not belong to the specified report: {report_id}""")
 
         comparison = {}
 
         # Compare all float fields
-        float_columns = [c.name for c in ComplianceReportSummary.__table__.columns if isinstance(c.type, Float)]
+        float_columns = [
+            c.name for c in ComplianceReportSummary.__table__.columns if isinstance(c.type, Float)]
         for column in float_columns:
             value_1 = getattr(summary_1, column)
             value_2 = getattr(summary_2, column)

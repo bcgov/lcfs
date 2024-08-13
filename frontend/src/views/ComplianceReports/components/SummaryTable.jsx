@@ -10,6 +10,16 @@ import {
 } from '@mui/material'
 
 const SummaryTable = ({ title, columns, data }) => {
+  const value = (cellValue) => {
+    if (typeof cellValue === 'string') {
+      return cellValue
+    } else if (cellValue < 0) {
+      return `(${Math.abs(cellValue)})`
+    } else {
+      return numberFormatter(cellValue)
+    }
+  }
+
   return (
     <TableContainer
       component={Paper}
@@ -73,9 +83,7 @@ const SummaryTable = ({ title, columns, data }) => {
                         : 'normal'
                   }}
                 >
-                  {row[column.id] < 0
-                    ? `(${Math.abs(row[column.id])})`
-                    : numberFormatter(row[column.id])}
+                  {value(row[column.id])}
                 </TableCell>
               ))}
             </TableRow>
