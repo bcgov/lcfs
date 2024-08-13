@@ -23,8 +23,6 @@ import { cleanEmptyStringValues } from '@/utils/formatters'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
-  // const [gridApi, setGridApi] = useState(null)
-  // const [columnApi, setColumnApi] = useState(null)
   const [errors, setErrors] = useState({})
 
   const gridRef = useRef(null)
@@ -41,7 +39,6 @@ export const AddEditOtherUses = () => {
     useGetAllOtherUses(complianceReportId)
   const { mutateAsync: saveRow } = useSaveOtherUses()
 
-  // const gridKey = 'add-other-uses'
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('otherUses:noOtherUsesFound'),
@@ -64,9 +61,6 @@ export const AddEditOtherUses = () => {
   }, [location.state])
 
   const onGridReady = (params) => {
-    // setGridApi(params.api)
-    // setColumnApi(params.columnApi)
-
     const ensureRowIds = (rows) => {
       return rows.map((row) => {
         if (!row.id) {
@@ -98,25 +92,12 @@ export const AddEditOtherUses = () => {
     params.api.sizeColumnsToFit()
   }
 
-  // const onValidated = (status, message, params, response) => {
-  //   let errMsg = message
-  //   if (status === 'error') {
-  //     const field = t(
-  //       `otherUses:otherUsesColLabels.${message.response?.data?.detail[0]?.loc[1]}`
-  //     )
-  //     errMsg = `Error updating row: ${field}  ${message.response?.data?.detail[0]?.msg}`
-  //     params.data.isValid = false
-  //     params.data.validationMsg =
-  //       field + ' ' + message.response?.data?.detail[0]?.msg
-  //   }
-
-  //   alertRef.current?.triggerAlert({
-  //     message: errMsg,
-  //     severity: status
-  //   })
-  // }
-
   const onAction = async (action, params) => {
+    alertRef.current?.triggerAlert({
+      message: 'Row updating',
+      severity: 'pending'
+    })
+
     if (action === 'delete') {
       const updatedRow = { ...params.data, deleted: true }
 
@@ -137,57 +118,42 @@ export const AddEditOtherUses = () => {
       }
     }
     if (action === 'duplicate') {
-      const newRowID = uuid()
-      console.log(1, params.data)
-      const rowData = {
-        ...params.data,
-        id: newRowID,
-        otherUsesId: null,
-        // validationStatus: 'error',
-        modified: true
-      }
-      console.log(2, rowData)
-      console.log(params.node?.rowIndex)
-      params.api.applyTransaction({
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      })
-
-      // setErrors({ [newRowID]: 'fuelCode' })
-
-      // alertRef.current?.triggerAlert({
-      //   message: 'Error updating row: Fuel code Field required',
-      //   severity: 'error'
-      // })
-
-      let updatedData = cleanEmptyStringValues(rowData)
-
       try {
         setErrors({})
+        const newRowID = uuid()
+
+        const rowData = {
+          ...params.data,
+          id: newRowID,
+          otherUsesId: null,
+          modified: true
+        }
+
+        let updatedData = cleanEmptyStringValues(rowData)
+
         const { data: dupeData } = await saveRow(updatedData)
-        console.log(dupeData)
+
         updatedData = {
           ...updatedData,
           otherUsesId: dupeData.otherUsesId,
           validationStatus: 'success',
           modified: false
         }
+
+        await params.api.applyTransaction({
+          add: [updatedData],
+          addIndex: params.node?.rowIndex + 1
+        })
+
         alertRef.current?.triggerAlert({
           message: 'Row updated successfully.',
           severity: 'success'
         })
-        console.log(6, updatedData)
       } catch (error) {
-        console.log('error')
         const errArr = {
           [params.data.id]: error.response.data.detail.map((err) => err.loc[1])
         }
         setErrors(errArr)
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
 
         if (error.code === 'ERR_BAD_REQUEST') {
           const field = error.response?.data?.detail[0]?.loc[1]
@@ -208,15 +174,11 @@ export const AddEditOtherUses = () => {
           })
         }
       }
-      console.log(5, updatedData)
-      params.node.updateData(updatedData)
-      params.api.refreshCells()
     }
   }
 
   const onCellEditingStopped = useCallback(
     async (params) => {
-      console.log(3, params.data)
       if (params.oldValue === params.newValue) return
       params.node.updateData({ ...params.data, validationStatus: 'pending' })
 
@@ -270,23 +232,11 @@ export const AddEditOtherUses = () => {
           })
         }
       }
-      console.log(4, updatedData)
+
       params.node.updateData(updatedData)
     },
     [saveRow, t]
   )
-
-  // const statusBarComponent = useMemo(
-  //   () => (
-  //     <Box component="div" m={2}>
-  //       <AddRowsButton
-  //         gridApi={gridApi}
-  //         complianceReportId={complianceReportId}
-  //       />
-  //     </Box>
-  //   ),
-  //   [gridApi, complianceReportId]
-  // )
 
   if (optionsLoading || usesLoading) {
     return <Loading />
@@ -301,28 +251,6 @@ export const AddEditOtherUses = () => {
             {t('otherUses:newOtherUsesTitle')}
           </Typography>
         </div>
-        {/* <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-          <BCDataGridEditor
-            gridKey={gridKey}
-            className="ag-theme-quartz"
-            getRowId={(params) => params.data.id}
-            gridRef={gridRef}
-            columnDefs={otherUsesColDefs(t, optionsData, gridApi, onValidated)}
-            defaultColDef={defaultColDef}
-            onGridReady={onGridReady}
-            rowData={rowData}
-            setRowData={setRowData}
-            gridApi={gridApi}
-            columnApi={columnApi}
-            gridOptions={gridOptions}
-            getRowNodeId={(data) => data.id}
-            defaultStatusBar={false}
-            statusBarComponent={statusBarComponent}
-            saveRow={saveRow}
-            onValidated={onValidated}
-            stopEditingWhenCellsLoseFocus={true}
-          />
-        </BCBox> */}
 
         <BCGridEditor
           gridRef={gridRef}
