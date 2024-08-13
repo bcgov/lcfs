@@ -8,14 +8,18 @@ import { ROLES_BADGE_SIZE } from '@/constants/common'
  * @returns {string} - The formatted number as a string, or the original value if it cannot be parsed as a number.
  */
 export const numberFormatter = (params) => {
-  if (params == null || (typeof params === 'object' && params.value == null)) return ''
+  if (params == null || (typeof params === 'object' && params.value == null))
+    return ''
 
   const value = params.value ?? params
   const parsedValue = parseFloat(value)
-  
+
   if (isNaN(parsedValue)) return value
 
-  return parsedValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 10 })
+  return parsedValue.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 10
+  })
 }
 
 export const currencyFormatter = (params) => {
@@ -134,7 +138,15 @@ export const timezoneFormatter = ({ value }) => {
 
 export const spacesFormatter = (params) => {
   if (params.value != null) {
-    return params.value.replace(/([A-Z])/g, ' $1').trim();
+    return params.value.replace(/([A-Z])/g, ' $1').trim()
   }
-  return params.value;
+  return params.value
 }
+
+export const cleanEmptyStringValues = (obj) =>
+  Object.entries(obj)
+    .filter(([, value]) => value !== null && value !== '')
+    .reduce((acc, [key, value]) => {
+      acc[key] = value
+      return acc
+    }, {})

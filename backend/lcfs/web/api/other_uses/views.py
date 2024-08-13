@@ -99,7 +99,8 @@ async def save_other_uses_row(
     """Endpoint to save a single other uses row"""
     compliance_report_id = request_data.compliance_report_id
     other_uses_id: Optional[int] = request_data.other_uses_id
-
+    print('====================')
+    print(request_data)
     await validate.validate_organization_access(compliance_report_id)
 
     if request_data.deleted:
@@ -109,6 +110,7 @@ async def save_other_uses_row(
         return DeleteOtherUsesResponseSchema(message="Other use deleted successfully")
     elif other_uses_id:
         # Update existing other use
+
         await validate.validate_compliance_report_id(compliance_report_id, [request_data])
         return await service.update_other_use(request_data)
     else:

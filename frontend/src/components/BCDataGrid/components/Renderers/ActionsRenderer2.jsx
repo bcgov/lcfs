@@ -16,7 +16,7 @@ export const ActionsRenderer2 = (props) => {
               data-testid="duplicate-button"
               data-action="duplicate"
               color="primary"
-              // disabled={props.data.validationStatus !== 'success'}
+              disabled={props.data.validationStatus === 'error'}
             >
               <Queue
                 style={{ pointerEvents: 'none' }}
