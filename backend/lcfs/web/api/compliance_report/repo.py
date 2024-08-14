@@ -406,19 +406,19 @@ class ComplianceReportRepository:
             summary_obj = ComplianceReportSummary(compliance_report_id=report_id, version=0)
 
         # Update renewable fuel target summary
-        for row in summary.get('renewableFuelTargetSummary', []):
+        for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
                 setattr(summary_obj, column_name, getattr(row, fuel_type))
 
         # Update low carbon fuel target summary
-        for row in summary.get('lowCarbonFuelTargetSummary', []):
+        for row in summary.low_carbon_fuel_target_summary:
             column_name = f"line_{row.line}_{row.field}"
             setattr(summary_obj, column_name, row.value)
 
         # Update non-compliance penalty summary
-        non_compliance_summary = summary.get('nonCompliancePenaltySummary', [])
+        non_compliance_summary = summary.non_compliance_penalty_summary
         for row in non_compliance_summary:
             if row.line == '11':
                 summary_obj.line_11_fossil_derived_base_fuel_gasoline = row.gasoline

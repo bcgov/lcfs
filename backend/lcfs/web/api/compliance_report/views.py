@@ -81,7 +81,7 @@ async def get_compliance_report_by_id(
 
 @router.get(
     "/{report_id}/summary",
-    response_model=Dict[str, List[ComplianceReportSummaryRowSchema]],
+    response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK
 )
 @view_handler(['*'])
@@ -89,7 +89,7 @@ async def get_compliance_report_summary(
     request: Request,
     report_id: int,
     summary_service: ComplianceReportSummaryService = Depends()
-) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+) -> ComplianceReportSummarySchema:
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
@@ -97,7 +97,7 @@ async def get_compliance_report_summary(
 
 @router.put(
     "/{report_id}/summary",
-    response_model=Dict[str, List[ComplianceReportSummaryRowSchema]],
+    response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.SUPPLIER])
@@ -106,7 +106,7 @@ async def update_compliance_report_summary(
     report_id: int,
     summary_data: ComplianceReportSummarySchema,
     summary_service: ComplianceReportSummaryService = Depends()
-) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+) -> ComplianceReportSummarySchema:
     """
     Autosave compliance report summary details for a specific report by ID.
     """

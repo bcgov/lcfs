@@ -135,9 +135,9 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     total_value: Optional[float] = 0
 
 class ComplianceReportSummarySchema(BaseSchema):
-    renewableFuelTargetSummary: List[ComplianceReportSummaryRowSchema]
-    lowCarbonFuelTargetSummary: List[ComplianceReportSummaryRowSchema]
-    nonCompliancePenaltySummary: List[ComplianceReportSummaryRowSchema]
+    renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: Optional[int] = None
     compliance_report_id: Optional[int] = None
     version: Optional[int] = None
