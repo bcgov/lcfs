@@ -6,8 +6,12 @@ import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
+import BCButton from '@/components/BCButton'
+import { Menu, MenuItem } from '@mui/material'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -27,10 +31,13 @@ export const BCGridEditor = ({
   onCellEditingStopped,
   onCellValueChanged,
   onAction,
+  showAddRowsButton = true,
   ...props
 }) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
+  const [anchorEl, setAnchorEl] = useState(null)
+  const buttonRef = useRef(null)
 
   const handleExcelPaste = useCallback(
     (params) => {
@@ -100,6 +107,20 @@ export const BCGridEditor = ({
     }
   }
 
+  const handleAddRowsClick = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleAddRowsClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleAddRows = (numRows) => {
+    const newRows = Array(numRows).fill().map(() => ({ id: uuid() }))
+    ref.current.api.applyTransaction({ add: newRows })
+    setAnchorEl(null)
+  }
+
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
       <BCGridBase
@@ -114,6 +135,37 @@ export const BCGridEditor = ({
         onCellEditingStopped={handleOnCellEditingStopped}
         {...props}
       />
+      {showAddRowsButton && (
+        <BCBox mt={2}>
+          <BCButton
+            ref={buttonRef}
+            variant="outlined"
+            color="dark"
+            size="small"
+            startIcon={<FontAwesomeIcon icon={faPlus} className="small-icon" />}
+            endIcon={<FontAwesomeIcon icon={faCaretDown} className="small-icon" />}
+            onClick={handleAddRowsClick}
+          >
+            Add row
+          </BCButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleAddRowsClose}
+            slotProps={{
+              paper: {
+                style: {
+                  width: buttonRef.current?.offsetWidth
+                }
+              }
+            }}
+          >
+            <MenuItem onClick={() => handleAddRows(1)}>1 row</MenuItem>
+            <MenuItem onClick={() => handleAddRows(5)}>5 rows</MenuItem>
+            <MenuItem onClick={() => handleAddRows(10)}>10 rows</MenuItem>
+          </Menu>
+        </BCBox>
+      )}
     </BCBox>
   )
 }
@@ -122,7 +174,7 @@ BCGridEditor.propTypes = {
   gridRef: PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,
-
   onRowEditingStopped: PropTypes.func,
-  onCellValueChanged: PropTypes.func
+  onCellValueChanged: PropTypes.func,
+  showAddRowsButton: PropTypes.bool
 }

@@ -2,15 +2,13 @@ name: Scheduled cleanup unused images
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
 # At 00:00 on Sunday.
 
 jobs:
-
   cleanup-images:
     runs-on: ubuntu-latest
     steps:
-
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
         with:
@@ -72,7 +70,7 @@ jobs:
           echo "Will delete all lcfs-frontend image tags in ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev except $search_string"
           namespace="${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev"
           delete_resources "$search_string" "$oc_output" "$namespace"
-          
+
           echo "will delete images in tools env"
           frontendimages=$(oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-frontend | awk '{print $1}')
           if [ ! -z "$frontendimages" ]; then
@@ -83,7 +81,7 @@ jobs:
           if [ ! -z "$backendimages" ]; then
             oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get imagetags | grep lcfs-backend | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete imagetag
           fi
-          
+
           echo "Cleaning up Completed pods on Dev except CrunchyDB pods"
           oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev get pods | grep Completed | grep -v crunchy | awk '{print $1}' | xargs oc -n  ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev delete pod || true
 
@@ -92,4 +90,4 @@ jobs:
           oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get builds | grep Failed | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete build || true
 
           echo "Cleaning up buildconfigs on Tools"
-          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get buildconfig | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete buildconfig || true          
+          oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools get buildconfig | awk '{print $1}' | xargs oc -n ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools delete buildconfig || true
