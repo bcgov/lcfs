@@ -3,7 +3,7 @@ import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 
-export const useFinalSupplyEquipmentOptions = (params, options) => {
+export const useFinalSupplyEquipmentOptions = (options) => {
   const client = useApiService()
   const path = apiRoutes.finalSupplyEquipmentOptions
   return useQuery({
@@ -25,7 +25,7 @@ export const useGetFinalSupplyEquipments = (complianceReportId, pagination, opti
   })
 }
 
-export const useSaveFinalSupplyEquipment = (params, options) => {
+export const useSaveFinalSupplyEquipment = (complianceReportId, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const { data: currentUser } = useCurrentUser()
@@ -36,17 +36,16 @@ export const useSaveFinalSupplyEquipment = (params, options) => {
       const modifedData = {
         ...data,
         levelOfEquipment: data.levelOfEquipment?.name || data.levelOfEquipment,
-        fuelMeasurementType: data.fuelMeasurementType?.type || data.fuelMeasurementType
+        fuelMeasurementType: data.fuelMeasurementType?.type || data.fuelMeasurementType,
+        complianceReportId: complianceReportId
       }
       return await client.post(
-        apiRoutes.saveFinalSupplyEquipments
-          .replace(':orgID', currentUser.organization.organizationId)
-          .replace(':reportID', params.complianceReportId),
-          modifedData
+        apiRoutes.saveFinalSupplyEquipments,
+        modifedData
       )
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['final-supply-equipments', params.complianceReportId])
+      queryClient.invalidateQueries(['final-supply-equipments', complianceReportId])
     }
   })
 }
