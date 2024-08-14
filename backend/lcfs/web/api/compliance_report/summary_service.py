@@ -72,7 +72,7 @@ class ComplianceReportSummaryService:
     @service_handler
     async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
-        
+
         # Fetch the compliance report details
         compliance_report = await self.repo.get_compliance_report_by_id(report_id)
         if not compliance_report:
@@ -210,14 +210,15 @@ class ComplianceReportSummaryService:
             ComplianceReportSummaryRowSchema(
                 line=line,
                 description=(
-                    RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line].format(
+                    RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]['description'].format(
                         int(summary_lines['4']["gasoline"] * 0.05),
                         int(summary_lines['4']["diesel"] * 0.05),
                         int(summary_lines['4']["jet_fuel"] * 0.05),
                     )
                     if (line in ["6", "8"])
-                    else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]
+                    else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]['description']
                 ),
+                field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 gasoline=values.get("gasoline", 0),
                 diesel=values.get("diesel", 0),
                 jet_fuel=values.get("jet_fuel", 0),
@@ -261,7 +262,8 @@ class ComplianceReportSummaryService:
         low_carbon_fuel_target_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line],
+                description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]['description'],
+                field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]['field'],
                 value=values.get('value', 0)
             )
             for line, values in low_carbon_summary_lines.items()
@@ -279,7 +281,8 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line],
+                description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["description"],
+                field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["field"],
                 gasoline=values.get('gasoline', 0),
                 diesel=values.get('diesel', 0),
                 jet_fuel=values.get('jet_fuel', 0),

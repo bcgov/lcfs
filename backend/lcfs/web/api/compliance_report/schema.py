@@ -127,6 +127,7 @@ class ComplianceReportListSchema(BaseSchema):
 class ComplianceReportSummaryRowSchema(BaseSchema):
     line: Optional[str] = ''
     description: Optional[str] = ''
+    field: Optional[str] = ''
     gasoline: Optional[float] = 0
     diesel: Optional[float] = 0
     jet_fuel: Optional[float] = 0

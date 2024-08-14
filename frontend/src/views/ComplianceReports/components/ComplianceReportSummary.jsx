@@ -45,15 +45,15 @@ const ComplianceReportSummary = ({ reportID }) => {
         setAlertMessage(error.message)
         setAlertSeverity('error')
         alertRef.current.triggerAlert()
-        // Scroll back to the top of the page
-        window.scrollTo(0, 0)
       }
     })
   
   const handleCellEdit = useCallback(
     (data) => {
       // perform auto save of summary after each cell change
-      updateComplianceReportSummary(summaryData)
+      const updatedData = { ...summaryData, renewableFuelTargetSummary: data }
+      setSummaryData(updatedData)
+      updateComplianceReportSummary(updatedData)
     },
     [summaryData, updateComplianceReportSummary]
   )

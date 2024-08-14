@@ -409,12 +409,12 @@ class ComplianceReportRepository:
         for row in summary.get('renewableFuelTargetSummary', []):
             line_number = row.line
             for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
-                column_name = f"line_{line_number}_{row.description.lower().replace(' ', '_')}_{fuel_type}"
+                column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
                 setattr(summary_obj, column_name, getattr(row, fuel_type))
 
         # Update low carbon fuel target summary
         for row in summary.get('lowCarbonFuelTargetSummary', []):
-            column_name = f"line_{row.line}_{row.description.lower().replace(' ', '_')}"
+            column_name = f"line_{row.line}_{row.field}"
             setattr(summary_obj, column_name, row.value)
 
         # Update non-compliance penalty summary
@@ -435,9 +435,7 @@ class ComplianceReportRepository:
 
         self.db.add(summary_obj)
         await self.db.flush()
-        await self.db.refresh(summary_obj)
         logger.info(f"Saved summary for compliance report {report_id}")
-        return summary_obj
 
     @repo_handler
     async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
