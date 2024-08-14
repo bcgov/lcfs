@@ -223,7 +223,6 @@ const AddFuelCodeBase = () => {
           onCellValueChanged={onCellValueChanged}
           onCellEditingStopped={onCellEditingStopped}
           onAction={onAction}
-          stopEditingWhenCellsLoseFocus
           showAddRowsButton={true}
           context={{ errors }}
         />
