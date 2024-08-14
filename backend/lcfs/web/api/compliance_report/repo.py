@@ -410,12 +410,12 @@ class ComplianceReportRepository:
             line_number = row.line
             for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                setattr(summary_obj, column_name, getattr(row, fuel_type))
+                setattr(summary_obj, column_name, int(getattr(row, fuel_type) or 0))
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:
             column_name = f"line_{row.line}_{row.field}"
-            setattr(summary_obj, column_name, row.value)
+            setattr(summary_obj, column_name, int(row.value or 0))
 
         # Update non-compliance penalty summary
         non_compliance_summary = summary.non_compliance_penalty_summary

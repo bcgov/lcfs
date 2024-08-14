@@ -137,7 +137,8 @@ class ComplianceReportSummaryService:
     @service_handler
     async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
-        summary_obj = await self.repo.get_summary_by_id(report_id)
+        # TODO: change this to refer to summary_id instead of report_id
+        summary_obj = await self.repo.get_summary_by_id(summary_id=report_id)
         if summary_obj:
             return self.convert_summary_to_dict(summary_obj)
         # Fetch the compliance report details
@@ -228,7 +229,7 @@ class ComplianceReportSummaryService:
         deferred_renewables = {'gasoline': 9000,
                                'diesel': 2000, 'jet_fuel': 5000}
 
-        # line 9
+        # line 9 TODO: refer to previous report to populate this line for the very first time.
         renewables_added = {'gasoline': 1000, 'diesel': 2000, 'jet_fuel': 3000}
 
         # line 10
