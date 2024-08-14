@@ -40,6 +40,9 @@ const ComplianceReportSummary = ({ reportID }) => {
     useUpdateComplianceReportSummary(reportID, {
       onSuccess: (response) => {
         setSummaryData(response.data)
+        setAlertMessage(error.message)
+        setAlertSeverity('error')
+        alertRef.current.triggerAlert()
       },
       onError: (error) => {
         setAlertMessage(error.message)
@@ -79,14 +82,7 @@ const ComplianceReportSummary = ({ reportID }) => {
 
   return (
     <>
-      <BCAlert
-        ref={alertRef}
-        data-test="alert-box"
-        severity={alertSeverity}
-        delay={65000}
-      >
-        {alertMessage}
-      </BCAlert>
+      {alertMessage && <BCAlert ref={alertRef} severity={alertSeverity}>{alertMessage}</BCAlert>}
       <Accordion defaultExpanded>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
