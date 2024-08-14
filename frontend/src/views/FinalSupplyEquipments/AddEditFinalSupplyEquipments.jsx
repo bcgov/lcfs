@@ -224,7 +224,6 @@ export const AddEditFinalSupplyEquipments = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             showAddRowsButton={true}
-            stopEditingWhenCellsLoseFocus
           />
         </BCBox>
       </Grid2>
