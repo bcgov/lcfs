@@ -37,7 +37,7 @@ const ComplianceReportSummary = ({ reportID }) => {
   }, [data])
 
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(reportID, {
+    useUpdateComplianceReportSummary(data?.summaryId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
         setAlertMessage(error.message)

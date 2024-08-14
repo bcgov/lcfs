@@ -96,21 +96,21 @@ async def get_compliance_report_summary(
     return await summary_service.calculate_compliance_report_summary(report_id)
 
 @router.put(
-    "/{report_id}/summary",
+    "/summary/{summary_id}",
     response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def update_compliance_report_summary(
     request: Request,
-    report_id: int,
+    summary_id: int,
     summary_data: ComplianceReportSummarySchema,
     summary_service: ComplianceReportSummaryService = Depends()
 ) -> ComplianceReportSummarySchema:
     """
-    Autosave compliance report summary details for a specific report by ID.
+    Autosave compliance report summary details for a specific summary by ID.
     """
-    return await summary_service.auto_save_compliance_report_summary(report_id, summary_data)
+    return await summary_service.auto_save_compliance_report_summary(summary_id, summary_data)
 
 @view_handler(['*'])
 @router.put(

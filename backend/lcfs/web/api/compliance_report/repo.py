@@ -26,7 +26,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema, ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema, ComplianceReportSummarySchema
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
@@ -238,6 +238,7 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
             )
             .where(and_(*conditions))
         )
@@ -287,7 +288,7 @@ class ComplianceReportRepository:
         ], total_count
 
     @repo_handler
-    async def get_compliance_report_by_id(self, report_id: int):
+    async def get_compliance_report_by_id(self, report_id: int, is_model: bool = False):
         """
         Retrieve a compliance report from the database by ID
         """
@@ -299,6 +300,7 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.organization),
                         joinedload(ComplianceReport.compliance_period),
                         joinedload(ComplianceReport.current_status),
+                        joinedload(ComplianceReport.summary),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -307,7 +309,10 @@ class ComplianceReportRepository:
             .scalars()
             .first()
         )
-        return ComplianceReportBaseSchema.model_validate(result)
+        if is_model:
+            return result
+        else:
+            return ComplianceReportBaseSchema.model_validate(result)
 
     @repo_handler
     async def get_intended_use_types(self) -> List[EndUseType]:
@@ -388,22 +393,29 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @repo_handler
-    async def save_compliance_report_summary(self, report_id: int, summary: Dict[str, List[ComplianceReportSummaryRowSchema]]):
+    async def add_compliance_report_summary(self, summary: ComplianceReportSummary) -> ComplianceReportSummary:
+        """
+        Adds a new compliance report summary to the database.
+        """
+        self.db.add(summary)
+        await self.db.flush()
+        await self.db.refresh(summary)
+        return summary
+
+    @repo_handler
+    async def save_compliance_report_summary(self, summary_id: int, summary: ComplianceReportSummarySchema):
         """
         Save the compliance report summary to the database.
         
-        :param report_id: The ID of the compliance report
+        :param summary_id: The ID of the compliance report summary
         :param summary: The generated summary data
         """
-        existing_summary = await self.db.execute(
-            select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
-        )
-        existing_summary = existing_summary.scalar_one_or_none()
+        existing_summary = await self.get_summary_by_id(summary_id)
 
         if existing_summary:
             summary_obj = existing_summary
         else:
-            summary_obj = ComplianceReportSummary(compliance_report_id=report_id, version=0)
+            raise ValueError(f"No summary found with ID {summary_id}")
 
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
@@ -441,6 +453,16 @@ class ComplianceReportRepository:
     @repo_handler
     async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
         query = select(ComplianceReportSummary).where(ComplianceReportSummary.summary_id == summary_id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
+    
+    @repo_handler
+    async def get_summary_by_report_id(self, report_id: int, is_supplemental: bool = False) -> ComplianceReportSummary:
+        if is_supplemental:
+            query = select(ComplianceReportSummary).where(ComplianceReportSummary.supplemental_report_id == report_id)
+        else:
+            query = select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
+            
         result = await self.db.execute(query)
         return result.scalars().first()
 

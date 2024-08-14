@@ -126,25 +126,30 @@ class ComplianceReportSummaryService:
         return await self.repo.get_summary_by_id(summary_id)
 
     @service_handler
-    async def auto_save_compliance_report_summary(self, report_id: int, summary_data: ComplianceReportSummarySchema) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    async def auto_save_compliance_report_summary(self, summary_id: int, summary_data: ComplianceReportSummarySchema) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """
-        Autosave compliance report summary details for a specific report by ID.
+        Autosave compliance report summary details for a specific summary by ID.
         """
-        summary_obj = await self.repo.save_compliance_report_summary(report_id, summary_data)
+        summary_obj = await self.repo.save_compliance_report_summary(summary_id, summary_data)
         summary_data = self.convert_summary_to_dict(summary_obj)
         return summary_data
 
     @service_handler
     async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
-        # TODO: change this to refer to summary_id instead of report_id
-        summary_obj = await self.repo.get_summary_by_id(summary_id=report_id)
-        if summary_obj:
-            return self.convert_summary_to_dict(summary_obj)
+        # TODO this method will have to be updated to handle supplemental reports
+
         # Fetch the compliance report details
-        compliance_report = await self.repo.get_compliance_report_by_id(report_id)
+        compliance_report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
+        
+        summary_model = compliance_report.summary
+
+        # After the report has been submitted, the summary becomes locked
+        # so we can return the existing summary rather than re-calculating
+        if summary_model.is_locked:
+            return self.convert_summary_to_dict(compliance_report.summary)
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -185,7 +190,15 @@ class ComplianceReportSummaryService:
             compliance_period_start, compliance_period_end, organization_id
         )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
+
         summary = ComplianceReportSummarySchema(
+            summary_id=summary_model.summary_id,
+            compliance_report_id=compliance_report.compliance_report_id,
+            version=summary_model.version,
+            is_locked=summary_model.is_locked,
+            supplemental_report_id=summary_model.supplemental_report_id,
+            quarter=summary_model.quarter,
+            # total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary

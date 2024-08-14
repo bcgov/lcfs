@@ -64,11 +64,15 @@ class ComplianceReportUpdateService:
     async def handle_submitted_status(self, report: ComplianceReport):
         """Handle actions when a report is Submitted."""
         # Create compliance report summary
-        summary = await self.summary_service.calculate_compliance_report_summary(report.compliance_report_id)
+        summary_data = await self.summary_service.calculate_compliance_report_summary(report.compliance_report_id)
+        summary_id = report.summary.summary_id
         
+        # TODO handle case where user has already saved information into the summary
+        # par ex. Line 6, 7, 8 edits, we don't want to overwrite those custom values
+        # we also need to lock the summary object here
+
         # Save the summary to the database
-        # Assuming there's a method in the repo to save the summary
-        await self.repo.save_compliance_report_summary(report.compliance_report_id, summary)
+        await self.repo.save_compliance_report_summary(summary_id, summary_data)
 
     async def handle_recommended_by_analyst_status(self, report: ComplianceReport):
         """Handle actions when a report is Recommended by analyst."""

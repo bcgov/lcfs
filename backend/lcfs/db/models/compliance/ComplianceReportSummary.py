@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey, Enum, DateTime, Boolean
+from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean, CheckConstraint
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 from datetime import datetime
@@ -6,11 +7,13 @@ from datetime import datetime
 class ComplianceReportSummary(BaseModel, Auditable):
     __tablename__ = 'compliance_report_summary'
     __table_args__ = (
+        CheckConstraint('(compliance_report_id IS NULL) != (supplemental_report_id IS NULL)',
+                  name='check_one_report_id_not_null'), # ensure one report id only
         {'comment': "Summary of all compliance calculations displaying the compliance units credits or debits over a compliance period"}
     )
     
     summary_id = Column(Integer, primary_key=True, autoincrement=True)
-    compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False)
+    compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=True)
     supplemental_report_id = Column(Integer, ForeignKey('supplemental_report.supplemental_report_id'), nullable=True)
     quarter = Column(Integer, nullable=True)  # Null for annual reports
     version = Column(Integer, nullable=False, default=1)
@@ -57,9 +60,9 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_10_net_renewable_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
     line_10_net_renewable_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
     
-    line_11_non_compliance_penalty_gasoline = Column(Float, nullable=False, default=0)
-    line_11_non_compliance_penalty_diesel = Column(Float, nullable=False, default=0)
-    line_11_non_compliance_penalty_jet_fuel = Column(Float, nullable=False, default=0)
+    line_11_non_compliance_penalty_gasoline = Column(Float, nullable=True, default=0)
+    line_11_non_compliance_penalty_diesel = Column(Float, nullable=True, default=0)
+    line_11_non_compliance_penalty_jet_fuel = Column(Float, nullable=True, default=0)
 
     # Low carbon fuel target summary columns
     line_12_low_carbon_fuel_required = Column(Float, nullable=False, default=0)
@@ -82,8 +85,14 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_21_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
-    compliance_report = relationship('ComplianceReport', back_populates='summaries')
-    supplemental_report = relationship('SupplementalReport', back_populates='summaries')
+    compliance_report = relationship('ComplianceReport', back_populates='summary')
+    supplemental_report = relationship('SupplementalReport', back_populates='summary')
+
+    def lock_summary(self):
+        if not self.is_locked:
+            self.is_locked = True
+        else:
+            raise InvalidRequestError("ComplianceReportSummary is already locked")
 
     def __repr__(self):
         return f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter}, version={self.version})>"
