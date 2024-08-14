@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime, date
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
@@ -128,9 +128,9 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     line: Optional[str] = ''
     description: Optional[str] = ''
     field: Optional[str] = ''
-    gasoline: Optional[float] = 0
-    diesel: Optional[float] = 0
-    jet_fuel: Optional[float] = 0
+    gasoline: Optional[Union[str, float]] = 0
+    diesel: Optional[Union[str, float]] = 0
+    jet_fuel: Optional[Union[str, float]] = 0
     value: Optional[float] = 0
     total_value: Optional[float] = 0
 
