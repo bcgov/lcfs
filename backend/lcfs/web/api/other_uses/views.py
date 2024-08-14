@@ -109,7 +109,6 @@ async def save_other_uses_row(
         return DeleteOtherUsesResponseSchema(message="Other use deleted successfully")
     elif other_uses_id:
         # Update existing other use
-
         await validate.validate_compliance_report_id(compliance_report_id, [request_data])
         return await service.update_other_use(request_data)
     else:
