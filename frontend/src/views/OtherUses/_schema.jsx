@@ -1,68 +1,70 @@
-import { KEY_ENTER, KEY_TAB } from '@/constants/common'
-import { Typography } from '@mui/material'
-import { OtherUsesActions } from './components/OtherUsesActions'
+import { actions, validation } from '@/components/BCDataGrid/columns'
+import { AutocompleteEditor } from '@/components/BCDataGrid/components'
+import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { Typography } from '@mui/material'
 
-export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
-  {
-    colId: 'validation',
-    cellRenderer: 'validationRenderer',
-    pinned: 'left',
-    maxWidth: 75,
-    editable: false,
-    suppressKeyboardEvent,
-    filter: false
-  },
-  {
-    colId: 'action',
-    cellRenderer: OtherUsesActions,
-    cellRendererParams: { api, onValidated },
-    pinned: 'left',
-    maxWidth: 110,
-    editable: false,
-    suppressKeyboardEvent,
-    filter: false
-  },
+const cellErrorStyle = (params, errors) => {
+  if (
+    errors[params.data.id] &&
+    errors[params.data.id].includes(params.colDef.field)
+  ) {
+    return {
+      borderColor: 'red'
+    }
+  } else {
+    return {
+      borderColor: 'unset'
+    }
+  }
+}
+
+export const otherUsesColDefs = (optionsData, errors) => [
+  validation,
+  actions({
+    enableDuplicate: true,
+    enableDelete: true
+  }),
   {
     field: 'id',
     hide: true
   },
   {
     field: 'fuelType',
-    headerName: t('otherUses:otherUsesColLabels.fuelType'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
+    cellEditor: AutocompleteEditor,
     minWidth: '280',
     cellEditorParams: {
-      options: optionsData.fuelTypes
-        .map((obj) => obj.fuelType),
+      options: optionsData.fuelTypes.map((obj) => obj.fuelType),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
+    cellRenderer: (params) =>
+      params.value || <Typography variant="body4">Select</Typography>,
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'fuelCategory',
-    headerName: t('otherUses:otherUsesColLabels.fuelCategory'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
+    cellEditor: AutocompleteEditor,
     cellEditorParams: {
-      options: optionsData.fuelCategories
-        .map((obj) => obj.category),
+      options: optionsData.fuelCategories.map((obj) => obj.category),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
+    cellRenderer: (params) =>
+      params.value || <Typography variant="body4">Select</Typography>,
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'quantitySupplied',
-    headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     cellEditor: 'agNumberCellEditor',
     type: 'numericColumn',
     cellEditorParams: {
@@ -70,47 +72,47 @@ export const otherUsesColDefs = (t, optionsData, api, onValidated) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'units',
-    headerName: t('otherUses:otherUsesColLabels.units'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('otherUses:otherUsesColLabels.units'),
+    cellEditor: AutocompleteEditor,
     minWidth: '155',
     cellEditorParams: {
-      options: optionsData.unitsOfMeasure
-        .map((obj) => obj),
+      options: optionsData.unitsOfMeasure.map((obj) => obj),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
+    cellRenderer: (params) =>
+      params.value || <Typography variant="body4">Select</Typography>,
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'expectedUse',
-    headerName: t('otherUses:otherUsesColLabels.expectedUse'),
-    cellEditor: 'autocompleteEditor',
+    headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
+    cellEditor: AutocompleteEditor,
     cellEditorParams: {
-      options: optionsData.expectedUses
-        .map((obj) => obj.name),
+      options: optionsData.expectedUses.map((obj) => obj.name),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) => params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => params.data.modified && !params.value ? { borderColor: 'red' } : undefined
+    cellRenderer: (params) =>
+      params.value || <Typography variant="body4">Select</Typography>,
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'rationale',
-    headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    editable: (params) => params.data.expectedUse === 'Other',
+    editable: (params) => params.data.expectedUse === 'Other'
   }
 ]
 

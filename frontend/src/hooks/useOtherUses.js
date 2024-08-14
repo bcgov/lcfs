@@ -15,7 +15,7 @@ export const useOtherUsesOptions = (params, options) => {
 export const useGetAllOtherUses = (complianceReportId, options) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['other-uses', complianceReportId],
+    queryKey: ['all-other-uses', complianceReportId],
     queryFn: async () => {
       return (
         await client.post(apiRoutes.getAllOtherUses, { complianceReportId })
@@ -36,6 +36,34 @@ export const useSaveOtherUses = (options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['other-uses'])
-    },
+    }
+  })
+}
+
+export const useGetOtherUses = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = [],
+    complianceReportId
+  } = {},
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    ...options,
+    queryKey: ['other-uses', page, size, sortOrders, filters],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getOtherUses, {
+          page,
+          size,
+          sortOrders,
+          filters,
+          complianceReportId
+        })
+      ).data
+    }
   })
 }
