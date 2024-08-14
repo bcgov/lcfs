@@ -138,6 +138,12 @@ class ComplianceReportSummarySchema(BaseSchema):
     renewableFuelTargetSummary: List[ComplianceReportSummaryRowSchema]
     lowCarbonFuelTargetSummary: List[ComplianceReportSummaryRowSchema]
     nonCompliancePenaltySummary: List[ComplianceReportSummaryRowSchema]
+    summary_id: Optional[int] = None
+    compliance_report_id: Optional[int] = None
+    version: Optional[int] = None
+    is_locked: Optional[bool] = False
+    quarter: Optional[str] = None
+    supplemental_report_id: Optional[int] = None
 
 
 class CommmonPaginatedReportRequestSchema(BaseSchema):

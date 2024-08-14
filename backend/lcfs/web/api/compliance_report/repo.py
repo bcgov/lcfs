@@ -435,7 +435,8 @@ class ComplianceReportRepository:
 
         self.db.add(summary_obj)
         await self.db.flush()
-        logger.info(f"Saved summary for compliance report {report_id}")
+        await self.db.refresh(summary_obj)
+        return summary_obj
 
     @repo_handler
     async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
