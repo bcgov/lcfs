@@ -73,7 +73,7 @@ export const EditViewComplianceReport = () => {
 
   // hooks
   const { data: currentUser, isLoading: isCurrentUserLoading, hasRoles } = useCurrentUser()
-  const isGovernmentUser = currentUser.isGovernmentUser
+  const isGovernmentUser = currentUser?.isGovernmentUser
   const {
     data: reportData,
     isLoading: isReportLoading,

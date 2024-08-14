@@ -133,6 +133,11 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     value: Optional[float] = 0
     total_value: Optional[float] = 0
 
+class ComplianceReportSummarySchema(BaseSchema):
+    renewableFuelTargetSummary: List[ComplianceReportSummaryRowSchema]
+    lowCarbonFuelTargetSummary: List[ComplianceReportSummaryRowSchema]
+    nonCompliancePenaltySummary: List[ComplianceReportSummaryRowSchema]
+
 
 class CommmonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")

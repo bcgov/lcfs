@@ -120,5 +120,5 @@ def repo_handler(func):
             func_name = func.__name__
             logger.error(f'''Repo error in {func_name} (file: {
                          file_path}) - {e}''', exc_info=True)
-            raise DatabaseException
+            raise DatabaseException from e # Preserve the original exception
     return wrapper

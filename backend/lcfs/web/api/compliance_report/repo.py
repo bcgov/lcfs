@@ -403,7 +403,7 @@ class ComplianceReportRepository:
         if existing_summary:
             summary_obj = existing_summary
         else:
-            summary_obj = ComplianceReportSummary(compliance_report_id=report_id)
+            summary_obj = ComplianceReportSummary(compliance_report_id=report_id, version=0)
 
         # Update renewable fuel target summary
         for row in summary.get('renewableFuelTargetSummary', []):
@@ -433,11 +433,11 @@ class ComplianceReportRepository:
         summary_obj.version += 1
         summary_obj.is_locked = False  # Or set based on some condition
 
-        if not existing_summary:
-            self.db.add(summary_obj)
-
-        await self.db.commit()
+        self.db.add(summary_obj)
+        await self.db.flush()
+        await self.db.refresh(summary_obj)
         logger.info(f"Saved summary for compliance report {report_id}")
+        return summary_obj
 
     @repo_handler
     async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:

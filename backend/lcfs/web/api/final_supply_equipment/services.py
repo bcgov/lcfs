@@ -28,24 +28,13 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def get_fse_options(self):
-        """Fetches all FSE options."""
-        intended_use_types = await self.repo.get_intended_use_types()
-        levels_of_equipment = await self.repo.get_levels_of_equipment()
-        fuel_measurement_types = await self.repo.get_fuel_measurement_types()
-
+        """Fetches all FSE options concurrently."""
+        intended_use_types, levels_of_equipment, fuel_measurement_types = await self.repo.get_fse_options()
+        
         return {
-            "intended_use_types": [
-                EndUseTypeSchema.model_validate(intended_use_type)
-                for intended_use_type in intended_use_types
-            ],
-            "levels_of_equipment": [
-                LevelOfEquipmentSchema.model_validate(level_of_equipment)
-                for level_of_equipment in levels_of_equipment
-            ],
-            "fuel_measurement_types": [
-                FuelMeasurementTypeSchema.model_validate(fuel_measurement_type)
-                for fuel_measurement_type in fuel_measurement_types
-            ],
+            "intended_use_types": [EndUseTypeSchema.model_validate(t) for t in intended_use_types],
+            "levels_of_equipment": [LevelOfEquipmentSchema.model_validate(l) for l in levels_of_equipment],
+            "fuel_measurement_types": [FuelMeasurementTypeSchema.model_validate(f) for f in fuel_measurement_types],
         }
 
     async def convert_to_fse_model(self, fse: FinalSupplyEquipmentCreateSchema):

@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Tuple
 from sqlalchemy import Float
 from fastapi import Depends
 from datetime import datetime
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema, ComplianceReportSummarySchema
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
@@ -41,6 +41,33 @@ class ComplianceReportSummaryService:
         Get a specific compliance report summary by its ID.
         """
         return await self.repo.get_summary_by_id(summary_id)
+
+    @service_handler
+    async def auto_save_compliance_report_summary(self, report_id: int, summary_data: ComplianceReportSummarySchema) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+        """
+        Autosave compliance report summary details for a specific report by ID.
+        """
+        summary = {}
+        
+        # Convert renewableFuelTargetSummary
+        summary["renewableFuelTargetSummary"] = [
+            ComplianceReportSummaryRowSchema(**row.model_dump())
+            for row in summary_data.renewableFuelTargetSummary
+        ]
+        
+        # Convert lowCarbonFuelTargetSummary
+        summary["lowCarbonFuelTargetSummary"] = [
+            ComplianceReportSummaryRowSchema(**row.model_dump())
+            for row in summary_data.lowCarbonFuelTargetSummary
+        ]
+        
+        # Convert nonCompliancePenaltySummary
+        summary["nonCompliancePenaltySummary"] = [
+            ComplianceReportSummaryRowSchema(**row.model_dump())
+            for row in summary_data.nonCompliancePenaltySummary
+        ]
+        await self.repo.save_compliance_report_summary(report_id, summary)
+        return summary
 
     @service_handler
     async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
@@ -182,10 +209,18 @@ class ComplianceReportSummaryService:
         summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line],
-                gasoline=values.get('gasoline', 0),
-                diesel=values.get('diesel', 0),
-                jet_fuel=values.get('jet_fuel', 0)
+                description=(
+                    RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line].format(
+                        int(summary_lines['4']["gasoline"] * 0.05),
+                        int(summary_lines['4']["diesel"] * 0.05),
+                        int(summary_lines['4']["jet_fuel"] * 0.05),
+                    )
+                    if (line in ["6", "8"])
+                    else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]
+                ),
+                gasoline=values.get("gasoline", 0),
+                diesel=values.get("diesel", 0),
+                jet_fuel=values.get("jet_fuel", 0),
             )
             for line, values in summary_lines.items()
         ]

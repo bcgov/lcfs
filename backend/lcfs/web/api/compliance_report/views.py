@@ -24,6 +24,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
     ComplianceReportSummaryRowSchema,
+    ComplianceReportSummarySchema,
     ComplianceReportUpdateSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
@@ -93,6 +94,23 @@ async def get_compliance_report_summary(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     return await summary_service.calculate_compliance_report_summary(report_id)
+
+@router.put(
+    "/{report_id}/summary",
+    response_model=Dict[str, List[ComplianceReportSummaryRowSchema]],
+    status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def update_compliance_report_summary(
+    request: Request,
+    report_id: int,
+    summary_data: ComplianceReportSummarySchema,
+    summary_service: ComplianceReportSummaryService = Depends()
+) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    """
+    Autosave compliance report summary details for a specific report by ID.
+    """
+    return await summary_service.auto_save_compliance_report_summary(report_id, summary_data)
 
 @view_handler(['*'])
 @router.put(

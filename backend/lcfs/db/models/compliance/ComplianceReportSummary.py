@@ -16,48 +16,71 @@ class ComplianceReportSummary(BaseModel, Auditable):
     version = Column(Integer, nullable=False, default=1)
     is_locked = Column(Boolean, default=False)
 
-    # Helper function to create columns for each fuel type
-    def create_columns(line_number, description):
-        prefix = f"line_{line_number}_{description}"
-        return [
-            Column(f"{prefix}_gasoline", Float, nullable=False, default=0),
-            Column(f"{prefix}_diesel", Float, nullable=False, default=0),
-            Column(f"{prefix}_jet_fuel", Float, nullable=False, default=0),
-        ]
-
     # Renewable fuel target summary 
-    create_columns(1, "fossil_derived_base_fuel")
-    create_columns(2, "eligible_renewable_fuel_supplied")
-    create_columns(3, "total_tracked_fuel_supplied")
-    create_columns(4, "eligible_renewable_fuel_required")
-    create_columns(5, "net_notionally_transferred")
-    create_columns(6, "renewable_fuel_retained")
-    create_columns(7, "previously_retained")
-    create_columns(8, "obligation_deferred")
-    create_columns(9, "obligation_added")
-    create_columns(10, "net_renewable_fuel_supplied")
-    create_columns(11, "non_compliance_penalty")
+    line_1_fossil_derived_base_fuel_gasoline = Column(Float, nullable=False, default=0)
+    line_1_fossil_derived_base_fuel_diesel = Column(Float, nullable=False, default=0)
+    line_1_fossil_derived_base_fuel_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_2_eligible_renewable_fuel_supplied_gasoline = Column(Float, nullable=False, default=0)
+    line_2_eligible_renewable_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
+    line_2_eligible_renewable_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_3_total_tracked_fuel_supplied_gasoline = Column(Float, nullable=False, default=0)
+    line_3_total_tracked_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
+    line_3_total_tracked_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_4_eligible_renewable_fuel_required_gasoline = Column(Float, nullable=False, default=0)
+    line_4_eligible_renewable_fuel_required_diesel = Column(Float, nullable=False, default=0)
+    line_4_eligible_renewable_fuel_required_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_5_net_notionally_transferred_gasoline = Column(Float, nullable=False, default=0)
+    line_5_net_notionally_transferred_diesel = Column(Float, nullable=False, default=0)
+    line_5_net_notionally_transferred_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_6_renewable_fuel_retained_gasoline = Column(Float, nullable=False, default=0)
+    line_6_renewable_fuel_retained_diesel = Column(Float, nullable=False, default=0)
+    line_6_renewable_fuel_retained_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_7_previously_retained_gasoline = Column(Float, nullable=False, default=0)
+    line_7_previously_retained_diesel = Column(Float, nullable=False, default=0)
+    line_7_previously_retained_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_8_obligation_deferred_gasoline = Column(Float, nullable=False, default=0)
+    line_8_obligation_deferred_diesel = Column(Float, nullable=False, default=0)
+    line_8_obligation_deferred_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_9_obligation_added_gasoline = Column(Float, nullable=False, default=0)
+    line_9_obligation_added_diesel = Column(Float, nullable=False, default=0)
+    line_9_obligation_added_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_10_net_renewable_fuel_supplied_gasoline = Column(Float, nullable=False, default=0)
+    line_10_net_renewable_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
+    line_10_net_renewable_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
+    
+    line_11_non_compliance_penalty_gasoline = Column(Float, nullable=False, default=0)
+    line_11_non_compliance_penalty_diesel = Column(Float, nullable=False, default=0)
+    line_11_non_compliance_penalty_jet_fuel = Column(Float, nullable=False, default=0)
 
     # Low carbon fuel target summary columns
-    Column("line_12_low_carbon_fuel_required", Float, nullable=False, default=0)
-    Column("line_13_low_carbon_fuel_supplied", Float, nullable=False, default=0)
-    Column("line_14_low_carbon_fuel_surplus", Float, nullable=False, default=0)
-    Column("line_15_banked_units_used", Float, nullable=False, default=0)
-    Column("line_16_banked_units_remaining", Float, nullable=False, default=0)
-    Column("line_17_non_banked_units_used", Float, nullable=False, default=0)
-    Column("line_18_units_to_be_banked", Float, nullable=False, default=0)
-    Column("line_19_units_to_be_exported", Float, nullable=False, default=0)
-    Column("line_20_surplus_deficit_units", Float, nullable=False, default=0)
-    Column("line_21_surplus_deficit_ratio", Float, nullable=False, default=0)
-    Column("line_22_compliance_units_issued", Float, nullable=False, default=0)
+    line_12_low_carbon_fuel_required = Column(Float, nullable=False, default=0)
+    line_13_low_carbon_fuel_supplied = Column(Float, nullable=False, default=0)
+    line_14_low_carbon_fuel_surplus = Column(Float, nullable=False, default=0)
+    line_15_banked_units_used = Column(Float, nullable=False, default=0)
+    line_16_banked_units_remaining = Column(Float, nullable=False, default=0)
+    line_17_non_banked_units_used = Column(Float, nullable=False, default=0)
+    line_18_units_to_be_banked = Column(Float, nullable=False, default=0)
+    line_19_units_to_be_exported = Column(Float, nullable=False, default=0)
+    line_20_surplus_deficit_units = Column(Float, nullable=False, default=0)
+    line_21_surplus_deficit_ratio = Column(Float, nullable=False, default=0)
+    line_22_compliance_units_issued = Column(Float, nullable=False, default=0)
 
     # Non-compliance penalty summary columns
-    Column("line_11_fossil_derived_base_fuel_gasoline", Float, nullable=False, default=0)
-    Column("line_11_fossil_derived_base_fuel_diesel", Float, nullable=False, default=0)
-    Column("line_11_fossil_derived_base_fuel_jet_fuel", Float, nullable=False, default=0)
-    Column("line_11_fossil_derived_base_fuel_total", Float, nullable=False, default=0)
-    Column("line_21_non_compliance_penalty_payable", Float, nullable=False, default=0)
-    Column("total_non_compliance_penalty_payable", Float, nullable=False, default=0)
+    line_11_fossil_derived_base_fuel_gasoline = Column(Float, nullable=False, default=0)
+    line_11_fossil_derived_base_fuel_diesel = Column(Float, nullable=False, default=0)
+    line_11_fossil_derived_base_fuel_jet_fuel = Column(Float, nullable=False, default=0)
+    line_11_fossil_derived_base_fuel_total = Column(Float, nullable=False, default=0)
+    line_21_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
+    total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
     compliance_report = relationship('ComplianceReport', back_populates='summaries')
     supplemental_report = relationship('SupplementalReport', back_populates='summaries')
