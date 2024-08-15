@@ -193,7 +193,7 @@ class ComplianceReportRepository:
                 "organization",
                 "other_uses",
                 "current_status",
-            ],
+                "summary",            ],
         )
         return ComplianceReportBaseSchema.model_validate(report)
 

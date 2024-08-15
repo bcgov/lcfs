@@ -40,9 +40,6 @@ const ComplianceReportSummary = ({ reportID }) => {
     useUpdateComplianceReportSummary(data?.summaryId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
-        setAlertMessage(error.message)
-        setAlertSeverity('error')
-        alertRef.current.triggerAlert()
       },
       onError: (error) => {
         setAlertMessage(error.message)
