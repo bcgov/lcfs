@@ -4,7 +4,7 @@ from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
-from pydantic import Field
+from pydantic import Field, Extra
 
 """
 Base - all shared attributes of a resource
@@ -29,7 +29,11 @@ class ComplianceReportOrganizationSchema(BaseSchema):
 
 
 class SummarySchema(BaseSchema):
-    pass
+    summary_id: int
+    is_locked: bool
+
+    class Config:
+        extra = Extra.allow
 
 
 class ComplianceReportStatusSchema(BaseSchema):
@@ -102,8 +106,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     compliance_period: CompliancePeriodSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
-    # summary_id: Optional[int] = None
-    # summary: Optional[SummarySchema]
+    summary: Optional[SummarySchema]
     current_status_id: int
     current_status: ComplianceReportStatusSchema
     transaction_id: Optional[int] = None
@@ -127,11 +130,24 @@ class ComplianceReportListSchema(BaseSchema):
 class ComplianceReportSummaryRowSchema(BaseSchema):
     line: Optional[str] = ''
     description: Optional[str] = ''
-    gasoline: Optional[Union[str, float]] = 0
-    diesel: Optional[Union[str, float]] = 0
-    jet_fuel: Optional[Union[str, float]] = 0
+    field: Optional[str] = ''
+    gasoline: Optional[float] = 0
+    diesel: Optional[float] = 0
+    jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
     total_value: Optional[float] = 0
+
+
+class ComplianceReportSummarySchema(BaseSchema):
+    renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
+    summary_id: Optional[int] = None
+    compliance_report_id: Optional[int] = None
+    supplemental_report_id: Optional[int] = None
+    version: Optional[int] = None
+    is_locked: Optional[bool] = False
+    quarter: Optional[int] = None
 
 
 class CommmonPaginatedReportRequestSchema(BaseSchema):

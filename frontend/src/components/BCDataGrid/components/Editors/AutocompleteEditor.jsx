@@ -44,6 +44,11 @@ export const AutocompleteEditor = (props) => {
   }
 
   const handleBlur = (e) => {
+    if (freeSolo && e.target.value) {
+      const newValue = e.target.value;
+      updateValue(newValue);
+    }
+
     if (onBlur) {
       onBlur(e, updateValue)
     }

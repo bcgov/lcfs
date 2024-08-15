@@ -26,7 +26,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema, ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema, ComplianceReportSummarySchema
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
@@ -193,7 +193,7 @@ class ComplianceReportRepository:
                 "organization",
                 "other_uses",
                 "current_status",
-            ],
+                "summary",            ],
         )
         return ComplianceReportBaseSchema.model_validate(report)
 
@@ -238,6 +238,7 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
             )
             .where(and_(*conditions))
         )
@@ -287,7 +288,7 @@ class ComplianceReportRepository:
         ], total_count
 
     @repo_handler
-    async def get_compliance_report_by_id(self, report_id: int):
+    async def get_compliance_report_by_id(self, report_id: int, is_model: bool = False):
         """
         Retrieve a compliance report from the database by ID
         """
@@ -299,6 +300,7 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.organization),
                         joinedload(ComplianceReport.compliance_period),
                         joinedload(ComplianceReport.current_status),
+                        joinedload(ComplianceReport.summary),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -307,7 +309,10 @@ class ComplianceReportRepository:
             .scalars()
             .first()
         )
-        return ComplianceReportBaseSchema.model_validate(result)
+        if is_model:
+            return result
+        else:
+            return ComplianceReportBaseSchema.model_validate(result)
 
     @repo_handler
     async def get_intended_use_types(self) -> List[EndUseType]:
@@ -388,37 +393,44 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @repo_handler
-    async def save_compliance_report_summary(self, report_id: int, summary: Dict[str, List[ComplianceReportSummaryRowSchema]]):
+    async def add_compliance_report_summary(self, summary: ComplianceReportSummary) -> ComplianceReportSummary:
+        """
+        Adds a new compliance report summary to the database.
+        """
+        self.db.add(summary)
+        await self.db.flush()
+        await self.db.refresh(summary)
+        return summary
+
+    @repo_handler
+    async def save_compliance_report_summary(self, summary_id: int, summary: ComplianceReportSummarySchema):
         """
         Save the compliance report summary to the database.
         
-        :param report_id: The ID of the compliance report
+        :param summary_id: The ID of the compliance report summary
         :param summary: The generated summary data
         """
-        existing_summary = await self.db.execute(
-            select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
-        )
-        existing_summary = existing_summary.scalar_one_or_none()
+        existing_summary = await self.get_summary_by_id(summary_id)
 
         if existing_summary:
             summary_obj = existing_summary
         else:
-            summary_obj = ComplianceReportSummary(compliance_report_id=report_id)
+            raise ValueError(f"No summary found with ID {summary_id}")
 
         # Update renewable fuel target summary
-        for row in summary.get('renewableFuelTargetSummary', []):
+        for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
-                column_name = f"line_{line_number}_{row.description.lower().replace(' ', '_')}_{fuel_type}"
-                setattr(summary_obj, column_name, getattr(row, fuel_type))
+                column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
+                setattr(summary_obj, column_name, int(getattr(row, fuel_type) or 0))
 
         # Update low carbon fuel target summary
-        for row in summary.get('lowCarbonFuelTargetSummary', []):
-            column_name = f"line_{row.line}_{row.description.lower().replace(' ', '_')}"
-            setattr(summary_obj, column_name, row.value)
+        for row in summary.low_carbon_fuel_target_summary:
+            column_name = f"line_{row.line}_{row.field}"
+            setattr(summary_obj, column_name, int(row.value or 0))
 
         # Update non-compliance penalty summary
-        non_compliance_summary = summary.get('nonCompliancePenaltySummary', [])
+        non_compliance_summary = summary.non_compliance_penalty_summary
         for row in non_compliance_summary:
             if row.line == '11':
                 summary_obj.line_11_fossil_derived_base_fuel_gasoline = row.gasoline
@@ -433,15 +445,24 @@ class ComplianceReportRepository:
         summary_obj.version += 1
         summary_obj.is_locked = False  # Or set based on some condition
 
-        if not existing_summary:
-            self.db.add(summary_obj)
-
-        await self.db.commit()
-        logger.info(f"Saved summary for compliance report {report_id}")
+        self.db.add(summary_obj)
+        await self.db.flush()
+        await self.db.refresh(summary_obj)
+        return summary_obj
 
     @repo_handler
     async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
         query = select(ComplianceReportSummary).where(ComplianceReportSummary.summary_id == summary_id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
+    
+    @repo_handler
+    async def get_summary_by_report_id(self, report_id: int, is_supplemental: bool = False) -> ComplianceReportSummary:
+        if is_supplemental:
+            query = select(ComplianceReportSummary).where(ComplianceReportSummary.supplemental_report_id == report_id)
+        else:
+            query = select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
+            
         result = await self.db.execute(query)
         return result.scalars().first()
 
