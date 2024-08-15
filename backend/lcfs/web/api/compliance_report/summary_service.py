@@ -1,9 +1,10 @@
 import math
 from typing import List, Dict, Any, Tuple
-from sqlalchemy import Float
+from sqlalchemy import Float, inspect
+import re
 from fastapi import Depends
 from datetime import datetime
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema, ComplianceReportSummarySchema
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
@@ -27,6 +28,86 @@ class ComplianceReportSummaryService:
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
 
+    def convert_summary_to_dict(self, summary_obj: ComplianceReportSummary) -> Dict[str, Any]:
+        """
+        Convert a ComplianceReportSummary object to a dictionary representation.
+        """
+        inspector = inspect(summary_obj)
+        summary = ComplianceReportSummarySchema(
+            summary_id=summary_obj.summary_id,
+            compliance_report_id=summary_obj.compliance_report_id,
+            version=summary_obj.version,
+            is_locked=summary_obj.is_locked,
+            supplemental_report_id=summary_obj.supplemental_report_id,
+            quarter=summary_obj.quarter,
+            total_non_compliance_penalty_payable=summary_obj.total_non_compliance_penalty_payable,
+            renewable_fuel_target_summary=[],
+            low_carbon_fuel_target_summary=[],
+            non_compliance_penalty_summary=[],
+        )
+        FUEL_CATEGORIES = ('gasoline', 'diesel', 'jet_fuel')
+        for column in inspector.mapper.column_attrs:
+            match = re.search(r"line_(\d+)_", column.key)
+            line = int(match.group(1)) if match else None
+            if line in range(1, 12) and column.key.endswith(FUEL_CATEGORIES) and not column.key.startswith('line_11_fossil_derived_base_fuel'):
+                existing_element = next((existing for existing in summary.renewable_fuel_target_summary if existing.line == str(line)), None)
+                if not existing_element:
+                    existing_element = ComplianceReportSummaryRowSchema(
+                        line=str(line),
+                        description=(
+                            RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)][
+                                "description"
+                            ].format(
+                                int(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05),
+                                int(summary_obj.line_4_eligible_renewable_fuel_required_diesel * 0.05),
+                                int(summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel * 0.05),
+                            )
+                            if (str(line) in ["6", "8"])
+                            else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"]
+                        ),
+                        field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)]["field"],
+                    )
+                    summary.renewable_fuel_target_summary.append(existing_element)
+                value = int(getattr(summary_obj, column.key) or 0)
+                if column.key.endswith("_gasoline"):
+                    existing_element.gasoline = value
+                elif column.key.endswith("_diesel"):
+                    existing_element.diesel = value
+                elif column.key.endswith("_jet_fuel"):
+                    existing_element.jet_fuel = value
+
+            elif line in range(12, 23) and not column.key.startswith('line_21_non_compliance_penalty_payable'):
+                summary.low_carbon_fuel_target_summary.append(
+                    ComplianceReportSummaryRowSchema(
+                        line=str(line),
+                        description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"],
+                        field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["field"],
+                        value=int(getattr(summary_obj, column.key) or 0)
+                    )
+                )
+            elif line in [11, 21] or column.key=="total_non_compliance_penalty_payable":
+                line = ''  if line is None else line
+                existing_element = next((existing for existing in summary.non_compliance_penalty_summary if existing.line == str(line) or existing.line == ''), None)
+                if not existing_element:
+                    existing_element = ComplianceReportSummaryRowSchema(
+                        line=str(line),
+                        description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["description"],
+                        field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["field"],
+                    )
+                    summary.non_compliance_penalty_summary.append(existing_element)
+                value = int(getattr(summary_obj, column.key) or 0)
+                if column.key.endswith("_gasoline"):
+                    existing_element.gasoline = value
+                elif column.key.endswith("_diesel"):
+                    existing_element.diesel = value
+                elif column.key.endswith("_jet_fuel"):
+                    existing_element.jet_fuel = value
+                elif column.key.endswith("_total"):
+                    existing_element.jet_fuel = value
+                else:
+                    existing_element.value = value
+        return summary
+
     @service_handler
     async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
         """
@@ -45,13 +126,30 @@ class ComplianceReportSummaryService:
         return await self.repo.get_summary_by_id(summary_id)
 
     @service_handler
+    async def auto_save_compliance_report_summary(self, summary_id: int, summary_data: ComplianceReportSummarySchema) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+        """
+        Autosave compliance report summary details for a specific summary by ID.
+        """
+        summary_obj = await self.repo.save_compliance_report_summary(summary_id, summary_data)
+        summary_data = self.convert_summary_to_dict(summary_obj)
+        return summary_data
+
+    @service_handler
     async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
+        # TODO this method will have to be updated to handle supplemental reports
 
         # Fetch the compliance report details
-        compliance_report = await self.repo.get_compliance_report_by_id(report_id)
+        compliance_report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
+        
+        summary_model = compliance_report.summary
+
+        # After the report has been submitted, the summary becomes locked
+        # so we can return the existing summary rather than re-calculating
+        if summary_model.is_locked:
+            return self.convert_summary_to_dict(compliance_report.summary)
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -93,11 +191,18 @@ class ComplianceReportSummaryService:
         )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
 
-        summary = {
-            'renewableFuelTargetSummary': renewable_fuel_target_summary,
-            'lowCarbonFuelTargetSummary': low_carbon_fuel_target_summary,
-            'nonCompliancePenaltySummary': non_compliance_penalty_summary
-        }
+        summary = ComplianceReportSummarySchema(
+            summary_id=summary_model.summary_id,
+            compliance_report_id=compliance_report.compliance_report_id,
+            version=summary_model.version,
+            is_locked=summary_model.is_locked,
+            supplemental_report_id=summary_model.supplemental_report_id,
+            quarter=summary_model.quarter,
+            # total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
+            renewable_fuel_target_summary=renewable_fuel_target_summary,
+            low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
+            non_compliance_penalty_summary=non_compliance_penalty_summary
+        )
 
         return summary
 
@@ -137,7 +242,7 @@ class ComplianceReportSummaryService:
         deferred_renewables = {'gasoline': 9000,
                                'diesel': 2000, 'jet_fuel': 5000}
 
-        # line 9
+        # line 9 TODO: refer to previous report to populate this line for the very first time.
         renewables_added = {'gasoline': 1000, 'diesel': 2000, 'jet_fuel': 3000}
 
         # line 10
@@ -188,10 +293,19 @@ class ComplianceReportSummaryService:
         summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line],
-                gasoline=values.get('gasoline', 0),
-                diesel=values.get('diesel', 0),
-                jet_fuel=values.get('jet_fuel', 0)
+                description=(
+                    RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]['description'].format(
+                        int(summary_lines['4']["gasoline"] * 0.05),
+                        int(summary_lines['4']["diesel"] * 0.05),
+                        int(summary_lines['4']["jet_fuel"] * 0.05),
+                    )
+                    if (line in ["6", "8"])
+                    else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]['description']
+                ),
+                field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
+                gasoline=values.get("gasoline", 0),
+                diesel=values.get("diesel", 0),
+                jet_fuel=values.get("jet_fuel", 0),
             )
             for line, values in summary_lines.items()
         ]
@@ -232,7 +346,8 @@ class ComplianceReportSummaryService:
         low_carbon_fuel_target_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line],
+                description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]['description'],
+                field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]['field'],
                 value=values.get('value', 0)
             )
             for line, values in low_carbon_summary_lines.items()
@@ -250,7 +365,8 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line],
+                description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["description"],
+                field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["field"],
                 gasoline=values.get('gasoline', 0),
                 diesel=values.get('diesel', 0),
                 jet_fuel=values.get('jet_fuel', 0),

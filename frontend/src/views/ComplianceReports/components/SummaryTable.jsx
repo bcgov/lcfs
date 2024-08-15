@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { numberFormatter } from '@/utils/formatters'
 import {
   Paper,
@@ -6,20 +7,76 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Input
 } from '@mui/material'
 
-const SummaryTable = ({ title, columns, data }) => {
-  const value = (cellValue) => {
-    if (typeof cellValue === 'string') {
-      return cellValue
-    } else if (cellValue < 0) {
-      return `(${Math.abs(cellValue)})`
-    } else {
-      return numberFormatter(cellValue)
-    }
+const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ...props }) => {
+  const [data, setData] = useState(initialData)
+  const [editingCell, setEditingCell] = useState(null)
+
+  useEffect(() => {
+    setData(initialData)
+  }, [initialData])
+
+  const isCellEditable = (rowIndex, columnId) => {
+    const column = columns.find((col) => col.id === columnId)
+    return (
+      column.editable &&
+      column.editableCells &&
+      column.editableCells.includes(rowIndex)
+    )
   }
 
+  const getCellConstraints = (rowIndex, columnId) => {
+    const column = columns.find((col) => col.id === columnId)
+    if (column.cellConstraints && column.cellConstraints[rowIndex]) {
+      return column.cellConstraints[rowIndex]
+    }
+    return {}
+  }
+
+  const handleCellChange = (e, rowIndex, columnId) => {
+    let newValue = e.target.value
+
+    // Remove any non-digit characters
+    newValue = newValue.replace(/\D/g, '')
+
+    // Convert to number
+    const numValue = newValue === '' ? '' : parseInt(newValue, 10)
+
+    // Check min and max constraints
+    const { min, max } = getCellConstraints(rowIndex, columnId)
+    if (numValue !== '') {
+      if (min !== undefined && numValue < min) {
+        newValue = min.toString()
+      } else if (max !== undefined && numValue > max) {
+        newValue = max.toString()
+      } else {
+        newValue = numValue.toString()
+      }
+    }
+
+    setData((prevData) => {
+      const newData = [...prevData]
+      newData[rowIndex] = { ...newData[rowIndex], [columnId]: newValue }
+      return newData
+    })
+    setEditingCell({ rowIndex, columnId })
+  }
+  // Cell editing has stopped perform autosave
+  const handleBlur = (rowIndex, columnId) => {
+    if (
+      editingCell &&
+      editingCell.rowIndex === rowIndex &&
+      editingCell.columnId === columnId
+    ) {
+      if (onCellEditStopped) {
+        onCellEditStopped(data)
+      }
+      setEditingCell(null)
+    }
+  }
   return (
     <TableContainer
       component={Paper}
@@ -74,16 +131,54 @@ const SummaryTable = ({ title, columns, data }) => {
                         : 'none',
                     maxWidth: column.maxWidth || 'none',
                     width: column.width || 'auto',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    fontWeight:
-                      column.bold || (column.id === 'description' && !row.line)
-                        ? 'bold'
-                        : 'normal'
+                    padding: isCellEditable(rowIndex, column.id) ? 0 : undefined
                   }}
                 >
-                  {value(row[column.id])}
+                  {isCellEditable(rowIndex, column.id) ? (
+                    <>
+                      <Input
+                        value={row[column.id]}
+                        onChange={(e) =>
+                          handleCellChange(e, rowIndex, column.id)
+                        }
+                        onBlur={() => handleBlur(rowIndex, column.id)}
+                        type="text"
+                        inputProps={{
+                          inputMode: 'numeric',
+                          pattern: '[0-9]*',
+                          ...getCellConstraints(rowIndex, column.id),
+                          ...props.inputProps
+                        }}
+                        sx={{
+                          width: '100%',
+                          height: '100%',
+                          padding: '6px',
+                          borderRadius: '8px',
+                          border: '1px solid #c1c1c1',
+                          '& .MuiInputBase-input': {
+                            textAlign: column.align || 'left'
+                          }
+                        }}
+                        disableUnderline
+                      />
+                    </>
+                  ) : (
+                    <span
+                      style={{
+                        fontWeight:
+                          column.bold ||
+                          (column.id === 'description' && !row.line)
+                            ? 'bold'
+                            : 'normal',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block'
+                      }}
+                    >
+                      {numberFormatter(row[column.id])}
+                    </span>
+                  )}
                 </TableCell>
               ))}
             </TableRow>

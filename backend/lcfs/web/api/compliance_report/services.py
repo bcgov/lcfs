@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
@@ -57,6 +58,10 @@ class ComplianceReportServices:
             )
         )
         await self.repo.add_compliance_report_history(report, self.request.user)
+
+        # Create an empty summary object
+        summary = ComplianceReportSummary(compliance_report_id=report.compliance_report_id)
+        await self.repo.add_compliance_report_summary(summary)
 
         return report
 
