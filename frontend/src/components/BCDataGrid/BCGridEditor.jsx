@@ -116,7 +116,7 @@ export const BCGridEditor = ({
   }
 
   const handleAddRows = (numRows) => {
-    const newRows = Array(numRows).fill().map(() => ({ id: uuid() }))
+    const newRows = Array(numRows).fill().map(() => ({ id: uuid(), validationStatus: 'error' }))
     ref.current.api.applyTransaction({ add: newRows })
     setAnchorEl(null)
   }
