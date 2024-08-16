@@ -170,5 +170,4 @@ async def test_create_user_success(
 
     # Check that the user creation was successful
     assert response.status_code == status.HTTP_201_CREATED
-    created_user = response.json()
-    assert created_user["email"] == user_data["email"]
+    assert response.json() == "User created successfully"

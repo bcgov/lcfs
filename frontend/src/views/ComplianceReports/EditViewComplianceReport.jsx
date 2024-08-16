@@ -1,12 +1,15 @@
 // react and npm library components
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
+import BCButton from '@/components/BCButton'
 import { Stack, Typography, List, ListItemButton, Fab, Tooltip } from '@mui/material'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
@@ -20,9 +23,11 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
 import { ActivityLinksList } from './components/ActivityLinkList'
 import { Introduction } from './components/Introduction'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useGetComplianceReport, useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
+import { buttonClusterConfigFn } from './buttonConfigs'
+
 
 const iconStyle = {
   width: '2rem', 
@@ -33,7 +38,6 @@ export const EditViewComplianceReport = () => {
   const { t } = useTranslation()
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const alertRef = useRef()
@@ -68,7 +72,8 @@ export const EditViewComplianceReport = () => {
   }, []);
 
   // hooks
-  const { data: currentUser, isLoading: isCurrentUserLoading } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading, hasRoles } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
   const {
     data: reportData,
     isLoading: isReportLoading,
@@ -78,8 +83,37 @@ export const EditViewComplianceReport = () => {
     currentUser?.organization?.organizationId,
     complianceReportId
   )
+  // TODO Temp Fix
+  const currentStatus = 'test' // reportData?.data?.currentStatus?.status
+  
   const { data: orgData, isLoading } = useOrganization(
     reportData?.data?.organizationId
+  )
+  const methods = useForm() // TODO we will need this for summary line inputs
+  const { mutate: updateComplianceReport } = useUpdateComplianceReport(complianceReportId, {
+    onSuccess: (response) => {
+      setModalData(null)
+    },
+    onError: (error) => {
+      setModalData(null)
+      setAlertMessage(error.message)
+      setAlertSeverity('error')
+    }
+  })
+
+  const buttonClusterConfig = useMemo(
+    () =>
+      buttonClusterConfigFn({
+        hasRoles,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        updateComplianceReport,
+        reportData,
+        isGovernmentUser
+      }),
+    [hasRoles, currentUser, methods, t, setModalData, updateComplianceReport, reportData, isGovernmentUser]
   )
 
   useEffect(() => {
@@ -202,6 +236,32 @@ export const EditViewComplianceReport = () => {
             )}
             <Introduction expanded={location.state?.newReport} />
           </Stack>
+          <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
+        {buttonClusterConfig[currentStatus]?.map((config) => (
+          config && (
+            <BCButton
+              key={config.id}
+              data-test={config.id}
+              id={config.id}
+              size="small"
+              variant={config.variant}
+              color={config.color}
+              onClick={methods.handleSubmit(config.handler)}
+              startIcon={
+                config.startIcon && (
+                  <FontAwesomeIcon
+                    icon={config.startIcon}
+                    className="small-icon"
+                  />
+                )
+              }
+              disabled={config.disabled}
+            >
+              {config.label}
+            </BCButton>
+          )
+        ))}
+      </Stack>
           <Tooltip
             title={
               isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')

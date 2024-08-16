@@ -23,9 +23,13 @@ from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
-    ComplianceReportSummaryRowSchema
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportSummarySchema,
+    ComplianceReportUpdateSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
+from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -77,16 +81,50 @@ async def get_compliance_report_by_id(
 
 @router.get(
     "/{report_id}/summary",
-    response_model=Dict[str, List[ComplianceReportSummaryRowSchema]],
+    response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK
 )
 @view_handler(['*'])
 async def get_compliance_report_summary(
     request: Request,
     report_id: int,
-    service: ComplianceReportServices = Depends()
-) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    summary_service: ComplianceReportSummaryService = Depends()
+) -> ComplianceReportSummarySchema:
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
-    return await service.get_compliance_report_summary(report_id)
+    return await summary_service.calculate_compliance_report_summary(report_id)
+
+@router.put(
+    "/summary/{summary_id}",
+    response_model=ComplianceReportSummarySchema,
+    status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def update_compliance_report_summary(
+    request: Request,
+    summary_id: int,
+    summary_data: ComplianceReportSummarySchema,
+    summary_service: ComplianceReportSummaryService = Depends()
+) -> ComplianceReportSummarySchema:
+    """
+    Autosave compliance report summary details for a specific summary by ID.
+    """
+    return await summary_service.auto_save_compliance_report_summary(summary_id, summary_data)
+
+@view_handler(['*'])
+@router.put(
+    "/{report_id}",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def update_compliance_report(
+    request: Request,
+    report_id: int,
+    report_data: ComplianceReportUpdateSchema,
+    update_service: ComplianceReportUpdateService = Depends(),
+) -> ComplianceReportBaseSchema:
+    """Update an existing compliance report."""
+     # TODO role validation for different status updates need to be added here
+    return await update_service.update_compliance_report(report_id, report_data)

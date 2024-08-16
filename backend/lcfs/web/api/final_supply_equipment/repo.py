@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List
+from typing import List, Tuple
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import FinalSupplyEquipmentRegNumber
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
@@ -23,6 +23,17 @@ class FinalSupplyEquipmentRepository:
         self.db = db
 
     @repo_handler
+    async def get_fse_options(self) -> Tuple[List[EndUseType], List[LevelOfEquipment], List[FuelMeasurementType]]:
+        """
+        Retrieve all FSE options in a single database transaction
+        """
+        async with self.db.begin_nested():
+            intended_use_types = await self.get_intended_use_types()
+            levels_of_equipment = await self.get_levels_of_equipment()
+            fuel_measurement_types = await self.get_fuel_measurement_types()
+        return intended_use_types, levels_of_equipment, fuel_measurement_types
+
+
     async def get_intended_use_types(self) -> List[EndUseType]:
         """
         Retrieve a list of intended use types from the database
@@ -38,7 +49,6 @@ class FinalSupplyEquipmentRepository:
         """
         return (await self.db.execute(select(EndUseType).where(and_(EndUseType.type == intended_use, EndUseType.intended_use == True)))).unique().scalar_one_or_none()
 
-    @repo_handler
     async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
         """
         Retrieve a list of levels of equipment from the database
@@ -53,7 +63,6 @@ class FinalSupplyEquipmentRepository:
         return ((await self.db.execute(select(LevelOfEquipment).where(LevelOfEquipment.name == name)))
             .unique().scalar_one_or_none())
 
-    @repo_handler
     async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
         """
         Retrieve a list of levels of equipment from the database

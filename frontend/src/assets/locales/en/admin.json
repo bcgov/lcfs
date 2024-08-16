@@ -13,9 +13,6 @@
   "Title": "Title",
   "usersNotFound": "No users found",
   "newUserBtn": "New user",
-  "mngGovUsrsLabel": "Manage government users",
-  "addEditOrgsLabel": "Add/edit fuel suppliers",
-  "usrActivity": "User activity",
   "userColLabels": {
     "userName": "User name",
     "role": "Role(s)",

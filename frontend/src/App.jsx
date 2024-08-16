@@ -29,6 +29,7 @@ import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComp
 import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
+import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 
 const router = createBrowserRouter([
   {
@@ -328,6 +329,14 @@ const router = createBrowserRouter([
         element: <AddEditFinalSupplyEquipments />,
         handle: {
           title: 'Final Supply Equipment',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL,
+        element: <AddEditFuelSupplies />,
+        handle: {
+          title: 'Supply of fuels',
           mode: 'add'
         }
       }

@@ -13,6 +13,7 @@ get_async_db = dependencies.get_async_db_session
 @router.get("/{admin_adjustment_id}", response_model=AdminAdjustmentSchema)
 @view_handler(['*'])
 async def get_admin_adjustment(
+    request: Request,
     admin_adjustment_id: int,
     service: AdminAdjustmentServices = Depends()
 ):
@@ -20,7 +21,7 @@ async def get_admin_adjustment(
     return await service.get_admin_adjustment(admin_adjustment_id)
 
 
-@router.put("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_200_OK)
+@router.put("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_202_ACCEPTED)
 @view_handler([RoleEnum.GOVERNMENT])
 async def update_admin_adjustment(
     request: Request,
@@ -34,7 +35,7 @@ async def update_admin_adjustment(
 
 
 @router.post("/", response_model=AdminAdjustmentSchema, status_code=status.HTTP_201_CREATED)
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.ANALYST])
 async def create_admin_adjustment(
     request: Request,
     admin_adjustment_create: AdminAdjustmentCreateSchema = ...,

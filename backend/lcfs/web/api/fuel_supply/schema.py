@@ -1,11 +1,19 @@
-from typing import List, Optional
+from enum import Enum
+from typing import List, Optional, Union
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     PaginationResponseSchema,
     SortOrder,
 )
-from pydantic import Field
+from pydantic import Field, field_validator
+
+
+class FuelTypeQuantityUnitsEnumSchema(str, Enum):
+    Litres = "L"
+    Kilograms = "kg"
+    Kilowatt_hour = "kWh"
+    Cubic_metres = "m3"
 
 
 class CommmonPaginatedReportRequestSchema(BaseSchema):
@@ -24,7 +32,7 @@ class FuelCategorySchema(BaseSchema):
 
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
-    provision: str
+    name: str
 
 
 class UnitOfMeasureSchema(BaseSchema):
@@ -40,8 +48,8 @@ class EnergyDensitySchema(BaseSchema):
 
 class EndUseTypeSchema(BaseSchema):
     end_use_type_id: int
-    end_use_type: str
-    end_use_sub_type: Optional[str]
+    type: str
+    sub_type: Optional[str] = None
 
 
 class EnergyEffectivenessRatioSchema(BaseSchema):
@@ -61,12 +69,12 @@ class TargetCarbonIntensitySchema(BaseSchema):
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
-    fuel_code_perfix_id: int
+    fuel_code_prefix_id: int
     fuel_code: str
     fuel_code_carbon_intensity: float
 
 
-class FuelTypeSchema(BaseSchema):
+class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
@@ -81,7 +89,21 @@ class FuelTypeSchema(BaseSchema):
 
 
 class FuelTypeOptionsResponse(BaseSchema):
-    fuel_types: List[FuelTypeSchema]
+    fuel_types: List[FuelTypeOptionsSchema]
+
+
+class FuelTypeSchema(BaseSchema):
+    fuel_type_id: int
+    fuel_type: str
+    fossil_derived: Optional[bool] = None
+    provision_1_id: Optional[int] = None
+    provision_2_id: Optional[int] = None
+    default_carbon_intensity: Optional[float] = None
+    units: FuelTypeQuantityUnitsEnumSchema
+
+    @field_validator("default_carbon_intensity")
+    def quantize_default_carbon_intensity(cls, value):
+        return round(value, 2)
 
 
 class FuelCategoryResponseSchema(BaseSchema):
@@ -105,18 +127,51 @@ class FuelCodeResponseSchema(BaseSchema):
 
 class FuelSupplySchema(BaseSchema):
     fuel_supply_id: Optional[int] = None
-    compliance_report_id: Optional[int] = None
-    quantity: Optional[int] = None
-    compliance_units: Optional[int] = None
+    compliance_report_id: int
+    fuel_type_id: int
+    fuel_type: FuelTypeSchema
+    quantity: int
+    units: str
+    compliance_units: int
+    ci_limit: Optional[float] = None
+    ci_of_fuel: Optional[float] = None
+    energy_density: Optional[float] = None
+    eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_category_id: Optional[int] = None
+    fuel_category_id: int
+    fuel_category: FuelCategoryResponseSchema
     fuel_code_id: Optional[int] = None
-    fuel_type_id: Optional[int] = None
+    fuel_code: Optional[FuelCodeResponseSchema] = None
     provision_of_the_act_id: Optional[int] = None
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
     custom_fuel_id: Optional[int] = None
     end_use_id: Optional[int] = None
-    fuel_category: Optional[FuelCategoryResponseSchema] = None
-    fuel_code: Optional[FuelCodeResponseSchema] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+
+
+class FuelSupplyCreateSchema(BaseSchema):
+    fuel_supply_id: Optional[int] = None
+    compliance_report_id: int
+    fuel_type: Union[str, FuelTypeSchema]
+    fuel_type_id: int
+    fuel_category: Union[str, FuelCategoryResponseSchema]
+    fuel_category_id: int
+    end_use_type: Optional[Union[str, EndUseTypeSchema]] = None
+    end_use_id: Optional[int] = None
+    provision_of_the_act: Union[str, ProvisionOfTheActSchema]
+    provision_of_the_act_id: int
+    fuel_code: Optional[Union[str, FuelCodeSchema]] = None
+    fuel_code_id: Optional[int] = None
+    quantity: int
+    units: str
+    compliance_units: int
+    ci_limit: float
+    ci_of_fuel: float
+    energy_density: float
+    eer: float
+    energy: float
+    custom_fuel_id: Optional[int] = None
+    deleted: Optional[bool] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

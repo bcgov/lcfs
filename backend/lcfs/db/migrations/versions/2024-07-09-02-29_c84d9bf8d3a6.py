@@ -61,21 +61,25 @@ def upgrade() -> None:
         ),
     )
     op.create_foreign_key(
-        None, "custom_fuel_type", "fuel_code", ["fuel_code_id"], ["fuel_code_id"]
+        "fk_custom_fuel_type_fuel_code",
+        "custom_fuel_type",
+        "fuel_code",
+        ["fuel_code_id"],
+        ["fuel_code_id"]
     )
     op.create_foreign_key(
-        None,
+        "fk_custom_fuel_type_provision_of_the_act",
         "custom_fuel_type",
         "provision_of_the_act",
         ["provision_of_the_act_id"],
-        ["provision_of_the_act_id"],
+        ["provision_of_the_act_id"]
     )
     op.create_foreign_key(
-        None,
+        "fk_custom_fuel_type_fuel_category",
         "custom_fuel_type",
         "fuel_category",
         ["fuel_category_id"],
-        ["fuel_category_id"],
+        ["fuel_category_id"]
     )
     op.add_column(
         "fuel_supply",
@@ -135,9 +139,11 @@ def downgrade() -> None:
     )
     op.drop_column("fuel_supply", "energy")
     op.drop_column("fuel_supply", "compliance_units")
-    op.drop_constraint(None, "custom_fuel_type", type_="foreignkey")
-    op.drop_constraint(None, "custom_fuel_type", type_="foreignkey")
-    op.drop_constraint(None, "custom_fuel_type", type_="foreignkey")
+
+    op.drop_constraint("fk_custom_fuel_type_fuel_category", "custom_fuel_type", type_="foreignkey")
+    op.drop_constraint("fk_custom_fuel_type_provision_of_the_act", "custom_fuel_type", type_="foreignkey")
+    op.drop_constraint("fk_custom_fuel_type_fuel_code", "custom_fuel_type", type_="foreignkey")
+
     op.drop_column("custom_fuel_type", "energy_density")
     op.drop_column("custom_fuel_type", "unit")
     op.drop_column("custom_fuel_type", "fuel_code_id")

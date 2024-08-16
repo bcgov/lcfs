@@ -1,10 +1,10 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime, date
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
-from pydantic import Field
+from pydantic import Field, Extra
 
 """
 Base - all shared attributes of a resource
@@ -29,7 +29,11 @@ class ComplianceReportOrganizationSchema(BaseSchema):
 
 
 class SummarySchema(BaseSchema):
-    pass
+    summary_id: int
+    is_locked: bool
+
+    class Config:
+        extra = Extra.allow
 
 
 class ComplianceReportStatusSchema(BaseSchema):
@@ -102,10 +106,9 @@ class ComplianceReportBaseSchema(BaseSchema):
     compliance_period: CompliancePeriodSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
-    summary_id: Optional[int] = None
     summary: Optional[SummarySchema]
-    status_id: int
-    status: ComplianceReportStatusSchema
+    current_status_id: int
+    current_status: ComplianceReportStatusSchema
     transaction_id: Optional[int] = None
     # transaction: Optional[TransactionBaseSchema] = None
     nickname: Optional[str] = None
@@ -127,11 +130,24 @@ class ComplianceReportListSchema(BaseSchema):
 class ComplianceReportSummaryRowSchema(BaseSchema):
     line: Optional[str] = ''
     description: Optional[str] = ''
+    field: Optional[str] = ''
     gasoline: Optional[float] = 0
     diesel: Optional[float] = 0
     jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
     total_value: Optional[float] = 0
+
+
+class ComplianceReportSummarySchema(BaseSchema):
+    renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
+    summary_id: Optional[int] = None
+    compliance_report_id: Optional[int] = None
+    supplemental_report_id: Optional[int] = None
+    version: Optional[int] = None
+    is_locked: Optional[bool] = False
+    quarter: Optional[int] = None
 
 
 class CommmonPaginatedReportRequestSchema(BaseSchema):
@@ -141,3 +157,7 @@ class CommmonPaginatedReportRequestSchema(BaseSchema):
     size: Optional[int] = None
     sort_orders: Optional[List[SortOrder]] = None
 
+
+class ComplianceReportUpdateSchema(BaseSchema):
+    status: str
+    supplemental_note: Optional[str] = None

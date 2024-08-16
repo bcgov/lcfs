@@ -3,7 +3,6 @@ from .AllocationTransactionType import AllocationTransactionType
 from .CompliancePeriod import CompliancePeriod
 from .ComplianceReport import ComplianceReport
 from .ComplianceReportHistory import ComplianceReportHistory
-from .ComplianceReportSnapshot import ComplianceReportSnapshot
 from .ComplianceReportStatus import ComplianceReportStatus
 from .ComplianceReportSummary import ComplianceReportSummary
 from .FinalSupplyEquipment import FinalSupplyEquipment
@@ -12,6 +11,8 @@ from .FuelSupply import FuelSupply
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
+from .SupplementalReport import SupplementalReport
+from . import listeners 
 
 __all__ = [
     "AllocationAgreement",
@@ -19,13 +20,14 @@ __all__ = [
     "CompliancePeriod",
     "ComplianceReport",
     "ComplianceReportHistory",
-    "ComplianceReportSnapshot",
     "ComplianceReportStatus",
     "ComplianceReportSummary",
+    "SupplementalReport",
     "FinalSupplyEquipment",
     "FuelMeasurementType",
     "FuelSupply",
     "LevelOfEquipment",
     "NotionalTransfer",
     "OtherUses",
+    "listeners"
 ]

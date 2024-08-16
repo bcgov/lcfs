@@ -172,7 +172,7 @@ class FuelSupplyRepository:
         Retrieve the list of fuel supplied information for a given compliance report.
         """
         query = self.query.where(FuelSupply.compliance_report_id == compliance_report_id)
-        results = (await self.db.execute(query)).scalars().all()
+        results = (await self.db.execute(query)).unique().scalars().all()
         return results
 
     @repo_handler
@@ -209,7 +209,7 @@ class FuelSupplyRepository:
         updated_fuel_supply = await self.db.merge(fuel_supply)
         await self.db.flush()
         await self.db.refresh(fuel_supply,
-            ["fuel_catgory", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
         )
         return updated_fuel_supply
 
@@ -222,7 +222,7 @@ class FuelSupplyRepository:
         await self.db.flush()
         await self.db.refresh(
             fuel_supply,
-            ["fuel_catgory", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
         )
         return fuel_supply
 
@@ -231,3 +231,25 @@ class FuelSupplyRepository:
         """Delete a fuel supply row from the database"""
         await self.db.execute(delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id))
         await self.db.flush()
+
+    @repo_handler
+    async def get_fuel_supplies(self, report_id: int, is_supplemental: bool = False) -> List[FuelSupply]:
+        """
+        Retrieve the list of fuel supplies for a given report (compliance or supplemental).
+        """
+        query = select(FuelSupply).options(
+            joinedload(FuelSupply.fuel_code),
+            joinedload(FuelSupply.fuel_category),
+            joinedload(FuelSupply.fuel_type),
+            joinedload(FuelSupply.provision_of_the_act),
+            joinedload(FuelSupply.custom_fuel_type),
+            joinedload(FuelSupply.end_use_type)
+        )
+
+        if is_supplemental:
+            query = query.where(FuelSupply.supplemental_report_id == report_id)
+        else:
+            query = query.where(FuelSupply.compliance_report_id == report_id)
+
+        result = await self.db.execute(query)
+        return result.scalars().all()

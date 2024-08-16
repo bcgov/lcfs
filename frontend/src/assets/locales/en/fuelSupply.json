@@ -1,0 +1,34 @@
+{
+  "fuelSupplyTitle": "Supply of fuels",
+  "noFuelSuppliesFound": "No fuel supplies found",
+  "addFuelSupplyRowsTitle": "Add new supply of fuel",
+  "fuelSupplySubtitle": "Report the fuel volumes supplied for various uses.",
+  "fuelSupplyDownloadBtn": "Download as excel",
+  "fuelSupplyDownloadingMsg": "Downloading supply of fuels information",
+  "fuelSupplyDownloadFailMsg": "Failed to download supply of fuel information.",
+  "LoadFailMsg": "Failed to load supply of fuel rows",
+  "addRow": "Add row",
+  "rows": "rows",
+  "fuelSupplyColLabels": {
+    "complianceReportId": "Compliance Report ID",
+    "fuelSuppyId": "Fuel supply ID",
+    "fuelType": "Fuel type",
+    "fuelTypeOther": "Fuel type other",
+    "fuelCategory": "Fuel catgory",
+    "endUse": "End use",
+    "provisionOfTheAct": "Determining carbon intensity",
+    "fuelCode": "Fuel code",
+    "quantity": "Quantity supplied",
+    "units": "Units",
+    "complianceUnits": "Compliance units",
+    "ciLimit": "CI limit",
+    "ciOfFuel": "CI of fuel",
+    "energyDensity": "Energy density",
+    "eer": "EER",
+    "energy": "Energy",
+    "determiningCarbonIntensity": "Determining carbon intensity"
+  },
+  "validateMsg": {
+    "isRequired": "{{field}} is required"
+  }
+}

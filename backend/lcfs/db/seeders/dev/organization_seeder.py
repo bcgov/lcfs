@@ -1,5 +1,5 @@
 import logging
-from sqlalchemy import select
+from sqlalchemy import select, text
 from lcfs.db.models.organization.Organization import Organization
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,12 @@ async def seed_organizations(session):
                     "organization_attorney_address_id"
                 ]
                 session.add(organization)
-
+        # reset the sequence to latest value
+        await session.execute(
+            text(
+                "SELECT setval('organization_attorney_address_organization_attorney_address_seq', (SELECT MAX(organization_attorney_address_id) FROM organization_attorney_address))"
+            )
+        )
         await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding organizations: %s", e)

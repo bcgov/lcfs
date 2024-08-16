@@ -253,7 +253,7 @@ class FuelCodeCreateSchema(BaseSchema):
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
-    fuel: str = None  # Fuel Type
+    fuel: str
     fuel_type_id: Optional[int] = None
     feedstock: str
     feedstock_location: str
