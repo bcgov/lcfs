@@ -21,6 +21,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.db.models.compliance import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -145,7 +146,29 @@ class ComplianceReportRepository:
             select(ComplianceReport)
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
+    
+    @repo_handler
+    async def get_supplemental_report(self, supplemental_report_id: int) -> Optional[SupplementalReport]:
+        """
+        Identify and retrieve the supplemental report by id.
+        """
+        return await self.db.scalar(
+            select(SupplementalReport)
+            .where(SupplementalReport.supplemental_report_id == supplemental_report_id)
+        )
 
+    @repo_handler
+    async def get_supplemental_reports(self, original_report_id: int) -> List[SupplementalReport]:
+        """
+        Identify and retrieve the supplemental reports by the original report id.
+        """
+        result = await self.db.execute(
+            select(SupplementalReport)
+            .where(SupplementalReport.original_report_id == original_report_id)
+            .order_by(SupplementalReport.create_date.asc())
+        )
+        return result.scalars().all()
+    
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
         """

@@ -7,6 +7,23 @@ class ReportType(enum.Enum):
     ANNUAL = 'Annual'
     QUARTERLY = 'Quarterly'
 
+class Quarter(enum.Enum):
+    Q1 = 'Q1'
+    Q2 = 'Q2'
+    Q3 = 'Q3'
+    Q4 = 'Q4'
+
+class ChangeType(enum.Enum):
+    CREATE = 'CREATE'
+    UPDATE = 'UPDATE'
+    DELETE = 'DELETE'
+
+class QuantityUnitsEnum(enum.Enum):
+    Litres = 'L'
+    Kilograms = "kg"
+    Kilowatt_hour = 'kWh'
+    Cubic_metres = 'm3'
+
 class ComplianceReport(BaseModel, Auditable):
     __tablename__ = 'compliance_report'
     __table_args__ = (
