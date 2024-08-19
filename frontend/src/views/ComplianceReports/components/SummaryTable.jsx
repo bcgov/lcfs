@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { numberFormatter } from '@/utils/formatters'
+import { currencyFormatter, numberFormatter } from '@/utils/formatters'
 import {
   Paper,
   Table,
@@ -176,7 +176,10 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
                         display: 'block'
                       }}
                     >
-                      {numberFormatter(row[column.id])}
+                      {row?.format && row[column.id] &&
+                      row.format === 'currency'
+                        ? currencyFormatter(row[column.id])
+                        : numberFormatter(row[column.id])}
                     </span>
                   )}
                 </TableCell>

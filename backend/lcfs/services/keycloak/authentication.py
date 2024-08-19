@@ -93,6 +93,7 @@ class UserAuthentication(AuthenticationBackend):
                     algorithms=["RS256"],
                     audience=self.settings.keycloak_audience,
                     options={"verify_exp": True},
+                    leeway=5  # Allows for 5 seconds of clock skew
                 )
             except jwt.ExpiredSignatureError as exc:
                 raise HTTPException(status_code=401, detail='Token has expired')

@@ -136,6 +136,7 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
     total_value: Optional[float] = 0
+    format: Optional[str] = ''
 
 
 class ComplianceReportSummarySchema(BaseSchema):
