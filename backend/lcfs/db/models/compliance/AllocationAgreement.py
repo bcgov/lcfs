@@ -18,7 +18,7 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     transaction_partner_email = Column(
         String, nullable=False, comment="Transaction Partner email"
     )
-    transaction_parnter_phone = Column(
+    transaction_partner_phone = Column(
         String, nullable=False, comment="Transaction Partner phone number"
     )
     ci_fuel = Column(Integer, nullable=False,
@@ -28,7 +28,7 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     units = Column(String, nullable=False,
                    comment="Units of the fuel quantity. Auto-selected, locked field.")
 
-    transaction_type_id = Column(Integer, ForeignKey(
+    allocation_transaction_type_id = Column(Integer, ForeignKey(
         'allocation_transaction_type.allocation_transaction_type_id'), nullable=False, comment="Foreign key to the transaction type")
     fuel_type_id = Column(Integer, ForeignKey(
         'fuel_type.fuel_type_id'), nullable=False, comment="Foreign key to the fuel type")
@@ -43,7 +43,7 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     compliance_report_id = Column(Integer, ForeignKey(
         'compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
 
-    transaction_type = relationship('AllocationTransactionType')
+    allocation_transaction_type = relationship('AllocationTransactionType')
     fuel_type = relationship('FuelType')
     custom_fuel_type = relationship('CustomFuelType')
     fuel_category = relationship('FuelCategory')
