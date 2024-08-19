@@ -24,6 +24,8 @@ import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
+import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 
 const ReportDetails = () => {
   const { t } = useTranslation()
@@ -71,13 +73,11 @@ const ReportDetails = () => {
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)
           ),
-        useFetch: async () => ({
-          data: [],
-          isLoading: false,
-          isError: false,
-          isFetched: true
-        }),
-        component: (data) => <>Coming soon...</>
+        useFetch: useGetAllocationAgreements,
+        component: (data) =>
+          data.allocationAgreements.length > 0 && (
+            <AllocationAgreementSummary data={data} />
+          )
       },
       {
         name: t('report:activityLists.notionalTransfers'),
