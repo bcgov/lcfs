@@ -67,7 +67,9 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
-    if (optionsData?.agreementTypes?.length > 0) {
+    console.log("OPTIONS DATA", optionsData)
+    if (optionsData?.fuelCategories?.length > 0) {
+      console.log("LOADING OPTIONS DATA")
       const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors)
       setColumnDefs(updatedColumnDefs)
     }

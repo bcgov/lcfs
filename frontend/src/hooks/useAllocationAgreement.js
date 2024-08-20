@@ -49,24 +49,3 @@ export const useSaveAllocationAgreement = (params, options) => {
     }
   })
 }
-
-export const useDeleteAllocationAgreement = (params, options) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  const { data: currentUser } = useCurrentUser()
-
-  return useMutation({
-    ...options,
-    mutationFn: async (allocationAgreementId) => {
-      return await client.delete(
-        apiRoutes.deleteAllocationAgreement
-          .replace(':orgID', currentUser.organization.organizationId)
-          .replace(':reportID', params.complianceReportId)
-          .replace(':allocationAgreementID', allocationAgreementId)
-      )
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(['allocation-agreements', params.complianceReportId])
-    }
-  })
-}

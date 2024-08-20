@@ -52,4 +52,5 @@ export const apiRoutes = {
   getAllAllocationAgreements: '/allocation-agreement/list-all',
   allocationAgreementOptions: '/allocation-agreement/table-options?',
   saveAllocationAgreements: '/allocation-agreement/save',
+  allocationAgreementSearch: '/allocation-agreement/search?',
 }

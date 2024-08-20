@@ -21,6 +21,7 @@ from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
@@ -301,7 +302,8 @@ class FuelCodeRepository:
         query = select(distinct(FuelCode.contact_email)).where(and_(
             func.lower(FuelCode.company) == func.lower(company),
             func.lower(FuelCode.contact_name) == func.lower(contact_name)),
-            func.lower(FuelCode.contact_email).like(func.lower(contact_email + "%"))
+            func.lower(FuelCode.contact_email).like(
+                func.lower(contact_email + "%"))
         ).order_by(FuelCode.contact_email).limit(10)
         return (await self.db.execute(query)).scalars().all()
 
@@ -311,9 +313,9 @@ class FuelCodeRepository:
     ) -> List[str]:
         query = (
             select(distinct(FuelCode.fuel_code)
-            ).join(FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
-            ).where(and_(FuelCode.fuel_code.like(fuel_code + "%"),func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
-            ).order_by(FuelCode.fuel_code).limit(10)
+                   ).join(FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
+                          ).where(and_(FuelCode.fuel_code.like(fuel_code + "%"), func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
+                                  ).order_by(FuelCode.fuel_code).limit(10)
         )
 
         return (await self.db.execute(query)).scalars().all()
@@ -322,18 +324,19 @@ class FuelCodeRepository:
     async def get_fuel_code_by_code_prefix(self, fuel_code: str, prefix: str) -> List[str]:
         query = (
             select(FuelCode).options(
-            joinedload(FuelCode.fuel_code_status),
-            joinedload(FuelCode.fuel_code_prefix),
-            joinedload(FuelCode.fuel_code_type)
-            .joinedload(FuelType.provision_1),
-            joinedload(FuelCode.fuel_code_type)
-            .joinedload(FuelType.provision_2),
-            joinedload(FuelCode.feedstock_fuel_transport_modes)
-            .joinedload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
-            joinedload(FuelCode.finished_fuel_transport_modes)
-            .joinedload(FinishedFuelTransportMode.finished_fuel_transport_mode),
+                joinedload(FuelCode.fuel_code_status),
+                joinedload(FuelCode.fuel_code_prefix),
+                joinedload(FuelCode.fuel_code_type)
+                .joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_code_type)
+                .joinedload(FuelType.provision_2),
+                joinedload(FuelCode.feedstock_fuel_transport_modes)
+                .joinedload(FeedstockFuelTransportMode.feedstock_fuel_transport_mode),
+                joinedload(FuelCode.finished_fuel_transport_modes)
+                .joinedload(FinishedFuelTransportMode.finished_fuel_transport_mode),
             ).where(
-                and_(FuelCode.fuel_code == fuel_code, FuelCodePrefix.prefix == prefix)
+                and_(FuelCode.fuel_code == fuel_code,
+                     FuelCodePrefix.prefix == prefix)
             )
         )
         input_version = fuel_code.split('.')[0]
@@ -363,7 +366,8 @@ class FuelCodeRepository:
     async def validate_fuel_code(self, fuel_code: str, prefix: str) -> str:
         # check if the fuel_code already exists
         query = select(FuelCode).where(
-            and_(FuelCode.fuel_code == fuel_code, func.lower(FuelCodePrefix.prefix) == func.lower(prefix))
+            and_(FuelCode.fuel_code == fuel_code, func.lower(
+                FuelCodePrefix.prefix) == func.lower(prefix))
         )
         result = (await self.db.execute(query)).scalar_one_or_none()
         if result:
@@ -371,6 +375,7 @@ class FuelCodeRepository:
             return await self.get_next_available_sub_version_fuel_code_by_prefix(fuel_code_prefix, prefix)
         else:
             return fuel_code
+
     @repo_handler
     async def get_next_available_fuel_code_by_prefix(self, prefix: str) -> str:
         query = text("""
@@ -500,3 +505,13 @@ class FuelCodeRepository:
         result = (await self.db.execute(query)).all()
 
         return result
+
+    @repo_handler
+    async def get_fuel_code_by_name(self, fuel_code: str) -> FuelCode:
+        result = await self.db.execute(select(FuelCode).where(FuelCode.fuel_code == fuel_code))
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_provision_of_the_act_by_name(self, provision_of_the_act: str) -> ProvisionOfTheAct:
+        result = await self.db.execute(select(ProvisionOfTheAct).where(ProvisionOfTheAct.name == provision_of_the_act))
+        return result.scalar_one_or_none()

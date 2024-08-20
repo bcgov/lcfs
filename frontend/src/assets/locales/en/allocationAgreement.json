@@ -1,6 +1,8 @@
 {
   "allocationAgreementTitle": "Allocation Agreement",
   "noAllocationAgreementsFound": "No allocation agreements found",
+  "addAllocationAgreementRowsTitle": "Allocation agreements (e.g., allocating responsibility for fuel)",
+  "allocationAgreementSubtitle": "Enter allocation agreement details below",
   "allocationAgreementColLabels": {
     "transaction": "Transaction",
     "legalName": "Legal name of transaction partner",
@@ -13,6 +15,18 @@
     "fuelCode": "Fuel code",
     "ciOfFuel": "CI of fuel",
     "quantity": "Quantity",
-    "units": "Units"
+    "units": "Units",
+    "agreementType": "Agreement Type",
+    "tradingPartner": "Trading Partner",
+    "allocationAgreement": "Allocation Agreement",
+    "complianceReportId": "Compliance Report ID",
+    "allocationAgreementId": "Allocation Agreement ID",
+    "transactionType": "Transaction Type",
+    "tradingPartnerAddress": "Trading Partner Address",
+    "tradingPartnerEmail": "Trading Partner Email",
+    "tradingPartnerPhone": "Trading Partner Phone",
+    "fuelTypeOther": "Other Fuel Type",
+    "determiningCarbonIntensity": "Determining Carbon Intensity",
+    "energyDensity": "Energy Density"
   }
 }

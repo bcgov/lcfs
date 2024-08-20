@@ -2,10 +2,12 @@ import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
-  HeaderComponent
+  HeaderComponent,
+  AsyncSuggestionEditor,
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
+import { apiRoutes } from '@/constants/routes'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -80,12 +82,18 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     field: 'tradingPartner',
     headerComponent: HeaderComponent,
     headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.tradingPartner'),
-    cellEditor: AutocompleteEditor,
-    cellEditorParams: {
-      options: optionsData?.tradingPartners?.map((partner) => partner.name),
-      freeSolo: true,
-      openOnFocus: true
-    },
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'trading-partner-name-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.allocationAgreementSearch
+        path += 'trading_partner=' + queryKey[1]
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'tradingPartner',
+      api: params.api,
+    }),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Enter</Typography>),
@@ -95,14 +103,14 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     editable: true,
     valueSetter: (params) => {
       if (params.newValue) {
-        const partner = optionsData?.tradingPartners?.find(
-          (p) => p.name === params.newValue
+        const company = optionsData?.companies?.find(
+          (c) => c.name === params.newValue
         )
-        if (partner) {
+        if (company) {
           params.data.tradingPartner = params.newValue
-          params.data.tradingPartnerAddress = partner.address
-          params.data.tradingPartnerEmail = partner.email
-          params.data.tradingPartnerPhone = partner.phone
+          params.data.tradingPartnerAddress = company.address
+          params.data.tradingPartnerEmail = company.email
+          params.data.tradingPartnerPhone = company.phone
         } else {
           params.data.tradingPartner = params.newValue
           params.data.tradingPartnerAddress = ''
