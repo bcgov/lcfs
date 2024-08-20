@@ -1,3 +1,4 @@
+from decimal import Decimal
 import math
 from typing import List, Dict, Any, Tuple
 from sqlalchemy import Float, inspect
@@ -85,9 +86,15 @@ class ComplianceReportSummaryService:
                 summary.low_carbon_fuel_target_summary.append(
                     ComplianceReportSummaryRowSchema(
                         line=str(line),
-                        description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"],
+                        description=(
+                            LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"].format(
+                                int(summary_obj.line_21_non_compliance_penalty_payable / 600)
+                            )
+                            if (str(line) == "21")
+                            else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"]
+                        ),
                         field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["field"],
-                        value=int(getattr(summary_obj, column.key) or 0)
+                        value=int(getattr(summary_obj, column.key) or 0),
                     )
                 )
             elif line in [11, 21] or column.key=="total_non_compliance_penalty_payable":
@@ -96,7 +103,11 @@ class ComplianceReportSummaryService:
                 if not existing_element:
                     existing_element = ComplianceReportSummaryRowSchema(
                         line=str(line),
-                        description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["description"],
+                        description=(NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["description"].format(
+                                int(summary_obj.line_21_non_compliance_penalty_payable / 600)
+                        )
+                        if (str(line) == "21") else
+                        NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["description"]),
                         field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["field"],
                     )
                     summary.non_compliance_penalty_summary.append(existing_element)
@@ -135,6 +146,7 @@ class ComplianceReportSummaryService:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
+        # TODO recalculate pending penalties for line 21
         summary_obj = await self.repo.save_compliance_report_summary(summary_id, summary_data)
         summary_data = self.convert_summary_to_dict(summary_obj)
         return summary_data
@@ -148,7 +160,7 @@ class ComplianceReportSummaryService:
         compliance_report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
-        
+
         summary_model = compliance_report.summary
 
         # After the report has been submitted, the summary becomes locked
@@ -191,10 +203,10 @@ class ComplianceReportSummaryService:
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums, compliance_period=compliance_period_start.year
         )
-        low_carbon_fuel_target_summary = await self.calculate_low_carbon_fuel_target_summary(
+        low_carbon_fuel_target_summary, non_compliance_penalty_payable_units = await self.calculate_low_carbon_fuel_target_summary(
             compliance_period_start, compliance_period_end, organization_id, report_id
         )
-        non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary()
+        non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary(non_compliance_penalty_payable_units, renewable_fuel_target_summary)
 
         summary = ComplianceReportSummarySchema(
             summary_id=summary_model.summary_id,
@@ -271,7 +283,7 @@ class ComplianceReportSummaryService:
         # line 11
         non_compliance_penalties = {
             category: (
-                None if max(0, eligible_renewable_fuel_required.get(category, 0) -
+                0 if max(0, eligible_renewable_fuel_required.get(category, 0) -
                             net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category] == 0
                 else f"""${math.ceil(max(0, eligible_renewable_fuel_required.get(category, 0) -
                                          net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category] * 100) / 100:,.2f}"""
@@ -321,64 +333,86 @@ class ComplianceReportSummaryService:
             self, compliance_period_start: datetime, compliance_period_end: datetime, organization_id: int, report_id: int
     ) -> List[ComplianceReportSummaryRowSchema]:
         
-        # Line 18 calculation
-        fuel_supply_compliance_units = await self.calculate_fuel_supply_compliance_units(report_id)
-
-        # replace 200 with sum of export fuels when export fuels is ready
-        complianceUnitsExport = 200 * -1
-
+        # Sent Transfers
         compliance_units_transferred_out = await self.repo.get_transferred_out_compliance_units(
             compliance_period_start, compliance_period_end, organization_id
         )
+        # Received Transfers
         compliance_units_received = await self.repo.get_received_compliance_units(
             compliance_period_start, compliance_period_end, organization_id
         )
+        # Earned through Initiative Agreements
         compliance_units_issued = await self.repo.get_issued_compliance_units(
             compliance_period_start, compliance_period_end, organization_id
         )
+
+        # TODO - add the logic as required
+        compliance_units_prev_issued_for_fuel_supply = 0  # line 15
+        compliance_units_prev_issued_for_fuel_export = 0  # line 16
+        available_balance_for_period = 0  # line 17
+        compliance_units_issued_for_fuel_supply = await self.calculate_fuel_supply_compliance_units(report_id)  # line 18
+        compliance_units_issued_for_fuel_export = 200 * -1  # line 19
+        compliance_unit_balance_change_from_assessment = 0  # line 20
+        calculated_penalty_units = int(
+            available_balance_for_period
+            + compliance_units_issued_for_fuel_supply
+            + compliance_units_issued_for_fuel_export
+        )
+        
+        non_compliance_penalty_payable_units = calculated_penalty_units if (calculated_penalty_units < 0) else 0
+        non_compliance_penalty_payable = int((non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)) if non_compliance_penalty_payable_units < 0 else 0 # line 21
+        available_balance_for_period_after_assessment = 45000  # line 22
 
         low_carbon_summary_lines = {
             '12': {'value': compliance_units_transferred_out},
             '13': {'value': compliance_units_received},
             '14': {'value': compliance_units_issued},
-            '15': {'value': 0},
-            '16': {'value': 0},
-            '17': {'value': 0},
-            '18': {'value': fuel_supply_compliance_units},
-            '19': {'value': complianceUnitsExport},
-            '20': {'value': 0},
-            '21': {'value': 0},
-            '22': {'value': 500},
+            '15': {'value': compliance_units_prev_issued_for_fuel_supply},
+            '16': {'value': compliance_units_prev_issued_for_fuel_export},
+            '17': {'value': available_balance_for_period},
+            '18': {'value': compliance_units_issued_for_fuel_supply},
+            '19': {'value': compliance_units_issued_for_fuel_export},
+            '20': {'value': compliance_unit_balance_change_from_assessment},
+            '21': {'value': non_compliance_penalty_payable},
+            '22': {'value': available_balance_for_period_after_assessment},
         }
 
         low_carbon_fuel_target_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]['description'],
+                description=(
+                    LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"].format(non_compliance_penalty_payable_units * -1)
+                    if (str(line) == "21")
+                    else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"]
+                ),
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]['field'],
-                value=values.get('value', 0)
+                value=values.get('value', 0),
+                format='currency' if (str(line) == "21") else None
             )
             for line, values in low_carbon_summary_lines.items()
         ]
 
-        return low_carbon_fuel_target_summary
+        return low_carbon_fuel_target_summary, non_compliance_penalty_payable_units
 
-    def calculate_non_compliance_penalty_summary(self) -> List[ComplianceReportSummaryRowSchema]:
+    def calculate_non_compliance_penalty_summary(self, non_compliance_penalty_payable_units: int, renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]) -> List[ComplianceReportSummaryRowSchema]:
+        non_compliance_penalty_payable = int((non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)) if non_compliance_penalty_payable_units < 0 else 0 
+        line_11 = next(row for row in renewable_fuel_target_summary if row.line == '11')
         non_compliance_summary_lines = {
-            '11': {'gasoline': 100, 'diesel': 0, 'jet_fuel': 0, 'total_value': 100},
-            '21': {'gasoline': 100, 'diesel': 0, 'jet_fuel': 0, 'total_value': 0},
-            '': {'gasoline': None, 'diesel': None, 'jet_fuel': None, 'total_value': 600}
+            '11': {'gasoline': line_11.gasoline, 'diesel': line_11.diesel, 'jet_fuel': line_11.jet_fuel, 'total_value': line_11.total_value},
+            '21': {'total_value': non_compliance_penalty_payable},
+            '': {'gasoline': line_11.gasoline, 'diesel': line_11.diesel, 'jet_fuel': line_11.jet_fuel, 'total_value': line_11.total_value + non_compliance_penalty_payable},
         }
 
         non_compliance_penalty_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
-                description=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["description"],
+                description=(NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)]["description"].format(non_compliance_penalty_payable_units * -1)),
                 field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["field"],
-                gasoline=values.get('gasoline', 0),
-                diesel=values.get('diesel', 0),
-                jet_fuel=values.get('jet_fuel', 0),
-                total_value=values.get('total_value', 0)
+                gasoline=values.get("gasoline", None),
+                diesel=values.get("diesel", None),
+                jet_fuel=values.get("jet_fuel", None),
+                total_value=values.get("total_value", 0),
+                format='currency' if (str(line) in ["21", ""]) else None
             )
             for line, values in non_compliance_summary_lines.items()
         ]
