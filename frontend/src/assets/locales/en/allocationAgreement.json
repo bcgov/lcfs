@@ -1,0 +1,18 @@
+{
+  "allocationAgreementTitle": "Allocation Agreement",
+  "noAllocationAgreementsFound": "No allocation agreements found",
+  "allocationAgreementColLabels": {
+    "transaction": "Transaction",
+    "legalName": "Legal name of transaction partner",
+    "addressForService": "Address for service",
+    "email": "Email",
+    "phone": "Phone",
+    "fuelType": "Fuel type",
+    "fuelCategory": "Fuel category",
+    "carbonIntensity": "Determining carbon intensity",
+    "fuelCode": "Fuel code",
+    "ciOfFuel": "CI of fuel",
+    "quantity": "Quantity",
+    "units": "Units"
+  }
+}

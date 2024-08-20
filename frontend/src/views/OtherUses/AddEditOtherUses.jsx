@@ -177,7 +177,8 @@ export const AddEditOtherUses = () => {
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
-      params.node.updateData({ ...params.data, validationStatus: 'pending' })
+      params.data.complianceReportId = complianceReportId
+      params.data.validationStatus = 'pending'
 
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
@@ -232,7 +233,7 @@ export const AddEditOtherUses = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [complianceReportId, saveRow, t]
   )
 
   if (optionsLoading || usesLoading) {
