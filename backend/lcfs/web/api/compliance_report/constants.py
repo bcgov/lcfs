@@ -83,7 +83,7 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
         "field": "surplus_deficit_units",
     },
     "21": {
-        "description": "Non-compliance penalty payable (x units * $600 CAD per unit)",
+        "description": "Non-compliance penalty payable ({} units * $600 CAD per unit)",
         "field": "surplus_deficit_ratio",
     },
     "22": {
@@ -98,7 +98,7 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
         "field": "fossil_derived_base_fuel",
     },
     "21": {
-        "description": "Non-compliance penalty payable (x units * $600 CAD per unit)",
+        "description": "Non-compliance penalty payable ({} units * $600 CAD per unit)",
         "field": "line_21_non_compliance_penalty_payable",
     },
     "": {
