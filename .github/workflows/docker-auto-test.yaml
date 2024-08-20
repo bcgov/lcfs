@@ -175,20 +175,19 @@ jobs:
         fail_on: "errors"
         report_individual_runs: "true"
         deduplicate_classes_by_file_name: "true"
-    # - name: Publish Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: |
-    #       backend/pytest-results.xml
-    #       frontend/vitest-results.xml
-    #       frontend/cypress-results/**/*.xml
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     comment_title: "Test Results"
-    #     check_name: "Test Results"
-    #     fail_on: "errors"
-    #     report_individual_runs: "true"
-    #     deduplicate_classes_by_file_name: "true"
+
+    - name: Publish Cypress Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: |
+          frontend/cypress-results/**/*.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        comment_title: "Test Results"
+        check_name: "Test Results"
+        fail_on: "errors"
+        report_individual_runs: "true"
+        deduplicate_classes_by_file_name: "true"
 
     - name: Check test results
       if: always()
