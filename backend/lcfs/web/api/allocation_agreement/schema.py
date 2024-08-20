@@ -10,7 +10,7 @@ class AllocationTransactionTypeSchema(BaseSchema):
 
 
 class FuelTypeSchema(BaseSchema):
-    fuel_type_id: int
+    fuel_type_id: Optional[int] = None
     fuel_type: str
 
 

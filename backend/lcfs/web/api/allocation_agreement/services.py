@@ -63,12 +63,16 @@ class AllocationAgreementServices:
         Gets the list of table options related to allocation agreements.
         """
         table_options = await self.repo.get_table_options()
+        fuel_types = [FuelTypeSchema.model_validate(
+            fuel_type) for fuel_type in table_options["fuel_types"]]
+        fuel_types.append(
+            FuelTypeSchema.model_validate({'fuel_type': "Other"}))
+
         return AllocationAgreementTableOptionsSchema(
             allocation_transaction_types=[AllocationTransactionTypeSchema.model_validate(
                 allocation_transaction_type
             ) for allocation_transaction_type in table_options["allocation_transaction_types"]],
-            fuel_types=[FuelTypeSchema.model_validate(
-                fuel_type) for fuel_type in table_options["fuel_types"]],
+            fuel_types=fuel_types,
             fuel_categories=[FuelCategorySchema.model_validate(
                 category) for category in table_options["fuel_categories"]],
             provisions_of_the_act=[ProvisionOfTheActSchema.model_validate(
