@@ -72,10 +72,10 @@ jobs:
       run: |
         sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
 
-    # - name: Build and start services
-    #   run: |
-    #     docker-compose build
-    #     docker-compose up -d
+    - name: Build and start services
+      run: |
+        docker-compose build
+        docker-compose up -d
 
     - name: Run backend tests
       id: backend_tests
@@ -116,10 +116,37 @@ jobs:
       with:
         name: vitest-results
         path: frontend/vitest-results.xml
+
+    - name: Run Cypress tests
+      id: cypress_tests
+      continue-on-error: true
+      uses: cypress-io/github-action@v5
+      with:
+        command: npm run cypress:run -- --reporter junit --reporter-options "mochaFile=cypress-results/results-[hash].xml"
+        wait-on: 'http://localhost:3000'
+        working-directory: frontend
+      env:
+        admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
+        admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+        org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
+        org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }}
+        org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }}
+        org1_bceid_userId: ${{ secrets.ORG1_BCEID_USERID }}
+        org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }}
+        org2_bceid_password: ${{ secrets.ORG2_BCEID_PASSWORD }}
+        org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }}
+        org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
+
+    - name: Upload Cypress results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: cypress-results
+        path: frontend/cypress-results
   
-    # - name: Stop services
-    #   if: always()
-    #   run: docker-compose down
+    - name: Stop services
+      if: always()
+      run: docker-compose down
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
@@ -128,6 +155,7 @@ jobs:
         files: |
           backend/pytest-results.xml
           frontend/vitest-results.xml
+          frontend/cypress-results/**/*.xml
         github_token: ${{ secrets.GITHUB_TOKEN }}
         comment_title: "Test Results"
         check_name: "Test Results"
@@ -139,7 +167,8 @@ jobs:
       if: always()
       run: |
         if [ "${{ steps.backend_tests.outcome }}" == "failure" ] || \
-           [ "${{ steps.frontend_tests.outcome }}" == "failure" ]; then
+           [ "${{ steps.frontend_tests.outcome }}" == "failure" ] || \
+           [ "${{ steps.cypress_tests.outcome }}" == "failure" ]; then
           echo "One or more tests failed"
           exit 1
         else
