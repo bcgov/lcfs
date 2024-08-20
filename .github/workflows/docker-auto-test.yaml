@@ -72,10 +72,10 @@ jobs:
       run: |
         sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
 
-    - name: Build and start services
-      run: |
-        docker-compose build
-        docker-compose up -d
+    # - name: Build and start services
+    #   run: |
+    #     docker-compose build
+    #     docker-compose up -d
 
     - name: Run backend tests
       id: backend_tests
@@ -117,9 +117,9 @@ jobs:
         name: vitest-results
         path: frontend/vitest-results.xml
   
-    - name: Stop services
-      if: always()
-      run: docker-compose down
+    # - name: Stop services
+    #   if: always()
+    #   run: docker-compose down
 
     - name: Publish Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
