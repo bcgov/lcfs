@@ -152,20 +152,43 @@ jobs:
       if: always()
       run: docker-compose down
 
-    - name: Publish Test Results
+    - name: Publish Backend Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
-        files: |
-          backend/pytest-results.xml
-          frontend/vitest-results.xml
-          frontend/cypress-results/**/*.xml
+        files: backend/pytest-results.xml
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        comment_title: "Test Results"
-        check_name: "Test Results"
+        comment_title: "Backend Test Results"
+        check_name: "Backend Test Results"
         fail_on: "errors"
         report_individual_runs: "true"
         deduplicate_classes_by_file_name: "true"
+
+    - name: Publish Frontend Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: frontend/vitest-results.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        comment_title: "Frontend Test Results"
+        check_name: "Frontend Test Results"
+        fail_on: "errors"
+        report_individual_runs: "true"
+        deduplicate_classes_by_file_name: "true"
+    # - name: Publish Test Results
+    #   uses: EnricoMi/publish-unit-test-result-action@v2
+    #   if: always()
+    #   with:
+    #     files: |
+    #       backend/pytest-results.xml
+    #       frontend/vitest-results.xml
+    #       frontend/cypress-results/**/*.xml
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     comment_title: "Test Results"
+    #     check_name: "Test Results"
+    #     fail_on: "errors"
+    #     report_individual_runs: "true"
+    #     deduplicate_classes_by_file_name: "true"
 
     - name: Check test results
       if: always()
