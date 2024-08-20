@@ -130,8 +130,8 @@ jobs:
         wait-on: 'http://localhost:3000'
         working-directory: frontend
       env:
-        ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
-        ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+        admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
+        admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }}
         org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
         org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }}
         org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }}

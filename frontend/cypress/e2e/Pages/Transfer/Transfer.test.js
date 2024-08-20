@@ -172,8 +172,8 @@ When('I login as analyst and recommend', () => {
   // Login with the updated user
   cy.loginWith(
     'idir',
-    Cypress.env(`ADMIN_IDIR_USERNAME`),
-    Cypress.env(`ADMIN_IDIR_PASSWORD`)
+    Cypress.env(`admin_idir_username`),
+    Cypress.env(`admin_idir_password`)
   )
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
@@ -201,8 +201,8 @@ When('I login as director and records transfer', () => {
   // Login with the updated user
   cy.loginWith(
     'idir',
-    Cypress.env(`ADMIN_IDIR_USERNAME`),
-    Cypress.env(`ADMIN_IDIR_PASSWORD`)
+    Cypress.env(`admin_idir_username`),
+    Cypress.env(`admin_idir_password`)
   )
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
@@ -228,8 +228,8 @@ When('I login as director and refuse transfer', () => {
   // Login with the updated user
   cy.loginWith(
     'idir',
-    Cypress.env(`ADMIN_IDIR_USERNAME`),
-    Cypress.env(`ADMIN_IDIR_PASSWORD`)
+    Cypress.env(`admin_idir_username`),
+    Cypress.env(`admin_idir_password`)
   )
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
