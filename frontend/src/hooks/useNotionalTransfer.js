@@ -39,3 +39,16 @@ export const useSaveNotionalTransfer = (options) => {
     },
   })
 }
+
+export const useGetNotionalTransfers = ({page=1, size=10, sortOrders=[], filters=[], complianceReportId} ={}, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['notional-transfers', page, size, sortOrders, filters],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getNotionalTransfers, {page, size, sortOrders, filters, complianceReportId})
+      ).data
+    },
+    ...options
+  })
+}

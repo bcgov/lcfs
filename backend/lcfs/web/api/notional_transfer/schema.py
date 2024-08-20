@@ -8,13 +8,13 @@ class ReceivedOrTransferredEnumSchema(str, Enum):
     Transferred = "Transferred"
 
 class NotionalTransferCreateSchema(BaseSchema):
-    notional_transfer_id: Optional[int] = None
-    compliance_report_id: int
-    quantity: int
     legal_name: str
     address_for_service: str
     fuel_category: str
     received_or_transferred: ReceivedOrTransferredEnumSchema
+    quantity: int
+    notional_transfer_id: Optional[int] = None
+    compliance_report_id: int
     deleted: Optional[bool] = None
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):
