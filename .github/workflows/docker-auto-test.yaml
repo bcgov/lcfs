@@ -58,6 +58,10 @@ jobs:
 
     - name: Install backend dependencies
       run: |
+        # Ensure that pip, setuptools, and wheel are up to date
+        pip install --upgrade pip setuptools wheel
+        
+        # Install Poetry dependencies
         cd backend
         poetry config virtualenvs.create false
         poetry install
