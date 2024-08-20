@@ -130,8 +130,8 @@ jobs:
         wait-on: 'http://localhost:3000'
         working-directory: frontend
       env:
-        admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
-        admin_idir_password: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+        ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
+        ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
         org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
         org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }}
         org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }}
@@ -176,15 +176,15 @@ jobs:
         report_individual_runs: "true"
         deduplicate_classes_by_file_name: "true"
 
-    - name: Publish Cypress Test Results
+    - name: Publish End-to-End Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
         files: |
           frontend/cypress-results/**/*.xml
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        comment_title: "Test Results"
-        check_name: "Test Results"
+        comment_title: "End-to-End Test Results"
+        check_name: "End-to-End Test Results"
         fail_on: "errors"
         report_individual_runs: "true"
         deduplicate_classes_by_file_name: "true"

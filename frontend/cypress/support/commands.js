@@ -27,6 +27,7 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   // cy.wait(5000)
   const loginProcess = (args) => {
     const [username, password] = args
+    console.log('username', username)
     cy.get('input[name=user]').type(username, { log: false })
     cy.get('input[name=password]').type(password, { log: false })
     cy.get('form').submit()
