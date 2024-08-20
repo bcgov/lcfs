@@ -16,7 +16,6 @@
     "test": "vitest",
     "test.coverage": "vitest --coverage",
     "test:run": "vitest run",
-    "test.coverage": "vitest --coverage",
     "cypress:install": "cypress install",
     "cypress:verify": "cypress verify",
     "cypress:open": "cypress open",
