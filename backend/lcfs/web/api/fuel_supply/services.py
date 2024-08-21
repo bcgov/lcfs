@@ -20,6 +20,7 @@ from lcfs.web.api.fuel_supply.schema import (
     UnitOfMeasureSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 
 logger = getLogger(__name__)
@@ -27,10 +28,14 @@ logger = getLogger(__name__)
 
 class FuelSupplyServices:
     def __init__(
-        self, request: Request = None, repo: FuelSupplyRepository = Depends()
+        self, 
+        request: Request = None, 
+        repo: FuelSupplyRepository = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends()
     ) -> None:
         self.request = request
         self.repo = repo
+        self.compliance_report_repo = compliance_report_repo
 
     def fuel_type_row_mapper(self, compliance_period, fuel_types, row):
         column_names = row._fields
@@ -240,44 +245,6 @@ class FuelSupplyServices:
             quantity=None  # or any appropriate default value
         )
         return await self.repo.create_fuel_supply(delete_record)
-
-    @service_handler
-    async def get_effective_fuel_supplies(self, report_id: int, is_supplemental: bool = False):
-        if is_supplemental:
-            report = await self.repo.get_supplemental_report(report_id)
-            if not report:
-                raise ValueError("Supplemental report not found")
-            original_report_id = report.original_report_id
-        else:
-            original_report_id = report_id
-            report = await self.repo.get_compliance_report(report_id)
-            if not report:
-                raise ValueError("Compliance report not found")
-
-        # Get all supplemental reports in order
-        supplemental_reports = await self.repo.get_supplemental_reports(original_report_id)
-
-        # Start with the original report's fuel supplies
-        original_supplies = await self.repo.get_fuel_supplies(original_report_id)
-
-        effective_supplies = {supply.fuel_supply_id: supply for supply in original_supplies}
-
-        # Apply changes from each supplemental report up to the desired version
-        for supp_report in supplemental_reports:
-            supp_supplies = await self.repo.get_fuel_supplies(supp_report.supplemental_report_id, is_supplemental=True)
-
-            for supply in supp_supplies:
-                if supply.change_type == ChangeType.DELETE:
-                    effective_supplies.pop(supply.previous_fuel_supply_id, None)
-                elif supply.change_type == ChangeType.UPDATE:
-                    effective_supplies[supply.previous_fuel_supply_id] = supply
-                else:  # CREATE
-                    effective_supplies[supply.fuel_supply_id] = supply
-
-            if is_supplemental and supp_report.supplemental_report_id == report_id:
-                break
-
-        return list(effective_supplies.values())
 
     @service_handler
     async def get_fuel_supply_changes(self, original_report_id: int, supplemental_report_id: int):
