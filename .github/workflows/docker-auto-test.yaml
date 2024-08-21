@@ -16,19 +16,19 @@ jobs:
     - name: Verify secrets are set
       run: |
         echo "Verifying secrets..."
-        echo "ADMIN_IDIR_USERNAME: ${ADMIN_IDIR_USERNAME}"
+        echo "admin_idir_username: ${admin_idir_username}"
         echo "ADMIN_IDIR_PASSWORD: [REDACTED]"
-        echo "ORG1_BCEID_USERNAME: ${ORG1_BCEID_USERNAME}"
+        echo "org1_bceid_username: ${org1_bceid_username}"
         echo "ORG1_BCEID_PASSWORD: [REDACTED]"
-        echo "ORG2_BCEID_USERNAME: ${ORG2_BCEID_USERNAME}"
+        echo "org2_bceid_username: ${org2_bceid_username}"
         echo "ORG2_BCEID_PASSWORD: [REDACTED]"
         echo "Secrets are set successfully."
       env:
-        ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
+        admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
         ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
-        ORG1_BCEID_USERNAME: ${{ secrets.ORG1_BCEID_USERNAME }}
+        org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
         ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
-        ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
+        org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }}
         ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
       
     - name: Set up Python
