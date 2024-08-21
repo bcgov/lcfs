@@ -146,7 +146,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: cypress-results
-        path: frontend/cypress-results
+        path: frontend/cypress/reports/
   
     - name: Stop services
       if: always()
@@ -181,7 +181,9 @@ jobs:
       if: always()
       with:
         files: |
-          frontend/cypress-results/**/*.xml
+          frontend/cypress/reports/**/*.xml
+          frontend/cypress/reports/**/*.json
+          frontend/cypress/reports/**/*.html
         github_token: ${{ secrets.GITHUB_TOKEN }}
         comment_title: "End-to-End Test Results"
         check_name: "End-to-End Test Results"
