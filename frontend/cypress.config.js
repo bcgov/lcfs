@@ -10,6 +10,7 @@ export default defineConfig({
     reporter: 'mochawesome',
     reporterOptions: {
       reportDir: 'cypress/reports',
+      reportFilename: 'results.json',
       overwrite: true,
       html: false,
       json: true

@@ -182,7 +182,7 @@ jobs:
       run: |
         # Process Cypress results
         echo "End-to-End Test Results:" >> test_summary.md
-        jq -r '.stats | "Total: \(.tests), Passed: \(.passes), Failed: \(.failures)"' frontend/cypress/reports/mochawesome.json >> test_summary.md
+        jq -r '.stats | "Total: \(.tests), Passed: \(.passes), Failed: \(.failures)"' frontend/cypress/reports/results.json >> test_summary.md
         
         # Post comment to PR
         gh pr comment ${{ github.event.pull_request.number }} --body-file test_summary.md
