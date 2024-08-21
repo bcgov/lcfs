@@ -13,7 +13,24 @@ jobs:
     - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.pull_request.head.sha }}
-
+    - name: Verify secrets are set
+      run: |
+        echo "Verifying secrets..."
+        echo "ADMIN_IDIR_USERNAME: ${ADMIN_IDIR_USERNAME}"
+        echo "ADMIN_IDIR_PASSWORD: [REDACTED]"
+        echo "ORG1_BCEID_USERNAME: ${ORG1_BCEID_USERNAME}"
+        echo "ORG1_BCEID_PASSWORD: [REDACTED]"
+        echo "ORG2_BCEID_USERNAME: ${ORG2_BCEID_USERNAME}"
+        echo "ORG2_BCEID_PASSWORD: [REDACTED]"
+        echo "Secrets are set successfully."
+      env:
+        ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
+        ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+        ORG1_BCEID_USERNAME: ${{ secrets.ORG1_BCEID_USERNAME }}
+        ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
+        ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
+        ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
+      
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
