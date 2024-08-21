@@ -13,23 +13,6 @@ jobs:
     - uses: actions/checkout@v3
       with:
         ref: ${{ github.event.pull_request.head.sha }}
-    - name: Verify secrets are set
-      run: |
-        echo "Verifying secrets..."
-        echo "admin_idir_username: ${admin_idir_username}"
-        echo "ADMIN_IDIR_PASSWORD: [REDACTED]"
-        echo "org1_bceid_username: ${org1_bceid_username}"
-        echo "ORG1_BCEID_PASSWORD: [REDACTED]"
-        echo "org2_bceid_username: ${org2_bceid_username}"
-        echo "ORG2_BCEID_PASSWORD: [REDACTED]"
-        echo "Secrets are set successfully."
-      env:
-        admin_idir_username: ${{ secrets.ADMIN_IDIR_USERNAME }}
-        ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
-        org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
-        ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
-        org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }}
-        ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -194,20 +177,30 @@ jobs:
         fail_on: "errors"
         report_individual_runs: "true"
         deduplicate_classes_by_file_name: "true"
-
-    - name: Publish End-to-End Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
+    - name: Process and Publish End-to-end Test Results
       if: always()
-      with:
-        files: |
-          frontend/cypress/reports/**/*
-          frontend/cypress/screenshots/**/*
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        comment_title: "End-to-End Test Results"
-        check_name: "End-to-End Test Results"
-        fail_on: "errors"
-        report_individual_runs: "true"
-        deduplicate_classes_by_file_name: "true"
+      run: |
+        # Process Cypress results
+        echo "End-to-End Test Results:" >> test_summary.md
+        jq -r '.stats | "Total: \(.tests), Passed: \(.passes), Failed: \(.failures)"' frontend/cypress/reports/mochawesome.json >> test_summary.md
+        
+        # Post comment to PR
+        gh pr comment ${{ github.event.pull_request.number }} --body-file test_summary.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # - name: Publish End-to-End Test Results
+    #   uses: EnricoMi/publish-unit-test-result-action@v2
+    #   if: always()
+    #   with:
+    #     files: |
+    #       frontend/cypress/reports/**/*
+    #       frontend/cypress/screenshots/**/*
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     comment_title: "End-to-End Test Results"
+    #     check_name: "End-to-End Test Results"
+    #     fail_on: "errors"
+    #     report_individual_runs: "true"
+    #     deduplicate_classes_by_file_name: "true"
 
     - name: Check test results
       if: always()
