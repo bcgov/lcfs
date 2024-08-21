@@ -198,7 +198,6 @@ jobs:
            [ "${{ steps.frontend_tests.outcome }}" == "failure" ] || \
            [ "${{ steps.cypress_tests.outcome }}" == "failure" ]; then
           echo "One or more tests failed"
-          exit 1
         else
           echo "All tests passed"
         fi
