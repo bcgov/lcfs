@@ -1,3 +1,4 @@
+import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
@@ -74,6 +75,22 @@ export const useCurrentOrgBalance = (options) => {
     queryKey: ['current-org-balance'],
     queryFn: async () =>
       (await client.get(`/organizations/current/balances`)).data,
+    ...options
+  })
+}
+
+export const useGetOrgComplianceReportReportedYears = (orgID, options) => {
+  const client = useApiService()
+  const path = apiRoutes.getOrgComplianceReportReportedYears.replace(
+    ':orgID',
+    orgID
+  )
+
+  return useQuery({
+    queryKey: ['org-compliance-reports', orgID],
+    queryFn: async () => {
+      return (await client.get(`${path}`)).data
+    },
     ...options
   })
 }

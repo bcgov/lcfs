@@ -40,6 +40,8 @@ export const apiRoutes = {
   updateComplianceReportSummary: '/reports/summary/:summaryID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
+  getOrgComplianceReportReportedYears:
+    '/organization/:orgID/reports/reported-years',
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
   getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
   saveFinalSupplyEquipments: '/final-supply-equipments/save',
@@ -48,5 +50,5 @@ export const apiRoutes = {
   saveFuelSupplies: '/fuel-supply/save',
   directorReviewCounts: '/dashboard/director-review-counts/',
   TransactionCounts: '/dashboard/transaction-counts',
-  OrgTransactionCounts: '/dashboard/org-transaction-counts',
+  OrgTransactionCounts: '/dashboard/org-transaction-counts'
 }

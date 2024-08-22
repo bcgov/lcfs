@@ -43,13 +43,14 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
 
 export const useGetComplianceReportSummary = (reportID, options) => {
   const client = useApiService()
-  const path = apiRoutes.getComplianceReportSummary.replace(':reportID', reportID)
+  const path = apiRoutes.getComplianceReportSummary.replace(
+    ':reportID',
+    reportID
+  )
   return useQuery({
     queryKey: ['compliance-report-summary', reportID],
     queryFn: async () => {
-      return (
-        await client.get(path)
-      ).data
+      return (await client.get(path)).data
     },
     ...options
   })
@@ -58,7 +59,10 @@ export const useGetComplianceReportSummary = (reportID, options) => {
 export const useUpdateComplianceReportSummary = (summaryID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const path = apiRoutes.updateComplianceReportSummary.replace(':summaryID', summaryID)
+  const path = apiRoutes.updateComplianceReportSummary.replace(
+    ':summaryID',
+    summaryID
+  )
   return useMutation({
     ...options,
     mutationFn: async (data) => {

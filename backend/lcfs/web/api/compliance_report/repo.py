@@ -146,7 +146,7 @@ class ComplianceReportRepository:
             select(ComplianceReport)
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-    
+
     @repo_handler
     async def get_supplemental_report(self, supplemental_report_id: int) -> Optional[SupplementalReport]:
         """
@@ -168,7 +168,7 @@ class ComplianceReportRepository:
             .order_by(SupplementalReport.create_date.asc())
         )
         return result.scalars().all()
-    
+
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
         """
@@ -216,7 +216,7 @@ class ComplianceReportRepository:
                 "organization",
                 "other_uses",
                 "current_status",
-                "summary",            ],
+                "summary",],
         )
         return ComplianceReportBaseSchema.model_validate(report)
 
@@ -429,7 +429,7 @@ class ComplianceReportRepository:
     async def save_compliance_report_summary(self, summary_id: int, summary: ComplianceReportSummarySchema):
         """
         Save the compliance report summary to the database.
-        
+
         :param summary_id: The ID of the compliance report summary
         :param summary: The generated summary data
         """
@@ -445,7 +445,8 @@ class ComplianceReportRepository:
             line_number = row.line
             for fuel_type in ['gasoline', 'diesel', 'jet_fuel']:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                setattr(summary_obj, column_name, int(getattr(row, fuel_type) or 0))
+                setattr(summary_obj, column_name, int(
+                    getattr(row, fuel_type) or 0))
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:
@@ -475,17 +476,20 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
-        query = select(ComplianceReportSummary).where(ComplianceReportSummary.summary_id == summary_id)
+        query = select(ComplianceReportSummary).where(
+            ComplianceReportSummary.summary_id == summary_id)
         result = await self.db.execute(query)
         return result.scalars().first()
-    
+
     @repo_handler
     async def get_summary_by_report_id(self, report_id: int, is_supplemental: bool = False) -> ComplianceReportSummary:
         if is_supplemental:
-            query = select(ComplianceReportSummary).where(ComplianceReportSummary.supplemental_report_id == report_id)
+            query = select(ComplianceReportSummary).where(
+                ComplianceReportSummary.supplemental_report_id == report_id)
         else:
-            query = select(ComplianceReportSummary).where(ComplianceReportSummary.compliance_report_id == report_id)
-            
+            query = select(ComplianceReportSummary).where(
+                ComplianceReportSummary.compliance_report_id == report_id)
+
         result = await self.db.execute(query)
         return result.scalars().first()
 
@@ -501,7 +505,7 @@ class ComplianceReportRepository:
         ).where(
             ComplianceReportSummary.compliance_report_id == report_id
         ).order_by(ComplianceReportSummary.version)
-        
+
         result = await self.db.execute(query)
         return result.all()
 
@@ -511,9 +515,10 @@ class ComplianceReportRepository:
         result = await self.db.scalar(
             select(func.sum(Transfer.quantity))
             .where(
-                Transfer.agreement_date.between(compliance_period_start, compliance_period_end),
+                Transfer.agreement_date.between(
+                    compliance_period_start, compliance_period_end),
                 Transfer.from_organization_id == organization_id,
-                Transfer.current_status_id == 6 # Recorded
+                Transfer.current_status_id == 6  # Recorded
             )
         )
         return result or 0
@@ -525,9 +530,10 @@ class ComplianceReportRepository:
         result = await self.db.scalar(
             select(func.sum(Transfer.quantity))
             .where(
-                Transfer.agreement_date.between(compliance_period_start, compliance_period_end),
+                Transfer.agreement_date.between(
+                    compliance_period_start, compliance_period_end),
                 Transfer.to_organization_id == organization_id,
-                Transfer.current_status_id == 6 # Recorded
+                Transfer.current_status_id == 6  # Recorded
             )
         )
         return result or 0
@@ -539,9 +545,10 @@ class ComplianceReportRepository:
         result = await self.db.scalar(
             select(func.sum(InitiativeAgreement.compliance_units))
             .where(
-                InitiativeAgreement.transaction_effective_date.between(compliance_period_start, compliance_period_end),
+                InitiativeAgreement.transaction_effective_date.between(
+                    compliance_period_start, compliance_period_end),
                 InitiativeAgreement.to_organization_id == organization_id,
-                InitiativeAgreement.current_status_id == 3 # Approved
+                InitiativeAgreement.current_status_id == 3  # Approved
             )
         )
         return result or 0
@@ -568,7 +575,8 @@ class ComplianceReportRepository:
         fuel_supply_query = (
             select(
                 FuelCategory.category,
-                func.coalesce(func.sum(FuelSupply.quantity), 0).label('quantity')
+                func.coalesce(func.sum(FuelSupply.quantity),
+                              0).label('quantity')
             )
             .select_from(FuelSupply)
             .join(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
@@ -585,7 +593,8 @@ class ComplianceReportRepository:
         other_uses_query = (
             select(
                 FuelCategory.category,
-                func.coalesce(func.sum(OtherUses.quantity_supplied), 0).label('quantity')
+                func.coalesce(func.sum(OtherUses.quantity_supplied), 0).label(
+                    'quantity')
             )
             .select_from(OtherUses)
             .join(FuelType, OtherUses.fuel_type_id == FuelType.fuel_type_id)
@@ -603,7 +612,8 @@ class ComplianceReportRepository:
             allocation_agreement_query = (
                 select(
                     FuelCategory.category,
-                    func.coalesce(func.sum(AllocationAgreement.quantity), 0).label('quantity')
+                    func.coalesce(func.sum(AllocationAgreement.quantity), 0).label(
+                        'quantity')
                 )
                 .select_from(AllocationAgreement)
                 .join(FuelType, AllocationAgreement.fuel_type_id == FuelType.fuel_type_id)
@@ -617,3 +627,12 @@ class ComplianceReportRepository:
             aggregate_fuel_quantities(await self.db.execute(allocation_agreement_query))
 
         return dict(fuel_quantities)
+
+    @repo_handler
+    async def get_all_org_reported_years(self, organization_id: int):
+
+        return (await self.db.execute(
+            select(CompliancePeriod)
+            .join(ComplianceReport, ComplianceReport.compliance_period_id == CompliancePeriod.compliance_period_id)
+            .where(ComplianceReport.organization_id == organization_id)
+        )).scalars().all()

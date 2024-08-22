@@ -11,6 +11,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from starlette import status
+from typing import List
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
@@ -30,6 +31,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    CompliancePeriodSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -264,6 +266,24 @@ async def get_compliance_reports(
     return await report_service.get_compliance_reports_paginated(
         pagination, organization_id
     )
+
+
+@router.get(
+    "/{organization_id}/reports/reported-years",
+    response_model=List[CompliancePeriodSchema],
+    status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def get_all_org_reported_years(
+    request: Request,
+    organization_id: int,
+    report_service: ComplianceReportServices = Depends(),
+) -> List[CompliancePeriodSchema]:
+    """
+    Gets all compliance report years that an organization has reported
+    """
+
+    return await report_service.get_all_org_reported_years(organization_id)
 
 
 @router.get(
