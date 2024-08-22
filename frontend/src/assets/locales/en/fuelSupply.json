@@ -3,7 +3,7 @@
   "noFuelSuppliesFound": "No fuel supplies found",
   "addFuelSupplyRowsTitle": "Add new supply of fuel",
   "fuelSupplySubtitle": "Report the fuel volumes supplied for various uses.",
-  "fuelSupplyDownloadBtn": "Download as excel",
+  "fuelSupplyDownloadBtn": "Download as Excel",
   "fuelSupplyDownloadingMsg": "Downloading supply of fuels information",
   "fuelSupplyDownloadFailMsg": "Failed to download supply of fuel information.",
   "LoadFailMsg": "Failed to load supply of fuel rows",
