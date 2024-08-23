@@ -67,9 +67,7 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
-    console.log("OPTIONS DATA", optionsData)
     if (optionsData?.fuelCategories?.length > 0) {
-      console.log("LOADING OPTIONS DATA")
       const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors)
       setColumnDefs(updatedColumnDefs)
     }
@@ -80,7 +78,7 @@ export const AddEditAllocationAgreements = () => {
       const updatedRowData = data.allocationAgreements.map((item) => ({
         ...item,
         agreementType: item.agreementType?.type,
-        tradingPartner: item.tradingPartner?.name,
+        transactionPartner: item.transactionPartner?.name,
         id: uuid()
       }))
       setRowData(updatedRowData)
@@ -91,11 +89,22 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
-      // Need to add any specific logic for cell value changes here
-      // For example, updating related fields based on the changed value
+      if (['fuelType', 'fuelCode', 'determiningCarbonIntensity'].includes(params.colDef.field)) {
+        let ciFuel = 0;
+        if (params.data.determiningCarbonIntensity === 'Approved fuel code - Section 6 (5) (c)') {
+          const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+          const fuelCode = fuelType?.fuelCodes?.find((item) => item.fuelCode === params.data.fuelCode);
+          ciFuel = fuelCode?.carbonIntensity || 0;
+        } else {
+          const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+          ciFuel = fuelType?.defaultCarbonIntensity || 0;
+        }
+        
+        params.node.setDataValue('ciFuel', ciFuel);
+      }
     },
     [optionsData]
-  )
+  );
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -162,7 +171,7 @@ export const AddEditAllocationAgreements = () => {
           })
         }
       }
-
+      updatedData.ciFuel = params.node.data.ciFuel
       params.node.updateData(updatedData)
     },
     [saveRow, t]
@@ -240,6 +249,7 @@ export const AddEditAllocationAgreements = () => {
             rowData={rowData}
             gridOptions={gridOptions}
             loading={optionsLoading || allocationAgreementsLoading}
+            loadingMessage={'Loading...'}
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}

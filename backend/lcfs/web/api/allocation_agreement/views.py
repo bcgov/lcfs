@@ -123,11 +123,11 @@ async def save_allocation_agreements_row(
 @view_handler(['*'])
 async def search_table_options_strings(
     request: Request,
-    trading_partner: Optional[str] = Query(None, alias="tradingPartner", description="Trading partner (company) for filtering options"),
+    transaction_partner: Optional[str] = Query(None, alias="transactionPartner", description="Trading partner (company) for filtering options"),
     service: AllocationAgreementServices = Depends(),
 ):
     """Endpoint to search allocation agreement options based on a query string"""
-    if trading_partner:
-        return await service.search_trading_partner(trading_partner)
+    if transaction_partner:
+        return await service.search_trading_partner(transaction_partner)
     else:
         return []

@@ -1,14 +1,14 @@
 from logging import getLogger
-from typing import List
-
+from typing import List, Dict, Any
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
 from sqlalchemy import and_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
 
 from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.fuel.FuelClass import FuelClass
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
@@ -48,6 +48,52 @@ class FuelCodeRepository:
             .scalars()
             .all()
         )
+    
+    @repo_handler
+    async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
+        """Get all fuel type options with their associated fuel categories and fuel codes"""
+        query = (
+            select(FuelType)
+            .outerjoin(FuelType.fuel_classes)
+            .outerjoin(FuelClass.fuel_category)
+            .options(
+                contains_eager(FuelType.fuel_classes).contains_eager(FuelClass.fuel_category),
+                joinedload(FuelType.provision_1),
+                joinedload(FuelType.provision_2),
+                joinedload(FuelType.fuel_codes),
+            )
+        )
+        
+        result = await self.db.execute(query)
+        fuel_types = result.unique().scalars().all()
+        
+        # Prepare the data in the format matching your schema
+        formatted_fuel_types = []
+        for fuel_type in fuel_types:
+            formatted_fuel_type = {
+                "fuel_type_id": fuel_type.fuel_type_id,
+                "fuel_type": fuel_type.fuel_type,
+                "default_carbon_intensity": fuel_type.default_carbon_intensity,
+                "units": fuel_type.units if fuel_type.units else None,
+                "fuel_categories": [
+                    {
+                        "fuel_category_id": fc.fuel_category.fuel_category_id,
+                        "category": fc.fuel_category.category
+                    }
+                    for fc in fuel_type.fuel_classes
+                ],
+                "fuel_codes": [
+                    {
+                        "fuel_code_id": fc.fuel_code_id,
+                        "fuel_code": fc.fuel_code,
+                        "carbon_intensity": fc.carbon_intensity
+                    }
+                    for fc in fuel_type.fuel_codes
+                ]
+            }
+            formatted_fuel_types.append(formatted_fuel_type)
+
+        return formatted_fuel_types
 
     @repo_handler
     async def get_fuel_type_by_name(self, fuel_type_name: str) -> FuelType:

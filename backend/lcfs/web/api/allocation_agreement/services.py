@@ -45,7 +45,7 @@ class AllocationAgreementServices:
         allocation_transaction_type = await self.repo.get_allocation_transaction_type_by_name(allocation_agreement.allocation_transaction_type)
         fuel_category = await self.fuel_repo.get_fuel_category_by_name(allocation_agreement.fuel_category)
         fuel_type = await self.fuel_repo.get_fuel_type_by_name(allocation_agreement.fuel_type)
-        provision_of_the_act = await self.fuel_repo.get_provision_of_the_act_by_name(allocation_agreement.provision_of_the_act)
+        # provision_of_the_act = await self.fuel_repo.get_provision_of_the_act_by_name(allocation_agreement.provision_of_the_act)
         fuel_code = await self.fuel_repo.get_fuel_code_by_name(allocation_agreement.fuel_code)
 
         return AllocationAgreement(
@@ -53,7 +53,7 @@ class AllocationAgreementServices:
             allocation_transaction_type_id=allocation_transaction_type.allocation_transaction_type_id,
             fuel_category_id=fuel_category.fuel_category_id,
             fuel_type_id=fuel_type.fuel_type_id,
-            provision_of_the_act_id=provision_of_the_act.provision_of_the_act_id,
+            provision_of_the_act_id= 1, # provision_of_the_act.provision_of_the_act_id, TODO confirm with business area correct provision
             fuel_code_id=fuel_code.fuel_code_id
         )
 
@@ -65,8 +65,7 @@ class AllocationAgreementServices:
         table_options = await self.repo.get_table_options()
         fuel_types = [FuelTypeSchema.model_validate(
             fuel_type) for fuel_type in table_options["fuel_types"]]
-        fuel_types.append(
-            FuelTypeSchema.model_validate({'fuel_type': "Other"}))
+        # fuel_types.append({'fuel_type': "Other"}) # TODO handle custom fuel types after refactor
 
         return AllocationAgreementTableOptionsSchema(
             allocation_transaction_types=[AllocationTransactionTypeSchema.model_validate(
@@ -187,7 +186,7 @@ class AllocationAgreementServices:
         allocation_transaction_type_value = created_allocation_agreement.allocation_transaction_type.type
         fuel_type_value = created_allocation_agreement.fuel_type.fuel_type
         fuel_category_value = created_allocation_agreement.fuel_category.category
-        provision_of_the_act_value = created_allocation_agreement.provision_of_the_act.name
+        # provision_of_the_act_value = created_allocation_agreement.provision_of_the_act.name
         fuel_code_value = created_allocation_agreement.fuel_code.fuel_code
 
         return AllocationAgreementSchema(
@@ -204,7 +203,7 @@ class AllocationAgreementServices:
             allocation_transaction_type=allocation_transaction_type_value,
             fuel_type=fuel_type_value,
             fuel_category=fuel_category_value,
-            provision_of_the_act=provision_of_the_act_value,
+            # provision_of_the_act=provision_of_the_act_value,
             fuel_code=fuel_code_value
         )
 

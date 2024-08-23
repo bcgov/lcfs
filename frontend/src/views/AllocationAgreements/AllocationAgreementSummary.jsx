@@ -2,7 +2,6 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
-import { CommonArrayRenderer } from '@/utils/cellRenderers'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -47,16 +46,16 @@ export const AllocationAgreementSummary = ({ data }) => {
   )
 
   const columns = useMemo(() => ([
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.transaction'), field: "transaction" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.legalName'), field: "legalName" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.addressForService'), field: "addressForService" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.email'), field: "email" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.phone'), field: "phone" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.transaction'), field: "allocationTransactionType" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.transactionPartner'), field: "transactionPartner" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.postalAddress'), field: "postalAddress" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'), field: "transactionPartnerEmail" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'), field: "transactionPartnerPhone" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelType'), field: "fuelType" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCategory'), field: "fuelCategory" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.carbonIntensity'), field: "carbonIntensity" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.carbonIntensity'), field: "determiningCarbonIntensity" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'), field: "fuelCode" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'), field: "ciOfFuel" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.ciFuel'), field: "ciFuel" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'), field: "quantity" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.units'), field: "units" }
   ]), [t])

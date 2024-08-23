@@ -31,7 +31,7 @@ class AllocationAgreementRepository:
     async def get_table_options(self) -> dict:
         """Get all table options"""
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.fuel_code_repo.get_fuel_types()
+        fuel_types = await self.fuel_code_repo.get_formatted_fuel_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
         allocation_transaction_types = (await self.db.execute(select(AllocationTransactionType))).scalars().all()
         provisions_of_the_act = (await self.db.execute(select(ProvisionOfTheAct))).scalars().all()

@@ -91,16 +91,6 @@
       "units": "kg"
     },
     {
-      "fuel_type_id": 8,
-      "fuel_type": "Other - gasoline category",
-      "fossil_derived": false,
-      "other_uses_fossil_derived": true,
-      "provision_1_id": 2,
-      "provision_2_id": 3,
-      "default_carbon_intensity": 93.67,
-      "units": "L"
-    },
-    {
       "fuel_type_id": 9,
       "fuel_type": "Other diesel fuel",
       "fossil_derived": false,
@@ -111,30 +101,10 @@
       "units": "L"
     },
     {
-      "fuel_type_id": 10,
-      "fuel_type": "Other - diesel category",
-      "fossil_derived": false,
-      "other_uses_fossil_derived": true,
-      "provision_1_id": 2,
-      "provision_2_id": 3,
-      "default_carbon_intensity": 100.21,
-      "units": "L"
-    },
-    {
       "fuel_type_id": 11,
       "fuel_type": "Alternative jet fuel",
       "fossil_derived": false,
       "other_uses_fossil_derived": false,
-      "provision_1_id": 2,
-      "provision_2_id": 3,
-      "default_carbon_intensity": 88.83,
-      "units": "L"
-    },
-    {
-      "fuel_type_id": 12,
-      "fuel_type": "Other - jet fuel category",
-      "fossil_derived": false,
-      "other_uses_fossil_derived": true,
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 88.83,
@@ -927,28 +897,13 @@
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 13,
-      "fuel_type_id": 8,
-      "fuel_category_id": 1
-    },
-    {
       "fuel_class_id": 14,
       "fuel_type_id": 9,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 15,
-      "fuel_type_id": 10,
-      "fuel_category_id": 2
-    },
-    {
       "fuel_class_id": 16,
       "fuel_type_id": 11,
-      "fuel_category_id": 3
-    },
-    {
-      "fuel_class_id": 17,
-      "fuel_type_id": 12,
       "fuel_category_id": 3
     },
     {
