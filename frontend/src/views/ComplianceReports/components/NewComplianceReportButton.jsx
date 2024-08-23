@@ -1,20 +1,28 @@
-import { useState, useRef } from 'react'
-// mui components
 import BCButton from '@/components/BCButton'
-import { Menu, MenuItem } from '@mui/material'
-// Icons
+import { useCompliancePeriod } from '@/hooks/useComplianceReports'
+import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
 import {
-  faCaretUp,
   faCaretDown,
+  faCaretUp,
   faCirclePlus
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// hooks
+import { Menu, MenuItem } from '@mui/material'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 
-export const NewComplianceReportButton = ({ handleNewReport, isButtonLoading, setIsButtonLoading }) => {
+export const NewComplianceReportButton = ({
+  handleNewReport,
+  isButtonLoading,
+  setIsButtonLoading
+}) => {
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
+  const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears(1)
+
+  const reportedPeriodIDs = reportedPeriods?.map(
+    (period) => period.compliancePeriodId
+  )
+
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
   const { t } = useTranslation(['common', 'report'])
@@ -34,6 +42,15 @@ export const NewComplianceReportButton = ({ handleNewReport, isButtonLoading, se
   }
 
   const isMenuOpen = Boolean(anchorEl)
+
+  const filteredDates = () => {
+    const currentYear = new Date().getFullYear()
+    const yearAhead = currentYear + 1
+    return periods?.data.filter((item) => {
+      const effectiveYear = new Date(item.effectiveDate).getFullYear()
+      return effectiveYear <= yearAhead && effectiveYear >= currentYear
+    })
+  }
 
   return (
     <div>
@@ -81,10 +98,11 @@ export const NewComplianceReportButton = ({ handleNewReport, isButtonLoading, se
             }
           }}
         >
-          {periods?.data?.map((period) => (
+          {filteredDates().map((period) => (
             <MenuItem
               key={period.compliancePeriodId}
               onClick={() => handleComplianceOptionClick(period)}
+              disabled={reportedPeriodIDs.includes(period.compliancePeriodId)}
             >
               {period.description}
             </MenuItem>
