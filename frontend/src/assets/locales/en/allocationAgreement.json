@@ -13,7 +13,7 @@
     "fuelCategory": "Fuel category",
     "carbonIntensity": "Determining carbon intensity",
     "fuelCode": "Fuel code",
-    "ciFuel": "CI of fuel",
+    "ciOfFuel": "CI of fuel",
     "quantity": "Quantity",
     "units": "Units",
     "agreementType": "Agreement Type",
@@ -21,7 +21,7 @@
     "complianceReportId": "Compliance Report ID",
     "allocationAgreementId": "Allocation Agreement ID",
     "fuelTypeOther": "Fuel type other",
-    "determiningCarbonIntensity": "Determining Carbon Intensity",
+    "provisionOfTheAct": "Determining Carbon Intensity",
     "energyDensity": "Energy Density"
   }
 }

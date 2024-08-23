@@ -6,7 +6,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, allocationAgreementColDefs } from './_schema'
+import { defaultColDef, allocationAgreementColDefs, PROVISION_APPROVED_FUEL_CODE } from './_schema'
 import {
   useAllocationAgreementOptions,
   useGetAllocationAgreements,
@@ -78,7 +78,6 @@ export const AddEditAllocationAgreements = () => {
       const updatedRowData = data.allocationAgreements.map((item) => ({
         ...item,
         agreementType: item.agreementType?.type,
-        transactionPartner: item.transactionPartner?.name,
         id: uuid()
       }))
       setRowData(updatedRowData)
@@ -89,18 +88,18 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
-      if (['fuelType', 'fuelCode', 'determiningCarbonIntensity'].includes(params.colDef.field)) {
-        let ciFuel = 0;
-        if (params.data.determiningCarbonIntensity === 'Approved fuel code - Section 6 (5) (c)') {
+      if (['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(params.colDef.field)) {
+        let ciOfFuel = 0;
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
           const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
           const fuelCode = fuelType?.fuelCodes?.find((item) => item.fuelCode === params.data.fuelCode);
-          ciFuel = fuelCode?.carbonIntensity || 0;
+          ciOfFuel = fuelCode?.carbonIntensity || 0;
         } else {
           const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
-          ciFuel = fuelType?.defaultCarbonIntensity || 0;
+          ciOfFuel = fuelType?.defaultCarbonIntensity || 0;
         }
         
-        params.node.setDataValue('ciFuel', ciFuel);
+        params.node.setDataValue('ciOfFuel', ciOfFuel);
       }
     },
     [optionsData]
@@ -171,7 +170,7 @@ export const AddEditAllocationAgreements = () => {
           })
         }
       }
-      updatedData.ciFuel = params.node.data.ciFuel
+      updatedData.ciOfFuel = params.node.data.ciOfFuel
       params.node.updateData(updatedData)
     },
     [saveRow, t]

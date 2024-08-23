@@ -7,7 +7,8 @@ import {
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import { apiRoutes } from '@/constants/routes'
+
+export const PROVISION_APPROVED_FUEL_CODE = 'Approved fuel code - Section 6 (5) (c)'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -83,17 +84,17 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerComponent: HeaderComponent,
     headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
     cellEditor: AsyncSuggestionEditor,
-    cellEditorParams: (params) => ({
-      queryKey: 'trading-partner-name-search',
-      queryFn: async ({ queryKey, client }) => {
-        let path = apiRoutes.allocationAgreementSearch
-        path += 'trading_partner=' + queryKey[1]
-        const response = await client.get(path)
-        return response.data
-      },
-      title: 'transactionPartner',
-      api: params.api,
-    }),
+    // cellEditorParams: (params) => ({
+    //   queryKey: 'trading-partner-name-search',
+    //   queryFn: async ({ queryKey, client }) => {
+    //     let path = apiRoutes.allocationAgreementSearch
+    //     path += 'trading_partner=' + queryKey[1]
+    //     const response = await client.get(path)
+    //     return response.data
+    //   },
+    //   title: 'transactionPartner',
+    //   api: params.api,
+    // }),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Enter</Typography>),
@@ -101,25 +102,25 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     minWidth: 310,
     editable: true,
-    valueSetter: (params) => {
-      if (params.newValue) {
-        const company = optionsData?.companies?.find(
-          (c) => c.name === params.newValue
-        )
-        if (company) {
-          params.data.transactionPartner = params.newValue
-          params.data.postalAddress = company.address
-          params.data.transactionPartnerEmail = company.email
-          params.data.transactionPartnerPhone = company.phone
-        } else {
-          params.data.transactionPartner = params.newValue
-          params.data.postalAddress = ''
-          params.data.transactionPartnerEmail = ''
-          params.data.transactionPartnerPhone = ''
-        }
-      }
-      return true
-    },
+    // valueSetter: (params) => {
+    //   if (params.newValue) {
+    //     const company = optionsData?.companies?.find(
+    //       (c) => c.name === params.newValue
+    //     )
+    //     if (company) {
+    //       params.data.transactionPartner = params.newValue
+    //       params.data.postalAddress = company.address
+    //       params.data.transactionPartnerEmail = company.email
+    //       params.data.transactionPartnerPhone = company.phone
+    //     } else {
+    //       params.data.transactionPartner = params.newValue
+    //       params.data.postalAddress = ''
+    //       params.data.transactionPartnerEmail = ''
+    //       params.data.transactionPartnerPhone = ''
+    //     }
+    //   }
+    //   return true
+    // },
     tooltipValueGetter: (p) => 'Enter or select the legal name of the trading partner'
   },
   {
@@ -214,12 +215,12 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       ?.fuelCategories.length > 1 && params.data.fuelType != null,
   },
   {
-    field: 'determiningCarbonIntensity',
+    field: 'provisionOfTheAct',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.determiningCarbonIntensity'),
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
-      values: ['Approved fuel code - Section 6 (5) (c)', 'Default carbon intensity - Section 6 (5) (d)']
+      values: optionsData?.provisionsOfTheAct?.map((obj) => obj.name).sort(),
     },
     cellRenderer: (params) =>
       params.value ||
@@ -245,23 +246,23 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     }),
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = params.data.determiningCarbonIntensity === 'Approved fuel code - Section 6 (5) (c)'
+      const conditionalStyle = params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
         ? { backgroundColor: '#fff', borderColor: 'unset' }
         : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
     suppressKeyboardEvent,
     minWidth: 150,
-    editable: (params) => params.data.determiningCarbonIntensity === 'Approved fuel code - Section 6 (5) (c)',
+    editable: (params) => params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE,
     tooltipValueGetter: (p) => 'Select the approved fuel code'
   },
   {
-    field: 'ciFuel',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.ciFuel'),
+    field: 'ciOfFuel',
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'),
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: false,
     valueGetter: (params) => {
-      if (params.data.determiningCarbonIntensity === 'Approved fuel code - Section 6 (5) (c)') {
+      if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
         return optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)

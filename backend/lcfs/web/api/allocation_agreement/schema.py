@@ -44,11 +44,12 @@ class AllocationAgreementCreateSchema(BaseSchema):
     transaction_partner_email: str
     transaction_partner_phone: str
     postal_address: str
-    ci_fuel: int
+    ci_of_fuel: float
     quantity: int
     units: str
     compliance_report_id: int
 
+    provision_of_the_act: str
     allocation_transaction_type: str
     fuel_type: str
     fuel_category: str
