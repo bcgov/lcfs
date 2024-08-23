@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder, EffectiveDates
 
@@ -13,6 +13,7 @@ class ProvisionOfTheAct(BaseModel, Auditable, DisplayOrder, EffectiveDates):
     provision_of_the_act_id = Column(Integer, primary_key=True, autoincrement=True, comment="Unique identifier for the provision of the act")
     name = Column(String(100), unique=True, nullable=False, comment="Name of the Provision. e.g. Section 6 (5) (a)")
     description = Column(String(1000), nullable=False, comment="Description of the provision. This is the displayed name. e.g. Prescribed Carbon Intensity, Approved Fuel Code.")
+    is_allocation_provision = Column(Boolean, default=False)
     
     # relationships
     fuel_type_provision_1 = relationship("FuelType", foreign_keys="[FuelType.provision_1_id]", back_populates="provision_1")
