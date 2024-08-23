@@ -2,7 +2,7 @@
   "summaryTitle": "Notional transfers of eligible renewable fuel",
   "newNotionalTransferBtn": "New notional transfer",
   "noNotionalTransfersFound": "No notional transfers found",
-  "notionalTransferDownloadBtn": "Download as excel",
+  "notionalTransferDownloadBtn": "Download as Excel",
   "notionalTransferDownloadingMsg": "Downloading notional transfers information",
   "notionalTransferDownloadFailMsg": "Failed to download notional transfer information.",
   "LoadFailMsg": "Failed to load notional transfer rows.",

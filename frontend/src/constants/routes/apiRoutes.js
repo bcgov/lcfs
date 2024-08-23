@@ -50,5 +50,9 @@ export const apiRoutes = {
   saveFuelSupplies: '/fuel-supply/save',
   directorReviewCounts: '/dashboard/director-review-counts/',
   TransactionCounts: '/dashboard/transaction-counts',
-  OrgTransactionCounts: '/dashboard/org-transaction-counts'
+  OrgTransactionCounts: '/dashboard/org-transaction-counts',
+  getAllAllocationAgreements: '/allocation-agreement/list-all',
+  allocationAgreementOptions: '/allocation-agreement/table-options?',
+  saveAllocationAgreements: '/allocation-agreement/save',
+  allocationAgreementSearch: '/allocation-agreement/search?',
 }
