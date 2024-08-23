@@ -4,7 +4,7 @@
   "fseSubtitle": "Report dates of supply for your FSE. If your billing location is different from your equipment location provided below use the Notes field. Use the Notes field if you use any Other options.",
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
-  "finalSupplyEquipmentDownloadBtn": "Download as excel",
+  "finalSupplyEquipmentDownloadBtn": "Download as Excel",
   "finalSupplyEquipmentDownloadingMsg": "Downloading final supply equipments information",
   "finalSupplyEquipmentDownloadFailMsg": "Failed to download final supply equipment information.",
   "finalSupplyEquipmentLoadFailMsg": "Failed to load final supply equipment information.",
