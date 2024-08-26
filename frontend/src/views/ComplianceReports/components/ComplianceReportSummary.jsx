@@ -29,15 +29,7 @@ const ComplianceReportSummary = ({ reportID }) => {
   const location = useLocation()
 
   const { data, isLoading, isError, error } = useGetComplianceReportSummary(reportID)
-
-  useEffect(() => {
-    if (data) {
-      setSummaryData(data)
-    }
-  }, [data])
-
-  const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(data?.summaryId, {
+  const { mutate: updateComplianceReportSummary } = useUpdateComplianceReportSummary(data?.complianceReportId, data?.summaryId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
       },
@@ -47,7 +39,12 @@ const ComplianceReportSummary = ({ reportID }) => {
         alertRef.current.triggerAlert()
       }
     })
-  
+  useEffect(() => {
+    if (data && !summaryData) {
+      setSummaryData(data)
+    }
+  }, [data])
+
   const handleCellEdit = useCallback(
     (data) => {
       // perform auto save of summary after each cell change
@@ -89,27 +86,6 @@ const ComplianceReportSummary = ({ reportID }) => {
             <BCTypography color="primary" variant="h5">
               {t('report:summaryAndDeclaration')}
             </BCTypography>
-            <List sx={{ padding: 0, marginTop: 1, marginLeft: 3 }}>
-              <ListItem
-                sx={{
-                  display: 'list-item',
-                  paddingLeft: 0,
-                  paddingRight: 0,
-                  listStyleType: 'disc'
-                }}
-              >
-                <BCTypography
-                  variant="h6"
-                  color="link"
-                  sx={{
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'info.main' }
-                  }}
-                >
-                  {t('report:addRenewableFuelRetention')}
-                </BCTypography>
-              </ListItem>
-            </List>
           </BCBox>
         </AccordionSummary>
         <AccordionDetails>

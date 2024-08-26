@@ -102,7 +102,7 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
         "field": "line_21_non_compliance_penalty_payable",
     },
     "": {
-        "description": "Total non-compliance penalty payable (Line 11 + Line 22 + Line 28)",
+        "description": "Total non-compliance penalty payable (Line 11 + Line 21)",
         "field": "total_non_compliance_penalty_payable",
     },
 }

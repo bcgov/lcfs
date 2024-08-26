@@ -118,7 +118,7 @@ async def update_compliance_report_summary(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
 async def update_compliance_report(
     request: Request,
     report_id: int,

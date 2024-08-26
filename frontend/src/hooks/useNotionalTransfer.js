@@ -25,7 +25,7 @@ export const useGetAllNotionalTransfers = (complianceReportId, options) => {
   })
 }
 
-export const useSaveNotionalTransfer = (options) => {
+export const useSaveNotionalTransfer = (complianceReportId, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -35,7 +35,7 @@ export const useSaveNotionalTransfer = (options) => {
       return await client.post(apiRoutes.saveNotionalTransfer, data)
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['notional-transfers'])
+      queryClient.invalidateQueries(['notional-transfers', `compliance-report-summary-${complianceReportId}`])
     },
   })
 }
