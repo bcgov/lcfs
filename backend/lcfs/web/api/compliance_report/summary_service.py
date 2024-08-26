@@ -281,7 +281,7 @@ class ComplianceReportSummaryService:
                     0.05 * eligible_renewable_fuel_required.get(category, 0),
                     getattr(summary_model, f"line_6_renewable_fuel_retained_{category}"),
                 )
-            else:
+            elif (fossil_quantity > 0):
                 deferred_renewables[category] = min(
                     0.05 * eligible_renewable_fuel_required.get(category, 0),
                     getattr(summary_model, f"line_8_obligation_deferred_{category}"),
