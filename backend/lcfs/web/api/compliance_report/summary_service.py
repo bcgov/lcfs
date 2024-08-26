@@ -137,17 +137,18 @@ class ComplianceReportSummaryService:
         return await self.repo.get_summary_by_id(summary_id)
 
     @service_handler
-    async def auto_save_compliance_report_summary(self, reportId: int, summary_id: int, summary_data: ComplianceReportSummarySchema) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    async def auto_save_compliance_report_summary(self, reportId: int, summary_id: int, summary_data: ComplianceReportSummarySchema, is_edit=True) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
         # TODO recalculate pending penalties for line 21
         await self.repo.save_compliance_report_summary(summary_id, summary_data)
-        summary_data = await self.calculate_compliance_report_summary(reportId)
+        if is_edit:
+            summary_data = await self.calculate_compliance_report_summary(reportId, is_edit=False)
         return summary_data
 
     @service_handler
-    async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    async def calculate_compliance_report_summary(self, report_id: int, is_edit=False) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
         # TODO this method will have to be updated to handle supplemental reports
 
@@ -242,7 +243,7 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary
         )
-        self.auto_save_compliance_report_summary(summary.summary_id, summary)
+        await self.auto_save_compliance_report_summary(report_id, summary.summary_id, summary, is_edit)
         return summary
 
     def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, previous_obligation: dict, notional_transfers_sums: dict, compliance_period: datetime, summary_model: ComplianceReportSummary) -> List[ComplianceReportSummaryRowSchema]:

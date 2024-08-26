@@ -93,7 +93,7 @@ async def get_compliance_report_summary(
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
-    return await summary_service.calculate_compliance_report_summary(report_id)
+    return await summary_service.calculate_compliance_report_summary(report_id, is_edit=False)
 
 @router.put(
     "/{report_id}/summary/{summary_id}",
