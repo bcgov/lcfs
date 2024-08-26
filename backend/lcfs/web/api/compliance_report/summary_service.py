@@ -191,6 +191,7 @@ class ComplianceReportSummaryService:
                 "jet_fuel": summary_model.line_9_obligation_added_jet_fuel,
             }
         else:
+            # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
             previous_retained = {
                 'gasoline': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_gasoline,
                 'diesel': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_diesel,
