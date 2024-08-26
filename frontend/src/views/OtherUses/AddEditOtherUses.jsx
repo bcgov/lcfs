@@ -34,7 +34,7 @@ export const AddEditOtherUses = () => {
   } = useOtherUsesOptions()
   const { data: otherUses, isLoading: usesLoading } =
     useGetAllOtherUses(complianceReportId)
-  const { mutateAsync: saveRow } = useSaveOtherUses()
+  const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
 
   const gridOptions = useMemo(
     () => ({

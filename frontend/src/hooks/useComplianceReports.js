@@ -48,7 +48,7 @@ export const useGetComplianceReportSummary = (reportID, options) => {
     reportID
   )
   return useQuery({
-    queryKey: [`compliance-report-summary-${reportID}`],
+    queryKey: ['compliance-report-summary', reportID],
     queryFn: async () => {
       return (await client.get(path)).data
     },
@@ -66,7 +66,7 @@ export const useUpdateComplianceReportSummary = (complianceReportId, summaryId, 
       return await client.put(path, data)
     },
     onSettled: () => {
-      queryClient.invalidateQueries([`compliance-report-summary-${complianceReportId}`])
+      queryClient.invalidateQueries(['compliance-report-summary', complianceReportId])
     }
   })
 }

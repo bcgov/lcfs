@@ -40,7 +40,7 @@ const ComplianceReportSummary = ({ reportID }) => {
       }
     })
   useEffect(() => {
-    if (data && !summaryData) {
+    if (data) {
       setSummaryData(data)
     }
   }, [data])

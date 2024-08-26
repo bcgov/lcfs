@@ -35,7 +35,8 @@ export const useSaveNotionalTransfer = (complianceReportId, options) => {
       return await client.post(apiRoutes.saveNotionalTransfer, data)
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['notional-transfers', `compliance-report-summary-${complianceReportId}`])
+      queryClient.invalidateQueries(['notional-transfers', complianceReportId])
+      queryClient.invalidateQueries(['compliance-report-summary', complianceReportId])
     },
   })
 }
