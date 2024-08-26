@@ -276,7 +276,7 @@ class ComplianceReportSummaryService:
         for category in ["gasoline", "diesel", "jet_fuel"]:
             fossil_quantity = fossil_quantities.get(category, 0) or 0
             renewable_quantity = renewable_quantities.get(category, 0) or 0
-            if (fossil_quantity - ren < 0):
+            if (fossil_quantity - renewable_quantity < 0):
                 retained_renewables[category] = min(
                     0.05 * eligible_renewable_fuel_required.get(category, 0),
                     getattr(summary_model, f"line_6_renewable_fuel_retained_{category}"),
