@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  nifi:
+    image: apache/nifi:latest
+    container_name: nifi
+    ports:
+      - "8080:8080"
+    environment:
+      - NIFI_WEB_HTTP_PORT=8080
+    restart: unless-stopped
+    depends_on:
+      - tfrs
+      - lcfs
+    volumes:
+      - ./jdbc_drivers/postgresql-42.7.3.jar:/opt/nifi/nifi-current/lib/postgresql-42.7.3.jar
+      - ./nifi_output:/nifi-output
+      - ./nifi_scripts:/nifi-scripts
+
+  tfrs:
+    image: postgres:14.2
+    container_name: tfrs
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: tfrs
+    ports:
+      - "5435:5435"
+    volumes:
+      - tfrs_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    command: >
+      postgres -c listen_addresses='*' -c port=5435
+
+  lcfs:
+    image: postgres:14.2
+    container_name: lcfs
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: lcfs
+    ports:
+      - "5436:5436"
+    volumes:
+      - lcfs_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    command: >
+      postgres -c listen_addresses='*' -c port=5436
+
+volumes:
+  tfrs_data:
+  lcfs_data:
+  nifi_output:
+  nifi_scripts:
