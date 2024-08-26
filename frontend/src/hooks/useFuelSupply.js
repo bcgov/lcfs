@@ -46,6 +46,7 @@ export const useSaveFuelSupply = (params, options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['fuel-supplies', params.complianceReportId])
+      queryClient.invalidateQueries(['compliance-report-summary', params.complianceReportId])
     }
   })
 }

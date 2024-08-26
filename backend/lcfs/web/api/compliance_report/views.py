@@ -93,16 +93,17 @@ async def get_compliance_report_summary(
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
-    return await summary_service.calculate_compliance_report_summary(report_id)
+    return await summary_service.calculate_compliance_report_summary(report_id, is_edit=False)
 
 @router.put(
-    "/summary/{summary_id}",
+    "/{report_id}/summary/{summary_id}",
     response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def update_compliance_report_summary(
     request: Request,
+    report_id: int,
     summary_id: int,
     summary_data: ComplianceReportSummarySchema,
     summary_service: ComplianceReportSummaryService = Depends()
@@ -110,7 +111,7 @@ async def update_compliance_report_summary(
     """
     Autosave compliance report summary details for a specific summary by ID.
     """
-    return await summary_service.auto_save_compliance_report_summary(summary_id, summary_data)
+    return await summary_service.auto_save_compliance_report_summary(report_id, summary_id, summary_data)
 
 @view_handler(['*'])
 @router.put(
@@ -118,7 +119,7 @@ async def update_compliance_report_summary(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
 async def update_compliance_report(
     request: Request,
     report_id: int,

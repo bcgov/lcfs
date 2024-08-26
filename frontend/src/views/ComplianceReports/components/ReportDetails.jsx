@@ -9,7 +9,7 @@ import {
   Link,
   CircularProgress
 } from '@mui/material'
-import { faEdit } from '@fortawesome/free-solid-svg-icons'
+import { faPen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -180,8 +180,8 @@ const ReportDetails = () => {
                 >
                   <FontAwesomeIcon
                     component="div"
-                    icon={faEdit}
-                    size={'lg'}
+                    icon={faPen}
+                    size={'sm'}
                     onClick={activity.action}
                   />
                 </Role>

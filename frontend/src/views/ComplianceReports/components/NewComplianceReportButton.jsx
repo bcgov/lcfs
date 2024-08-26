@@ -102,7 +102,7 @@ export const NewComplianceReportButton = ({
             <MenuItem
               key={period.compliancePeriodId}
               onClick={() => handleComplianceOptionClick(period)}
-              disabled={reportedPeriodIDs.includes(period.compliancePeriodId)}
+              disabled={reportedPeriodIDs?.includes(period.compliancePeriodId)}
             >
               {period.description}
             </MenuItem>

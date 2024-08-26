@@ -200,6 +200,35 @@ class ComplianceReportRepository:
         return result is not None
 
     @repo_handler
+    async def get_assessed_compliance_report_by_period(self, organization_id: int, period: int):
+        """
+        Identify and retrieve the compliance report of an organization for the given compliance period
+        """
+        result = (
+            await self.db.execute(
+                select(ComplianceReport)
+                .options(
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.compliance_period),
+                    joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.summary),
+                )
+                .join(CompliancePeriod, ComplianceReport.compliance_period_id == CompliancePeriod.compliance_period_id)
+                .join(Organization, ComplianceReport.organization_id == Organization.organization_id)
+                .join(ComplianceReportStatus, ComplianceReport.current_status_id == ComplianceReportStatus.compliance_report_status_id)
+                .outerjoin(ComplianceReportSummary, ComplianceReport.compliance_report_id == ComplianceReportSummary.compliance_report_id)
+                .where(
+                    and_(
+                        ComplianceReport.organization_id == organization_id,
+                        CompliancePeriod.description == str(period),
+                        ComplianceReportStatus.status == ComplianceReportStatusEnum.Assessed,
+                    )
+                )
+            )
+        ).unique().scalars().first()
+        return result
+
+    @repo_handler
     async def add_compliance_report(self, report: ComplianceReport):
         """
         Add a new compliance report to the database

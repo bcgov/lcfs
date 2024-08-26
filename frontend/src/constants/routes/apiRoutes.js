@@ -37,7 +37,7 @@ export const apiRoutes = {
   otherUsesOptions: '/other-uses/table-options',
   getComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
-  updateComplianceReportSummary: '/reports/summary/:summaryID',
+  updateComplianceReportSummary: '/reports/:reportID/summary/:summaryID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
   getOrgComplianceReportReportedYears:
