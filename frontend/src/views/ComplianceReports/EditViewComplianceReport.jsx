@@ -7,10 +7,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
-import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import BCButton from '@/components/BCButton'
-import { Stack, Typography, List, ListItemButton, Fab, Tooltip } from '@mui/material'
+import { Stack, Typography, Fab, Tooltip } from '@mui/material'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 // styles
@@ -20,13 +19,14 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 // internal components
-import { constructAddress } from '@/utils/constructAddress'
-import { ActivityLinksList } from './components/ActivityLinkList'
 import { Introduction } from './components/Introduction'
 import { useGetComplianceReport, useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
 import { buttonClusterConfigFn } from './buttonConfigs'
+import { ActivityListCard } from './components/ActivityListCard'
+import { OrgDetailsCard } from './components/OrgDetailsCard'
+import UploadCard from './components/UploadCard'
 
 
 const iconStyle = {
@@ -148,85 +148,20 @@ export const EditViewComplianceReport = () => {
             onClose={() => setModalData(null)}
             data={modalData}
           />
-          <BCBox>
+          <BCBox pb={2}>
             <Typography variant="h5" color="primary">
               {compliancePeriod + ' ' + t('report:complianceReport')}
             </Typography>
           </BCBox>
-          <BCBox p={2} my={1} bgColor={colors.grey[200]}>
-            <Stack direction="column" spacing={0}>
-              <Typography variant="h6" color="primary">
-                {orgData?.name}
-              </Typography>
-              <div>
-                <Typography variant="body3">
-                  {t('report:serviceAddrLabel')}:
-                </Typography>{' '}
-                <Typography variant="body3">
-                  {constructAddress(orgData.orgAddress)}
-                </Typography>
-              </div>
-              <div>
-                <Typography variant="body3">
-                  {t('report:bcAddrLabel')}:
-                </Typography>{' '}
-                <Typography variant="body3">
-                  {constructAddress(orgData.orgAttorneyAddress)}
-                </Typography>
-              </div>
-            </Stack>
-          </BCBox>
           <Stack direction="column" spacing={2} mt={2}>
-            <Typography variant="body4" color="text" component="div">
-              {t('report:activityHdrLabel', {
-                name: orgData?.name,
-                period: compliancePeriod
-              })}
-            </Typography>
-            <Typography variant="body4" color="text" component="div">
-              {t('report:activityLinksList')}:
-            </Typography>
             <Stack
               direction={{ md: 'column', lg: 'row' }}
-              spacing={32}
+              spacing={2}
               sx={{ '.upload-box': { marginTop: { xs: '2%', md: '0' } } }}
             >
-              <ActivityLinksList />
-              <BCBox
-                className="upload-box"
-                p={2}
-                bgColor={colors.grey[200]}
-                sx={{ width: { xs: '100%', md: '45%' }, height: '80%' }}
-              >
-                <List
-                  component="div"
-                  sx={{ maxWidth: '100%', listStyleType: 'disc' }}
-                >
-                  {' '}
-                  <ListItemButton
-                    sx={{
-                      display: 'list-item',
-                      padding: '0',
-                      marginLeft: '1rem'
-                    }}
-                    component="a"
-                    alignItems="flex-start"
-                    onClick={() => console.log('handle upload functionality')}
-                  >
-                    <BCTypography
-                      variant="subtitle2"
-                      color="link"
-                      sx={{
-                        textDecoration: 'underline',
-                        fontWeight: '500',
-                        '&:hover': { color: 'info.main' }
-                      }}
-                    >
-                      {t('report:uploadLabel')}
-                    </BCTypography>
-                  </ListItemButton>
-                </List>
-              </BCBox>
+              <ActivityListCard name={orgData?.name} period={compliancePeriod}/>
+              <UploadCard />
+              <OrgDetailsCard orgName={orgData?.name} orgAddress={orgData?.orgAddress} orgAttorneyAddress={orgData?.orgAttorneyAddress} />
             </Stack>
             {!location.state?.newReport && (
               <>

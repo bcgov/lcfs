@@ -35,6 +35,17 @@ const ReportDetails = () => {
   const activityList = useMemo(
     () => [
       {
+        name: t('report:supportingDocs'),
+        action: () => console.log('clicked on supporting documents'),
+        useFetch: async () => ({
+          data: [],
+          isLoading: false,
+          isError: false,
+          isFetched: true
+        }),
+        component: (data) => <>Coming soon...</>
+      },
+      {
         name: t('report:activityLists.supplyOfFuel'),
         action: () =>
           navigate(
