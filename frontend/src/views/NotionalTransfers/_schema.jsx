@@ -4,8 +4,9 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
   AutocompleteEditor,
-  NumberCellEditor
+  NumberEditor
 } from '@/components/BCDataGrid/components'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -113,7 +114,13 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   {
     field: 'quantity',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
-    cellEditor: NumberCellEditor,
+    cellEditor: NumberEditor,
+    cellEditorParams: {
+      precision: 0,
+      min: 0,
+      showStepperButtons: false
+    },
+    valueFormatter,
     cellStyle: (params) => cellErrorStyle(params, errors)
   }
 ]

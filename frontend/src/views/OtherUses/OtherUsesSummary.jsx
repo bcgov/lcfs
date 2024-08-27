@@ -5,6 +5,7 @@ import { useGetOtherUses } from '@/hooks/useOtherUses'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 
 export const OtherUsesSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -36,7 +37,8 @@ export const OtherUsesSummary = ({ data }) => {
     {
       headerName: 'Quantity Supplied',
       field: 'quantitySupplied',
-      floatingFilter: false
+      floatingFilter: false,
+      valueFormatter
     },
     { headerName: 'Units', field: 'units', floatingFilter: false },
     { headerName: 'Expected Use', field: 'expectedUse', floatingFilter: false },
