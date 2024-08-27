@@ -157,7 +157,8 @@ export const EditViewComplianceReport = () => {
             <Stack
               direction={{ md: 'column', lg: 'row' }}
               spacing={2}
-              sx={{ '.upload-box': { marginTop: { xs: '2%', md: '0' } } }}
+              p={4}
+              sx={{ bgcolor: { lg: 'background.grey' } }}
             >
               <ActivityListCard name={orgData?.name} period={compliancePeriod}/>
               <UploadCard />
