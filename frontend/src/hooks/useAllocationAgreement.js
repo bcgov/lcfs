@@ -46,6 +46,7 @@ export const useSaveAllocationAgreement = (params, options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['allocation-agreements', params.complianceReportId])
+      queryClient.invalidateQueries(['compliance-report-summary', params.complianceReportId])
     }
   })
 }

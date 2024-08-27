@@ -49,11 +49,11 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
     const { min, max } = getCellConstraints(rowIndex, columnId)
     if (numValue !== '') {
       if (min !== undefined && numValue < min) {
-        newValue = min.toString()
+        newValue = min
       } else if (max !== undefined && numValue > max) {
-        newValue = max.toString()
+        newValue = max
       } else {
-        newValue = numValue.toString()
+        newValue = numValue
       }
     }
 
