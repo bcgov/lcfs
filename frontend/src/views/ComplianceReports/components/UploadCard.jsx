@@ -107,7 +107,7 @@ const UploadCard = () => {
                 {t('report:clickDrag')}
               </Typography>
               <Typography
-                variant="body2"
+                variant="caption1"
                 color="textSecondary"
                 style={{ marginTop: '10px' }}
               >
