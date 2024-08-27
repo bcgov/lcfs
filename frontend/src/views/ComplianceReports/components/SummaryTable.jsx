@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { currencyFormatter, numberFormatter } from '@/utils/formatters'
+import { currencyFormatter, formatNumberWithCommas, numberFormatter } from '@/utils/formatters'
 import {
   Paper,
   Table,
@@ -11,7 +11,7 @@ import {
   Input
 } from '@mui/material'
 
-const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ...props }) => {
+const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, width='100%', ...props }) => {
   const [data, setData] = useState(initialData)
   const [editingCell, setEditingCell] = useState(null)
 
@@ -80,7 +80,7 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
   return (
     <TableContainer
       component={Paper}
-      sx={{ margin: '20px 0', border: '1px solid #e0e0e0' }}
+      sx={{ margin: '20px 0', border: '1px solid #495057', width }}
     >
       <Table
         sx={{ minWidth: 650, borderCollapse: 'separate', borderSpacing: 0 }}
@@ -94,10 +94,10 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
                 align={column.align || 'center'}
                 sx={{
                   fontWeight: 'bold',
-                  backgroundColor: '#f5f5f5',
-                  borderBottom: '2px solid #e0e0e0',
+                  backgroundColor: '#f0f0f0',
+                  borderBottom: '2px solid #495057',
                   borderRight:
-                    index < columns.length - 1 ? '1px solid #e0e0e0' : 'none',
+                    index < columns.length - 1 ? '1px solid #495057' : 'none',
                   maxWidth: column.maxWidth || 'none',
                   width: column.width || 'auto',
                   whiteSpace: 'nowrap',
@@ -114,7 +114,7 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
           {data?.map((row, rowIndex) => (
             <TableRow
               key={row.line}
-              sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 } }}
+              sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 }, backgroundColor: '#f0f0f0' }}
             >
               {columns.map((column, colIndex) => (
                 <TableCell
@@ -124,10 +124,10 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
                     borderBottom:
                       rowIndex === data.length - 1
                         ? 'none'
-                        : '1px solid #e0e0e0',
+                        : '1px solid #495057',
                     borderRight:
                       colIndex < columns.length - 1
-                        ? '1px solid #e0e0e0'
+                        ? '1px solid #495057'
                         : 'none',
                     maxWidth: column.maxWidth || 'none',
                     width: column.width || 'auto',
@@ -137,7 +137,7 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
                   {isCellEditable(rowIndex, column.id) ? (
                     <>
                       <Input
-                        value={row[column.id]}
+                        value={formatNumberWithCommas({value: row[column.id]})}
                         onChange={(e) =>
                           handleCellChange(e, rowIndex, column.id)
                         }
@@ -154,7 +154,9 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, ..
                           height: '100%',
                           padding: '6px',
                           borderRadius: '8px',
-                          border: '1px solid #c1c1c1',
+                          fontSize: '1rem',
+                          border: '1px solid #495057',
+                          backgroundColor: '#fff',
                           '& .MuiInputBase-input': {
                             textAlign: column.align || 'left'
                           }

@@ -419,9 +419,9 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable = int((non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)) if non_compliance_penalty_payable_units < 0 else 0 
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == '11')
         non_compliance_summary_lines = {
-            '11': {'gasoline': line_11.gasoline, 'diesel': line_11.diesel, 'jet_fuel': line_11.jet_fuel, 'total_value': line_11.total_value},
+            '11': {'total_value': line_11.total_value},
             '21': {'total_value': non_compliance_penalty_payable},
-            '': {'gasoline': line_11.gasoline, 'diesel': line_11.diesel, 'jet_fuel': line_11.jet_fuel, 'total_value': line_11.total_value + non_compliance_penalty_payable},
+            '': {'total_value': line_11.total_value + non_compliance_penalty_payable},
         }
 
         non_compliance_penalty_summary = [

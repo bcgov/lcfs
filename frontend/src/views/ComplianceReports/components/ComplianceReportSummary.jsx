@@ -7,8 +7,6 @@ import {
   AccordionDetails, 
   Typography, 
   CircularProgress,
-  List, 
-  ListItem 
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SummaryTable from './SummaryTable'
@@ -106,11 +104,13 @@ const ComplianceReportSummary = ({ reportID }) => {
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns}
             data={summaryData?.lowCarbonFuelTargetSummary}
+            width={'81%'}
           />
           <SummaryTable
             title={t('report:nonCompliancePenaltySummary')}
             columns={nonComplianceColumns}
             data={summaryData?.nonCompliancePenaltySummary}
+            width={'81%'}
           />
           <SigningAuthorityDeclaration />
         </AccordionDetails>
