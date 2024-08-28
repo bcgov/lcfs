@@ -34,6 +34,11 @@
     "fuelsOtherUse": "Fuels for other use",
     "exportFuels": "Exporting fuel that was previously marketed in British Columbia"
   },
+  "actionBtns": {
+    "saveDraftBtn": "Save draft report",
+    "deleteDraftBtn": "Delete draft report",
+    "submitReportBtn": "Submit Report"
+  },
   "uploadLabel": "Upload supporting documents for your report.",
   "introduction": "Introduction",
   "introH1": "British Columbia Renewable and Low Carbon Fuel Requirements Regulation",

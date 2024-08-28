@@ -189,7 +189,7 @@ export const EditViewComplianceReport = () => {
             </Stack>
             {!location.state?.newReport && (
               <>
-                <ReportDetails />
+                <ReportDetails currentStatus={currentStatus} />
                 <ComplianceReportSummary reportID={complianceReportId} />
               </>
             )}
