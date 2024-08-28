@@ -9,7 +9,7 @@ import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 const prefixMap = {
-  "Transfer": "CUT",
+  "Transfer": "CT",
   "AdminAdjustment": "AA",
   "InitiativeAgreement": "IA"
 };

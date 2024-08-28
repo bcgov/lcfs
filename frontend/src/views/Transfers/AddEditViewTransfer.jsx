@@ -311,7 +311,7 @@ export const AddEditViewTransfer = () => {
   )
 
   const title = useMemo(() => {
-    const formattedTransferId = `CUT${transferId}`
+    const formattedTransferId = `CT${transferId}`
 
     if (!editorMode) {
       return `${t('transfer:transferID')} ${formattedTransferId}`
