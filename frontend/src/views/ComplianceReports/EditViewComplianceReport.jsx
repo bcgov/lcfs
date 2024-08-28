@@ -27,6 +27,9 @@ import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
 import { OrgDetailsCard } from './components/OrgDetailsCard'
 import UploadCard from './components/UploadCard'
+import { AssessmentCard } from './components/AssessmentCard'
+import { ImportantInfoCard } from './components/ImportantInfoCard'
+import { timezoneFormatter } from '@/utils/formatters'
 
 
 const iconStyle = {
@@ -84,11 +87,10 @@ export const EditViewComplianceReport = () => {
     complianceReportId
   )
   // TODO Temp Fix
-  const currentStatus = 'test' // reportData?.data?.currentStatus?.status
+  const currentStatus = reportData?.data?.currentStatus?.status
+  // const currentStatus = "Assessed"
   
-  const { data: orgData, isLoading } = useOrganization(
-    reportData?.data?.organizationId
-  )
+  const { data: orgData, isLoading } = useOrganization(reportData?.data?.organizationId)
   const methods = useForm() // TODO we will need this for summary line inputs
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(complianceReportId, {
     onSuccess: (response) => {
@@ -160,9 +162,30 @@ export const EditViewComplianceReport = () => {
               p={4}
               sx={{ bgcolor: { lg: 'background.grey' } }}
             >
-              <ActivityListCard name={orgData?.name} period={compliancePeriod}/>
-              <UploadCard />
-              <OrgDetailsCard orgName={orgData?.name} orgAddress={orgData?.orgAddress} orgAttorneyAddress={orgData?.orgAttorneyAddress} />
+              {currentStatus === 'Assessed' && (
+                <AssessmentCard
+                  orgName={orgData?.name}
+                  assessedDate={timezoneFormatter({
+                    value: reportData?.data?.updateDate
+                  })}
+                />
+              )}
+              {currentStatus === 'Draft' ? (
+                <>
+                  <ActivityListCard
+                    name={orgData?.name}
+                    period={compliancePeriod}
+                  />
+                  <UploadCard />
+                </>
+              ) : (
+                <ImportantInfoCard />
+              )}
+              <OrgDetailsCard
+                orgName={orgData?.name}
+                orgAddress={orgData?.orgAddress}
+                orgAttorneyAddress={orgData?.orgAttorneyAddress}
+              />
             </Stack>
             {!location.state?.newReport && (
               <>
@@ -173,31 +196,32 @@ export const EditViewComplianceReport = () => {
             <Introduction expanded={location.state?.newReport} />
           </Stack>
           <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
-        {buttonClusterConfig[currentStatus]?.map((config) => (
-          config && (
-            <BCButton
-              key={config.id}
-              data-test={config.id}
-              id={config.id}
-              size="small"
-              variant={config.variant}
-              color={config.color}
-              onClick={methods.handleSubmit(config.handler)}
-              startIcon={
-                config.startIcon && (
-                  <FontAwesomeIcon
-                    icon={config.startIcon}
-                    className="small-icon"
-                  />
+            {buttonClusterConfig[currentStatus]?.map(
+              (config) =>
+                config && (
+                  <BCButton
+                    key={config.id}
+                    data-test={config.id}
+                    id={config.id}
+                    size="small"
+                    variant={config.variant}
+                    color={config.color}
+                    onClick={methods.handleSubmit(config.handler)}
+                    startIcon={
+                      config.startIcon && (
+                        <FontAwesomeIcon
+                          icon={config.startIcon}
+                          className="small-icon"
+                        />
+                      )
+                    }
+                    disabled={config.disabled}
+                  >
+                    {config.label}
+                  </BCButton>
                 )
-              }
-              disabled={config.disabled}
-            >
-              {config.label}
-            </BCButton>
-          )
-        ))}
-      </Stack>
+            )}
+          </Stack>
           <Tooltip
             title={
               isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')
