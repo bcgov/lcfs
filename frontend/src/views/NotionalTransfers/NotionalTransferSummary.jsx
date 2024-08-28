@@ -3,10 +3,9 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { v4 as uuid } from 'uuid'
 
 export const NotionalTransferSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')

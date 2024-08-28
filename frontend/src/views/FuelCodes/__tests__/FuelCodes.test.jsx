@@ -13,6 +13,7 @@ import { FuelCodes } from '@/views/FuelCodes'
 import { getByDataTest } from '@/tests/utils/testHelpers'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
+import { roles } from '@/constants/roles.js'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -28,10 +29,7 @@ vi.mock('@react-keycloak/web', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: {
-      roles: [
-        { name: 'Administrator' },
-        { name: 'Government' }
-      ]
+      roles: [{ name: roles.administrator }, { name: roles.analyst }]
     }
   })
 }))
@@ -99,7 +97,7 @@ describe('FuelCodes Component Tests', () => {
     const { getByTestId } = render(WrapperComponent())
     const newFuelCodeBtn = getByTestId('new-fuel-code-btn')
     fireEvent.click(newFuelCodeBtn)
-    expect(window.location.pathname).toBe('/admin/fuel-codes/add-fuel-code')
+    expect(window.location.pathname).toBe('/fuel-codes/add-fuel-code')
   })
 
   test('displays alert message on download failure', async () => {

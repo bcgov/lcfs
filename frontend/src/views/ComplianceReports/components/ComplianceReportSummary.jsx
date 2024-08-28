@@ -1,19 +1,24 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { 
-  Accordion, 
-  AccordionSummary, 
-  AccordionDetails, 
-  Typography, 
-  CircularProgress,
-  List, 
-  ListItem 
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography,
+  CircularProgress
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SummaryTable from './SummaryTable'
-import { renewableFuelColumns, lowCarbonColumns, nonComplianceColumns } from './_schema'
-import { useGetComplianceReportSummary, useUpdateComplianceReportSummary } from '@/hooks/useComplianceReports'
+import {
+  renewableFuelColumns,
+  lowCarbonColumns,
+  nonComplianceColumns
+} from './_schema'
+import {
+  useGetComplianceReportSummary,
+  useUpdateComplianceReportSummary
+} from '@/hooks/useComplianceReports'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
@@ -28,17 +33,23 @@ const ComplianceReportSummary = ({ reportID }) => {
   const { t } = useTranslation(['report'])
   const location = useLocation()
 
-  const { data, isLoading, isError, error } = useGetComplianceReportSummary(reportID)
-  const { mutate: updateComplianceReportSummary } = useUpdateComplianceReportSummary(data?.complianceReportId, data?.summaryId, {
-      onSuccess: (response) => {
-        setSummaryData(response.data)
-      },
-      onError: (error) => {
-        setAlertMessage(error.message)
-        setAlertSeverity('error')
-        alertRef.current.triggerAlert()
+  const { data, isLoading, isError, error } =
+    useGetComplianceReportSummary(reportID)
+  const { mutate: updateComplianceReportSummary } =
+    useUpdateComplianceReportSummary(
+      data?.complianceReportId,
+      data?.summaryId,
+      {
+        onSuccess: (response) => {
+          setSummaryData(response.data)
+        },
+        onError: (error) => {
+          setAlertMessage(error.message)
+          setAlertSeverity('error')
+          alertRef.current.triggerAlert()
+        }
       }
-    })
+    )
   useEffect(() => {
     if (data) {
       setSummaryData(data)
@@ -65,7 +76,7 @@ const ComplianceReportSummary = ({ reportID }) => {
       setAlertSeverity('error')
     }
   }, [isError, error, location.state])
-  
+
   if (isLoading) {
     return <CircularProgress />
   }
@@ -76,7 +87,11 @@ const ComplianceReportSummary = ({ reportID }) => {
 
   return (
     <>
-      {alertMessage && <BCAlert ref={alertRef} severity={alertSeverity}>{alertMessage}</BCAlert>}
+      {alertMessage && (
+        <BCAlert ref={alertRef} severity={alertSeverity}>
+          {alertMessage}
+        </BCAlert>
+      )}
       <Accordion defaultExpanded>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}

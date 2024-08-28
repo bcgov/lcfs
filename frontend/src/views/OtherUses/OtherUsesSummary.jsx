@@ -46,7 +46,7 @@ export const OtherUsesSummary = ({ data }) => {
   const getRowId = (params) => params.data.otherUsesId
 
   return (
-    <Grid2 className="other-uses-container" mx={-1}>
+    <Grid2 className="other-uses-container" data-test="container" mx={-1}>
       <div>
         {alertMessage && (
           <BCAlert data-test="alert-box" severity={alertSeverity}>
