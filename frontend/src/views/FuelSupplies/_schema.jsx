@@ -2,10 +2,12 @@ import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
+  NumberEditor,
   HeaderComponent
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -92,7 +94,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
-        params.data.quantity = undefined
+        params.data.quantity = 0
         params.data.units = fuelType?.unit
       }
       return true
@@ -142,7 +144,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
-        params.data.quantity = undefined
+        params.data.quantity = 0
       }
       return true
     },
@@ -264,7 +266,8 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'quantity',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-    cellEditor: 'agNumberCellEditor',
+    valueFormatter,
+    cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
       min: 0,
@@ -301,6 +304,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'complianceUnits',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     minWidth: 100,
+    valueFormatter,
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors)
   },
@@ -396,6 +400,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'energy',
     cellStyle: (params) => cellErrorStyle(params, errors),
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
+    valueFormatter,
     minWidth: 100,
     editable: false
   }

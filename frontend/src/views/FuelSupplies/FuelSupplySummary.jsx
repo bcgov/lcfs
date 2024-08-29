@@ -2,7 +2,7 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
-import { CommonArrayRenderer } from '@/utils/cellRenderers'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -54,14 +54,14 @@ export const FuelSupplySummary = ({ data }) => {
     { headerName: t('fuelSupply:fuelSupplyColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType?.type || 'Any' },
     { headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'), field: "determiningCarbonIntensity", valueGetter: params => params.data.provisionOfTheAct?.name },
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.quantity'), field: "quantity" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.quantity'), field: "quantity", valueFormatter },
     { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: "units" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits", valueFormatter },
     { headerName: t('fuelSupply:fuelSupplyColLabels.ciLimit'), field: "ciLimit" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'), field: "ciOfFuel" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'), field: "energyDensity" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: "eer" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.energy'), field: "energy" },
+    { headerName: t('fuelSupply:fuelSupplyColLabels.energy'), field: "energy", valueFormatter },
   ]), [t])
 
   const getRowId = (params) => {

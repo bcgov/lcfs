@@ -164,3 +164,18 @@ export const formatNumberWithCommas = ({ value }) => {
   return number
 }
 
+export const formatNumberWithoutCommas = (value) => {
+  const [integerPart, decimalPart] = value.split('.')
+
+  let number = integerPart.replaceAll(',', '')
+
+  const regex = /^\d*\.?\d*$/
+  if (!regex.test(number)) return
+
+  if (decimalPart !== undefined) {
+    if (!regex.test(decimalPart)) return
+    number = number + '.' + decimalPart
+  }
+
+  return Number(number)
+}

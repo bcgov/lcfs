@@ -3,6 +3,7 @@ import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
@@ -56,7 +57,7 @@ export const AllocationAgreementSummary = ({ data }) => {
     { headerName: t('allocationAgreement:allocationAgreementColLabels.carbonIntensity'), field: "provisionOfTheAct" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'), field: "fuelCode" },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'), field: "ciOfFuel" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'), field: "quantity" },
+    { headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'), field: "quantity", valueFormatter },
     { headerName: t('allocationAgreement:allocationAgreementColLabels.units'), field: "units" }
   ]), [t])
 
