@@ -42,7 +42,7 @@ class TransactionsService:
             List[Transactions]: The list of transactions after applying the filters.
         """
         prefix_map = {
-            "CUT": "Transfer",
+            "CT": "Transfer",
             "AA": "AdminAdjustment",
             "IA": "InitiativeAgreement"
         }
