@@ -31,6 +31,10 @@ export default defineConfig({
 
     // Base URL for tests
     baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:3000',
+    env: {
+      // Environment variables
+      admin_idir_username: process.env.admin_idir_username,
+    },
     async setupNodeEvents(on, config) {
       // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
       await addCucumberPreprocessorPlugin(on, config);
