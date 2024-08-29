@@ -114,7 +114,7 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, wi
           {data?.map((row, rowIndex) => (
             <TableRow
               key={row.line}
-              sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 }, backgroundColor: '#f6f6f6' }}
+              sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 }, backgroundColor: '#fcfcfc' }}
             >
               {columns.map((column, colIndex) => (
                 <TableCell
