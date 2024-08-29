@@ -1,24 +1,9 @@
 import enum
 from sqlalchemy import Column, Integer, Float, ForeignKey, Enum
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import text
 from lcfs.db.base import BaseModel, Auditable
-
-class Quarter(enum.Enum):
-    Q1 = 'Q1'
-    Q2 = 'Q2'
-    Q3 = 'Q3'
-    Q4 = 'Q4'
-
-class ChangeType(enum.Enum):
-    CREATE = 'Create'
-    UPDATE = 'Update'
-    DELETE = 'Delete'
-
-class QuantityUnitsEnum(enum.Enum):
-    Litres = 'L'
-    Kilograms = "kg"
-    Kilowatt_hour = 'kWh'
-    Cubic_metres = 'm3'
+from lcfs.db.models.compliance.ComplianceReport import ChangeType, Quarter, QuantityUnitsEnum
 
 class FuelSupply(BaseModel, Auditable):
     __tablename__ = 'fuel_supply'
@@ -30,6 +15,7 @@ class FuelSupply(BaseModel, Auditable):
     compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=False, comment="Foreign key to the compliance report")
     supplemental_report_id = Column(Integer, ForeignKey('supplemental_report.supplemental_report_id'), nullable=True, comment="Foreign key to the supplemental report")
     previous_fuel_supply_id = Column(Integer, ForeignKey('fuel_supply.fuel_supply_id'), nullable=True, comment="Foreign key to the previous fuel supply record")
+    change_type = Column(Enum(ChangeType), nullable=False, server_default=text("'CREATE'"), comment="Action type for this record")
 
     # data columns
     quarter = Column(Enum(Quarter), nullable=True, comment="Quarter for quarterly reports")

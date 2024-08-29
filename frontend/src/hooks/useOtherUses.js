@@ -25,7 +25,7 @@ export const useGetAllOtherUses = (complianceReportId, options) => {
   })
 }
 
-export const useSaveOtherUses = (options) => {
+export const useSaveOtherUses = (complianceReportId, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
@@ -36,6 +36,7 @@ export const useSaveOtherUses = (options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['other-uses'])
+      queryClient.invalidateQueries(['compliance-report-summary', complianceReportId])
     }
   })
 }

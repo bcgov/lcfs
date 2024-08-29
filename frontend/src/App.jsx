@@ -30,6 +30,7 @@ import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotio
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
+import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
 
 const router = createBrowserRouter([
   {
@@ -313,6 +314,14 @@ const router = createBrowserRouter([
         element: <AddEditNotionalTransfers />,
         handle: {
           title: 'New Notional Transfer',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS,
+        element: <AddEditAllocationAgreements />,
+        handle: {
+          title: 'New Allocation Agreement',
           mode: 'add'
         }
       },

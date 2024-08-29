@@ -26,6 +26,7 @@ from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdate
 
 logger = getLogger(__name__)
 
+
 class ComplianceReportServices:
     def __init__(
         self, request: Request = None, repo: ComplianceReportRepository = Depends()
@@ -55,13 +56,10 @@ class ComplianceReportServices:
                 compliance_period=period,
                 organization_id=organization_id,
                 current_status=draft_status,
+                summary=ComplianceReportSummary() # Create an empty summary object
             )
         )
         await self.repo.add_compliance_report_history(report, self.request.user)
-
-        # Create an empty summary object
-        summary = ComplianceReportSummary(compliance_report_id=report.compliance_report_id)
-        await self.repo.add_compliance_report_summary(summary)
 
         return report
 
@@ -109,3 +107,9 @@ class ComplianceReportServices:
 
         result = await self.repo.db.execute(query)
         return result.scalars().all()
+
+    @service_handler
+    async def get_all_org_reported_years(
+        self, organization_id: int
+    ) -> List[CompliancePeriodSchema]:
+        return await self.repo.get_all_org_reported_years(organization_id)

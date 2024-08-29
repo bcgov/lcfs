@@ -9,7 +9,7 @@ import {
   Link,
   CircularProgress
 } from '@mui/material'
-import { faEdit } from '@fortawesome/free-solid-svg-icons'
+import { faPen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
@@ -24,6 +24,8 @@ import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
+import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 
 const ReportDetails = () => {
   const { t } = useTranslation()
@@ -71,13 +73,11 @@ const ReportDetails = () => {
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)
           ),
-        useFetch: async () => ({
-          data: [],
-          isLoading: false,
-          isError: false,
-          isFetched: true
-        }),
-        component: (data) => <>Coming soon...</>
+        useFetch: useGetAllocationAgreements,
+        component: (data) =>
+          data.allocationAgreements.length > 0 && (
+            <AllocationAgreementSummary data={data} />
+          )
       },
       {
         name: t('report:activityLists.notionalTransfers'),
@@ -180,8 +180,8 @@ const ReportDetails = () => {
                 >
                   <FontAwesomeIcon
                     component="div"
-                    icon={faEdit}
-                    size={'lg'}
+                    icon={faPen}
+                    size={'sm'}
                     onClick={activity.action}
                   />
                 </Role>

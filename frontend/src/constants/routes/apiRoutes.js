@@ -37,9 +37,11 @@ export const apiRoutes = {
   otherUsesOptions: '/other-uses/table-options',
   getComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
-  updateComplianceReportSummary: '/reports/summary/:summaryID',
+  updateComplianceReportSummary: '/reports/:reportID/summary/:summaryID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
+  getOrgComplianceReportReportedYears:
+    '/organization/:orgID/reports/reported-years',
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
   getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
   saveFinalSupplyEquipments: '/final-supply-equipments/save',
@@ -49,4 +51,8 @@ export const apiRoutes = {
   directorReviewCounts: '/dashboard/director-review-counts/',
   TransactionCounts: '/dashboard/transaction-counts',
   OrgTransactionCounts: '/dashboard/org-transaction-counts',
+  getAllAllocationAgreements: '/allocation-agreement/list-all',
+  allocationAgreementOptions: '/allocation-agreement/table-options?',
+  saveAllocationAgreements: '/allocation-agreement/save',
+  allocationAgreementSearch: '/allocation-agreement/search?',
 }

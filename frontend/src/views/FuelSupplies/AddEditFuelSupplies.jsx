@@ -149,6 +149,7 @@ export const AddEditFuelSupplies = () => {
           )?.energyEffectivenessRatio
         }
         const energyContent = (energyDensity * Number(params.newValue)).toFixed(0)
+        // TODO Compliance units should be calculated on the backend and returned
         const complianceUnits = (
           ((Number(ciLimit) * Number(eer) - Number(effectiveCarbonIntensity)) *
             energyContent) /

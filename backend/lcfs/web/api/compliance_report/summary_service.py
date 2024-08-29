@@ -5,7 +5,7 @@ from sqlalchemy import Float, inspect
 import re
 from fastapi import Depends
 from datetime import datetime
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema, ComplianceReportSummarySchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema, ComplianceReportSummarySchema, SummarySchema
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
@@ -137,17 +137,18 @@ class ComplianceReportSummaryService:
         return await self.repo.get_summary_by_id(summary_id)
 
     @service_handler
-    async def auto_save_compliance_report_summary(self, summary_id: int, summary_data: ComplianceReportSummarySchema) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    async def auto_save_compliance_report_summary(self, reportId: int, summary_id: int, summary_data: ComplianceReportSummarySchema, is_edit=True) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
         # TODO recalculate pending penalties for line 21
-        summary_obj = await self.repo.save_compliance_report_summary(summary_id, summary_data)
-        summary_data = self.convert_summary_to_dict(summary_obj)
+        await self.repo.save_compliance_report_summary(summary_id, summary_data)
+        if is_edit:
+            summary_data = await self.calculate_compliance_report_summary(reportId, is_edit=False)
         return summary_data
 
     @service_handler
-    async def calculate_compliance_report_summary(self, report_id: int) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    async def calculate_compliance_report_summary(self, report_id: int, is_edit=False) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
         # TODO this method will have to be updated to handle supplemental reports
 
@@ -155,7 +156,12 @@ class ComplianceReportSummaryService:
         compliance_report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
-
+        prev_compliance_report = (
+            await self.repo.get_assessed_compliance_report_by_period(
+                compliance_report.organization_id,
+                int(compliance_report.compliance_period.description) - 1
+            )
+        )
         summary_model = compliance_report.summary
 
         # After the report has been submitted, the summary becomes locked
@@ -174,7 +180,29 @@ class ComplianceReportSummaryService:
 
         # Placeholder values for demonstration purposes
         # need to get these values from the db after fuel supply is implemented
-        previous_retained = {'gasoline': 200, 'diesel': 400, 'jet_fuel': 100}
+        if prev_compliance_report is None:
+            previous_retained = {
+                "gasoline": summary_model.line_7_previously_retained_gasoline,
+                "diesel": summary_model.line_7_previously_retained_diesel,
+                "jet_fuel": summary_model.line_7_previously_retained_jet_fuel,
+            }
+            previous_obligation = {
+                "gasoline": summary_model.line_9_obligation_added_gasoline,
+                "diesel": summary_model.line_9_obligation_added_diesel,
+                "jet_fuel": summary_model.line_9_obligation_added_jet_fuel,
+            }
+        else:
+            # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
+            previous_retained = {
+                'gasoline': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_gasoline,
+                'diesel': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_diesel,
+                'jet_fuel': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_jet_fuel
+            }
+            previous_obligation = {
+                'gasoline': prev_compliance_report.summary.line_8_obligation_deferred_gasoline,
+                'diesel': prev_compliance_report.summary.line_8_obligation_deferred_diesel,
+                'jet_fuel': prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel
+            }
 
         notional_transfers = await self.notional_transfer_service.get_notional_transfers(compliance_report_id=report_id)
 
@@ -196,7 +224,7 @@ class ComplianceReportSummaryService:
                 notional_transfers_sums[normalized_category] -= transfer.quantity
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
-            fossil_quantities, renewable_quantities, previous_retained, notional_transfers_sums, compliance_period=compliance_period_start.year
+            fossil_quantities, renewable_quantities, previous_retained, previous_obligation, notional_transfers_sums, compliance_period=compliance_period_start.year, summary_model=summary_model
         )
         low_carbon_fuel_target_summary, non_compliance_penalty_payable_units = await self.calculate_low_carbon_fuel_target_summary(
             compliance_period_start, compliance_period_end, organization_id
@@ -215,10 +243,10 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary
         )
-
+        await self.auto_save_compliance_report_summary(report_id, summary.summary_id, summary, is_edit)
         return summary
 
-    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, notional_transfers_sums: dict, compliance_period: datetime) -> List[ComplianceReportSummaryRowSchema]:
+    def calculate_renewable_fuel_target_summary(self, fossil_quantities: dict, renewable_quantities: dict, previous_retained: dict, previous_obligation: dict, notional_transfers_sums: dict, compliance_period: datetime, summary_model: ComplianceReportSummary) -> List[ComplianceReportSummaryRowSchema]:
         # line 3
         tracked_totals = {
             category: fossil_quantities.get(
@@ -243,20 +271,23 @@ class ComplianceReportSummaryService:
         }
 
         # line 6
-        retained_renewables = {
-            category: min(0.05 * eligible_renewable_fuel_required.get(category, 0),
-                          previous_retained.get(category, 0))
-            for category in ['gasoline', 'diesel', 'jet_fuel']
-        }
-
+        retained_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
         # line 8
-        # These should be calculated based on some business logic
-        deferred_renewables = {'gasoline': 9000,
-                               'diesel': 2000, 'jet_fuel': 5000}
+        deferred_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
 
-        # line 9 TODO: refer to previous report to populate this line for the very first time.
-        renewables_added = {'gasoline': 1000, 'diesel': 2000, 'jet_fuel': 3000}
-
+        for category in ["gasoline", "diesel", "jet_fuel"]:
+            fossil_quantity = fossil_quantities.get(category, 0) or 0
+            renewable_quantity = renewable_quantities.get(category, 0) or 0
+            if (fossil_quantity - renewable_quantity < 0):
+                retained_renewables[category] = min(
+                    0.05 * eligible_renewable_fuel_required.get(category, 0),
+                    getattr(summary_model, f"line_6_renewable_fuel_retained_{category}"),
+                )
+            elif (fossil_quantity > 0):
+                deferred_renewables[category] = min(
+                    0.05 * eligible_renewable_fuel_required.get(category, 0),
+                    getattr(summary_model, f"line_8_obligation_deferred_{category}"),
+                )
         # line 10
         net_renewable_supplied = {
             category:
@@ -271,7 +302,7 @@ class ComplianceReportSummaryService:
                 # line 8
                 deferred_renewables.get(category, 0) -
                 # line 9
-                renewables_added.get(category, 0)
+                previous_obligation.get(category, 0)
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
@@ -297,7 +328,7 @@ class ComplianceReportSummaryService:
             '7': {'gasoline': previous_retained.get('gasoline', 0), 'diesel': previous_retained.get('diesel', 0), 'jet_fuel': previous_retained.get('jet_fuel', 0)},
             '8': {'gasoline': deferred_renewables.get('gasoline', 0), 'diesel': deferred_renewables.get('diesel', 0), 'jet_fuel': deferred_renewables.get('jet_fuel', 0)},
             # Renewable obligation added from previous period
-            '9': {'gasoline': renewables_added.get('gasoline', 0), 'diesel': renewables_added.get('diesel', 0), 'jet_fuel': renewables_added.get('jet_fuel', 0)},
+            '9': {'gasoline': previous_obligation.get('gasoline', 0), 'diesel': previous_obligation.get('diesel', 0), 'jet_fuel': previous_obligation.get('jet_fuel', 0)},
             '10': {'gasoline': net_renewable_supplied.get('gasoline', 0), 'diesel': net_renewable_supplied.get('diesel', 0), 'jet_fuel': net_renewable_supplied.get('jet_fuel', 0)},
             '11': {'gasoline': non_compliance_penalties.get('gasoline', 0), 'diesel': non_compliance_penalties.get('diesel', 0), 'jet_fuel': non_compliance_penalties.get('jet_fuel', 0)},
         }
@@ -342,7 +373,7 @@ class ComplianceReportSummaryService:
         compliance_units_prev_issued_for_fuel_export = 0  # line 16
         available_balance_for_period = 0  # line 17
         compliance_units_curr_issued_for_fuel_supply = 0  # line 18
-        compliance_units_curr_issued_for_fuel_export = 200 * -1  # line 19
+        compliance_units_curr_issued_for_fuel_export = 0  # line 19
         compliance_unit_balance_change_from_assessment = 0  # line 20
         calculated_penalty_units = int(
             available_balance_for_period
@@ -351,7 +382,7 @@ class ComplianceReportSummaryService:
         )
         non_compliance_penalty_payable_units = calculated_penalty_units if (calculated_penalty_units < 0) else 0
         non_compliance_penalty_payable = int((non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)) if non_compliance_penalty_payable_units < 0 else 0 # line 21
-        available_balance_for_period_after_assessment = 45000  # line 22
+        available_balance_for_period_after_assessment = 0  # line 22
 
         low_carbon_summary_lines = {
             '12': {'value': compliance_units_transferred_out},
