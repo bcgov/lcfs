@@ -1,6 +1,7 @@
 from decimal import Decimal
 import math
 from typing import List, Dict, Any, Tuple
+from lcfs.web.api.transaction.repo import TransactionRepository
 from sqlalchemy import Float, inspect
 import re
 from fastapi import Depends
@@ -23,11 +24,13 @@ class ComplianceReportSummaryService:
     def __init__(
             self,
             repo: ComplianceReportRepository = Depends(),
+            trxn_repo: TransactionRepository = Depends(),
             notional_transfer_service: NotionalTransferServices = Depends(
                 NotionalTransferServices),
     ):
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
+        self.trxn_repo = trxn_repo
 
     def convert_summary_to_dict(self, summary_obj: ComplianceReportSummary) -> Dict[str, Any]:
         """
@@ -371,7 +374,7 @@ class ComplianceReportSummaryService:
         # TODO - add the logic as required
         compliance_units_prev_issued_for_fuel_supply = 0  # line 15
         compliance_units_prev_issued_for_fuel_export = 0  # line 16
-        available_balance_for_period = 0  # line 17
+        available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(organization_id, compliance_period_start.year)  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = 0  # line 18
         compliance_units_curr_issued_for_fuel_export = 0  # line 19
         compliance_unit_balance_change_from_assessment = 0  # line 20
