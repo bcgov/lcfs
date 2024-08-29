@@ -74,7 +74,7 @@ export const TransferDetails = () => {
           </BCTypography>
           {` ${t('transfer:transfers')} `}
           <TextField
-            data-testid="quantity"
+            inputProps={{ 'data-test': 'quantity' }}
             {...register('quantity')}
             placeholder={t('common:quantity')}
             size="small"
@@ -109,7 +109,7 @@ export const TransferDetails = () => {
                   error={!!errors.toOrganizationId}
                   // helperText={errors.toOrganizationId?.message}
                   displayEmpty
-                  MenuProps={{
+                  menuProps={{
                     sx: {
                       marginTop: '0 !important'
                     }
@@ -160,9 +160,8 @@ export const TransferDetails = () => {
             inputProps={{
               maxLength: 13,
               step: '10',
-              style: { textAlign: 'right' }
-            }}
-            InputProps={{
+              style: { textAlign: 'right' },
+              'data-test': 'price-per-unit',
               startAdornment: (
                 <InputAdornment position="start">$</InputAdornment>
               )

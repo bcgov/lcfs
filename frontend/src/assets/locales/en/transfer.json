@@ -47,7 +47,7 @@
   "numberOfUnitsToTrns": "Number of units to be transferred",
   "valuePerUnit": "Value per unit",
   "totalVal": "Total value",
-  "AgreementDt": "Agreement Date",
+  "agreementDt": "Agreement Date",
   "loadingText": "Loading transfer...",
   "processingText": "Processing transfer...",
   "detailsLabel": "Transfer Details (required)",

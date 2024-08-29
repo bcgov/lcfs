@@ -47,13 +47,14 @@ export const AddPlainComment = ({
           onClick={handleToggle}
           sx={{ cursor: 'pointer' }}
         >
-          <IconButton aria-label="expand comments">
+          <IconButton data-test="toggle-comments" aria-label="expand comments">
             {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
         </Box>
 
         <Collapse in={isExpanded}>
           <TextField
+            data-test="comment-input"
             multiline
             fullWidth
             rows={4}

@@ -37,7 +37,7 @@ export const TransferSummary = ({ transferData, formData }) => {
         )}`}
       </BCTypography>
       <BCTypography variant="body5">
-        {t('transfer:AgreementDt')}
+        {t('transfer:agreementDt')}
         {`: ${dateFormatter(formData.agreementDate)}`}
       </BCTypography>
       <BCTypography mt={2} variant="body5">
