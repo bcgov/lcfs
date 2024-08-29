@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 import math
 from typing import List, Dict, Any, Tuple
@@ -5,7 +6,6 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from sqlalchemy import Float, inspect
 import re
 from fastapi import Depends
-from datetime import datetime
 from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema, ComplianceReportSummarySchema, SummarySchema
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
@@ -377,7 +377,7 @@ class ComplianceReportSummaryService:
         available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(organization_id, compliance_period_start.year)  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = 0  # line 18
         compliance_units_curr_issued_for_fuel_export = 0  # line 19
-        compliance_unit_balance_change_from_assessment = 0  # line 20
+        compliance_unit_balance_change_from_assessment = compliance_units_curr_issued_for_fuel_supply + compliance_units_curr_issued_for_fuel_export  # line 20
         calculated_penalty_units = int(
             available_balance_for_period
             + compliance_units_curr_issued_for_fuel_supply
