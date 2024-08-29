@@ -14,16 +14,14 @@ const customRender = (ui, options = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: false,
-      },
-    },
+        retry: false
+      }
+    }
   })
 
   const AllTheProviders = ({ children }) => (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        {children}
-      </ThemeProvider>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
     </QueryClientProvider>
   )
 
@@ -39,13 +37,13 @@ vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
   useParams: () => mockUseParams(),
   useLocation: () => mockUseLocation(),
-  useNavigate: () => mockUseNavigate,
+  useNavigate: () => mockUseNavigate
 }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key,
-  }),
+    t: (key) => key
+  })
 }))
 
 vi.mock('@/hooks/useComplianceReports')
@@ -53,64 +51,84 @@ vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
 
 vi.mock('../components/ActivityLinkList', () => ({
-  ActivityLinksList: () => <div>Activity Links List</div>,
+  ActivityLinksList: () => <div>Activity Links List</div>
 }))
 
-vi.mock('../components/ReportDetailsAccordion', () => ({
-  default: () => <div>Report Details Accordion</div>,
+vi.mock('../components/ReportDetails', () => ({
+  default: () => <div>Report Details</div>
 }))
 
 vi.mock('../components/ComplianceReportSummary', () => ({
-  default: () => <div>Compliance Report Summary</div>,
+  default: () => <div>Compliance Report Summary</div>
 }))
 
 vi.mock('../components/Introduction', () => ({
-  Introduction: () => <div>Introduction</div>,
+  Introduction: () => <div>Introduction</div>
 }))
 
 describe('EditViewComplianceReport', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
-    // Set up default mock return values
-    mockUseParams.mockReturnValue({ compliancePeriod: '2023', complianceReportId: '123' })
+    mockUseParams.mockReturnValue({
+      compliancePeriod: '2023',
+      complianceReportId: '123'
+    })
     mockUseLocation.mockReturnValue({ state: {} })
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
       data: { organization: { organizationId: '123' } },
-      isLoading: false,
+      isLoading: false
     })
 
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
       data: { data: { organizationId: '123' } },
       isLoading: false,
-      isError: false,
+      isError: false
     })
 
-    vi.mocked(useComplianceReportsHook.useGetComplianceReportSummary).mockReturnValue({
+    vi.mocked(
+      useComplianceReportsHook.useGetComplianceReportSummary
+    ).mockReturnValue({
       data: {
         renewableFuelTargetSummary: [],
         lowCarbonFuelTargetSummary: [],
-        nonCompliancePenaltySummary: [],
+        nonCompliancePenaltySummary: []
       },
       isLoading: false,
-      isError: false,
+      isError: false
     })
+
+    vi.mocked(
+      useComplianceReportsHook.useUpdateComplianceReport
+    ).mockReturnValue({ mutate: {} })
 
     vi.mocked(useOrganizationHook.useOrganization).mockReturnValue({
       data: {
         name: 'Test Org',
-        orgAddress: { addressLine1: '123 Test St', city: 'Test City', state: 'TS', postalCode: '12345' },
-        orgAttorneyAddress: { addressLine1: '456 Law St', city: 'Law City', state: 'LS', postalCode: '67890' },
+        orgAddress: {
+          addressLine1: '123 Test St',
+          city: 'Test City',
+          state: 'TS',
+          postalCode: '12345'
+        },
+        orgAttorneyAddress: {
+          addressLine1: '456 Law St',
+          city: 'Law City',
+          state: 'LS',
+          postalCode: '67890'
+        }
       },
-      isLoading: false,
+      isLoading: false
     })
   })
 
   it('renders the component', async () => {
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('2023 report:complianceReport')).toBeInTheDocument()
+      expect(
+        screen.getByText('2023 report:complianceReport')
+      ).toBeInTheDocument()
     })
   })
 
@@ -134,14 +152,16 @@ describe('EditViewComplianceReport', () => {
   it('renders report components', async () => {
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('Report Details Accordion')).toBeInTheDocument()
+      expect(screen.getByText('Report Details')).toBeInTheDocument()
       expect(screen.getByText('Compliance Report Summary')).toBeInTheDocument()
       expect(screen.getByText('Introduction')).toBeInTheDocument()
     })
   })
 
   it('displays an alert message when location state has a message', async () => {
-    mockUseLocation.mockReturnValue({ state: { message: 'Test alert', severity: 'success' } })
+    mockUseLocation.mockReturnValue({
+      state: { message: 'Test alert', severity: 'success' }
+    })
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
@@ -152,7 +172,7 @@ describe('EditViewComplianceReport', () => {
   it('displays an error message when there is an error fetching the report', async () => {
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
       isError: true,
-      error: { message: 'Error fetching report' },
+      error: { message: 'Error fetching report' }
     })
 
     customRender(<EditViewComplianceReport />)
