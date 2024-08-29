@@ -1,5 +1,6 @@
 # transactions/repo.py
 
+from datetime import datetime
 from enum import Enum
 from typing import List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -201,6 +202,48 @@ class TransactionRepository:
             ).where(Transaction.organization_id == organization_id)
         )
         return available_balance or 0
+
+    @repo_handler
+    async def calculate_available_balance_for_period(self, organization_id: int, period: int):
+        """
+        Calculate the available balance for a specific organization available to a specific compliance period.
+
+        Args:
+            organization_id (int): The ID of the organization for which to calculate the available balance.
+            compliance_period_end (datetime): The end date of the compliance period for which to calculate the available balance.
+
+        Returns:
+            int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
+        """
+        compliance_period_end = datetime.strptime(f'{str(period + 1)}-12-31', '%Y-%m-%d')
+        async with self.db.begin_nested():
+            # Calculate the sum of all transactions up to the specified date
+            balance_to_date = await self.db.scalar(
+                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                    and_(
+                        Transaction.organization_id == organization_id,
+                        Transaction.create_date <= compliance_period_end,
+                        Transaction.transaction_action != TransactionActionEnum.Released
+                    )
+                )
+            )
+
+            # Calculate the sum of future negative transactions
+            future_negative_transactions = await self.db.scalar(
+                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                    and_(
+                        Transaction.organization_id == organization_id,
+                        Transaction.create_date > compliance_period_end,
+                        Transaction.compliance_units < 0,
+                        Transaction.transaction_action != TransactionActionEnum.Released
+                    )
+                )
+            )
+
+        # Calculate the available balance, round to the nearest whole number, and if negative, set to zero
+        available_balance = max(round(balance_to_date - abs(future_negative_transactions)), 0)
+
+        return available_balance
 
     @repo_handler
     async def create_transaction(

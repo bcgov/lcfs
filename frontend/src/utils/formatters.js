@@ -151,7 +151,7 @@ export const cleanEmptyStringValues = (obj) =>
       return acc
     }, {})
 
-export const formatNumberWithCommas = ({value}) => {
+export const formatNumberWithCommas = ({ value }) => {
   if (!value) return 0
   const [integerPart, decimalPart] = value.toString().split('.')
 

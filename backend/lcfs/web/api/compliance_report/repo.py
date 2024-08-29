@@ -486,9 +486,6 @@ class ComplianceReportRepository:
         non_compliance_summary = summary.non_compliance_penalty_summary
         for row in non_compliance_summary:
             if row.line == '11':
-                summary_obj.line_11_fossil_derived_base_fuel_gasoline = row.gasoline
-                summary_obj.line_11_fossil_derived_base_fuel_diesel = row.diesel
-                summary_obj.line_11_fossil_derived_base_fuel_jet_fuel = row.jet_fuel
                 summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
             elif row.line == '21':
                 summary_obj.line_21_non_compliance_penalty_payable = row.total_value
