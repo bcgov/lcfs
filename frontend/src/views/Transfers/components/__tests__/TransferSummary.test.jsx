@@ -51,7 +51,7 @@ describe('TransferSummary', () => {
     expect(screen.getByText('transfer:valuePerUnit: $5.00')).toBeInTheDocument()
     expect(screen.getByText('transfer:totalVal: $50.00')).toBeInTheDocument() // 10 * 5 = 50
     expect(
-      screen.getByText('transfer:agreementDt: 12/31/2022')
+      screen.getByText('transfer:agreementDt: 2022-12-31')
     ).toBeInTheDocument() // Date formatted
   })
 })
