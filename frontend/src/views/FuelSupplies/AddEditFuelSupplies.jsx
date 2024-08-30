@@ -60,8 +60,20 @@ export const AddEditFuelSupplies = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      setRowData([...(data || { id: uuid() })])
-      params.api.sizeColumnsToFit()
+      if (data) {
+        const updatedRowData = data.fuelSupplies.map((item) => ({
+          ...item,
+          fuelCategory: item.fuelCategory?.category,
+          fuelType: item.fuelType?.fuelType,
+          provisionOfTheAct: item.provisionOfTheAct?.name,
+          fuelCode: item.fuelCode?.fuelCode,
+          endUse: item.endUse?.type || 'Any',
+          id: uuid()
+        }))
+        setRowData(updatedRowData)
+      } else {
+        setRowData([{ id: uuid() }])
+      }
     },
     [data]
   )
@@ -148,7 +160,9 @@ export const AddEditFuelSupplies = () => {
                 params.node.data.fuelCategory && item.endUseType === null
           )?.energyEffectivenessRatio
         }
-        const energyContent = (energyDensity * Number(params.newValue)).toFixed(0)
+        const energyContent = (energyDensity * Number(params.newValue)).toFixed(
+          0
+        )
         // TODO Compliance units should be calculated on the backend and returned
         const complianceUnits = (
           ((Number(ciLimit) * Number(eer) - Number(effectiveCarbonIntensity)) *

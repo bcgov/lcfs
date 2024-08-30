@@ -10,12 +10,10 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
 export const FuelSupplySummary = ({ data }) => {
-
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`fuel-supplies-grid`)
   const { complianceReportId } = useParams()
-
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'fuelSupply'])
@@ -28,27 +26,31 @@ export const FuelSupplySummary = ({ data }) => {
     }
   }, [location.state])
 
-  const gridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
-    autoSizeStrategy: {
-      type: 'fitCellContents',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    },
-    enableCellTextSelection: true, // enables text selection on the grid
-    ensureDomOrder: true,
-  }),[t])
+  const gridOptions = useMemo(
+    () => ({
+      overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
+      autoSizeStrategy: {
+        type: 'fitCellContents',
+        defaultMinWidth: 50,
+        defaultMaxWidth: 600
+      },
+      enableCellTextSelection: true, // enables text selection on the grid
+      ensureDomOrder: true
+    }),
+    [t]
+  )
 
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
-      filter: false,
+      filter: false
     }),
     []
   )
 
   // TODO: The values for the following columns must be determined
   const columns = useMemo(() => ([
+    { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits", valueFormatter },
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'), field: "fuelType", valueGetter: (params) => params.data.fuelType?.fuelType },
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategory'), field: "fuelCategory", valueGetter: (params) => params.data.fuelCategory?.category },
     { headerName: t('fuelSupply:fuelSupplyColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType?.type || 'Any' },
@@ -56,7 +58,6 @@ export const FuelSupplySummary = ({ data }) => {
     { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
     { headerName: t('fuelSupply:fuelSupplyColLabels.quantity'), field: "quantity", valueFormatter },
     { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: "units" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits", valueFormatter },
     { headerName: t('fuelSupply:fuelSupplyColLabels.ciLimit'), field: "ciLimit" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'), field: "ciOfFuel" },
     { headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'), field: "energyDensity" },
@@ -87,7 +88,7 @@ export const FuelSupplySummary = ({ data }) => {
           gridRef={gridRef}
           apiEndpoint={apiRoutes.getAllFuelSupplies}
           apiData={'fuelSupplies'}
-          apiParams={{complianceReportId}}
+          apiParams={{ complianceReportId }}
           columnDefs={columns}
           gridKey={gridKey}
           getRowId={getRowId}

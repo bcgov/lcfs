@@ -62,6 +62,14 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     hide: true
   },
   {
+    field: 'complianceUnits',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+    minWidth: 100,
+    valueFormatter,
+    editable: false,
+    cellStyle: (params) => cellErrorStyle(params, errors)
+  },
+  {
     field: 'fuelType',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
@@ -299,14 +307,6 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle, borderColor: 'unset' }
     }
-  },
-  {
-    field: 'complianceUnits',
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
-    minWidth: 100,
-    valueFormatter,
-    editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'ciLimit',
