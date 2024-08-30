@@ -32,6 +32,6 @@ describe('Loading Component', () => {
 
     const loadingBox = screen.getByTestId('loading')
     expect(loadingBox).toHaveStyle('position: relative')
-    expect(loadingBox).toHaveStyle('margin: 30px')
+    expect(loadingBox).toHaveStyle('margin: 10px')
   })
 })

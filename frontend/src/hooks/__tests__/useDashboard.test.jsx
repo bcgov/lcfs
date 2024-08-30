@@ -78,7 +78,7 @@ describe('useTransactionCounts', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data).toEqual({ transaction_counts: 20 })
-    expect(mockGet).toHaveBeenCalledWith('/dashboard/transaction-counts/')
+    expect(mockGet).toHaveBeenCalledWith('/dashboard/transaction-counts')
   })
 
   it('handles errors correctly', async () => {
@@ -114,7 +114,7 @@ describe('useOrgTransactionCounts', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data).toEqual({ org_transaction_counts: 30 })
-    expect(mockGet).toHaveBeenCalledWith('/dashboard/org-transaction-counts/')
+    expect(mockGet).toHaveBeenCalledWith('/dashboard/org-transaction-counts')
   })
 
   it('handles errors correctly', async () => {

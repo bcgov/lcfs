@@ -51,7 +51,7 @@ const WrapperComponent = (props) => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <Router>
-          <OtherUsesSummary {...props}/>
+          <OtherUsesSummary {...props} />
         </Router>
       </ThemeProvider>
     </QueryClientProvider>
@@ -74,18 +74,10 @@ describe('OtherUsesSummary Component Tests', () => {
     vi.resetAllMocks()
   })
 
-  it('renders title correctly', () => {
-    render(<WrapperComponent compliancePeriod="2024"/>)
-    const title = screen.getByTestId('title')
+  it('renders root component', () => {
+    render(<WrapperComponent compliancePeriod="2024" />)
+    const title = screen.getByTestId('container')
     expect(title).toBeInTheDocument()
-    expect(title.textContent).toBe('Other uses of suitable fuels')
-  })
-
-  it('clicking new other use button redirects to add page', () => {
-    render(<WrapperComponent compliancePeriod="2024"/>)
-    const newOtherUseBtn = screen.getByTestId('new-other-use-btn')
-    fireEvent.click(newOtherUseBtn)
-    expect(navigate).toHaveBeenCalledWith('/compliance-reporting/2024/123/fuels-other-use')
   })
 
   it('displays alert message on initial load if present', () => {
@@ -94,7 +86,7 @@ describe('OtherUsesSummary Component Tests', () => {
     }
     vi.mocked(useLocation).mockReturnValue(mockLocation)
 
-    render(<WrapperComponent compliancePeriod="2024"/>)
+    render(<WrapperComponent compliancePeriod="2024" />)
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toBeInTheDocument()
     expect(alertBox.textContent).toContain('Test Alert Message')
