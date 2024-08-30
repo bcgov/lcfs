@@ -4,7 +4,7 @@ import withRole from '@/utils/withRole'
 import { useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
-const SigningAuthority = () => {
+export const SigningAuthority = () => {
   const { t } = useTranslation(['transfer'])
   const {
     register,
@@ -28,6 +28,7 @@ const SigningAuthority = () => {
             <Checkbox
               {...register('signingAuthorityDeclaration')}
               id="signing-authority-declaration"
+              data-test='signing-authority-checkbox'
               color="primary"
               defaultChecked={false}
             />

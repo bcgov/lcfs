@@ -52,6 +52,7 @@ export const TransferGraphic = () => {
     if (isNumberOfCreditsValid(quantity) && isTotalValueValid(totalValue)) {
       return (
         <SyncAltIcon
+          data-test="SyncAltIcon"
           color="primary"
           sx={{ ...iconSizeStyle, marginTop: '-20px', marginBottom: '-25px' }}
         />
@@ -59,12 +60,19 @@ export const TransferGraphic = () => {
     } else if (isNumberOfCreditsValid(quantity)) {
       return (
         <TrendingFlatIcon
+          data-test="TrendingFlatIcon"
           color="primary"
           sx={{ ...iconSizeStyle, marginTop: '-37px' }}
         />
       )
     } else {
-      return <HorizontalRuleIcon color="primary" sx={iconSizeStyle} />
+      return (
+        <HorizontalRuleIcon
+          data-test="HorizontalRuleIcon"
+          color="primary"
+          sx={iconSizeStyle}
+        />
+      )
     }
   }
 
