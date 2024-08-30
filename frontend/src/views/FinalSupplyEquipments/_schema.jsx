@@ -116,6 +116,7 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
     cellEditor: AutocompleteEditor,
+    suppressKeyboardEvent,
     minWidth: 430,
     cellEditorParams: {
       options: optionsData?.levelsOfEquipment.map((obj) => obj.name),
@@ -136,6 +137,7 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
     ),
     cellEditor: AutocompleteEditor,
+    suppressKeyboardEvent,
     minWidth: 315,
     cellEditorParams: {
       options: optionsData?.fuelMeasurementTypes.map((obj) => obj.type) || [],

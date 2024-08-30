@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -27,14 +27,39 @@ import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
 import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 
-const ReportDetails = () => {
+const ReportDetails = ({currentStatus='Draft'}) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
+  const isArrayEmpty = useCallback((data) => {
+    if (Array.isArray(data)) {
+      return data.length === 0
+    }
+    if (typeof data === 'object' && data !== null) {
+      const keys = Object.keys(data)
+      const arrayKey = keys.find((key) => key !== 'pagination')
+      if (arrayKey && Array.isArray(data[arrayKey])) {
+        return data[arrayKey].length === 0
+      }
+    }
+    return null
+  }, [])
+
   const activityList = useMemo(
     () => [
-      {
+      ...(currentStatus === 'Draft' ? [{
+        name: t('report:supportingDocs'),
+        action: () => console.log('clicked on supporting documents'),
+        useFetch: async () => ({
+          data: [],
+          isLoading: false,
+          isError: false,
+          isFetched: true
+        }),
+        component: (data) => <>Coming soon...</>
+      }]: []),
+      ...[{
         name: t('report:activityLists.supplyOfFuel'),
         action: () =>
           navigate(
@@ -45,9 +70,7 @@ const ReportDetails = () => {
           ),
         useFetch: useGetFuelSupplies,
         component: (data) =>
-          data.fuelSupplies.length > 0 && (
-            <FuelSupplySummary data={data} />
-          )
+          data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
@@ -89,7 +112,8 @@ const ReportDetails = () => {
             ).replace(':complianceReportId', complianceReportId)
           ),
         useFetch: useGetAllNotionalTransfers,
-        component: (data) => data.length > 0 && <NotionalTransferSummary data={data} />
+        component: (data) =>
+          data.length > 0 && <NotionalTransferSummary data={data} />
       },
       {
         name: t('otherUses:summaryTitle'),
@@ -120,8 +144,8 @@ const ReportDetails = () => {
         }),
         component: (data) => <>Coming soon...</>
       }
-    ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    ]],
+    [currentStatus, t, navigate, compliancePeriod, complianceReportId]
   )
 
   const [expanded, setExpanded] = useState(() => activityList.map((_, index) => `panel${index}`))
@@ -158,33 +182,40 @@ const ReportDetails = () => {
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
+          data && !isArrayEmpty(data) &&
           <Accordion
             key={index}
             expanded={expanded.includes(`panel${index}`)}
             onChange={handleChange(`panel${index}`)}
           >
             <AccordionSummary
-              expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+              expandIcon={
+                <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+              }
               aria-controls={`panel${index}-content`}
               id={`panel${index}-header`}
               data-test={`panel${index}-summary`}
             >
               <Typography variant="h6" color="primary" component="div">
                 {activity.name}&nbsp;&nbsp;
-                <Role
-                  roles={[
-                    roles.supplier,
-                    roles.compliance_reporting,
-                    roles.compliance_reporting
-                  ]}
-                >
-                  <FontAwesomeIcon
-                    component="div"
-                    icon={faPen}
-                    size={'sm'}
-                    onClick={activity.action}
-                  />
-                </Role>
+                {currentStatus === 'Draft' && (
+                  <>
+                    <Role
+                      roles={[
+                        roles.supplier,
+                        roles.compliance_reporting,
+                        roles.compliance_reporting
+                      ]}
+                    >
+                      <FontAwesomeIcon
+                        component="div"
+                        icon={faPen}
+                        size={'sm'}
+                        onClick={activity.action}
+                      />
+                    </Role>
+                  </>
+                )}
               </Typography>
             </AccordionSummary>
             <AccordionDetails>

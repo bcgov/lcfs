@@ -4,8 +4,10 @@ import {
   AutocompleteEditor,
   HeaderComponent,
   AsyncSuggestionEditor,
+  NumberEditor,
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Approved fuel code - Section 6 (5) (c)'
@@ -279,7 +281,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     field: 'quantity',
     headerComponent: HeaderComponent,
     headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
-    cellEditor: 'agNumberCellEditor',
+    editor: NumberEditor,
+    valueFormatter,
+    cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
       min: 0,

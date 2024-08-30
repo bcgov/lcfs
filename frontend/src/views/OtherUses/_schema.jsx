@@ -1,8 +1,9 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import { AutocompleteEditor } from '@/components/BCDataGrid/components'
+import { AutocompleteEditor, NumberEditor } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { Typography } from '@mui/material'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 
 const cellErrorStyle = (params, errors) => {
   if (
@@ -65,7 +66,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'quantitySupplied',
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
-    cellEditor: 'agNumberCellEditor',
+    cellEditor: NumberEditor,
+    valueFormatter,
     type: 'numericColumn',
     cellEditorParams: {
       precision: 0,
