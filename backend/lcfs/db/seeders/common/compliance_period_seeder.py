@@ -173,7 +173,6 @@ async def seed_compliance_periods(session):
                 compliance_period = CompliancePeriod(**compliance_period_data)
                 session.add(compliance_period)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding compliance periods: %s", e)
         raise

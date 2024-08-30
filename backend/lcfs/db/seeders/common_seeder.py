@@ -1,9 +1,7 @@
 import logging
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from lcfs.settings import settings
 
 from lcfs.db.seeders.common.compliance_period_seeder import seed_compliance_periods
 from lcfs.db.seeders.common.organization_type_seeder import seed_organization_types
@@ -52,36 +50,27 @@ async def update_sequences(session):
         sequence_name = f"{table}_{column}_seq"
         max_value_query = text(f"SELECT setval('{sequence_name}', COALESCE((SELECT MAX({column}) + 1 FROM {table}), 1), false)")
         await session.execute(max_value_query)
-    await session.commit()
 
-async def seed_common():
+async def seed_common(session: AsyncSession):
     """
     Function to seed the database with common data.
     """
-    engine = create_async_engine(str(settings.db_url))
-    AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession)
-
-    async with AsyncSessionLocal() as session:
-        try:
-            await seed_compliance_periods(session)
-            await seed_organization_types(session)
-            await seed_organization_statuses(session)
-            await seed_roles(session)
-            await seed_transfer_statuses(session)
-            await seed_transfer_categories(session)
-            await seed_admin_adjustment_statuses(session)
-            await seed_initiative_agreement_statuses(session)
-            await seed_static_fuel_data(session)
-            await seed_compliance_report_statuses(session)
-            await seed_allocation_transaction_types(session)
-            
-            # Update sequences after all seeders have run
-            await update_sequences(session)
-            
-            logger.info("Database seeding completed successfully.")
-        except Exception as e:
-            logger.error(f"An error occurred during seeding: {e}")
-            await session.rollback()
+    await seed_compliance_periods(session)
+    await seed_organization_types(session)
+    await seed_organization_statuses(session)
+    await seed_roles(session)
+    await seed_transfer_statuses(session)
+    await seed_transfer_categories(session)
+    await seed_admin_adjustment_statuses(session)
+    await seed_initiative_agreement_statuses(session)
+    await seed_static_fuel_data(session)
+    await seed_compliance_report_statuses(session)
+    await seed_allocation_transaction_types(session)
+    
+    # Update sequences after all seeders have run
+    await update_sequences(session)
+    
+    logger.info("Common database seeding completed successfully.")
 
 if __name__ == "__main__":
     asyncio.run(seed_common())

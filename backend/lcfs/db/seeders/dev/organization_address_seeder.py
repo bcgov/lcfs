@@ -133,7 +133,6 @@ async def seed_organization_addresses(session):
                     **organization_address_data)
                 session.add(organization_address)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding organization addresses: %s", e)

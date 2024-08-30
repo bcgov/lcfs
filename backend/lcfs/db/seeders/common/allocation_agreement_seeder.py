@@ -39,10 +39,8 @@ async def seed_allocation_transaction_types(session):
                 transaction_type = AllocationTransactionType(**type_data)
                 session.add(transaction_type)
 
-        await session.commit()
         logger.info("Successfully seeded allocation transaction types.")
     except Exception as e:
         logger.error(
             "Error occurred while seeding allocation transaction types: %s", e)
-        await session.rollback()
         raise

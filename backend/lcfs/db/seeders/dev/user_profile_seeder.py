@@ -289,7 +289,6 @@ async def seed_user_profiles(session):
                 user_profile = UserProfile(**user_data)
                 session.add(user_profile)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding user profiles: %s", e)
         raise

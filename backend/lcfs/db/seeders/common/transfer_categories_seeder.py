@@ -32,8 +32,6 @@ async def seed_transfer_categories(session: AsyncSession):
                 new_category = TransferCategory(**data)
                 session.add(new_category)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding transfer categories: %s", e)
-        await session.rollback()  # Rollback in case of an error
         raise

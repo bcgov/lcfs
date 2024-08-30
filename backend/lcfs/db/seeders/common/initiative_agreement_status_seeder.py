@@ -41,9 +41,7 @@ async def seed_initiative_agreement_statuses(session):
                 status = InitiativeAgreementStatus(**status_data)
                 session.add(status)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding initiative agreement statuses: %s", e)
-        await session.rollback()
         raise

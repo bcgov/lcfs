@@ -35,7 +35,6 @@ async def seed_organization_statuses(session):
                 org_status = OrganizationStatus(**org_status_data)
                 session.add(org_status)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding organization statuses: %s", e)

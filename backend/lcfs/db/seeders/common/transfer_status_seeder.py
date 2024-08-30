@@ -90,8 +90,6 @@ async def seed_transfer_statuses(session):
                 transfer_status = TransferStatus(**transfer_status_data)
                 session.add(transfer_status)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding transfer statuses: %s", e)
-        await session.rollback()  # Ensure to rollback in case of an error
         raise

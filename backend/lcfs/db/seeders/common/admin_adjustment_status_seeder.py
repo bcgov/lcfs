@@ -41,9 +41,7 @@ async def seed_admin_adjustment_statuses(session):
                 status = AdminAdjustmentStatus(**status_data)
                 session.add(status)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding admin adjustment statuses: %s", e)
-        await session.rollback()
         raise
