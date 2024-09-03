@@ -78,8 +78,18 @@ jobs:
 
     - name: Build and start services
       run: |
-        docker-compose build
-        docker-compose up -d
+        ADMIN_IDIR_USERNAME=${{ secrets.ADMIN_IDIR_USERNAME }} \
+        ADMIN_IDIR_PASSWORD=${{ secrets.ADMIN_IDIR_PASSWORD }} \
+        ORG1_BCEID_USERNAME=${{ secrets.ORG1_BCEID_USERNAME }} \
+        ORG1_BCEID_PASSWORD=${{ secrets.ORG1_BCEID_PASSWORD }} \
+        ORG1_BCEID_ID=${{ secrets.ORG1_BCEID_ID }} \
+        ORG1_BCEID_USERID=${{ secrets.ORG1_BCEID_USERID }} \
+        ORG2_BCEID_USERNAME=${{ secrets.ORG2_BCEID_USERNAME }} \
+        ORG2_BCEID_PASSWORD=${{ secrets.ORG2_BCEID_PASSWORD }} \
+        ORG2_BCEID_ID=${{ secrets.ORG2_BCEID_ID }} \
+        ORG2_BCEID_USERID=${{ secrets.ORG2_BCEID_USERID }} \
+        docker-compose -f docker-compose-test.yml build
+        docker-compose -f docker-compose-test.yml up -d
 
     # - name: Run backend tests
     #   id: backend_tests
@@ -153,29 +163,29 @@ jobs:
       if: always()
       run: docker-compose down
 
-    - name: Publish Backend Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always()
-      with:
-        files: backend/pytest-results.xml
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        comment_title: "Backend Test Results"
-        check_name: "Backend Test Results"
-        fail_on: "errors"
-        report_individual_runs: "true"
-        deduplicate_classes_by_file_name: "true"
+    # - name: Publish Backend Test Results
+    #   uses: EnricoMi/publish-unit-test-result-action@v2
+    #   if: always()
+    #   with:
+    #     files: backend/pytest-results.xml
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     comment_title: "Backend Test Results"
+    #     check_name: "Backend Test Results"
+    #     fail_on: "errors"
+    #     report_individual_runs: "true"
+    #     deduplicate_classes_by_file_name: "true"
 
-    - name: Publish Frontend Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      if: always()
-      with:
-        files: frontend/vitest-results.xml
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        comment_title: "Frontend Test Results"
-        check_name: "Frontend Test Results"
-        fail_on: "errors"
-        report_individual_runs: "true"
-        deduplicate_classes_by_file_name: "true"
+    # - name: Publish Frontend Test Results
+    #   uses: EnricoMi/publish-unit-test-result-action@v2
+    #   if: always()
+    #   with:
+    #     files: frontend/vitest-results.xml
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     comment_title: "Frontend Test Results"
+    #     check_name: "Frontend Test Results"
+    #     fail_on: "errors"
+    #     report_individual_runs: "true"
+    #     deduplicate_classes_by_file_name: "true"
     # - name: Process and Publish End-to-end Test Results
     #   if: always()
     #   run: |
