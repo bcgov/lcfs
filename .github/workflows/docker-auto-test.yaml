@@ -74,7 +74,7 @@ jobs:
 
     - name: Fix docker-compose.yml
       run: |
-        sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
+        sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose-test.yml
 
     - name: Build and start services
       run: |
