@@ -81,45 +81,45 @@ jobs:
         docker-compose build
         docker-compose up -d
 
-    # - name: Run backend tests
-    #   id: backend_tests
-    #   continue-on-error: true
-    #   run: |
-    #     cd backend
-    #     poetry run pytest --junitxml=pytest-results.xml
-    #   env:
-    #     LCFS_DB_HOST: localhost
-    #     LCFS_DB_PORT: 5432
-    #     LCFS_DB_USER: lcfs
-    #     LCFS_DB_PASS: development_only
-    #     LCFS_DB_BASE: lcfs
-    #     LCFS_REDIS_HOST: localhost
-    #     LCFS_REDIS_PORT: 6379
-    #     LCFS_REDIS_PASSWORD: development_only
-    #     APP_ENVIRONMENT: test
+    - name: Run backend tests
+      id: backend_tests
+      continue-on-error: true
+      run: |
+        cd backend
+        poetry run pytest --junitxml=pytest-results.xml
+      env:
+        LCFS_DB_HOST: localhost
+        LCFS_DB_PORT: 5432
+        LCFS_DB_USER: lcfs
+        LCFS_DB_PASS: development_only
+        LCFS_DB_BASE: lcfs
+        LCFS_REDIS_HOST: localhost
+        LCFS_REDIS_PORT: 6379
+        LCFS_REDIS_PASSWORD: development_only
+        APP_ENVIRONMENT: test
 
-    # - name: Upload pytest results
-    #   if: always()
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: pytest-results
-    #     path: backend/pytest-results.xml
+    - name: Upload pytest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-results
+        path: backend/pytest-results.xml
 
-    # - name: Run frontend tests
-    #   id: frontend_tests
-    #   continue-on-error: true
-    #   run: |
-    #     cd frontend
-    #     npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
-    #   env:
-    #     CI: true
+    - name: Run frontend tests
+      id: frontend_tests
+      continue-on-error: true
+      run: |
+        cd frontend
+        npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
+      env:
+        CI: true
 
-    # - name: Upload Vitest results
-    #   if: always()
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: vitest-results
-    #     path: frontend/vitest-results.xml
+    - name: Upload Vitest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: vitest-results
+        path: frontend/vitest-results.xml
     - name: Create cypress.env.json
       run: |
         echo '{
@@ -168,53 +168,67 @@ jobs:
       if: always()
       run: docker-compose down
 
-    # - name: Publish Backend Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: backend/pytest-results.xml
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     comment_title: "Backend Test Results"
-    #     check_name: "Backend Test Results"
-    #     fail_on: "errors"
-    #     report_individual_runs: "true"
-    #     deduplicate_classes_by_file_name: "true"
-
-    # - name: Publish Frontend Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: frontend/vitest-results.xml
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     comment_title: "Frontend Test Results"
-    #     check_name: "Frontend Test Results"
-    #     fail_on: "errors"
-    #     report_individual_runs: "true"
-    #     deduplicate_classes_by_file_name: "true"
-    # - name: Process and Publish End-to-end Test Results
-    #   if: always()
-    #   run: |
-    #     # Process Cypress results
-    #     echo "End-to-End Test Results:" >> test_summary.md
-    #     jq -r '.stats | "Total: \(.tests), Passed: \(.passes), Failed: \(.failures)"' frontend/cypress/reports/results.json >> test_summary.md
-        
-    #     # Post comment to PR
-    #     gh pr comment ${{ github.event.pull_request.number }} --body-file test_summary.md
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: Publish End-to-End Test Results
+    - name: Publish Backend Test Results
       uses: EnricoMi/publish-unit-test-result-action@v2
       if: always()
       with:
-        files: |
-          frontend/cypress/reports/**/*
-          frontend/cypress/screenshots/**/*
+        files: backend/pytest-results.xml
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        comment_title: "End-to-End Test Results"
-        check_name: "End-to-End Test Results"
+        comment_title: "Backend Test Results"
+        check_name: "Backend Test Results"
         fail_on: "errors"
         report_individual_runs: "true"
         deduplicate_classes_by_file_name: "true"
+
+    - name: Publish Frontend Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: frontend/vitest-results.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        comment_title: "Frontend Test Results"
+        check_name: "Frontend Test Results"
+        fail_on: "errors"
+        report_individual_runs: "true"
+        deduplicate_classes_by_file_name: "true"
+    - name: Process and Publish End-to-end Test Results
+      if: always()
+      run: |
+        # Process Cypress results
+        echo "End-to-End Test Results:" >> test_summary.md
+        jq -r '.stats | "Total: \(.tests), Passed: \(.passes), Failed: \(.failures)"' frontend/cypress/reports/results.json >> test_summary.md
+        
+        # Post comment to PR
+        gh pr comment ${{ github.event.pull_request.number }} --body-file test_summary.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Process and Display Cypress Results
+      if: always()
+      run: |
+        # Read the results.json file
+        RESULTS=$(cat frontend/cypress/reports/results.json)
+        
+        # Extract required fields
+        TESTS=$(echo $RESULTS | jq '.stats.tests')
+        PASSES=$(echo $RESULTS | jq '.stats.passes')
+        FAILURES=$(echo $RESULTS | jq '.stats.failures')
+        DURATION=$(echo $RESULTS | jq '.stats.duration')
+        SUITES=$(echo $RESULTS | jq '.stats.suites')
+        SKIPPED=$(echo $RESULTS | jq '.stats.skipped')
+        
+        # Calculate duration in seconds
+        DURATION_SEC=$(echo "scale=2; $DURATION / 1000" | bc)
+        
+        # Format the output
+        echo "End-to-End Test Results" >> test_summary.md
+        echo "$TESTS tests  ± 0   $PASSES ✅ ±0   ${DURATION_SEC}s ⏱️ ±0s  $SUITES suites ± 0   $SKIPPED 💤 ±0  3*** files   +3***   $FAILURES ❌ ±0  3*** errors" >> test_summary.md
+        echo "For more details on these parsing errors, see this check." >> test_summary.md
+        echo "Results for commit ${GITHUB_SHA::6}***${GITHUB_SHA: -3}. ± Comparison against earlier commit ${GITHUB_BASE_REF::1}***${GITHUB_BASE_REF: -3}***${GITHUB_BASE_REF: -2}." >> test_summary.md
+        
+        # Post comment to PR
+        gh pr comment ${{ github.event.pull_request.number }} --body-file test_summary.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Check test results
       if: always()
