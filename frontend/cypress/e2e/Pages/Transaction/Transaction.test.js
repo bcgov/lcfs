@@ -15,14 +15,9 @@ Given('the analyst is on the login page', () => {
 When('the analyst logs in with valid credentials', () => {
   cy.loginWith(
     'idir',
-    Cypress.env('ADMIN_IDIR_USERNAME'),
-    Cypress.env('ADMIN_IDIR_PASSWORD')
+    Cypress.env('admin_idir_username'),
+    Cypress.env('admin_idir_password')
   )
-  // cy.loginWith(
-  //   'idir',
-  //   Cypress.env('admin_idir_username'),
-  //   Cypress.env('admin_idir_password')
-  // )
   cy.wait(5000)
   cy.setIDIRRoles('analyst')
   cy.visit('/')

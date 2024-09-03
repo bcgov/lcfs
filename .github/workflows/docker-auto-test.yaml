@@ -74,22 +74,12 @@ jobs:
 
     - name: Fix docker-compose.yml
       run: |
-        sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose-test.yml
+        sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
 
     - name: Build and start services
       run: |
-        ADMIN_IDIR_USERNAME=${{ secrets.ADMIN_IDIR_USERNAME }} \
-        ADMIN_IDIR_PASSWORD=${{ secrets.ADMIN_IDIR_PASSWORD }} \
-        ORG1_BCEID_USERNAME=${{ secrets.ORG1_BCEID_USERNAME }} \
-        ORG1_BCEID_PASSWORD=${{ secrets.ORG1_BCEID_PASSWORD }} \
-        ORG1_BCEID_ID=${{ secrets.ORG1_BCEID_ID }} \
-        ORG1_BCEID_USERID=${{ secrets.ORG1_BCEID_USERID }} \
-        ORG2_BCEID_USERNAME=${{ secrets.ORG2_BCEID_USERNAME }} \
-        ORG2_BCEID_PASSWORD=${{ secrets.ORG2_BCEID_PASSWORD }} \
-        ORG2_BCEID_ID=${{ secrets.ORG2_BCEID_ID }} \
-        ORG2_BCEID_USERID=${{ secrets.ORG2_BCEID_USERID }} \
-        docker-compose -f docker-compose-test.yml build
-        docker-compose -f docker-compose-test.yml up -d
+        docker-compose build
+        docker-compose up -d
 
     # - name: Run backend tests
     #   id: backend_tests
@@ -130,6 +120,21 @@ jobs:
     #   with:
     #     name: vitest-results
     #     path: frontend/vitest-results.xml
+    - name: Create cypress.env.json
+      run: |
+        echo '{
+          "admin_idir_username": "${{ secrets.ADMIN_IDIR_USERNAME }}",
+          "admin_idir_password": "${{ secrets.ADMIN_IDIR_PASSWORD }}",
+          "org1_bceid_username": "${{ secrets.ORG1_BCEID_USERNAME }}",
+          "org1_bceid_password": "${{ secrets.ORG1_BCEID_PASSWORD }}",
+          "org1_bceid_id": "${{ secrets.ORG1_BCEID_ID }}",
+          "org1_bceid_userId": "${{ secrets.ORG1_BCEID_USERID }}",
+          "org2_bceid_username": "${{ secrets.ORG2_BCEID_USERNAME }}",
+          "org2_bceid_password": "${{ secrets.ORG2_BCEID_PASSWORD }}",
+          "org2_bceid_id": "${{ secrets.ORG2_BCEID_ID }}",
+          "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}",
+        }' > frontend/cypress.env.json
+
     - name: Run Cypress tests
       id: cypress_tests
       continue-on-error: true
