@@ -8,7 +8,6 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: cypress/included:13.14.0
 
     steps:
     - uses: actions/checkout@v3
@@ -121,11 +120,10 @@ jobs:
     #   with:
     #     name: vitest-results
     #     path: frontend/vitest-results.xml
-
     - name: Run Cypress tests
       id: cypress_tests
       continue-on-error: true
-      uses: cypress-io/github-action@v5
+      uses: cypress-io/github-action@v6
       with:
         command: npm run cypress:run -- --reporter junit --reporter-options "mochaFile=cypress/reports/results-[hash].xml"
         wait-on: 'http://localhost:3000'
