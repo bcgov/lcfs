@@ -132,7 +132,7 @@ jobs:
           "org2_bceid_username": "${{ secrets.ORG2_BCEID_USERNAME }}",
           "org2_bceid_password": "${{ secrets.ORG2_BCEID_PASSWORD }}",
           "org2_bceid_id": "${{ secrets.ORG2_BCEID_ID }}",
-          "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}",
+          "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}"
         }' > frontend/cypress.env.json
 
     - name: Run Cypress tests
