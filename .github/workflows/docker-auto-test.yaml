@@ -125,7 +125,7 @@ jobs:
       continue-on-error: true
       uses: cypress-io/github-action@v6
       with:
-        command: npm run cypress:run -- --reporter junit --reporter-options "mochaFile=cypress/reports/results-[hash].xml"
+        command: npm run cypress:run
         wait-on: 'http://localhost:3000'
         working-directory: frontend
       env:
