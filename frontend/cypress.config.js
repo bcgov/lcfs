@@ -2,6 +2,7 @@ import { defineConfig } from "cypress";
 import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
 import { addCucumberPreprocessorPlugin } from "@badeball/cypress-cucumber-preprocessor";
 import { createEsbuildPlugin } from "@badeball/cypress-cucumber-preprocessor/esbuild";
+const { GenerateCtrfReport } = require('cypress-ctrf-json-report')
 
 export default defineConfig({
   e2e: {
@@ -34,6 +35,7 @@ export default defineConfig({
     async setupNodeEvents(on, config) {
       // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
       await addCucumberPreprocessorPlugin(on, config);
+      await GenerateCtrfReport({on, config})
 
       on(
         "file:preprocessor",
