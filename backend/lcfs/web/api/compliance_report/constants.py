@@ -94,15 +94,15 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
 
 NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     "11": {
-        "description": "Volume of fossil-derived base fuel supplied",
+        "description": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)",
         "field": "fossil_derived_base_fuel",
     },
     "21": {
-        "description": "Non-compliance penalty payable ({} units * $600 CAD per unit)",
+        "description": "Low carbon fuel target non-compliance penalty total (Line 21)",
         "field": "line_21_non_compliance_penalty_payable",
     },
     "": {
-        "description": "Total non-compliance penalty payable (Line 11 + Line 21)",
+        "description": "Total non-compliance penalty payable ",
         "field": "total_non_compliance_penalty_payable",
     },
 }

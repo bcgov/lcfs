@@ -4,6 +4,7 @@ from typing import List
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import and_
 
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.dependencies import get_async_db_session
@@ -49,15 +50,47 @@ class OrganizationService:
         Returns:
             List[Transactions]: The list of transactions after applying the filters.
         """
-        for filter in pagination.filters:
-            filter_value = filter.filter
-            filter_option = filter.type
-            filter_type = filter.filter_type
-            field = get_field_for_filter(TransactionView, filter.field)
+        prefix_map = {
+            "CT": "Transfer",
+            "AA": "AdminAdjustment",
+            "IA": "InitiativeAgreement"
+        }
 
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
-            )
+        for filter in pagination.filters:
+            if filter.field == "transaction_id":
+                filter_value = filter.filter.upper()
+                for prefix, transaction_type in prefix_map.items():
+                    if filter_value.startswith(prefix):
+                        numeric_part = filter_value[len(prefix):]
+                        if numeric_part:
+                            if numeric_part.isdigit():
+                                conditions.append(and_(
+                                    TransactionView.transaction_type == transaction_type,
+                                    TransactionView.transaction_id == int(numeric_part)
+                                ))
+                            else:
+                                # Invalid numeric part, add a condition that will never match
+                                conditions.append(False)
+                        else:
+                            # Only prefix provided, filter by transaction type only
+                            conditions.append(TransactionView.transaction_type == transaction_type)
+                        break
+                else:
+                    # If no prefix matches, treat the whole value as a potential transaction_id
+                    if filter_value.isdigit():
+                        conditions.append(TransactionView.transaction_id == int(filter_value))
+                    else:
+                        # Invalid input, add a condition that will never match
+                        conditions.append(False)
+            else:
+                # Handle other filters as before
+                field = get_field_for_filter(TransactionView, filter.field)
+                filter_value = filter.filter
+                filter_option = filter.type
+                filter_type = filter.filter_type
+                conditions.append(
+                    apply_filter_conditions(field, filter_value, filter_option, filter_type)
+                )
 
     @service_handler
     async def get_organization_users_list(

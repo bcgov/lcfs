@@ -150,3 +150,32 @@ export const cleanEmptyStringValues = (obj) =>
       acc[key] = value
       return acc
     }, {})
+
+export const formatNumberWithCommas = ({ value }) => {
+  if (!value) return 0
+  const [integerPart, decimalPart] = value.toString().split('.')
+
+  let number = new Intl.NumberFormat('en-CA').format(integerPart)
+
+  if (decimalPart !== undefined) {
+    number = number + '.' + decimalPart
+  }
+
+  return number
+}
+
+export const formatNumberWithoutCommas = (value) => {
+  const [integerPart, decimalPart] = value.split('.')
+
+  let number = integerPart.replaceAll(',', '')
+
+  const regex = /^\d*\.?\d*$/
+  if (!regex.test(number)) return
+
+  if (decimalPart !== undefined) {
+    if (!regex.test(decimalPart)) return
+    number = number + '.' + decimalPart
+  }
+
+  return Number(number)
+}

@@ -31,7 +31,6 @@ async def seed_test():
             logger.info("Test database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")
-            await session.rollback()
 
 if __name__ == "__main__":
     asyncio.run(seed_test())

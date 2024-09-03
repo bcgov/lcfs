@@ -2,7 +2,11 @@ import { Typography } from '@mui/material'
 import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
-import { AutocompleteEditor } from '@/components/BCDataGrid/components'
+import {
+  AutocompleteEditor,
+  NumberEditor
+} from '@/components/BCDataGrid/components'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -44,7 +48,9 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   },
   {
     field: 'complianceReportId',
-    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.complianceReportId'),
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.complianceReportId'
+    ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     hide: true
@@ -54,18 +60,22 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'addressForService',
-    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.addressForService'),
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.addressForService'
+    ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
     field: 'fuelCategory',
-    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.fuelCategory'
+    ),
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
@@ -83,7 +93,9 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   },
   {
     field: 'receivedOrTransferred',
-    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.receivedOrTransferred'),
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
+    ),
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
@@ -102,15 +114,15 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   {
     field: 'quantity',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
-    cellEditor: 'agNumberCellEditor',
-    type: 'numericColumn',
+    cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
-  },
+    valueFormatter,
+    cellStyle: (params) => cellErrorStyle(params, errors)
+  }
 ]
 
 export const defaultColDef = {

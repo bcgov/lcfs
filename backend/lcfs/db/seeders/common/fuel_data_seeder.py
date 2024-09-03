@@ -67,10 +67,8 @@ async def seed_static_fuel_data(session):
             await add_if_not_exists(FuelMeasurementType, 'fuel_measurement_type_id', data["fuel_measurement_types"])
             await add_if_not_exists(LevelOfEquipment, 'level_of_equipment_id', data["levels_of_equipment"])
 
-            await session.commit()
             f_data.close()
 
     except Exception as e:
         logger.error("Error occurred while seeding static fuel data: %s", e)
-        await session.rollback()  # Ensure to rollback in case of an error
         raise

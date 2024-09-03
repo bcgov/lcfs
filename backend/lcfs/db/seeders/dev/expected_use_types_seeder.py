@@ -28,7 +28,6 @@ async def seed_expected_use_types(session):
                 expected_use_type = ExpectedUseType(**expected_use_type_data)
                 session.add(expected_use_type)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding expected use types: %s", e)
         raise

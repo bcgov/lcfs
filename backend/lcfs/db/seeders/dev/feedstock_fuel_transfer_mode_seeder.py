@@ -73,7 +73,6 @@ async def seed_feedstock_fuel_transfer_modes(session):
                     **feedstock_fuel_transferm_mode_data)
                 session.add(feedstock_fuel_transfer_mode)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding feedstock fuel transfer modes: %s", e)

@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 from math import ceil
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, cast, String
 
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
@@ -42,34 +42,38 @@ class TransactionsService:
             List[Transactions]: The list of transactions after applying the filters.
         """
         prefix_map = {
-            "CUT": "Transfer",
+            "CT": "Transfer",
             "AA": "AdminAdjustment",
             "IA": "InitiativeAgreement"
         }
 
         for filter in pagination.filters:
-            filter_value = filter.filter
-            filter_option = filter.type
-            filter_type = filter.filter_type
-            field = get_field_for_filter(TransactionView, filter.field)
-
-            # Check for prefixed transaction_id
             if filter.field == "transaction_id":
+                filter_value = filter.filter.upper()
                 for prefix, transaction_type in prefix_map.items():
-                    if filter_value.upper().startswith(prefix):
-                        numeric_id = filter_value[len(prefix):]
-                        if numeric_id.isdigit():
-                            transaction_type_condition = TransactionView.transaction_type == transaction_type
-                            transaction_id_condition = TransactionView.transaction_id == int(numeric_id)
-                            conditions.append(and_(transaction_type_condition, transaction_id_condition))
+                    if filter_value.startswith(prefix):
+                        numeric_part = filter_value[len(prefix):]
+                        if numeric_part:
+                            if numeric_part.isdigit():
+                                conditions.append(and_(
+                                    TransactionView.transaction_type == transaction_type,
+                                    TransactionView.transaction_id == int(numeric_part)
+                                ))
+                        else:
+                            # Only prefix provided, filter by transaction type only
+                            conditions.append(TransactionView.transaction_type == transaction_type)
                         break
                 else:
-                    # If no prefix matches, add a condition that will never match
-                    conditions.append(False)
+                    # If no prefix matches, treat the whole value as a potential transaction_id
+                    if filter_value.isdigit():
+                        conditions.append(TransactionView.transaction_id == int(filter_value))
             else:
+                # Handle other filters
+                field = get_field_for_filter(TransactionView, filter.field)
                 conditions.append(
                     apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type)
+                        field, filter.filter, filter.type, filter.filter_type
+                    )
                 )
 
     @service_handler

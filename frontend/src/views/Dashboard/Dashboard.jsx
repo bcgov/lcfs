@@ -12,6 +12,7 @@ import {
   TransactionsCard,
   OrgTransactionsCard
 } from './components/cards'
+import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
 
 export const Dashboard = () => {
   return (
@@ -28,11 +29,14 @@ export const Dashboard = () => {
           xs={12} sm={6} md={5} lg={3}
           order={{ xs: 3, sm: 2, md: 2, lg: 1 }}
         >
-          <Box display="flex" flexDirection="column" gap={3} sx={{ mr: { lg: 3 } }}>
+          <Box display="flex" flexDirection="column" gap={3} sx={{ ml: { lg: 3 }, mt: 5 }}>
             <Role roles={nonGovRoles}>
               <OrgBalanceCard />
               <FeedbackCard />
               <WebsiteCard />
+            </Role>
+            <Role roles={govRoles}>
+              <OrganizationsSummaryCard />
             </Role>
           </Box>
         </Grid>
@@ -42,9 +46,8 @@ export const Dashboard = () => {
           item
           xs={12} sm={12} md={12} lg={6}
           order={{ xs: 1, sm: 1, md: 1, lg: 2 }}
-          sx={{ bgcolor: { lg: 'background.grey' } }}
         >
-          <Box sx={{ mx: {lg: 2 }, mt: {lg: 5}, mb: {lg: 3}, bgcolor: { lg: 'background.grey' }, px: { lg: 1 } }}>
+          <Box sx={{ mx: {lg: 2 }, mt: {lg: 5}, mb: {lg: 3}, px: { lg: 1 } }}>
             <Role roles={[roles.analyst, roles.compliance_manager]}>
               <TransactionsCard />
             </Role>
@@ -62,7 +65,6 @@ export const Dashboard = () => {
           item
           xs={12} sm={6} md={5} lg={3}
           order={{ xs: 2, sm: 3, md: 3, lg: 3 }}
-          sx={{ bgcolor: { lg: 'background.grey' } }}
         >
           <Box sx={{ mr: {lg: 3 }, my: {lg: 5 } }}>
             <Role roles={nonGovRoles}>

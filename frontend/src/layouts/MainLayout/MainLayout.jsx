@@ -58,7 +58,7 @@ export const MainLayout = () => {
                 <Outlet />
               </BCBox>
             </Grid>
-            <Grid item="true" xs={12}>
+            <Grid item="true" xs={12} px={2}>
               <DisclaimerBanner
                 messages={[
                   t('layout.disclaimer.part1'),

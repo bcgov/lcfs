@@ -160,7 +160,6 @@ async def seed_fuel_codes(session):
                 fuel_code = FuelCode(**fuel_code_data)
                 session.add(fuel_code)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding fuel codes: %s", e)
         raise

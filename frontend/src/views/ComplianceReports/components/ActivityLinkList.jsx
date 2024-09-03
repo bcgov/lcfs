@@ -55,7 +55,7 @@ export const ActivityLinksList = () => {
     <List component="div" sx={{ maxWidth: '100%', listStyleType: 'disc' }}>
       {activityList.map((activity, index) => (
         <ListItemButton
-          sx={{ display: 'list-item', padding: '0', marginLeft: '4rem' }}
+          sx={{ display: 'list-item', padding: '0', marginLeft: '1.2rem' }}
           component="a"
           key={index}
           alignItems="flex-start"

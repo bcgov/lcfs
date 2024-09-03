@@ -121,11 +121,13 @@ const ComplianceReportSummary = ({ reportID }) => {
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns}
             data={summaryData?.lowCarbonFuelTargetSummary}
+            width={'81%'}
           />
           <SummaryTable
             title={t('report:nonCompliancePenaltySummary')}
             columns={nonComplianceColumns}
             data={summaryData?.nonCompliancePenaltySummary}
+            width={'81%'}
           />
           <SigningAuthorityDeclaration />
         </AccordionDetails>

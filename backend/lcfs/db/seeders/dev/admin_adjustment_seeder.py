@@ -42,7 +42,6 @@ async def seed_admin_adjustments(session):
                 admin_adjustment = AdminAdjustment(**admin_adjustment_data)
                 session.add(admin_adjustment)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding admin adjustments: %s", e)
         raise

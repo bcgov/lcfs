@@ -33,7 +33,7 @@ export const AgreementDate = () => {
           placeholder="yyyy-mm-dd"
           inputProps={{
             max: maxDate,
-            'data-testid': 'transfer-agreement-date-input'
+            'data-test': 'transfer-agreement-date-input'
           }}
           size="small"
           error={!!errors.agreementDate}

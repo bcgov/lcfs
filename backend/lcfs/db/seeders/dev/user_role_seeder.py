@@ -70,7 +70,6 @@ async def seed_user_roles(session):
                 user_role = UserRole(**user_role_data)
                 session.add(user_role)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding user roles: %s", e)
         raise

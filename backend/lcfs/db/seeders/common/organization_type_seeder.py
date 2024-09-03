@@ -35,7 +35,6 @@ async def seed_organization_types(session):
                 org_type = OrganizationType(**org_type_data)
                 session.add(org_type)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding organization types: %s", e)
         raise

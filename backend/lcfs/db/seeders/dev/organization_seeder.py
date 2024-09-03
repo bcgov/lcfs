@@ -175,7 +175,6 @@ async def seed_organizations(session):
                 "SELECT setval('organization_attorney_address_organization_attorney_address_seq', (SELECT MAX(organization_attorney_address_id) FROM organization_attorney_address))"
             )
         )
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding organizations: %s", e)
         raise
