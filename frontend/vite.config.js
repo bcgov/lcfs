@@ -43,6 +43,6 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['@mui/material/Unstable_Grid2']
+    include: ['@mui/material/Unstable_Grid2', '@mui/material/Tooltip']
   }
 })
