@@ -186,6 +186,13 @@ jobs:
           frontend/cypress/reports/
           frontend/cypress/screenshots/
 
+    - name: Post Cypress results as a comment
+      if: always()
+      run: |
+        gh pr comment ${{ github.event.pull_request.number }} --body "Cypress test report is available [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}). Download the 'cypress-results' artifact to view the report."
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Stop services
       if: always()
       run: docker-compose down
