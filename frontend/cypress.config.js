@@ -10,6 +10,7 @@ export default defineConfig({
     reporter: 'mochawesome',
     reporterOptions: {
       reportDir: 'cypress/reports',
+      reportFilename: 'results.json',
       overwrite: false,
       html: false,
       json: true
@@ -29,17 +30,14 @@ export default defineConfig({
     viewportHeight: 720,
 
     // Base URL for tests
-    baseUrl: 'http://localhost:3000',
+    baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:3000',
     async setupNodeEvents(on, config) {
       // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
       await addCucumberPreprocessorPlugin(on, config);
 
-      on(
-        "file:preprocessor",
-        createBundler({
-          plugins: [createEsbuildPlugin(config)],
-        })
-      );
+      on("file:preprocessor", createBundler({
+        plugins: [createEsbuildPlugin(config)],
+      }));
 
       return config;
     },

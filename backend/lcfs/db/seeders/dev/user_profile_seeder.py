@@ -275,6 +275,19 @@ async def seed_user_profiles(session):
             "first_name": "Stuart",
             "last_name": "Galloway",
         },
+        {
+            "user_profile_id": 21,
+            "keycloak_email": "lcfstest@gov.bc.ca",
+            "keycloak_username": "lcfstest",
+            "email": "lcfstest@gov.bc.ca",
+            "title": "Test Account",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "LCFS_IDIR",
+            "last_name": "TESTER",
+        },
     ]
 
     try:
