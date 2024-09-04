@@ -19,10 +19,15 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
 Cypress.Commands.add('loginWith', (userType, username, password) => {
   // Determine which login link to click based on user type
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
-
+  cy.wait(5000)
   // Define the login process for IDIR and BCeID
+  // cy.get("#user").type(username, { log: false });
+  // cy.get("#password").type(password, { log: false });
+  // cy.get("div.login-form-action > input").click();
+  // cy.wait(5000)
   const loginProcess = (args) => {
     const [username, password] = args
+    console.log('username', username)
     cy.get('input[name=user]').type(username, { log: false })
     cy.get('input[name=password]').type(password, { log: false })
     cy.get('form').submit()
@@ -34,7 +39,6 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     { args: [username, password] },
     loginProcess
   )
-
   // Check to confirm successful login
   // cy.getByDataTest('logout-button').should('be.visible')
 })
@@ -59,6 +63,7 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.visit('/')
     cy.getByDataTest('login-container').should('exist')
     // Login as an IDIR user with Admin privileges.
+    expect(Cypress.env('admin_idir_username'), 'IDIR username is set').to.be.a('string').and.not.be.empty
     cy.loginWith(
       'idir',
       Cypress.env('admin_idir_username'),

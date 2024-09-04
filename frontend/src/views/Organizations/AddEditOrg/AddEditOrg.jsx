@@ -136,7 +136,7 @@ export const AddEditOrg = () => {
     }
     return (
       errors[fieldName] && (
-        <Typography color="error" variant="caption">
+        <Typography role="alert" color="error" variant="caption">
           {errors[fieldName].message}
         </Typography>
       )
@@ -324,7 +324,6 @@ export const AddEditOrg = () => {
                       <TextField
                         required
                         id="orgLegalName"
-                        name="orgLegalName"
                         data-test="orgLegalName"
                         variant="outlined"
                         fullWidth
@@ -367,7 +366,6 @@ export const AddEditOrg = () => {
                         required
                         disabled={sameAsLegalName}
                         id="orgOperatingName"
-                        name="orgOperatingName"
                         data-test="orgOperatingName"
                         variant="outlined"
                         fullWidth
@@ -383,7 +381,6 @@ export const AddEditOrg = () => {
                       <TextField
                         required
                         id="orgEmailAddress"
-                        name="orgEmailAddress"
                         data-test="orgEmailAddress"
                         variant="outlined"
                         fullWidth
@@ -399,7 +396,6 @@ export const AddEditOrg = () => {
                       <TextField
                         required
                         id="orgPhoneNumber"
-                        name="orgPhoneNumber"
                         data-test="orgPhoneNumber"
                         variant="outlined"
                         fullWidth
@@ -511,7 +507,6 @@ export const AddEditOrg = () => {
                       <TextField
                         required
                         id="orgEDRMSRecord"
-                        name="orgEDRMSRecord"
                         data-test="orgEDRMSRecord"
                         variant="outlined"
                         fullWidth
@@ -537,7 +532,6 @@ export const AddEditOrg = () => {
                 <TextField
                   required
                   id="orgStreetAddress"
-                  name="orgStreetAddress"
                   data-test="orgStreetAddress"
                   variant="outlined"
                   fullWidth
@@ -552,7 +546,6 @@ export const AddEditOrg = () => {
                 </InputLabel>
                 <TextField
                   id="orgAddressOther"
-                  name="orgAddressOther"
                   data-test="orgAddressOther"
                   variant="outlined"
                   fullWidth
@@ -566,7 +559,6 @@ export const AddEditOrg = () => {
                 <TextField
                   required
                   id="orgCity"
-                  name="orgCity"
                   data-test="orgCity"
                   variant="outlined"
                   fullWidth
@@ -582,7 +574,6 @@ export const AddEditOrg = () => {
                 <TextField
                   disabled
                   id="orgProvince"
-                  name="orgProvince"
                   data-test="orgProvince"
                   variant="outlined"
                   defaultValue="BC"
@@ -596,7 +587,6 @@ export const AddEditOrg = () => {
                 <TextField
                   disabled
                   id="orgCountry"
-                  name="orgCountry"
                   data-test="orgCountry"
                   variant="outlined"
                   defaultValue="Canada"
@@ -610,7 +600,6 @@ export const AddEditOrg = () => {
                 <TextField
                   required
                   id="orgPostalCodeZipCode"
-                  name="orgPostalCodeZipCode"
                   data-test="orgPostalCodeZipCode"
                   variant="outlined"
                   fullWidth
@@ -651,7 +640,6 @@ export const AddEditOrg = () => {
                   required
                   disabled={sameAsServiceAddress}
                   id="orgAttorneyStreetAddress"
-                  name="orgAttorneyStreetAddress"
                   data-test="orgAttorneyStreetAddress"
                   variant="outlined"
                   fullWidth
@@ -673,7 +661,6 @@ export const AddEditOrg = () => {
                 <TextField
                   disabled={sameAsServiceAddress}
                   id="orgAttorneyAddressOther"
-                  name="orgAttorneyAddressOther"
                   data-test="orgAttorneyAddressOther"
                   variant="outlined"
                   fullWidth
@@ -688,7 +675,6 @@ export const AddEditOrg = () => {
                   required
                   disabled={sameAsServiceAddress}
                   id="orgAttorneyCity"
-                  name="orgAttorneyCity"
                   data-test="orgAttorneyCity"
                   variant="outlined"
                   fullWidth
@@ -706,7 +692,6 @@ export const AddEditOrg = () => {
                 <TextField
                   disabled
                   id="orgAttorneyProvince"
-                  name="orgAttorneyProvince"
                   data-test="orgAttorneyProvince"
                   variant="outlined"
                   defaultValue="BC"
@@ -720,7 +705,6 @@ export const AddEditOrg = () => {
                 <TextField
                   disabled
                   id="orgAttorneyCountry"
-                  name="orgAttorneyCountry"
                   data-test="orgAttorneyCountry"
                   variant="outlined"
                   defaultValue="Canada"
@@ -738,7 +722,6 @@ export const AddEditOrg = () => {
                   required
                   disabled={sameAsServiceAddress}
                   id="orgAttorneyPostalCodeZipCode"
-                  name="orgAttorneyPostalCodeZipCode"
                   data-test="orgAttorneyPostalCodeZipCode"
                   variant="outlined"
                   fullWidth

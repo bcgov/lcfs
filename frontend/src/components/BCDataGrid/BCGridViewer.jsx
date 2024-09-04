@@ -146,7 +146,7 @@ export const BCGridViewer = ({
     []
   )
 
-  return isError && error.response.status !== 404 ? (
+  return isError && error?.response?.status !== 404 ? (
     <div className="error-container">
       <div className="error-message">
         <BCAlert severity="error">
