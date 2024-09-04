@@ -8,6 +8,8 @@ import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
 import { useNavigate, useParams } from 'react-router-dom'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { schemaValidation } from '@/views/Organizations/AddEditOrg/_schema.js'
 
 vi.mock('@/hooks/useOrganization')
 vi.mock('react-i18next', () => ({
@@ -19,8 +21,32 @@ vi.mock('@/services/useApiService')
 vi.mock('react-router-dom')
 
 const MockFormProvider = ({ children }) => {
-  const methods = useForm()
+  const methods = useForm({
+    resolver: yupResolver(schemaValidation),
+    mode: 'all'
+  })
   return <FormProvider {...methods}>{children}</FormProvider>
+}
+
+const mockedOrg = {
+  name: 'Test Org',
+  operatingName: 'Test Operating Org',
+  email: 'test@example.com',
+  phone: '123-456-7890',
+  edrmsRecord: 'EDRMS123',
+  orgAddress: {
+    streetAddress: '123 Test St',
+    addressOther: '',
+    city: 'Test City',
+    postalcodeZipcode: 'A1B2C3'
+  },
+  orgAttorneyAddress: {
+    streetAddress: '456 Attorney Rd',
+    addressOther: '',
+    city: 'Attorney City',
+    postalcodeZipcode: 'D4E5F6'
+  },
+  orgStatus: { organizationStatusId: 2 }
 }
 
 describe('AddEditOrg', () => {
@@ -34,26 +60,6 @@ describe('AddEditOrg', () => {
 
     // Mocking the useOrganization hook
     useOrganization.mockReturnValue({
-      data: {
-        name: 'Test Org',
-        operatingName: 'Test Operating Org',
-        email: 'test@example.com',
-        phone: '123-456-7890',
-        edrmsRecord: 'EDRMS123',
-        orgAddress: {
-          streetAddress: '123 Test St',
-          addressOther: '',
-          city: 'Test City',
-          postalcodeZipcode: 'A1B2C3'
-        },
-        orgAttorneyAddress: {
-          streetAddress: '456 Attorney Rd',
-          addressOther: '',
-          city: 'Attorney City',
-          postalcodeZipcode: 'D4E5F6'
-        },
-        orgStatus: { organizationStatusId: 2 }
-      },
       isFetched: true
     })
 
@@ -66,6 +72,11 @@ describe('AddEditOrg', () => {
   })
 
   test('renders correctly with provided organization data', () => {
+    useOrganization.mockReturnValue({
+      data: mockedOrg,
+      isFetched: true
+    })
+
     render(
       <MockFormProvider>
         <AddEditOrg />
@@ -92,25 +103,77 @@ describe('AddEditOrg', () => {
     expect(screen.getAllByLabelText(/org:poLabel/i)[0]).toHaveValue('A1B2C3')
   })
 
-  test('renders validation errors in the form correctly', async () => {
-    // FIXME: Why does the error object not get populated?
-    // render(
-    //   <MockFormProvider>
-    //     <AddEditOrg />
-    //   </MockFormProvider>,
-    //   { wrapper }
-    // )
-    //
-    // // Simulate submitting the form without filling required fields
-    // fireEvent.click(screen.getByTestId('saveOrganization'))
-    //
-    // // Check for validation error messages
-    // await waitFor(
-    //   expect(await screen.findByText(/required/i)).toBeInTheDocument()
-    // )
+  test('renders required errors in the form correctly', async () => {
+    render(
+      <MockFormProvider>
+        <AddEditOrg />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    // Simulate submitting the form without filling required fields
+    fireEvent.click(screen.getByTestId('saveOrganization'))
+
+    // Check for validation error messages
+    await waitFor(async () => {
+      const errorMessages = await screen.findAllByText(/required/i)
+      expect(errorMessages.length).toBeGreaterThan(0)
+
+      // Check for specific error messages
+      expect(
+        screen.getByText(/Legal Name of Organization is required./i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Operating Name of Organization is required./i)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Email Address is required./i)
+      ).toBeInTheDocument()
+      expect(screen.getByText(/Phone Number is required./i)).toBeInTheDocument()
+    })
+  })
+
+  test('renders unique error messages for specific fields', async () => {
+    useOrganization.mockReturnValue({
+      data: {
+        ...mockedOrg,
+        phone: 'f91j5qhf91',
+        orgAddress: {
+          postalcodeZipcode: '2671224'
+        }
+      },
+      isFetched: true
+    })
+
+    render(
+      <MockFormProvider>
+        <AddEditOrg />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    // Simulate submitting the form without filling required fields
+    fireEvent.click(screen.getByTestId('saveOrganization'))
+
+    // Check for validation error messages
+    await waitFor(async () => {
+      expect(
+        screen.getByText(
+          /Invalid format. Only numbers, spaces, parentheses, plus signs, and hyphens are allowed./i
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Please enter a valid Postal \/ ZIP Code./i)
+      ).toBeInTheDocument()
+    })
   })
 
   test('submits form data correctly', async () => {
+    useOrganization.mockReturnValue({
+      data: mockedOrg,
+      isFetched: true
+    })
+
     render(
       <MockFormProvider>
         <AddEditOrg />
