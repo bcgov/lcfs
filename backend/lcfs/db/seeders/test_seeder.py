@@ -17,18 +17,13 @@ async def seed_test(session: AsyncSession):
     """
     Function to seed the database with test data.
     """
-
-    async with AsyncSessionLocal() as session:
-        try:
-            await seed_test_organizations(session)
-            await seed_test_user_profiles(session)
-            await seed_test_user_roles(session)
-            await seed_test_transactions(session)
-            await seed_test_admin_adjustments(session)
-            # await seed_test_transfers(session)
-            logger.info("Test database seeding completed successfully.")
-        except Exception as e:
-            logger.error(f"An error occurred during seeding: {e}")
+    await seed_test_organizations(session)
+    await seed_test_user_profiles(session)
+    await seed_test_user_roles(session)
+    await seed_test_transactions(session)
+    await seed_test_admin_adjustments(session)
+    # await seed_test_transfers(session)
+    logger.info("Test database seeding completed successfully.")
 
 if __name__ == "__main__":
     asyncio.run(seed_test())
