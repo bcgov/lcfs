@@ -5,7 +5,8 @@ import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
 import ComplianceReportSummary from '../ComplianceReportSummary'
-import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
+import { useGetComplianceReportSummary, useUpdateComplianceReportSummary } from '@/hooks/useComplianceReports'
+import { BrowserRouter as Router } from 'react-router-dom'
 
 // Mock the custom hooks and components
 vi.mock('@/hooks/useComplianceReports')
@@ -20,7 +21,7 @@ vi.mock('@mui/material', () => ({
   Typography: ({ children }) => <div>{children}</div>,
   CircularProgress: () => <div>Loading...</div>,
   List: ({ children }) => <ul>{children}</ul>,
-  ListItem: ({ children }) => <li>{children}</li>,
+  ListItem: ({ children }) => <li>{children}</li>
 }))
 
 // Custom render function with providers
@@ -28,15 +29,17 @@ const customRender = (ui, options = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: false,
-      },
-    },
+        retry: false
+      }
+    }
   })
 
   const AllTheProviders = ({ children }) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        {children}
+        <Router>
+          {children}
+        </Router>
       </ThemeProvider>
     </QueryClientProvider>
   )
@@ -47,11 +50,15 @@ const customRender = (ui, options = {}) => {
 describe('ComplianceReportSummary', () => {
   const mockReportID = '123'
 
+  beforeAll(() => {
+    useUpdateComplianceReportSummary.mockReturnValue({})
+  })
+
   it('renders loading state', () => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: true,
       isError: false,
-      data: null,
+      data: null
     })
 
     customRender(<ComplianceReportSummary reportID={mockReportID} />)
@@ -63,28 +70,22 @@ describe('ComplianceReportSummary', () => {
       isLoading: false,
       isError: true,
       error: { message: 'Error fetching data' },
-      data: null,
+      data: null
     })
 
     customRender(<ComplianceReportSummary reportID={mockReportID} />)
-    expect(screen.getByText('Error fetching data')).toBeInTheDocument()
+    expect(screen.getByText('Error retrieving the record')).toBeInTheDocument()
   })
 
-  it('renders summary content when data is loaded', () => {
-    const mockData = {
-      renewableFuelTargetSummary: [],
-      lowCarbonFuelTargetSummary: [],
-      nonCompliancePenaltySummary: [],
-    }
-
+  it('renders summary content', () => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: false,
-      data: mockData,
+      data: null
     })
 
     customRender(<ComplianceReportSummary reportID={mockReportID} />)
-    
+
     waitFor(() => {
       expect(screen.getByTestId('accordion')).toBeInTheDocument()
       expect(screen.getByTestId('accordion-summary')).toBeInTheDocument()

@@ -144,7 +144,7 @@ export const EditViewComplianceReport = () => {
           {alertMessage}
         </BCAlert>
       ) : (
-        <>
+        <BCBox pl={2} pr={2}>
           <BCModal
             open={!!modalData}
             onClose={() => setModalData(null)}
@@ -159,8 +159,7 @@ export const EditViewComplianceReport = () => {
             <Stack
               direction={{ md: 'column', lg: 'row' }}
               spacing={2}
-              p={4}
-              sx={{ bgcolor: { lg: 'background.grey' } }}
+              pb={2}
             >
               {currentStatus === 'Assessed' && (
                 <AssessmentCard
@@ -247,7 +246,7 @@ export const EditViewComplianceReport = () => {
               )}
             </Fab>
           </Tooltip>
-        </>
+        </BCBox>
       )}
     </>
   )

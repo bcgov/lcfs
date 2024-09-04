@@ -137,7 +137,6 @@ async def seed_organization_attorney_addresses(session):
                 )
                 session.add(organization_attorney_address)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding organization attorney addresses: %s", e

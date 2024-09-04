@@ -13,12 +13,10 @@ from lcfs.db.seeders.test.test_transaction_seeder import seed_test_transactions
 
 logger = logging.getLogger(__name__)
 
-async def seed_test():
+async def seed_test(session: AsyncSession):
     """
     Function to seed the database with test data.
     """
-    engine = create_async_engine(str(settings.db_url))
-    AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession)
 
     async with AsyncSessionLocal() as session:
         try:
@@ -31,7 +29,6 @@ async def seed_test():
             logger.info("Test database seeding completed successfully.")
         except Exception as e:
             logger.error(f"An error occurred during seeding: {e}")
-            await session.rollback()
 
 if __name__ == "__main__":
     asyncio.run(seed_test())

@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react'
 import { BrowserRouter as Router } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { NotionalTransfers } from '@/views/NotionalTransfers'
+import { NotionalTransferSummary } from '@/views/NotionalTransfers'
 // Import utilities directly, if getByDataTest is a custom utility, ensure it's correctly imported
 import { getByDataTest } from '@/tests/utils/testHelpers'
 import { ThemeProvider } from '@mui/material'
@@ -75,14 +75,14 @@ const WrapperComponent = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <Router>
-          <NotionalTransfers />
+          <NotionalTransferSummary />
         </Router>
       </ThemeProvider>
     </QueryClientProvider>
   )
 }
 
-describe('NotionalTransfers Component Tests', () => {
+describe('NotionalTransferSummary Component Tests', () => {
   afterEach(() => {
     cleanup()
     vi.resetAllMocks() // Reset mocks to their initial state after each test
@@ -90,8 +90,8 @@ describe('NotionalTransfers Component Tests', () => {
 
   test('renders title correctly', () => {
     render(WrapperComponent())
-    const title = screen.getByTestId('title');
-    expect(title).toBeInTheDocument();
+    const title = screen.getByTestId('title')
+    expect(title).toBeInTheDocument()
     expect(title.textContent).toBe('NotionalTransfers')
   })
 

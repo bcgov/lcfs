@@ -309,13 +309,13 @@ class ComplianceReportSummaryService:
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }
 
+
         # line 11
         non_compliance_penalties = {
-            category: (
-                0 if max(0, eligible_renewable_fuel_required.get(category, 0) -
-                            net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category] == 0
-                else f"""${math.ceil(max(0, eligible_renewable_fuel_required.get(category, 0) -
-                                         net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category] * 100) / 100:,.2f}"""
+            category: round(
+                max(0, eligible_renewable_fuel_required.get(category, 0) - 
+                      net_renewable_supplied.get(category, 0)) * PRESCRIBED_PENALTY_RATE[category],
+                2
             )
             for category in ['gasoline', 'diesel', 'jet_fuel']
         }

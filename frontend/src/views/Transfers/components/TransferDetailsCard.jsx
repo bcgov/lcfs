@@ -55,9 +55,9 @@ export const TransferDetailsCard = ({
             py={1}
           >
             {isMobileSize ? (
-              <SwapVertIcon color="primary" sx={{ ...iconSizeStyle }} />
+              <SwapVertIcon data-test='SwapVertIcon' color="primary" sx={{ ...iconSizeStyle }} />
             ) : (
-              <SyncAltIcon color="primary" sx={{ ...iconSizeStyle }} />
+              <SyncAltIcon data-test='SyncAltIcon' color="primary" sx={{ ...iconSizeStyle }} />
             )}
           </BCBox>
           <Typography variant="caption1" textAlign="center">

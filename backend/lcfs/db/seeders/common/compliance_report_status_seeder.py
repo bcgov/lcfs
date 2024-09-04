@@ -49,9 +49,7 @@ async def seed_compliance_report_statuses(session):
                 status = ComplianceReportStatus(**status_data)
                 session.add(status)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding compliance report statuses: %s", e)
-        await session.rollback()
         raise

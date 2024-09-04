@@ -37,13 +37,17 @@ export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
             onClick={handleToggle}
             sx={{ cursor: 'pointer' }}
           >
-            <IconButton aria-label="expand comments">
+            <IconButton
+              data-test="collapse-button"
+              aria-label="expand comments"
+            >
               {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </IconButton>
           </Box>
 
           <Collapse in={isExpanded}>
             <TextField
+              data-test="external-comments"
               id="external-comments"
               {...register(commentField)}
               multiline

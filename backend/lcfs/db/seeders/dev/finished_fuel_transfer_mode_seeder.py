@@ -73,7 +73,6 @@ async def seed_finished_fuel_transfer_modes(session):
                     **finished_fuel_transferm_mode_data)
                 session.add(finished_fuel_transfer_mode)
 
-        await session.commit()
     except Exception as e:
         logger.error(
             "Error occurred while seeding finished fuel transfer modes: %s", e)
