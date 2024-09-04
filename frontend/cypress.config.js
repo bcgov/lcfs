@@ -35,7 +35,7 @@ export default defineConfig({
     async setupNodeEvents(on, config) {
       // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
       await addCucumberPreprocessorPlugin(on, config);
-      await GenerateCtrfReport({on, config})
+      await new GenerateCtrfReport({on, outputFile: 'results.json', outputDir: 'frontend/cypress/ctrf/'})
 
       on(
         "file:preprocessor",
@@ -43,6 +43,13 @@ export default defineConfig({
           plugins: [createEsbuildPlugin(config)],
         })
       );
+
+      on('after:run', async (results) => {
+        await GenerateCtrfReport({
+          jsonDir: "cypress/reports",
+          outputFile: "cypress/reports/ctrf-report.json"
+        });
+      });
 
       return config;
     },

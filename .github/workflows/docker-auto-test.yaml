@@ -193,7 +193,7 @@ jobs:
         deduplicate_classes_by_file_name: "true"
 
     - name: Publish Test Summary Results
-      run: npx github-actions-ctrf frontend/cypress/reports/results.json
+      run: npx github-actions-ctrf frontend/cypress/reports/ctrf-report.json
 
     - name: Check test results
       if: always()
