@@ -77,7 +77,5 @@ async def seed_test_transfers(session):
             logger.error(f"Error occurred while seeding transfers: {e}")
             raise
     
-    await session.commit()
-
     # Refresh the materialized view to include the new/updated transfers
     await session.execute(text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate"))
