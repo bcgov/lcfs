@@ -52,7 +52,9 @@ jobs:
         key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
         restore-keys: |
           ${{ runner.os }}-docker-
-
+    - name: Install mochawesome and marge
+      run: |
+        npm install mochawesome mochawesome-merge mochawesome-report-generator --save-dev
     - name: Install Poetry
       run: pip install poetry==1.6.1
 
@@ -155,6 +157,14 @@ jobs:
         org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }}
         org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
 
+    - name: Combine mochawesome reports
+      run: |
+        npx mochawesome-merge frontend/cypress/reports/*.json > frontend/cypress/reports/combined-report.json
+
+    - name: Generate HTML report
+      run: |
+        npx marge frontend/cypress/reports/combined-report.json --reportDir frontend/cypress/reports --inline
+
     - name: Upload Cypress results
       if: always()
       uses: actions/upload-artifact@v3
@@ -191,10 +201,7 @@ jobs:
     #     fail_on: "errors"
     #     report_individual_runs: "true"
     #     deduplicate_classes_by_file_name: "true"
-
-    - name: Publish Test Summary Results
-      run: npx github-actions-ctrf frontend/cypress/reports/ctrf-report.json
-
+  
     - name: Check test results
       if: always()
       run: |
