@@ -83,45 +83,45 @@ jobs:
         docker-compose build
         docker-compose up -d
 
-    # - name: Run backend tests
-    #   id: backend_tests
-    #   continue-on-error: true
-    #   run: |
-    #     cd backend
-    #     poetry run pytest --junitxml=pytest-results.xml
-    #   env:
-    #     LCFS_DB_HOST: localhost
-    #     LCFS_DB_PORT: 5432
-    #     LCFS_DB_USER: lcfs
-    #     LCFS_DB_PASS: development_only
-    #     LCFS_DB_BASE: lcfs
-    #     LCFS_REDIS_HOST: localhost
-    #     LCFS_REDIS_PORT: 6379
-    #     LCFS_REDIS_PASSWORD: development_only
-    #     APP_ENVIRONMENT: test
+    - name: Run backend tests
+      id: backend_tests
+      continue-on-error: true
+      run: |
+        cd backend
+        poetry run pytest --junitxml=pytest-results.xml
+      env:
+        LCFS_DB_HOST: localhost
+        LCFS_DB_PORT: 5432
+        LCFS_DB_USER: lcfs
+        LCFS_DB_PASS: development_only
+        LCFS_DB_BASE: lcfs
+        LCFS_REDIS_HOST: localhost
+        LCFS_REDIS_PORT: 6379
+        LCFS_REDIS_PASSWORD: development_only
+        APP_ENVIRONMENT: test
 
-    # - name: Upload pytest results
-    #   if: always()
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: pytest-results
-    #     path: backend/pytest-results.xml
+    - name: Upload pytest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-results
+        path: backend/pytest-results.xml
 
-    # - name: Run frontend tests
-    #   id: frontend_tests
-    #   continue-on-error: true
-    #   run: |
-    #     cd frontend
-    #     npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
-    #   env:
-    #     CI: true
+    - name: Run frontend tests
+      id: frontend_tests
+      continue-on-error: true
+      run: |
+        cd frontend
+        npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
+      env:
+        CI: true
 
-    # - name: Upload Vitest results
-    #   if: always()
-    #   uses: actions/upload-artifact@v3
-    #   with:
-    #     name: vitest-results
-    #     path: frontend/vitest-results.xml
+    - name: Upload Vitest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: vitest-results
+        path: frontend/vitest-results.xml
     - name: Create cypress.env.json
       run: |
         echo '{
@@ -190,29 +190,29 @@ jobs:
       if: always()
       run: docker-compose down
 
-    # - name: Publish Backend Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: backend/pytest-results.xml
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     comment_title: "Backend Test Results"
-    #     check_name: "Backend Test Results"
-    #     fail_on: "errors"
-    #     report_individual_runs: "true"
-    #     deduplicate_classes_by_file_name: "true"
+    - name: Publish Backend Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: backend/pytest-results.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        comment_title: "Backend Test Results"
+        check_name: "Backend Test Results"
+        fail_on: "errors"
+        report_individual_runs: "true"
+        deduplicate_classes_by_file_name: "true"
 
-    # - name: Publish Frontend Test Results
-    #   uses: EnricoMi/publish-unit-test-result-action@v2
-    #   if: always()
-    #   with:
-    #     files: frontend/vitest-results.xml
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     comment_title: "Frontend Test Results"
-    #     check_name: "Frontend Test Results"
-    #     fail_on: "errors"
-    #     report_individual_runs: "true"
-    #     deduplicate_classes_by_file_name: "true"
+    - name: Publish Frontend Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: frontend/vitest-results.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        comment_title: "Frontend Test Results"
+        check_name: "Frontend Test Results"
+        fail_on: "errors"
+        report_individual_runs: "true"
+        deduplicate_classes_by_file_name: "true"
   
     - name: Check test results
       if: always()

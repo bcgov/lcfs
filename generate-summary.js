@@ -12,11 +12,7 @@ const summary = `
 End-to-end Test Results
 ${stats.testsRegistered} tests   ${stats.passes} ✅  ${(stats.duration / 1000).toFixed(0)}s ⏱️
 ${stats.suites} suites    ${stats.pending} 💤
-  1 files    ${stats.failures} ❌
-
-For more details on these failures, see this check.
-
-Results for commit ${{ github.sha }}.
+  1 files    ${stats.failures} ❌.
 `;
 
 // Write the summary to a file (this can be used for posting as a comment)
