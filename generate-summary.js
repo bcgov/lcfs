@@ -16,7 +16,7 @@ ${stats.suites} suites    ${stats.pending} 💤
 
 For more details on these failures, see this check.
 
-Results for commit ${ github.sha }.
+Results for commit ${{ github.sha }}.
 `;
 
 // Write the summary to a file (this can be used for posting as a comment)
