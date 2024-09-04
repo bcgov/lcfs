@@ -53,5 +53,13 @@
     "orgDetailsLoadingMsg": "Loading organization details...",
     "users": "Users",
     "createNewUsrLabel": "Create new BCeID account"
+  },
+  "orgComplianceReports": {
+    "title": "Compliance reports",
+    "loadingMessage": "Loading compliance reports card...",
+    "orgHas": "{{name}} has:",
+    "inProgress": "Compliance report(s) in progress",
+    "awaitingGovReview": "Compliance report(s) awaiting government review",
+    "noActionRequired": "There are no reports that require any action."
   }
 }

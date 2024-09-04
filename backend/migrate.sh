@@ -31,24 +31,36 @@ generate_migration() {
         exit 1
     fi
     echo "🛠  Generating new migration: $1"
-    poetry run alembic revision --autogenerate -m "$1"
-    echo "✅  New migration created."
+    if poetry run alembic revision --autogenerate -m "$1"; then
+        echo "✅  New migration created."
+    else
+        echo "❌  Failed to create migration."
+        exit 1
+    fi
 }
 
 # Function for upgrading the database
 upgrade_database() {
     local revision=${1:-head}
     echo "📈  Upgrading the database to revision: $revision"
-    poetry run alembic upgrade $revision
-    echo "✅  Database upgraded to $revision."
+    if poetry run alembic upgrade $revision; then
+        echo "✅  Database upgraded to $revision."
+    else
+        echo "❌  Database upgrade failed."
+        exit 1
+    fi
 }
 
 # Function for downgrading the database
 downgrade_database() {
     local revision=${1:-base}
     echo "📉  Downgrading the database to revision: $revision"
-    poetry run alembic downgrade $revision
-    echo "✅  Database downgraded to $revision."
+    if poetry run alembic downgrade $revision; then
+        echo "✅  Database downgraded to $revision."
+    else
+        echo "❌  Database downgrade failed."
+        exit 1
+    fi
 }
 
 # Function for resetting and seeding the database
@@ -73,8 +85,12 @@ display_help() {
 
 # Installing dependencies using Poetry
 echo "📚  Installing dependencies with Poetry..."
-poetry install
-echo "✅  Dependencies installed."
+if poetry install; then
+    echo "✅  Dependencies installed."
+else
+    echo "❌  Failed to install dependencies."
+    exit 1
+fi
 echo "====================================================="
 
 # Check if no arguments were provided

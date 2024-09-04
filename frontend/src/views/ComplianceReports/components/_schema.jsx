@@ -28,7 +28,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'status',
     headerName: t('report:reportColLabels.status'),
     maxWidth: 300,
-    valueGetter: ({ data }) => data.status?.status || '',
+    valueGetter: ({ data }) => data.currentStatus?.status || '',
     cellRenderer: ReportsStatusRenderer,
     floatingFilterComponent: BCColumnSetFilter,
     suppressFloatingFilterButton: true,
@@ -142,3 +142,5 @@ export const nonComplianceColumns = [
   { id: 'description', label: 'Non-compliance penalty payable summary', maxWidth: '300px' },
   { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' },
 ]
+
+export const defaultSortModel = [{ field: 'compliancePeriod', direction: 'desc' }]
