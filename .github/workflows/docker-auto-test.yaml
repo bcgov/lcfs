@@ -98,7 +98,7 @@ jobs:
         LCFS_REDIS_HOST: localhost
         LCFS_REDIS_PORT: 6379
         LCFS_REDIS_PASSWORD: development_only
-        APP_ENVIRONMENT: test
+        APP_ENVIRONMENT: dev
 
     - name: Upload pytest results
       if: always()
