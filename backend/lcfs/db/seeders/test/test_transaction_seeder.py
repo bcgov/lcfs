@@ -34,7 +34,6 @@ async def seed_test_transactions(session):
                 transaction = Transaction(**transaction_data)
                 session.add(transaction)
 
-        await session.commit()
     except Exception as e:
         logger.error("Error occurred while seeding transactions: %s", e)
         raise
