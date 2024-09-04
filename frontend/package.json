@@ -107,7 +107,6 @@
     "cross-env": "^7.0.3",
     "cypress": "^13.13.3",
     "cypress-axe": "^1.5.0",
-    "cypress-ctrf-json-reporter": "^0.0.11",
     "cypress-vite": "^1.5.0",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
