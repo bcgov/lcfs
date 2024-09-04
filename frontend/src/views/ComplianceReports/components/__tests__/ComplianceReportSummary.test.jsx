@@ -14,15 +14,20 @@ vi.mock('../SummaryTable', () => ({ default: () => <div>SummaryTable</div> }))
 vi.mock('../SigningAuthorityDeclaration', () => ({ default: () => <div>SigningAuthorityDeclaration</div> }))
 
 // Mock MUI components
-vi.mock('@mui/material', () => ({
-  Accordion: ({ children }) => <div data-testid="accordion">{children}</div>,
-  AccordionSummary: ({ children }) => <div data-testid="accordion-summary">{children}</div>,
-  AccordionDetails: ({ children }) => <div data-testid="accordion-details">{children}</div>,
-  Typography: ({ children }) => <div>{children}</div>,
-  CircularProgress: () => <div>Loading...</div>,
-  List: ({ children }) => <ul>{children}</ul>,
-  ListItem: ({ children }) => <li>{children}</li>
-}))
+vi.mock('@mui/material', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual, // keep the actual MUI components
+    Accordion: ({ children }) => <div data-testid="accordion">{children}</div>,
+    AccordionSummary: ({ children }) => <div data-testid="accordion-summary">{children}</div>,
+    AccordionDetails: ({ children }) => <div data-testid="accordion-details">{children}</div>,
+    Typography: ({ children }) => <div>{children}</div>,
+    CircularProgress: () => <div>Loading...</div>,
+    List: ({ children }) => <ul>{children}</ul>,
+    ListItem: ({ children }) => <li>{children}</li>,
+    TextField: (props) => <input {...props} />
+  };
+});
 
 // Custom render function with providers
 const customRender = (ui, options = {}) => {

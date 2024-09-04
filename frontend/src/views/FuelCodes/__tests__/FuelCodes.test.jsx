@@ -43,29 +43,27 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
 
 // Mock the specific import of useApiService
 vi.mock('@/services/useApiService', () => {
-  const mockDownload = vi.fn(() => Promise.resolve()) // Adjust as necessary for download
-  const mockPost = vi.fn(() =>
-    Promise.resolve({
-      data: {
-        pagination: {
-          total: 100, // Example total number of items
-          page: 1,   // Current page number
-        },
-        fuelCodes: [ // Array of items representing fuel codes
-          { fuelCodeId: '001', name: 'Fuel Code 1' },
-          { fuelCodeConsoleId: '002', name: 'Fuel Code 2' }
-        ]
-      }
-    })
-  )
+  const mockDownload = vi.fn().mockResolvedValue(Promise.resolve())
+  const mockPost = vi.fn().mockResolvedValue({
+    data: {
+      pagination: {
+        total: 100, // Example total number of items
+        page: 1,    // Current page number
+      },
+      fuelCodes: [ // Array of items representing fuel codes
+        { fuelCodeId: '001', name: 'Fuel Code 1' },
+        { fuelCodeId: '002', name: 'Fuel Code 2' }
+      ]
+    }
+  });
 
   return {
     useApiService: () => ({
       download: mockDownload,
       post: mockPost
     })
-  }
-})
+  };
+});
 
 const WrapperComponent = () => {
   const queryClient = new QueryClient()
