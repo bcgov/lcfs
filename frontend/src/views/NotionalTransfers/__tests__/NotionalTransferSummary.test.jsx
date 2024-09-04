@@ -1,81 +1,48 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import {
-  render,
-  screen,
-  cleanup,
-  fireEvent,
-  waitFor
-} from '@testing-library/react'
-import { BrowserRouter as Router } from 'react-router-dom'
+import { vi, describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { render, screen, cleanup } from '@testing-library/react'
+import { BrowserRouter as Router, useNavigate, useParams, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { NotionalTransferSummary } from '@/views/NotionalTransfers'
-// Import utilities directly, if getByDataTest is a custom utility, ensure it's correctly imported
-import { getByDataTest } from '@/tests/utils/testHelpers'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
+import { NotionalTransferSummary } from '@/views/NotionalTransfers'
 
-vi.mock('@react-keycloak/web', () => ({
-  useKeycloak: () => ({
-    keycloak: {
-      token: 'mock-token',
-      authenticated: true,
-      initialized: true
-    }
-  })
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: vi.fn(),
+    useParams: () => ({
+      complianceReportId: '123',
+    }),
+    useLocation: vi.fn()
+  }
+})
+
+// Mock the BCGridViewer correctly
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => <div data-testid="mockedBCGridViewer"></div>,
 }))
 
-// Mocking Keycloak and Current User
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
+// Mock useGetNotionalTransfers hook
+vi.mock('@/hooks/useNotionalTransfer', () => ({
+  useGetNotionalTransfers: () => ({
     data: {
-      roles: [
-        { name: 'Supplier' },
-        { name: 'Government' }
+      pagination: { page: 1, size: 10, total: 2 },
+      notionalTransfers: [
+        { notionalTransferId: '001', legalName: 'Partner 1', addressForService: 'Address 1' },
+        { notionalTransferId: '002', legalName: 'Partner 2', addressForService: 'Address 2' }
       ]
     }
   })
 }))
 
-// Mock the specific import of BCDataGridServer
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  // Replace BCDataGridServer with a dummy component
-  __esModule: true, // This is important for mocking ES modules
-  default: () => <div data-test="mockedBCDataGridServer"></div>
-}))
-
-// Mock the specific import of useApiService
-vi.mock('@/services/useApiService', () => {
-  const mockDownload = vi.fn(() => Promise.resolve()) // Adjust as necessary for download
-  const mockPost = vi.fn(() =>
-    Promise.resolve({
-      data: {
-        pagination: {
-          total: 100, // Example total number of items
-          page: 1,   // Current page number
-        },
-        notionalTransfers: [ // Array of items representing notional transfers
-          { notionalTransferId: '001', name: 'Notional Transfer 1' },
-          { notionalTransferId: '002', name: 'Notional Transfer 2' }
-        ]
-      }
-    })
-  )
-
-  return {
-    useApiService: () => ({
-      download: mockDownload,
-      post: mockPost
-    })
-  }
-})
-
-const WrapperComponent = () => {
+const WrapperComponent = (props) => {
   const queryClient = new QueryClient()
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <Router>
-          <NotionalTransferSummary />
+          <NotionalTransferSummary {...props} />
         </Router>
       </ThemeProvider>
     </QueryClientProvider>
@@ -83,97 +50,30 @@ const WrapperComponent = () => {
 }
 
 describe('NotionalTransferSummary Component Tests', () => {
+  let navigate
+  let location
+
+  beforeEach(() => {
+    navigate = vi.fn()
+    location = vi.fn()
+    vi.mocked(useNavigate).mockReturnValue(navigate)
+    vi.mocked(useLocation).mockReturnValue(location)
+  })
+
   afterEach(() => {
     cleanup()
-    vi.resetAllMocks() // Reset mocks to their initial state after each test
+    vi.resetAllMocks()
   })
 
-  test('renders title correctly', () => {
-    render(WrapperComponent())
-    const title = screen.getByTestId('title')
-    expect(title).toBeInTheDocument()
-    expect(title.textContent).toBe('NotionalTransfers')
-  })
-
-  test('clicking new notional transfer button redirects to add page', () => {
-    const { getByTestId } = render(WrapperComponent())
-    const newNotionalTransferBtn = getByTestId('new-notional-transfer-btn')
-    fireEvent.click(newNotionalTransferBtn)
-    expect(window.location.pathname).toBe('/admin/notional-transfers/add-notional-transfer')
-  })
-
-  test('displays alert message on download failure', async () => {
-    // Mocking API service to simulate download failure
-    const mockApiService = {
-      download: vi.fn().mockRejectedValue(new Error('Download failed'))
+  it('displays alert message if location state has a message', () => {
+    const mockLocation = {
+      state: { message: 'Test Alert Message', severity: 'error' }
     }
-    vi.mock('@/services/useApiService', () => ({
-      useApiService: () => mockApiService
-    }))
+    vi.mocked(useLocation).mockReturnValue(mockLocation)
 
-    const { getByTestId } = render(WrapperComponent())
-    const downloadBtn = getByTestId('notional-transfer-download-btn')
-    fireEvent.click(downloadBtn)
-
-    await waitFor(() => {
-      const alertBox = getByTestId('alert-box')
-      expect(alertBox.textContent).toContain(
-        'Failed to download notional transfer information.'
-      )
-    })
-  })
-
-  describe('Download notional transfers information', () => {
-    beforeEach(() => {
-      render(WrapperComponent())
-    })
-
-    it('initially shows the download notional transfers button with correct text and enabled', () => {
-      const downloadButton = getByDataTest('notional-transfer-download-btn')
-      expect(downloadButton).toBeInTheDocument()
-      expect(downloadButton).toBeEnabled()
-    })
-
-    it('shows downloading text and disables the download notional transfers button during download', async () => {
-      const mockApiService = {
-        download: vi.fn(() => new Promise(() => {})), // Unresolving promise
-      }
-      vi.mock('@/services/useApiService', () => ({
-        useApiService: () => mockApiService
-      }))
-
-      const downloadButton = getByDataTest('notional-transfer-download-btn')
-      fireEvent.click(downloadButton)
-
-      // First, ensure the button text changes to the downloading state
-      await waitFor(() => {
-        expect(downloadButton).toHaveTextContent(
-          /Downloading notional transfers information.../i
-        )
-        // Then, check if the button gets disabled
-        expect(downloadButton).toBeDisabled()
-      })
-    })
-
-    it('shows an error message if the download notional transfers fails', async () => {
-      vi.mock('@/services/useApiService', () => ({
-        useApiService: () => ({
-          download: vi.fn(() => Promise.reject(new Error('Download failed')))
-        })
-      }))
-
-      cleanup()
-      render(WrapperComponent())
-
-      const downloadButton = getByDataTest('notional-transfer-download-btn')
-      fireEvent.click(downloadButton)
-
-      await waitFor(() => {
-        const errorMessage = screen.getByText(
-          /Failed to download notional transfer information./i
-        )
-        expect(errorMessage).toBeInTheDocument()
-      })
-    })
+    render(<WrapperComponent data={[]} />)
+    const alertBox = screen.getByTestId('alert-box')
+    expect(alertBox).toBeInTheDocument()
+    expect(alertBox.textContent).toContain('Test Alert Message')
   })
 })

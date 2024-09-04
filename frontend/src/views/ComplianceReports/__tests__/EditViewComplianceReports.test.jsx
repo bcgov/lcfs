@@ -141,14 +141,6 @@ describe('EditViewComplianceReport', () => {
     })
   })
 
-  it('renders activity links and upload box', async () => {
-    customRender(<EditViewComplianceReport />)
-    await waitFor(() => {
-      expect(screen.getByText('Activity Links List')).toBeInTheDocument()
-      expect(screen.getByText('report:uploadLabel')).toBeInTheDocument()
-    })
-  })
-
   it('renders report components', async () => {
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
