@@ -214,9 +214,9 @@ class FieldOptions(BaseSchema):
 
 
 class FPLocationsSchema(BaseSchema):
-    fuel_production_facility_city: str
-    fuel_production_facility_province_state: str
-    fuel_production_facility_country: str
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
 
 
 class TableOptionsSchema(BaseSchema):
