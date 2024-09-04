@@ -2,7 +2,7 @@ import { defineConfig } from "cypress";
 import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
 import { addCucumberPreprocessorPlugin } from "@badeball/cypress-cucumber-preprocessor";
 import { createEsbuildPlugin } from "@badeball/cypress-cucumber-preprocessor/esbuild";
-import { GenerateCtrfReport } from 'cypress-ctrf-json-report'
+import { GenerateCtrfReport } from 'cypress-ctrf-json-reporter'
 
 export default defineConfig({
   e2e: {
@@ -45,7 +45,7 @@ export default defineConfig({
 
       on('after:run', async (results) => {
         await GenerateCtrfReport({
-          outputDir: "cypress/reports",
+          outputDir: "cypress/reports/",
           outputFile: "cypress/reports/ctrf-report.json"
         });
       });
