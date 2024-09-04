@@ -44,7 +44,8 @@ export default defineConfig({
       on('after:run', async (results) => {
         const ctrfReport = new GenerateCtrfReport({
           jsonDir: "cypress/reports",
-          outputFile: "cypress/reports/ctrf-report.json"
+          outputFile: "cypress/reports/ctrf-report.json",
+          on
         });
         await ctrfReport.generate();
       });
