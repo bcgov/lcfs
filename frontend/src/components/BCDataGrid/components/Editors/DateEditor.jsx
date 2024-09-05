@@ -24,9 +24,6 @@ export const DateEditor = ({ value, onValueChange, minDate, maxDate }) => {
         margin="normal"
         id="date-picker-dialog"
         format="yyyy-MM-dd"
-        slotProps={{
-          field: { clearable: true }
-        }}
         value={selectedDate}
         onChange={updateValue}
         variant="inline"

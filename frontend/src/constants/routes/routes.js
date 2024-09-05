@@ -64,3 +64,4 @@ export const FILESUBMISSION = '/file-submissions' // might not need
 
 export const APIDOCS = '/docs'
 export const CONTACT_US = '/contact-us'
+export const LOG_OUT = '/log-out'
