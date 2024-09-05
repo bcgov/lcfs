@@ -31,8 +31,18 @@ jobs:
           "prompt": "Review the following code for any issues or improvements: '"$DIFF_CONTENT"'",
           "max_tokens": 500
         }')
+    
         echo "AI response: $AI_RESPONSE"
-        echo "ai_feedback=$AI_RESPONSE" >> $GITHUB_ENV  # Write output to environment file
+    
+        # Check if the response contains an error
+        if echo "$AI_RESPONSE" | jq -e '.error' > /dev/null; then
+          echo "AI encountered an error: $(echo $AI_RESPONSE | jq '.error.message')"
+          exit 1
+        else
+          # Extract the response text if it's valid
+          REVIEW_TEXT=$(echo "$AI_RESPONSE" | jq -r '.choices[0].text')
+          echo "ai_feedback=$REVIEW_TEXT" >> $GITHUB_ENV  # Write the review text to environment file
+        fi
 
     - name: Post feedback as a comment on PR
       uses: peter-evans/create-or-update-comment@v3
