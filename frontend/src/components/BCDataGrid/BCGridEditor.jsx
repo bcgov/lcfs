@@ -116,7 +116,9 @@ export const BCGridEditor = ({
   }
 
   const handleAddRows = (numRows) => {
-    const newRows = Array(numRows).fill().map(() => ({ id: uuid(), validationStatus: 'error' }))
+    const newRows = Array(numRows)
+      .fill()
+      .map(() => ({ id: uuid(), validationStatus: 'error' }))
     ref.current.api.applyTransaction({ add: newRows })
     setAnchorEl(null)
   }
@@ -143,7 +145,9 @@ export const BCGridEditor = ({
             color="dark"
             size="small"
             startIcon={<FontAwesomeIcon icon={faPlus} className="small-icon" />}
-            endIcon={<FontAwesomeIcon icon={faCaretDown} className="small-icon" />}
+            endIcon={
+              <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
+            }
             onClick={handleAddRowsClick}
           >
             Add row

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
-import { currencyFormatter, formatNumberWithCommas, numberFormatter } from '@/utils/formatters'
+import {
+  currencyFormatter,
+  formatNumberWithCommas,
+  numberFormatter
+} from '@/utils/formatters'
 import {
   Paper,
   Table,
@@ -11,7 +15,14 @@ import {
   Input
 } from '@mui/material'
 
-const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, width='100%', ...props }) => {
+const SummaryTable = ({
+  title,
+  columns,
+  data: initialData,
+  onCellEditStopped,
+  width = '100%',
+  ...props
+}) => {
   const [data, setData] = useState(initialData)
   const [editingCell, setEditingCell] = useState(null)
 
@@ -114,7 +125,10 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, wi
           {data?.map((row, rowIndex) => (
             <TableRow
               key={row.line}
-              sx={{ '&:last-child td, &:last-child th': { borderBottom: 0 }, backgroundColor: '#fcfcfc' }}
+              sx={{
+                '&:last-child td, &:last-child th': { borderBottom: 0 },
+                backgroundColor: '#fcfcfc'
+              }}
             >
               {columns.map((column, colIndex) => (
                 <TableCell
@@ -137,7 +151,9 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, wi
                   {isCellEditable(rowIndex, column.id) ? (
                     <>
                       <Input
-                        value={formatNumberWithCommas({value: row[column.id]})}
+                        value={formatNumberWithCommas({
+                          value: row[column.id]
+                        })}
                         onChange={(e) =>
                           handleCellChange(e, rowIndex, column.id)
                         }
@@ -178,7 +194,8 @@ const SummaryTable = ({ title, columns, data: initialData, onCellEditStopped, wi
                         display: 'block'
                       }}
                     >
-                      {row?.format && row[column.id] &&
+                      {row?.format &&
+                      row[column.id] &&
                       row.format === 'currency'
                         ? currencyFormatter(row[column.id])
                         : numberFormatter(row[column.id])}

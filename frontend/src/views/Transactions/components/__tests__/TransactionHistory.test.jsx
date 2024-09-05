@@ -53,7 +53,11 @@ describe('TransactionHistory Component', () => {
   ]
 
   it('renders without crashing', () => {
-    renderComponent({ transactionHistory: [{userProfile: { firstName: 'Jane', lastName: 'Smith' }}] })
+    renderComponent({
+      transactionHistory: [
+        { userProfile: { firstName: 'Jane', lastName: 'Smith' } }
+      ]
+    })
     expect(screen.getByText('Transaction History')).toBeInTheDocument()
   })
 
@@ -75,7 +79,9 @@ describe('TransactionHistory Component', () => {
       }
     ]
 
-    renderComponent({ transactionHistory: mockTransactionHistoryWithUnknownStatus })
+    renderComponent({
+      transactionHistory: mockTransactionHistoryWithUnknownStatus
+    })
 
     expect(screen.getByText(/Status not found/i)).toBeInTheDocument()
   })

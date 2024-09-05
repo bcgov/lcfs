@@ -13,16 +13,14 @@ const customRender = (ui, options = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: false,
-      },
-    },
+        retry: false
+      }
+    }
   })
 
   const AllTheProviders = ({ children }) => (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        {children}
-      </ThemeProvider>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
     </QueryClientProvider>
   )
 
@@ -36,13 +34,13 @@ const mockUseNavigate = vi.fn()
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
   useLocation: () => mockUseLocation(),
-  useNavigate: () => mockUseNavigate,
+  useNavigate: () => mockUseNavigate
 }))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key,
-  }),
+    t: (key) => key
+  })
 }))
 
 vi.mock('@/hooks/useCurrentUser')
@@ -50,12 +48,14 @@ vi.mock('@/hooks/useComplianceReports')
 
 vi.mock('../components/NewComplianceReportButton', () => ({
   NewComplianceReportButton: ({ handleNewReport }) => (
-    <button onClick={() => handleNewReport({ description: 'Test Period' })}>New Report</button>
-  ),
+    <button onClick={() => handleNewReport({ description: 'Test Period' })}>
+      New Report
+    </button>
+  )
 }))
 
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: () => <div data-test="bc-data-grid">BCDataGridServer</div>,
+  default: () => <div data-test="bc-data-grid">BCDataGridServer</div>
 }))
 
 describe('ComplianceReports', () => {
@@ -68,22 +68,24 @@ describe('ComplianceReports', () => {
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
       hasRoles: vi.fn(() => true),
-      data: { 
-        organization: { organizationId: '123' }, 
-        roles: [{ name: 'Supplier' }] 
-      },
+      data: {
+        organization: { organizationId: '123' },
+        roles: [{ name: 'Supplier' }]
+      }
     })
 
-    vi.mocked(useComplianceReportsHook.useCreateComplianceReport).mockReturnValue({
+    vi.mocked(
+      useComplianceReportsHook.useCreateComplianceReport
+    ).mockReturnValue({
       mutate: vi.fn(),
       isLoading: false,
-      isError: false,
+      isError: false
     })
 
     vi.mocked(useComplianceReportsHook.useCompliancePeriod).mockReturnValue({
       mutate: vi.fn(),
       isLoading: false,
-      isError: false,
+      isError: false
     })
   })
 
@@ -104,10 +106,12 @@ describe('ComplianceReports', () => {
 
   it('handles creating a new report', async () => {
     const mockMutate = vi.fn()
-    vi.mocked(useComplianceReportsHook.useCreateComplianceReport).mockReturnValue({
+    vi.mocked(
+      useComplianceReportsHook.useCreateComplianceReport
+    ).mockReturnValue({
       mutate: mockMutate,
       isLoading: false,
-      isError: false,
+      isError: false
     })
 
     customRender(<ComplianceReports />)
@@ -117,13 +121,15 @@ describe('ComplianceReports', () => {
       expect(mockMutate).toHaveBeenCalledWith({
         compliancePeriod: 'Test Period',
         organizationId: '123',
-        status: 'Draft',
+        status: 'Draft'
       })
     })
   })
 
   it('displays an alert message when location state has a message', () => {
-    mockUseLocation.mockReturnValue({ state: { message: 'Test alert', severity: 'success' } })
+    mockUseLocation.mockReturnValue({
+      state: { message: 'Test alert', severity: 'success' }
+    })
 
     customRender(<ComplianceReports />)
     expect(screen.getByText('Test alert')).toBeInTheDocument()

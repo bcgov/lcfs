@@ -1,5 +1,13 @@
 import { IconButton, Tooltip, Stack } from '@mui/material'
-import { Edit, Delete, Save, Cancel, Queue, Warning, DoneAll } from '@mui/icons-material'
+import {
+  Edit,
+  Delete,
+  Save,
+  Cancel,
+  Queue,
+  Warning,
+  DoneAll
+} from '@mui/icons-material'
 
 export const ActionsRenderer = ({ onDuplicate, onDelete, ...props }) => {
   const isCurrentRowEditing = props.api

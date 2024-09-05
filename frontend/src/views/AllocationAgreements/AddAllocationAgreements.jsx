@@ -6,7 +6,11 @@ import { useLocation, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, allocationAgreementColDefs, PROVISION_APPROVED_FUEL_CODE } from './_schema'
+import {
+  defaultColDef,
+  allocationAgreementColDefs,
+  PROVISION_APPROVED_FUEL_CODE
+} from './_schema'
 import {
   useAllocationAgreementOptions,
   useGetAllocationAgreements,
@@ -31,14 +35,18 @@ export const AddEditAllocationAgreements = () => {
     isLoading: optionsLoading,
     isFetched
   } = useAllocationAgreementOptions({ compliancePeriod })
-  const { mutateAsync: saveRow } = useSaveAllocationAgreement({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveAllocationAgreement({
+    complianceReportId
+  })
 
   const { data, isLoading: allocationAgreementsLoading } =
     useGetAllocationAgreements(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('allocationAgreement:noAllocationAgreementsFound'),
+      overlayNoRowsTemplate: t(
+        'allocationAgreement:noAllocationAgreementsFound'
+      ),
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -74,7 +82,10 @@ export const AddEditAllocationAgreements = () => {
   }, [errors, optionsData])
 
   useEffect(() => {
-    if (!allocationAgreementsLoading && data?.allocationAgreements?.length > 0) {
+    if (
+      !allocationAgreementsLoading &&
+      data?.allocationAgreements?.length > 0
+    ) {
       const updatedRowData = data.allocationAgreements.map((item) => ({
         ...item,
         agreementType: item.agreementType?.type,
@@ -88,22 +99,32 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
-      if (['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(params.colDef.field)) {
-        let ciOfFuel = 0;
+      if (
+        ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
+          params.colDef.field
+        )
+      ) {
+        let ciOfFuel = 0
         if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-          const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
-          const fuelCode = fuelType?.fuelCodes?.find((item) => item.fuelCode === params.data.fuelCode);
-          ciOfFuel = fuelCode?.carbonIntensity || 0;
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )
+          const fuelCode = fuelType?.fuelCodes?.find(
+            (item) => item.fuelCode === params.data.fuelCode
+          )
+          ciOfFuel = fuelCode?.carbonIntensity || 0
         } else {
-          const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
-          ciOfFuel = fuelType?.defaultCarbonIntensity || 0;
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )
+          ciOfFuel = fuelType?.defaultCarbonIntensity || 0
         }
-        
-        params.node.setDataValue('ciOfFuel', ciOfFuel);
+
+        params.node.setDataValue('ciOfFuel', ciOfFuel)
       }
     },
     [optionsData]
-  );
+  )
 
   const onCellEditingStopped = useCallback(
     async (params) => {

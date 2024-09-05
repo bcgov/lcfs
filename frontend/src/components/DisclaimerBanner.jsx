@@ -16,7 +16,7 @@ const DisclaimerBanner = ({ messages }) => {
       }}
     >
       {messages.map((message, index) => (
-        <Typography key={index} variant="body2" sx={{ fontSize: '14px'}}>
+        <Typography key={index} variant="body2" sx={{ fontSize: '14px' }}>
           {message}
         </Typography>
       ))}

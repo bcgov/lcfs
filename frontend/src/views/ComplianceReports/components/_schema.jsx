@@ -9,7 +9,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
-    valueGetter: ({ data }) => data.compliancePeriod?.description || '',
+    valueGetter: ({ data }) => data.compliancePeriod?.description || ''
   },
   {
     field: 'organization',
@@ -22,7 +22,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: ({ data }) => data.type?.description || '',
+    valueGetter: ({ data }) => data.type?.description || ''
   },
   {
     field: 'status',
@@ -63,28 +63,46 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.lastUpdated'),
     flex: 1,
     valueGetter: ({ data }) => data.updateDate || '',
-    valueFormatter: timezoneFormatter,
+    valueFormatter: timezoneFormatter
   }
 ]
 
 export const renewableFuelColumns = (data, editable) => {
   // Line 6 & 7: only visible if cells G2, D2, and J2 do not show a balance of zero and there is a surplus above the renewable requirement.
-  // Line 8 & 9: When I am short of my renewable obligation and in a penalty situation, 
+  // Line 8 & 9: When I am short of my renewable obligation and in a penalty situation,
   //         then the free text fields in cells G8, D8, and J8 are available for input and I see the fields only if there is a deficiency.
   let gasolineEditableCells = []
-  if (data[SUMMARY.LINE_2].gasoline > 0 && data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0) 
+  if (
+    data[SUMMARY.LINE_2].gasoline > 0 &&
+    data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
+  )
     gasolineEditableCells = [SUMMARY.LINE_6, SUMMARY.LINE_7]
-  else if (data[SUMMARY.LINE_1].gasoline > 0 && data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0)
+  else if (
+    data[SUMMARY.LINE_1].gasoline > 0 &&
+    data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
+  )
     gasolineEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
   let dieselEditableCells = []
-  if (data[SUMMARY.LINE_2].diesel > 0 && data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0) 
+  if (
+    data[SUMMARY.LINE_2].diesel > 0 &&
+    data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
+  )
     dieselEditableCells = [SUMMARY.LINE_6, SUMMARY.LINE_7]
-  else if (data[SUMMARY.LINE_1].diesel > 0 && data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0)
+  else if (
+    data[SUMMARY.LINE_1].diesel > 0 &&
+    data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
+  )
     dieselEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
   let jetFuelEditableCells = []
-  if (data[SUMMARY.LINE_2].jetFuel > 0 && data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0) 
+  if (
+    data[SUMMARY.LINE_2].jetFuel > 0 &&
+    data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
+  )
     jetFuelEditableCells = [SUMMARY.LINE_6, SUMMARY.LINE_7]
-  else if (data[SUMMARY.LINE_1].jetFuel > 0 && data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0)
+  else if (
+    data[SUMMARY.LINE_1].jetFuel > 0 &&
+    data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
+  )
     jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
 
   return [
@@ -130,15 +148,24 @@ export const renewableFuelColumns = (data, editable) => {
         7: { min: 0, max: 0.05 * data[SUMMARY.LINE_4].jetFuel }
       }
     }
-  ]}
+  ]
+}
 
 export const lowCarbonColumns = [
   { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
-  { id: 'description', label: 'Low carbon fuel target summary', maxWidth: '300px' },
-  { id: 'value', label: 'Value', align: 'center', width: '150px' },
+  {
+    id: 'description',
+    label: 'Low carbon fuel target summary',
+    maxWidth: '300px'
+  },
+  { id: 'value', label: 'Value', align: 'center', width: '150px' }
 ]
 
 export const nonComplianceColumns = [
-  { id: 'description', label: 'Non-compliance penalty payable summary', maxWidth: '300px' },
-  { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' },
+  {
+    id: 'description',
+    label: 'Non-compliance penalty payable summary',
+    maxWidth: '300px'
+  },
+  { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' }
 ]

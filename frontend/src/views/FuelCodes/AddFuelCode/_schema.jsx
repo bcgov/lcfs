@@ -12,7 +12,10 @@ import { Typography } from '@mui/material'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 
 const cellErrorStyle = (params) => {
-  if (params.data.validationMsg && params.data.validationMsg[params.colDef.field]) {
+  if (
+    params.data.validationMsg &&
+    params.data.validationMsg[params.colDef.field]
+  ) {
     return { borderColor: 'red' }
   }
   return { borderColor: 'unset' }
@@ -20,21 +23,19 @@ const cellErrorStyle = (params) => {
 
 const createCellRenderer = (field, customRenderer = null) => {
   const CellRenderer = (params) => {
-    const hasError = params.data.id && params.context.errors[params.data.id]?.includes(field);
-    const content = customRenderer ? customRenderer(params) : (
-      params.value || (!params.value && <Typography variant="body4">Select</Typography>)
-    );
-    return (
-      <div style={{ color: hasError ? 'red' : 'inherit' }}>
-        {content}
-      </div>
-    );
-  };
+    const hasError =
+      params.data.id && params.context.errors[params.data.id]?.includes(field)
+    const content = customRenderer
+      ? customRenderer(params)
+      : params.value ||
+        (!params.value && <Typography variant="body4">Select</Typography>)
+    return <div style={{ color: hasError ? 'red' : 'inherit' }}>{content}</div>
+  }
 
-  CellRenderer.displayName = `CellRenderer_${field}`;
+  CellRenderer.displayName = `CellRenderer_${field}`
 
-  return CellRenderer;
-};
+  return CellRenderer
+}
 
 export const fuelCodeColDefs = (optionsData, errors) => [
   validation,
@@ -74,7 +75,10 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       }
       return true
     },
-    cellRenderer: createCellRenderer('prefix', (params) => params.value || 'BCLCF')
+    cellRenderer: createCellRenderer(
+      'prefix',
+      (params) => params.value || 'BCLCF'
+    )
   },
   {
     field: 'fuelCode',
@@ -120,7 +124,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       showStepperButtons: false
     },
     type: 'numericColumn',
-    cellRenderer: createCellRenderer('carbonIntensity'),
+    cellRenderer: createCellRenderer('carbonIntensity')
   },
   {
     field: 'edrms',
@@ -128,7 +132,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellRenderer: createCellRenderer('edrms'),
+    cellRenderer: createCellRenderer('edrms')
   },
   {
     field: 'company',
@@ -145,7 +149,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
         return response.data
       },
       title: 'company',
-      api: params.api,
+      api: params.api
     }),
     valueSetter: (params) => {
       params.data.company = params.newValue
@@ -157,7 +161,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     minWidth: 300,
-    cellRenderer: createCellRenderer('company'),
+    cellRenderer: createCellRenderer('company')
   },
   {
     field: 'contactName',
@@ -177,7 +181,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     }),
     suppressKeyboardEvent,
     minWidth: 300,
-    cellRenderer: createCellRenderer('contactName'),
+    cellRenderer: createCellRenderer('contactName')
   },
   {
     field: 'contactEmail',
@@ -203,7 +207,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     }),
     suppressKeyboardEvent,
     minWidth: 300,
-    cellRenderer: createCellRenderer('contactEmail'),
+    cellRenderer: createCellRenderer('contactEmail')
   },
   {
     field: 'applicationDate',
@@ -228,7 +232,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
         {params.value ? params.value : 'YYYY-MM-DD'}
       </Typography>
     )),
-    
+
     suppressKeyboardEvent,
     cellEditor: DateEditor
   },
@@ -464,9 +468,13 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'feedstockTransportMode',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: createCellRenderer('feedstockTransportMode', (params) => (
-      params.value ? <CommonArrayRenderer {...params} /> : <Typography variant="body4">Select</Typography>
-    )),
+    cellRenderer: createCellRenderer('feedstockTransportMode', (params) =>
+      params.value ? (
+        <CommonArrayRenderer {...params} />
+      ) : (
+        <Typography variant="body4">Select</Typography>
+      )
+    ),
     cellRendererParams: {
       disableLink: true
     },
@@ -483,9 +491,13 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'finishedFuelTransportMode',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) => (
-      params.value ? <CommonArrayRenderer {...params} /> : <Typography variant="body4">Select</Typography>
-    )),
+    cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) =>
+      params.value ? (
+        <CommonArrayRenderer {...params} />
+      ) : (
+        <Typography variant="body4">Select</Typography>
+      )
+    ),
     cellRendererParams: {
       disableLink: true
     },

@@ -6,7 +6,10 @@ import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from '../AddEditViewTransaction'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '../AddEditViewTransaction'
 import { ROUTES } from '@/constants/routes'
 
 let navigate
@@ -16,7 +19,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useNavigate: () => navigate,
+    useNavigate: () => navigate
   }
 })
 
@@ -25,9 +28,7 @@ const renderComponent = (HookComponent) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <MemoryRouter>
-          {HookComponent}
-        </MemoryRouter>
+        <MemoryRouter>{HookComponent}</MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>
   )
@@ -48,22 +49,37 @@ describe('useTransactionMutation', () => {
       const actual = await vi.importActual('react-router-dom')
       return {
         ...actual,
-        useNavigate: () => navigate,
+        useNavigate: () => navigate
       }
     })
   })
 
   it('should navigate to edit route if status is DRAFT and no recommended history', () => {
     const HookComponent = () => {
-      const { handleSuccess } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient)
+      const { handleSuccess } = useTransactionMutation(
+        t,
+        setAlertMessage,
+        setAlertSeverity,
+        setModalData,
+        alertRef,
+        queryClient
+      )
       return (
-        <button onClick={() => handleSuccess({
-          data: {
-            currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
-            initiativeAgreementId: '123',
-            history: [],
+        <button
+          onClick={() =>
+            handleSuccess(
+              {
+                data: {
+                  currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
+                  initiativeAgreementId: '123',
+                  history: []
+                }
+              },
+              '123',
+              INITIATIVE_AGREEMENT
+            )
           }
-        }, '123', INITIATIVE_AGREEMENT)}>
+        >
           Test
         </button>
       )
@@ -73,24 +89,45 @@ describe('useTransactionMutation', () => {
 
     fireEvent.click(screen.getByText('Test'))
 
-    const expectedPath = ROUTES.INITIATIVE_AGREEMENT_EDIT.replace(':transactionId', '123')
+    const expectedPath = ROUTES.INITIATIVE_AGREEMENT_EDIT.replace(
+      ':transactionId',
+      '123'
+    )
     console.log(navigate)
     expect(navigate).toHaveBeenCalledWith(expectedPath, {
-      state: { message: 'initiativeAgreement:actionMsgs.updatedText', severity: 'success' },
+      state: {
+        message: 'initiativeAgreement:actionMsgs.updatedText',
+        severity: 'success'
+      }
     })
   })
 
   it('should navigate to TRANSACTIONS with hid if status is DRAFT and isReturned is true', () => {
     const HookComponent = () => {
-      const { handleSuccess } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient)
+      const { handleSuccess } = useTransactionMutation(
+        t,
+        setAlertMessage,
+        setAlertSeverity,
+        setModalData,
+        alertRef,
+        queryClient
+      )
       return (
-        <button onClick={() => handleSuccess({
-          data: {
-            currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
-            initiativeAgreementId: '123',
-            returned: true
+        <button
+          onClick={() =>
+            handleSuccess(
+              {
+                data: {
+                  currentStatus: { status: TRANSACTION_STATUSES.DRAFT },
+                  initiativeAgreementId: '123',
+                  returned: true
+                }
+              },
+              '123',
+              INITIATIVE_AGREEMENT
+            )
           }
-        }, '123', INITIATIVE_AGREEMENT)}>
+        >
           Test
         </button>
       )
@@ -100,24 +137,42 @@ describe('useTransactionMutation', () => {
 
     fireEvent.click(screen.getByText('Test'))
 
-    expect(navigate).toHaveBeenCalledWith('/transactions/?hid=initiativeagreement-123', {
-      state: {
-        message: 'initiativeAgreement:actionMsgs.successText',
-        severity: 'success',
-      },
-    })
+    expect(navigate).toHaveBeenCalledWith(
+      '/transactions/?hid=initiativeagreement-123',
+      {
+        state: {
+          message: 'initiativeAgreement:actionMsgs.successText',
+          severity: 'success'
+        }
+      }
+    )
   })
 
   it('should navigate to TRANSACTIONS with hid if status is RECOMMENDED or APPROVED', () => {
     const HookComponent = () => {
-      const { handleSuccess } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient)
+      const { handleSuccess } = useTransactionMutation(
+        t,
+        setAlertMessage,
+        setAlertSeverity,
+        setModalData,
+        alertRef,
+        queryClient
+      )
       return (
-        <button onClick={() => handleSuccess({
-          data: {
-            currentStatus: { status: TRANSACTION_STATUSES.RECOMMENDED },
-            initiativeAgreementId: '123',
+        <button
+          onClick={() =>
+            handleSuccess(
+              {
+                data: {
+                  currentStatus: { status: TRANSACTION_STATUSES.RECOMMENDED },
+                  initiativeAgreementId: '123'
+                }
+              },
+              '123',
+              INITIATIVE_AGREEMENT
+            )
           }
-        }, '123', INITIATIVE_AGREEMENT)}>
+        >
           Test
         </button>
       )
@@ -127,24 +182,42 @@ describe('useTransactionMutation', () => {
 
     fireEvent.click(screen.getByText('Test'))
 
-    expect(navigate).toHaveBeenCalledWith('/transactions/?hid=initiativeagreement-123', {
-      state: {
-        message: 'initiativeAgreement:actionMsgs.successText',
-        severity: 'success',
-      },
-    })
+    expect(navigate).toHaveBeenCalledWith(
+      '/transactions/?hid=initiativeagreement-123',
+      {
+        state: {
+          message: 'initiativeAgreement:actionMsgs.successText',
+          severity: 'success'
+        }
+      }
+    )
   })
 
   it('should navigate to TRANSACTIONS if status is DELETED', () => {
     const HookComponent = () => {
-      const { handleSuccess } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient)
+      const { handleSuccess } = useTransactionMutation(
+        t,
+        setAlertMessage,
+        setAlertSeverity,
+        setModalData,
+        alertRef,
+        queryClient
+      )
       return (
-        <button onClick={() => handleSuccess({
-          data: {
-            currentStatus: { status: TRANSACTION_STATUSES.DELETED },
-            initiativeAgreementId: '123',
+        <button
+          onClick={() =>
+            handleSuccess(
+              {
+                data: {
+                  currentStatus: { status: TRANSACTION_STATUSES.DELETED },
+                  initiativeAgreementId: '123'
+                }
+              },
+              '123',
+              INITIATIVE_AGREEMENT
+            )
           }
-        }, '123', INITIATIVE_AGREEMENT)}>
+        >
           Test
         </button>
       )
@@ -159,14 +232,29 @@ describe('useTransactionMutation', () => {
 
   it('should set alert message and severity for other statuses', () => {
     const HookComponent = () => {
-      const { handleSuccess } = useTransactionMutation(t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient)
+      const { handleSuccess } = useTransactionMutation(
+        t,
+        setAlertMessage,
+        setAlertSeverity,
+        setModalData,
+        alertRef,
+        queryClient
+      )
       return (
-        <button onClick={() => handleSuccess({
-          data: {
-            currentStatus: { status: 'OTHER_STATUS' },
-            initiativeAgreementId: '123',
+        <button
+          onClick={() =>
+            handleSuccess(
+              {
+                data: {
+                  currentStatus: { status: 'OTHER_STATUS' },
+                  initiativeAgreementId: '123'
+                }
+              },
+              '123',
+              INITIATIVE_AGREEMENT
+            )
           }
-        }, '123', INITIATIVE_AGREEMENT)}>
+        >
           Test
         </button>
       )
