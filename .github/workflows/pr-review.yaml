@@ -22,15 +22,22 @@ jobs:
     - name: Analyze code with AI
       id: analyze_code
       run: |
-        DIFF_CONTENT=$(jq -R -s '.' < pr_diff.txt)
+        # Read the diff and escape it properly for JSON
+        DIFF_CONTENT=$(jq -Rs '.' < pr_diff.txt)
+    
+        # Construct the JSON payload with jq to avoid formatting issues
+        JSON_PAYLOAD=$(jq -n --arg prompt "Review the following code for any issues or improvements: $DIFF_CONTENT" \
+          '{
+            "model": "gpt-4",
+            "prompt": $prompt,
+            "max_tokens": 500
+          }')
+    
+        # Send the request to the OpenAI API
         AI_RESPONSE=$(curl -X POST "https://api.openai.com/v1/completions" \
-        -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "model": "gpt-4",
-          "prompt": "Review the following code for any issues or improvements: '"$DIFF_CONTENT"'",
-          "max_tokens": 500
-        }')
+          -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d "$JSON_PAYLOAD")
     
         echo "AI response: $AI_RESPONSE"
     
