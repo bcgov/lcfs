@@ -18,6 +18,7 @@ from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
+write some junk
 # Create a colorized log formatter
 log_formatter = colorlog.ColoredFormatter(
     "%(log_color)s[%(levelname)s] [%(asctime)s]  %(name)s.%(funcName)s - %(message)s",
