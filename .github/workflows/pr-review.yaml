@@ -1,0 +1,46 @@
+# File: .github/workflows/ai_code_review.yml
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]  # Trigger on new PRs or updates to existing ones
+
+jobs:
+  ai_code_review:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Extract diff from PR
+      id: extract_diff
+      run: |
+        git fetch origin ${{ github.event.pull_request.base.ref }}
+        git diff origin/${{ github.event.pull_request.base.ref }} > pr_diff.txt
+
+    - name: Analyze code with AI
+      id: analyze_code
+      run: |
+        # You can change this to a Python script if you're using OpenAI or another service
+        DIFF_CONTENT=$(cat pr_diff.txt)
+        AI_RESPONSE=$(curl -X POST "https://api.openai.com/v1/completions" \
+        -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "model": "gpt-4",
+          "prompt": "Review the following code for any issues or improvements: '"$DIFF_CONTENT"'",
+          "max_tokens": 500
+        }')
+        echo "AI response: $AI_RESPONSE"
+        echo "::set-output name=ai_feedback::$AI_RESPONSE"
+
+    - name: Post feedback as a comment on PR
+      uses: peter-evans/create-or-update-comment@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: |
+          ### AI Code Review Feedback
+          ${{ steps.analyze_code.outputs.ai_feedback }}

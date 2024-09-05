@@ -13,6 +13,7 @@ import {
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
 import { v4 as uuid } from 'uuid'
+import { isArrayEmpty } from '@/utils/formatters'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -60,7 +61,7 @@ export const AddEditFuelSupplies = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      if (data) {
+      if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelSupplies.map((item) => ({
           ...item,
           fuelCategory: item.fuelCategory?.category,
@@ -86,7 +87,7 @@ export const AddEditFuelSupplies = () => {
   }, [errors, optionsData])
 
   useEffect(() => {
-    if (!fuelSuppliesLoading && data?.fuelSupplies?.length > 0) {
+    if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
       const updatedRowData = data.fuelSupplies.map((item) => ({
         ...item,
         fuelCategory: item.fuelCategory?.category,
