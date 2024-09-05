@@ -22,8 +22,7 @@ jobs:
     - name: Analyze code with AI
       id: analyze_code
       run: |
-        # You can change this to a Python script if you're using OpenAI or another service
-        DIFF_CONTENT=$(cat pr_diff.txt)
+        DIFF_CONTENT=$(jq -R -s '.' < pr_diff.txt)
         AI_RESPONSE=$(curl -X POST "https://api.openai.com/v1/completions" \
         -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
         -H "Content-Type: application/json" \
@@ -33,7 +32,7 @@ jobs:
           "max_tokens": 500
         }')
         echo "AI response: $AI_RESPONSE"
-        echo "::set-output name=ai_feedback::$AI_RESPONSE"
+        echo "ai_feedback=$AI_RESPONSE" >> $GITHUB_ENV  # Write output to environment file
 
     - name: Post feedback as a comment on PR
       uses: peter-evans/create-or-update-comment@v3
@@ -43,4 +42,5 @@ jobs:
         issue-number: ${{ github.event.pull_request.number }}
         body: |
           ### AI Code Review Feedback
-          ${{ steps.analyze_code.outputs.ai_feedback }}
+          ${{ env.ai_feedback }}
+
