@@ -90,8 +90,8 @@ export const FuelSupplySummary = ({ data }) => {
       },
       { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
       {
-        headerName: t('fuelSupply:fuelSupplyColLabels.targetCI'),
-        field: 'targetCI'
+        headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
+        field: 'targetCi'
       },
       {
         headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),

@@ -309,8 +309,8 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     }
   },
   {
-    field: 'targetCI',
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCI'),
+    field: 'targetCi',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors),
     valueGetter: (params) =>
