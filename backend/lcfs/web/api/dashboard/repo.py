@@ -62,6 +62,6 @@ class DashboardRepository:
         counts = result.fetchone()
 
         return {
-            "in_progress": counts.count_in_progress,
-            "awaiting_gov_review": counts.count_awaiting_gov_review
+            "in_progress": getattr(counts, 'count_in_progress', 0),
+            "awaiting_gov_review": getattr(counts, 'count_awaiting_gov_review', 0)
         }
