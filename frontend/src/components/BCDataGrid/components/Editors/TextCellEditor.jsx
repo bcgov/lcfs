@@ -4,7 +4,6 @@ import InputMask from 'react-input-mask'
 
 export const TextCellEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
-
     const handleTextFieldChange = (event) => {
       onValueChange(event.target.value)
     }

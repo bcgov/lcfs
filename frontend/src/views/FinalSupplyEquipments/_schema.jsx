@@ -36,7 +36,11 @@ const cellErrorStyle = (params, errors) => {
   return style
 }
 
-export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, errors) => [
+export const finalSupplyEquipmentColDefs = (
+  optionsData,
+  compliancePeriod,
+  errors
+) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -79,7 +83,10 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
       maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
     },
     valueGetter: (params) => {
-      return [params.data.supplyFromDate || `${compliancePeriod}-01-01`, params.data.supplyToDate || `${compliancePeriod}-12-31`]
+      return [
+        params.data.supplyFromDate || `${compliancePeriod}-01-01`,
+        params.data.supplyToDate || `${compliancePeriod}-12-31`
+      ]
     },
     valueSetter: (params) => {
       params.data.supplyFromDate = params.newValue[0]
@@ -187,7 +194,9 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
   {
     field: 'city',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'),
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.city'
+    ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) => cellErrorStyle(params, errors),
@@ -200,23 +209,23 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
     valueSetter: (params) => {
-      const newValue = params.newValue.toUpperCase().replace(/(.{3})/, '$1 ');
-      params.data[params.colDef.field] = newValue;
-      return true;
+      const newValue = params.newValue.toUpperCase().replace(/(.{3})/, '$1 ')
+      params.data[params.colDef.field] = newValue
+      return true
     },
     cellEditor: 'textCellEditor',
     cellEditorParams: {
       mask: 'A1A 1A1',
       formatChars: {
-        'A': '[A-Za-z]',
-        '1': '[0-9]'
+        A: '[A-Za-z]',
+        1: '[0-9]'
       }
     },
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellStyle: (params) => cellErrorStyle(params, errors),
     minWidth: 260
-  },  
+  },
   {
     field: 'latitude',
     headerComponent: HeaderComponent,
@@ -249,7 +258,9 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
   },
   {
     field: 'notes',
-    headerName: i18n.t('finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'),
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'
+    ),
     cellEditor: 'agTextCellEditor',
     minWidth: 500
   }

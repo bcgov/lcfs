@@ -17,7 +17,7 @@ const checkedIcon = <CheckBoxIcon fontSize="medium" />
 
 export const AutocompleteEditor = (props) => {
   const {
-    value='',
+    value = '',
     options = [],
     onValueChange,
     limitTags = 2,
@@ -45,8 +45,8 @@ export const AutocompleteEditor = (props) => {
 
   const handleBlur = (e) => {
     if (freeSolo && e.target.value) {
-      const newValue = e.target.value;
-      updateValue(newValue);
+      const newValue = e.target.value
+      updateValue(newValue)
     }
 
     if (onBlur) {

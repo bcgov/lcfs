@@ -10,7 +10,6 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
 export const AllocationAgreementSummary = ({ data }) => {
-
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`allocation-agreements-grid`)
@@ -27,39 +26,106 @@ export const AllocationAgreementSummary = ({ data }) => {
     }
   }, [location.state])
 
-  const gridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: t('allocationAgreement:noAllocationAgreementsFound'),
-    autoSizeStrategy: {
-      type: 'fitCellContents',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    },
-    enableCellTextSelection: true, // enables text selection on the grid
-    ensureDomOrder: true,
-  }),[t])
+  const gridOptions = useMemo(
+    () => ({
+      overlayNoRowsTemplate: t(
+        'allocationAgreement:noAllocationAgreementsFound'
+      ),
+      autoSizeStrategy: {
+        type: 'fitCellContents',
+        defaultMinWidth: 50,
+        defaultMaxWidth: 600
+      },
+      enableCellTextSelection: true, // enables text selection on the grid
+      ensureDomOrder: true
+    }),
+    [t]
+  )
 
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
-      filter: false,
+      filter: false
     }),
     []
   )
 
-  const columns = useMemo(() => ([
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.transaction'), field: "allocationTransactionType" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.transactionPartner'), field: "transactionPartner" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.postalAddress'), field: "postalAddress" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'), field: "transactionPartnerEmail" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'), field: "transactionPartnerPhone" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelType'), field: "fuelType" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCategory'), field: "fuelCategory" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.carbonIntensity'), field: "provisionOfTheAct" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'), field: "fuelCode" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'), field: "ciOfFuel" },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'), field: "quantity", valueFormatter },
-    { headerName: t('allocationAgreement:allocationAgreementColLabels.units'), field: "units" }
-  ]), [t])
+  const columns = useMemo(
+    () => [
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.transaction'
+        ),
+        field: 'allocationTransactionType'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+        ),
+        field: 'transactionPartner'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.postalAddress'
+        ),
+        field: 'postalAddress'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+        ),
+        field: 'transactionPartnerEmail'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+        ),
+        field: 'transactionPartnerPhone'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.fuelType'
+        ),
+        field: 'fuelType'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+        ),
+        field: 'fuelCategory'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.carbonIntensity'
+        ),
+        field: 'provisionOfTheAct'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.fuelCode'
+        ),
+        field: 'fuelCode'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+        ),
+        field: 'ciOfFuel'
+      },
+      {
+        headerName: t(
+          'allocationAgreement:allocationAgreementColLabels.quantity'
+        ),
+        field: 'quantity',
+        valueFormatter
+      },
+      {
+        headerName: t('allocationAgreement:allocationAgreementColLabels.units'),
+        field: 'units'
+      }
+    ],
+    [t]
+  )
 
   const getRowId = (params) => {
     return params.data.allocationAgreementId
@@ -84,7 +150,7 @@ export const AllocationAgreementSummary = ({ data }) => {
           gridRef={gridRef}
           apiEndpoint={apiRoutes.getAllAllocationAgreements}
           apiData={'allocationAgreements'}
-          apiParams={{complianceReportId}}
+          apiParams={{ complianceReportId }}
           columnDefs={columns}
           gridKey={gridKey}
           getRowId={getRowId}

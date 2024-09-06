@@ -27,17 +27,17 @@ export const NotionalTransferSummary = ({ data }) => {
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
-      filter: false,
+      filter: false
     }),
     []
   )
 
   const columns = [
-    { headerName: "Legal name of trading partner", field: "legalName" },
-    { headerName: "Address for service", field: "addressForService" },
-    { headerName: "Fuel category", field: "fuelCategory" },
-    { headerName: "Received OR Transferred", field: "receivedOrTransferred" },
-    { headerName: "Quantity (L)", field: "quantity", valueFormatter },
+    { headerName: 'Legal name of trading partner', field: 'legalName' },
+    { headerName: 'Address for service', field: 'addressForService' },
+    { headerName: 'Fuel category', field: 'fuelCategory' },
+    { headerName: 'Received OR Transferred', field: 'receivedOrTransferred' },
+    { headerName: 'Quantity (L)', field: 'quantity', valueFormatter }
   ]
 
   return (
@@ -51,22 +51,22 @@ export const NotionalTransferSummary = ({ data }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '74rem' }}>
         <BCGridViewer
-            gridKey={'notional-transfers'}
-            getRowId={getRowId}
-            columnDefs={columns}
-            defaultColDef={defaultColDef}
-            query={useGetNotionalTransfers}
-            queryParams={{ complianceReportId }}
-            dataKey={'notionalTransfers'}
-            suppressPagination={data?.length <= 10}
-            autoSizeStrategy={{
-              type: 'fitCellContents',
-              defaultMinWidth: 50,
-              defaultMaxWidth: 600
-            }}
-            enableCellTextSelection
-            ensureDomOrder
-          />
+          gridKey={'notional-transfers'}
+          getRowId={getRowId}
+          columnDefs={columns}
+          defaultColDef={defaultColDef}
+          query={useGetNotionalTransfers}
+          queryParams={{ complianceReportId }}
+          dataKey={'notionalTransfers'}
+          suppressPagination={data?.length <= 10}
+          autoSizeStrategy={{
+            type: 'fitCellContents',
+            defaultMinWidth: 50,
+            defaultMaxWidth: 600
+          }}
+          enableCellTextSelection
+          ensureDomOrder
+        />
       </BCBox>
     </Grid2>
   )

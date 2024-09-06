@@ -23,24 +23,24 @@ import '@ag-grid-community/styles/ag-theme-quartz.css'
 import { isEqual } from '@/utils/eventHandlers'
 
 const BCDataGridEditorV2 = ({
-  gridOptions={},
-  onGridReady={},
-  gridApi=null,
-  columnApi=null,
-  rowData=[],
-  gridKey='bcgrid-key-unique-id',
-  getRowNodeId=uuid(),
-  gridRef=null,
-  columnDefs={},
-  defaultColDef={},
-  highlightedRowId=null,
-  className='ag-theme-quartz',
+  gridOptions = {},
+  onGridReady = {},
+  gridApi = null,
+  columnApi = null,
+  rowData = [],
+  gridKey = 'bcgrid-key-unique-id',
+  getRowNodeId = uuid(),
+  gridRef = null,
+  columnDefs = {},
+  defaultColDef = {},
+  highlightedRowId = null,
+  className = 'ag-theme-quartz',
   // defaultStatusBar,
   // onRowEditingStarted,
   // onRowEditingStopped,
   // tabToNextCellHandler,
-  saveRow=null,
-  onValidated=null,
+  saveRow = null,
+  onValidated = null,
   ...props
 }) => {
   const frameworkComponents = useMemo(
@@ -127,40 +127,43 @@ const BCDataGridEditorV2 = ({
     },
     [saveRow]
   )
-  const defaultGridOptions = useMemo(() => ({
-    undoRedoCellEditing: true,
-    undoRedoCellEditingLimit: 5,
-    reactiveCustomComponents: true,
-    overlayNoRowsTemplate: 'No rows found',
-    autoSizeStrategy: { type: 'fitCellContents' },
-    suppressDragLeaveHidesColumns: true,
-    suppressMovableColumns: true,
-    suppressColumnMoveAnimation: false,
-    rowSelection: 'multiple',
-    editType: 'fullRow',
-    enableBrowserTooltips: true,
-    rowHeight: 45,
-    headerHeight: 40,
-    animateRows: true,
-    tabToNextCell,
-    suppressPaginationPanel: true,
-    suppressScrollOnNewData: true,
-    suppressCsvExport: false,
-    components: frameworkComponents,
-    onFirstDataRendered: (params) => {
-      params.api.startEditingCell({
-        rowIndex: 0,
-        colKey: params.api.getDisplayedCenterColumns()[0].colId,
-      })
-    },
-    getRowStyle: highlightedRowId
-      ? (params) => {
-        if (params.node.id === highlightedRowId) {
-          return { backgroundColor: '#fade81' }
-        }
-      }
-      : undefined,
-  }), [highlightedRowId, frameworkComponents, tabToNextCell])
+  const defaultGridOptions = useMemo(
+    () => ({
+      undoRedoCellEditing: true,
+      undoRedoCellEditingLimit: 5,
+      reactiveCustomComponents: true,
+      overlayNoRowsTemplate: 'No rows found',
+      autoSizeStrategy: { type: 'fitCellContents' },
+      suppressDragLeaveHidesColumns: true,
+      suppressMovableColumns: true,
+      suppressColumnMoveAnimation: false,
+      rowSelection: 'multiple',
+      editType: 'fullRow',
+      enableBrowserTooltips: true,
+      rowHeight: 45,
+      headerHeight: 40,
+      animateRows: true,
+      tabToNextCell,
+      suppressPaginationPanel: true,
+      suppressScrollOnNewData: true,
+      suppressCsvExport: false,
+      components: frameworkComponents,
+      onFirstDataRendered: (params) => {
+        params.api.startEditingCell({
+          rowIndex: 0,
+          colKey: params.api.getDisplayedCenterColumns()[0].colId
+        })
+      },
+      getRowStyle: highlightedRowId
+        ? (params) => {
+            if (params.node.id === highlightedRowId) {
+              return { backgroundColor: '#fade81' }
+            }
+          }
+        : undefined
+    }),
+    [highlightedRowId, frameworkComponents, tabToNextCell]
+  )
 
   function onCellValueChanged(params) {
     if (!isEqual(params.oldValue, params.newValue)) {
@@ -173,7 +176,9 @@ const BCDataGridEditorV2 = ({
       <AgGridReact
         gridKey={gridKey}
         gridRef={gridRef}
-        stopEditingWhenCellsLoseFocus={props.stopEditingWhenCellsLoseFocus ?? false}
+        stopEditingWhenCellsLoseFocus={
+          props.stopEditingWhenCellsLoseFocus ?? false
+        }
         gridApi={gridApi}
         className={className}
         columnDefs={columnDefs}
@@ -185,7 +190,9 @@ const BCDataGridEditorV2 = ({
         frameworkComponents={frameworkComponents}
         domLayout="autoHeight"
         onCellValueChanged={props.onCellValueChanged || onCellValueChanged}
-        onCellEditingStopped={props.onCellEditingStopped || onCellEditingStopped}
+        onCellEditingStopped={
+          props.onCellEditingStopped || onCellEditingStopped
+        }
         loadingOverlayComponent={loadingOverlayComponent}
         {...props}
       />
@@ -198,7 +205,7 @@ const BCDataGridEditorV2 = ({
           position: 'relative',
           border: 'none',
           borderRadius: '0px 0px 4px 4px',
-          overflow: 'hidden',
+          overflow: 'hidden'
         }}
       >
         {props.statusBarComponent}
@@ -231,8 +238,8 @@ BCDataGridEditorV2.propTypes = {
     'ag-theme-quartz-auto-dark',
     'ag-theme-balham',
     'ag-theme-balham-dark',
-    'ag-theme-balham-auto-dark',
-  ]),
+    'ag-theme-balham-auto-dark'
+  ])
 }
 
 export default BCDataGridEditorV2

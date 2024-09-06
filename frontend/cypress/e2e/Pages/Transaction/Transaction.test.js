@@ -1,8 +1,4 @@
-import {
-  Given,
-  When,
-  Then
-} from '@badeball/cypress-cucumber-preprocessor'
+import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
 Given('the analyst is on the login page', () => {
   cy.clearAllCookies()
@@ -38,7 +34,10 @@ When('the analyst recommends the transaction', () => {
   cy.get('#recommend-btn').click()
   cy.get('.MuiDialog-container')
     .should('exist')
-    .and('contain', 'Are you sure you want to recommend this initiative agreement?')
+    .and(
+      'contain',
+      'Are you sure you want to recommend this initiative agreement?'
+    )
   cy.wait(500)
   cy.get('#modal-btn-recommend').click()
 })
@@ -57,15 +56,16 @@ When('the analyst starts a new initiative agreement transaction', () => {
   })
 })
 
-When('the analyst enters {string} units to organization {string} with effective date {string} and comment {string}', 
+When(
+  'the analyst enters {string} units to organization {string} with effective date {string} and comment {string}',
   (units, orgId, effetiveDate, comment) => {
-  cy.get('#to-organization-id').click()
-  cy.get(`[data-value="${orgId}"]`).click()
-  cy.get('input[name="complianceUnits"]').type(units)
-  cy.get('input[name="transactionEffectiveDate"]').type(effetiveDate)
-  cy.get('textarea[name="govComment"]').type(comment)
-
-})
+    cy.get('#to-organization-id').click()
+    cy.get(`[data-value="${orgId}"]`).click()
+    cy.get('input[name="complianceUnits"]').type(units)
+    cy.get('input[name="transactionEffectiveDate"]').type(effetiveDate)
+    cy.get('textarea[name="govComment"]').type(comment)
+  }
+)
 
 When('the analyst saves the draft transaction', () => {
   cy.get('#save-draft-btn').click()
@@ -115,7 +115,10 @@ When('the director approves the transaction', () => {
   cy.get('#approve-btn').click()
   cy.get('.MuiDialog-container')
     .should('exist')
-    .and('contain', 'Are you sure you want to approve this initiative agreement?')
+    .and(
+      'contain',
+      'Are you sure you want to approve this initiative agreement?'
+    )
   cy.wait(500)
   cy.get('#modal-btn-approve').click()
 })

@@ -12,7 +12,7 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useNavigate: () => mockNavigate,
+    useNavigate: () => mockNavigate
   }
 })
 
@@ -21,17 +21,15 @@ const customRender = (ui, options = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: false,
-      },
-    },
+        retry: false
+      }
+    }
   })
 
   const AllTheProviders = ({ children }) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <Router>
-          {children}
-        </Router>
+        <Router>{children}</Router>
       </ThemeProvider>
     </QueryClientProvider>
   )

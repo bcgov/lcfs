@@ -9,8 +9,16 @@ import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 
 const OrgBalanceCard = () => {
   const { t } = useTranslation(['dashboard'])
-  const { data: currentUser, isLoading: isUserLoading, isError: isUserError } = useCurrentUser()
-  const { data: orgBalance, isLoading: isBalanceLoading, isError: isBalanceError } = useCurrentOrgBalance()
+  const {
+    data: currentUser,
+    isLoading: isUserLoading,
+    isError: isUserError
+  } = useCurrentUser()
+  const {
+    data: orgBalance,
+    isLoading: isBalanceLoading,
+    isError: isBalanceError
+  } = useCurrentOrgBalance()
 
   const Content = () => {
     if (isUserLoading || isBalanceLoading) {
@@ -23,31 +31,48 @@ const OrgBalanceCard = () => {
       )
     } else {
       // Ensure reservedBalance is displayed as positive
-      const formattedReservedBalance = Math.abs(orgBalance.reservedBalance).toLocaleString()
+      const formattedReservedBalance = Math.abs(
+        orgBalance.reservedBalance
+      ).toLocaleString()
 
       return (
         <>
-          <BCTypography style={{ fontSize: '18px', color: '#003366', marginBottom: '-2px' }} gutterBottom>
-            <strong>{currentUser?.organization?.name || t('dashboard:orgBalance.org')}</strong>
+          <BCTypography
+            style={{ fontSize: '18px', color: '#003366', marginBottom: '-2px' }}
+            gutterBottom
+          >
+            <strong>
+              {currentUser?.organization?.name || t('dashboard:orgBalance.org')}
+            </strong>
           </BCTypography>
-          <BCTypography style={{ fontSize: '16px', color: '#003366', marginBottom: '-4px' }}>
+          <BCTypography
+            style={{ fontSize: '16px', color: '#003366', marginBottom: '-4px' }}
+          >
             {t('dashboard:orgBalance.hasABalanceOf')}
           </BCTypography>
-          <BCTypography style={{ fontSize: '32px', color: '#578260', marginBottom: '-4px' }} component="span">
+          <BCTypography
+            style={{ fontSize: '32px', color: '#578260', marginBottom: '-4px' }}
+            component="span"
+          >
             {orgBalance.totalBalance.toLocaleString()}
           </BCTypography>
-          <BCTypography style={{ fontSize: '18px', color: '#003366', marginBottom: '-5px' }}>
+          <BCTypography
+            style={{ fontSize: '18px', color: '#003366', marginBottom: '-5px' }}
+          >
             <strong>{t('dashboard:orgBalance.complianceUnits')}</strong>
           </BCTypography>
           <Box display="flex" alignItems="center" mt={1}>
-            <BCTypography style={{ fontSize: '22px', color: '#578260' }} component="span">
+            <BCTypography
+              style={{ fontSize: '22px', color: '#578260' }}
+              component="span"
+            >
               ({formattedReservedBalance} {t('dashboard:orgBalance.inReserve')})
             </BCTypography>
             <Tooltip
-                title={t('dashboard:orgBalance.inReserveTooltip')}
-                TransitionComponent={Fade}
-                arrow
-              >
+              title={t('dashboard:orgBalance.inReserveTooltip')}
+              TransitionComponent={Fade}
+              arrow
+            >
               <InfoIcon style={{ marginLeft: '4px', color: '#578260' }} />
             </Tooltip>
           </Box>
@@ -57,7 +82,16 @@ const OrgBalanceCard = () => {
   }
 
   return (
-    <Box p={2} paddingTop={4} paddingBottom={4} bgcolor="background.grey" display="flex" flexDirection="column" alignItems="center" justifyContent="center">
+    <Box
+      p={2}
+      paddingTop={4}
+      paddingBottom={4}
+      bgcolor="background.grey"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+    >
       <Content />
     </Box>
   )

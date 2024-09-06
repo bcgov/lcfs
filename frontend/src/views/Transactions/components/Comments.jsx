@@ -6,7 +6,7 @@ import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 
-export const Comments = ({commentField, isEditable}) => {
+export const Comments = ({ commentField, isEditable }) => {
   const { t } = useTranslation(['txn'])
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -29,7 +29,7 @@ export const Comments = ({commentField, isEditable}) => {
   return (
     commentField && (
       <>
-        <LabelBox label={t('txn:commentsLabel')} >
+        <LabelBox label={t('txn:commentsLabel')}>
           <Box
             display="flex"
             alignItems="center"
