@@ -1,7 +1,7 @@
 """Add mv_org_compliance_report_count to calculate the number of organization compliance reports for the OrgComplianceReports card on the dashboard.
 
 Revision ID: c8a2dbd4ccd7
-Revises: 9d93dc700752
+Revises: 7883dc36d1b1
 Create Date: 2024-08-29 23:03:35.246219
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "c8a2dbd4ccd7"
-down_revision = "9d93dc700752"
+down_revision = "7883dc36d1b1"
 branch_labels = None
 depends_on = None
 
