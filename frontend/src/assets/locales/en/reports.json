@@ -63,5 +63,8 @@
   "pleaseCheckDeclaration": "Please certify the information before submitting",
   "expandAll": "expand all",
   "collapseAll": "collapse all",
-  "fuelSupply": "Fuel supply"
+  "fuelSupply": "Fuel supply",
+  "returnToReport": "Return to report",
+  "incompleteReport": "Incomplete data will not be saved, cancel to fix.",
+  "saveReturn": "Save & return to report"
 }
