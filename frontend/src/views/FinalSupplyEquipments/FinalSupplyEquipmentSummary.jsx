@@ -10,12 +10,10 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
 export const FinalSupplyEquipmentSummary = ({ data }) => {
-
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`final-supply-equipments-grid`)
   const { complianceReportId } = useParams()
-
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipments'])
@@ -29,39 +27,120 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
   }, [location.state])
 
   const gridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: t('finalSupplyEquipment:noFinalSupplyEquipmentsFound'),
+    overlayNoRowsTemplate: t(
+      'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
+    ),
     autoSizeStrategy: {
       type: 'fitCellContents',
       defaultMinWidth: 50,
       defaultMaxWidth: 600
     },
     enableCellTextSelection: true, // enables text selection on the grid
-    ensureDomOrder: true,
+    ensureDomOrder: true
   }))
 
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
-      filter: false,
+      filter: false
     }),
     []
   )
-  const columns = useMemo(() => ([
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'), field: "supplyFromDate" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'), field: "supplyToDate" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'), field: "registrationNbr" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'), field: "serialNbr" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'), field: "manufacturer" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'), field: "levelOfEquipment", valueGetter: (params) => params.data.levelOfEquipment.name },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'), field: "fuelMeasurementType", valueGetter: (params) => params.data.fuelMeasurementType.type },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'), field: "intendedUses", valueGetter: (params) => params.data.intendedUseTypes.map((use) => use.type).join(', '), cellRenderer: CommonArrayRenderer, cellRendererParams: { marginTop: '0.7em' } },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'), field: "streetAddress" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'), field: "city" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'), field: "postalCode" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'), field: "latitude" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'), field: "longitude" },
-    { headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'), field: "notes" },
-  ]), [t])
+  const columns = useMemo(
+    () => [
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
+        ),
+        field: 'supplyFromDate'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
+        ),
+        field: 'supplyToDate'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
+        ),
+        field: 'registrationNbr'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
+        ),
+        field: 'serialNbr'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
+        ),
+        field: 'manufacturer'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
+        ),
+        field: 'levelOfEquipment',
+        valueGetter: (params) => params.data.levelOfEquipment.name
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
+        ),
+        field: 'fuelMeasurementType',
+        valueGetter: (params) => params.data.fuelMeasurementType.type
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
+        ),
+        field: 'intendedUses',
+        valueGetter: (params) =>
+          params.data.intendedUseTypes.map((use) => use.type).join(', '),
+        cellRenderer: CommonArrayRenderer,
+        cellRendererParams: { marginTop: '0.7em' }
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
+        ),
+        field: 'streetAddress'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.city'
+        ),
+        field: 'city'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
+        ),
+        field: 'postalCode'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
+        ),
+        field: 'latitude'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
+        ),
+        field: 'longitude'
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'
+        ),
+        field: 'notes'
+      }
+    ],
+    [t]
+  )
 
   const getRowId = (params) => {
     return params.data.finalSupplyEquipmentId
@@ -86,7 +165,7 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
           gridRef={gridRef}
           apiEndpoint={apiRoutes.getAllFinalSupplyEquipments}
           apiData={'finalSupplyEquipments'}
-          apiParams={{complianceReportId}}
+          apiParams={{ complianceReportId }}
           columnDefs={columns}
           gridKey={gridKey}
           getRowId={getRowId}

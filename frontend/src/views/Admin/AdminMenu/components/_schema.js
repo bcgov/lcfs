@@ -14,8 +14,7 @@ export const usersColumnDefs = (t) => [
     minWidth: 250,
     headerName: t('admin:userColLabels.userName'),
     cellRenderer: LinkRenderer,
-    valueGetter: (params) =>
-      params.data.firstName + ' ' + params.data.lastName
+    valueGetter: (params) => params.data.firstName + ' ' + params.data.lastName
   },
   {
     colId: 'role',
@@ -48,8 +47,8 @@ export const usersColumnDefs = (t) => [
     floatingFilterComponentParams: {
       apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
       // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
-      params: "government_roles_only=true",
-      key: "admin-users",
+      params: 'government_roles_only=true',
+      key: 'admin-users',
       disableCloseOnSelect: false,
       multiple: false
     },

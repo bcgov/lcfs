@@ -32,5 +32,5 @@ BCFormSelect.propTypes = {
   control: PropTypes.any.isRequired,
   label: PropTypes.string,
   setValue: PropTypes.any,
-  options: PropTypes.array.isRequired,
+  options: PropTypes.array.isRequired
 }

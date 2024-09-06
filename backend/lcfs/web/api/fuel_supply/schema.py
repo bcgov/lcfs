@@ -133,7 +133,7 @@ class FuelSupplySchema(BaseSchema):
     quantity: int
     units: str
     compliance_units: int
-    ci_limit: Optional[float] = None
+    target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
     energy_density: Optional[float] = None
     eer: Optional[float] = None
@@ -165,7 +165,7 @@ class FuelSupplyCreateSchema(BaseSchema):
     quantity: int
     units: str
     compliance_units: int
-    ci_limit: float
+    target_ci: float
     ci_of_fuel: float
     energy_density: float
     eer: float

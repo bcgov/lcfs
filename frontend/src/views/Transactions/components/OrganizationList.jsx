@@ -10,22 +10,32 @@ const OrganizationList = ({ onOrgChange }) => {
   const { data, isLoading } = useOrganizationNames()
   const [optionsList, setOptionsList] = useState([])
   const [org, setOrg] = useState(null)
-  
+
   useEffect(() => {
     if (!isLoading) {
-      const formattedData = data.map(org => ({
+      const formattedData = data.map((org) => ({
         ...org,
-        label: `${org.name} ${t('txn:complianceUnitsBalance')}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({ value: Math.abs(org.reservedBalance) })} ${t('txn:inReserve')})`
-      }));
+        label: `${org.name} ${t(
+          'txn:complianceUnitsBalance'
+        )}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({
+          value: Math.abs(org.reservedBalance)
+        })} ${t('txn:inReserve')})`
+      }))
 
       setOptionsList([
-        { organizationId: null, name: t('txn:allOrganizations'), totalBalance: 0, reservedBalance: 0, label: t('txn:allOrganizations') },
+        {
+          organizationId: null,
+          name: t('txn:allOrganizations'),
+          totalBalance: 0,
+          reservedBalance: 0,
+          label: t('txn:allOrganizations')
+        },
         ...formattedData
-      ]);
+      ])
     }
   }, [data, isLoading, t])
 
-  const onInputBoxChanged = (event, input) => {    
+  const onInputBoxChanged = (event, input) => {
     if (!input || input.name === t('txn:allOrganizations')) {
       setOrg(null)
       onOrgChange(null)
@@ -33,7 +43,7 @@ const OrganizationList = ({ onOrgChange }) => {
       setOrg(input.label)
       onOrgChange(input.organizationId)
     }
-  };
+  }
 
   return (
     <Box component="div" mb={2}>

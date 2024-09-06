@@ -18,4 +18,3 @@ export const useUser = (id, options) => {
     ...options
   })
 }
-

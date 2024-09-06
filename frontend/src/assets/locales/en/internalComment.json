@@ -1,13 +1,12 @@
 {
-    "loadingComments": "Loading comments...",
-    "errorLoadingComments": "Error loading comments:",
-    "addComment": "Add Comment",
-    "saveChanges": "Save Changes",
-    "cancel": "Cancel",
-    "editComment": "Edit comment:",
-    "commentToDirector": "Comments to the director to support your recommendation (optional):",
-    "commentToAnalyst": "Comments to the analyst (optional):",
-    "edit": "[Edit]",
-    "edited": "Edited"
-  }
-  
+  "loadingComments": "Loading comments...",
+  "errorLoadingComments": "Error loading comments:",
+  "addComment": "Add Comment",
+  "saveChanges": "Save Changes",
+  "cancel": "Cancel",
+  "editComment": "Edit comment:",
+  "commentToDirector": "Comments to the director to support your recommendation (optional):",
+  "commentToAnalyst": "Comments to the analyst (optional):",
+  "edit": "[Edit]",
+  "edited": "Edited"
+}

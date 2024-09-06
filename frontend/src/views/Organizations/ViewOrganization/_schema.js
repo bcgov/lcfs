@@ -6,7 +6,14 @@ import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
 
 export const organizationsColDefs = (t) => [
-  { colId: 'name', field: 'name', headerName: t('org:orgColLabels.orgName'), cellRenderer: LinkRenderer, minWidth: 400, flex: 1 },
+  {
+    colId: 'name',
+    field: 'name',
+    headerName: t('org:orgColLabels.orgName'),
+    cellRenderer: LinkRenderer,
+    minWidth: 400,
+    flex: 1
+  },
   {
     colId: 'complianceUnits',
     field: 'complianceUnits',
@@ -46,7 +53,7 @@ export const organizationsColDefs = (t) => [
     floatingFilterComponentParams: {
       apiOptionField: 'status',
       apiQuery: useOrganizationStatuses,
-      key: "org-status",
+      key: 'org-status',
       disableCloseOnSelect: false,
       multiple: false
     },
@@ -65,8 +72,9 @@ export const getUserColumnDefs = (t) => {
       }
     } else if (colDef.field === 'role') {
       // pick only supplier roles
-      colDef.floatingFilterComponentParams.params = "government_roles_only=false"
-      colDef.floatingFilterComponentParams.key = "organization-users"
+      colDef.floatingFilterComponentParams.params =
+        'government_roles_only=false'
+      colDef.floatingFilterComponentParams.key = 'organization-users'
     }
     return colDef
   })

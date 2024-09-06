@@ -1,11 +1,21 @@
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from './AddEditViewTransaction'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from './AddEditViewTransaction'
 import { TRANSACTIONS } from '@/constants/routes/routes'
 import { useQueryClient } from '@tanstack/react-query'
 
-export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, setModalData, alertRef, queryClient) => {
+export const useTransactionMutation = (
+  t,
+  setAlertMessage,
+  setAlertSeverity,
+  setModalData,
+  alertRef,
+  queryClient
+) => {
   const navigate = useNavigate()
 
   // Helper function to determine routes based on transaction type and ID
@@ -22,31 +32,50 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
     }
 
     return {
-      editRoute: typeRoutes[transactionType].editRoute.replace(':transactionId', id),
-      viewRoute: typeRoutes[transactionType].viewRoute.replace(':transactionId', id)
+      editRoute: typeRoutes[transactionType].editRoute.replace(
+        ':transactionId',
+        id
+      ),
+      viewRoute: typeRoutes[transactionType].viewRoute.replace(
+        ':transactionId',
+        id
+      )
     }
   }
 
   const handleSuccess = (response, transactionId, transactionType) => {
     setModalData(null)
     const status = response.data.currentStatus.status
-    const idField = transactionType === ADMIN_ADJUSTMENT ? 'adminAdjustmentId' : 'initiativeAgreementId'
-    const idPrefix = transactionType === ADMIN_ADJUSTMENT ? 'adminadjustment-' : 'initiativeagreement-'
+    const idField =
+      transactionType === ADMIN_ADJUSTMENT
+        ? 'adminAdjustmentId'
+        : 'initiativeAgreementId'
+    const idPrefix =
+      transactionType === ADMIN_ADJUSTMENT
+        ? 'adminadjustment-'
+        : 'initiativeagreement-'
     const txnId = response.data[idField]
-    const { editRoute, viewRoute } = getTransactionRoutes(transactionType, txnId)
-    
+    const { editRoute, viewRoute } = getTransactionRoutes(
+      transactionType,
+      txnId
+    )
+
     // Check if returned flag is true
     const isReturned = response.data.returned
-  
+
     // Invalidate relevant queries
     queryClient.invalidateQueries([transactionType, transactionId])
-  
+
     // Set the message and state for navigating
-    const message = t(`${transactionType}:actionMsgs.${transactionId ? 'updatedText' : 'createdText'}`)
+    const message = t(
+      `${transactionType}:actionMsgs.${
+        transactionId ? 'updatedText' : 'createdText'
+      }`
+    )
     const navigateState = {
       state: { message, severity: 'success' }
     }
-  
+
     if (status === TRANSACTION_STATUSES.DRAFT && !isReturned) {
       navigate(editRoute, navigateState)
     } else if (status === TRANSACTION_STATUSES.DRAFT && isReturned) {
@@ -58,7 +87,10 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
           severity: 'success'
         }
       })
-    } else if (status === TRANSACTION_STATUSES.RECOMMENDED || status === TRANSACTION_STATUSES.APPROVED) {
+    } else if (
+      status === TRANSACTION_STATUSES.RECOMMENDED ||
+      status === TRANSACTION_STATUSES.APPROVED
+    ) {
       navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
         state: {
           message: t(`${transactionType}:actionMsgs.successText`, {
@@ -70,7 +102,9 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
     } else if (status === TRANSACTION_STATUSES.DELETED) {
       navigate(TRANSACTIONS, {})
     } else {
-      setAlertMessage(t(`${transactionType}:actionMsgs.successText`, { status: 'saved' }))
+      setAlertMessage(
+        t(`${transactionType}:actionMsgs.successText`, { status: 'saved' })
+      )
       setAlertSeverity('success')
     }
 
@@ -82,7 +116,13 @@ export const useTransactionMutation = (t, setAlertMessage, setAlertSeverity, set
 
   const handleError = (_error, transactionId, transactionType) => {
     setModalData(null)
-    const errorMsg = _error.response?.data?.detail || t(`${transactionType}:actionMsgs.error${transactionId ? 'Update' : 'Create'}Text`)
+    const errorMsg =
+      _error.response?.data?.detail ||
+      t(
+        `${transactionType}:actionMsgs.error${
+          transactionId ? 'Update' : 'Create'
+        }Text`
+      )
     setAlertMessage(errorMsg)
     setAlertSeverity('error')
     alertRef.current.triggerAlert()

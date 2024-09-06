@@ -11,7 +11,7 @@ function BCWidgetCard({ color, title, content, style, disableHover }) {
       sx={{
         border: '1px solid #8c8c8c',
         '&:hover': {
-          transform: disableHover ? 'none' : 'scale(1.005)',
+          transform: disableHover ? 'none' : 'scale(1.005)'
         },
         mb: 5,
         ...style
@@ -51,7 +51,7 @@ function BCWidgetCard({ color, title, content, style, disableHover }) {
 // Setting default values for the props of BCWidgetCard
 BCWidgetCard.defaultProps = {
   color: 'nav',
-  disableHover: false,
+  disableHover: false
 }
 
 // Typechecking props for the BCWidgetCard

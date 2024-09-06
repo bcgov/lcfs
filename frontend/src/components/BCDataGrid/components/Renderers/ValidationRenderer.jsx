@@ -29,7 +29,7 @@ export const ValidationRenderer = ({ data, ...props }) => {
           <IconButton
             aria-label="shows sign for saving"
             data-testid="save-row"
-            onClick={()=> props.api.stopEditing()}
+            onClick={() => props.api.stopEditing()}
           >
             <Save color="primary" />
           </IconButton>

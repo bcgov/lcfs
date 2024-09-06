@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useMatches, useParams, useNavigate, useLocation } from 'react-router-dom'
+import {
+  useMatches,
+  useParams,
+  useNavigate,
+  useLocation
+} from 'react-router-dom'
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -7,8 +12,14 @@ import { govRoles, roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useAdminAdjustment, useCreateUpdateAdminAdjustment } from '@/hooks/useAdminAdjustment'
-import { useInitiativeAgreement, useCreateUpdateInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
+import {
+  useAdminAdjustment,
+  useCreateUpdateAdminAdjustment
+} from '@/hooks/useAdminAdjustment'
+import {
+  useInitiativeAgreement,
+  useCreateUpdateInitiativeAgreement
+} from '@/hooks/useInitiativeAgreement'
 import {
   useTheme,
   Stack,
@@ -46,7 +57,12 @@ export const AddEditViewTransaction = () => {
   const queryClient = useQueryClient()
   const theme = useTheme()
   const isMobileSize = useMediaQuery(theme.breakpoints.down('sm'))
-  const { t } = useTranslation(['common', 'adminadjustment', 'initiativeagreement', 'transaction'])
+  const { t } = useTranslation([
+    'common',
+    'adminadjustment',
+    'initiativeagreement',
+    'transaction'
+  ])
   const matches = useMatches()
   const navigate = useNavigate()
   const location = useLocation()
@@ -71,18 +87,20 @@ export const AddEditViewTransaction = () => {
 
   const {
     mutate: createUpdateAdminAdjustment,
-    isLoading: isUpdatingAdminAdjustment,
+    isLoading: isUpdatingAdminAdjustment
   } = useCreateUpdateAdminAdjustment(transactionId, {
-    onSuccess: (response) => handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
-    onError: (error) => handleError(error, transactionId, ADMIN_ADJUSTMENT),
+    onSuccess: (response) =>
+      handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
+    onError: (error) => handleError(error, transactionId, ADMIN_ADJUSTMENT)
   })
 
   const {
     mutate: createUpdateInitiativeAgreement,
-    isLoading: isUpdatingInitiativeAgreement,
+    isLoading: isUpdatingInitiativeAgreement
   } = useCreateUpdateInitiativeAgreement(transactionId, {
-    onSuccess: (response) => handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
-    onError: (error) => handleError(error, transactionId, INITIATIVE_AGREEMENT),
+    onSuccess: (response) =>
+      handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
+    onError: (error) => handleError(error, transactionId, INITIATIVE_AGREEMENT)
   })
 
   const methods = useForm({
@@ -93,15 +111,15 @@ export const AddEditViewTransaction = () => {
       toOrganizationId: null,
       complianceUnits: null,
       transactionEffectiveDate: null,
-      govComment: null,
-    },
+      govComment: null
+    }
   })
 
   const {
     watch,
     setValue,
     formState: { errors },
-    handleSubmit,
+    handleSubmit
   } = methods
 
   let txnType = watch('txnType')
@@ -129,54 +147,72 @@ export const AddEditViewTransaction = () => {
   }, [location.state, mode, setValue])
 
   if (mode !== 'add') {
-    txnType = location.pathname.includes('admin-adjustment') ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
+    txnType = location.pathname.includes('admin-adjustment')
+      ? ADMIN_ADJUSTMENT
+      : INITIATIVE_AGREEMENT
   }
 
   // Conditionally fetch data if in edit mode and txnType is set
-  const transactionDataHook = txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement
+  const transactionDataHook =
+    txnType === ADMIN_ADJUSTMENT ? useAdminAdjustment : useInitiativeAgreement
   const {
     data: transactionData,
     isLoading: isTransactionDataLoading,
     isFetched,
-    isLoadingError,
+    isLoadingError
   } = transactionDataHook(transactionId, {
     enabled: !!transactionId && !!txnType,
     retry: false,
     staleTime: 0,
     cacheTime: 0,
-    keepPreviousData: false,
+    keepPreviousData: false
   })
 
-  const stateId = txnType === ADMIN_ADJUSTMENT ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
+  const stateId =
+    txnType === ADMIN_ADJUSTMENT ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
   const queryState = queryClient.getQueryState([stateId, transactionId])
 
   useEffect(() => {
     if (transactionId && isFetched && transactionData) {
       methods.reset({
-        txnType: transactionData.adminAdjustmentId ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT,
+        txnType: transactionData.adminAdjustmentId
+          ? ADMIN_ADJUSTMENT
+          : INITIATIVE_AGREEMENT,
         govComment: transactionData.govComment,
         toOrganizationId: transactionData.toOrganizationId || '',
         complianceUnits: transactionData.complianceUnits || '',
         transactionEffectiveDate: transactionData.transactionEffectiveDate
           ? dateFormatter(transactionData.transactionEffectiveDate)
-          : null,
+          : null
       })
     } else {
       queryClient.invalidateQueries([txnType, transactionId]) // Invalidate and refetch if data is not fetched
     }
     if (isLoadingError || queryState.status === 'error') {
-      setAlertMessage(t(`${txnType}:actionMsgs.errorRetrieval`, { transactionId }))
+      setAlertMessage(
+        t(`${txnType}:actionMsgs.errorRetrieval`, { transactionId })
+      )
       setAlertSeverity('error')
     }
-  }, [isFetched, transactionId, transactionData, isLoadingError, queryState, txnType, methods, t, queryClient])
+  }, [
+    isFetched,
+    transactionId,
+    transactionData,
+    isLoadingError,
+    queryState,
+    txnType,
+    methods,
+    t,
+    queryClient
+  ])
 
   const formatTransactionId = (transactionId, txnType) => {
     const prefixMap = {
-      'administrativeAdjustment': "AA",
-      'initiativeAgreement': "IA"
+      administrativeAdjustment: 'AA',
+      initiativeAgreement: 'IA'
     }
-  
-    const prefix = prefixMap[txnType] || ""
+
+    const prefix = prefixMap[txnType] || ''
     return `${prefix}${transactionId}`
   }
 
@@ -185,9 +221,15 @@ export const AddEditViewTransaction = () => {
       case 'add':
         return t('txn:newTransaction')
       case 'edit':
-        return `Edit ${t(`${txnType}:${txnType}`)} ${formatTransactionId(transactionId, txnType)}`
+        return `Edit ${t(`${txnType}:${txnType}`)} ${formatTransactionId(
+          transactionId,
+          txnType
+        )}`
       default:
-        return `${t(`${txnType}:${txnType}`)} ${formatTransactionId(transactionId, txnType)}`
+        return `${t(`${txnType}:${txnType}`)} ${formatTransactionId(
+          transactionId,
+          txnType
+        )}`
     }
   }, [mode, t, transactionId, txnType])
 
@@ -195,8 +237,11 @@ export const AddEditViewTransaction = () => {
   const isDraft = currentStatus === TRANSACTION_STATUSES.DRAFT
   const isRecommended = currentStatus === TRANSACTION_STATUSES.RECOMMENDED
   const isApproved = currentStatus === TRANSACTION_STATUSES.APPROVED
-  const isEditable = (mode === 'add' || (mode === 'edit' && isDraft)) && hasAnyRole(roles.analyst, roles.director)
-  const isCommentEditable = isEditable || (isRecommended && hasAnyRole(roles.director))
+  const isEditable =
+    (mode === 'add' || (mode === 'edit' && isDraft)) &&
+    hasAnyRole(roles.analyst, roles.director)
+  const isCommentEditable =
+    isEditable || (isRecommended && hasAnyRole(roles.director))
 
   useEffect(() => {
     const updateSteps = () => {
@@ -206,7 +251,10 @@ export const AddEditViewTransaction = () => {
 
       // Iterate over the transaction history to collect statuses
       transactionData?.history?.forEach((item) => {
-        const status = txnType === ADMIN_ADJUSTMENT ? item.adminAdjustmentStatus.status : item.initiativeAgreementStatus.status
+        const status =
+          txnType === ADMIN_ADJUSTMENT
+            ? item.adminAdjustmentStatus.status
+            : item.initiativeAgreementStatus.status
         statusArray.push(status)
       })
 
@@ -237,18 +285,39 @@ export const AddEditViewTransaction = () => {
         createUpdateInitiativeAgreement,
         internalComment
       }),
-    [transactionId, txnType, methods, t, setModalData, createUpdateAdminAdjustment, createUpdateInitiativeAgreement, hasRoles, internalComment]
+    [
+      transactionId,
+      txnType,
+      methods,
+      t,
+      setModalData,
+      createUpdateAdminAdjustment,
+      createUpdateInitiativeAgreement,
+      hasRoles,
+      internalComment
+    ]
   )
 
-  if (transactionId && isTransactionDataLoading) return <Loading message={t('txn:loadingText')} />
+  if (transactionId && isTransactionDataLoading)
+    return <Loading message={t('txn:loadingText')} />
 
   // Conditional rendering for loading
-  if (transactionId && (isTransactionDataLoading || queryState.status === 'pending')) return <Loading message={t('txn:loadingText')} />
-  if (isUpdatingAdminAdjustment || isUpdatingInitiativeAgreement) return <Loading message={t('txn:processingText')} />
+  if (
+    transactionId &&
+    (isTransactionDataLoading || queryState.status === 'pending')
+  )
+    return <Loading message={t('txn:loadingText')} />
+  if (isUpdatingAdminAdjustment || isUpdatingInitiativeAgreement)
+    return <Loading message={t('txn:processingText')} />
 
   if (isLoadingError || queryState.status === 'error') {
     return (
-      <BCAlert data-test="alert-box" severity={alertSeverity} dismissible={true} delay={10000}>
+      <BCAlert
+        data-test="alert-box"
+        severity={alertSeverity}
+        dismissible={true}
+        delay={10000}
+      >
         {alertMessage}
       </BCAlert>
     )
@@ -258,18 +327,36 @@ export const AddEditViewTransaction = () => {
     <FormProvider {...methods}>
       <div>
         {alertMessage && (
-          <BCAlert ref={alertRef} data-test="alert-box" severity={alertSeverity} delay={65000}>
+          <BCAlert
+            ref={alertRef}
+            data-test="alert-box"
+            severity={alertSeverity}
+            delay={65000}
+          >
             {alertMessage}
           </BCAlert>
         )}
       </div>
-      <BCModal open={!!modalData} onClose={() => setModalData(null)} data={modalData} />
+      <BCModal
+        open={!!modalData}
+        onClose={() => setModalData(null)}
+        data={modalData}
+      />
       <BCBox>
         {/* Header section */}
-        <Typography variant="h5" color="primary">{title}</Typography>
+        <Typography variant="h5" color="primary">
+          {title}
+        </Typography>
 
         {/* Progress bar */}
-        <BCBox sx={{ margin: 'auto', justifyContent: 'center', width: '60%', paddingY: 2 }}>
+        <BCBox
+          sx={{
+            margin: 'auto',
+            justifyContent: 'center',
+            width: '60%',
+            paddingY: 2
+          }}
+        >
           <Stepper
             activeStep={steps.indexOf(currentStatus)}
             alternativeLabel={!isMobileSize}
@@ -294,15 +381,21 @@ export const AddEditViewTransaction = () => {
 
         {/* Transaction Details */}
         {isEditable ? (
-          <TransactionDetails isEditable={isEditable} transactionId={transactionId} />
+          <TransactionDetails
+            isEditable={isEditable}
+            transactionId={transactionId}
+          />
         ) : (
           <TransactionView transaction={transactionData} />
         )}
 
         {/* Comments */}
-        {!(isApproved || (isRecommended && hasAnyRole(roles.analyst))) &&
-          <Comments isEditable={isCommentEditable} commentField={'govComment'}
-        />}
+        {!(isApproved || (isRecommended && hasAnyRole(roles.analyst))) && (
+          <Comments
+            isEditable={isCommentEditable}
+            commentField={'govComment'}
+          />
+        )}
 
         {/* Internal Comments */}
         <BCBox mt={4}>
@@ -321,13 +414,17 @@ export const AddEditViewTransaction = () => {
         </BCBox>
 
         {/* Transaction History */}
-        {transactionId && <TransactionHistory transactionHistory={transactionData?.history} />}
+        {transactionId && (
+          <TransactionHistory transactionHistory={transactionData?.history} />
+        )}
 
         {/* Buttons */}
         <Stack
           component="div"
           direction={{ md: 'column', lg: 'row' }}
-          justifyContent="flex-end" mt={2} gap={2}
+          justifyContent="flex-end"
+          mt={2}
+          gap={2}
           spacing={2}
         >
           <BCButton
@@ -341,7 +438,9 @@ export const AddEditViewTransaction = () => {
               {t('backBtn')}
             </Typography>
           </BCButton>
-          {buttonClusterConfig[transactionId ? currentStatus : TRANSACTION_STATUSES.NEW]?.map(
+          {buttonClusterConfig[
+            transactionId ? currentStatus : TRANSACTION_STATUSES.NEW
+          ]?.map(
             (config) =>
               config && (
                 <Role key={config.label}>
@@ -351,7 +450,14 @@ export const AddEditViewTransaction = () => {
                     variant={config.variant}
                     color={config.color}
                     onClick={handleSubmit(config.handler)}
-                    startIcon={config.startIcon && <FontAwesomeIcon icon={config.startIcon} className="small-icon" />}
+                    startIcon={
+                      config.startIcon && (
+                        <FontAwesomeIcon
+                          icon={config.startIcon}
+                          className="small-icon"
+                        />
+                      )
+                    }
                     disabled={config.disabled}
                   >
                     {config.label}

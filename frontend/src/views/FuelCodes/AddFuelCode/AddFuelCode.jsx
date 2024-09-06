@@ -50,156 +50,168 @@ const AddFuelCodeBase = () => {
     [optionsData]
   )
 
-  const onCellValueChanged = useCallback(async (params) => {
-    const updatedData = { ...params.data, modified: true }
-    
-    if (params.colDef.field === 'prefix') {
-      updatedData.fuelCode = optionsData?.fuelCodePrefixes?.find(
-        (item) => item.prefix === params.newValue
-      ).nextFuelCode
-    }
+  const onCellValueChanged = useCallback(
+    async (params) => {
+      const updatedData = { ...params.data, modified: true }
 
-    params.api.applyTransaction({ update: [updatedData] })
-  }, [optionsData])
-
-  const onCellEditingStopped = useCallback(async (params) => {
-    if (params.oldValue === params.newValue) return
-
-    params.node.updateData({
-      ...params.node.data,
-      validationStatus: 'pending'
-    })
-
-    alertRef.current?.triggerAlert({
-      message: 'Updating row...',
-      severity: 'pending'
-    })
-
-    let updatedData = Object.entries(params.node.data)
-      .filter(([, value]) => value !== null && value !== '')
-      .reduce((acc, [key, value]) => {
-        acc[key] = value
-        return acc
-      }, {})
-
-    try {
-      setErrors({})
-      await saveRow(updatedData)
-      updatedData = {
-        ...updatedData,
-        validationStatus: 'success',
-        modified: false
+      if (params.colDef.field === 'prefix') {
+        updatedData.fuelCode = optionsData?.fuelCodePrefixes?.find(
+          (item) => item.prefix === params.newValue
+        ).nextFuelCode
       }
-      alertRef.current?.triggerAlert({
-        message: 'Row updated successfully.',
-        severity: 'success'
+
+      params.api.applyTransaction({ update: [updatedData] })
+    },
+    [optionsData]
+  )
+
+  const onCellEditingStopped = useCallback(
+    async (params) => {
+      if (params.oldValue === params.newValue) return
+
+      params.node.updateData({
+        ...params.node.data,
+        validationStatus: 'pending'
       })
-    } catch (error) {
-      console.error('Error updating row:', error)
 
-      const errArr = {
-        [params.node.data.id]: error.response?.data?.detail?.map(
-          (err) => err.loc[1]
-        )
-      }
-      setErrors(errArr)
+      alertRef.current?.triggerAlert({
+        message: 'Updating row...',
+        severity: 'pending'
+      })
 
-      updatedData = {
-        ...updatedData,
-        validationStatus: 'error'
-      }
+      let updatedData = Object.entries(params.node.data)
+        .filter(([, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => {
+          acc[key] = value
+          return acc
+        }, {})
 
-      if (error.response?.data?.detail && error.response.data.detail.length > 0) {
-        const firstError = error.response.data.detail[0]
-        const field = firstError.loc[1]
-          ? t(`fuelCode:fuelCodeColLabels.${firstError.loc[1]}`)
-          : ''
-        const errMsg = `Error updating row: ${field} ${firstError.msg}`
-
+      try {
+        setErrors({})
+        await saveRow(updatedData)
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'success',
+          modified: false
+        }
         alertRef.current?.triggerAlert({
-          message: errMsg,
-          severity: 'error'
+          message: 'Row updated successfully.',
+          severity: 'success'
         })
-      } else {
-        alertRef.current?.triggerAlert({
-          message: `Error updating row: ${error.message}`,
-          severity: 'error'
-        })
-      }
-    }
+      } catch (error) {
+        console.error('Error updating row:', error)
 
-    params.node.updateData(updatedData)
-  }, [saveRow, t])
+        const errArr = {
+          [params.node.data.id]: error.response?.data?.detail?.map(
+            (err) => err.loc[1]
+          )
+        }
+        setErrors(errArr)
 
-  const onAction = useCallback(async (action, params) => {
-    if (action === 'duplicate') {
-      const rowData = {
-        ...params.data,
-        id: uuid(),
-        fuelCodeId: null,
-        modified: true,
-        isValid: false,
-        validationStatus: 'error',
-        validationMsg: "Fill in the missing fields"
-      }
-      if (params.api) {
-        if(params.data.fuelCodeId) {
-          try {
-            const response = await saveRow(rowData)
-            const updatedData = {
-              ...response.data,
-              id: uuid(),
-              modified: false,
-              isValid: false,
-              validationStatus: 'error'
-            }
-            params.api.applyTransaction({
-              add: [updatedData],
-              addIndex: params.node?.rowIndex + 1,
-            })
-            params.api.refreshCells()
-            alertRef.current?.triggerAlert({
-              message: 'Row duplicated successfully.',
-              severity: 'success'
-            })
-          } catch (error) {
-            console.error('Error duplicating row:', error)
-            alertRef.current?.triggerAlert({
-              message: `Error duplicating row: ${error.message}`,
-              severity: 'error'
-            })
-          }
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+
+        if (
+          error.response?.data?.detail &&
+          error.response.data.detail.length > 0
+        ) {
+          const firstError = error.response.data.detail[0]
+          const field = firstError.loc[1]
+            ? t(`fuelCode:fuelCodeColLabels.${firstError.loc[1]}`)
+            : ''
+          const errMsg = `Error updating row: ${field} ${firstError.msg}`
+
+          alertRef.current?.triggerAlert({
+            message: errMsg,
+            severity: 'error'
+          })
         } else {
-          params.api.applyTransaction({
-            add: [rowData],
-            addIndex: params.node?.rowIndex + 1,
+          alertRef.current?.triggerAlert({
+            message: `Error updating row: ${error.message}`,
+            severity: 'error'
           })
         }
       }
-    } else if (action === 'delete') {
-      const updatedRow = { ...params.data, deleted: true }
-      if (params.api) {
-        if(updatedRow.fuelCodeId) {
-          try {
-            await saveRow(updatedRow)
-            params.api.applyTransaction({ remove: [params.node.data] })
-            alertRef.current?.triggerAlert({
-              message: 'Row deleted successfully.',
-              severity: 'success'
-            })
-          } catch (error) {
-            console.error('Error deleting row:', error)
-            alertRef.current?.triggerAlert({
-              message: `Error deleting row: ${error.message}`,
-              severity: 'error'
+
+      params.node.updateData(updatedData)
+    },
+    [saveRow, t]
+  )
+
+  const onAction = useCallback(
+    async (action, params) => {
+      if (action === 'duplicate') {
+        const rowData = {
+          ...params.data,
+          id: uuid(),
+          fuelCodeId: null,
+          modified: true,
+          isValid: false,
+          validationStatus: 'error',
+          validationMsg: 'Fill in the missing fields'
+        }
+        if (params.api) {
+          if (params.data.fuelCodeId) {
+            try {
+              const response = await saveRow(rowData)
+              const updatedData = {
+                ...response.data,
+                id: uuid(),
+                modified: false,
+                isValid: false,
+                validationStatus: 'error'
+              }
+              params.api.applyTransaction({
+                add: [updatedData],
+                addIndex: params.node?.rowIndex + 1
+              })
+              params.api.refreshCells()
+              alertRef.current?.triggerAlert({
+                message: 'Row duplicated successfully.',
+                severity: 'success'
+              })
+            } catch (error) {
+              console.error('Error duplicating row:', error)
+              alertRef.current?.triggerAlert({
+                message: `Error duplicating row: ${error.message}`,
+                severity: 'error'
+              })
+            }
+          } else {
+            params.api.applyTransaction({
+              add: [rowData],
+              addIndex: params.node?.rowIndex + 1
             })
           }
-        } else {
-          params.api.applyTransaction({ remove: [params.node.data] })
+        }
+      } else if (action === 'delete') {
+        const updatedRow = { ...params.data, deleted: true }
+        if (params.api) {
+          if (updatedRow.fuelCodeId) {
+            try {
+              await saveRow(updatedRow)
+              params.api.applyTransaction({ remove: [params.node.data] })
+              alertRef.current?.triggerAlert({
+                message: 'Row deleted successfully.',
+                severity: 'success'
+              })
+            } catch (error) {
+              console.error('Error deleting row:', error)
+              alertRef.current?.triggerAlert({
+                message: `Error deleting row: ${error.message}`,
+                severity: 'error'
+              })
+            }
+          } else {
+            params.api.applyTransaction({ remove: [params.node.data] })
+          }
         }
       }
-    }
-  }, [saveRow])
+    },
+    [saveRow]
+  )
 
   if (isLoading) {
     return <Loading />

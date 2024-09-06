@@ -12,12 +12,19 @@ export const useFinalSupplyEquipmentOptions = (options) => {
   })
 }
 
-export const useGetFinalSupplyEquipments = (complianceReportId, pagination, options) => {
+export const useGetFinalSupplyEquipments = (
+  complianceReportId,
+  pagination,
+  options
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: [`final-supply-equipments ${complianceReportId} ${pagination}`],
     queryFn: async () => {
-      const response = await client.post(apiRoutes.getAllFinalSupplyEquipments, { complianceReportId, ...pagination })
+      const response = await client.post(
+        apiRoutes.getAllFinalSupplyEquipments,
+        { complianceReportId, ...pagination }
+      )
       return response.data
     },
     ...options
@@ -34,17 +41,21 @@ export const useSaveFinalSupplyEquipment = (complianceReportId, options) => {
       const modifedData = {
         ...data,
         levelOfEquipment: data.levelOfEquipment?.name || data.levelOfEquipment,
-        fuelMeasurementType: data.fuelMeasurementType?.type || data.fuelMeasurementType,
+        fuelMeasurementType:
+          data.fuelMeasurementType?.type || data.fuelMeasurementType,
         complianceReportId
       }
-      return await client.post(
-        apiRoutes.saveFinalSupplyEquipments,
-        modifedData
-      )
+      return await client.post(apiRoutes.saveFinalSupplyEquipments, modifedData)
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['final-supply-equipments', complianceReportId])
-      queryClient.invalidateQueries(['compliance-report-summary', complianceReportId])
+      queryClient.invalidateQueries([
+        'final-supply-equipments',
+        complianceReportId
+      ])
+      queryClient.invalidateQueries([
+        'compliance-report-summary',
+        complianceReportId
+      ])
     }
   })
 }

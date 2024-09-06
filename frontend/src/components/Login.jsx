@@ -131,14 +131,14 @@ export const Login = () => {
       sx={styles.loginBackground}
       data-test="login"
     >
-      {season !== 'summer' &&
+      {season !== 'summer' && (
         <Snowfall
           wind={seasonImages[season].wind}
           snowflakeCount={seasonImages[season].count}
           radius={seasonImages[season].radius}
           images={droplets()}
         />
-      }
+      )}
       <BCTypography variant="h1" className="visually-hidden">
         Login
       </BCTypography>

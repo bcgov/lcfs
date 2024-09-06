@@ -22,11 +22,7 @@ export const Logout = () => {
         mr={3}
       >
         {currentUser?.firstName && (
-          <BCTypography
-            variant="subtitle1"
-            color="light"
-            mx={3}
-          >
+          <BCTypography variant="subtitle1" color="light" mx={3}>
             {currentUser?.firstName + ' ' + currentUser?.lastName}
           </BCTypography>
         )}

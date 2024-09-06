@@ -8,12 +8,20 @@ export const useInitiativeAgreement = (initiativeAgreementID, options) => {
 
   return useQuery({
     queryKey: [INITIATIVE_AGREEMENT, initiativeAgreementID],
-    queryFn: async () => (await client.get(`${apiRoutes.initiativeAgreements}${initiativeAgreementID}`)).data,
+    queryFn: async () =>
+      (
+        await client.get(
+          `${apiRoutes.initiativeAgreements}${initiativeAgreementID}`
+        )
+      ).data,
     ...options
   })
 }
 
-export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId, options) => {
+export const useCreateUpdateInitiativeAgreement = (
+  initiativeAgreementId,
+  options
+) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   return useMutation({
@@ -27,7 +35,10 @@ export const useCreateUpdateInitiativeAgreement = (initiativeAgreementId, option
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries([INITIATIVE_AGREEMENT, initiativeAgreementId])
+      queryClient.invalidateQueries([
+        INITIATIVE_AGREEMENT,
+        initiativeAgreementId
+      ])
     }
   })
 }

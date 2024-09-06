@@ -17,8 +17,14 @@ const SupplierBalance = () => {
   }, [showBalance])
 
   const { data: orgBalance } = useCurrentOrgBalance()
-  const formattedTotalBalance = orgBalance?.totalBalance != null ? numberFormatter({ value: orgBalance.totalBalance }) : 'N/A'
-  const formattedReservedBalance = orgBalance?.reservedBalance != null ? numberFormatter({ value: Math.abs(orgBalance.reservedBalance) }) : 'N/A'
+  const formattedTotalBalance =
+    orgBalance?.totalBalance != null
+      ? numberFormatter({ value: orgBalance.totalBalance })
+      : 'N/A'
+  const formattedReservedBalance =
+    orgBalance?.reservedBalance != null
+      ? numberFormatter({ value: Math.abs(orgBalance.reservedBalance) })
+      : 'N/A'
 
   const toggleBalanceVisibility = () => {
     setShowBalance(!showBalance)
@@ -26,7 +32,10 @@ const SupplierBalance = () => {
 
   return (
     <BCBox component="div" className="organization_balance">
-      <BCBox component="div" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+      <BCBox
+        component="div"
+        sx={{ display: 'inline-flex', alignItems: 'center' }}
+      >
         <Icon
           style={{
             fontSize: 20,
@@ -38,7 +47,10 @@ const SupplierBalance = () => {
           {showBalance ? 'visibility' : 'visibility_off'}
         </Icon>
         <span>
-          {t('balance')}: {showBalance ? `${formattedTotalBalance} (${formattedReservedBalance})` : '****'}
+          {t('balance')}:{' '}
+          {showBalance
+            ? `${formattedTotalBalance} (${formattedReservedBalance})`
+            : '****'}
         </span>
       </BCBox>
     </BCBox>

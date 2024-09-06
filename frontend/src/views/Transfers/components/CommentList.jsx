@@ -39,7 +39,8 @@ export const CommentList = ({ comments }) => (
                     variant="subtitle1"
                     color="text.primary"
                   >
-                    {comment.name}{':'}
+                    {comment.name}
+                    {':'}
                   </Typography>
                 </>
               }

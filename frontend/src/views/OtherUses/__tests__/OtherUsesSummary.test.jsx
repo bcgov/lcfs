@@ -1,6 +1,11 @@
 import { vi, describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { BrowserRouter as Router, useNavigate, useParams, useLocation } from 'react-router-dom'
+import {
+  BrowserRouter as Router,
+  useNavigate,
+  useParams,
+  useLocation
+} from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
@@ -32,10 +37,7 @@ vi.mock('@react-keycloak/web', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: {
-      roles: [
-        { name: 'Supplier' },
-        { name: 'Government' }
-      ]
+      roles: [{ name: 'Supplier' }, { name: 'Government' }]
     }
   })
 }))

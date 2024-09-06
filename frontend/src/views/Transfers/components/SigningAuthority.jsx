@@ -28,7 +28,7 @@ export const SigningAuthority = () => {
             <Checkbox
               {...register('signingAuthorityDeclaration')}
               id="signing-authority-declaration"
-              data-test='signing-authority-checkbox'
+              data-test="signing-authority-checkbox"
               color="primary"
               defaultChecked={false}
             />

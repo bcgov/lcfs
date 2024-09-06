@@ -20,7 +20,10 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 // internal components
 import { Introduction } from './components/Introduction'
-import { useGetComplianceReport, useUpdateComplianceReport } from '@/hooks/useComplianceReports'
+import {
+  useGetComplianceReport,
+  useUpdateComplianceReport
+} from '@/hooks/useComplianceReports'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
 import { buttonClusterConfigFn } from './buttonConfigs'
@@ -31,9 +34,8 @@ import { AssessmentCard } from './components/AssessmentCard'
 import { ImportantInfoCard } from './components/ImportantInfoCard'
 import { timezoneFormatter } from '@/utils/formatters'
 
-
 const iconStyle = {
-  width: '2rem', 
+  width: '2rem',
   height: '2rem',
   color: colors.white.main
 }
@@ -46,36 +48,40 @@ export const EditViewComplianceReport = () => {
   const alertRef = useRef()
 
   const { compliancePeriod, complianceReportId } = useParams()
-  const [isAtTop, setIsAtTop] = useState(true);
+  const [isAtTop, setIsAtTop] = useState(true)
 
   const scrollToTopOrBottom = () => {
     if (isAtTop) {
       window.scrollTo({
         top: document.documentElement.scrollHeight,
         behavior: 'smooth'
-      });
-      setIsAtTop(false);
+      })
+      setIsAtTop(false)
     } else {
       window.scrollTo({
         top: 0,
         behavior: 'smooth'
-      });
-      setIsAtTop(true);
+      })
+      setIsAtTop(true)
     }
-  };
+  }
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      setIsAtTop(scrollTop === 0);
-    };
+      const scrollTop = window.scrollY || document.documentElement.scrollTop
+      setIsAtTop(scrollTop === 0)
+    }
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // hooks
-  const { data: currentUser, isLoading: isCurrentUserLoading, hasRoles } = useCurrentUser()
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles
+  } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const {
     data: reportData,
@@ -89,19 +95,24 @@ export const EditViewComplianceReport = () => {
   // TODO Temp Fix
   const currentStatus = reportData?.data?.currentStatus?.status
   // const currentStatus = "Assessed"
-  
-  const { data: orgData, isLoading } = useOrganization(reportData?.data?.organizationId)
+
+  const { data: orgData, isLoading } = useOrganization(
+    reportData?.data?.organizationId
+  )
   const methods = useForm() // TODO we will need this for summary line inputs
-  const { mutate: updateComplianceReport } = useUpdateComplianceReport(complianceReportId, {
-    onSuccess: (response) => {
-      setModalData(null)
-    },
-    onError: (error) => {
-      setModalData(null)
-      setAlertMessage(error.message)
-      setAlertSeverity('error')
+  const { mutate: updateComplianceReport } = useUpdateComplianceReport(
+    complianceReportId,
+    {
+      onSuccess: (response) => {
+        setModalData(null)
+      },
+      onError: (error) => {
+        setModalData(null)
+        setAlertMessage(error.message)
+        setAlertSeverity('error')
+      }
     }
-  })
+  )
 
   const buttonClusterConfig = useMemo(
     () =>
@@ -115,7 +126,16 @@ export const EditViewComplianceReport = () => {
         reportData,
         isGovernmentUser
       }),
-    [hasRoles, currentUser, methods, t, setModalData, updateComplianceReport, reportData, isGovernmentUser]
+    [
+      hasRoles,
+      currentUser,
+      methods,
+      t,
+      setModalData,
+      updateComplianceReport,
+      reportData,
+      isGovernmentUser
+    ]
   )
 
   useEffect(() => {
@@ -156,11 +176,7 @@ export const EditViewComplianceReport = () => {
             </Typography>
           </BCBox>
           <Stack direction="column" spacing={2} mt={2}>
-            <Stack
-              direction={{ md: 'column', lg: 'row' }}
-              spacing={2}
-              pb={2}
-            >
+            <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
               {currentStatus === 'Assessed' && (
                 <AssessmentCard
                   orgName={orgData?.name}

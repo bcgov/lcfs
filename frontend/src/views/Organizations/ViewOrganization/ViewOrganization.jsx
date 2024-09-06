@@ -16,7 +16,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization, useOrganizationBalance } from '@/hooks/useOrganization'
+import {
+  useOrganization,
+  useOrganizationBalance
+} from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
 import { calculateRowHeight, phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -287,7 +290,12 @@ export const ViewOrganization = () => {
                 </BCTypography>
               </BCButton>
             </BCBox>
-            <BCTypography variant="h5" mt={1} color="primary" data-test="active-users-heading">
+            <BCTypography
+              variant="h5"
+              mt={1}
+              color="primary"
+              data-test="active-users-heading"
+            >
               {t('org:activeUsersBtn')}
             </BCTypography>
           </>
@@ -310,7 +318,12 @@ export const ViewOrganization = () => {
                 {t('org:showActiveUsersBtn')}
               </BCTypography>
             </BCButton>
-            <BCTypography variant="h5" mt={1} color="primary" data-test="inactive-users-heading">
+            <BCTypography
+              variant="h5"
+              mt={1}
+              color="primary"
+              data-test="inactive-users-heading"
+            >
               {t('org:inactiveUsersBtn')}
             </BCTypography>
           </>

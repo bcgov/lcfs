@@ -33,18 +33,24 @@ const Crumb = () => {
   const matches = useMatches()
   const reportPathRegex = /^\d{4}-Compliance-report$/
   const { userID, orgID, complianceReportId, compliancePeriod } = useParams()
-  const path = location.pathname.replace(`/compliance-reporting/${compliancePeriod}/${complianceReportId}`, `/compliance-reporting/${compliancePeriod}-Compliance-report`)
+  const path = location.pathname.replace(
+    `/compliance-reporting/${compliancePeriod}/${complianceReportId}`,
+    `/compliance-reporting/${compliancePeriod}-Compliance-report`
+  )
   const pathnames = path.split('/').filter((x) => x)
   const title = matches[matches.length - 1]?.handle?.title
 
   // Mapping for custom breadcrumb labels and routes
   const customBreadcrumbs = {
-    'admin': { label: 'Administration', route: '/admin' },
-    'transfers': { label: 'Transactions', route: '/transactions' },
+    admin: { label: 'Administration', route: '/admin' },
+    transfers: { label: 'Transactions', route: '/transactions' },
     'add-org': { label: 'Add organization', route: '/add-org' },
     'edit-org': { label: 'Edit organization', route: '/edit-org' },
     'initiative-agreement': { label: 'Transactions', route: '/transactions' },
-    'org-initiative-agreement': { label: 'Transactions', route: '/transactions' },
+    'org-initiative-agreement': {
+      label: 'Transactions',
+      route: '/transactions'
+    },
     'admin-adjustment': { label: 'Transactions', route: '/transactions' },
     'org-admin-adjustment': { label: 'Transactions', route: '/transactions' }
   }
@@ -78,11 +84,14 @@ const Crumb = () => {
         {pathnames.map((name, index) => {
           const isLast = index === pathnames.length - 1
           const customCrumb = customBreadcrumbs[name] || {}
-          let routeTo = customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
+          let routeTo =
+            customCrumb.route || `/${pathnames.slice(0, index + 1).join('/')}`
           if (reportPathRegex.test(name)) {
-            routeTo = `compliance-reporting/${compliancePeriod}/${complianceReportId}` 
+            routeTo = `compliance-reporting/${compliancePeriod}/${complianceReportId}`
           }
-          const displayName = customCrumb.label || name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
+          const displayName =
+            customCrumb.label ||
+            name.charAt(0).toUpperCase() + name.slice(1).replaceAll('-', ' ')
 
           return isLast ? (
             <StyledBreadcrumb
@@ -104,8 +113,13 @@ const Crumb = () => {
                 key={name}
                 component={Link}
                 label={
-                  (isNumeric(name) && name === userID && pathnames[index + 1] === "edit-user" && 'User profile') ||
-                  (isNumeric(name) && name === orgID && 'Organization profile') ||
+                  (isNumeric(name) &&
+                    name === userID &&
+                    pathnames[index + 1] === 'edit-user' &&
+                    'User profile') ||
+                  (isNumeric(name) &&
+                    name === orgID &&
+                    'Organization profile') ||
                   displayName
                 }
                 sx={{

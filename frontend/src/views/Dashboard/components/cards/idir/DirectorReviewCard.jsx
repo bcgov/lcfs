@@ -30,15 +30,20 @@ const DirectorReviewCard = () => {
 
   const handleNavigation = (route, transactionType, status) => {
     const filters = [
-      { field: "transactionType", filterType: "text", type: "contains", filter: transactionType },
-      { field: 'status', filterType: 'text', type: 'equals', filter: status },
+      {
+        field: 'transactionType',
+        filterType: 'text',
+        type: 'contains',
+        filter: transactionType
+      },
+      { field: 'status', filterType: 'text', type: 'equals', filter: status }
     ]
     navigate(route, { state: { filters } })
   }
 
   const handleComplianceNavigation = (route, status) => {
     const filters = [
-      { field: "status", filterType: "text", type: "equals", filter: status }
+      { field: 'status', filterType: 'text', type: 'equals', filter: status }
     ]
     navigate(route, { state: { filters } })
   }
@@ -52,7 +57,7 @@ const DirectorReviewCard = () => {
           color="link"
           sx={{
             textDecoration: 'underline',
-            '&:hover': { color: 'info.main' },
+            '&:hover': { color: 'info.main' }
           }}
           onClick={onClick}
         >
@@ -73,55 +78,99 @@ const DirectorReviewCard = () => {
           <Loading message={t('dashboard:directorReview.loadingMessage')} />
         ) : (
           <Stack spacing={1}>
-            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>{t('dashboard:directorReview.thereAre')}</BCTypography>
-            <List 
-              component="div" 
-              sx={{ 
-                maxWidth: '100%', 
+            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
+              {t('dashboard:directorReview.thereAre')}
+            </BCTypography>
+            <List
+              component="div"
+              sx={{
+                maxWidth: '100%',
                 padding: 0,
                 '& .MuiListItemButton-root': {
                   padding: '2px 0'
-                },
+                }
               }}
             >
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', 'Recommended')}
+                onClick={() =>
+                  handleNavigation(
+                    ROUTES.TRANSACTIONS,
+                    'Transfer',
+                    'Recommended'
+                  )
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:directorReview.transfersForReview'),
                   counts?.transfers || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', 'Recommended')
+                  () =>
+                    handleNavigation(
+                      ROUTES.TRANSACTIONS,
+                      'Transfer',
+                      'Recommended'
+                    )
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleComplianceNavigation(ROUTES.REPORTS, 'Recommended_by_manager')}
+                onClick={() =>
+                  handleComplianceNavigation(
+                    ROUTES.REPORTS,
+                    'Recommended_by_manager'
+                  )
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:directorReview.complianceReportsForReview'),
                   counts?.complianceReports || 0,
-                  () => handleComplianceNavigation(ROUTES.REPORTS, 'Recommended_by_manager')
+                  () =>
+                    handleComplianceNavigation(
+                      ROUTES.REPORTS,
+                      'Recommended_by_manager'
+                    )
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Approved')}
+                onClick={() =>
+                  handleNavigation(
+                    ROUTES.TRANSACTIONS,
+                    'InitiativeAgreement',
+                    'Approved'
+                  )
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:directorReview.initiativeAgreementsForReview'),
                   counts?.initiativeAgreements || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', 'Approved')
+                  () =>
+                    handleNavigation(
+                      ROUTES.TRANSACTIONS,
+                      'InitiativeAgreement',
+                      'Approved'
+                    )
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', 'Recommended')}
+                onClick={() =>
+                  handleNavigation(
+                    ROUTES.TRANSACTIONS,
+                    'AdminAdjustment',
+                    'Recommended'
+                  )
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:directorReview.adminAdjustmentsForReview'),
                   counts?.adminAdjustments || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', 'Recommended')
+                  () =>
+                    handleNavigation(
+                      ROUTES.TRANSACTIONS,
+                      'AdminAdjustment',
+                      'Recommended'
+                    )
                 )}
               </ListItemButton>
             </List>

@@ -10,16 +10,14 @@ const customRender = (ui, options = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: false,
-      },
-    },
+        retry: false
+      }
+    }
   })
 
   const AllTheProviders = ({ children }) => (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        {children}
-      </ThemeProvider>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
     </QueryClientProvider>
   )
 

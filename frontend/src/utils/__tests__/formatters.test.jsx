@@ -40,12 +40,16 @@ describe('numberFormatter', () => {
   })
 
   it('should format numbers with up to 10 decimal places correctly', () => {
-    expect(numberFormatter({ value: '1234.5678901234' })).toBe('1,234.5678901234')
+    expect(numberFormatter({ value: '1234.5678901234' })).toBe(
+      '1,234.5678901234'
+    )
     expect(numberFormatter('5678.1234567890')).toBe('5,678.123456789')
   })
 
   it('should format numbers with more than 10 decimal places by rounding', () => {
-    expect(numberFormatter({ value: '1234.567890123456' })).toBe('1,234.5678901235')
+    expect(numberFormatter({ value: '1234.567890123456' })).toBe(
+      '1,234.5678901235'
+    )
     expect(numberFormatter('5678.123456789012')).toBe('5,678.123456789')
   })
 })

@@ -9,7 +9,8 @@ export const useTransaction = (transactionID, options) => {
 
   return useQuery({
     queryKey: ['transaction', transactionID],
-    queryFn: async () => (await client.get(`/transactions/${transactionID}`)).data,
+    queryFn: async () =>
+      (await client.get(`/transactions/${transactionID}`)).data,
     ...options
   })
 }

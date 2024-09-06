@@ -1,7 +1,10 @@
 import colors from '@/themes/base/colors'
 import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { ADMIN_ADJUSTMENT, INITIATIVE_AGREEMENT } from './AddEditViewTransaction'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from './AddEditViewTransaction'
 import { roles } from '@/constants/roles'
 
 const outlineBase = {
@@ -52,13 +55,13 @@ export const buttonClusterConfigFn = ({
 }) => {
   const transactionButtons = {
     saveDraft: {
-      ...outlinedButton(
-        t(`txn:actionBtns.saveDraftBtn`),
-        faFloppyDisk
-      ),
+      ...outlinedButton(t(`txn:actionBtns.saveDraftBtn`), faFloppyDisk),
       id: 'save-draft-btn',
       handler: (formData) => {
-        const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+        const mutationFn =
+          transactionType === ADMIN_ADJUSTMENT
+            ? createUpdateAdminAdjustment
+            : createUpdateInitiativeAgreement
         mutationFn({
           data: {
             ...formData,
@@ -70,15 +73,15 @@ export const buttonClusterConfigFn = ({
       disabled: !hasRoles(roles.analyst)
     },
     deleteDraft: {
-      ...redOutlinedButton(
-        t(`txn:actionBtns.deleteDraftBtn`),
-        faTrash
-      ),
+      ...redOutlinedButton(t(`txn:actionBtns.deleteDraftBtn`), faTrash),
       id: 'delete-draft-btn',
       handler: async (formData) => {
         setModalData({
           primaryButtonAction: async () => {
-            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            const mutationFn =
+              transactionType === ADMIN_ADJUSTMENT
+                ? createUpdateAdminAdjustment
+                : createUpdateInitiativeAgreement
             await mutationFn({
               data: {
                 ...formData,
@@ -96,14 +99,15 @@ export const buttonClusterConfigFn = ({
       disabled: !hasRoles(roles.analyst)
     },
     recommendTransaction: {
-      ...containedButton(
-        t(`txn:actionBtns.recommendBtn`),
-      ),
+      ...containedButton(t(`txn:actionBtns.recommendBtn`)),
       id: 'recommend-btn',
       handler: async (formData) => {
         setModalData({
           primaryButtonAction: async () => {
-            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            const mutationFn =
+              transactionType === ADMIN_ADJUSTMENT
+                ? createUpdateAdminAdjustment
+                : createUpdateInitiativeAgreement
             await mutationFn({
               data: {
                 ...formData,
@@ -122,14 +126,15 @@ export const buttonClusterConfigFn = ({
       disabled: !hasRoles(roles.analyst)
     },
     returnTransaction: {
-      ...outlinedButton(
-        t(`txn:actionBtns.returnToAnalystBtn`),
-      ),
+      ...outlinedButton(t(`txn:actionBtns.returnToAnalystBtn`)),
       id: 'return-to-analyst-btn',
       handler: async (formData) => {
         setModalData({
           primaryButtonAction: async () => {
-            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            const mutationFn =
+              transactionType === ADMIN_ADJUSTMENT
+                ? createUpdateAdminAdjustment
+                : createUpdateInitiativeAgreement
             await mutationFn({
               data: {
                 ...formData,
@@ -148,14 +153,15 @@ export const buttonClusterConfigFn = ({
       disabled: !hasRoles(roles.director)
     },
     approveTransaction: {
-      ...containedButton(
-        t(`txn:actionBtns.approveBtn`),
-      ),
+      ...containedButton(t(`txn:actionBtns.approveBtn`)),
       id: 'approve-btn',
       handler: async (formData) => {
         setModalData({
           primaryButtonAction: async () => {
-            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            const mutationFn =
+              transactionType === ADMIN_ADJUSTMENT
+                ? createUpdateAdminAdjustment
+                : createUpdateInitiativeAgreement
             await mutationFn({
               data: {
                 ...formData,
@@ -173,15 +179,15 @@ export const buttonClusterConfigFn = ({
       disabled: !hasRoles(roles.director)
     },
     deleteTransaction: {
-      ...redOutlinedButton(
-        t(`txn:actionBtns.deleteBtn`),
-        faTrash
-      ),
+      ...redOutlinedButton(t(`txn:actionBtns.deleteBtn`), faTrash),
       id: 'delete-btn',
       handler: async (formData) => {
         setModalData({
           primaryButtonAction: async () => {
-            const mutationFn = transactionType === ADMIN_ADJUSTMENT ? createUpdateAdminAdjustment : createUpdateInitiativeAgreement;
+            const mutationFn =
+              transactionType === ADMIN_ADJUSTMENT
+                ? createUpdateAdminAdjustment
+                : createUpdateInitiativeAgreement
             await mutationFn({
               data: {
                 ...formData,
@@ -200,9 +206,20 @@ export const buttonClusterConfigFn = ({
   }
 
   const buttons = {
-    New: [transactionButtons.saveDraft, transactionButtons.recommendTransaction],
-    Draft: [transactionButtons.deleteDraft, transactionButtons.saveDraft, transactionButtons.recommendTransaction],
-    Recommended: [transactionButtons.deleteTransaction, transactionButtons.returnTransaction, transactionButtons.approveTransaction],
+    New: [
+      transactionButtons.saveDraft,
+      transactionButtons.recommendTransaction
+    ],
+    Draft: [
+      transactionButtons.deleteDraft,
+      transactionButtons.saveDraft,
+      transactionButtons.recommendTransaction
+    ],
+    Recommended: [
+      transactionButtons.deleteTransaction,
+      transactionButtons.returnTransaction,
+      transactionButtons.approveTransaction
+    ],
     Approved: [],
     Deleted: []
   }

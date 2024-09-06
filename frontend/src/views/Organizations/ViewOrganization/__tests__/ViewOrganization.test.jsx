@@ -32,12 +32,12 @@ vi.mock('@/services/useApiService', () => {
 // Mock necessary hooks and dependencies
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
-    data: { 
+    data: {
       roles: [{ name: 'Government' }]
     },
     isLoading: false,
     hasRoles: vi.fn().mockReturnValue(true),
-    hasAnyRole: vi.fn().mockReturnValue(true),
+    hasAnyRole: vi.fn().mockReturnValue(true)
   })
 }))
 
@@ -51,13 +51,13 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
 // Mock the useOrganization hook
 vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn((orgId) => ({
-    data: { 
-      organizationId: orgId, 
+    data: {
+      organizationId: orgId,
       orgStatus: { status: 'Registered' },
-      name: 'Test Org', 
-      operatingName: 'Test Operating Name', 
-      email: 'test@test.com', 
-      phone: '1234567890', 
+      name: 'Test Org',
+      operatingName: 'Test Operating Name',
+      email: 'test@test.com',
+      phone: '1234567890',
       orgAddress: {
         streetAddress: '123 Test St',
         addressOther: 'Unit 101',
@@ -66,7 +66,8 @@ vi.mock('@/hooks/useOrganization', () => ({
         country: 'TestCountry',
         postalcodeZipcode: '12345'
       },
-      orgAttorneyAddress: { // Adding this to simulate a full address structure
+      orgAttorneyAddress: {
+        // Adding this to simulate a full address structure
         streetAddress: '456 Lawyer Ln',
         addressOther: 'Suite 202',
         city: 'Lawyerville',
@@ -79,11 +80,11 @@ vi.mock('@/hooks/useOrganization', () => ({
     isError: false
   })),
   useOrganizationBalance: vi.fn((orgId) => ({
-    data: { 
+    data: {
       registered: true,
       organizationId: orgId,
-      totalBalance: 1000, 
-      reservedBalance: 500 
+      totalBalance: 1000,
+      reservedBalance: 500
     },
     isLoading: false
   }))
@@ -125,7 +126,9 @@ describe('ViewOrganization Component Tests', () => {
 
   it('shows correct labels and values for organization data', () => {
     expect(screen.getByText(/Legal name of organization/i)).toBeInTheDocument()
-    expect(screen.getByText(/Operating name of organization/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Operating name of organization/i)
+    ).toBeInTheDocument()
     expect(screen.getByText(/Phone Number/i)).toBeInTheDocument()
     expect(screen.getByText(/Email Address/i)).toBeInTheDocument()
   })
@@ -140,7 +143,7 @@ describe('ViewOrganization Component Tests', () => {
     const showInactiveButton = screen.getByTestId('show-inactive-btn')
     fireEvent.click(showInactiveButton)
     expect(screen.getByTestId('inactive-users-heading')).toBeInTheDocument()
-  
+
     const showActiveButton = screen.getByTestId('show-active-btn')
     fireEvent.click(showActiveButton)
     expect(screen.getByTestId('active-users-heading')).toBeInTheDocument()

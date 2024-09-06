@@ -30,8 +30,13 @@ const TransactionsCard = () => {
 
   const handleNavigation = (route, transactionType, statuses) => {
     const filters = [
-      { field: "transactionType", filterType: "text", type: "equals", filter: transactionType },
-      { field: 'status', filterType: 'set', type: 'set', filter: statuses },
+      {
+        field: 'transactionType',
+        filterType: 'text',
+        type: 'equals',
+        filter: transactionType
+      },
+      { field: 'status', filterType: 'set', type: 'set', filter: statuses }
     ]
     navigate(route, { state: { filters } })
   }
@@ -45,7 +50,7 @@ const TransactionsCard = () => {
           color="link"
           sx={{
             textDecoration: 'underline',
-            '&:hover': { color: 'info.main' },
+            '&:hover': { color: 'info.main' }
           }}
           onClick={onClick}
         >
@@ -66,45 +71,77 @@ const TransactionsCard = () => {
           <Loading message={t('dashboard:transactions.loadingMessage')} />
         ) : (
           <Stack spacing={1}>
-            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>{t('dashboard:transactions.thereAre')}</BCTypography>
-            <List 
-              component="div" 
-              sx={{ 
-                maxWidth: '100%', 
+            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
+              {t('dashboard:transactions.thereAre')}
+            </BCTypography>
+            <List
+              component="div"
+              sx={{
+                maxWidth: '100%',
                 padding: 0,
                 '& .MuiListItemButton-root': {
                   padding: '2px 0'
-                },
+                }
               }}
             >
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', ['Submitted', 'Recommended'])}
+                onClick={() =>
+                  handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
+                    'Submitted',
+                    'Recommended'
+                  ])
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:transactions.transfersInProgress'),
                   counts?.transfers || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', ['Submitted', 'Recommended'])
+                  () =>
+                    handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
+                      'Submitted',
+                      'Recommended'
+                    ])
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', ['Draft', 'Recommended'])}
+                onClick={() =>
+                  handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', [
+                    'Draft',
+                    'Recommended'
+                  ])
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:transactions.initiativeAgreementsInProgress'),
                   counts?.initiativeAgreements || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', ['Draft', 'Recommended'])
+                  () =>
+                    handleNavigation(
+                      ROUTES.TRANSACTIONS,
+                      'InitiativeAgreement',
+                      ['Draft', 'Recommended']
+                    )
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', ['Draft', 'Recommended'])}
+                onClick={() =>
+                  handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', [
+                    'Draft',
+                    'Recommended'
+                  ])
+                }
               >
                 {renderLinkWithCount(
-                  t('dashboard:transactions.administrativeAdjustmentsInProgress'),
+                  t(
+                    'dashboard:transactions.administrativeAdjustmentsInProgress'
+                  ),
                   counts?.adminAdjustments || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', ['Draft', 'Recommended'])
+                  () =>
+                    handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', [
+                      'Draft',
+                      'Recommended'
+                    ])
                 )}
               </ListItemButton>
               <ListItemButton

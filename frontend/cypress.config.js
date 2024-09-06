@@ -1,11 +1,11 @@
-import { defineConfig } from "cypress";
-import createBundler from "@bahmutov/cypress-esbuild-preprocessor";
-import { addCucumberPreprocessorPlugin } from "@badeball/cypress-cucumber-preprocessor";
-import { createEsbuildPlugin } from "@badeball/cypress-cucumber-preprocessor/esbuild";
+import { defineConfig } from 'cypress'
+import createBundler from '@bahmutov/cypress-esbuild-preprocessor'
+import { addCucumberPreprocessorPlugin } from '@badeball/cypress-cucumber-preprocessor'
+import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esbuild'
 
 export default defineConfig({
   e2e: {
-    specPattern: ["**/*.feature", "**/*.cy.js"],
+    specPattern: ['**/*.feature', '**/*.cy.js'],
     // Global configurations
     reporter: 'mochawesome',
     reporterOptions: {
@@ -33,13 +33,16 @@ export default defineConfig({
     baseUrl: process.env.CYPRESS_BASE_URL || 'http://localhost:3000',
     async setupNodeEvents(on, config) {
       // This is required for the preprocessor to be able to generate JSON reports after each run, and more,
-      await addCucumberPreprocessorPlugin(on, config);
+      await addCucumberPreprocessorPlugin(on, config)
 
-      on("file:preprocessor", createBundler({
-        plugins: [createEsbuildPlugin(config)],
-      }));
+      on(
+        'file:preprocessor',
+        createBundler({
+          plugins: [createEsbuildPlugin(config)]
+        })
+      )
 
-      return config;
-    },
-  },
-});
+      return config
+    }
+  }
+})

@@ -1,29 +1,29 @@
-import BCBox from '@/components/BCBox';
-import { Typography } from '@mui/material';
-import dayjs from 'dayjs';
-import localizedFormat from 'dayjs/plugin/localizedFormat';
-import { useTranslation } from 'react-i18next';
+import BCBox from '@/components/BCBox'
+import { Typography } from '@mui/material'
+import dayjs from 'dayjs'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+import { useTranslation } from 'react-i18next'
 
-dayjs.extend(localizedFormat);
+dayjs.extend(localizedFormat)
 
 export const TransactionHistory = ({ transactionHistory }) => {
-  const { t } = useTranslation(['common', 'transaction']);
+  const { t } = useTranslation(['common', 'transaction'])
 
   const getTransactionStatusLabel = (status) => {
-    const basePath = 'txn:txnHistory';
-    const statusNotFound = 'Status not found';
-    return t(`${basePath}.${status}`, statusNotFound);
-  };
+    const basePath = 'txn:txnHistory'
+    const statusNotFound = 'Status not found'
+    return t(`${basePath}.${status}`, statusNotFound)
+  }
 
   // Helper function to determine the correct status object
   const getStatusObject = (historyItem) => {
     if (historyItem.adminAdjustmentStatus) {
-      return historyItem.adminAdjustmentStatus.status;
+      return historyItem.adminAdjustmentStatus.status
     } else if (historyItem.initiativeAgreementStatus) {
-      return historyItem.initiativeAgreementStatus.status;
+      return historyItem.initiativeAgreementStatus.status
     }
-    return 'Unknown Status'; // Fallback in case no known status object keys are found
-  };
+    return 'Unknown Status' // Fallback in case no known status object keys are found
+  }
 
   if (transactionHistory?.length <= 0) {
     return <></>
@@ -37,9 +37,11 @@ export const TransactionHistory = ({ transactionHistory }) => {
       <BCBox m={2}>
         <ul>
           {transactionHistory?.map((item, index) => (
-            <li key={index} style={{marginLeft: 10}}>
+            <li key={index} style={{ marginLeft: 10 }}>
               <Typography variant="body2" component="div">
-                <strong>{getTransactionStatusLabel(getStatusObject(item))}</strong>
+                <strong>
+                  {getTransactionStatusLabel(getStatusObject(item))}
+                </strong>
                 <span> on </span>
                 {dayjs(item.createDate).format('LL')}
                 <span> by </span>
@@ -54,5 +56,5 @@ export const TransactionHistory = ({ transactionHistory }) => {
         </ul>
       </BCBox>
     </BCBox>
-  );
-};
+  )
+}

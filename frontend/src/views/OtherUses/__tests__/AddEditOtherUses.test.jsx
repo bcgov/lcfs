@@ -49,7 +49,7 @@ describe.todo()
 
 // vi.mock('@/hooks/useOtherUses', () => ({
 //   useOtherUsesOptions: () => ({
-//     data: { 
+//     data: {
 //       fuelTypes: [{ fuelType: 'Diesel' }],
 //       fuelCategories: [{ category: 'Biofuel' }],
 //       expectedUses: [{ name: 'Transport' }],

@@ -27,13 +27,13 @@ const SigningAuthorityDeclaration = () => {
   }
 
   return (
-    <Paper 
-      sx={{ 
-        padding: 2, 
-        marginTop: 2, 
-        textAlign: 'left', 
-        boxShadow: 'none', 
-        border: 'none' 
+    <Paper
+      sx={{
+        padding: 2,
+        marginTop: 2,
+        textAlign: 'left',
+        boxShadow: 'none',
+        border: 'none'
       }}
       elevation={0}
     >
@@ -59,10 +59,7 @@ const SigningAuthorityDeclaration = () => {
         onClick={handleSubmit}
       >
         <FontAwesomeIcon icon={faPencil} fontSize={8} />
-        <BCTypography
-          variant="body4"
-          sx={{ textTransform: 'capitalize' }}
-        >
+        <BCTypography variant="body4" sx={{ textTransform: 'capitalize' }}>
           {t('report:submitReport')}
         </BCTypography>
       </BCButton>

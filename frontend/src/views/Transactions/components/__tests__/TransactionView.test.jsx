@@ -50,14 +50,18 @@ describe('TransactionView Component', () => {
 
   it('renders without crashing', () => {
     renderComponent({ transaction: mockTransaction })
-    expect(screen.getByText(/txn:administrativeAdjustment/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/txn:administrativeAdjustment/i)
+    ).toBeInTheDocument()
     expect(screen.getByText(/Test Organization/i)).toBeInTheDocument()
   })
 
   it('displays transaction details correctly', () => {
     renderComponent({ transaction: mockTransaction })
 
-    expect(screen.getByText(/txn:administrativeAdjustment/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/txn:administrativeAdjustment/i)
+    ).toBeInTheDocument()
     expect(screen.getByText(/txn:complianceUnitsLabel/i)).toBeInTheDocument()
     expect(screen.getByText(/1000/i)).toBeInTheDocument()
     expect(screen.getByText(/txn:effectiveDateLabel/i)).toBeInTheDocument()
@@ -74,7 +78,9 @@ describe('TransactionView Component', () => {
 
     renderComponent({ transaction: transactionWithoutOrg })
 
-    expect(screen.getByText(/txn:administrativeAdjustment/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/txn:administrativeAdjustment/i)
+    ).toBeInTheDocument()
     expect(screen.getByText(/common:unknown/i)).toBeInTheDocument()
   })
 
@@ -86,6 +92,8 @@ describe('TransactionView Component', () => {
 
     renderComponent({ transaction: transactionWithInitiative })
 
-    expect(screen.getByText(/txn:initiativeAgreement for Test Organization/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/txn:initiativeAgreement for Test Organization/i)
+    ).toBeInTheDocument()
   })
 })

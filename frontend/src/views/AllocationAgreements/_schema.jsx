@@ -4,13 +4,14 @@ import {
   AutocompleteEditor,
   HeaderComponent,
   AsyncSuggestionEditor,
-  NumberEditor,
+  NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 
-export const PROVISION_APPROVED_FUEL_CODE = 'Approved fuel code - Section 6 (5) (c)'
+export const PROVISION_APPROVED_FUEL_CODE =
+  'Approved fuel code - Section 6 (5) (c)'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -52,14 +53,18 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'complianceReportId',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.complianceReportId'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.complianceReportId'
+    ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     hide: true
   },
   {
     field: 'allocationAgreementId',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationAgreementId'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.allocationAgreementId'
+    ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     hide: true
@@ -67,7 +72,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   {
     field: 'allocationTransactionType',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transaction'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transaction'
+    ),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
       values: ['Purchased', 'Sold']
@@ -79,12 +86,15 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     minWidth: 120,
     editable: true,
-    tooltipValueGetter: (p) => 'Select whether the fuel was purchased or sold under the allocation agreement'
+    tooltipValueGetter: (p) =>
+      'Select whether the fuel was purchased or sold under the allocation agreement'
   },
   {
     field: 'transactionPartner',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
     cellEditor: AsyncSuggestionEditor,
     // cellEditorParams: (params) => ({
     //   queryKey: 'trading-partner-name-search',
@@ -123,11 +133,14 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     //   }
     //   return true
     // },
-    tooltipValueGetter: (p) => 'Enter or select the legal name of the trading partner'
+    tooltipValueGetter: (p) =>
+      'Enter or select the legal name of the trading partner'
   },
   {
     field: 'postalAddress',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.postalAddress'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: true,
@@ -135,7 +148,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'transactionPartnerEmail',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: true,
@@ -143,7 +158,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'transactionPartnerPhone',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: true,
@@ -152,7 +169,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   {
     field: 'fuelType',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
     cellEditor: AutocompleteEditor,
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
@@ -177,7 +196,8 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         params.data.fuelType = params.newValue
         params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = undefined
-        params.data.fuelCategory = fuelType.fuelCategories?.[0]?.category ?? null;
+        params.data.fuelCategory =
+          fuelType.fuelCategories?.[0]?.category ?? null
         params.data.units = fuelType?.units
       }
       return true
@@ -186,12 +206,15 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelTypeOther',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelTypeOther'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = params.data.fuelType === 'Other'
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
+      const conditionalStyle =
+        params.data.fuelType === 'Other'
+          ? { backgroundColor: '#fff', borderColor: 'unset' }
+          : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
     editable: (params) => params.data.fuelType === 'Other',
@@ -199,12 +222,15 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelCategory',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCategory'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
     cellEditor: AutocompleteEditor,
     cellEditorParams: (params) => ({
-      options: optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCategories.map((item) => item.category) || [],
+      options:
+        optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.fuelCategories.map((item) => item.category) || [],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -212,17 +238,20 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     }),
     suppressKeyboardEvent,
     minWidth: 150,
-    editable: (params) => optionsData?.fuelTypes
-      ?.find((obj) => params.data.fuelType === obj.fuelType)
-      ?.fuelCategories.length > 1 && params.data.fuelType != null,
+    editable: (params) =>
+      optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )?.fuelCategories.length > 1 && params.data.fuelType != null
   },
   {
     field: 'provisionOfTheAct',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
-      values: optionsData?.provisionsOfTheAct?.map((obj) => obj.name).sort(),
+      values: optionsData?.provisionsOfTheAct?.map((obj) => obj.name).sort()
     },
     cellRenderer: (params) =>
       params.value ||
@@ -231,16 +260,20 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     minWidth: 300,
     editable: true,
-    tooltipValueGetter: (p) => 'Select the method for determining carbon intensity'
+    tooltipValueGetter: (p) =>
+      'Select the method for determining carbon intensity'
   },
   {
     field: 'fuelCode',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCode'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
     cellEditor: AutocompleteEditor,
     cellEditorParams: (params) => ({
-      options: optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCodes.map((item) => item.fuelCode) || [],
+      options:
+        optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.fuelCodes.map((item) => item.fuelCode) || [],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -248,31 +281,39 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     }),
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
+      const conditionalStyle =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+          ? { backgroundColor: '#fff', borderColor: 'unset' }
+          : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
     suppressKeyboardEvent,
     minWidth: 150,
-    editable: (params) => params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE,
+    editable: (params) =>
+      params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE,
     tooltipValueGetter: (p) => 'Select the approved fuel code'
   },
   {
     field: 'ciOfFuel',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: false,
     valueGetter: (params) => {
       if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-          ?.carbonIntensity || 0
+        return (
+          optionsData?.fuelTypes
+            ?.find((obj) => params.data.fuelType === obj.fuelType)
+            ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
+            ?.carbonIntensity || 0
+        )
       } else {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.defaultCarbonIntensity || 0
+        return (
+          optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )?.defaultCarbonIntensity || 0
+        )
       }
     },
     minWidth: 100
@@ -280,7 +321,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   {
     field: 'quantity',
     headerComponent: HeaderComponent,
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.quantity'
+    ),
     editor: NumberEditor,
     valueFormatter,
     cellEditor: NumberEditor,
@@ -295,13 +338,13 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'units',
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.units'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: false,
     minWidth: 80
-  },
-  
-
+  }
 ]
 
 export const defaultColDef = {

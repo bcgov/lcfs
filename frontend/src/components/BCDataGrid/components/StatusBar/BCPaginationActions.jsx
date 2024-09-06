@@ -48,14 +48,14 @@ export function BCPaginationActions({
     }, {})
 
     // Rename keys in rows using the fieldToHeaderNameMap and format dates
-    const renamedRows = rows.map(row => {
+    const renamedRows = rows.map((row) => {
       const renamedRow = {}
       for (const key in row) {
         if (fieldToHeaderNameMap[key]) {
           let value = row[key]
           // Check if the value is a date string in ISO format
           if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
-            value = value.split('T')[0]  // Extract the date part
+            value = value.split('T')[0] // Extract the date part
           }
           renamedRow[fieldToHeaderNameMap[key]] = value
         }
@@ -68,20 +68,22 @@ export function BCPaginationActions({
     // Adjust column widths
     const colWidths = renamedRows.reduce((widths, row) => {
       Object.keys(row).forEach((key, i) => {
-        const value = row[key] ? row[key].toString() : '';
-        widths[i] = Math.max(widths[i] || 12, value.length);
+        const value = row[key] ? row[key].toString() : ''
+        widths[i] = Math.max(widths[i] || 12, value.length)
       })
       return widths
     }, [])
-    
-    worksheet['!cols'] = colWidths.map(w => ({ wch: w }))
+
+    worksheet['!cols'] = colWidths.map((w) => ({ wch: w }))
 
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, exportName)
 
     // Generate file name
     const formattedDate = new Date().toISOString().split('T')[0]
-    const fileName = `${exportName.toLowerCase().replace(/\s+/g, '_')}_${formattedDate}.xls`
+    const fileName = `${exportName
+      .toLowerCase()
+      .replace(/\s+/g, '_')}_${formattedDate}.xls`
 
     // Write file as xls
     XLSX.writeFile(workbook, fileName, { bookType: 'xls', type: 'binary' })
@@ -135,16 +137,19 @@ export function BCPaginationActions({
           </Tooltip>
         )}
         {enableExportButton && (
-          <Tooltip title="Download displayed records to Excel" placement="top-start">
-          <IconButton
-            id="downloadGridButton"
-            aria-label="Download displayed records to Excel"
-            onClick={handleDownloadData}
-            color="primary"
+          <Tooltip
+            title="Download displayed records to Excel"
+            placement="top-start"
           >
-            <FileDownloadOutlined />
-          </IconButton>
-        </Tooltip>
+            <IconButton
+              id="downloadGridButton"
+              aria-label="Download displayed records to Excel"
+              onClick={handleDownloadData}
+              color="primary"
+            >
+              <FileDownloadOutlined />
+            </IconButton>
+          </Tooltip>
         )}
       </>
     </BCBox>
@@ -158,7 +163,7 @@ BCPaginationActions.propTypes = {
   rowsPerPage: PropTypes.number.isRequired,
   handleResetState: PropTypes.func,
   enableExportButton: PropTypes.bool,
-  exportName: PropTypes.string,
+  exportName: PropTypes.string
 }
 
 BCPaginationActions.displayName = 'BCPaginationActions'

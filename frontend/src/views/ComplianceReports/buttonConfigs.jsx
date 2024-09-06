@@ -1,6 +1,10 @@
 // complianceReportButtonConfigs.js
 
-import { faFloppyDisk, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import {
+  faFloppyDisk,
+  faPencil,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const outlineBase = {
@@ -90,7 +94,7 @@ export const buttonClusterConfigFn = ({
           content: t('report:recommendConfirmText')
         })
       }
-    },
+    }
   }
 
   const buttons = {
@@ -102,7 +106,7 @@ export const buttonClusterConfigFn = ({
       ...(isGovernmentUser && hasRoles('analyst')
         ? [reportButtons.recommendReport]
         : [])
-    ],
+    ]
   }
 
   return buttons

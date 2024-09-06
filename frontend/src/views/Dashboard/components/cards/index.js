@@ -1,4 +1,4 @@
-  // IDIR Cards
+// IDIR Cards
 export { default as AdminLinksCard } from './idir/AdminLinksCard'
 export { default as DirectorReviewCard } from './idir/DirectorReviewCard'
 export { default as TransactionsCard } from './idir/TransactionsCard'

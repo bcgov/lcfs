@@ -1,6 +1,11 @@
 import { vi, describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import { BrowserRouter as Router, useNavigate, useParams, useLocation } from 'react-router-dom'
+import {
+  BrowserRouter as Router,
+  useNavigate,
+  useParams,
+  useLocation
+} from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
@@ -12,7 +17,7 @@ vi.mock('react-router-dom', async () => {
     ...actual,
     useNavigate: vi.fn(),
     useParams: () => ({
-      complianceReportId: '123',
+      complianceReportId: '123'
     }),
     useLocation: vi.fn()
   }
@@ -20,7 +25,7 @@ vi.mock('react-router-dom', async () => {
 
 // Mock the BCGridViewer correctly
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: () => <div data-testid="mockedBCGridViewer"></div>,
+  BCGridViewer: () => <div data-testid="mockedBCGridViewer"></div>
 }))
 
 // Mock useGetNotionalTransfers hook
@@ -29,8 +34,16 @@ vi.mock('@/hooks/useNotionalTransfer', () => ({
     data: {
       pagination: { page: 1, size: 10, total: 2 },
       notionalTransfers: [
-        { notionalTransferId: '001', legalName: 'Partner 1', addressForService: 'Address 1' },
-        { notionalTransferId: '002', legalName: 'Partner 2', addressForService: 'Address 2' }
+        {
+          notionalTransferId: '001',
+          legalName: 'Partner 1',
+          addressForService: 'Address 1'
+        },
+        {
+          notionalTransferId: '002',
+          legalName: 'Partner 2',
+          addressForService: 'Address 2'
+        }
       ]
     }
   })
