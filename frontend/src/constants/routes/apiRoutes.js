@@ -55,5 +55,5 @@ export const apiRoutes = {
   allocationAgreementOptions: '/allocation-agreement/table-options?',
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',
-  OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
+  OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts'
 }

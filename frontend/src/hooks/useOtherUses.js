@@ -36,7 +36,10 @@ export const useSaveOtherUses = (complianceReportId, options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['other-uses'])
-      queryClient.invalidateQueries(['compliance-report-summary', complianceReportId])
+      queryClient.invalidateQueries([
+        'compliance-report-summary',
+        complianceReportId
+      ])
     }
   })
 }

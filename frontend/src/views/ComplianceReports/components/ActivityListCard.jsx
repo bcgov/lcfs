@@ -10,7 +10,7 @@ export const ActivityListCard = ({ name, period }) => {
   return (
     <BCWidgetCard
       component="div"
-      style={{height: 'fit-content'}}
+      style={{ height: 'fit-content' }}
       title={t('report:reportActivities')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={

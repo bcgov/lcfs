@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { Stack, Typography } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 
-export const AssessmentCard = ({ orgName, assessedDate="2025-06-25 9:44 am PST" }) => {
+export const AssessmentCard = ({
+  orgName,
+  assessedDate = '2025-06-25 9:44 am PST'
+}) => {
   const { t } = useTranslation(['report'])
   return (
     <BCWidgetCard
@@ -15,21 +18,21 @@ export const AssessmentCard = ({ orgName, assessedDate="2025-06-25 9:44 am PST" 
             component="div"
             variant="body4"
             dangerouslySetInnerHTML={{
-              __html: t('report:assessmentLn1', {name: orgName})
+              __html: t('report:assessmentLn1', { name: orgName })
             }}
           />
           <Typography
             component="div"
             variant="body4"
             dangerouslySetInnerHTML={{
-              __html: t('report:assessmentLn2', {name: orgName})
+              __html: t('report:assessmentLn2', { name: orgName })
             }}
           />
           <Typography
             component="div"
             variant="body4"
             dangerouslySetInnerHTML={{
-              __html: t('report:assessmentLn3', {assessedDate})
+              __html: t('report:assessmentLn3', { assessedDate })
             }}
           />
         </Stack>

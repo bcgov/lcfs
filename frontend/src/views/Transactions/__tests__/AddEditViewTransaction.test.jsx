@@ -3,12 +3,27 @@ import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
-import { AddEditViewTransaction, INITIATIVE_AGREEMENT, ADMIN_ADJUSTMENT } from '../AddEditViewTransaction'
+import {
+  AddEditViewTransaction,
+  INITIATIVE_AGREEMENT,
+  ADMIN_ADJUSTMENT
+} from '../AddEditViewTransaction'
 import { useTranslation } from 'react-i18next'
-import { MemoryRouter, useMatches, useLocation, useParams } from 'react-router-dom'
+import {
+  MemoryRouter,
+  useMatches,
+  useLocation,
+  useParams
+} from 'react-router-dom'
 // import { yupResolver } from '@hookform/resolvers/yup'
-import { useAdminAdjustment, useCreateUpdateAdminAdjustment } from '@/hooks/useAdminAdjustment'
-import { useInitiativeAgreement, useCreateUpdateInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
+import {
+  useAdminAdjustment,
+  useCreateUpdateAdminAdjustment
+} from '@/hooks/useAdminAdjustment'
+import {
+  useInitiativeAgreement,
+  useCreateUpdateInitiativeAgreement
+} from '@/hooks/useInitiativeAgreement'
 import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
@@ -28,7 +43,7 @@ vi.mock('@mui/material', async () => {
   const actual = await vi.importActual('@mui/material')
   return {
     ...actual,
-    useMediaQuery: vi.fn(),
+    useMediaQuery: vi.fn()
   }
 })
 
@@ -40,34 +55,34 @@ vi.mock('react-router-dom', async () => {
     useParams: vi.fn(() => ({ transactionId: '1' })),
     useNavigate: vi.fn(),
     useLocation: vi.fn(),
-    useMatches: vi.fn(),
+    useMatches: vi.fn()
   }
 })
 
 vi.mock('react-i18next', () => ({
   useTranslation: vi.fn().mockReturnValue({
-    t: vi.fn((key) => key),
-  }),
+    t: vi.fn((key) => key)
+  })
 }))
 
 vi.mock('@hookform/resolvers/yup', () => ({
-  yupResolver: vi.fn(),
+  yupResolver: vi.fn()
 }))
 
 vi.mock('@/hooks/useAdminAdjustment', () => ({
   useAdminAdjustment: vi.fn(),
   useCreateUpdateAdminAdjustment: vi.fn().mockReturnValue({
     mutate: vi.fn(),
-    isLoading: false,
-  }),
+    isLoading: false
+  })
 }))
 
 vi.mock('@/hooks/useInitiativeAgreement', () => ({
   useInitiativeAgreement: vi.fn(),
   useCreateUpdateInitiativeAgreement: vi.fn().mockReturnValue({
     mutate: vi.fn(),
-    isLoading: false,
-  }),
+    isLoading: false
+  })
 }))
 
 // Mocking Keycloak and Current User
@@ -77,20 +92,20 @@ vi.mock('@/hooks/useCurrentUser', () => ({
       roles: [
         { name: 'Administrator' },
         { name: 'Government' },
-        { name: 'Analyst' },
+        { name: 'Analyst' }
       ]
     },
     hasRoles: vi.fn(),
-    hasAnyRole: vi.fn().mockReturnValue(true),
+    hasAnyRole: vi.fn().mockReturnValue(true)
   })
 }))
 
 vi.mock('../transactionMutation', () => ({
-  useTransactionMutation: vi.fn(),
+  useTransactionMutation: vi.fn()
 }))
 
 vi.mock('@fortawesome/react-fontawesome', () => ({
-  FontAwesomeIcon: vi.fn(),
+  FontAwesomeIcon: vi.fn()
 }))
 
 // Mock the hooks
@@ -99,64 +114,73 @@ vi.mock('@/hooks/useOrganization', () => ({
     data: [
       {
         organizationId: 1,
-        name: "LCFS Org 1",
-        operatingName: "LCFS Org 1",
+        name: 'LCFS Org 1',
+        operatingName: 'LCFS Org 1',
         totalBalance: 50614,
         reservedBalance: 0,
         orgStatus: {
           organizationStatusId: 2,
-          status: "Registered",
-          description: "Registered",
-        },
+          status: 'Registered',
+          description: 'Registered'
+        }
       },
       {
         organizationId: 2,
-        name: "LCFS Org 2",
-        operatingName: "LCFS Org 2",
+        name: 'LCFS Org 2',
+        operatingName: 'LCFS Org 2',
         totalBalance: 50123,
         reservedBalance: 0,
         orgStatus: {
           organizationStatusId: 2,
-          status: "Registered",
-          description: "Registered",
-        },
+          status: 'Registered',
+          description: 'Registered'
+        }
       }
     ],
     isLoading: false,
     isFetched: true,
-    isLoadingError: false,
+    isLoadingError: false
   }),
   useOrganizationBalance: vi.fn().mockReturnValue({
     data: {
       organizationId: 1,
       totalBalance: 50614,
-      reservedBalance: 0,
+      reservedBalance: 0
     },
     isLoading: false,
     isFetched: true,
-    isLoadingError: false,
-  }),
+    isLoadingError: false
+  })
 }))
 
-const renderComponent = (handleMode = 'edit', txnType = INITIATIVE_AGREEMENT) => {
+const renderComponent = (
+  handleMode = 'edit',
+  txnType = INITIATIVE_AGREEMENT
+) => {
   const queryClient = new QueryClient()
   queryClient.getQueryState = vi.fn().mockReturnValue({
-    status: 'success',
+    status: 'success'
   })
 
   let path = ''
   switch (handleMode) {
     case 'view':
-      path = txnType === ADMIN_ADJUSTMENT ? '/admin-adjustment/1' : '/initiative-agreement/1'
+      path =
+        txnType === ADMIN_ADJUSTMENT
+          ? '/admin-adjustment/1'
+          : '/initiative-agreement/1'
       break
     case 'edit':
-      path = txnType === ADMIN_ADJUSTMENT ? '/admin-adjustment/edit/1' : '/initiative-agreement/edit/1'
+      path =
+        txnType === ADMIN_ADJUSTMENT
+          ? '/admin-adjustment/edit/1'
+          : '/initiative-agreement/edit/1'
       break
     case 'add':
       path = '/transactions/add'
       break
   }
-  useTranslation.mockReturnValue({t: vi.fn((key) => key)})
+  useTranslation.mockReturnValue({ t: vi.fn((key) => key) })
 
   useTransactionMutation.mockReturnValue({
     handleSuccess: vi.fn(),
@@ -165,7 +189,7 @@ const renderComponent = (handleMode = 'edit', txnType = INITIATIVE_AGREEMENT) =>
 
   useCreateUpdateAdminAdjustment.mockReturnValue({
     mutate: vi.fn(),
-    isLoading: false,
+    isLoading: false
   })
 
   return render(
@@ -188,7 +212,10 @@ describe('AddEditViewTransaction Component Tests', () => {
   it('renders without crashing', () => {
     useParams.mockReturnValue({})
     useMatches.mockReturnValue([{ handle: { mode: 'add' } }])
-    useLocation.mockReturnValue({ pathname: '/initiative-agreement/add', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/initiative-agreement/add',
+      state: null
+    })
     useInitiativeAgreement.mockReturnValue({ data: null })
     renderComponent()
   })
@@ -196,11 +223,14 @@ describe('AddEditViewTransaction Component Tests', () => {
   it('displays a loading indicator when data is being fetched', () => {
     useParams.mockReturnValue({ transactionId: 1 })
     useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
-    useLocation.mockReturnValue({ pathname: '/initiative-agreement/edit/1', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/initiative-agreement/edit/1',
+      state: null
+    })
     useInitiativeAgreement.mockReturnValue({ data: null })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: true,
+      isLoading: true
     })
     renderComponent()
     expect(screen.getByText('txn:processingText')).toBeInTheDocument()
@@ -211,76 +241,84 @@ describe('AddEditViewTransaction Component Tests', () => {
       data: null,
       isLoading: false,
       isFetched: true,
-      isLoadingError: true,
+      isLoadingError: true
     })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
     useParams.mockReturnValue({ transactionId: 1 })
     useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
-    useLocation.mockReturnValue({ pathname: '/initiative-agreement/edit/1', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/initiative-agreement/edit/1',
+      state: null
+    })
 
     renderComponent('edit', INITIATIVE_AGREEMENT)
-    expect(screen.getByText('initiativeAgreement:actionMsgs.errorRetrieval')).toBeInTheDocument()
+    expect(
+      screen.getByText('initiativeAgreement:actionMsgs.errorRetrieval')
+    ).toBeInTheDocument()
   })
-  
+
   it('renders Add mode for Initiative Agreement correctly', async () => {
     useInitiativeAgreement.mockReturnValue({
       data: null,
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
 
     useParams.mockReturnValue({})
     useMatches.mockReturnValue([{ handle: { mode: 'add' } }])
-    useLocation.mockReturnValue({ pathname: '/initiative-agreement/add', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/initiative-agreement/add',
+      state: null
+    })
 
     useRegExtOrgs.mockReturnValue({
       data: [
         {
           organizationId: 1,
-          name: "LCFS Org 1",
-          operatingName: "LCFS Org 1",
+          name: 'LCFS Org 1',
+          operatingName: 'LCFS Org 1',
           totalBalance: 50614,
           reservedBalance: 0,
           orgStatus: {
             organizationStatusId: 2,
-            status: "Registered",
-            description: "Registered",
-          },
+            status: 'Registered',
+            description: 'Registered'
+          }
         },
         {
           organizationId: 2,
-          name: "LCFS Org 2",
-          operatingName: "LCFS Org 2",
+          name: 'LCFS Org 2',
+          operatingName: 'LCFS Org 2',
           totalBalance: 50123,
           reservedBalance: 0,
           orgStatus: {
             organizationStatusId: 2,
-            status: "Registered",
-            description: "Registered",
-          },
+            status: 'Registered',
+            description: 'Registered'
+          }
         }
       ],
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useOrganizationBalance.mockReturnValue({
       data: {
         organizationId: 1,
         totalBalance: 50614,
-        reservedBalance: 0,
+        reservedBalance: 0
       },
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     renderComponent('add', INITIATIVE_AGREEMENT)
@@ -300,36 +338,41 @@ describe('AddEditViewTransaction Component Tests', () => {
         govComment: 'Test comment',
         toOrganizationId: '123',
         complianceUnits: '10',
-        transactionEffectiveDate: '2024-01-01',
+        transactionEffectiveDate: '2024-01-01'
       },
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useParams.mockReturnValue({ transactionId: 1 })
     useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
-    useLocation.mockReturnValue({ pathname: '/initiative-agreement/edit/1', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/initiative-agreement/edit/1',
+      state: null
+    })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
     useRegExtOrgs.mockReturnValue({
       data: [],
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useOrganizationBalance.mockReturnValue({
       data: {},
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     renderComponent('edit', INITIATIVE_AGREEMENT)
 
     await waitFor(() => {
-      expect(screen.getByText('Edit initiativeAgreement:initiativeAgreement IA1')).toBeInTheDocument()
+      expect(
+        screen.getByText('Edit initiativeAgreement:initiativeAgreement IA1')
+      ).toBeInTheDocument()
     })
   })
 
@@ -342,22 +385,27 @@ describe('AddEditViewTransaction Component Tests', () => {
         govComment: 'Test comment',
         toOrganizationId: '123',
         complianceUnits: '10',
-        transactionEffectiveDate: '2024-01-01',
+        transactionEffectiveDate: '2024-01-01'
       },
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useParams.mockReturnValue({ transactionId: 1 })
     useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
-    useLocation.mockReturnValue({ pathname: '/initiative-agreement/1', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/initiative-agreement/1',
+      state: null
+    })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
     renderComponent('view', INITIATIVE_AGREEMENT)
     await waitFor(() => {
-      expect(screen.getByText('initiativeAgreement:initiativeAgreement IA1')).toBeInTheDocument()
+      expect(
+        screen.getByText('initiativeAgreement:initiativeAgreement IA1')
+      ).toBeInTheDocument()
     })
   })
 
@@ -366,40 +414,43 @@ describe('AddEditViewTransaction Component Tests', () => {
       data: null,
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useInitiativeAgreement.mockReturnValue({
       data: null,
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     useRegExtOrgs.mockReturnValue({
       data: [],
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useOrganizationBalance.mockReturnValue({
       data: {},
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
-    })    
-    
+      isLoadingError: false
+    })
+
     useCreateUpdateAdminAdjustment.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
 
     useParams.mockReturnValue({})
     useMatches.mockReturnValue([{ handle: { mode: 'add' } }])
-    useLocation.mockReturnValue({ pathname: '/admin-adjustment/add', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/admin-adjustment/add',
+      state: null
+    })
 
     renderComponent('add', ADMIN_ADJUSTMENT)
     expect(screen.getByText('txn:newTransaction')).toBeInTheDocument()
@@ -418,49 +469,56 @@ describe('AddEditViewTransaction Component Tests', () => {
         govComment: 'Test comment',
         toOrganizationId: '123',
         complianceUnits: '10',
-        transactionEffectiveDate: '2024-01-01',
+        transactionEffectiveDate: '2024-01-01'
       },
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useInitiativeAgreement.mockReturnValue({
       data: null,
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     useParams.mockReturnValue({ transactionId: 1 })
     useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
-    useLocation.mockReturnValue({ pathname: '/admin-adjustment/edit/1', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/admin-adjustment/edit/1',
+      state: null
+    })
 
     useCreateUpdateAdminAdjustment.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
 
     useRegExtOrgs.mockReturnValue({
       data: [],
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useOrganizationBalance.mockReturnValue({
       data: {},
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     renderComponent('edit', ADMIN_ADJUSTMENT)
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Edit administrativeAdjustment:administrativeAdjustment AA1')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Edit administrativeAdjustment:administrativeAdjustment AA1'
+        )
+      ).toBeInTheDocument()
     })
   })
 
@@ -473,36 +531,43 @@ describe('AddEditViewTransaction Component Tests', () => {
         govComment: 'Test comment',
         toOrganizationId: '123',
         complianceUnits: '10',
-        transactionEffectiveDate: '2024-01-01',
+        transactionEffectiveDate: '2024-01-01'
       },
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
     useInitiativeAgreement.mockReturnValue({
       data: null,
       isLoading: false,
       isFetched: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     useParams.mockReturnValue({ transactionId: 1 })
     useMatches.mockReturnValue([{ handle: { mode: 'view' } }])
-    useLocation.mockReturnValue({ pathname: '/admin-adjustment/1', state: null })
+    useLocation.mockReturnValue({
+      pathname: '/admin-adjustment/1',
+      state: null
+    })
 
     useCreateUpdateAdminAdjustment.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isLoading: false
     })
 
     renderComponent('view', ADMIN_ADJUSTMENT)
 
     await waitFor(() => {
-      expect(screen.getByText('administrativeAdjustment:administrativeAdjustment AA1')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'administrativeAdjustment:administrativeAdjustment AA1'
+        )
+      ).toBeInTheDocument()
     })
   })
 })

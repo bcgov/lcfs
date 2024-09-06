@@ -5,29 +5,38 @@ import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import theme from '@/themes'
 import ComplianceReportSummary from '../ComplianceReportSummary'
-import { useGetComplianceReportSummary, useUpdateComplianceReportSummary } from '@/hooks/useComplianceReports'
+import {
+  useGetComplianceReportSummary,
+  useUpdateComplianceReportSummary
+} from '@/hooks/useComplianceReports'
 import { BrowserRouter as Router } from 'react-router-dom'
 
 // Mock the custom hooks and components
 vi.mock('@/hooks/useComplianceReports')
 vi.mock('../SummaryTable', () => ({ default: () => <div>SummaryTable</div> }))
-vi.mock('../SigningAuthorityDeclaration', () => ({ default: () => <div>SigningAuthorityDeclaration</div> }))
+vi.mock('../SigningAuthorityDeclaration', () => ({
+  default: () => <div>SigningAuthorityDeclaration</div>
+}))
 
 // Mock MUI components
 vi.mock('@mui/material', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal()
   return {
     ...actual, // keep the actual MUI components
     Accordion: ({ children }) => <div data-testid="accordion">{children}</div>,
-    AccordionSummary: ({ children }) => <div data-testid="accordion-summary">{children}</div>,
-    AccordionDetails: ({ children }) => <div data-testid="accordion-details">{children}</div>,
+    AccordionSummary: ({ children }) => (
+      <div data-testid="accordion-summary">{children}</div>
+    ),
+    AccordionDetails: ({ children }) => (
+      <div data-testid="accordion-details">{children}</div>
+    ),
     Typography: ({ children }) => <div>{children}</div>,
     CircularProgress: () => <div>Loading...</div>,
     List: ({ children }) => <ul>{children}</ul>,
     ListItem: ({ children }) => <li>{children}</li>,
     TextField: (props) => <input {...props} />
-  };
-});
+  }
+})
 
 // Custom render function with providers
 const customRender = (ui, options = {}) => {
@@ -42,9 +51,7 @@ const customRender = (ui, options = {}) => {
   const AllTheProviders = ({ children }) => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <Router>
-          {children}
-        </Router>
+        <Router>{children}</Router>
       </ThemeProvider>
     </QueryClientProvider>
   )
@@ -96,9 +103,15 @@ describe('ComplianceReportSummary', () => {
       expect(screen.getByTestId('accordion-summary')).toBeInTheDocument()
       expect(screen.getByTestId('accordion-details')).toBeInTheDocument()
       expect(screen.getByText('Summary & Declaration')).toBeInTheDocument()
-      expect(screen.getByText('Add a renewable fuel retention or obligation deferral')).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Add a renewable fuel retention or obligation deferral'
+        )
+      ).toBeInTheDocument()
       expect(screen.getAllByText('SummaryTable')).toHaveLength(3)
-      expect(screen.getByText('SigningAuthorityDeclaration')).toBeInTheDocument()
+      expect(
+        screen.getByText('SigningAuthorityDeclaration')
+      ).toBeInTheDocument()
     })
   })
 })

@@ -13,12 +13,13 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
-import {
-  transactionsColDefs,
-  defaultSortModel
-} from './_schema'
+import { transactionsColDefs, defaultSortModel } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { ORGANIZATION_STATUSES, TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
+import {
+  ORGANIZATION_STATUSES,
+  TRANSACTION_STATUSES,
+  TRANSFER_STATUSES
+} from '@/constants/statuses'
 import { roles, govRoles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 
@@ -46,7 +47,11 @@ export const Transactions = () => {
     overlayNoRowsTemplate: t('txn:noTxnsFound')
   }
   const getRowId = useCallback((params) => {
-    return params.data.transactionType.toLowerCase() + '-' + params.data.transactionId
+    return (
+      params.data.transactionType.toLowerCase() +
+      '-' +
+      params.data.transactionId
+    )
   }, [])
 
   const [selectedOrgId, setSelectedOrgId] = useState(null)
@@ -64,23 +69,25 @@ export const Transactions = () => {
           view: ROUTES.TRANSFERS_VIEW,
           edit: ROUTES.TRANSFERS_EDIT
         },
-        'AdminAdjustment': {
-          view: currentUser.isGovernmentUser ? ROUTES.ADMIN_ADJUSTMENT_VIEW : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
+        AdminAdjustment: {
+          view: currentUser.isGovernmentUser
+            ? ROUTES.ADMIN_ADJUSTMENT_VIEW
+            : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
           edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
         },
-        'InitiativeAgreement': {
-          view: currentUser.isGovernmentUser ? ROUTES.INITIATIVE_AGREEMENT_VIEW : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
+        InitiativeAgreement: {
+          view: currentUser.isGovernmentUser
+            ? ROUTES.INITIATIVE_AGREEMENT_VIEW
+            : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
           edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
         }
       }
 
       // Determine if it's an edit scenario
-      const isEditScenario = (
-        (userOrgName === fromOrganization && status === TRANSFER_STATUSES.DRAFT) ||
-        (!fromOrganization && (
-          status === TRANSACTION_STATUSES.DRAFT
-        ))
-      )
+      const isEditScenario =
+        (userOrgName === fromOrganization &&
+          status === TRANSFER_STATUSES.DRAFT) ||
+        (!fromOrganization && status === TRANSACTION_STATUSES.DRAFT)
 
       const routeType = isEditScenario ? 'edit' : 'view'
 
@@ -106,7 +113,10 @@ export const Transactions = () => {
     if (hasRoles(roles.supplier)) {
       return apiRoutes.orgTransactions
     } else if (selectedOrgId) {
-      return apiRoutes.filteredTransactionsByOrg.replace(':orgID', selectedOrgId)
+      return apiRoutes.filteredTransactionsByOrg.replace(
+        ':orgID',
+        selectedOrgId
+      )
     }
     return apiRoutes.transactions
   }, [selectedOrgId, currentUser, hasRoles])
@@ -116,7 +126,10 @@ export const Transactions = () => {
     if (hasRoles(roles.supplier)) {
       return apiRoutes.exportOrgTransactions
     } else if (selectedOrgId) {
-      return apiRoutes.exportFilteredTransactionsByOrg.replace(':orgID', selectedOrgId)
+      return apiRoutes.exportFilteredTransactionsByOrg.replace(
+        ':orgID',
+        selectedOrgId
+      )
     }
     return apiRoutes.exportTransactions
   }, [selectedOrgId, currentUser, hasRoles])
@@ -160,11 +173,32 @@ export const Transactions = () => {
             {t('txn:title')}
           </BCTypography>
           <Box display={'flex'} gap={2} mb={2}>
-          {currentUser.organization?.orgStatus?.status ===
-            ORGANIZATION_STATUSES.REGISTERED && (
-            <Role roles={[roles.transfers]}>
+            {currentUser.organization?.orgStatus?.status ===
+              ORGANIZATION_STATUSES.REGISTERED && (
+              <Role roles={[roles.transfers]}>
+                <BCButton
+                  id="new-transfer-button"
+                  variant="contained"
+                  size="small"
+                  color="primary"
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faCirclePlus}
+                      className="small-icon"
+                      size="2x"
+                    />
+                  }
+                  onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+                >
+                  <BCTypography variant="subtitle2">
+                    {t('txn:newTransferBtn')}
+                  </BCTypography>
+                </BCButton>
+              </Role>
+            )}
+            <Role roles={[roles.analyst]}>
               <BCButton
-                id="new-transfer-button"
+                id="new-transaction-button"
                 variant="contained"
                 size="small"
                 color="primary"
@@ -175,49 +209,33 @@ export const Transactions = () => {
                     size="2x"
                   />
                 }
-                onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+                onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
               >
                 <BCTypography variant="subtitle2">
-                  {t('txn:newTransferBtn')}
+                  {t('txn:newTransactionBtn')}
                 </BCTypography>
               </BCButton>
             </Role>
-          )}
-          <Role roles={[roles.analyst]}>
-            <BCButton
-              id="new-transaction-button"
-              variant="contained"
-              size="small"
-              color="primary"
-              startIcon={
-                <FontAwesomeIcon
-                  icon={faCirclePlus}
-                  className="small-icon"
-                  size="2x"
-                />
-              }
-              onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
-            >
-              <BCTypography variant="subtitle2">
-                {t('txn:newTransactionBtn')}
-              </BCTypography>
-            </BCButton>
-          </Role>
-          <DownloadButton
-            onDownload={handleDownloadTransactions}
-            isDownloading={isDownloadingTransactions}
-            label={t('txn:downloadAsExcel')}
-            downloadLabel={t('txn:downloadingTxnInfo')}
-            dataTest="download-transactions-button"
-          />
-        </Box>
+            <DownloadButton
+              onDownload={handleDownloadTransactions}
+              isDownloading={isDownloadingTransactions}
+              label={t('txn:downloadAsExcel')}
+              downloadLabel={t('txn:downloadingTxnInfo')}
+              dataTest="download-transactions-button"
+            />
+          </Box>
         </Grid>
-        <Grid item xs={12} lg={7} sx={{ 
-            display: 'flex', 
+        <Grid
+          item
+          xs={12}
+          lg={7}
+          sx={{
+            display: 'flex',
             flexDirection: 'column',
             justifyContent: { xs: 'flex-start', lg: 'flex-end' },
             alignItems: { lg: 'flex-end' }
-        }}>
+          }}
+        >
           <Role roles={govRoles}>
             <OrganizationList onOrgChange={setSelectedOrgId} />
           </Role>

@@ -15,37 +15,67 @@ export const ActivityLinksList = () => {
       {
         name: t('report:activityLists.supplyOfFuel'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(
+            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          )
         }
       },
       {
         name: t('report:activityLists.finalSupplyEquipment'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(
+            ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          )
         }
       },
       {
         name: t('report:activityLists.allocationAgreements'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(
+            ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          )
         }
       },
       {
         name: t('report:activityLists.notionalTransfers'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(
+            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          )
         }
       },
       {
         name: t('report:activityLists.fuelsOtherUse'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(
+            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          )
         }
       },
       {
         name: t('report:activityLists.exportFuels'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_EXPORT_FUELS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(
+            ROUTES.REPORTS_ADD_EXPORT_FUELS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          )
         }
       }
     ]

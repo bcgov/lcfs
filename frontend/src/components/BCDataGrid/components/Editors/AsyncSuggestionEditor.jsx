@@ -87,7 +87,7 @@ export const AsyncSuggestionEditor = ({
         onKeyDownCapture={handleKeyDown}
         // loading={isLoading}
         noOptionsText="No suggestions..."
-        renderInput={(params) => <TextField {...params} fullWidth autoFocus/>}
+        renderInput={(params) => <TextField {...params} fullWidth autoFocus />}
         renderOption={({ key, ...props }, option, { inputValue }) => {
           const matches = match(option.title, inputValue, {
             insideWords: true

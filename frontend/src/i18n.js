@@ -36,7 +36,7 @@ const resources = {
     finalSupplyEquipment: finalSupplyEquipmentEn,
     fuelSupply: fuelSupplyEn,
     dashboard: dashboardEn,
-    allocationAgreement: allocationAgreementEn,
+    allocationAgreement: allocationAgreementEn
   }
 }
 

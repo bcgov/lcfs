@@ -8,7 +8,9 @@ export const useAdminAdjustment = (adminAdjustmentID, options) => {
 
   return useQuery({
     queryKey: [ADMIN_ADJUSTMENT, adminAdjustmentID],
-    queryFn: async () => (await client.get(`${apiRoutes.adminAdjustments}${adminAdjustmentID}`)).data,
+    queryFn: async () =>
+      (await client.get(`${apiRoutes.adminAdjustments}${adminAdjustmentID}`))
+        .data,
     ...options
   })
 }

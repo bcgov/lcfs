@@ -9,36 +9,39 @@ import theme from '@/themes'
 // Mock dependencies
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key,
-  }),
+    t: (key) => key
+  })
 }))
 
 vi.mock('@/constants/routes', () => ({
   ROUTES: {
     ADMIN_USERS_ADD: '/admin/users/add',
-    ADMIN_USERS: '/admin/users',
+    ADMIN_USERS: '/admin/users'
   },
   apiRoutes: {
-    listUsers: '/api/users',
-  },
+    listUsers: '/api/users'
+  }
 }))
 
 vi.mock('../AdminMenu/components/_schema', () => ({
   usersColumnDefs: vi.fn(() => []),
-  idirUserDefaultFilter: [],
+  idirUserDefaultFilter: []
 }))
 
 vi.mock('@/utils/formatters', () => ({
-  calculateRowHeight: vi.fn(() => 50),
+  calculateRowHeight: vi.fn(() => 50)
 }))
 
 // Mock BCDataGridServer component
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   default: ({ handleRowClicked }) => (
-    <div data-test="mocked-data-grid" onClick={() => handleRowClicked({ data: { userProfileId: '123' } })}>
+    <div
+      data-test="mocked-data-grid"
+      onClick={() => handleRowClicked({ data: { userProfileId: '123' } })}
+    >
       Mocked DataGrid
     </div>
-  ),
+  )
 }))
 
 // Helper component to access current location
@@ -54,12 +57,15 @@ const WrapperComponent = ({ children, initialEntries = ['/'] }) => {
       <ThemeProvider theme={theme}>
         <MemoryRouter initialEntries={initialEntries}>
           <Routes>
-            <Route path="*" element={
-              <>
-                {children}
-                <LocationDisplay />
-              </>
-            } />
+            <Route
+              path="*"
+              element={
+                <>
+                  {children}
+                  <LocationDisplay />
+                </>
+              }
+            />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -73,29 +79,47 @@ describe('Users Component', () => {
   })
 
   it('renders without crashing', () => {
-    render(<WrapperComponent><Users /></WrapperComponent>)
+    render(
+      <WrapperComponent>
+        <Users />
+      </WrapperComponent>
+    )
     expect(screen.getByText('admin:Users')).toBeInTheDocument()
   })
 
   it('displays the New User button', () => {
-    render(<WrapperComponent><Users /></WrapperComponent>)
+    render(
+      <WrapperComponent>
+        <Users />
+      </WrapperComponent>
+    )
     const newUserButton = screen.getByText('admin:newUserBtn')
     expect(newUserButton).toBeInTheDocument()
   })
 
   it('navigates to add user page when New User button is clicked', async () => {
-    render(<WrapperComponent><Users /></WrapperComponent>)
+    render(
+      <WrapperComponent>
+        <Users />
+      </WrapperComponent>
+    )
     const newUserButton = screen.getByText('admin:newUserBtn')
     fireEvent.click(newUserButton)
 
     // Check if the navigation occurred
     await waitFor(() => {
-      expect(screen.getByTestId('location-display')).toHaveTextContent('/admin/users/add')
+      expect(screen.getByTestId('location-display')).toHaveTextContent(
+        '/admin/users/add'
+      )
     })
   })
 
   it('renders BCDataGridServer with correct props', () => {
-    render(<WrapperComponent><Users /></WrapperComponent>)
+    render(
+      <WrapperComponent>
+        <Users />
+      </WrapperComponent>
+    )
     expect(screen.getByTestId('mocked-data-grid')).toBeInTheDocument()
   })
 
@@ -106,13 +130,21 @@ describe('Users Component', () => {
         state: { message: 'Test alert message', severity: 'success' }
       }
     ]
-    render(<WrapperComponent initialEntries={initialEntries}><Users /></WrapperComponent>)
+    render(
+      <WrapperComponent initialEntries={initialEntries}>
+        <Users />
+      </WrapperComponent>
+    )
     expect(screen.getByText('Test alert message')).toBeInTheDocument()
   })
 
   it('handles row click correctly', async () => {
-    render(<WrapperComponent><Users /></WrapperComponent>)
-    
+    render(
+      <WrapperComponent>
+        <Users />
+      </WrapperComponent>
+    )
+
     // Simulate a row click
     const mockedDataGrid = screen.getByTestId('mocked-data-grid')
     fireEvent.click(mockedDataGrid)
