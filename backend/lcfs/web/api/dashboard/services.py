@@ -5,7 +5,8 @@ from lcfs.web.api.dashboard.repo import DashboardRepository
 from lcfs.web.api.dashboard.schema import (
     DirectorReviewCountsSchema,
     TransactionCountsSchema,
-    OrganizarionTransactionCountsSchema
+    OrganizarionTransactionCountsSchema,
+    OrgComplianceReportCountsSchema
 )
 
 logger = getLogger("dashboard_services")
@@ -41,4 +42,13 @@ class DashboardServices:
 
         return OrganizarionTransactionCountsSchema(
             transfers=counts.get('transfers', 0)
+        )
+
+    @service_handler
+    async def get_org_compliance_report_counts(self, organization_id: int) -> OrgComplianceReportCountsSchema:
+        counts = await self.repo.get_org_compliance_report_counts(organization_id)
+
+        return OrgComplianceReportCountsSchema(
+            in_progress=counts.get('in_progress', 0),
+            awaiting_gov_review=counts.get('awaiting_gov_review', 0),
         )

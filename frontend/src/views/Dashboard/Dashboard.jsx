@@ -10,7 +10,8 @@ import {
   WebsiteCard,
   DirectorReviewCard,
   TransactionsCard,
-  OrgTransactionsCard
+  OrgTransactionsCard,
+  OrgComplianceReportsCard
 } from './components/cards'
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
 
@@ -66,6 +67,9 @@ export const Dashboard = () => {
             </Role>
             <Role roles={[roles.transfers]}>
               <OrgTransactionsCard />
+            </Role>
+            <Role roles={[roles.compliance_reporting, roles.signing_authority]}>
+              <OrgComplianceReportsCard />
             </Role>
             <Role roles={[roles.director]}>
               <DirectorReviewCard />

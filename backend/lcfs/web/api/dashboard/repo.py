@@ -7,6 +7,7 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.transaction.DirectorReviewTransactionCountView import DirectorReviewTransactionCountView
 from lcfs.db.models.transaction.TransactionCountView import TransactionCountView
 from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.compliance.OrgComplianceReportCountView import OrgComplianceReportCountView
 
 logger = getLogger("dashboard_repo")
 
@@ -47,3 +48,20 @@ class DashboardRepository:
         result = await self.db.execute(query)
         counts = {'transfers': result.scalar_one()}
         return counts
+
+    @repo_handler
+    async def get_org_compliance_report_counts(self, organization_id: int):
+        query = select(
+            OrgComplianceReportCountView.count_in_progress,
+            OrgComplianceReportCountView.count_awaiting_gov_review
+        ).where(
+            OrgComplianceReportCountView.organization_id == organization_id
+        )
+
+        result = await self.db.execute(query)
+        counts = result.fetchone()
+
+        return {
+            "in_progress": getattr(counts, 'count_in_progress', 0),
+            "awaiting_gov_review": getattr(counts, 'count_awaiting_gov_review', 0)
+        }
