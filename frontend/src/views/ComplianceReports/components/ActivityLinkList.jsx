@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { List, ListItemButton } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/constants/routes'
+import { REPORTS_ADD_FUEL_EXPORTS } from '@/constants/routes/routes.js'
 
 export const ActivityLinksList = () => {
   const { t } = useTranslation()
@@ -45,7 +46,7 @@ export const ActivityLinksList = () => {
       {
         name: t('report:activityLists.exportFuels'),
         action: () => {
-          navigate(ROUTES.REPORTS_ADD_EXPORT_FUELS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
+          navigate(ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(':compliancePeriod', compliancePeriod).replace(':complianceReportId', complianceReportId))
         }
       }
     ]

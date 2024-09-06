@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -13,6 +13,7 @@ import {
   useSaveFinalSupplyEquipment
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
+import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -22,17 +23,26 @@ export const AddEditFinalSupplyEquipments = () => {
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'finalSupplyEquipment'])
+  const { t } = useTranslation(['common', 'finalSupplyEquipment', 'reports'])
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
+  const navigate = useNavigate()
 
-  const { data: optionsData, isLoading: optionsLoading, isFetched } = useFinalSupplyEquipmentOptions()
-  const { mutateAsync: saveRow } = useSaveFinalSupplyEquipment(complianceReportId)
-  const { data, isLoading: equipmentsLoading } = useGetFinalSupplyEquipments(complianceReportId)
+  const {
+    data: optionsData,
+    isLoading: optionsLoading,
+    isFetched
+  } = useFinalSupplyEquipmentOptions()
+  const { mutateAsync: saveRow } =
+    useSaveFinalSupplyEquipment(complianceReportId)
+  const { data, isLoading: equipmentsLoading } =
+    useGetFinalSupplyEquipments(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('finalSupplyEquipment:noFinalSupplyEquipmentsFound'),
+      overlayNoRowsTemplate: t(
+        'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
+      ),
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -62,7 +72,11 @@ export const AddEditFinalSupplyEquipments = () => {
 
   useEffect(() => {
     if (optionsData?.levelsOfEquipment?.length > 0) {
-      const updatedColumnDefs = finalSupplyEquipmentColDefs(optionsData, compliancePeriod, errors)
+      const updatedColumnDefs = finalSupplyEquipmentColDefs(
+        optionsData,
+        compliancePeriod,
+        errors
+      )
       setColumnDefs(updatedColumnDefs)
     }
   }, [errors, optionsData])
@@ -73,7 +87,7 @@ export const AddEditFinalSupplyEquipments = () => {
         ...item,
         levelOfEquipment: item.levelOfEquipment.name,
         fuelMeasurementType: item.fuelMeasurementType.type,
-        intendedUses: item.intendedUseTypes.map(i => i.type),
+        intendedUses: item.intendedUseTypes.map((i) => i.type),
         id: uuid()
       }))
       setRowData(updatedRowData)
@@ -199,6 +213,15 @@ export const AddEditFinalSupplyEquipments = () => {
     }
   }
 
+  const handleNavigateBack = useCallback(() => {
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }, [navigate, compliancePeriod, complianceReportId])
+
   return (
     isFetched &&
     !equipmentsLoading && (
@@ -208,7 +231,12 @@ export const AddEditFinalSupplyEquipments = () => {
           <Typography variant="h5" color="primary">
             {t('finalSupplyEquipment:addFSErowsTitle')}
           </Typography>
-          <Typography variant="body4" color="primary" sx={{ marginY: '2rem' }} component="div">
+          <Typography
+            variant="body4"
+            color="primary"
+            sx={{ marginY: '2rem' }}
+            component="div"
+          >
             {t('finalSupplyEquipment:fseSubtitle')}
           </Typography>
         </div>
@@ -224,6 +252,13 @@ export const AddEditFinalSupplyEquipments = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             showAddRowsButton={true}
+            saveButtonProps={{
+              enabled: true,
+              text: t('report:saveReturn'),
+              onSave: handleNavigateBack,
+              confirmText: t('report:incompleteReport'),
+              confirmLabel: t('report:returnToReport')
+            }}
           />
         </BCBox>
       </Grid2>

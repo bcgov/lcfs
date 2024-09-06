@@ -26,6 +26,7 @@ import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
 import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
+import { REPORTS_ADD_FUEL_EXPORTS } from '@/constants/routes/routes.js'
 
 const ReportDetails = ({currentStatus='Draft'}) => {
   const { t } = useTranslation()
@@ -131,7 +132,7 @@ const ReportDetails = ({currentStatus='Draft'}) => {
         name: t('report:activityLists.exportFuels'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_EXPORT_FUELS.replace(
+            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
               ':compliancePeriod',
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)

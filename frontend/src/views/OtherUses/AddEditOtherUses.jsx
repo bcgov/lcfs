@@ -14,9 +14,10 @@ import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, otherUsesColDefs } from './_schema'
+import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -25,8 +26,8 @@ export const AddEditOtherUses = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'otherUses'])
-  const { complianceReportId } = useParams()
+  const { t } = useTranslation(['common', 'otherUses', 'reports'])
+  const { complianceReportId, compliancePeriod } = useParams()
   const {
     data: optionsData,
     isLoading: optionsLoading,
@@ -35,6 +36,7 @@ export const AddEditOtherUses = () => {
   const { data: otherUses, isLoading: usesLoading } =
     useGetAllOtherUses(complianceReportId)
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
+  const navigate = useNavigate()
 
   const gridOptions = useMemo(
     () => ({
@@ -236,6 +238,15 @@ export const AddEditOtherUses = () => {
     [complianceReportId, saveRow, t]
   )
 
+  const handleNavigateBack = useCallback(() => {
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }, [navigate, compliancePeriod, complianceReportId])
+
   if (optionsLoading || usesLoading) {
     return <Loading />
   }
@@ -262,29 +273,14 @@ export const AddEditOtherUses = () => {
           onAction={onAction}
           onCellEditingStopped={onCellEditingStopped}
           showAddRowsButton
+          saveButtonProps={{
+            enabled: true,
+            text: t('report:saveReturn'),
+            onSave: handleNavigateBack,
+            confirmText: t('report:incompleteReport'),
+            confirmLabel: t('report:returnToReport')
+          }}
         />
-
-        <Stack
-          direction={{ md: 'column', lg: 'row' }}
-          spacing={{ xs: 2, sm: 2, md: 3 }}
-          useFlexGap
-          flexWrap="wrap"
-          m={2}
-        >
-          <BCButton
-            variant="contained"
-            size="medium"
-            color="primary"
-            startIcon={
-              <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
-            }
-            onClick={() => gridRef.current?.api.stopEditing(false)}
-          >
-            <Typography variant="subtitle2">
-              {t('otherUses:saveOtherUsesBtn')}
-            </Typography>
-          </BCButton>
-        </Stack>
       </Grid2>
     )
   )
