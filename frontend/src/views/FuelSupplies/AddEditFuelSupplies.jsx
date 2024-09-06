@@ -123,7 +123,7 @@ export const AddEditFuelSupplies = () => {
           optionsData?.fuelTypes?.find(
             (obj) => params.node.data.fuelType === obj.fuelType
           )?.energyDensity.energyDensity
-        const ciLimit =
+        const targetCI =
           optionsData?.fuelTypes
             ?.find((obj) => params.node.data.fuelType === obj.fuelType)
             ?.targetCarbonIntensities.find(
@@ -165,14 +165,14 @@ export const AddEditFuelSupplies = () => {
         )
         // TODO Compliance units should be calculated on the backend and returned
         const complianceUnits = (
-          ((Number(ciLimit) * Number(eer) - Number(effectiveCarbonIntensity)) *
+          ((Number(targetCI) * Number(eer) - Number(effectiveCarbonIntensity)) *
             energyContent) /
           1000000
         ).toFixed(0)
         const updatedData = {
           ...params.node.data,
           energy: energyContent,
-          ciLimit,
+          targetCI,
           eer,
           endUse: params.node.data.endUse || null,
           ciOfFuel: effectiveCarbonIntensity,
