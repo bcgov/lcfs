@@ -113,7 +113,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     # transaction: Optional[TransactionBaseSchema] = None
     nickname: Optional[str] = None
     supplemental_note: Optional[str] = None
-    update_date: Optional[datetime] = None
+    # update_date: Optional[datetime] = None
 
 
 class ComplianceReportCreateSchema(BaseSchema):

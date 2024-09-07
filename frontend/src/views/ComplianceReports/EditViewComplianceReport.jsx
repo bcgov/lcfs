@@ -33,6 +33,7 @@ import UploadCard from './components/UploadCard'
 import { AssessmentCard } from './components/AssessmentCard'
 import { ImportantInfoCard } from './components/ImportantInfoCard'
 import { timezoneFormatter } from '@/utils/formatters'
+import SigningAuthorityDeclaration from './components/SigningAuthorityDeclaration'
 
 const iconStyle = {
   width: '2rem',
@@ -45,6 +46,7 @@ export const EditViewComplianceReport = () => {
   const [modalData, setModalData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] = useState(false)
   const alertRef = useRef()
 
   const { compliancePeriod, complianceReportId } = useParams()
@@ -92,14 +94,10 @@ export const EditViewComplianceReport = () => {
     currentUser?.organization?.organizationId,
     complianceReportId
   )
-  // TODO Temp Fix
   const currentStatus = reportData?.data?.currentStatus?.status
-  // const currentStatus = "Assessed"
-
   const { data: orgData, isLoading } = useOrganization(
     reportData?.data?.organizationId
   )
-  const methods = useForm() // TODO we will need this for summary line inputs
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
     {
@@ -114,27 +112,29 @@ export const EditViewComplianceReport = () => {
     }
   )
 
+  const methods = useForm() // TODO we will need this for summary line inputs
+
   const buttonClusterConfig = useMemo(
     () =>
       buttonClusterConfigFn({
         hasRoles,
         currentUser,
-        methods,
         t,
         setModalData,
         updateComplianceReport,
         reportData,
-        isGovernmentUser
+        isGovernmentUser,
+        isSigningAuthorityDeclared
       }),
     [
       hasRoles,
       currentUser,
-      methods,
       t,
       setModalData,
       updateComplianceReport,
       reportData,
-      isGovernmentUser
+      isGovernmentUser,
+      isSigningAuthorityDeclared
     ]
   )
 
@@ -210,6 +210,11 @@ export const EditViewComplianceReport = () => {
             )}
             <Introduction expanded={location.state?.newReport} />
           </Stack>
+          {currentStatus === 'Draft' &&
+            <SigningAuthorityDeclaration 
+              onChange={setIsSigningAuthorityDeclared} 
+            />
+          }
           <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
             {buttonClusterConfig[currentStatus]?.map(
               (config) =>
@@ -218,7 +223,7 @@ export const EditViewComplianceReport = () => {
                     key={config.id}
                     data-test={config.id}
                     id={config.id}
-                    size="small"
+                    size="large"
                     variant={config.variant}
                     color={config.color}
                     onClick={methods.handleSubmit(config.handler)}

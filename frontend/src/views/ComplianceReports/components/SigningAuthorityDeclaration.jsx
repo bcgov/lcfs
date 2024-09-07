@@ -1,30 +1,19 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Checkbox, FormControlLabel, Paper } from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPencil } from '@fortawesome/free-solid-svg-icons'
-import BCButton from '@/components/BCButton'
-import { useNavigate } from 'react-router-dom'
+import { Checkbox, FormControlLabel, Paper, Typography } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
-const SigningAuthorityDeclaration = () => {
+const SigningAuthorityDeclaration = ({ onChange }) => {
   const { t } = useTranslation(['report'])
   const [checked, setChecked] = useState(false)
-  const navigate = useNavigate()
 
-  const handleCheckboxChange = (event) => {
+  const handleChange = (event) => {
     setChecked(event.target.checked)
   }
 
-  const handleSubmit = () => {
-    if (checked) {
-      // Action to submit the report
-      console.log('Report submitted')
-    } else {
-      // Optionally, handle the case where the checkbox is not checked
-      console.log(t('report:pleaseCheckDeclaration'))
-    }
-  }
+  useEffect(() => {
+    onChange(checked)
+  }, [checked, onChange])
 
   return (
     <Paper
@@ -41,7 +30,15 @@ const SigningAuthorityDeclaration = () => {
         {t('report:signingAuthorityDeclaration')}
       </BCTypography>
       <FormControlLabel
-        control={<Checkbox checked={checked} onChange={handleCheckboxChange} />}
+        control={
+          <Checkbox
+            checked={checked}
+            onChange={handleChange}
+            id="signing-authority-declaration"
+            data-test="signing-authority-checkbox"
+            color="primary"
+          />
+        }
         label={t('report:declarationText')}
         style={{
           marginLeft: 20,
@@ -49,20 +46,6 @@ const SigningAuthorityDeclaration = () => {
           alignItems: 'flex-start'
         }}
       />
-      <BCButton
-        variant="contained"
-        color="primary"
-        style={{
-          gap: 8,
-          marginTop: 20
-        }}
-        onClick={handleSubmit}
-      >
-        <FontAwesomeIcon icon={faPencil} fontSize={8} />
-        <BCTypography variant="body4" sx={{ textTransform: 'capitalize' }}>
-          {t('report:submitReport')}
-        </BCTypography>
-      </BCButton>
     </Paper>
   )
 }

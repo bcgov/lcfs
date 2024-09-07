@@ -129,7 +129,6 @@ const ComplianceReportSummary = ({ reportID }) => {
             data={summaryData?.nonCompliancePenaltySummary}
             width={'81%'}
           />
-          <SigningAuthorityDeclaration />
         </AccordionDetails>
       </Accordion>
     </>
