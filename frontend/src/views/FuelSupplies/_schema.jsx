@@ -62,6 +62,18 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     hide: true
   },
   {
+    field: 'fuelCodeId',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    hide: true
+  },
+  {
+    field: 'endUseId',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    hide: true
+  },
+  {
     field: 'complianceUnits',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     minWidth: 100,
@@ -98,10 +110,12 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = undefined
         params.data.fuelCategory = undefined
-        params.data.endUse = ''
+        params.data.endUseId = undefined
+        params.data.endUseType = undefined
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
+        params.data.fuelCodeId = undefined
         params.data.quantity = 0
         params.data.units = fuelType?.unit
       }
@@ -148,7 +162,8 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
           ?.fuelCategories?.find(
             (obj) => params.newValue === obj.fuelCategory
           )?.fuelCategoryId
-        params.data.endUse = undefined
+        params.data.endUseId = undefined;
+        params.data.endUseType = undefined
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
@@ -175,7 +190,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     tooltipValueGetter: (p) => 'Select the fuel category from the list'
   },
   {
-    field: 'endUse',
+    field: 'endUseType',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUse'),
     options: (params) =>
@@ -205,8 +220,23 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
     valueGetter: (params) =>
-      params.colDef?.options(params).length < 1 ? 'Any' : params.data?.endUse,
+      params.colDef?.options(params).length < 1 ? 'Any' : params.data?.endUseType?.type,
     editable: (params) => params.colDef?.options(params).length > 0,
+    valueSetter: (params) => {
+      if (params.newValue) {
+        const eerRatio = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.eerRatios.filter(
+            (item) =>
+              item.fuelCategory.fuelCategory === params.data.fuelCategory
+          )
+          .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
+
+        params.data.endUseType = eerRatio.endUseType.type
+        params.data.endUseId = eerRatio.endUseType.endUseTypeId
+      }
+      return true
+    },
     minWidth: 260
   },
   {
@@ -264,11 +294,34 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     minWidth: 135,
-    editable: (params) =>
-      optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-      /Fuel code/i.test(params.data.provisionOfTheAct)
+    editable: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      if (fuelType) {
+        return (
+          fuelType.fuelCodes.map((item) => item.fuelCode).length > 0 &&
+          /Fuel code/i.test(params.data.provisionOfTheAct)
+        )
+      }
+      return false
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.fuelCode = params.newValue
+
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+        const matchingFuelCode = fuelType.fuelCodes?.find(
+          (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
+        )
+        if (matchingFuelCode) {
+          params.data.fuelCodeId = matchingFuelCode.fuelCodeId
+        }
+      }
+      return true
+    }
   },
   {
     field: 'quantity',
@@ -384,7 +437,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUse
+            item.endUseType?.type === params.data.endUseType
         )
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(

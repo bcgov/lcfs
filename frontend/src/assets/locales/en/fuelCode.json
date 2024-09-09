@@ -25,6 +25,7 @@
     "fuelCodeId": "Fuel Code Id",
     "status": "Status",
     "prefix": "Prefix",
+    "fuelSuffix": "Iteration",
     "fuelCode": "Fuel code",
     "company": "Company",
     "contactName": "Contact Name",

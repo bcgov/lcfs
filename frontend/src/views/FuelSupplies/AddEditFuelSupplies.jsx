@@ -13,8 +13,6 @@ import {
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
 import { v4 as uuid } from 'uuid'
-import Button from '@mui/material/Button'
-import BCButton from '@/components/BCButton/index.jsx'
 import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditFuelSupplies = () => {
@@ -35,6 +33,7 @@ export const AddEditFuelSupplies = () => {
     isLoading: optionsLoading,
     isFetched
   } = useFuelSupplyOptions({ compliancePeriod })
+
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
   const { data, isLoading: fuelSuppliesLoading } =
@@ -109,11 +108,25 @@ export const AddEditFuelSupplies = () => {
   const onCellValueChanged = useCallback(
     async (params) => {
       if (params.column.colId === 'fuelType') {
-        const options = optionsData?.fuelTypes
-          ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-          ?.fuelCategories.map((item) => item.fuelCategory)
-        if (options.length === 1) {
-          params.node.setDataValue('fuelCategory', options[0])
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+        if (selectedFuelType) {
+          const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
+            (item) => item.fuelCategory
+          )
+          params.node.setDataValue(
+            'fuelCategory',
+            fuelCategoryOptions[0] ?? null
+          )
+          const fuelCodeOptions = selectedFuelType.fuelCodes.map(
+            (code) => code.fuelCode
+          )
+          params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
+          params.node.setDataValue(
+            'fuelCodeId',
+            selectedFuelType.fuelCodes[0]?.fuelCodeId ?? null
+          )
         }
       }
       if (

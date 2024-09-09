@@ -14,7 +14,8 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
-    FuelSupplyCreateSchema,
+    FuelSupplyCreateUpdateSchema,
+    FuelSupplyResponseSchema,
     FuelTypeOptionsResponse,
     CommmonPaginatedReportRequestSchema,
 )
@@ -70,13 +71,13 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplyCreateSchema, DeleteFuelSupplyResponseSchema],
+    response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def save_fuel_supply_row(
     request: Request,
-    request_data: FuelSupplyCreateSchema = Body(...),
+    request_data: FuelSupplyCreateUpdateSchema = Body(...),
     fs_service: FuelSupplyServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelSupplyValidation = Depends(),
@@ -91,8 +92,7 @@ async def save_fuel_supply_row(
         # Delete existing fuel supply row
         await fs_service.delete_fuel_supply(fs_id)
         return DeleteFuelSupplyResponseSchema(
-            success= True,
-            message="fuel supply row deleted successfully"
+            success=True, message="fuel supply row deleted successfully"
         )
     elif fs_id:
         # Update existing fuel supply row
