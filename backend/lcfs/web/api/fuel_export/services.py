@@ -280,7 +280,7 @@ class FuelExportServices:
             ),
             None,
         )
-        ci_limit = (
+        target_ci = (
             next(
                 (
                     item["targetCarbonIntensity"]
@@ -362,12 +362,12 @@ class FuelExportServices:
         energy_content = round(energy_density * float(fs_data.quantity))
         compliance_units = round(
             (
-                (ci_limit * (eer or 0) - (effective_carbon_intensity or 0))
+                (target_ci * (eer or 0) - (effective_carbon_intensity or 0))
                 * energy_content
             )
             / 1_000_000
         )
-        fs_data.ci_limit = ci_limit
+        fs_data.target_ci = target_ci
         fs_data.ci_of_fuel = effective_carbon_intensity
         fs_data.energy_density = energy_density
         fs_data.eer = eer

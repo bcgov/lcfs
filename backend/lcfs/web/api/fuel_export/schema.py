@@ -136,7 +136,7 @@ class FuelExportSchema(BaseSchema):
     units: str
     export_date: date
     compliance_units: Optional[int] = 0
-    ci_limit: Optional[float] = None
+    target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
     energy_density: Optional[float] = None
     eer: Optional[float] = None
@@ -170,7 +170,7 @@ class FuelExportCreateSchema(BaseSchema):
     units: str
     export_date: date
     compliance_units: Optional[int] = 0
-    ci_limit: Optional[float] = 0
+    target_ci: Optional[float] = 0
     ci_of_fuel: Optional[float] = 0
     energy_density: Optional[float] = 0
     eer: Optional[float] = 0

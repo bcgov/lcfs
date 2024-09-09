@@ -149,7 +149,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         }
       ]
     ],
-    [currentStatus, t, navigate, compliancePeriod, complianceReportId]
+    [currentStatus, t, navigate, compliancePeriod, complianceReportId, isArrayEmpty]
   )
 
   const [expanded, setExpanded] = useState(() =>

@@ -326,8 +326,8 @@ export const fuelExportColDefs = (optionsData, errors) => [
     }
   },
   {
-    field: 'ciLimit',
-    headerName: i18n.t('fuelExport:fuelExportColLabels.ciLimit'),
+    field: 'targetCi',
+    headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     editable: false,
     cellStyle: (params) => cellErrorStyle(params, errors),
     valueGetter: (params) =>

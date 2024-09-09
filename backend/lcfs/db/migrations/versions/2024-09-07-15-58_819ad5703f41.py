@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "819ad5703f41"
-down_revision = "9d93dc700752"
+down_revision = "c8a2dbd4ccd7"
 branch_labels = None
 depends_on = None
 
@@ -89,7 +89,7 @@ def upgrade() -> None:
             comment="Compliance units for the fuel supply",
         ),
         sa.Column(
-            "ci_limit",
+            "target_ci",
             sa.Float(),
             nullable=True,
             comment="CI limit for the fuel supply",

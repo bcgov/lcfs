@@ -59,7 +59,7 @@ export const FuelExportSummary = ({ data }) => {
     { headerName: t('fuelExport:fuelExportColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
     { headerName: t('fuelExport:fuelExportColLabels.quantity'), field: "quantity", valueFormatter },
     { headerName: t('fuelExport:fuelExportColLabels.units'), field: "units" },
-    { headerName: t('fuelExport:fuelExportColLabels.ciLimit'), field: "ciLimit" },
+    { headerName: t('fuelExport:fuelExportColLabels.targetCI'), field: "targetCi" },
     { headerName: t('fuelExport:fuelExportColLabels.ciOfFuel'), field: "ciOfFuel" },
     { headerName: t('fuelExport:fuelExportColLabels.energyDensity'), field: "energyDensity" },
     { headerName: t('fuelExport:fuelExportColLabels.eer'), field: "eer" },

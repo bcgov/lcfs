@@ -22,7 +22,7 @@ class FuelExport(BaseModel, Auditable):
     quantity = Column(Integer, nullable=False, comment="Quantity of fuel supplied")
     units = Column(Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity")
     compliance_units = Column(Integer, nullable=True, comment="Compliance units for the fuel supply")
-    ci_limit = Column(Float, nullable=True, comment="CI limit for the fuel supply")
+    target_ci = Column(Float, nullable=True, comment="CI limit for the fuel supply")
     ci_of_fuel = Column(Float, nullable=True, comment="CI of fuel for the fuel supply")
     energy_density = Column(Float, nullable=True, comment="Energy density of the fuel supplied")
     eer = Column(Float, nullable=True, comment="Energy effectiveness ratio of the fuel supplied")
