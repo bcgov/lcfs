@@ -155,7 +155,7 @@ class FuelSupplyServices:
                 page=pagination.page,
                 size=pagination.size,
                 total=total_count,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=math.ceil(total_count / pagination.size) if total_count > 0 else 0,
             ),
             fuel_supplies=[FuelSupplySchema.model_validate(fs) for fs in fuel_supplies],
         )

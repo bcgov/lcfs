@@ -144,7 +144,7 @@ const globals = {
     paddingBottom: '8px'
   },
   '.ag-theme-quartz .ag-grid-date-editor': {
-    width: '100%',
+    width: '200px',
     height: '100%'
   },
   '.ag-theme-quartz .ag-center-cols-viewport': {

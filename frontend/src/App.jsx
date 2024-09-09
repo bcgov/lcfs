@@ -30,6 +30,7 @@ import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotio
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
+import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
 import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
 
 const router = createBrowserRouter([
@@ -346,6 +347,14 @@ const router = createBrowserRouter([
         element: <AddEditFuelSupplies />,
         handle: {
           title: 'Supply of fuels',
+          mode: 'add'
+        }
+      },
+      {
+        path: ROUTES.REPORTS_ADD_FUEL_EXPORTS,
+        element: <AddEditFuelExports />,
+        handle: {
+          title: 'Export fuels',
           mode: 'add'
         }
       }

@@ -14,6 +14,7 @@ import notionalTransferEn from '@/assets/locales/en/notionalTransfer.json'
 import otherUsesEn from '@/assets/locales/en/otherUses.json'
 import finalSupplyEquipmentEn from '@/assets/locales/en/finalSupplyEquipment.json'
 import fuelSupplyEn from '@/assets/locales/en/fuelSupply.json'
+import fuelExportEn from '@/assets/locales/en/fuelExport.json'
 import dashboardEn from '@/assets/locales/en/dashboard.json'
 import allocationAgreementEn from '@/assets/locales/en/allocationAgreement.json'
 
@@ -35,6 +36,7 @@ const resources = {
     otherUses: otherUsesEn,
     finalSupplyEquipment: finalSupplyEquipmentEn,
     fuelSupply: fuelSupplyEn,
+    fuelExport: fuelExportEn,
     dashboard: dashboardEn,
     allocationAgreement: allocationAgreementEn,
   }

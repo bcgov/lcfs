@@ -26,6 +26,8 @@ import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
 import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
+import { useGetFuelExports } from '@/hooks/useFuelExport'
+import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 
 const ReportDetails = ({currentStatus='Draft'}) => {
   const { t } = useTranslation()
@@ -128,24 +130,19 @@ const ReportDetails = ({currentStatus='Draft'}) => {
         component: (data) => data.length > 0 && <OtherUsesSummary data={data} />
       },
       {
-        name: t('report:activityLists.exportFuels'),
+        name: t('fuelExport:fuelExportTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_EXPORT_FUELS.replace(
+            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
               ':compliancePeriod',
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)
           ),
-        useFetch: async () => ({
-          data: [],
-          isLoading: false,
-          isError: false,
-          isFetched: true
-        }),
-        component: (data) => <>Coming soon...</>
+        useFetch: useGetFuelExports,
+        component: (data) => !isArrayEmpty(data) && <FuelExportSummary data={data} />
       }
     ]],
-    [currentStatus, t, navigate, compliancePeriod, complianceReportId]
+    [currentStatus, t, navigate, compliancePeriod, complianceReportId, isArrayEmpty]
   )
 
   const [expanded, setExpanded] = useState(() => activityList.map((_, index) => `panel${index}`))

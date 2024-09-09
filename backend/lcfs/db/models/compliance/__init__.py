@@ -8,6 +8,7 @@ from .ComplianceReportSummary import ComplianceReportSummary
 from .FinalSupplyEquipment import FinalSupplyEquipment
 from .FuelMeasurementType import FuelMeasurementType
 from .FuelSupply import FuelSupply
+from .FuelExport import FuelExport
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
@@ -26,6 +27,7 @@ __all__ = [
     "FinalSupplyEquipment",
     "FuelMeasurementType",
     "FuelSupply",
+    "FuelExport",
     "LevelOfEquipment",
     "NotionalTransfer",
     "OtherUses",
