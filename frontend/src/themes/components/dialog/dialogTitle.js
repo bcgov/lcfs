@@ -11,8 +11,8 @@ const dialogTitle = {
       padding: pxToRem(16),
       fontSize: size.xl,
       backgroundColor: background.primary,
-      border: "none",
-      color: white.main,
+      border: 'none',
+      color: white.main
     }
   }
 }

@@ -34,15 +34,20 @@ const OrgTransactionsCard = () => {
 
   const handleNavigation = (route, transactionType, statuses) => {
     const filters = [
-      { field: "transactionType", filterType: "text", type: "equals", filter: transactionType },
-      { field: 'status', filterType: 'set', type: 'set', filter: statuses },
+      {
+        field: 'transactionType',
+        filterType: 'text',
+        type: 'equals',
+        filter: transactionType
+      },
+      { field: 'status', filterType: 'set', type: 'set', filter: statuses }
     ]
     navigate(route, { state: { filters } })
   }
 
   function handleExternalNavigate(event, route) {
-    event.preventDefault();
-    window.open(route, '_blank', 'noopener,noreferrer');
+    event.preventDefault()
+    window.open(route, '_blank', 'noopener,noreferrer')
   }
 
   const renderLinkWithCount = (text, count, onClick, icons = []) => {
@@ -54,13 +59,17 @@ const OrgTransactionsCard = () => {
           color="link"
           sx={{
             textDecoration: 'underline',
-            '&:hover': { color: 'info.main' },
+            '&:hover': { color: 'info.main' }
           }}
           onClick={onClick}
         >
           {text}
           {icons.map((icon, index) => (
-            <FontAwesomeIcon key={index} icon={icon} style={{ color: '#578260', marginLeft: 6 }} />
+            <FontAwesomeIcon
+              key={index}
+              icon={icon}
+              style={{ color: '#578260', marginLeft: 6 }}
+            />
           ))}
         </BCTypography>
       </>
@@ -81,34 +90,54 @@ const OrgTransactionsCard = () => {
             <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
               {t('dashboard:orgTransactions.orgHas', { name: orgData?.name })}
             </BCTypography>
-            <List 
-              component="div" 
-              sx={{ 
-                maxWidth: '100%', 
+            <List
+              component="div"
+              sx={{
+                maxWidth: '100%',
                 padding: 0,
                 '& .MuiListItemButton-root': {
                   padding: '2px 0'
-                },
+                }
               }}
             >
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', ['Draft', 'Sent', 'Submitted'])}
+                onClick={() =>
+                  handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
+                    'Draft',
+                    'Sent',
+                    'Submitted'
+                  ])
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.transfersInProgress'),
                   counts?.transfers || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', ['Draft', 'Sent', 'Submitted'])
+                  () =>
+                    handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
+                      'Draft',
+                      'Sent',
+                      'Submitted'
+                    ])
                 )}
               </ListItemButton>
               <ListItemButton
                 component="a"
-                onClick={(e) => handleExternalNavigate(e, 'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf')}
+                onClick={(e) =>
+                  handleExternalNavigate(
+                    e,
+                    'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf'
+                  )
+                }
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.organizationsRegistered'),
                   null,
-                  (e) => handleExternalNavigate(e, 'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf'),
+                  (e) =>
+                    handleExternalNavigate(
+                      e,
+                      'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf'
+                    ),
                   [faFilePdf, faShareFromSquare]
                 )}
               </ListItemButton>
@@ -131,6 +160,9 @@ const OrgTransactionsCard = () => {
 }
 
 const AllowedRoles = [roles.transfers]
-const orgTransactionsWidgetWithRole = withRole(OrgTransactionsCard, AllowedRoles)
+const orgTransactionsWidgetWithRole = withRole(
+  OrgTransactionsCard,
+  AllowedRoles
+)
 
 export default orgTransactionsWidgetWithRole

@@ -33,8 +33,7 @@ const OrgDetailsCard = () => {
                 {orgData?.orgAddress.streetAddress}
               </BCTypography>
               <BCTypography variant="body4" color="primary">
-                {orgData?.orgAddress.city}{' '}
-                {orgData?.orgAddress.provinceState}
+                {orgData?.orgAddress.city} {orgData?.orgAddress.provinceState}
               </BCTypography>
               <BCTypography variant="body4" color="primary">
                 {orgData?.orgAddress.country}
@@ -81,7 +80,10 @@ const OrgDetailsCard = () => {
                     }}
                   >
                     {t('dashboard:orgDetails.createNewUsrLabel')}
-                    <FontAwesomeIcon icon={faShareFromSquare} style={{ color: '#578260', marginLeft: 6 }} />
+                    <FontAwesomeIcon
+                      icon={faShareFromSquare}
+                      style={{ color: '#578260', marginLeft: 6 }}
+                    />
                   </BCTypography>
                 </ListItemButton>
               </List>

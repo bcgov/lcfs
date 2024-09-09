@@ -17,11 +17,11 @@ vi.mock('react-i18next', () => ({
 const mockOrganizations = [
   {
     organizationId: 1,
-    name: 'Organization One',
+    name: 'Organization One'
   },
   {
     organizationId: 2,
-    name: 'Organization Two',
+    name: 'Organization Two'
   }
 ]
 
@@ -115,7 +115,9 @@ describe('TransactionDetails Component', () => {
     // Check if the balance is displayed correctly
     await waitFor(() => {
       expect(screen.getByText(/txn:complianceBalance/i)).toBeInTheDocument()
-      expect(screen.getByText(/1,000 \(100 txn:inReserve\)/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/1,000 \(100 txn:inReserve\)/i)
+      ).toBeInTheDocument()
     })
   })
 })

@@ -1,29 +1,37 @@
 // This component renders a form for adding or editing an internal comment.
 // It uses ReactQuill for rich text editing.
 
-import React, { useEffect, useState } from 'react';
-import PropTypes from 'prop-types';
-import ReactQuill from 'react-quill';
-import { GlobalStyles } from '@mui/system';
-import 'react-quill/dist/quill.snow.css';
+import React, { useEffect, useState } from 'react'
+import PropTypes from 'prop-types'
+import ReactQuill from 'react-quill'
+import { GlobalStyles } from '@mui/system'
+import 'react-quill/dist/quill.snow.css'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 
-const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCancel, isEditing = false, showAddCommentBtn = true, onCommentChange }) => {
+const InternalCommentForm = ({
+  title,
+  initialCommentText = '',
+  onSubmit,
+  onCancel,
+  isEditing = false,
+  showAddCommentBtn = true,
+  onCommentChange
+}) => {
   const { t } = useTranslation(['internalComment'])
-  const [commentText, setCommentText] = useState(initialCommentText);
+  const [commentText, setCommentText] = useState(initialCommentText)
 
   useEffect(() => {
-    setCommentText(initialCommentText);
-  }, [initialCommentText, isEditing]);
+    setCommentText(initialCommentText)
+  }, [initialCommentText, isEditing])
 
   useEffect(() => {
     if (onCommentChange) {
-      onCommentChange(commentText);
+      onCommentChange(commentText)
     }
-  }, [commentText, onCommentChange]);
+  }, [commentText, onCommentChange])
 
   return (
     <>
@@ -39,7 +47,9 @@ const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCance
           }
         }}
       />
-      <BCTypography variant="subtitle2" gutterBottom>{title}</BCTypography>
+      <BCTypography variant="subtitle2" gutterBottom>
+        {title}
+      </BCTypography>
       <ReactQuill
         value={commentText}
         onChange={setCommentText}
@@ -65,7 +75,9 @@ const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCance
             disabled={!commentText.trim()}
             sx={{ marginRight: 1 }}
           >
-            {isEditing ? t('internalComment:saveChanges') : t('internalComment:addComment')}
+            {isEditing
+              ? t('internalComment:saveChanges')
+              : t('internalComment:addComment')}
           </BCButton>
         )}
         {isEditing && (
@@ -80,8 +92,8 @@ const InternalCommentForm = ({ title, initialCommentText = '', onSubmit, onCance
         )}
       </BCBox>
     </>
-  );
-};
+  )
+}
 
 InternalCommentForm.propTypes = {
   title: PropTypes.string.isRequired,
@@ -90,7 +102,7 @@ InternalCommentForm.propTypes = {
   onCancel: PropTypes.func,
   isEditing: PropTypes.bool,
   showAddCommentBtn: PropTypes.bool,
-  onCommentChange: PropTypes.func,
-};
+  onCommentChange: PropTypes.func
+}
 
-export default InternalCommentForm;
+export default InternalCommentForm

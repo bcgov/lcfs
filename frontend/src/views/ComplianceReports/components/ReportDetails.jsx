@@ -29,7 +29,7 @@ import { AllocationAgreementSummary } from '@/views/AllocationAgreements/Allocat
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 
-const ReportDetails = ({currentStatus='Draft'}) => {
+const ReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
@@ -50,102 +50,111 @@ const ReportDetails = ({currentStatus='Draft'}) => {
 
   const activityList = useMemo(
     () => [
-      ...(currentStatus === 'Draft' ? [{
-        name: t('report:supportingDocs'),
-        action: () => console.log('clicked on supporting documents'),
-        useFetch: async () => ({
-          data: [],
-          isLoading: false,
-          isError: false,
-          isFetched: true
-        }),
-        component: (data) => <>Coming soon...</>
-      }]: []),
-      ...[{
-        name: t('report:activityLists.supplyOfFuel'),
-        action: () =>
-          navigate(
-            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          ),
-        useFetch: useGetFuelSupplies,
-        component: (data) =>
-          data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
-      },
-      {
-        name: t('finalSupplyEquipment:fseTitle'),
-        action: () =>
-          navigate(
-            ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          ),
-        useFetch: useGetFinalSupplyEquipments,
-        component: (data) =>
-          data.finalSupplyEquipments.length > 0 && (
-            <FinalSupplyEquipmentSummary data={data} />
-          )
-      },
-      {
-        name: t('report:activityLists.allocationAgreements'),
-        action: () =>
-          navigate(
-            ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          ),
-        useFetch: useGetAllocationAgreements,
-        component: (data) =>
-          data.allocationAgreements.length > 0 && (
-            <AllocationAgreementSummary data={data} />
-          )
-      },
-      {
-        name: t('report:activityLists.notionalTransfers'),
-        action: () =>
-          navigate(
-            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          ),
-        useFetch: useGetAllNotionalTransfers,
-        component: (data) =>
-          data.length > 0 && <NotionalTransferSummary data={data} />
-      },
-      {
-        name: t('otherUses:summaryTitle'),
-        action: () =>
-          navigate(
-            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          ),
-        useFetch: useGetAllOtherUses,
-        component: (data) => data.length > 0 && <OtherUsesSummary data={data} />
-      },
-      {
-        name: t('fuelExport:fuelExportTitle'),
-        action: () =>
-          navigate(
-            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          ),
-        useFetch: useGetFuelExports,
-        component: (data) => !isArrayEmpty(data) && <FuelExportSummary data={data} />
-      }
-    ]],
-    [currentStatus, t, navigate, compliancePeriod, complianceReportId, isArrayEmpty]
+      ...(currentStatus === 'Draft'
+        ? [
+            {
+              name: t('report:supportingDocs'),
+              action: () => console.log('clicked on supporting documents'),
+              useFetch: async () => ({
+                data: [],
+                isLoading: false,
+                isError: false,
+                isFetched: true
+              }),
+              component: (data) => <>Coming soon...</>
+            }
+          ]
+        : []),
+      ...[
+        {
+          name: t('report:activityLists.supplyOfFuel'),
+          action: () =>
+            navigate(
+              ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
+                ':compliancePeriod',
+                compliancePeriod
+              ).replace(':complianceReportId', complianceReportId)
+            ),
+          useFetch: useGetFuelSupplies,
+          component: (data) =>
+            data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
+        },
+        {
+          name: t('finalSupplyEquipment:fseTitle'),
+          action: () =>
+            navigate(
+              ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
+                ':compliancePeriod',
+                compliancePeriod
+              ).replace(':complianceReportId', complianceReportId)
+            ),
+          useFetch: useGetFinalSupplyEquipments,
+          component: (data) =>
+            data.finalSupplyEquipments.length > 0 && (
+              <FinalSupplyEquipmentSummary data={data} />
+            )
+        },
+        {
+          name: t('report:activityLists.allocationAgreements'),
+          action: () =>
+            navigate(
+              ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
+                ':compliancePeriod',
+                compliancePeriod
+              ).replace(':complianceReportId', complianceReportId)
+            ),
+          useFetch: useGetAllocationAgreements,
+          component: (data) =>
+            data.allocationAgreements.length > 0 && (
+              <AllocationAgreementSummary data={data} />
+            )
+        },
+        {
+          name: t('report:activityLists.notionalTransfers'),
+          action: () =>
+            navigate(
+              ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
+                ':compliancePeriod',
+                compliancePeriod
+              ).replace(':complianceReportId', complianceReportId)
+            ),
+          useFetch: useGetAllNotionalTransfers,
+          component: (data) =>
+            data.length > 0 && <NotionalTransferSummary data={data} />
+        },
+        {
+          name: t('otherUses:summaryTitle'),
+          action: () =>
+            navigate(
+              ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
+                ':compliancePeriod',
+                compliancePeriod
+              ).replace(':complianceReportId', complianceReportId)
+            ),
+          useFetch: useGetAllOtherUses,
+          component: (data) =>
+            data.length > 0 && <OtherUsesSummary data={data} />
+        },
+        {
+          name: t('fuelExport:fuelExportTitle'),
+          action: () =>
+            navigate(
+              ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
+                ':compliancePeriod',
+                compliancePeriod
+              ).replace(':complianceReportId', complianceReportId)
+            ),
+          useFetch: useGetFuelExports,
+          component: (data) => !isArrayEmpty(data) && <FuelExportSummary data={data} />
+        }
+      ]
+    ],
+    [currentStatus, t, navigate, compliancePeriod, complianceReportId]
   )
 
-  const [expanded, setExpanded] = useState(() => activityList.map((_, index) => `panel${index}`))
+  const [expanded, setExpanded] = useState(() =>
+    activityList.map((_, index) => `panel${index}`)
+  )
   const [allExpanded, setAllExpanded] = useState(true)
 
   const handleChange = (panel) => (event, isExpanded) => {
@@ -168,65 +177,77 @@ const ReportDetails = ({currentStatus='Draft'}) => {
     <>
       <Typography color="primary" variant="h5" mb={2} component="div">
         {t('report:reportDetails')}
-        <Link component="button" variant="body2" onClick={handleExpandAll} sx={{ ml: 2, mr: 1, textDecoration: 'underline' }}>
+        <Link
+          component="button"
+          variant="body2"
+          onClick={handleExpandAll}
+          sx={{ ml: 2, mr: 1, textDecoration: 'underline' }}
+        >
           {t('report:expandAll')}
         </Link>
         |
-        <Link component="button" variant="body2" onClick={handleCollapseAll} sx={{ ml: 1, textDecoration: 'underline' }}>
+        <Link
+          component="button"
+          variant="body2"
+          onClick={handleCollapseAll}
+          sx={{ ml: 1, textDecoration: 'underline' }}
+        >
           {t('report:collapseAll')}
         </Link>
       </Typography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          data && !isArrayEmpty(data) &&
-          <Accordion
-            key={index}
-            expanded={expanded.includes(`panel${index}`)}
-            onChange={handleChange(`panel${index}`)}
-          >
-            <AccordionSummary
-              expandIcon={
-                <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
-              }
-              aria-controls={`panel${index}-content`}
-              id={`panel${index}-header`}
-              data-test={`panel${index}-summary`}
+          data &&
+          !isArrayEmpty(data) && (
+            <Accordion
+              key={index}
+              expanded={expanded.includes(`panel${index}`)}
+              onChange={handleChange(`panel${index}`)}
             >
-              <Typography variant="h6" color="primary" component="div">
-                {activity.name}&nbsp;&nbsp;
-                {currentStatus === 'Draft' && (
-                  <>
-                    <Role
-                      roles={[
-                        roles.supplier,
-                        roles.compliance_reporting,
-                        roles.compliance_reporting
-                      ]}
-                    >
-                      <FontAwesomeIcon
-                        component="div"
-                        icon={faPen}
-                        size={'sm'}
-                        onClick={activity.action}
-                      />
-                    </Role>
-                  </>
+              <AccordionSummary
+                expandIcon={
+                  <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+                }
+                aria-controls={`panel${index}-content`}
+                id={`panel${index}-header`}
+                data-test={`panel${index}-summary`}
+              >
+                <Typography variant="h6" color="primary" component="div">
+                  {activity.name}&nbsp;&nbsp;
+                  {currentStatus === 'Draft' && (
+                    <>
+                      <Role
+                        roles={[
+                          roles.supplier,
+                          roles.compliance_reporting,
+                          roles.compliance_reporting
+                        ]}
+                      >
+                        <FontAwesomeIcon
+                          component="div"
+                          icon={faPen}
+                          size={'sm'}
+                          onClick={activity.action}
+                        />
+                      </Role>
+                    </>
+                  )}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {isLoading ? (
+                  <CircularProgress />
+                ) : error ? (
+                  <Typography color="error">Error loading data</Typography>
+                ) : activity.component ? (
+                  activity.component(data)
+                ) : (
+                  <Typography>{JSON.stringify(data)}</Typography>
                 )}
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              {isLoading ? (
-                <CircularProgress />
-              ) : error ? (
-                <Typography color="error">Error loading data</Typography>
-              ) : activity.component ? (
-                activity.component(data)
-              ) : (
-                <Typography>{JSON.stringify(data)}</Typography>
-              )}
-            </AccordionDetails>
-          </Accordion>
+              </AccordionDetails>
+            </Accordion>
+          )
         )
       })}
     </>

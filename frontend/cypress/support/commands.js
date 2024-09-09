@@ -63,7 +63,9 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.visit('/')
     cy.getByDataTest('login-container').should('exist')
     // Login as an IDIR user with Admin privileges.
-    expect(Cypress.env('admin_idir_username'), 'IDIR username is set').to.be.a('string').and.not.be.empty
+    expect(Cypress.env('admin_idir_username'), 'IDIR username is set').to.be.a(
+      'string'
+    ).and.not.be.empty
     cy.loginWith(
       'idir',
       Cypress.env('admin_idir_username'),
@@ -105,17 +107,15 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
   cy.visit('/admin/users')
 
   // Find the row with the specified name and click it
-  cy.contains('a', Cypress.env('admin_idir_email'))
-  .should('be.visible')
-    .click();
+  cy.contains('a', Cypress.env('admin_idir_email')).should('be.visible').click()
 
-  cy.url().should('match', /\/admin\/users\/\d+/);
+  cy.url().should('match', /\/admin\/users\/\d+/)
 
   // click edit button
-  cy.get('button[aria-label="edit"]').click();
+  cy.get('button[aria-label="edit"]').click()
 
   // Ensure the URL has changed to the user edit page
-  cy.url().should('include', '/edit-user');
+  cy.url().should('include', '/edit-user')
 
   const roleToSelect = role.toLowerCase()
   cy.get(`input[type="radio"][value="${roleToSelect}"]`).check()

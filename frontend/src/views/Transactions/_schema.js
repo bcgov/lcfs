@@ -1,40 +1,52 @@
-import { 
-  numberFormatter, 
-  currencyFormatter, 
-  dateFormatter, 
-  spacesFormatter 
+import {
+  numberFormatter,
+  currencyFormatter,
+  dateFormatter,
+  spacesFormatter
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 const prefixMap = {
-  "Transfer": "CT",
-  "AdminAdjustment": "AA",
-  "InitiativeAgreement": "IA"
-};
+  Transfer: 'CT',
+  AdminAdjustment: 'AA',
+  InitiativeAgreement: 'IA'
+}
 
 export const transactionsColDefs = (t) => [
-  { 
-    colId: 'transactionId', 
-    field: 'transactionId', 
-    headerName: t('txn:txnColLabels.txnId'), 
+  {
+    colId: 'transactionId',
+    field: 'transactionId',
+    headerName: t('txn:txnColLabels.txnId'),
     width: 175,
     valueGetter: (params) => {
-      const transactionType = params.data.transactionType;
-      const prefix = prefixMap[transactionType] || '';
-      return `${prefix}${params.data.transactionId}`;
+      const transactionType = params.data.transactionType
+      const prefix = prefixMap[transactionType] || ''
+      return `${prefix}${params.data.transactionId}`
     }
   },
-  { 
-    colId: 'transactionType', 
-    field: 'transactionType', 
-    headerName: t('txn:txnColLabels.type'), 
+  {
+    colId: 'transactionType',
+    field: 'transactionType',
+    headerName: t('txn:txnColLabels.type'),
     valueFormatter: spacesFormatter,
-    width: 222 
+    width: 222
   },
-  { colId: 'fromOrganization', field: 'fromOrganization', headerName: t('txn:txnColLabels.organizationFrom'), minWidth: 300, flex: 2 },
-  { colId: 'toOrganization', field: 'toOrganization', headerName: t('txn:txnColLabels.organizationTo'), minWidth: 300, flex: 2 },
+  {
+    colId: 'fromOrganization',
+    field: 'fromOrganization',
+    headerName: t('txn:txnColLabels.organizationFrom'),
+    minWidth: 300,
+    flex: 2
+  },
+  {
+    colId: 'toOrganization',
+    field: 'toOrganization',
+    headerName: t('txn:txnColLabels.organizationTo'),
+    minWidth: 300,
+    flex: 2
+  },
   {
     colId: 'quantity',
     field: 'quantity',
@@ -76,8 +88,8 @@ export const transactionsColDefs = (t) => [
     field: 'updateDate',
     headerName: t('txn:txnColLabels.updateDate'),
     valueFormatter: dateFormatter,
-    width: 190,
-  },
-];
+    width: 190
+  }
+]
 
 export const defaultSortModel = [{ field: 'transactionId', direction: 'desc' }]

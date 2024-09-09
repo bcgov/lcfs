@@ -17,7 +17,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
-import { reportsColDefs } from './components/_schema'
+import { reportsColDefs, defaultSortModel } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 
 export const ComplianceReports = () => {
@@ -33,19 +33,25 @@ export const ComplianceReports = () => {
   const location = useLocation()
   const { hasRoles, data: currentUser } = useCurrentUser()
 
-  const gridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: t('report:noReportsFound')
-  }),[t])
+  const gridOptions = useMemo(
+    () => ({
+      overlayNoRowsTemplate: t('report:noReportsFound')
+    }),
+    [t]
+  )
   const getRowId = useCallback((params) => params.data.complianceReportId, [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback(({data}) => {
-    navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        data.compliancePeriod.description
-      ).replace(':complianceReportId', data.complianceReportId)
-    )
-  }, [navigate])
+  const handleRowClicked = useCallback(
+    ({ data }) => {
+      navigate(
+        ROUTES.REPORTS_VIEW.replace(
+          ':compliancePeriod',
+          data.compliancePeriod.description
+        ).replace(':complianceReportId', data.complianceReportId)
+      )
+    },
+    [navigate]
+  )
 
   const handleGridKey = useCallback(() => {
     setGridKey(`reports-grid`)
@@ -138,16 +144,16 @@ export const ComplianceReports = () => {
             apiEndpoint={
               hasRoles(roles.supplier)
                 ? apiRoutes.getOrgComplianceReports.replace(
-                  ':orgID',
-                  currentUser?.organization?.organizationId
-                )
+                    ':orgID',
+                    currentUser?.organization?.organizationId
+                  )
                 : apiRoutes.getComplianceReports
             }
             apiData={'reports'}
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
             gridKey={gridKey}
             getRowId={getRowId}
-            // defaultSortModel={defaultSortModel}
+            defaultSortModel={defaultSortModel}
             defaultFilterModel={location.state?.filters}
             gridOptions={gridOptions}
             handleGridKey={handleGridKey}

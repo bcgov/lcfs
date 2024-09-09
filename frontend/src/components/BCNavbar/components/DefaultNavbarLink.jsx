@@ -12,7 +12,14 @@ import Icon from '@mui/material/Icon'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-function DefaultNavbarLink({ icon, name, route, light, onClick, isMobileView }) {
+function DefaultNavbarLink({
+  icon,
+  name,
+  route,
+  light,
+  onClick,
+  isMobileView
+}) {
   const [hover, setHover] = useState(false)
   return (
     <BCBox
@@ -34,13 +41,19 @@ function DefaultNavbarLink({ icon, name, route, light, onClick, isMobileView }) 
         paddingBottom: isMobileView ? '10px' : '15px',
         '&:hover': {
           borderBottom: isMobileView ? '0' : '6px solid #38598a',
-          backgroundColor: hover ? ( isMobileView ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.2)') : 'transparent',
+          backgroundColor: hover
+            ? isMobileView
+              ? 'rgba(0, 0, 0, 0.1)'
+              : 'rgba(0, 0, 0, 0.2)'
+            : 'transparent',
           paddingBottom: isMobileView ? '10px' : '9px'
         },
         '&.active': {
           borderBottom: isMobileView ? '0' : '3px solid #fcc219',
           borderLeft: isMobileView ? '3px solid #fcc219' : '0',
-          backgroundColor: isMobileView ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.3)',
+          backgroundColor: isMobileView
+            ? 'rgba(0, 0, 0, 0.2)'
+            : 'rgba(0, 0, 0, 0.3)',
           paddingBottom: isMobileView ? '11px' : '12px',
           paddingLeft: isMobileView ? '13px' : 2
         },

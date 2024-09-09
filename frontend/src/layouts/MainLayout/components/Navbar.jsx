@@ -6,39 +6,46 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HeaderComponent } from './HeaderComponent'
 import { Logout } from './Logout'
+import { useMediaQuery, useTheme } from '@mui/material'
 
 export const Navbar = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
+  const theme = useTheme()
+  const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
   // Nav Links
-  const navMenuItems = useMemo(
-    () =>
-      currentUser.isGovernmentUser
-        ? // IDIR Routes
-          [
-            { name: t('Dashboard'), route: ROUTES.DASHBOARD },
-            { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
-            { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
-            { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
-            {
-              name: t('FuelCodes'),
-              route: ROUTES.FUELCODES,
-              hide: !currentUser.roles.find(
-                (role) => role.name === roles.analyst
-              )
-            },
-            { name: t('Administration'), route: ROUTES.ADMIN }
-          ]
-        : // BCeID Routes
-          [
-            { name: t('Dashboard'), route: ROUTES.DASHBOARD },
-            { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
-            { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
-            { name: t('Organization'), route: ROUTES.ORGANIZATION }
-          ],
-    [currentUser, t]
-  )
+  const navMenuItems = useMemo(() => {
+    const isAnalyst = currentUser.roles.find(
+      (role) => role.name === roles.analyst
+    )
+    const idirRoutes = [
+      { name: t('Dashboard'), route: ROUTES.DASHBOARD },
+      { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
+      { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
+      { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
+      {
+        name: t('FuelCodes'),
+        route: ROUTES.FUELCODES,
+        hide: !isAnalyst
+      },
+      { name: t('Administration'), route: ROUTES.ADMIN }
+    ]
+    const bceidRoutes = [
+      { name: t('Dashboard'), route: ROUTES.DASHBOARD },
+      { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
+      { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
+      { name: t('Organization'), route: ROUTES.ORGANIZATION }
+    ]
+    const mobileRoutes = [{ name: t('logout'), route: ROUTES.LOG_OUT }]
+
+    const activeRoutes = currentUser.isGovernmentUser ? idirRoutes : bceidRoutes
+
+    if (isMobileView) {
+      activeRoutes.push(...mobileRoutes)
+    }
+    return activeRoutes
+  }, [currentUser, t, isMobileView])
 
   return (
     <BCNavbar

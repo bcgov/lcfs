@@ -26,12 +26,13 @@ import { NotFound } from './components/NotFound'
 import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
 import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComplianceReport'
-import { AddEditNotionalTransfers } from './views/NotionalTransfers/AddEditNotionalTransfers'
+import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
 import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
+import { logout } from '@/utils/keycloak.js'
 
 const router = createBrowserRouter([
   {
@@ -369,6 +370,13 @@ const router = createBrowserRouter([
     path: ROUTES.CONTACT_US,
     element: <ContactUs />,
     handle: { crumb: () => 'Contact Us' }
+  },
+  {
+    path: ROUTES.LOG_OUT,
+    loader: async () => {
+      logout()
+      return null
+    }
   },
   {
     path: '*',

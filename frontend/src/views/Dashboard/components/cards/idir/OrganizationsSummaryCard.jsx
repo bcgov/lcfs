@@ -1,15 +1,15 @@
-import React from 'react';
-import { Box, Tooltip, Fade, Select, MenuItem } from '@mui/material';
-import InfoIcon from '@mui/icons-material/Info';
-import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard';
-import BCTypography from '@/components/BCTypography';
+import React from 'react'
+import { Box, Tooltip, Fade, Select, MenuItem } from '@mui/material'
+import InfoIcon from '@mui/icons-material/Info'
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import BCTypography from '@/components/BCTypography'
 
 // Placeholder data object
 const placeholderData = {
   totalUnits: 857361,
   reservedUnits: 113867,
-  organizations: ['All organizations', 'Organization 1', 'Organization 2'],
-};
+  organizations: ['All organizations', 'Organization 1', 'Organization 2']
+}
 
 const OrganizationsSummaryCard = () => {
   return (
@@ -21,7 +21,7 @@ const OrganizationsSummaryCard = () => {
         '& .MuiCardContent-root': { padding: '16px' },
         margin: '0 auto',
         maxWidth: '300px',
-        boxShadow: 1,
+        boxShadow: 1
       }}
       content={
         <Box
@@ -34,7 +34,9 @@ const OrganizationsSummaryCard = () => {
           justifyContent="center"
           sx={{ width: '100%' }}
         >
-          <BCTypography style={{ fontSize: '16px', color: '#003366', marginBottom: '2px' }}>
+          <BCTypography
+            style={{ fontSize: '16px', color: '#003366', marginBottom: '2px' }}
+          >
             All organizations
           </BCTypography>
           <BCTypography
@@ -50,7 +52,10 @@ const OrganizationsSummaryCard = () => {
             compliance units
           </BCTypography>
           <Box display="flex" alignItems="center" mt={1}>
-            <BCTypography style={{ fontSize: '22px', color: '#578260' }} component="span">
+            <BCTypography
+              style={{ fontSize: '22px', color: '#578260' }}
+              component="span"
+            >
               ({placeholderData.reservedUnits.toLocaleString()} in reserve)
             </BCTypography>
             <Tooltip
@@ -61,7 +66,9 @@ const OrganizationsSummaryCard = () => {
               <InfoIcon style={{ marginLeft: '4px', color: '#578260' }} />
             </Tooltip>
           </Box>
-          <BCTypography style={{ fontSize: '14px', color: '#003366', marginTop: '6px' }}>
+          <BCTypography
+            style={{ fontSize: '14px', color: '#003366', marginTop: '6px' }}
+          >
             Show balance for:
           </BCTypography>
           <Select
@@ -72,7 +79,7 @@ const OrganizationsSummaryCard = () => {
               padding: '8px',
               width: 'calc(100% - 20px)',
               bgcolor: 'background.paper',
-              borderRadius: 1,
+              borderRadius: 1
             }}
           >
             {placeholderData.organizations.map((org, index) => (
@@ -84,7 +91,7 @@ const OrganizationsSummaryCard = () => {
         </Box>
       }
     />
-  );
-};
+  )
+}
 
-export default OrganizationsSummaryCard;
+export default OrganizationsSummaryCard

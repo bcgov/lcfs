@@ -38,7 +38,7 @@ const resources = {
     fuelSupply: fuelSupplyEn,
     fuelExport: fuelExportEn,
     dashboard: dashboardEn,
-    allocationAgreement: allocationAgreementEn,
+    allocationAgreement: allocationAgreementEn
   }
 }
 

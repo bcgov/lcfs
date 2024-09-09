@@ -38,7 +38,7 @@ export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
                   render={({ field: { onChange, value } }) => {
                     return (
                       <Checkbox
-                        id={option.value.toLowerCase().replace(/\s/g, "-")}
+                        id={option.value.toLowerCase().replace(/\s/g, '-')}
                         sx={{ marginTop: 0.5 }}
                         checked={value.includes(option.value)}
                         onChange={() =>

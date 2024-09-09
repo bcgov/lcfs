@@ -2,7 +2,12 @@ import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi } from 'vitest'
-import { useDirectorReviewCounts, useTransactionCounts, useOrgTransactionCounts } from '@/hooks/useDashboard'
+import {
+  useDirectorReviewCounts,
+  useTransactionCounts,
+  useOrgTransactionCounts,
+  useOrgComplianceReportCounts
+} from '@/hooks/useDashboard'
 import { useApiService } from '@/services/useApiService'
 
 vi.mock('@/services/useApiService')
@@ -12,9 +17,9 @@ const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        retry: false,
-      },
-    },
+        retry: false
+      }
+    }
   })
 
   return ({ children }) => (
@@ -32,11 +37,11 @@ describe('useDirectorReviewCounts', () => {
 
   it('fetches the director review counts successfully', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { review_counts: 10 },
+      data: { review_counts: 10 }
     })
 
     const { result } = renderHook(() => useDirectorReviewCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -49,7 +54,7 @@ describe('useDirectorReviewCounts', () => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
     const { result } = renderHook(() => useDirectorReviewCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
@@ -68,11 +73,11 @@ describe('useTransactionCounts', () => {
 
   it('fetches the transaction counts successfully', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { transaction_counts: 20 },
+      data: { transaction_counts: 20 }
     })
 
     const { result } = renderHook(() => useTransactionCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -85,7 +90,7 @@ describe('useTransactionCounts', () => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
     const { result } = renderHook(() => useTransactionCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
@@ -104,11 +109,11 @@ describe('useOrgTransactionCounts', () => {
 
   it('fetches the org transaction counts successfully', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { org_transaction_counts: 30 },
+      data: { org_transaction_counts: 30 }
     })
 
     const { result } = renderHook(() => useOrgTransactionCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -121,6 +126,42 @@ describe('useOrgTransactionCounts', () => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
     const { result } = renderHook(() => useOrgTransactionCounts(), {
+      wrapper: createWrapper()
+    })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(result.current.error).toEqual(new Error('Failed to fetch'))
+  })
+})
+
+describe('useOrgComplianceReportCounts', () => {
+  const mockGet = vi.fn()
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+  })
+
+  it('fetches the org compliance report counts successfully', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { org_compliance_report_counts: 40 },
+    })
+
+    const { result } = renderHook(() => useOrgComplianceReportCounts(), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toEqual({ org_compliance_report_counts: 40 })
+    expect(mockGet).toHaveBeenCalledWith('/dashboard/org-compliance-report-counts')
+  })
+
+  it('handles errors correctly', async () => {
+    mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
+
+    const { result } = renderHook(() => useOrgComplianceReportCounts(), {
       wrapper: createWrapper(),
     })
 

@@ -26,13 +26,21 @@ export const AddEditFinalSupplyEquipments = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
 
-  const { data: optionsData, isLoading: optionsLoading, isFetched } = useFinalSupplyEquipmentOptions()
-  const { mutateAsync: saveRow } = useSaveFinalSupplyEquipment(complianceReportId)
-  const { data, isLoading: equipmentsLoading } = useGetFinalSupplyEquipments(complianceReportId)
+  const {
+    data: optionsData,
+    isLoading: optionsLoading,
+    isFetched
+  } = useFinalSupplyEquipmentOptions()
+  const { mutateAsync: saveRow } =
+    useSaveFinalSupplyEquipment(complianceReportId)
+  const { data, isLoading: equipmentsLoading } =
+    useGetFinalSupplyEquipments(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('finalSupplyEquipment:noFinalSupplyEquipmentsFound'),
+      overlayNoRowsTemplate: t(
+        'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
+      ),
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -62,7 +70,11 @@ export const AddEditFinalSupplyEquipments = () => {
 
   useEffect(() => {
     if (optionsData?.levelsOfEquipment?.length > 0) {
-      const updatedColumnDefs = finalSupplyEquipmentColDefs(optionsData, compliancePeriod, errors)
+      const updatedColumnDefs = finalSupplyEquipmentColDefs(
+        optionsData,
+        compliancePeriod,
+        errors
+      )
       setColumnDefs(updatedColumnDefs)
     }
   }, [errors, optionsData])
@@ -73,7 +85,7 @@ export const AddEditFinalSupplyEquipments = () => {
         ...item,
         levelOfEquipment: item.levelOfEquipment.name,
         fuelMeasurementType: item.fuelMeasurementType.type,
-        intendedUses: item.intendedUseTypes.map(i => i.type),
+        intendedUses: item.intendedUseTypes.map((i) => i.type),
         id: uuid()
       }))
       setRowData(updatedRowData)
@@ -208,7 +220,12 @@ export const AddEditFinalSupplyEquipments = () => {
           <Typography variant="h5" color="primary">
             {t('finalSupplyEquipment:addFSErowsTitle')}
           </Typography>
-          <Typography variant="body4" color="primary" sx={{ marginY: '2rem' }} component="div">
+          <Typography
+            variant="body4"
+            color="primary"
+            sx={{ marginY: '2rem' }}
+            component="div"
+          >
             {t('finalSupplyEquipment:fseSubtitle')}
           </Typography>
         </div>

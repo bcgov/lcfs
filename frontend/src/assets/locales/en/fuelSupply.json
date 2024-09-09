@@ -21,7 +21,7 @@
     "quantity": "Quantity supplied",
     "units": "Units",
     "complianceUnits": "Compliance units",
-    "ciLimit": "CI limit",
+    "targetCi": "Target CI",
     "ciOfFuel": "CI of fuel",
     "energyDensity": "Energy density",
     "eer": "EER",

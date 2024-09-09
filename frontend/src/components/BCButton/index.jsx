@@ -4,7 +4,10 @@ import BCButtonRoot from './BCButtonRoot'
 import { CircularProgress } from '@mui/material'
 
 const BCButton = forwardRef(
-  ({ color, variant, size, circular, iconOnly, isLoading, children, ...rest }, ref) => {
+  (
+    { color, variant, size, circular, iconOnly, isLoading, children, ...rest },
+    ref
+  ) => {
     return (
       <BCButtonRoot
         {...rest}
@@ -14,7 +17,7 @@ const BCButton = forwardRef(
         size={size}
         ownerState={{ color, variant, size, circular, iconOnly }}
       >
-        {isLoading ? <CircularProgress size={22} color='white' /> : children}
+        {isLoading ? <CircularProgress size={22} color="white" /> : children}
       </BCButtonRoot>
     )
   }

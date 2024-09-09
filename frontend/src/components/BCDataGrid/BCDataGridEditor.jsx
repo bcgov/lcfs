@@ -96,86 +96,95 @@ const BCDataGridEditor = ({
   const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
   const tabToNextCell = useCallback((params) => params.nextCellPosition, [])
 
-  const defaultGridOptions = useMemo(() => ({
-    undoRedoCellEditing: true,
-    undoRedoCellEditingLimit: 5,
-    reactiveCustomComponents: true,
-    overlayNoRowsTemplate: 'No rows found',
-    autoSizeStrategy: { type: 'fitCellContents' },
-    suppressDragLeaveHidesColumns: true,
-    suppressMovableColumns: true,
-    suppressColumnMoveAnimation: false,
-    rowSelection: 'multiple',
-    editType: 'fullRow',
-    enableBrowserTooltips: true,
-    rowHeight: 45,
-    headerHeight: 40,
-    animateRows: true,
-    tabToNextCell,
-    suppressPaginationPanel: true,
-    suppressScrollOnNewData: true,
-    suppressCsvExport: false,
-    components: frameworkComponents,
-    onFirstDataRendered: (params) => {
-      params.api.startEditingCell({
-        rowIndex: 0,
-        colKey: params.api.getDisplayedCenterColumns()[0].colId,
-      })
-    },
-    getRowStyle: highlightedRowId
-      ? (params) => {
-        if (params.node.id === highlightedRowId) {
-          return { backgroundColor: '#fade81' }
-        }
-      }
-      : undefined,
-  }), [highlightedRowId, frameworkComponents, tabToNextCell])
-
-  const onRowEditingStartedHandler = useCallback((params) => {
-    params.api.refreshCells({
-      columns: ['action'],
-      rowNodes: [params.node],
-      force: true,
-    })
-    if (onRowEditingStarted) {
-      onRowEditingStarted(params)
-    }
-  }, [onRowEditingStarted])
-
-  const onRowEditingStoppedHandler = useCallback((params) => {
-    if (onRowEditingStopped) {
-      onRowEditingStopped(params)
-    }
-    // Check if any data field has changed
-    if (params.data.modified && !params.data.deleted) {
-      onValidated('pending', 'Updating row...')
-      saveRow(params.data, {
-        onSuccess: (resp) => {
-          params.data.modified = false
-          params.data.isValid = true
-          if (onValidated) {
-            onValidated('success', 'Row updated successfully.', params, resp)
-          }
-          params.api.refreshCells()
-        },
-        onError: (error) => {
-          params.data.isValid = false
-          params.api.refreshCells()
-          if (onValidated) {
-            if (error.code === 'ERR_BAD_REQUEST') {
-              onValidated('error', error, params)
-              // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
-            } else {
-              onValidated('error', `Error updating row: ${error.message}`)
+  const defaultGridOptions = useMemo(
+    () => ({
+      undoRedoCellEditing: true,
+      undoRedoCellEditingLimit: 5,
+      reactiveCustomComponents: true,
+      overlayNoRowsTemplate: 'No rows found',
+      autoSizeStrategy: { type: 'fitCellContents' },
+      suppressDragLeaveHidesColumns: true,
+      suppressMovableColumns: true,
+      suppressColumnMoveAnimation: false,
+      rowSelection: 'multiple',
+      editType: 'fullRow',
+      enableBrowserTooltips: true,
+      rowHeight: 45,
+      headerHeight: 40,
+      animateRows: true,
+      tabToNextCell,
+      suppressPaginationPanel: true,
+      suppressScrollOnNewData: true,
+      suppressCsvExport: false,
+      components: frameworkComponents,
+      onFirstDataRendered: (params) => {
+        params.api.startEditingCell({
+          rowIndex: 0,
+          colKey: params.api.getDisplayedCenterColumns()[0].colId
+        })
+      },
+      getRowStyle: highlightedRowId
+        ? (params) => {
+            if (params.node.id === highlightedRowId) {
+              return { backgroundColor: '#fade81' }
             }
           }
-        }
+        : undefined
+    }),
+    [highlightedRowId, frameworkComponents, tabToNextCell]
+  )
+
+  const onRowEditingStartedHandler = useCallback(
+    (params) => {
+      params.api.refreshCells({
+        columns: ['action'],
+        rowNodes: [params.node],
+        force: true
       })
-    }
-  
-    params.api.redrawRows({ rowNodes: [params.node] })
-  }, [onRowEditingStopped, onValidated, saveRow])
-  
+      if (onRowEditingStarted) {
+        onRowEditingStarted(params)
+      }
+    },
+    [onRowEditingStarted]
+  )
+
+  const onRowEditingStoppedHandler = useCallback(
+    (params) => {
+      if (onRowEditingStopped) {
+        onRowEditingStopped(params)
+      }
+      // Check if any data field has changed
+      if (params.data.modified && !params.data.deleted) {
+        onValidated('pending', 'Updating row...')
+        saveRow(params.data, {
+          onSuccess: (resp) => {
+            params.data.modified = false
+            params.data.isValid = true
+            if (onValidated) {
+              onValidated('success', 'Row updated successfully.', params, resp)
+            }
+            params.api.refreshCells()
+          },
+          onError: (error) => {
+            params.data.isValid = false
+            params.api.refreshCells()
+            if (onValidated) {
+              if (error.code === 'ERR_BAD_REQUEST') {
+                onValidated('error', error, params)
+                // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
+              } else {
+                onValidated('error', `Error updating row: ${error.message}`)
+              }
+            }
+          }
+        })
+      }
+
+      params.api.redrawRows({ rowNodes: [params.node] })
+    },
+    [onRowEditingStopped, onValidated, saveRow]
+  )
+
   function onCellValueChanged(params) {
     if (!isEqual(params.oldValue, params.newValue)) {
       params.data.modified = true
@@ -187,7 +196,9 @@ const BCDataGridEditor = ({
       <AgGridReact
         gridKey={gridKey}
         gridRef={gridRef}
-        stopEditingWhenCellsLoseFocus={props.stopEditingWhenCellsLoseFocus ?? false}
+        stopEditingWhenCellsLoseFocus={
+          props.stopEditingWhenCellsLoseFocus ?? false
+        }
         gridApi={gridApi}
         className={className}
         columnDefs={columnDefs}
@@ -213,7 +224,7 @@ const BCDataGridEditor = ({
           position: 'relative',
           border: 'none',
           borderRadius: '0px 0px 4px 4px',
-          overflow: 'hidden',
+          overflow: 'hidden'
         }}
       >
         {props.statusBarComponent}
@@ -246,8 +257,8 @@ BCDataGridEditor.propTypes = {
     'ag-theme-quartz-auto-dark',
     'ag-theme-balham',
     'ag-theme-balham-dark',
-    'ag-theme-balham-auto-dark',
-  ]),
+    'ag-theme-balham-auto-dark'
+  ])
 }
 
 BCDataGridEditor.defaultProps = {
@@ -261,7 +272,7 @@ BCDataGridEditor.defaultProps = {
   loadingOverlayComponentParams: { loadingMessage: 'One moment please...' },
   className: 'ag-theme-quartz',
   getRowNodeId: uuid(),
-  onValidated: null,
+  onValidated: null
 }
 
 export default BCDataGridEditor

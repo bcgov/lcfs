@@ -18,7 +18,9 @@ export const useGetAllNotionalTransfers = (complianceReportId, options) => {
     queryKey: ['notional-transfers', complianceReportId],
     queryFn: async () => {
       return (
-        await client.post(apiRoutes.getAllNotionalTransfers, { complianceReportId })
+        await client.post(apiRoutes.getAllNotionalTransfers, {
+          complianceReportId
+        })
       ).data.notionalTransfers
     },
     ...options
@@ -36,18 +38,36 @@ export const useSaveNotionalTransfer = (complianceReportId, options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['notional-transfers', complianceReportId])
-      queryClient.invalidateQueries(['compliance-report-summary', complianceReportId])
-    },
+      queryClient.invalidateQueries([
+        'compliance-report-summary',
+        complianceReportId
+      ])
+    }
   })
 }
 
-export const useGetNotionalTransfers = ({page=1, size=10, sortOrders=[], filters=[], complianceReportId} ={}, options) => {
+export const useGetNotionalTransfers = (
+  {
+    page = 1,
+    size = 10,
+    sortOrders = [],
+    filters = [],
+    complianceReportId
+  } = {},
+  options
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['notional-transfers', page, size, sortOrders, filters],
     queryFn: async () => {
       return (
-        await client.post(apiRoutes.getNotionalTransfers, {page, size, sortOrders, filters, complianceReportId})
+        await client.post(apiRoutes.getNotionalTransfers, {
+          page,
+          size,
+          sortOrders,
+          filters,
+          complianceReportId
+        })
       ).data
     },
     ...options
