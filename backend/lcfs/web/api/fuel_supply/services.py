@@ -124,6 +124,7 @@ class FuelSupplyServices:
                     eer_ratios=[eer],
                     target_carbon_intensities=[tci],
                     fuel_codes=[fuel_code] if fuel_code else [],
+                    unrecognized=row_data["unrecognized"],
                 )
             fuel_types.append(fuel_type)
 

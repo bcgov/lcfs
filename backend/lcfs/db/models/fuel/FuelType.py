@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
 import enum
 
-
+# Enum for fuel quantity units
 class QuantityUnitsEnum(enum.Enum):
     Litres = 'L'
     Kilograms = "kg"
@@ -36,10 +36,16 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         "provision_of_the_act.provision_of_the_act_id"), nullable=True)
     default_carbon_intensity = Column(Float(
         10, 2), nullable=True, comment="Carbon intensities: default & prescribed (gCO2e/MJ)")
-
     units = Column(Enum(QuantityUnitsEnum), nullable=False,
                    comment="Units of fuel quantity")
+    unrecognized = Column(
+        Boolean,
+        default=False,
+        nullable=False,
+        comment="Indicates if the fuel type is unrecognized"
+    )
 
+    # Relationships
     fuel_codes = relationship('FuelCode',  back_populates='fuel_code_type')
     energy_density = relationship('EnergyDensity', back_populates='fuel_type')
     energy_effectiveness_ratio = relationship(
@@ -49,4 +55,4 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
                                provision_1_id], back_populates="fuel_type_provision_1")
     provision_2 = relationship('ProvisionOfTheAct', foreign_keys=[
                                provision_2_id], back_populates="fuel_type_provision_2")
-    fuel_classes = relationship("FuelClass", back_populates="fuel_type")
+    fuel_instances = relationship("FuelInstance", back_populates="fuel_type")

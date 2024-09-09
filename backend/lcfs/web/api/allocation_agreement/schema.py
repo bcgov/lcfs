@@ -22,6 +22,7 @@ class FuelTypeSchema(BaseSchema):
     fuel_type: str
     default_carbon_intensity: float
     units: str
+    unrecognized: bool
     fuel_categories: List[FuelCategorySchema]
     fuel_codes: Optional[List[FuelCodeSchema]] = []
 

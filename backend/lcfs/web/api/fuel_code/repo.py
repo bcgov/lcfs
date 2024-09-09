@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
 from lcfs.db.models.fuel.FuelType import FuelType
-from lcfs.db.models.fuel.FuelClass import FuelClass
+from lcfs.db.models.fuel.FuelInstance import FuelInstance
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
@@ -54,10 +54,10 @@ class FuelCodeRepository:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
         query = (
             select(FuelType)
-            .outerjoin(FuelType.fuel_classes)
-            .outerjoin(FuelClass.fuel_category)
+            .outerjoin(FuelType.fuel_instances)
+            .outerjoin(FuelInstance.fuel_category)
             .options(
-                contains_eager(FuelType.fuel_classes).contains_eager(FuelClass.fuel_category),
+                contains_eager(FuelType.fuel_instances).contains_eager(FuelInstance.fuel_category),
                 joinedload(FuelType.provision_1),
                 joinedload(FuelType.provision_2),
                 joinedload(FuelType.fuel_codes),
@@ -75,12 +75,13 @@ class FuelCodeRepository:
                 "fuel_type": fuel_type.fuel_type,
                 "default_carbon_intensity": fuel_type.default_carbon_intensity,
                 "units": fuel_type.units if fuel_type.units else None,
+                "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [
                     {
                         "fuel_category_id": fc.fuel_category.fuel_category_id,
                         "category": fc.fuel_category.category
                     }
-                    for fc in fuel_type.fuel_classes
+                    for fc in fuel_type.fuel_instances
                 ],
                 "fuel_codes": [
                     {

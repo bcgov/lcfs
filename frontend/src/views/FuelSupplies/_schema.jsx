@@ -104,6 +104,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         params.data.fuelCode = undefined
         params.data.quantity = 0
         params.data.units = fuelType?.unit
+        params.data.unrecognized = fuelType?.unrecognized
       }
       return true
     },
@@ -114,12 +115,12 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
+      const conditionalStyle = params.data.unrecognized
         ? { backgroundColor: '#fff', borderColor: 'unset' }
         : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
-    editable: (params) => /other/i.test(params.data.fuelType)
+    editable: (params) => params.data.unrecognized
   },
   {
     field: 'fuelCategory',
