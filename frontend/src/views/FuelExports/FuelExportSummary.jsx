@@ -1,18 +1,16 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { apiRoutes } from '@/constants/routes'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { v4 as uuid } from 'uuid'
 
 export const FuelExportSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [gridKey, setGridKey] = useState(`fuel-exports-grid`)
   const { complianceReportId } = useParams()
 
   const gridRef = useRef()
@@ -70,10 +68,6 @@ export const FuelExportSummary = ({ data }) => {
     return params.data.fuelExportId
   }
 
-  const handleGridKey = () => {
-    setGridKey(`fuel-exports-grid-${uuid()}`)
-  }
-
   return (
     <Grid2 className="fuel-export-container" mx={-1}>
       <div>
@@ -84,17 +78,15 @@ export const FuelExportSummary = ({ data }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
-          className={'ag-theme-material'}
+        <BCGridViewer
+          gridKey={"fuel-exports"}
           gridRef={gridRef}
-          apiEndpoint={apiRoutes.getAllFuelExports}
-          apiData={'fuelExports'}
-          apiParams={{ complianceReportId }}
+          query={useGetFuelExports}
+          dataKey={'fuelExports'}
+          queryParams={{ complianceReportId }}
           columnDefs={columns}
-          gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}
-          handleGridKey={handleGridKey}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.fuelExports.length <= 10}

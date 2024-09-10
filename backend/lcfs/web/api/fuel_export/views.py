@@ -35,7 +35,7 @@ get_async_db = dependencies.get_async_db_session
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-async def get_fs_table_options(
+async def get_fuel_export_table_options(
     request: Request, compliancePeriod: str, service: FuelExportServices = Depends()
 ) -> FuelTypeOptionsResponse:
     return await service.get_fuel_export_options(compliancePeriod)
@@ -45,7 +45,7 @@ async def get_fs_table_options(
     "/list-all", response_model=FuelExportsSchema, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.SUPPLIER])
-async def get_fuel_export(
+async def get_fuel_exports(
     request: Request,
     request_data: CommmonPaginatedReportRequestSchema = Body(...),
     response: Response = None,
