@@ -70,7 +70,6 @@ export const NewComplianceReportButton = ({
           />
         }
         onClick={handleClick}
-        loadingPosition="start"
       >
         {t('report:newReportBtn')}
       </BCButton>

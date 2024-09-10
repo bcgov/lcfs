@@ -71,7 +71,7 @@ export const ActivityLinksList = () => {
         name: t('report:activityLists.exportFuels'),
         action: () => {
           navigate(
-            ROUTES.REPORTS_ADD_EXPORT_FUELS.replace(
+            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
               ':compliancePeriod',
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)
