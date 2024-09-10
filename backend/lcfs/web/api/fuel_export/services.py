@@ -302,7 +302,7 @@ class FuelExportServices:
             else 0
         )
 
-        if "Fuel code" in fs_data.determining_carbon_intensity:
+        if "Fuel code" in fs_data.provision_of_the_act:
             effective_carbon_intensity = (
                 next(
                     (
@@ -348,11 +348,11 @@ class FuelExportServices:
         )
         eer = next(
             (
-                item['energyEffectivenessRatio']
-                for item in fuel_export_options["eerRatios"]
+                item["energyEffectivenessRatio"]
+                for item in (eer_options["eerRatios"] if eer_options else [])
                 if item["fuelCategory"]["fuelCategory"] == fs_data.fuel_category
                 and (
-                    item["endeUseType"] is None
+                    item.get("endeUseType") is None
                     or item["endUseType"]["type"] == fs_data.end_use
                 )
             ),
@@ -370,15 +370,14 @@ class FuelExportServices:
         fs_data.target_ci = target_ci
         fs_data.ci_of_fuel = effective_carbon_intensity
         fs_data.energy_density = energy_density
+        fs_data.energy = energy_content
         fs_data.eer = eer
-        fs_data.compliance_units = compliance_units
+        fs_data.compliance_units = max(compliance_units, 0)
         return fs_data
 
     @service_handler
     async def update_fuel_export(self, fs_data: FuelExportSchema) -> FuelExportSchema:
         """Update an existing fuel supply record"""
-        if fs_data.quantity <= 0:
-            raise ValueError("Quantity cannot be zero or negative value.")
         fs_data = await self.validate_and_calculate_compliance_units(fs_data)
         existing_fs = await self.repo.get_fuel_export_by_id(fs_data.fuel_export_id)
         if not existing_fs:
@@ -410,8 +409,6 @@ class FuelExportServices:
     @service_handler
     async def create_fuel_export(self, fs_data: FuelExportSchema) -> FuelExportSchema:
         """Create a new fuel supply record"""
-        if fs_data.quantity <= 0:
-            raise ValueError("Quantity cannot be zero or negative value.")
         fs_data = await self.validate_and_calculate_compliance_units(fs_data)
         fuel_export = FuelExport(
             **fs_data.model_dump(
@@ -419,6 +416,7 @@ class FuelExportServices:
                     "id",
                     "fuel_type",
                     "fuel_category",
+                    "compliance_period",
                     "provision_of_the_act",
                     "end_use",
                     "fuel_code",

@@ -7,8 +7,7 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
     SortOrder,
 )
-from pydantic import Field, field_validator
-
+from pydantic import Field, field_validator, validator
 
 class FuelTypeQuantityUnitsEnumSchema(str, Enum):
     Litres = "L"
@@ -132,7 +131,7 @@ class FuelExportSchema(BaseSchema):
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_type: FuelTypeSchema
-    quantity: int
+    quantity: int = Field(..., gt=0)
     units: str
     export_date: date
     compliance_units: Optional[int] = 0
@@ -151,6 +150,12 @@ class FuelExportSchema(BaseSchema):
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
 
+    @validator('quantity')
+    def quantity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('quantity must be greater than zero')
+        return v
+
 
 class FuelExportCreateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
@@ -166,7 +171,7 @@ class FuelExportCreateSchema(BaseSchema):
     provision_of_the_act_id: int
     fuel_code: Optional[Union[str, FuelCodeSchema]] = None
     fuel_code_id: Optional[int] = None
-    quantity: int
+    quantity: int = Field(..., gt=0)
     units: str
     export_date: date
     compliance_units: Optional[int] = 0
@@ -178,6 +183,11 @@ class FuelExportCreateSchema(BaseSchema):
     custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
+    @validator('quantity')
+    def quantity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('quantity must be greater than zero')
+        return v
 
 class DeleteFuelExportResponseSchema(BaseSchema):
     success: bool
