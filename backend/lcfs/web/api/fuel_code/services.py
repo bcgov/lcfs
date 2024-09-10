@@ -161,13 +161,13 @@ class FuelCodeServices:
                     "status",
                     "is_valid",
                     "validation_msg",
-                    "fuel_code",
+                    "fuel_suffix",
                     "deleted",
                     "facility_nameplate_capacity_unit",
                 }
             ),
             fuel_code_status=fuel_status,
-            fuel_code=str(fuel_code.fuel_code),
+            fuel_suffix=str(fuel_code.fuel_suffix),
             prefix_id=prefix.fuel_code_prefix_id,
             fuel_type_id=fuel_type.fuel_type_id,
             facility_nameplate_capacity_unit=facility_nameplate_capacity_units_enum,
@@ -208,10 +208,10 @@ class FuelCodeServices:
         Create a new fuel code.
         """
         fuel_code.status = FuelCodeStatusEnum.Draft
-        fuel_code_value = await self.repo.validate_fuel_code(
-            fuel_code.fuel_code, fuel_code.prefix
+        fuel_suffix_value = await self.repo.validate_fuel_code(
+            fuel_code.fuel_suffix, fuel_code.prefix
         )
-        fuel_code.fuel_code = fuel_code_value
+        fuel_code.fuel_suffix = fuel_suffix_value
         fuel_code_model = await self.convert_to_model(fuel_code)
         fuel_code_model.fuel_status_id = 1  # set to draft by default
         return await self.repo.create_fuel_code(fuel_code_model)

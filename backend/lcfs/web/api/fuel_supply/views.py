@@ -8,13 +8,17 @@ from fastapi import (
     Response,
     Depends,
 )
+from starlette.responses import JSONResponse
+
 from lcfs.db import dependencies
+from lcfs.db.models import FuelSupply
 
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
-    FuelSupplyCreateSchema,
+    FuelSupplyCreateUpdateSchema,
+    FuelSupplyResponseSchema,
     FuelTypeOptionsResponse,
     CommmonPaginatedReportRequestSchema,
 )
@@ -70,13 +74,14 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplyCreateSchema, DeleteFuelSupplyResponseSchema],
+    response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def save_fuel_supply_row(
     request: Request,
-    request_data: FuelSupplyCreateSchema = Body(...),
+    response: Response,
+    request_data: FuelSupplyCreateUpdateSchema = Body(...),
     fs_service: FuelSupplyServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelSupplyValidation = Depends(),
@@ -94,8 +99,48 @@ async def save_fuel_supply_row(
             success=True, message="fuel supply row deleted successfully"
         )
     elif fs_id:
+        duplicate_id = await fs_validate.check_duplicate(request_data)
+        if duplicate_id is not None:
+            duplicate_response = format_duplicate_error(duplicate_id)
+            return duplicate_response
         # Update existing fuel supply row
         return await fs_service.update_fuel_supply(request_data)
     else:
+        duplicate_id = await fs_validate.check_duplicate(request_data)
+        if duplicate_id is not None:
+            duplicate_response = format_duplicate_error(duplicate_id)
+            return duplicate_response
         # Create new fuel supply row
         return await fs_service.create_fuel_supply(request_data)
+
+
+def format_duplicate_error(duplicate_id: int):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "message": "Validation failed",
+            "errors": [
+                {
+                    "fields": [
+                        "fuelCode",
+                        "fuelType",
+                        "fuelCategory",
+                        "provisionOfTheAct",
+                    ],
+                    "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
+                }
+            ],
+            "warnings": [
+                {
+                    "id": duplicate_id,
+                    "fields": [
+                        "fuelCode",
+                        "fuelType",
+                        "fuelCategory",
+                        "provisionOfTheAct",
+                    ],
+                    "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
+                }
+            ],
+        },
+    )

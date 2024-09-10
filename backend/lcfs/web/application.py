@@ -5,6 +5,7 @@ import os
 import debugpy
 import colorlog
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import UJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -20,6 +21,7 @@ from starlette.responses import JSONResponse
 
 from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
+from lcfs.web.exception.exception_handler import validation_exception_handler
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
 # Create a colorized log formatter
@@ -54,7 +56,7 @@ origins = [
 
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
     """
-    Catches HTTP exceptions from other middlewares, returns JSON responses, and adds CORS headers.
+    Catches HTTP exception from other middlewares, returns JSON responses, and adds CORS headers.
     """
 
     async def dispatch(self, request: Request, call_next):
@@ -136,6 +138,8 @@ def get_app() -> FastAPI:
     # Apply custom authentication handler for user injection purposes
     app.add_middleware(AuthenticationMiddleware, backend=LazyAuthenticationBackend(app))
     app.add_middleware(MiddlewareExceptionWrapper)
+
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
     # Adds prometheus metrics instrumentation.
     Instrumentator().instrument(app).expose(app)

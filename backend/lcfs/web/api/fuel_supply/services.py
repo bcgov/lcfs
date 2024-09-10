@@ -2,7 +2,6 @@ from logging import getLogger
 import math
 from fastapi import Depends, Request
 
-
 from lcfs.db.models.compliance.FuelSupply import (
     FuelSupply,
     ChangeType,
@@ -16,12 +15,13 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelCategorySchema,
     FuelCodeSchema,
     FuelSuppliesSchema,
-    FuelSupplySchema,
+    FuelSupplyResponseSchema,
     FuelTypeOptionsResponse,
     FuelTypeOptionsSchema,
     ProvisionOfTheActSchema,
     TargetCarbonIntensitySchema,
     UnitOfMeasureSchema,
+    FuelSupplyCreateUpdateSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -43,7 +43,9 @@ class FuelSupplyServices:
 
     def fuel_type_row_mapper(self, compliance_period, fuel_types, row):
         column_names = row._fields
+
         row_data = dict(zip(column_names, row))
+
         fuel_category = FuelCategorySchema(
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
@@ -80,7 +82,7 @@ class FuelSupplyServices:
         fuel_code = (
             FuelCodeSchema(
                 fuel_code_id=row_data["fuel_code_id"],
-                fuel_code=row_data["fuel_code"],
+                fuel_code=row_data["prefix"] + row_data["fuel_suffix"],
                 fuel_code_prefix_id=row_data["fuel_code_prefix_id"],
                 fuel_code_carbon_intensity=round(
                     row_data["fuel_code_carbon_intensity"], 2
@@ -159,7 +161,8 @@ class FuelSupplyServices:
                     (
                         fc
                         for fc in existing_fuel_type.fuel_codes
-                        if fc.fuel_code == row_data["fuel_code"]
+                        if fc.fuel_code
+                        == (row_data["prefix"] + row_data["fuel_suffix"])
                     ),
                     None,
                 )
@@ -228,7 +231,9 @@ class FuelSupplyServices:
             "Getting fuel supply list for compliance report %s", compliance_report_id
         )
         fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id)
-        fs_list = [FuelSupplySchema.model_validate(fs) for fs in fuel_supply_models]
+        fs_list = [
+            FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
+        ]
         return FuelSuppliesSchema(fuel_supplies=fs_list if fs_list else [])
 
     @service_handler
@@ -252,11 +257,15 @@ class FuelSupplyServices:
                     math.ceil(total_count / pagination.size) if total_count > 0 else 0
                 ),
             ),
-            fuel_supplies=[FuelSupplySchema.model_validate(fs) for fs in fuel_supplies],
+            fuel_supplies=[
+                FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supplies
+            ],
         )
 
     @service_handler
-    async def update_fuel_supply(self, fs_data: FuelSupplySchema) -> FuelSupplySchema:
+    async def update_fuel_supply(
+        self, fs_data: FuelSupplyCreateUpdateSchema
+    ) -> FuelSupplyResponseSchema:
         """Update an existing fuel supply record"""
 
         existing_fs = await self.repo.get_fuel_supply_by_id(fs_data.fuel_supply_id)
@@ -264,29 +273,28 @@ class FuelSupplyServices:
             raise ValueError("fuel supply record not found")
 
         for key, value in fs_data.model_dump().items():
-            if (
-                key
-                not in [
-                    "fuel_supply_id" "id",
-                    "fuel_type",
-                    "fuel_category",
-                    "provision_of_the_act",
-                    "end_use",
-                    "fuel_code",
-                    "units",
-                    "deleted",
-                ]
-                and value is not None
-            ):
+            if key not in [
+                "fuel_supply_id",
+                "id",
+                "fuel_type",
+                "fuel_category",
+                "provision_of_the_act",
+                "end_use",
+                "fuel_code",
+                "units",
+                "deleted",
+            ]:
                 if key == "units":
                     value = QuantityUnitsEnum(value)
                 setattr(existing_fs, key, value)
 
         updated_transfer = await self.repo.update_fuel_supply(existing_fs)
-        return FuelSupplySchema.model_validate(updated_transfer)
+        return FuelSupplyResponseSchema.model_validate(updated_transfer)
 
     @service_handler
-    async def create_fuel_supply(self, fs_data: FuelSupplySchema) -> FuelSupplySchema:
+    async def create_fuel_supply(
+        self, fs_data: FuelSupplyCreateUpdateSchema
+    ) -> FuelSupplyResponseSchema:
         """Create a new fuel supply record"""
         fuel_supply = FuelSupply(
             **fs_data.model_dump(
@@ -303,8 +311,8 @@ class FuelSupplyServices:
             )
         )
         fuel_supply.units = QuantityUnitsEnum(fs_data.units)
-        created_equipment = await self.repo.create_fuel_supply(fuel_supply)
-        return FuelSupplySchema.model_validate(created_equipment)
+        created_supply = await self.repo.create_fuel_supply(fuel_supply)
+        return FuelSupplyResponseSchema.model_validate(created_supply)
 
     @service_handler
     async def delete_fuel_supply(self, fuel_supply_id: int) -> str:

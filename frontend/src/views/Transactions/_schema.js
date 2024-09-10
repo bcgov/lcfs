@@ -4,7 +4,7 @@ import {
   dateFormatter,
   spacesFormatter
 } from '@/utils/formatters'
-import { TransactionStatusRenderer } from '@/utils/cellRenderers'
+import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 

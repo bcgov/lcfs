@@ -1,10 +1,8 @@
-from typing import List
-from fastapi import Depends, HTTPException, Request
-from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from starlette import status
+from fastapi import Depends, Request
 
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.utils.constants import LCFS_Constants
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
 
 
 class FuelSupplyValidation:
@@ -14,6 +12,9 @@ class FuelSupplyValidation:
         fs_repo: FuelSupplyRepository = Depends(FuelSupplyRepository),
         report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
     ):
-        self.fse_repo = fs_repo
+        self.fs_repo = fs_repo
         self.request = request
         self.report_repo = report_repo
+
+    async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
+        return await self.fs_repo.check_duplicate(fuel_supply)

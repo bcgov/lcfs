@@ -13,7 +13,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 // ag-grid components
 import { phoneNumberFormatter } from '@/utils/formatters'
-import { RoleSpanRenderer, StatusRenderer } from '@/utils/cellRenderers'
+import { RoleSpanRenderer, StatusRenderer } from '@/utils/grid/cellRenderers'
 import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
 // constants
 import { ROUTES } from '@/constants/routes'

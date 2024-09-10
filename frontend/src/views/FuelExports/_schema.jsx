@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,

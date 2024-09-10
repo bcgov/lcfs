@@ -4,24 +4,9 @@ import {
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
 import { Typography } from '@mui/material'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-
-const cellErrorStyle = (params, errors) => {
-  if (
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    return {
-      borderColor: 'red'
-    }
-  } else {
-    return {
-      borderColor: 'unset'
-    }
-  }
-}
 
 export const otherUsesColDefs = (optionsData, errors) => [
   validation,
@@ -48,7 +33,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'fuelCategory',
@@ -64,7 +49,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'quantitySupplied',
@@ -77,7 +62,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'units',
@@ -94,7 +79,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'expectedUse',
@@ -110,7 +95,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'rationale',

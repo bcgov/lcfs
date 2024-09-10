@@ -150,7 +150,7 @@ export const BCGridViewer = ({
     <div className="error-container">
       <div className="error-message">
         <BCAlert severity="error">
-          {error.message}. Pleae contact your administrator.
+          {error.message}. Please contact your administrator.
         </BCAlert>
       </div>
     </div>

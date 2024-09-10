@@ -3,7 +3,7 @@ import {
   CommonArrayRenderer,
   FuelCodeStatusTextRenderer,
   TextRenderer
-} from '@/utils/cellRenderers'
+} from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 import { Typography } from '@mui/material'
 import { v4 as uuid } from 'uuid'
@@ -23,8 +23,8 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer
   },
   {
-    field: 'fuelCode',
-    headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
+    field: 'fuelSuffix',
+    headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
     cellRenderer: TextRenderer
   },
   {
@@ -184,7 +184,7 @@ export const addEditSchema = {
       ...props.data,
       id: uuid(),
       modified: true,
-      fuelCode: '1000' + '.' + `${props.node?.rowIndex + 1}`
+      fuelSuffix: '100' + '.' + `${props.node?.rowIndex + 1}`
     }
     props.api.applyTransaction({
       add: [newRow],
@@ -206,9 +206,9 @@ export const addEditSchema = {
             field: t('fuelCode:fuelCodeColLabels.prefix')
           })
         ),
-      fuelCode: yup.number().required(
+      fuelSuffix: yup.number().required(
         t('fuelCode:validateMsg.isRequired', {
-          field: t('fuelCode:fuelCodeColLabels.fuelCode')
+          field: t('fuelCode:fuelCodeColLabels.fuelSuffix')
         })
       ),
       company: yup.string().required(
@@ -283,9 +283,6 @@ export const addEditSchema = {
         enableDelete: true,
         onDuplicate: addEditSchema.duplicateRow
       },
-      // checkboxSelection: true,
-      // headerCheckboxSelection: true,
-      // field: 'checkobxBtn',
       pinned: 'left',
       maxWidth: 100,
       editable: false,
@@ -327,8 +324,8 @@ export const addEditSchema = {
       editable: isDraftOrNew
     },
     {
-      field: 'fuelCode',
-      headerName: t('fuelCode:fuelCodeColLabels.fuelCode'),
+      field: 'fuelSuffix',
+      headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
       cellDataType: 'text',
       editable: false
     },

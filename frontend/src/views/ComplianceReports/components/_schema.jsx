@@ -1,7 +1,7 @@
 /* eslint-disable chai-friendly/no-unused-expressions */
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer } from '@/utils/cellRenderers'
+import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 
 export const reportsColDefs = (t, bceidRole) => [

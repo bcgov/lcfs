@@ -1,6 +1,6 @@
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
-import { isEqual } from '@/utils/eventHandlers'
+import { isEqual } from '@/utils/grid/eventHandlers'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'

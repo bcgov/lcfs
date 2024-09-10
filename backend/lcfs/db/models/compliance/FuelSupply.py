@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, Float, ForeignKey, Enum
+from sqlalchemy import Column, Integer, Float, ForeignKey, Enum, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 from lcfs.db.base import BaseModel, Auditable
@@ -67,6 +67,7 @@ class FuelSupply(BaseModel, Auditable):
         Float, nullable=True, comment="Energy effectiveness ratio of the fuel supplied"
     )
     energy = Column(Float, nullable=True, comment="Energy content of the fuel supplied")
+    fuel_type_other = Column(String(1000), nullable=True, comment="Other fuel type is one provided")
 
     # relational columns
     fuel_category_id = Column(

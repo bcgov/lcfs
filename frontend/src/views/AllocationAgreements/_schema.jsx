@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
@@ -10,35 +10,10 @@ import i18n from '@/i18n'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
+import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE =
   'Approved fuel code - Section 6 (5) (c)'
-
-const cellErrorStyle = (params, errors) => {
-  let style = {}
-  if (
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: 'red' }
-  } else {
-    style = { ...style, borderColor: 'unset' }
-  }
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
-    style = { ...style, backgroundColor: '#fff' }
-  } else {
-    style = {
-      ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
-    }
-  }
-  return style
-}
 
 export const allocationAgreementColDefs = (optionsData, errors) => [
   validation,
@@ -83,7 +58,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 120,
     editable: true,
@@ -116,7 +91,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       (!params.value && (
         <Typography variant="body4">Enter or search a name</Typography>
       )),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 310,
     editable: true,
@@ -153,7 +128,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       'allocationAgreement:allocationAgreementColLabels.postalAddress'
     ),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     editable: true,
     minWidth: 350
   },
@@ -163,7 +138,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
     ),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     editable: true,
     minWidth: 200
   },
@@ -173,7 +148,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
     ),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     editable: true,
     minWidth: 200
   },
@@ -194,7 +169,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 200,
     editable: true,
@@ -222,9 +197,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
     ),
     cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
+      const style = StandardCellErrors(params, errors)
       const conditionalStyle =
-         params.data.fuelType === 'Other'
+        params.data.fuelType === 'Other'
           ? { backgroundColor: '#fff', borderColor: 'unset' }
           : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
@@ -268,7 +243,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 300,
     editable: true,
@@ -292,7 +267,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       openOnFocus: true
     }),
     cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
+      const style = StandardCellErrors(params, errors)
       const conditionalStyle =
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
           ? { backgroundColor: '#fff', borderColor: 'unset' }
@@ -310,7 +285,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     editable: false,
     valueGetter: (params) => {
       if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
@@ -344,7 +319,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 100,
     editable: true
   },
@@ -353,7 +328,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.units'
     ),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     editable: false,
     minWidth: 80
   }

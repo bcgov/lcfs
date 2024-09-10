@@ -40,7 +40,7 @@ const AddFuelCodeBase = () => {
         {
           id: uuid(),
           prefix: 'BCLCF',
-          fuelCode: optionsData?.fuelCodePrefixes?.find(
+          fuelSuffix: optionsData?.fuelCodePrefixes?.find(
             (item) => item.prefix === 'BCLCF'
           ).nextFuelCode
         }
@@ -55,7 +55,7 @@ const AddFuelCodeBase = () => {
       const updatedData = { ...params.data, modified: true }
 
       if (params.colDef.field === 'prefix') {
-        updatedData.fuelCode = optionsData?.fuelCodePrefixes?.find(
+        updatedData.fuelSuffix = optionsData?.fuelCodePrefixes?.find(
           (item) => item.prefix === params.newValue
         ).nextFuelCode
       }

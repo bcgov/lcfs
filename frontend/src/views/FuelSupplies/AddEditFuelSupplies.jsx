@@ -21,6 +21,7 @@ export const AddEditFuelSupplies = () => {
   const gridRef = useRef(null)
   const [gridApi, setGridApi] = useState()
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
@@ -34,6 +35,7 @@ export const AddEditFuelSupplies = () => {
     isLoading: optionsLoading,
     isFetched
   } = useFuelSupplyOptions({ compliancePeriod })
+
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
   const { data, isLoading: fuelSuppliesLoading } =
@@ -83,10 +85,10 @@ export const AddEditFuelSupplies = () => {
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelSupplyColDefs(optionsData, errors)
+      const updatedColumnDefs = fuelSupplyColDefs(optionsData, errors, warnings)
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData])
+  }, [errors, warnings, optionsData])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
@@ -107,12 +109,27 @@ export const AddEditFuelSupplies = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
+      setWarnings({})
       if (params.column.colId === 'fuelType') {
-        const options = optionsData?.fuelTypes
-          ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-          ?.fuelCategories.map((item) => item.fuelCategory)
-        if (options.length === 1) {
-          params.node.setDataValue('fuelCategory', options[0])
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+        if (selectedFuelType) {
+          const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
+            (item) => item.fuelCategory
+          )
+          params.node.setDataValue(
+            'fuelCategory',
+            fuelCategoryOptions[0] ?? null
+          )
+          const fuelCodeOptions = selectedFuelType.fuelCodes.map(
+            (code) => code.fuelCode
+          )
+          params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
+          params.node.setDataValue(
+            'fuelCodeId',
+            selectedFuelType.fuelCodes[0]?.fuelCodeId ?? null
+          )
         }
       }
       if (
@@ -202,13 +219,7 @@ export const AddEditFuelSupplies = () => {
         severity: 'pending'
       })
 
-      // clean up any null or empty string values
-      let updatedData = Object.entries(params.node.data)
-        .filter(([, value]) => value !== null && value !== '')
-        .reduce((acc, [key, value]) => {
-          acc[key] = value
-          return acc
-        }, {})
+      let updatedData = params.node.data
 
       try {
         setErrors({})
@@ -223,12 +234,26 @@ export const AddEditFuelSupplies = () => {
           severity: 'success'
         })
       } catch (error) {
-        const errArr = {
-          [params.node.data.id]: error.response?.data?.detail?.map(
-            (err) => err.loc[1]
-          )
+        const newWarnings = error.response.data.warnings
+        if (newWarnings && newWarnings.length > 0) {
+          setWarnings({
+            [newWarnings[0].id]: newWarnings[0].fields
+          })
+
+          params.api.forEachNode((rowNode) => {
+            if (rowNode.data.fuelSupplyId === newWarnings[0].id) {
+              rowNode.updateData({
+                ...rowNode.data,
+                validationStatus: 'warning'
+              })
+            }
+          })
         }
-        setErrors(errArr)
+
+        const newErrors = error.response.data.errors
+        setErrors({
+          [params.node.data.id]: newErrors[0].fields
+        })
 
         updatedData = {
           ...updatedData,
@@ -236,12 +261,15 @@ export const AddEditFuelSupplies = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
-            ? t(
-                `fuelSupply:fuelSupplyColLabels.${error.response?.data?.detail[0]?.loc[1]}`
-              )
-            : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const { fields, message } = newErrors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`fuelSupply:fuelSupplyColLabels.${field}`)
+          )
+
+          //Only show field label if there is one
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,
