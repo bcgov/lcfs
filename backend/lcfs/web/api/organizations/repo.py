@@ -233,3 +233,21 @@ class OrganizationsRepository:
             )
         )
         return result is not None
+
+    @repo_handler
+    async def get_organization_details(self, transaction_partner: str) -> List[Organization]:
+        """
+        Fetches organizations where the name matches the given transaction_partner query.
+        Includes organization details like full address, email, and phone.
+        """
+        query = (
+            select(Organization)
+            .where(func.lower(Organization.name).like(func.lower(transaction_partner + "%")))
+            .options(
+                joinedload(Organization.org_address)
+            )
+            .order_by(Organization.name)
+            .limit(10)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
