@@ -18,6 +18,7 @@ from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
+from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
@@ -125,10 +126,10 @@ async def save_allocation_agreements_row(
 async def search_table_options_strings(
     request: Request,
     transaction_partner: Optional[str] = Query(None, alias="transactionPartner", description="Trading partner (company) for filtering options"),
-    service: AllocationAgreementServices = Depends(),
+    service: OrganizationsService = Depends(),
 ):
     """Endpoint to search allocation agreement options based on a query string"""
     if transaction_partner:
-        return await service.search_trading_partner_details(transaction_partner)
+        return await service.search_organization_details(transaction_partner)
     else:
         return []

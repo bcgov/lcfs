@@ -34,7 +34,7 @@ from .schema import (
     OrganizationListSchema,
     OrganizationCreateSchema,
     OrganizationSummaryResponseSchema,
-    OrganizationStatusSchema
+    OrganizationDetailsSchema
 )
 
 
@@ -422,3 +422,30 @@ class OrganizationsService:
             organization_id
         )
         return new_transaction
+
+    @service_handler
+    async def search_organization_details(self, search_query: str) -> List[OrganizationDetailsSchema]:
+        """
+        Get organizations matching the transaction partner query.
+        The organization details include name, full address, email, and phone.
+        """
+        organizations = await self.repo.search_organizations_by_name(search_query)
+        
+        return [
+            {
+                "name": org.name,
+                "address": " ".join(
+                    part for part in [
+                        org.org_address.street_address,
+                        org.org_address.address_other,
+                        org.org_address.city,
+                        org.org_address.province_state,
+                        org.org_address.country,
+                        org.org_address.postalCode_zipCode
+                    ] if part
+                ),
+                "email": org.email,
+                "phone": org.phone
+            }
+            for org in organizations
+        ]

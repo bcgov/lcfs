@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import { useApiService } from '@/services/useApiService'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -23,6 +24,7 @@ export const AddEditNotionalTransfers = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
+  const apiService = useApiService()
   const { t } = useTranslation(['common', 'notionalTransfer'])
   const { complianceReportId } = useParams()
   const {
@@ -61,6 +63,7 @@ export const AddEditNotionalTransfers = () => {
         if (!row.id) {
           return {
             ...row,
+            complianceReportId,
             id: uuid(),
             isValid: false
           }
@@ -91,8 +94,10 @@ export const AddEditNotionalTransfers = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      // Initialize updated data with 'pending' status
       params.node.updateData({
         ...params.node.data,
+        complianceReportId,
         validationStatus: 'pending'
       })
 
@@ -114,6 +119,7 @@ export const AddEditNotionalTransfers = () => {
         await saveRow(updatedData)
         updatedData = {
           ...updatedData,
+          complianceReportId,
           validationStatus: 'success',
           modified: false
         }
@@ -131,6 +137,7 @@ export const AddEditNotionalTransfers = () => {
 
         updatedData = {
           ...updatedData,
+          complianceReportId,
           validationStatus: 'error'
         }
 
@@ -156,7 +163,7 @@ export const AddEditNotionalTransfers = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, complianceReportId]
   )
 
   const onAction = async (action, params) => {
@@ -237,6 +244,7 @@ export const AddEditNotionalTransfers = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             showAddRowsButton={true}
+            stopEditingWhenCellsLoseFocus
           />
         </BCBox>
       </Grid2>

@@ -196,3 +196,9 @@ class OrganizationBalanceResponseSchema(BaseSchema):
     organization_id: int
     total_balance: int
     reserved_balance: int
+
+class OrganizationDetailsSchema(BaseSchema):
+    name: str
+    address: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]

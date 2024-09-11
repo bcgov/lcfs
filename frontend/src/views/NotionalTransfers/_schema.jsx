@@ -3,10 +3,12 @@ import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
+  AsyncSuggestionEditor,
   AutocompleteEditor,
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { apiRoutes } from '@/constants/routes'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -58,9 +60,41 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   {
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
-    cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'company-details-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.organizationSearch
+        path += 'org_name=' + queryKey[1]
+        const response = await client.get(path)
+        params.node.data.apiDataCache = response.data
+        return response.data
+      },
+      title: 'legalName',
+      api: params.api,
+    }),
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Enter or search a name</Typography>),
+    suppressKeyboardEvent,
+    minWidth: 300,
+    cellStyle: (params) => cellErrorStyle(params, errors),
+    valueSetter: (params) => {
+      const { newValue: selectedName, node, data } = params
+      const apiData = node.data.apiDataCache || []
+      // Attempt to find the selected company from the cached API data
+      const selectedOption = apiData.find(company => company.name === selectedName)
+      if (selectedOption) {
+        // Only update related fields if a match is found in the API data
+        data.legalName = selectedOption.name
+        data.addressForService = selectedOption.address || data.addressForService
+      } else {
+        // If no match, only update the legalName field, leave others unchanged
+        data.legalName = selectedName
+      }
+      return true
+    },
   },
   {
     field: 'addressForService',

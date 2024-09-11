@@ -1,7 +1,7 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, status, Request
+from fastapi import APIRouter, Body, Depends, status, Request, Query
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from starlette import status
@@ -20,9 +20,9 @@ from .schema import (
     OrganizationCreateSchema,
     OrganizationResponseSchema,
     OrganizationSummaryResponseSchema,
-    OrganizationCreateResponseSchema,
     OrganizationBalanceResponseSchema,
-    OrganizationUpdateSchema
+    OrganizationUpdateSchema,
+    OrganizationDetailsSchema
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -72,6 +72,18 @@ async def create_organization(
     """
     return await service.create_organization(organization_data)
 
+@router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=status.HTTP_200_OK)
+@view_handler(['*'])
+async def search_organizations(
+    request: Request,
+    org_name: str = Query(..., min_length=3, description="Company name or operating name"),
+    service: OrganizationsService = Depends()
+):
+    """
+    Search for organizations based on a query string.
+    Returns a list of organizations with their names and formatted addresses.
+    """
+    return await service.search_organization_details(org_name)
 
 @router.get(
     "/{organization_id}",

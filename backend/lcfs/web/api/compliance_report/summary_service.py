@@ -197,9 +197,9 @@ class ComplianceReportSummaryService:
         else:
             # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
             previous_retained = {
-                'gasoline': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_gasoline,
-                'diesel': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_diesel,
-                'jet_fuel': prev_compliance_report.summary.line_6_eligible_renewable_fuel_required_jet_fuel
+                'gasoline': prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
+                'diesel': prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel,
+                'jet_fuel': prev_compliance_report.summary.line_6_renewable_fuel_retained_jet_fuel
             }
             previous_obligation = {
                 'gasoline': prev_compliance_report.summary.line_8_obligation_deferred_gasoline,

@@ -101,8 +101,8 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellEditorParams: (params) => ({
       queryKey: 'trading-partner-name-search',
       queryFn: async ({ queryKey, client }) => {
-        let path = apiRoutes.allocationAgreementSearch
-        path += 'transactionPartner=' + queryKey[1]
+        let path = apiRoutes.organizationSearch
+        path += 'org_name=' + queryKey[1]
         const response = await client.get(path)
         params.node.data.apiDataCache = response.data
         return response.data
