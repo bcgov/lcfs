@@ -234,19 +234,16 @@ class OrganizationsRepository:
         )
         return result is not None
 
-    @repo_handler
     async def search_organizations(self, search_query: str) -> List[Organization]:
         """
         Search for organizations based on a query string.
-        Return exact match if found, otherwise return partial matches.
+        Return exact match first if found, followed by partial matches.
         """
         query = (
             select(Organization)
             .options(joinedload(Organization.org_address))
             .filter(
                 or_(
-                    Organization.name == search_query,
-                    Organization.operating_name == search_query,
                     Organization.name.ilike(f"%{search_query}%"),
                     Organization.operating_name.ilike(f"%{search_query}%")
                 )
@@ -257,10 +254,12 @@ class OrganizationsRepository:
         result = await self.db.execute(query)
         organizations = result.scalars().all()
 
-        # Return exact matches if any, else return partial matches
+        # Separate exact matches and partial matches
         exact_matches = [
             org for org in organizations 
-            if org.name == search_query or org.operating_name == search_query
+            if org.name.lower() == search_query.lower() or org.operating_name.lower() == search_query.lower()
         ]
+        partial_matches = [org for org in organizations if org not in exact_matches]
         
-        return exact_matches if exact_matches else organizations
+        # Return exact matches first, followed by partial matches
+        return exact_matches + partial_matches

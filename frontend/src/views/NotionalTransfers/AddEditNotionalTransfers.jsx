@@ -274,6 +274,7 @@ export const AddEditNotionalTransfers = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             showAddRowsButton={true}
+            stopEditingWhenCellsLoseFocus
           />
         </BCBox>
       </Grid2>
