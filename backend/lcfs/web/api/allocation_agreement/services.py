@@ -33,7 +33,7 @@ class AllocationAgreementServices:
         self,
         repo: AllocationAgreementRepository = Depends(
             AllocationAgreementRepository),
-        fuel_repo: FuelCodeRepository = Depends()
+        fuel_repo: FuelCodeRepository = Depends(),
     ) -> None:
         self.repo = repo
         self.fuel_repo = fuel_repo
@@ -211,7 +211,3 @@ class AllocationAgreementServices:
     async def delete_allocation_agreement(self, allocation_agreement_id: int) -> str:
         """Delete an Allocation agreement"""
         return await self.repo.delete_allocation_agreement(allocation_agreement_id)
-
-    @service_handler
-    async def search_trading_partner(self, trading_partner: str) -> List[str]:
-        return await self.repo.get_distinct_trading_partners(trading_partner)

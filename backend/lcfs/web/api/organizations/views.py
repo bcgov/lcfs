@@ -22,7 +22,7 @@ from .schema import (
     OrganizationSummaryResponseSchema,
     OrganizationBalanceResponseSchema,
     OrganizationUpdateSchema,
-    OrganizationSearchResponseSchema
+    OrganizationDetailsSchema
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -72,18 +72,18 @@ async def create_organization(
     """
     return await service.create_organization(organization_data)
 
-@router.get("/search", response_model=List[OrganizationSearchResponseSchema], status_code=status.HTTP_200_OK)
+@router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=status.HTTP_200_OK)
 @view_handler(['*'])
 async def search_organizations(
     request: Request,
-    company: str = Query(..., min_length=3, description="Company name used for address lookup"),
+    org_name: str = Query(..., min_length=3, description="Company name or operating name"),
     service: OrganizationsService = Depends()
 ):
     """
     Search for organizations based on a query string.
     Returns a list of organizations with their names and formatted addresses.
     """
-    return await service.search_organizations(company)
+    return await service.search_organization_details(org_name)
 
 @router.get(
     "/{organization_id}",

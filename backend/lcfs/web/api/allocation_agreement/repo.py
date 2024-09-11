@@ -168,10 +168,3 @@ class AllocationAgreementRepository:
     async def get_allocation_transaction_type_by_name(self, type: str) -> AllocationTransactionType:
         result = await self.db.execute(select(AllocationTransactionType).where(AllocationTransactionType.type == type))
         return result.scalar_one_or_none()
-
-    @repo_handler
-    async def get_distinct_trading_partners(self, trading_partner: str) -> List[str]:
-        query = select(distinct(AllocationAgreement.transaction_partner)).where(
-            func.lower(AllocationAgreement.transaction_partner).like(func.lower(trading_partner + "%"))
-        ).order_by(AllocationAgreement.transaction_partner).limit(10)
-        return (await self.db.execute(query)).scalars().all()

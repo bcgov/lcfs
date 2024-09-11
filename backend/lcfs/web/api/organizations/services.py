@@ -34,7 +34,7 @@ from .schema import (
     OrganizationListSchema,
     OrganizationCreateSchema,
     OrganizationSummaryResponseSchema,
-    OrganizationSearchResponseSchema
+    OrganizationDetailsSchema
 )
 
 
@@ -424,35 +424,28 @@ class OrganizationsService:
         return new_transaction
 
     @service_handler
-    async def search_organizations(self, search_query: str) -> List[OrganizationSearchResponseSchema]:
+    async def search_organization_details(self, search_query: str) -> List[OrganizationDetailsSchema]:
         """
-        Search for organizations based on a query string.
-        Returns a list of organizations with their names and formatted addresses.
+        Get organizations matching the transaction partner query.
+        The organization details include name, full address, email, and phone.
         """
-        organizations = await self.repo.search_organizations(search_query)
+        organizations = await self.repo.search_organizations_by_name(search_query)
         
         return [
-            OrganizationSearchResponseSchema(
-                organization_id=org.organization_id,
-                name=org.name,
-                formatted_address=self._format_address(org.org_address)
-            )
+            {
+                "name": org.name,
+                "address": " ".join(
+                    part for part in [
+                        org.org_address.street_address,
+                        org.org_address.address_other,
+                        org.org_address.city,
+                        org.org_address.province_state,
+                        org.org_address.country,
+                        org.org_address.postalCode_zipCode
+                    ] if part
+                ),
+                "email": org.email,
+                "phone": org.phone
+            }
             for org in organizations
         ]
-
-    def _format_address(self, address):
-        """
-        Format the organization address for display.
-        """
-        if not address:
-            return ""
-        
-        parts = [
-            address.street_address,
-            address.address_other,
-            address.city,
-            address.province_state,
-            address.country,
-            address.postalCode_zipCode
-        ]
-        return ", ".join(filter(None, parts))

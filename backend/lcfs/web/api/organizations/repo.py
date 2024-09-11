@@ -234,7 +234,8 @@ class OrganizationsRepository:
         )
         return result is not None
 
-    async def search_organizations(self, search_query: str) -> List[Organization]:
+    @repo_handler
+    async def search_organizations_by_name(self, search_query: str) -> List[Organization]:
         """
         Search for organizations based on a query string.
         Return exact match first if found, followed by partial matches.
@@ -249,6 +250,7 @@ class OrganizationsRepository:
                 )
             )
             .order_by(Organization.name)
+            .limit(10)
         )
         
         result = await self.db.execute(query)

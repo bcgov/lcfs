@@ -63,18 +63,38 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     cellDataType: 'text',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
-      queryKey: 'company-name-search',
+      queryKey: 'company-details-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.organizationSearch
-        path += 'company=' + queryKey[1]
+        path += 'org_name=' + queryKey[1]
         const response = await client.get(path)
-        return response.data.map(org => org.name)
+        params.node.data.apiDataCache = response.data
+        return response.data
       },
+      title: 'legalName',
       api: params.api,
     }),
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Enter or search a name</Typography>),
     suppressKeyboardEvent,
     minWidth: 300,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => cellErrorStyle(params, errors),
+    valueSetter: (params) => {
+      const { newValue: selectedName, node, data } = params
+      const apiData = node.data.apiDataCache || []
+      // Attempt to find the selected company from the cached API data
+      const selectedOption = apiData.find(company => company.name === selectedName)
+      if (selectedOption) {
+        // Only update related fields if a match is found in the API data
+        data.legalName = selectedOption.name
+        data.addressForService = selectedOption.address || data.addressForService
+      } else {
+        // If no match, only update the legalName field, leave others unchanged
+        data.legalName = selectedName
+      }
+      return true
+    },
   },
   {
     field: 'addressForService',

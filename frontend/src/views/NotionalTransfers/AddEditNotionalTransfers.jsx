@@ -15,7 +15,6 @@ import {
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { useApiService } from '@/services/useApiService'
-import { apiRoutes } from '@/constants/routes'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -102,35 +101,6 @@ export const AddEditNotionalTransfers = () => {
         validationStatus: 'pending'
       })
 
-      if (params.column.colId === 'legalName') {
-        const newLegalName = params.newValue
-        if (newLegalName) {
-          let address = params.node.data.addressForService
-          try {
-            const response = await apiService.get(apiRoutes.organizationSearch, {
-              params: { company: newLegalName }
-            })
-            const organizations = response.data
-            const matchedOrg = organizations.find(org => org.name === newLegalName)
-            if (matchedOrg && matchedOrg.formattedAddress) {
-              address = matchedOrg.formattedAddress
-            } else {
-              console.log('No matching organization or address found')
-            }
-          } catch (error) {
-            console.error('Error fetching organization details:', error)
-          }
-  
-          // Add the new legal name and updated address (if found) to updatedData
-          params.node.updateData({
-            ...params.node.data,
-            complianceReportId,
-            legalName: newLegalName,
-            addressForService: address
-          })
-        }
-      }
-  
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
         severity: 'pending'
@@ -193,7 +163,7 @@ export const AddEditNotionalTransfers = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t, apiService, complianceReportId]
+    [saveRow, t, complianceReportId]
   )
 
   const onAction = async (action, params) => {
