@@ -14,6 +14,8 @@ import {
 } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -23,6 +25,7 @@ export const AddEditNotionalTransfers = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
+  const apiService = useApiService()
   const { t } = useTranslation(['common', 'notionalTransfer'])
   const { complianceReportId } = useParams()
   const {
@@ -61,6 +64,7 @@ export const AddEditNotionalTransfers = () => {
         if (!row.id) {
           return {
             ...row,
+            complianceReportId,
             id: uuid(),
             isValid: false
           }
@@ -91,11 +95,42 @@ export const AddEditNotionalTransfers = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      // Initialize updated data with 'pending' status
       params.node.updateData({
         ...params.node.data,
+        complianceReportId,
         validationStatus: 'pending'
       })
 
+      if (params.column.colId === 'legalName') {
+        const newLegalName = params.newValue
+        if (newLegalName) {
+          let address = params.node.data.addressForService
+          try {
+            const response = await apiService.get(apiRoutes.organizationSearch, {
+              params: { company: newLegalName }
+            })
+            const organizations = response.data
+            const matchedOrg = organizations.find(org => org.name === newLegalName)
+            if (matchedOrg && matchedOrg.formattedAddress) {
+              address = matchedOrg.formattedAddress
+            } else {
+              console.log('No matching organization or address found')
+            }
+          } catch (error) {
+            console.error('Error fetching organization details:', error)
+          }
+  
+          // Add the new legal name and updated address (if found) to updatedData
+          params.node.updateData({
+            ...params.node.data,
+            complianceReportId,
+            legalName: newLegalName,
+            addressForService: address
+          })
+        }
+      }
+  
       alertRef.current?.triggerAlert({
         message: 'Updating row...',
         severity: 'pending'
@@ -114,6 +149,7 @@ export const AddEditNotionalTransfers = () => {
         await saveRow(updatedData)
         updatedData = {
           ...updatedData,
+          complianceReportId,
           validationStatus: 'success',
           modified: false
         }
@@ -131,6 +167,7 @@ export const AddEditNotionalTransfers = () => {
 
         updatedData = {
           ...updatedData,
+          complianceReportId,
           validationStatus: 'error'
         }
 
@@ -156,7 +193,7 @@ export const AddEditNotionalTransfers = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, apiService, complianceReportId]
   )
 
   const onAction = async (action, params) => {

@@ -51,6 +51,14 @@ export const AsyncSuggestionEditor = ({
     }
   }
 
+  const processedOptions = useMemo(() => {
+    if (!options) return [];
+    if (Array.isArray(options)) {
+      return options.map(item => typeof item === 'string' ? { title: item } : item);
+    }
+    return options[optionLabel]?.map(item => ({ title: item })) || [];
+  }, [options, optionLabel]);
+
   return (
     <BCBox
       component="div"
@@ -74,13 +82,7 @@ export const AsyncSuggestionEditor = ({
         getOptionLabel={(option) =>
           typeof option === 'string' ? option : option.title
         }
-        options={
-          options
-            ? Array.isArray(options)
-              ? options.map((item) => ({ title: item }))
-              : options[optionLabel].map((item) => ({ title: item }))
-            : []
-        }
+        options={processedOptions}
         includeInputInList
         value={value}
         onInputChange={handleInputChange}

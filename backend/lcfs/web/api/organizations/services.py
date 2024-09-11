@@ -34,7 +34,7 @@ from .schema import (
     OrganizationListSchema,
     OrganizationCreateSchema,
     OrganizationSummaryResponseSchema,
-    OrganizationStatusSchema
+    OrganizationSearchResponseSchema
 )
 
 
@@ -422,3 +422,37 @@ class OrganizationsService:
             organization_id
         )
         return new_transaction
+
+    @service_handler
+    async def search_organizations(self, search_query: str) -> List[OrganizationSearchResponseSchema]:
+        """
+        Search for organizations based on a query string.
+        Returns a list of organizations with their names and formatted addresses.
+        """
+        organizations = await self.repo.search_organizations(search_query)
+        
+        return [
+            OrganizationSearchResponseSchema(
+                organization_id=org.organization_id,
+                name=org.name,
+                formatted_address=self._format_address(org.org_address)
+            )
+            for org in organizations
+        ]
+
+    def _format_address(self, address):
+        """
+        Format the organization address for display.
+        """
+        if not address:
+            return ""
+        
+        parts = [
+            address.street_address,
+            address.address_other,
+            address.city,
+            address.province_state,
+            address.country,
+            address.postalCode_zipCode
+        ]
+        return ", ".join(filter(None, parts))

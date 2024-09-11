@@ -3,10 +3,12 @@ import { suppressKeyboardEvent } from '@/utils/eventHandlers'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
+  AsyncSuggestionEditor,
   AutocompleteEditor,
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { apiRoutes } from '@/constants/routes'
 
 const cellErrorStyle = (params, errors) => {
   let style = {}
@@ -58,8 +60,20 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   {
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
-    cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'company-name-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.organizationSearch
+        path += 'company=' + queryKey[1]
+        const response = await client.get(path)
+        return response.data.map(org => org.name)
+      },
+      api: params.api,
+    }),
+    suppressKeyboardEvent,
+    minWidth: 300,
     cellStyle: (params) => cellErrorStyle(params, errors)
   },
   {
