@@ -18,7 +18,9 @@ class TransferValidation:
         self.org_repo = org_repo
         self.request = request
 
-    async def government_update_transfer(self, request: Request, transfer_create: TransferCreateSchema):
+    async def government_update_transfer(
+        self, request: Request, transfer_create: TransferCreateSchema
+    ):
         # Ensure only the valid statuses are passed.
         if transfer_create.current_status not in LCFS_Constants.GOV_TRANSFER_STATUSES:
             raise HTTPException(
@@ -39,4 +41,3 @@ class TransferValidation:
                     detail="Validation for authorization failed.",
                 )
             # TODO: Ensure the logged in user has the necessary permissions and roles.
-

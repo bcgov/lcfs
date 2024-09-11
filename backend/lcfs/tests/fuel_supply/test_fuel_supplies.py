@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
 
+
 @pytest.mark.anyio
 async def test_get_fs_table_options(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
@@ -18,6 +19,7 @@ async def test_get_fs_table_options(
     assert isinstance(data["fuel_types"], list)
     assert isinstance(data["fuel_classes"], list)
 
+
 @pytest.mark.anyio
 async def test_get_fuel_supply_list(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
@@ -29,7 +31,7 @@ async def test_get_fuel_supply_list(
         "page": 1,
         "size": 10,
         "sort_orders": [],
-        "filters": []
+        "filters": [],
     }
     response = await client.post(url, json=payload)
 
@@ -39,20 +41,20 @@ async def test_get_fuel_supply_list(
     assert "fuel_supplies" in data
     assert isinstance(data["fuel_supplies"], list)
 
+
 @pytest.mark.anyio
 async def test_get_fuel_supply_list_without_pagination(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
 ):
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_fuel_supply")
-    payload = {
-        "compliance_report_id": 1
-    }
+    payload = {"compliance_report_id": 1}
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
+
 
 @pytest.mark.anyio
 async def test_save_fuel_supply_row_create(
@@ -66,7 +68,7 @@ async def test_save_fuel_supply_row_create(
         "fuel_type": "Gasoline",
         "fuel_class": "Class 1",
         "quantity": 1000,
-        "deleted": False
+        "deleted": False,
     }
     response = await client.post(url, json=payload)
 
@@ -76,6 +78,7 @@ async def test_save_fuel_supply_row_create(
     assert data["fuel_type"] == "Gasoline"
     assert data["fuel_class"] == "Class 1"
     assert data["quantity"] == 1000
+
 
 @pytest.mark.anyio
 async def test_save_fuel_supply_row_update(
@@ -89,7 +92,7 @@ async def test_save_fuel_supply_row_update(
         "fuel_type": "Diesel",
         "fuel_class": "Class 2",
         "quantity": 2000,
-        "deleted": False
+        "deleted": False,
     }
     response = await client.post(url, json=payload)
 
@@ -100,23 +103,21 @@ async def test_save_fuel_supply_row_update(
     assert data["fuel_class"] == "Class 2"
     assert data["quantity"] == 2000
 
+
 @pytest.mark.anyio
 async def test_save_fuel_supply_row_delete(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
 ):
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
-    payload = {
-        "compliance_report_id": 1,
-        "fuel_supply_id": 1,
-        "deleted": True
-    }
+    payload = {"compliance_report_id": 1, "fuel_supply_id": 1, "deleted": True}
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert "message" in data
     assert data["message"] == "fuel supply row deleted successfully"
+
 
 @pytest.mark.anyio
 async def test_save_fuel_supply_row_unauthorized(
@@ -130,7 +131,7 @@ async def test_save_fuel_supply_row_unauthorized(
         "fuel_type": "Gasoline",
         "fuel_class": "Class 1",
         "quantity": 1000,
-        "deleted": False
+        "deleted": False,
     }
     response = await client.post(url, json=payload)
 

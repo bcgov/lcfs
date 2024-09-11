@@ -5,7 +5,10 @@ from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.transaction.services import TransactionsService
-from lcfs.web.api.transaction.schema import TransactionListSchema, TransactionStatusSchema
+from lcfs.web.api.transaction.schema import (
+    TransactionListSchema,
+    TransactionStatusSchema,
+)
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -14,7 +17,11 @@ logger = getLogger("transaction")
 router = APIRouter()
 
 
-@router.post("/{organization_id}", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
+@router.post(
+    "/{organization_id}",
+    response_model=TransactionListSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_transactions_paginated_by_org(
     request: Request,
@@ -28,7 +35,11 @@ async def get_transactions_paginated_by_org(
     return await service.get_transactions_paginated(pagination, organization_id)
 
 
-@router.get("/{organization_id}/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/{organization_id}/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions_by_org(
     request: Request,
@@ -74,10 +85,9 @@ async def export_transactions(
     status_code=status.HTTP_200_OK,
 )
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_transaction_statuses(
-    request: Request,
-    service: TransactionsService = Depends()
+    request: Request, service: TransactionsService = Depends()
 ) -> List[TransactionStatusSchema]:
-    '''Fetch all transaction statuses'''
+    """Fetch all transaction statuses"""
     return await service.get_transaction_statuses()

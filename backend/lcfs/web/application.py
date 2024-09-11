@@ -9,7 +9,11 @@ from fastapi.responses import UJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.middleware.authentication import AuthenticationMiddleware
-from starlette.authentication import AuthenticationBackend, AuthCredentials, UnauthenticatedUser
+from starlette.authentication import (
+    AuthenticationBackend,
+    AuthCredentials,
+    UnauthenticatedUser,
+)
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -22,12 +26,12 @@ from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 log_formatter = colorlog.ColoredFormatter(
     "%(log_color)s[%(levelname)s] [%(asctime)s]  %(name)s.%(funcName)s - %(message)s",
     log_colors={
-        'DEBUG': 'cyan',
-        'INFO': 'green',
-        'WARNING': 'yellow',
-        'ERROR': 'red',
-        'CRITICAL': 'bold_red'
-    }
+        "DEBUG": "cyan",
+        "INFO": "green",
+        "WARNING": "yellow",
+        "ERROR": "red",
+        "CRITICAL": "bold_red",
+    },
 )
 
 # Create a colorized console handler with the formatter
@@ -47,20 +51,19 @@ origins = [
     "https://lcfs.apps.silver.devops.gov.bc.ca",
 ]
 
+
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
     """
     Catches HTTP exceptions from other middlewares, returns JSON responses, and adds CORS headers.
     """
+
     async def dispatch(self, request: Request, call_next):
         try:
             return await call_next(request)
         except HTTPException as exc:
             response = JSONResponse(
                 status_code=exc.status_code,
-                content={
-                    "status" : exc.status_code,
-                    "detail": exc.detail
-                }
+                content={"status": exc.status_code, "detail": exc.detail},
             )
 
             # Check if the request origin is in the allowed origins
@@ -70,22 +73,25 @@ class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
 
             return response
 
+
 class LazyAuthenticationBackend(AuthenticationBackend):
     def __init__(self, app):
         self.app = app
 
     async def authenticate(self, request):
-        if request.scope['method'] == "OPTIONS":
+        if request.scope["method"] == "OPTIONS":
             return AuthCredentials([]), UnauthenticatedUser()
-        
+
         # Lazily retrieve Redis, session, and settings from app state
         redis_pool = self.app.state.redis_pool
         session = self.app.state.db_session_factory
         settings = self.app.state.settings
 
         # Now that we have the dependencies, we can instantiate the real backend
-        real_backend = UserAuthentication(redis_pool=redis_pool, session=session, settings=settings)
-        
+        real_backend = UserAuthentication(
+            redis_pool=redis_pool, session=session, settings=settings
+        )
+
         # Call the authenticate method of the real backend
         return await real_backend.authenticate(request)
 
@@ -122,7 +128,9 @@ def get_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],  # Allows all methods
         allow_headers=["*"],  # Allows all headers
-        expose_headers=["Content-Disposition"],  # Expose Content-Disposition header to the frontend
+        expose_headers=[
+            "Content-Disposition"
+        ],  # Expose Content-Disposition header to the frontend
     )
 
     # Apply custom authentication handler for user injection purposes

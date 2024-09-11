@@ -53,7 +53,7 @@ class OrganizationService:
         prefix_map = {
             "CT": "Transfer",
             "AA": "AdminAdjustment",
-            "IA": "InitiativeAgreement"
+            "IA": "InitiativeAgreement",
         }
 
         for filter in pagination.filters:
@@ -61,24 +61,32 @@ class OrganizationService:
                 filter_value = filter.filter.upper()
                 for prefix, transaction_type in prefix_map.items():
                     if filter_value.startswith(prefix):
-                        numeric_part = filter_value[len(prefix):]
+                        numeric_part = filter_value[len(prefix) :]
                         if numeric_part:
                             if numeric_part.isdigit():
-                                conditions.append(and_(
-                                    TransactionView.transaction_type == transaction_type,
-                                    TransactionView.transaction_id == int(numeric_part)
-                                ))
+                                conditions.append(
+                                    and_(
+                                        TransactionView.transaction_type
+                                        == transaction_type,
+                                        TransactionView.transaction_id
+                                        == int(numeric_part),
+                                    )
+                                )
                             else:
                                 # Invalid numeric part, add a condition that will never match
                                 conditions.append(False)
                         else:
                             # Only prefix provided, filter by transaction type only
-                            conditions.append(TransactionView.transaction_type == transaction_type)
+                            conditions.append(
+                                TransactionView.transaction_type == transaction_type
+                            )
                         break
                 else:
                     # If no prefix matches, treat the whole value as a potential transaction_id
                     if filter_value.isdigit():
-                        conditions.append(TransactionView.transaction_id == int(filter_value))
+                        conditions.append(
+                            TransactionView.transaction_id == int(filter_value)
+                        )
                     else:
                         # Invalid input, add a condition that will never match
                         conditions.append(False)
@@ -89,7 +97,9 @@ class OrganizationService:
                 filter_option = filter.type
                 filter_type = filter.filter_type
                 conditions.append(
-                    apply_filter_conditions(field, filter_value, filter_option, filter_type)
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
                 )
 
     @service_handler

@@ -86,13 +86,12 @@ async def save_fuel_export_row(
     fs_id: Optional[int] = request_data.fuel_export_id
 
     await report_validate.validate_organization_access(compliance_report_id)
-    
+
     if request_data.deleted:
         # Delete existing fuel export row
         await fs_service.delete_fuel_export(fs_id)
         return DeleteFuelExportResponseSchema(
-            success= True,
-            message="fuel export row deleted successfully"
+            success=True, message="fuel export row deleted successfully"
         )
     elif fs_id:
         # Update existing fuel export row

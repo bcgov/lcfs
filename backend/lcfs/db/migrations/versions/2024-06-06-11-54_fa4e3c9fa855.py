@@ -19,7 +19,12 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "target_carbon_intensity",
-        sa.Column("target_carbon_intensity_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column(
+            "target_carbon_intensity_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+        ),
         sa.Column(
             "compliance_period_id",
             sa.Integer(),
@@ -132,8 +137,18 @@ def upgrade() -> None:
         existing_comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
         schema=None,
     )
-    op.create_index(op.f('ix_target_carbon_intensity_compliance_period_id'), 'target_carbon_intensity', ['compliance_period_id'], unique=False)
-    op.create_index(op.f('ix_target_carbon_intensity_fuel_category_id'), 'target_carbon_intensity', ['fuel_category_id'], unique=False)
+    op.create_index(
+        op.f("ix_target_carbon_intensity_compliance_period_id"),
+        "target_carbon_intensity",
+        ["compliance_period_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_target_carbon_intensity_fuel_category_id"),
+        "target_carbon_intensity",
+        ["fuel_category_id"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:
@@ -173,6 +188,12 @@ def downgrade() -> None:
         type_=sa.REAL(),
         existing_nullable=False,
     )
-    op.drop_index(op.f('ix_target_carbon_intensity_fuel_category_id'), table_name='target_carbon_intensity')
-    op.drop_index(op.f('ix_target_carbon_intensity_compliance_period_id'), table_name='target_carbon_intensity')
+    op.drop_index(
+        op.f("ix_target_carbon_intensity_fuel_category_id"),
+        table_name="target_carbon_intensity",
+    )
+    op.drop_index(
+        op.f("ix_target_carbon_intensity_compliance_period_id"),
+        table_name="target_carbon_intensity",
+    )
     op.drop_table("target_carbon_intensity")

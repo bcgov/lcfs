@@ -6,10 +6,7 @@ from fastapi import Depends, Request
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.comment.InternalComment import InternalComment
 from .repo import InternalCommentRepository
-from .schema import (
-    InternalCommentCreateSchema,
-    InternalCommentResponseSchema
-)
+from .schema import InternalCommentCreateSchema, InternalCommentResponseSchema
 
 
 logger = getLogger("internal_comment_service")
@@ -19,10 +16,11 @@ class InternalCommentService:
     """
     Service class for handling internal comment-related operations.
     """
+
     def __init__(
         self,
         request: Request = None,
-        repo: InternalCommentRepository = Depends(InternalCommentRepository)
+        repo: InternalCommentRepository = Depends(InternalCommentRepository),
     ) -> None:
         """
         Initializes the InternalCommentService with a request object and an
@@ -52,7 +50,7 @@ class InternalCommentService:
         comment = InternalComment(
             comment=data.comment,
             audience_scope=data.audience_scope,
-            create_user=username
+            create_user=username,
         )
         created_comment = await self.repo.create_internal_comment(
             comment, data.entity_type, data.entity_id
@@ -94,7 +92,9 @@ class InternalCommentService:
         return InternalCommentResponseSchema.from_orm(comment)
 
     @service_handler
-    async def update_internal_comment(self, internal_comment_id: int, new_comment_text: str) -> InternalCommentResponseSchema:
+    async def update_internal_comment(
+        self, internal_comment_id: int, new_comment_text: str
+    ) -> InternalCommentResponseSchema:
         """
         Updates the text of an existing internal comment, identified by its ID and the
         username of the comment creator.
@@ -106,5 +106,7 @@ class InternalCommentService:
         Returns:
             InternalCommentResponseSchema: The updated internal comment as a data transfer object.
         """
-        updated_comment = await self.repo.update_internal_comment(internal_comment_id, new_comment_text)
+        updated_comment = await self.repo.update_internal_comment(
+            internal_comment_id, new_comment_text
+        )
         return InternalCommentResponseSchema.model_validate(updated_comment)

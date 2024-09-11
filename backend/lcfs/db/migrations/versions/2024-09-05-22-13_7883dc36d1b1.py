@@ -16,10 +16,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.alter_column('fuel_supply', 'ci_limit',
-                    new_column_name='target_ci')
+    op.alter_column("fuel_supply", "ci_limit", new_column_name="target_ci")
 
 
 def downgrade() -> None:
-    op.alter_column('fuel_supply', 'target_ci',
-                    new_column_name='ci_limit')
+    op.alter_column("fuel_supply", "target_ci", new_column_name="ci_limit")

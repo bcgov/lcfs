@@ -39,21 +39,23 @@ class FuelCodeServices:
     async def search_fuel_code(self, fuel_code, prefix, distinct_search):
         if distinct_search:
             result = await self.repo.get_distinct_fuel_codes_by_code(fuel_code, prefix)
-        else: 
+        else:
             result = await self.repo.get_fuel_code_by_code_prefix(fuel_code, prefix)
         return SearchFuelCodeList(fuel_codes=result)
-    
+
     @service_handler
     async def search_company(self, company):
-        return await self.repo.get_distinct_company_names(company)        
-    
+        return await self.repo.get_distinct_company_names(company)
+
     @service_handler
     async def search_contact_name(self, company, contact_name):
-        return await self.repo.get_contact_names_by_company(company, contact_name)      
-    
+        return await self.repo.get_contact_names_by_company(company, contact_name)
+
     @service_handler
     async def search_contact_email(self, company, contact_name, contact_email):
-        return await self.repo.get_contact_email_by_company_and_name(company, contact_name, contact_email)      
+        return await self.repo.get_contact_email_by_company_and_name(
+            company, contact_name, contact_email
+        )
 
     @service_handler
     async def get_table_options(self) -> TableOptionsSchema:
@@ -66,8 +68,7 @@ class FuelCodeServices:
         latest_fuel_codes = await self.repo.get_latest_fuel_codes()
         field_options_results = await self.repo.get_fuel_code_field_options()
         fp_locations = await self.repo.get_fp_locations()
-        facility_nameplate_capacity_units = [
-            unit.value for unit in QuantityUnitsEnum]
+        facility_nameplate_capacity_units = [unit.value for unit in QuantityUnitsEnum]
 
         field_options_results_dict = {}
         for row in field_options_results:
@@ -79,13 +80,17 @@ class FuelCodeServices:
                     field_options_results_dict[key] = set()
                 field_options_results_dict[key].add(value)
 
-        field_options = {key: sorted(list(values))
-                         for key, values in field_options_results_dict.items()}
+        field_options = {
+            key: sorted(list(values))
+            for key, values in field_options_results_dict.items()
+        }
 
         # Get next available fuel code for each prefix
         fuel_code_prefixes_with_next = []
         for prefix in fuel_code_prefixes:
-            next_code = await self.repo.get_next_available_fuel_code_by_prefix(prefix.prefix)
+            next_code = await self.repo.get_next_available_fuel_code_by_prefix(
+                prefix.prefix
+            )
             schema = FuelCodePrefixSchema.model_validate(prefix)
             schema.next_fuel_code = next_code
             fuel_code_prefixes_with_next.append(schema)
@@ -102,7 +107,7 @@ class FuelCodeServices:
             "latest_fuel_codes": latest_fuel_codes,
             "field_options": field_options,
             "fp_locations": list(set(fp_locations)),
-            "facility_nameplate_capacity_units": facility_nameplate_capacity_units
+            "facility_nameplate_capacity_units": facility_nameplate_capacity_units,
         }
 
     @service_handler
@@ -136,8 +141,7 @@ class FuelCodeServices:
         fuel_status = await self.repo.get_fuel_status_by_status(fuel_code.status)
         fuel_type = await self.repo.get_fuel_type_by_name(fuel_code.fuel)
         facility_nameplate_capacity_units_enum = (
-            QuantityUnitsEnum(
-                fuel_code.facility_nameplate_capacity_unit).name
+            QuantityUnitsEnum(fuel_code.facility_nameplate_capacity_unit).name
             if fuel_code.facility_nameplate_capacity_unit is not None
             else None
         )
@@ -159,14 +163,14 @@ class FuelCodeServices:
                     "validation_msg",
                     "fuel_code",
                     "deleted",
-                    "facility_nameplate_capacity_unit"
+                    "facility_nameplate_capacity_unit",
                 }
             ),
             fuel_code_status=fuel_status,
             fuel_code=str(fuel_code.fuel_code),
             prefix_id=prefix.fuel_code_prefix_id,
             fuel_type_id=fuel_type.fuel_type_id,
-            facility_nameplate_capacity_unit=facility_nameplate_capacity_units_enum
+            facility_nameplate_capacity_unit=facility_nameplate_capacity_units_enum,
         )
 
         fc.feedstock_fuel_transport_modes = [
@@ -204,7 +208,9 @@ class FuelCodeServices:
         Create a new fuel code.
         """
         fuel_code.status = FuelCodeStatusEnum.Draft
-        fuel_code_value = await self.repo.validate_fuel_code(fuel_code.fuel_code, fuel_code.prefix)
+        fuel_code_value = await self.repo.validate_fuel_code(
+            fuel_code.fuel_code, fuel_code.prefix
+        )
         fuel_code.fuel_code = fuel_code_value
         fuel_code_model = await self.convert_to_model(fuel_code)
         fuel_code_model.fuel_status_id = 1  # set to draft by default
@@ -215,26 +221,36 @@ class FuelCodeServices:
         return await self.repo.get_fuel_code(fuel_code_id)
 
     async def get_fuel_code_status(self, fuel_code_status: str) -> FuelCodeStatus:
-        return (await self.repo.get_fuel_code_status(fuel_code_status))
+        return await self.repo.get_fuel_code_status(fuel_code_status)
 
     @service_handler
-    async def update_fuel_code(self, fuel_code_id: int, fuel_code_data: FuelCodeCreateSchema):
+    async def update_fuel_code(
+        self, fuel_code_id: int, fuel_code_data: FuelCodeCreateSchema
+    ):
         fuel_code = await self.get_fuel_code(fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
 
-        for field, value in fuel_code_data.model_dump(exclude={'feedstock_fuel_transport_modes', 'finished_fuel_transport_modes', 'facility_nameplate_capacity_unit'}).items():
+        for field, value in fuel_code_data.model_dump(
+            exclude={
+                "feedstock_fuel_transport_modes",
+                "finished_fuel_transport_modes",
+                "facility_nameplate_capacity_unit",
+            }
+        ).items():
             setattr(fuel_code, field, value)
 
         fuel_code.feedstock_fuel_transport_modes.clear()
         if fuel_code_data.feedstock_fuel_transport_modes:
             for mode in fuel_code_data.feedstock_fuel_transport_modes:
 
-                transport_mode = await self.repo.get_transport_mode(mode.transport_mode_id)
+                transport_mode = await self.repo.get_transport_mode(
+                    mode.transport_mode_id
+                )
 
                 feedstock_mode = FeedstockFuelTransportMode(
                     fuel_code_id=fuel_code.fuel_code_id,
-                    transport_mode_id=transport_mode.transport_mode_id
+                    transport_mode_id=transport_mode.transport_mode_id,
                 )
 
                 fuel_code.feedstock_fuel_transport_modes.append(feedstock_mode)
@@ -243,25 +259,30 @@ class FuelCodeServices:
         if fuel_code_data.finished_fuel_transport_modes:
             for mode in fuel_code_data.finished_fuel_transport_modes:
 
-                transport_mode = await self.repo.get_transport_mode(mode.transport_mode_id)
+                transport_mode = await self.repo.get_transport_mode(
+                    mode.transport_mode_id
+                )
 
                 finished_mode = FinishedFuelTransportMode(
                     fuel_code_id=fuel_code.fuel_code_id,
-                    transport_mode_id=transport_mode.transport_mode_id
+                    transport_mode_id=transport_mode.transport_mode_id,
                 )
 
                 fuel_code.finished_fuel_transport_modes.append(finished_mode)
 
         facility_nameplate_capacity_units_enum = (
-            QuantityUnitsEnum(
-                fuel_code_data.facility_nameplate_capacity_unit).name
+            QuantityUnitsEnum(fuel_code_data.facility_nameplate_capacity_unit).name
             if fuel_code_data.facility_nameplate_capacity_unit is not None
             else None
         )
-        fuel_code.facility_nameplate_capacity_unit = facility_nameplate_capacity_units_enum
+        fuel_code.facility_nameplate_capacity_unit = (
+            facility_nameplate_capacity_units_enum
+        )
 
-        if fuel_code_data.status == 'Approved':
-            fuel_code.fuel_status_id = (await self.get_fuel_code_status(fuel_code_data.status)).fuel_code_status_id
+        if fuel_code_data.status == "Approved":
+            fuel_code.fuel_status_id = (
+                await self.get_fuel_code_status(fuel_code_data.status)
+            ).fuel_code_status_id
             fuel_code.approval_date = datetime.now()
 
         return await self.repo.update_fuel_code(fuel_code)

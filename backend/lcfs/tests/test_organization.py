@@ -3,7 +3,13 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
 
-from lcfs.web.api.organizations.schema import OrganizationBalanceResponseSchema, OrganizationListSchema, OrganizationStatusEnum, OrganizationSummaryResponseSchema, OrganizationTypeEnum
+from lcfs.web.api.organizations.schema import (
+    OrganizationBalanceResponseSchema,
+    OrganizationListSchema,
+    OrganizationStatusEnum,
+    OrganizationSummaryResponseSchema,
+    OrganizationTypeEnum,
+)
 
 
 @pytest.mark.anyio
@@ -193,14 +199,16 @@ async def test_get_organizations_list(
     assert data.organizations[0].org_type.org_type == OrganizationTypeEnum.FUEL_SUPPLIER
     assert response.status_code == status.HTTP_200_OK
 
+
 @pytest.mark.anyio
 async def test_get_organization_statuses_list(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
 ) -> None:
     set_mock_user_roles(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization_statuses")
-    response = await client.get(url)    
+    response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
+
 
 @pytest.mark.anyio
 async def test_get_organization_types_list(
@@ -208,8 +216,9 @@ async def test_get_organization_types_list(
 ) -> None:
     set_mock_user_roles(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization_types")
-    response = await client.get(url)    
+    response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
+
 
 @pytest.mark.anyio
 async def test_get_organization_names(
@@ -224,6 +233,7 @@ async def test_get_organization_names(
     assert len(data) > 0
     assert all("name" in org for org in data)
 
+
 @pytest.mark.anyio
 async def test_get_externally_registered_organizations(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
@@ -237,6 +247,7 @@ async def test_get_externally_registered_organizations(
         org_model = OrganizationSummaryResponseSchema(**org)
         assert org_model.organization_id is not None
         assert org_model.org_status.status == OrganizationStatusEnum.REGISTERED
+
 
 @pytest.mark.anyio
 async def test_get_balances(
@@ -253,6 +264,7 @@ async def test_get_balances(
     assert data.total_balance >= 0
     assert data.reserved_balance >= 0
 
+
 @pytest.mark.anyio
 async def test_get_current_balances(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
@@ -265,6 +277,7 @@ async def test_get_current_balances(
     assert data.name is not None
     assert data.total_balance >= 0
     assert data.reserved_balance >= 0
+
 
 @pytest.mark.anyio
 async def test_create_organization_unauthorized(
@@ -286,7 +299,7 @@ async def test_create_organization_unauthorized(
             "city": "Test City",
             "provinceState": "Test Province",
             "country": "Test Country",
-            "postalcodeZipcode": "12345"
+            "postalcodeZipcode": "12345",
         },
         "attorneyAddress": {
             "name": "Test Attorney Address",
@@ -294,11 +307,12 @@ async def test_create_organization_unauthorized(
             "city": "Attorney City",
             "provinceState": "Attorney Province",
             "country": "Attorney Country",
-            "postalcodeZipcode": "67890"
-        }
+            "postalcodeZipcode": "67890",
+        },
     }
     response = await client.post(url, json=payload)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
 
 @pytest.mark.anyio
 async def test_get_balances_unauthorized(

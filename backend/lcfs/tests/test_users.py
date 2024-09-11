@@ -162,7 +162,7 @@ async def test_create_user_success(
         "last_name": "User",
         "is_active": True,
         "organization_id": None,
-        "roles": ["SUPPLIER"]
+        "roles": ["SUPPLIER"],
     }
 
     # Make the POST request to create a new user

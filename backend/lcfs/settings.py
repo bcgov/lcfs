@@ -58,7 +58,9 @@ class Settings(BaseSettings):
     redis_base: Optional[int] = None
 
     # Variables for Keycloak
-    well_known_endpoint: str = "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
+    well_known_endpoint: str = (
+        "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
+    )
     keycloak_audience: str = "low-carbon-fuel-standard-5147"
 
     @property

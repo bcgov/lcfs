@@ -12,10 +12,10 @@ class FuelCodeStatusEnumSchema(str, Enum):
 
 
 class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = 'L'
+    Litres = "L"
     Kilograms = "kg"
-    Kilowatt_hour = 'kWh'
-    Cubic_metres = 'm3'
+    Kilowatt_hour = "kWh"
+    Cubic_metres = "m3"
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -166,6 +166,8 @@ class FuelCodeSchema(BaseSchema):
     finished_fuel_transport_modes: Optional[List[FinishedFuelTransportModeSchema]] = (
         None
     )
+
+
 class FuelCodeCloneSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_status_id: Optional[int] = None
@@ -228,8 +230,10 @@ class TableOptionsSchema(BaseSchema):
     fp_locations: List[FPLocationsSchema]
     facility_nameplate_capacity_units: List[FuelTypeQuantityUnitsEnumSchema]
 
+
 class SearchFuelCodeList(BaseSchema):
     fuel_codes: Union[List[str], List[FuelCodeCloneSchema]]
+
 
 class FuelCodesSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]
@@ -280,15 +284,18 @@ class FuelCodeCreateSchema(BaseSchema):
 
     @root_validator(pre=True)
     def check_capacity_and_unit(cls, values):
-        facility_nameplate_capacity = values.get('facilityNameplateCapacity')
-        facility_nameplate_capacity_unit = values.get(
-            'facilityNameplateCapacityUnit')
+        facility_nameplate_capacity = values.get("facilityNameplateCapacity")
+        facility_nameplate_capacity_unit = values.get("facilityNameplateCapacityUnit")
 
         if facility_nameplate_capacity is None:
-            values['facilityNameplateCapacityUnit'] = None
-        elif facility_nameplate_capacity is not None and facility_nameplate_capacity_unit is None:
+            values["facilityNameplateCapacityUnit"] = None
+        elif (
+            facility_nameplate_capacity is not None
+            and facility_nameplate_capacity_unit is None
+        ):
             raise ValueError(
-                'facility_nameplate_capacity_unit must be provided when facility_nameplate_capacity is not None')
+                "facility_nameplate_capacity_unit must be provided when facility_nameplate_capacity is not None"
+            )
 
         return values
 

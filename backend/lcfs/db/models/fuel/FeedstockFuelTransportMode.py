@@ -25,7 +25,9 @@ class FeedstockFuelTransportMode(BaseModel, Auditable):
         comment="Transport mode identifier",
     )
     # Define relationships
-    feedstock_fuel_code = relationship("FuelCode", back_populates="feedstock_fuel_transport_modes")
+    feedstock_fuel_code = relationship(
+        "FuelCode", back_populates="feedstock_fuel_transport_modes"
+    )
     feedstock_fuel_transport_mode = relationship(
         "TransportMode", back_populates="feedstock_fuel_transport_modes"
     )

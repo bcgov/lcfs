@@ -8,8 +8,10 @@ app = FastAPI()
 
 @app.exception_handler(StarletteHTTPException)
 def exception_404_handler(request: Request, exc: HTTPException):
-    return JSONResponse(status_code=exc.status_code, content={
-        "error": {"status_code": exc.status_code, "message": exc.detail}})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": {"status_code": exc.status_code, "message": exc.detail}},
+    )
 
 
 class CommonHTTPException(HTTPException):
