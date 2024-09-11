@@ -24,6 +24,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     # ExpectedUseTypeSchema
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 
 logger = getLogger("allocation_agreement_services")
 
@@ -33,10 +34,12 @@ class AllocationAgreementServices:
         self,
         repo: AllocationAgreementRepository = Depends(
             AllocationAgreementRepository),
-        fuel_repo: FuelCodeRepository = Depends()
+        fuel_repo: FuelCodeRepository = Depends(),
+        org_repo: OrganizationsRepository = Depends()
     ) -> None:
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.org_repo = org_repo
 
     async def convert_to_model(self, allocation_agreement: AllocationAgreementCreateSchema) -> AllocationAgreement:
         """
@@ -213,5 +216,28 @@ class AllocationAgreementServices:
         return await self.repo.delete_allocation_agreement(allocation_agreement_id)
 
     @service_handler
-    async def search_trading_partner(self, trading_partner: str) -> List[str]:
-        return await self.repo.get_distinct_trading_partners(trading_partner)
+    async def search_trading_partner_details(self, transaction_partner: str) -> List[dict]:
+        """
+        Get organizations matching the transaction partner query.
+        The organization details include name, full address, email, and phone.
+        """
+        organizations = await self.org_repo.get_organization_details(transaction_partner)
+        
+        return [
+            {
+                "name": org.name,
+                "address": " ".join(
+                    part for part in [
+                        org.org_address.street_address,
+                        org.org_address.address_other,
+                        org.org_address.city,
+                        org.org_address.province_state,
+                        org.org_address.country,
+                        org.org_address.postalCode_zipCode
+                    ] if part
+                ),
+                "email": org.email,
+                "phone": org.phone
+            }
+            for org in organizations
+        ]
