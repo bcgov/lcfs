@@ -7,32 +7,45 @@ import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
 import { useMemo, useState } from 'react'
 
+/**
+ * AsyncSuggestionEditor component
+ *
+ * @param {string} value - Current input value.
+ * @param {function} onValueChange - Callback for input value changes.
+ * @param {boolean} enabled - Enables/disables the component (default: true).
+ * @param {number} minWords - Minimum number of words to trigger suggestions (default: 1).
+ * @param {string} queryKey - Unique key for caching the async query.
+ * @param {function} queryFn - Function to fetch async suggestions.
+ * @param {number} debounceValue - Debounce time in ms before triggering API (default: 500ms).
+ * @param {function} onKeyDownCapture - Custom handler for keydown events.
+ * @param {object} api - API for grid interactions (e.g., navigation).
+ * @param {string} optionLabel - Key for displaying suggestion labels (default: 'title').
+ */
 export const AsyncSuggestionEditor = ({
   value = '',
   onValueChange,
   enabled = true,
+  minWords = 1,
   queryKey,
   queryFn,
-  debounceValue,
+  debounceValue = 500,
   onKeyDownCapture,
   api,
-  optionLabel
+  optionLabel = 'name'
 }) => {
   const [inputValue, setInputValue] = useState('')
   const apiService = useApiService()
+
   const { data: options } = useQuery({
     queryKey: [queryKey || 'async-suggestion', inputValue],
     queryFn: async ({ queryKey }) => queryFn({ client: apiService, queryKey }),
-    enabled: inputValue !== '' && enabled,
+    enabled: inputValue.length >= minWords && enabled,
     retry: false,
     refetchOnWindowFocus: false
   })
 
   const debouncedSetInputValue = useMemo(
-    () =>
-      debounce((newInputValue) => {
-        setInputValue(newInputValue)
-      }, debounceValue || 500), // by default 1/2 second delay between calls
+    () => debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
     [debounceValue]
   )
 
@@ -71,16 +84,10 @@ export const AsyncSuggestionEditor = ({
         }}
         freeSolo
         id="async-search-editor"
-        getOptionLabel={(option) =>
-          typeof option === 'string' ? option : option.title
+        getOptionLabel={(option) => 
+          typeof option === 'string' ? option : option[optionLabel]
         }
-        options={
-          options
-            ? Array.isArray(options)
-              ? options.map((item) => ({ title: item }))
-              : options[optionLabel].map((item) => ({ title: item }))
-            : []
-        }
+        options={options || []}
         includeInputInList
         value={value}
         onInputChange={handleInputChange}
@@ -89,10 +96,9 @@ export const AsyncSuggestionEditor = ({
         noOptionsText="No suggestions..."
         renderInput={(params) => <TextField {...params} fullWidth autoFocus />}
         renderOption={({ key, ...props }, option, { inputValue }) => {
-          const matches = match(option.title, inputValue, {
-            insideWords: true
-          })
-          const parts = parse(option.title, matches)
+          const label = typeof option === 'string' ? option : option[optionLabel]
+          const matches = match(label, inputValue, { insideWords: true })
+          const parts = parse(label, matches)
 
           return (
             <li key={key} {...props}>

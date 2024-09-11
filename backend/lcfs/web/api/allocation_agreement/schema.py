@@ -93,3 +93,9 @@ class DeleteAllocationAgreementsSchema(BaseSchema):
 
 class DeleteAllocationAgreementResponseSchema(BaseSchema):
     message: str
+
+class OrganizationDetailsSchema(BaseSchema):
+    name: str
+    address: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]

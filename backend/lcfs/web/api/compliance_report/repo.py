@@ -64,8 +64,7 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
-                filter_value = getattr(
-                    ComplianceReportStatusEnum, filter_value)
+                filter_value = getattr(ComplianceReportStatusEnum, filter_value.title())
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
@@ -74,6 +73,7 @@ class ComplianceReportRepository:
                 field = get_field_for_filter(CompliancePeriod, "description")
             else:
                 field = get_field_for_filter(ComplianceReport, filter.field)
+
             conditions.append(
                 apply_filter_conditions(
                     field, filter_value, filter_option, filter_type)
@@ -239,6 +239,7 @@ class ComplianceReportRepository:
             [
                 "compliance_period",
                 "fuel_supplies",
+                "fuel_exports",
                 "history",
                 "notional_transfers",
                 "organization",
@@ -290,6 +291,10 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id == ComplianceReportStatus.compliance_report_status_id
             )
             .where(and_(*conditions))
         )

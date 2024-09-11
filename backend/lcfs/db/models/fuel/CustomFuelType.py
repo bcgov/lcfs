@@ -21,6 +21,7 @@ class CustomFuelType(BaseModel, EffectiveDates, DisplayOrder):
     description = Column(String, nullable=True, comment="Description of the custom fuel type")
 
     fuel_supplies = relationship('FuelSupply', back_populates='custom_fuel_type')
+    fuel_exports = relationship('FuelExport', back_populates='custom_fuel_type')
     fuel_category = relationship('FuelCategory')
     provisoin_of_the_act = relationship('ProvisionOfTheAct')
     fuel_code = relationship('FuelCode')

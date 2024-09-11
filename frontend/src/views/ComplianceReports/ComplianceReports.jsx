@@ -17,7 +17,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
-import { reportsColDefs } from './components/_schema'
+import { reportsColDefs, defaultSortModel } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 
 export const ComplianceReports = () => {
@@ -153,7 +153,7 @@ export const ComplianceReports = () => {
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
             gridKey={gridKey}
             getRowId={getRowId}
-            // defaultSortModel={defaultSortModel}
+            defaultSortModel={defaultSortModel}
             defaultFilterModel={location.state?.filters}
             gridOptions={gridOptions}
             handleGridKey={handleGridKey}

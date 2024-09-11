@@ -6,7 +6,8 @@ from lcfs.web.api.dashboard.services import DashboardServices
 from lcfs.web.api.dashboard.schema import (
     DirectorReviewCountsSchema,
     TransactionCountsSchema,
-    OrganizarionTransactionCountsSchema
+    OrganizarionTransactionCountsSchema,
+    OrgComplianceReportCountsSchema
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -40,3 +41,13 @@ async def get_org_transaction_counts(
     """Endpoint to retrieve counts for organizarion transaction items"""
     organization_id = request.user.organization.organization_id
     return await service.get_org_transaction_counts(organization_id)
+
+@router.get("/org-compliance-report-counts", response_model=OrgComplianceReportCountsSchema)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def get_org_compliance_report_counts(
+    request: Request,
+    service: DashboardServices = Depends(),
+):
+    """Endpoint to retrieve counts for organization compliance report items"""
+    organization_id = request.user.organization.organization_id
+    return await service.get_org_compliance_report_counts(organization_id)

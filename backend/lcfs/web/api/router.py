@@ -14,6 +14,7 @@ from lcfs.web.api import (
     transaction,
     internal_comment,
     fuel_code,
+    fuel_export,
     admin_adjustment,
     initiative_agreement,
     compliance_report,
@@ -54,6 +55,9 @@ api_router.include_router(
 )
 api_router.include_router(
     fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"]
+)
+api_router.include_router(
+    fuel_export.router, prefix="/fuel-exports", tags=["fuel-exports"]
 )
 api_router.include_router(
     admin_adjustment.router, prefix="/admin-adjustments", tags=["admin_adjustments"]

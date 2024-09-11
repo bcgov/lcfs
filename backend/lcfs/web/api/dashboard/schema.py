@@ -13,3 +13,7 @@ class TransactionCountsSchema(BaseSchema):
 
 class OrganizarionTransactionCountsSchema(BaseSchema):
     transfers: int
+
+class OrgComplianceReportCountsSchema(BaseSchema):
+    in_progress: int
+    awaiting_gov_review: int

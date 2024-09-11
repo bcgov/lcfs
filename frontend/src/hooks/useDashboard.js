@@ -43,3 +43,17 @@ export const useOrgTransactionCounts = (options = {}) => {
     ...options
   })
 }
+
+export const useOrgComplianceReportCounts = (options = {}) => {
+  const client = useApiService()
+  const path = apiRoutes.OrgComplianceReportCounts
+
+  return useQuery({
+    queryKey: ['org-compliance-report-counts'],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    },
+    ...options
+  })
+}

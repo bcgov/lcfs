@@ -163,6 +163,7 @@ export const BCGridViewer = ({
         flexDirection: 'column'
       }}
       className="bc-grid-container"
+      data-test="bc-grid-container"
     >
       <BCGridBase
         ref={ref}

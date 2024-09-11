@@ -49,21 +49,67 @@ export const FuelSupplySummary = ({ data }) => {
   )
 
   // TODO: The values for the following columns must be determined
-  const columns = useMemo(() => ([
-    { headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'), field: "complianceUnits", valueFormatter },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'), field: "fuelType", valueGetter: (params) => params.data.fuelType?.fuelType },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategory'), field: "fuelCategory", valueGetter: (params) => params.data.fuelCategory?.category },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType?.type || 'Any' },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'), field: "determiningCarbonIntensity", valueGetter: params => params.data.provisionOfTheAct?.name },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.quantity'), field: "quantity", valueFormatter },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: "units" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.ciLimit'), field: "ciLimit" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'), field: "ciOfFuel" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'), field: "energyDensity" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: "eer" },
-    { headerName: t('fuelSupply:fuelSupplyColLabels.energy'), field: "energy", valueFormatter },
-  ]), [t])
+  const columns = useMemo(
+    () => [
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+        field: 'complianceUnits',
+        valueFormatter
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
+        field: 'fuelType',
+        valueGetter: (params) => params.data.fuelType?.fuelType
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategory'),
+        field: 'fuelCategory',
+        valueGetter: (params) => params.data.fuelCategory?.category
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.endUse'),
+        field: 'endUse',
+        valueGetter: (params) => params.data.endUseType?.type || 'Any'
+      },
+      {
+        headerName: t(
+          'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
+        ),
+        field: 'determiningCarbonIntensity',
+        valueGetter: (params) => params.data.provisionOfTheAct?.name
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
+        field: 'fuelCode',
+        valueGetter: (params) => params.data.fuelCode?.fuelCode
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
+        field: 'quantity',
+        valueFormatter
+      },
+      { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
+        field: 'targetCi'
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+        field: 'ciOfFuel'
+      },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
+        field: 'energyDensity'
+      },
+      { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
+        field: 'energy',
+        valueFormatter
+      }
+    ],
+    [t]
+  )
 
   const getRowId = (params) => {
     return params.data.fuelSupplyId
