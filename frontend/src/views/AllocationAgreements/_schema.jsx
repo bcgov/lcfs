@@ -212,12 +212,13 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     ),
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = params.data.unrecognized
+      const conditionalStyle =
+         params.data.fuelType === 'Other'
           ? { backgroundColor: '#fff', borderColor: 'unset' }
           : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
-    editable: (params) => params.data.unrecognized,
+    editable: (params) => params.data.fuelType === 'Other',
     minWidth: 150
   },
   {

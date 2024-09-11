@@ -115,12 +115,12 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = params.data.unrecognized
+      const conditionalStyle = /other/i.test(params.data.fuelType)
         ? { backgroundColor: '#fff', borderColor: 'unset' }
         : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
-    editable: (params) => params.data.unrecognized
+    editable: (params) => /other/i.test(params.data.fuelType)
   },
   {
     field: 'fuelCategory',
