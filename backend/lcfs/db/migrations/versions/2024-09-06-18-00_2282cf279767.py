@@ -1,7 +1,7 @@
 """rename `fuel_class` table to fuel_instance
 
 Revision ID: 2282cf279767
-Revises: 9d93dc700752
+Revises: c8a2dbd4ccd7
 Create Date: 2024-09-06 18:00:38.695353
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "2282cf279767"
-down_revision = "9d93dc700752"
+down_revision = "c8a2dbd4ccd7"
 branch_labels = None
 depends_on = None
 
