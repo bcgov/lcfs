@@ -200,7 +200,7 @@ def upgrade() -> None:
     op.drop_column("compliance_report_summary", "diesel_category_previously_retained")
     op.drop_column("compliance_report_summary", "gasoline_category_previously_retained")
     op.drop_column("compliance_report_summary", "gasoline_category_obligation")
-    
+
     op.add_column(
         "fuel_supply",
         sa.Column(
@@ -249,7 +249,9 @@ def upgrade() -> None:
         schema=None,
     )
     op.drop_index("ix_organization_organization_code", table_name="organization")
-    op.create_unique_constraint("uq_organization_code", "organization", ["organization_code"])
+    op.create_unique_constraint(
+        "uq_organization_code", "organization", ["organization_code"]
+    )
 
 
 def downgrade() -> None:

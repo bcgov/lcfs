@@ -129,11 +129,9 @@ async def seed_organization_addresses(session):
                 )
             )
             if not exists.scalars().first():
-                organization_address = OrganizationAddress(
-                    **organization_address_data)
+                organization_address = OrganizationAddress(**organization_address_data)
                 session.add(organization_address)
 
     except Exception as e:
-        logger.error(
-            "Error occurred while seeding organization addresses: %s", e)
+        logger.error("Error occurred while seeding organization addresses: %s", e)
         raise

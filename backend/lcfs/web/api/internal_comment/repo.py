@@ -12,8 +12,12 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
-from lcfs.db.models.comment.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
+from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
+    AdminAdjustmentInternalComment,
+)
 
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 
@@ -27,7 +31,12 @@ class InternalCommentRepository:
     """
     Repository class for internal comments
     """
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session), user_repo: UserRepository = Depends()):
+
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_async_db_session),
+        user_repo: UserRepository = Depends(),
+    ):
         """
         Initializes the repository with an asynchronous database session.
 
@@ -39,7 +48,10 @@ class InternalCommentRepository:
 
     @repo_handler
     async def create_internal_comment(
-        self, internal_comment: InternalComment, entity_type: EntityTypeEnum, entity_id: int
+        self,
+        internal_comment: InternalComment,
+        entity_type: EntityTypeEnum,
+        entity_id: int,
     ):
         """
         Creates a new internal comment and associates it with a transfer, initiative agreement or admin adjustment entity.
@@ -59,15 +71,18 @@ class InternalCommentRepository:
         # Determine and create the appropriate entity association based on the provided entity type
         if entity_type == EntityTypeEnum.TRANSFER:
             association = TransferInternalComment(
-                transfer_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
+                transfer_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
             )
         elif entity_type == EntityTypeEnum.INITIATIVE_AGREEMENT:
             association = InitiativeAgreementInternalComment(
-                initiative_agreement_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
+                initiative_agreement_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
             )
         elif entity_type == EntityTypeEnum.ADMIN_ADJUSTMENT:
             association = AdminAdjustmentInternalComment(
-                admin_adjustment_id=entity_id, internal_comment_id=internal_comment.internal_comment_id
+                admin_adjustment_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
             )
 
         # Add the association to the session and commit
@@ -105,15 +120,15 @@ class InternalCommentRepository:
         entity_mapping = {
             EntityTypeEnum.TRANSFER: (
                 TransferInternalComment,
-                TransferInternalComment.transfer_id
+                TransferInternalComment.transfer_id,
             ),
             EntityTypeEnum.INITIATIVE_AGREEMENT: (
                 InitiativeAgreementInternalComment,
-                InitiativeAgreementInternalComment.initiative_agreement_id
+                InitiativeAgreementInternalComment.initiative_agreement_id,
             ),
             EntityTypeEnum.ADMIN_ADJUSTMENT: (
                 AdminAdjustmentInternalComment,
-                AdminAdjustmentInternalComment.admin_adjustment_id
+                AdminAdjustmentInternalComment.admin_adjustment_id,
             ),
         }
 
@@ -121,37 +136,48 @@ class InternalCommentRepository:
         entity_model, where_condition = entity_mapping[entity_type]
 
         # Construct the base query
-        base_query = select(
-            InternalComment,
-            (UserProfile.first_name + " " + UserProfile.last_name).label("full_name")
-        ).join(
-            entity_model,
-            entity_model.internal_comment_id == InternalComment.internal_comment_id
-        ).join(
-            UserProfile,
-            UserProfile.keycloak_username == InternalComment.create_user
-        ).where(
-            where_condition == entity_id
-        ).order_by(desc(InternalComment.internal_comment_id))
+        base_query = (
+            select(
+                InternalComment,
+                (UserProfile.first_name + " " + UserProfile.last_name).label(
+                    "full_name"
+                ),
+            )
+            .join(
+                entity_model,
+                entity_model.internal_comment_id == InternalComment.internal_comment_id,
+            )
+            .join(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+            )
+            .where(where_condition == entity_id)
+            .order_by(desc(InternalComment.internal_comment_id))
+        )
 
         # Execute the query
         results = await self.db.execute(base_query)
 
         # Compile and return the list of internal comments with user info
-        comments_with_user_info = [{
-            "internal_comment_id": internal_comment.internal_comment_id,
-            "comment": internal_comment.comment,
-            "audience_scope": internal_comment.audience_scope,
-            "create_user": internal_comment.create_user,
-            "create_date": internal_comment.create_date,
-            "update_date": internal_comment.update_date,
-            "full_name": full_name
-        } for internal_comment, full_name in results]
+        comments_with_user_info = [
+            {
+                "internal_comment_id": internal_comment.internal_comment_id,
+                "comment": internal_comment.comment,
+                "audience_scope": internal_comment.audience_scope,
+                "create_user": internal_comment.create_user,
+                "create_date": internal_comment.create_date,
+                "update_date": internal_comment.update_date,
+                "full_name": full_name,
+            }
+            for internal_comment, full_name in results
+        ]
 
         return comments_with_user_info
 
     @repo_handler
-    async def get_internal_comment_by_id(self, internal_comment_id: int) -> InternalComment:
+    async def get_internal_comment_by_id(
+        self, internal_comment_id: int
+    ) -> InternalComment:
         """
         Fetches an internal comment by its ID.
 

@@ -32,7 +32,6 @@ class UserCreateSchema(BaseSchema):
     roles: Optional[List[str]] = []
 
 
-
 class UserBaseSchema(BaseSchema):
     """DTO for user values."""
 
@@ -49,7 +48,6 @@ class UserBaseSchema(BaseSchema):
     organization: Optional[OrganizationSummaryResponseSchema] = None
     roles: Optional[List[RoleSchema]] = None
     is_government_user: Optional[bool] = None
-
 
     @classmethod
     def model_validate(cls, user_profile):
@@ -75,7 +73,6 @@ class UserHistorySchema(BaseSchema):
     external_username: str
     is_login_successful: bool
     login_error_message: Optional[str] = None
-
 
 
 class UserHistories(BaseSchema):

@@ -4,62 +4,97 @@ from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 from datetime import datetime
 
+
 class ComplianceReportSummary(BaseModel, Auditable):
-    __tablename__ = 'compliance_report_summary'
+    __tablename__ = "compliance_report_summary"
     __table_args__ = (
-        CheckConstraint('(compliance_report_id IS NULL) != (supplemental_report_id IS NULL)',
-                  name='check_one_report_id_not_null'), # ensure one report id only
-        {'comment': "Summary of all compliance calculations displaying the compliance units credits or debits over a compliance period"}
+        CheckConstraint(
+            "(compliance_report_id IS NULL) != (supplemental_report_id IS NULL)",
+            name="check_one_report_id_not_null",
+        ),  # ensure one report id only
+        {
+            "comment": "Summary of all compliance calculations displaying the compliance units credits or debits over a compliance period"
+        },
     )
-    
+
     summary_id = Column(Integer, primary_key=True, autoincrement=True)
-    compliance_report_id = Column(Integer, ForeignKey('compliance_report.compliance_report_id'), nullable=True)
-    supplemental_report_id = Column(Integer, ForeignKey('supplemental_report.supplemental_report_id'), nullable=True)
+    compliance_report_id = Column(
+        Integer, ForeignKey("compliance_report.compliance_report_id"), nullable=True
+    )
+    supplemental_report_id = Column(
+        Integer, ForeignKey("supplemental_report.supplemental_report_id"), nullable=True
+    )
     quarter = Column(Integer, nullable=True)  # Null for annual reports
     version = Column(Integer, nullable=False, default=1)
     is_locked = Column(Boolean, default=False)
 
-    # Renewable fuel target summary 
+    # Renewable fuel target summary
     line_1_fossil_derived_base_fuel_gasoline = Column(Float, nullable=False, default=0)
     line_1_fossil_derived_base_fuel_diesel = Column(Float, nullable=False, default=0)
     line_1_fossil_derived_base_fuel_jet_fuel = Column(Float, nullable=False, default=0)
-    
-    line_2_eligible_renewable_fuel_supplied_gasoline = Column(Float, nullable=False, default=0)
-    line_2_eligible_renewable_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
-    line_2_eligible_renewable_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
-    
-    line_3_total_tracked_fuel_supplied_gasoline = Column(Float, nullable=False, default=0)
+
+    line_2_eligible_renewable_fuel_supplied_gasoline = Column(
+        Float, nullable=False, default=0
+    )
+    line_2_eligible_renewable_fuel_supplied_diesel = Column(
+        Float, nullable=False, default=0
+    )
+    line_2_eligible_renewable_fuel_supplied_jet_fuel = Column(
+        Float, nullable=False, default=0
+    )
+
+    line_3_total_tracked_fuel_supplied_gasoline = Column(
+        Float, nullable=False, default=0
+    )
     line_3_total_tracked_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
-    line_3_total_tracked_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
-    
-    line_4_eligible_renewable_fuel_required_gasoline = Column(Float, nullable=False, default=0)
-    line_4_eligible_renewable_fuel_required_diesel = Column(Float, nullable=False, default=0)
-    line_4_eligible_renewable_fuel_required_jet_fuel = Column(Float, nullable=False, default=0)
-    
-    line_5_net_notionally_transferred_gasoline = Column(Float, nullable=False, default=0)
+    line_3_total_tracked_fuel_supplied_jet_fuel = Column(
+        Float, nullable=False, default=0
+    )
+
+    line_4_eligible_renewable_fuel_required_gasoline = Column(
+        Float, nullable=False, default=0
+    )
+    line_4_eligible_renewable_fuel_required_diesel = Column(
+        Float, nullable=False, default=0
+    )
+    line_4_eligible_renewable_fuel_required_jet_fuel = Column(
+        Float, nullable=False, default=0
+    )
+
+    line_5_net_notionally_transferred_gasoline = Column(
+        Float, nullable=False, default=0
+    )
     line_5_net_notionally_transferred_diesel = Column(Float, nullable=False, default=0)
-    line_5_net_notionally_transferred_jet_fuel = Column(Float, nullable=False, default=0)
-    
+    line_5_net_notionally_transferred_jet_fuel = Column(
+        Float, nullable=False, default=0
+    )
+
     line_6_renewable_fuel_retained_gasoline = Column(Float, nullable=False, default=0)
     line_6_renewable_fuel_retained_diesel = Column(Float, nullable=False, default=0)
     line_6_renewable_fuel_retained_jet_fuel = Column(Float, nullable=False, default=0)
-    
+
     line_7_previously_retained_gasoline = Column(Float, nullable=False, default=0)
     line_7_previously_retained_diesel = Column(Float, nullable=False, default=0)
     line_7_previously_retained_jet_fuel = Column(Float, nullable=False, default=0)
-    
+
     line_8_obligation_deferred_gasoline = Column(Float, nullable=False, default=0)
     line_8_obligation_deferred_diesel = Column(Float, nullable=False, default=0)
     line_8_obligation_deferred_jet_fuel = Column(Float, nullable=False, default=0)
-    
+
     line_9_obligation_added_gasoline = Column(Float, nullable=False, default=0)
     line_9_obligation_added_diesel = Column(Float, nullable=False, default=0)
     line_9_obligation_added_jet_fuel = Column(Float, nullable=False, default=0)
-    
-    line_10_net_renewable_fuel_supplied_gasoline = Column(Float, nullable=False, default=0)
-    line_10_net_renewable_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
-    line_10_net_renewable_fuel_supplied_jet_fuel = Column(Float, nullable=False, default=0)
-    
+
+    line_10_net_renewable_fuel_supplied_gasoline = Column(
+        Float, nullable=False, default=0
+    )
+    line_10_net_renewable_fuel_supplied_diesel = Column(
+        Float, nullable=False, default=0
+    )
+    line_10_net_renewable_fuel_supplied_jet_fuel = Column(
+        Float, nullable=False, default=0
+    )
+
     line_11_non_compliance_penalty_gasoline = Column(Float, nullable=True, default=0)
     line_11_non_compliance_penalty_diesel = Column(Float, nullable=True, default=0)
     line_11_non_compliance_penalty_jet_fuel = Column(Float, nullable=True, default=0)
@@ -85,8 +120,8 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_21_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
-    compliance_report = relationship('ComplianceReport', back_populates='summary')
-    supplemental_report = relationship('SupplementalReport', back_populates='summary')
+    compliance_report = relationship("ComplianceReport", back_populates="summary")
+    supplemental_report = relationship("SupplementalReport", back_populates="summary")
 
     def lock_summary(self):
         if not self.is_locked:

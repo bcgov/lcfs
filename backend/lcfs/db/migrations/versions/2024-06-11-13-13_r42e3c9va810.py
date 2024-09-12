@@ -18,9 +18,15 @@ depends_on = None
 
 def upgrade() -> None:
     # Drops the triggers created to refresh the materialized view upon changes in related tables.
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_transfer ON transfer;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_initiative_agreement ON initiative_agreement;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_admin_adjustment ON admin_adjustment;""")
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_transfer ON transfer;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_initiative_agreement ON initiative_agreement;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_admin_adjustment ON admin_adjustment;"""
+    )
 
     # Drops the function designed to refresh the materialized view 'mv_transaction_aggregate'.
     op.execute("""DROP FUNCTION IF EXISTS refresh_transaction_aggregate();""")
@@ -35,7 +41,8 @@ def upgrade() -> None:
     # This view aggregates data from three different sources: transfers, initiative agreements, and admin adjustments.
     # Each source contributes records with a unified structure to facilitate transaction aggregation.
     # Fields include transaction ID, type, participating organizations, quantity, unit price, status, and timestamps.
-    op.execute("""
+    op.execute(
+        """
     CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
     SELECT
         t.transfer_id AS transaction_id,
@@ -116,19 +123,23 @@ def upgrade() -> None:
     FROM admin_adjustment aa
     JOIN organization org ON aa.to_organization_id = org.organization_id
     JOIN admin_adjustment_status aas ON aa.current_status_id = aas.admin_adjustment_status_id;
-    """)
+    """
+    )
 
-    # Creates a unique composite key for our mv_transaction_aggregate view so it 
+    # Creates a unique composite key for our mv_transaction_aggregate view so it
     # can be updated concurrently
-    op.execute("""
+    op.execute(
+        """
     CREATE UNIQUE INDEX mv_transaction_aggregate_unique_idx ON mv_transaction_aggregate (transaction_id, transaction_type);
-    """)
+    """
+    )
 
     # Creates or replaces a view named 'transaction_status_view'.
-    # This view consolidates status information from three tables: initiative_agreement_status, 
+    # This view consolidates status information from three tables: initiative_agreement_status,
     # admin_adjustment_status, and transfer_status, providing a unified view of statuses across transaction types.
     # Includes status text, creation date, and last update date for each status record.
-    op.execute("""
+    op.execute(
+        """
     CREATE OR REPLACE VIEW transaction_status_view AS
     SELECT 
         status::text, 
@@ -147,12 +158,14 @@ def upgrade() -> None:
         create_date,
         update_date  
     FROM transfer_status;
-    """)
+    """
+    )
 
     # Creates or replaces a function named 'refresh_transaction_aggregate'.
     # This function is designed to refresh the materialized view 'mv_transaction_aggregate'.
     # It is triggered to run after certain operations (INSERT, UPDATE, DELETE) on specific tables.
-    op.execute("""
+    op.execute(
+        """
     CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -160,71 +173,96 @@ def upgrade() -> None:
         RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Creates a trigger named 'refresh_transaction_view_after_transfer'.
     # This trigger activates after any INSERT, UPDATE, or DELETE operation on the 'transfer' table.
     # It calls the 'refresh_transaction_aggregate' function to refresh the materialized view.
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_transaction_view_after_transfer
     AFTER INSERT OR UPDATE OR DELETE ON transfer
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_transaction_aggregate();
-    """)
+    """
+    )
 
     # Creates a trigger named 'refresh_transaction_view_after_initiative_agreement'.
     # This trigger activates after any INSERT, UPDATE, or DELETE operation on the 'initiative_agreement' table.
     # It ensures the materialized view is refreshed to include the latest data by calling the same refresh function.
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_transaction_view_after_initiative_agreement
     AFTER INSERT OR UPDATE OR DELETE ON initiative_agreement
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_transaction_aggregate();
-    """)
+    """
+    )
 
     # Creates a trigger named 'refresh_transaction_view_after_admin_adjustment'.
     # Activates after any INSERT, UPDATE, or DELETE operation on the 'admin_adjustment' table.
     # Calls 'refresh_transaction_aggregate' to ensure the materialized view remains up-to-date.
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_transaction_view_after_admin_adjustment
     AFTER INSERT OR UPDATE OR DELETE ON admin_adjustment
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_transaction_aggregate();
-    """)
+    """
+    )
 
     # Creates a trigger named 'refresh_transaction_view_after_transfer_history'.
     # This trigger activates after any INSERT, UPDATE, or DELETE operation on the 'transfer_history' table.
     # It calls the 'refresh_transaction_aggregate' function to refresh the materialized view.
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_transaction_view_after_transfer_history
     AFTER INSERT OR UPDATE OR DELETE ON transfer_history
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_transaction_aggregate();
-    """)
+    """
+    )
 
     # Creates a trigger named 'refresh_transaction_view_after_initiative_agreement_history'.
     # This trigger activates after any INSERT, UPDATE, or DELETE operation on the 'initiative_agreement_history' table.
     # It calls the 'refresh_transaction_aggregate' function to refresh the materialized view.
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_transaction_view_after_initiative_agreement_history
     AFTER INSERT OR UPDATE OR DELETE ON initiative_agreement_history
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_transaction_aggregate();
-    """)
+    """
+    )
 
     # Creates a trigger named 'refresh_transaction_view_after_admin_adjustment_history'.
     # This trigger activates after any INSERT, UPDATE, or DELETE operation on the 'admin_adjustment_history' table.
     # It calls the 'refresh_transaction_aggregate' function to refresh the materialized view.
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_transaction_view_after_admin_adjustment_history
     AFTER INSERT OR UPDATE OR DELETE ON admin_adjustment_history
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_transaction_aggregate();
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
     # Drops the triggers created to refresh the materialized view upon changes in related tables.
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_transfer ON transfer;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_initiative_agreement ON initiative_agreement;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_admin_adjustment ON admin_adjustment;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_transfer_history ON transfer_history;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_initiative_agreement_history ON initiative_agreement_history;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_transaction_view_after_admin_adjustment_history ON admin_adjustment_history;""")
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_transfer ON transfer;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_initiative_agreement ON initiative_agreement;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_admin_adjustment ON admin_adjustment;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_transfer_history ON transfer_history;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_initiative_agreement_history ON initiative_agreement_history;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_transaction_view_after_admin_adjustment_history ON admin_adjustment_history;"""
+    )
 
     # Drops the function designed to refresh the materialized view 'mv_transaction_aggregate'.
     op.execute("""DROP FUNCTION IF EXISTS refresh_transaction_aggregate();""")

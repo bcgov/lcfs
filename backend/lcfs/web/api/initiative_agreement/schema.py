@@ -11,6 +11,7 @@ class InitiativeAgreementStatusSchema(BaseSchema):
     class Config:
         from_attributes = True
 
+
 class HistoryUserSchema(BaseSchema):
     first_name: str
     last_name: str
@@ -18,11 +19,13 @@ class HistoryUserSchema(BaseSchema):
     class Config:
         from_attributes = True
 
+
 class OrganizationSchema(BaseSchema):
     name: str
 
     class Config:
         from_attributes = True
+
 
 class InitiativeAgreementHistorySchema(BaseSchema):
     create_date: datetime
@@ -32,6 +35,7 @@ class InitiativeAgreementHistorySchema(BaseSchema):
     class Config:
         from_attributes = True
 
+
 class InitiativeAgreementBaseSchema(BaseSchema):
     compliance_units: int
     current_status: InitiativeAgreementStatusSchema
@@ -40,14 +44,15 @@ class InitiativeAgreementBaseSchema(BaseSchema):
     gov_comment: Optional[str] = None
     internal_comment: Optional[str] = None
 
-    @field_validator('compliance_units')
+    @field_validator("compliance_units")
     def validate_compliance_units(cls, v):
         if v <= 0:
-            raise ValueError('compliance_units must be positive')
+            raise ValueError("compliance_units must be positive")
         return v
 
     class Config:
         from_attributes = True
+
 
 class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     initiative_agreement_id: int
@@ -56,8 +61,10 @@ class InitiativeAgreementSchema(InitiativeAgreementBaseSchema):
     returned: Optional[bool] = False
     create_date: datetime
 
+
 class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
     current_status: str
+
 
 class InitiativeAgreementUpdateSchema(InitiativeAgreementBaseSchema):
     initiative_agreement_id: int

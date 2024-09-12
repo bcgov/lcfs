@@ -27,7 +27,7 @@ from lcfs.web.api.notional_transfer.schema import (
     DeleteNotionalTransferResponseSchema,
     PaginatedNotionalTransferRequestSchema,
     NotionalTransfersSchema,
-    NotionalTransfersAllSchema
+    NotionalTransfersAllSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -39,9 +39,11 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get(
-    "/table-options", response_model=NotionalTransferTableOptionsSchema, status_code=status.HTTP_200_OK
+    "/table-options",
+    response_model=NotionalTransferTableOptionsSchema,
+    status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
     request: Request,
@@ -51,8 +53,12 @@ async def get_table_options(
     return await service.get_table_options()
 
 
-@router.post("/list-all", response_model=NotionalTransfersAllSchema, status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@router.post(
+    "/list-all",
+    response_model=NotionalTransfersAllSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
 async def get_notional_transfers(
     request: Request,
     request_data: ComplianceReportRequestSchema = Body(...),
@@ -68,7 +74,7 @@ async def get_notional_transfers(
     response_model=NotionalTransfersSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_notional_transfers_paginated(
     request: Request,
     request_data: PaginatedNotionalTransferRequestSchema = Body(...),
@@ -78,14 +84,16 @@ async def get_notional_transfers_paginated(
         page=request_data.page,
         size=request_data.size,
         sort_orders=request_data.sort_orders,
-        filters=request_data.filters
+        filters=request_data.filters,
     )
     compliance_report_id = request_data.compliance_report_id
-    return await service.get_notional_transfers_paginated(pagination, compliance_report_id)
+    return await service.get_notional_transfers_paginated(
+        pagination, compliance_report_id
+    )
 
 
 @router.get("/{notional_transfer_id}", status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_notional_transfer(
     request: Request,
     notional_transfer_id: int,
@@ -96,8 +104,7 @@ async def get_notional_transfer(
 
 @router.post(
     "/save",
-    response_model=Union[NotionalTransferSchema,
-                         DeleteNotionalTransferResponseSchema],
+    response_model=Union[NotionalTransferSchema, DeleteNotionalTransferResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
@@ -115,14 +122,22 @@ async def save_notional_transfer_row(
 
     if request_data.deleted:
         # Delete existing notional transfer
-        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        await validate.validate_compliance_report_id(
+            compliance_report_id, [request_data]
+        )
         await service.delete_notional_transfer(notional_transfer_id)
-        return DeleteNotionalTransferResponseSchema(message="Notional transfer deleted successfully")
+        return DeleteNotionalTransferResponseSchema(
+            message="Notional transfer deleted successfully"
+        )
     elif notional_transfer_id:
         # Update existing notional transfer
-        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        await validate.validate_compliance_report_id(
+            compliance_report_id, [request_data]
+        )
         return await service.update_notional_transfer(request_data)
     else:
         # Create new notional transfer
-        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        await validate.validate_compliance_report_id(
+            compliance_report_id, [request_data]
+        )
         return await service.create_notional_transfer(request_data)

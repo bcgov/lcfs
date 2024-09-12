@@ -9,6 +9,7 @@ from lcfs.web.api.base import (
 )
 from pydantic import Field, field_validator, validator
 
+
 class FuelTypeQuantityUnitsEnumSchema(str, Enum):
     Litres = "L"
     Kilograms = "kg"
@@ -150,10 +151,10 @@ class FuelExportSchema(BaseSchema):
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
 
-    @validator('quantity')
+    @validator("quantity")
     def quantity_must_be_positive(cls, v):
         if v <= 0:
-            raise ValueError('quantity must be greater than zero')
+            raise ValueError("quantity must be greater than zero")
         return v
 
 
@@ -183,11 +184,12 @@ class FuelExportCreateSchema(BaseSchema):
     custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
-    @validator('quantity')
+    @validator("quantity")
     def quantity_must_be_positive(cls, v):
         if v <= 0:
-            raise ValueError('quantity must be greater than zero')
+            raise ValueError("quantity must be greater than zero")
         return v
+
 
 class DeleteFuelExportResponseSchema(BaseSchema):
     success: bool

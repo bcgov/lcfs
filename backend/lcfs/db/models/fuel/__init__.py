@@ -36,5 +36,5 @@ __all__ = [
     "UnitOfMeasure",
     "ProvisionOfTheAct",
     "TargetCarbonIntensity",
-    "FuelClass"
+    "FuelClass",
 ]

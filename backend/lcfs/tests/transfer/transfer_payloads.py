@@ -13,7 +13,7 @@ transfer_create_payload = TransferCreateSchema(
     agreement_date="2023-01-01",
     quantity=100,
     price_per_unit=10.0,
-    from_org_comment="Comments added by transferer organization"
+    from_org_comment="Comments added by transferer organization",
 )
 
 transfer_create_payload_2 = TransferCreateSchema(
@@ -22,7 +22,7 @@ transfer_create_payload_2 = TransferCreateSchema(
     agreement_date="2024-03-03",
     quantity=300,
     price_per_unit=3.0,
-    from_org_comment="Comments added by transferer organization"
+    from_org_comment="Comments added by transferer organization",
 )
 
 transfer_create_payload_3 = TransferCreateSchema(
@@ -30,7 +30,7 @@ transfer_create_payload_3 = TransferCreateSchema(
     from_organization_id=1,
     to_organization_id=2,
     agreement_date="2023-01-01",
-    currentStatus="Refused"
+    currentStatus="Refused",
 )
 
 # update payloads
@@ -41,7 +41,7 @@ transfer_update_payload = TransferCreateSchema(
     agreement_date="2023-02-02",
     quantity=50,
     price_per_unit=5.0,
-    from_org_comment="Comments added by transferer organization"
+    from_org_comment="Comments added by transferer organization",
 )
 
 transfer_update_draft_payload = TransferCreateSchema(
@@ -51,7 +51,7 @@ transfer_update_draft_payload = TransferCreateSchema(
     agreement_date="2023-04-04",
     quantity=40,
     price_per_unit=4.0,
-    from_org_comment="Comments added by transferer organization"
+    from_org_comment="Comments added by transferer organization",
 )
 
 transfer_update_payload_2 = TransferUpdate(
@@ -69,7 +69,7 @@ transfer_update_payload_3 = {
     "quantity": 100,
     "recommendation": "Record",
     "toOrgComment": "",
-    "toOrganizationId": 2
+    "toOrganizationId": 2,
 }
 
 # transfer orm models
@@ -81,7 +81,7 @@ transfer_orm_model = Transfer(
     transfer_category_id=1,
     agreement_date=agreement_date,
     quantity=100,
-    price_per_unit=10.0
+    price_per_unit=10.0,
 )
 
 agreement_date = datetime.strptime("2024-02-02", "%Y-%m-%d").date()
@@ -92,7 +92,7 @@ transfer_orm_model_2 = Transfer(
     transfer_category_id=1,
     agreement_date=agreement_date,
     quantity=20,
-    price_per_unit=2.0
+    price_per_unit=2.0,
 )
 
 agreement_date = datetime.strptime("2024-02-02", "%Y-%m-%d").date()
@@ -104,7 +104,7 @@ transfer_orm_model_3 = Transfer(
     transfer_category_id=1,
     agreement_date=agreement_date,
     quantity=20,
-    price_per_unit=2.0
+    price_per_unit=2.0,
 )
 
 agreement_date = datetime.strptime("2024-02-02", "%Y-%m-%d").date()
@@ -115,21 +115,18 @@ transfer_orm_fields = {
     "transfer_category_id": 1,
     "agreement_date": agreement_date,
     "quantity": 20,
-    "price_per_unit": 2.0
+    "price_per_unit": 2.0,
 }
 
 # transaction orm models
 transaction_orm_model = Transaction(
-    transaction_id = 1,
-    compliance_units = 100,
-    organization_id = 1,
-    transaction_action = TransactionActionEnum.Reserved
+    transaction_id=1,
+    compliance_units=100,
+    organization_id=1,
+    transaction_action=TransactionActionEnum.Reserved,
 )
 
 # transfer history orm models
 transfer_history_orm_model = TransferHistory(
-    transfer_id = 1,
-    transfer_status_id = 5,
-    user_profile_id = 1,
-    create_user = 'HVALIOLL'
+    transfer_id=1, transfer_status_id=5, user_profile_id=1, create_user="HVALIOLL"
 )

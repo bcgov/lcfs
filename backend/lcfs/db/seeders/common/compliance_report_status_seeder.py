@@ -1,6 +1,9 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus, ComplianceReportStatusEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +46,13 @@ async def seed_compliance_report_statuses(session):
         for status_data in compliance_report_statuses_to_seed:
             exists = await session.execute(
                 select(ComplianceReportStatus).where(
-                    ComplianceReportStatus.status == status_data["status"])
+                    ComplianceReportStatus.status == status_data["status"]
+                )
             )
             if not exists.scalars().first():
                 status = ComplianceReportStatus(**status_data)
                 session.add(status)
 
     except Exception as e:
-        logger.error(
-            "Error occurred while seeding compliance report statuses: %s", e)
+        logger.error("Error occurred while seeding compliance report statuses: %s", e)
         raise

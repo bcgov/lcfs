@@ -17,8 +17,20 @@ async def seed_test_admin_adjustments(session):
     transaction_effective_date = datetime(2024, 1, 1)
 
     admin_adjustments_to_seed = [
-        {'compliance_units': 50000, 'to_organization_id': 1, 'transaction_id': 1, 'current_status_id': 1, 'transaction_effective_date': transaction_effective_date},
-        {'compliance_units': 50000, 'to_organization_id': 1, 'transaction_id': 2, 'current_status_id': 3, 'transaction_effective_date': transaction_effective_date}
+        {
+            "compliance_units": 50000,
+            "to_organization_id": 1,
+            "transaction_id": 1,
+            "current_status_id": 1,
+            "transaction_effective_date": transaction_effective_date,
+        },
+        {
+            "compliance_units": 50000,
+            "to_organization_id": 1,
+            "transaction_id": 2,
+            "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
+        },
     ]
 
     try:
@@ -26,8 +38,8 @@ async def seed_test_admin_adjustments(session):
             # Check if the admin adjustment already exists
             exists = await session.execute(
                 select(AdminAdjustment).where(
-                    AdminAdjustment.transaction_id ==
-                    admin_adjustment_data["transaction_id"]
+                    AdminAdjustment.transaction_id
+                    == admin_adjustment_data["transaction_id"]
                 )
             )
             if not exists.scalars().first():
