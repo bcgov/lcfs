@@ -70,5 +70,14 @@
   "pleaseCheckDeclaration": "Please certify the information before submitting",
   "expandAll": "expand all",
   "collapseAll": "collapse all",
-  "fuelSupply": "Fuel supply"
+  "fuelSupply": "Fuel supply",
+  "reportHistory": "Report history",
+  "complianceReportHistory": {
+    "SubmittedTitle": "Signing authority declaration",
+    "Submitted": "Signed and submitted {{createDate}} by {{firstName}} {{lastName}}.",
+    "Recommended_by_analyst": "Recommended by analyst",
+    "Recommended_by_manager": "Recommended by manager",
+    "Assessed": "Assessed",
+    "ReAssessed": "Re-assessed"
+  }
 }

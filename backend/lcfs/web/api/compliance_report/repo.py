@@ -301,6 +301,8 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.status),
+                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.user_profile),
             )
             .join(
                 ComplianceReportStatus,
@@ -367,6 +369,8 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.compliance_period),
                         joinedload(ComplianceReport.current_status),
                         joinedload(ComplianceReport.summary),
+                        joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.status),
+                        joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.user_profile),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )

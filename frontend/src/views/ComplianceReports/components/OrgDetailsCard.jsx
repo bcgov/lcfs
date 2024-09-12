@@ -8,7 +8,7 @@ export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress }) => {
   return (
     <BCWidgetCard
       component="div"
-      style={{ height: 'fit-content' }}
+      style={{ height: 'fit-content', maxWidth: '40%' }}
       title={t('report:orgDetails')}
       content={
         <Stack direction="column" spacing={1}>
