@@ -14,7 +14,6 @@ async_engine = create_async_engine(db_url, future=True)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARN)
 
 
-
 async def update_auditable_entries(session: AsyncSession, user_info):
     """
     Update Auditable entries in the session with user information.

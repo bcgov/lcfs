@@ -152,9 +152,11 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.fuel_supplies),  # Add more relationships if needed
+                joinedload(
+                    ComplianceReport.fuel_supplies
+                ),  # Add more relationships if needed
                 joinedload(ComplianceReport.other_uses),
-                joinedload(ComplianceReport.history)
+                joinedload(ComplianceReport.history),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
@@ -192,10 +194,11 @@ class ComplianceReportRepository:
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
         """
-        status_enum = status.replace(' ', '_') # frontend sends status with spaces
+        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
         result = await self.db.execute(
             select(ComplianceReportStatus).where(
-                ComplianceReportStatus.status == getattr(ComplianceReportStatusEnum, status_enum)
+                ComplianceReportStatus.status
+                == getattr(ComplianceReportStatusEnum, status_enum)
             )
         )
         return result.scalars().first()

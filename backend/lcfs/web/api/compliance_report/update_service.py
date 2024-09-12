@@ -74,31 +74,62 @@ class ComplianceReportUpdateService:
 
     async def handle_submitted_status(self, report: ComplianceReport):
         """Handle actions when a report is submitted."""
-        
+
         # Fetch the existing summary from the database, if any
-        existing_summary = await self.repo.get_summary_by_report_id(report.compliance_report_id)
-        
+        existing_summary = await self.repo.get_summary_by_report_id(
+            report.compliance_report_id
+        )
+
         # Calculate a new summary based on the current report data
-        calculated_summary = await self.summary_service.calculate_compliance_report_summary(report.compliance_report_id)
+        calculated_summary = (
+            await self.summary_service.calculate_compliance_report_summary(
+                report.compliance_report_id
+            )
+        )
 
         # If there's an existing summary, preserve user-edited values
         if existing_summary:
             for row in calculated_summary.renewable_fuel_target_summary:
-                if row.line == '6':
+                if row.line == "6":
                     # Preserve line 6 values (renewable fuel retained)
-                    row.gasoline = existing_summary.line_6_renewable_fuel_retained_gasoline or row.gasoline
-                    row.diesel = existing_summary.line_6_renewable_fuel_retained_diesel or row.diesel
-                    row.jet_fuel = existing_summary.line_6_renewable_fuel_retained_jet_fuel or row.jet_fuel
-                elif row.line == '7':
+                    row.gasoline = (
+                        existing_summary.line_6_renewable_fuel_retained_gasoline
+                        or row.gasoline
+                    )
+                    row.diesel = (
+                        existing_summary.line_6_renewable_fuel_retained_diesel
+                        or row.diesel
+                    )
+                    row.jet_fuel = (
+                        existing_summary.line_6_renewable_fuel_retained_jet_fuel
+                        or row.jet_fuel
+                    )
+                elif row.line == "7":
                     # Preserve line 7 values (previously retained)
-                    row.gasoline = existing_summary.line_7_previously_retained_gasoline or row.gasoline
-                    row.diesel = existing_summary.line_7_previously_retained_diesel or row.diesel
-                    row.jet_fuel = existing_summary.line_7_previously_retained_jet_fuel or row.jet_fuel
-                elif row.line == '8':
+                    row.gasoline = (
+                        existing_summary.line_7_previously_retained_gasoline
+                        or row.gasoline
+                    )
+                    row.diesel = (
+                        existing_summary.line_7_previously_retained_diesel or row.diesel
+                    )
+                    row.jet_fuel = (
+                        existing_summary.line_7_previously_retained_jet_fuel
+                        or row.jet_fuel
+                    )
+                elif row.line == "8":
                     # Preserve line 8 values (obligation deferred)
-                    row.gasoline = existing_summary.line_8_obligation_deferred_gasoline or row.gasoline
-                    row.diesel = existing_summary.line_8_obligation_deferred_diesel or row.diesel
-                    row.jet_fuel = existing_summary.line_8_obligation_deferred_jet_fuel or row.jet_fuel
+                    row.gasoline = (
+                        existing_summary.line_8_obligation_deferred_gasoline
+                        or row.gasoline
+                    )
+                    row.diesel = (
+                        existing_summary.line_8_obligation_deferred_diesel or row.diesel
+                    )
+                    row.jet_fuel = (
+                        existing_summary.line_8_obligation_deferred_jet_fuel
+                        or row.jet_fuel
+                    )
 
         # Lock the summary to prevent further edits
         calculated_summary.is_locked = True
@@ -106,10 +137,14 @@ class ComplianceReportUpdateService:
         # Save the summary
         if report.summary:
             # Update existing summary
-            await self.repo.save_compliance_report_summary(report.summary.summary_id, calculated_summary)
+            await self.repo.save_compliance_report_summary(
+                report.summary.summary_id, calculated_summary
+            )
         else:
             # Create new summary if it doesn't exist
-            new_summary = await self.repo.add_compliance_report_summary(calculated_summary)
+            new_summary = await self.repo.add_compliance_report_summary(
+                calculated_summary
+            )
             report.summary = new_summary
             # Update the report with the new summary
             await self.repo.update_compliance_report(report)
