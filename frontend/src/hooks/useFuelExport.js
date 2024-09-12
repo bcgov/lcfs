@@ -14,14 +14,15 @@ export const useFuelExportOptions = (params, options) => {
   })
 }
 
-export const useGetFuelExports = (complianceReportId, pagination, options) => {
+export const useGetFuelExports = (params, pagination, options) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['fuel-exports', complianceReportId, pagination],
+    queryKey: ['fuel-exports', params, pagination],
     queryFn: async () => {
       const response = await client.post(apiRoutes.getAllFuelExports, {
-        complianceReportId,
-        ...pagination
+        ...(typeof params === 'string' && { complianceReportId: params }),
+        ...(typeof params !== 'string' && params),
+
       })
       return response.data
     },
