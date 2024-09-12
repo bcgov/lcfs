@@ -91,8 +91,7 @@ async def save_fuel_supply_row(
         # Delete existing fuel supply row
         await fs_service.delete_fuel_supply(fs_id)
         return DeleteFuelSupplyResponseSchema(
-            success= True,
-            message="fuel supply row deleted successfully"
+            success=True, message="fuel supply row deleted successfully"
         )
     elif fs_id:
         # Update existing fuel supply row

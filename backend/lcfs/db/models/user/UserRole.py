@@ -46,5 +46,5 @@ class UserRole(BaseModel, Auditable):
             "name": self.role.name,
             "description": self.role.description,
             "display_order": self.role.display_order,
-            "is_government_role": self.role.is_government_role
+            "is_government_role": self.role.is_government_role,
         }

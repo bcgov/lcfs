@@ -171,7 +171,9 @@ class FuelExportRepository:
         """
         Retrieve the list of fuel supplied information for a given compliance report.
         """
-        query = self.query.where(FuelExport.compliance_report_id == compliance_report_id)
+        query = self.query.where(
+            FuelExport.compliance_report_id == compliance_report_id
+        )
         results = (await self.db.execute(query)).unique().scalars().all()
         return results
 
@@ -181,7 +183,9 @@ class FuelExportRepository:
     ) -> List[FuelExport]:
         offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        query = self.query.where(FuelExport.compliance_report_id == compliance_report_id)
+        query = self.query.where(
+            FuelExport.compliance_report_id == compliance_report_id
+        )
         count_query = query.with_only_columns(
             func.count(FuelExport.fuel_export_id)
         ).order_by(None)
@@ -208,8 +212,15 @@ class FuelExportRepository:
         """
         updated_fuel_export = await self.db.merge(fuel_export)
         await self.db.flush()
-        await self.db.refresh(fuel_export,
-            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+        await self.db.refresh(
+            fuel_export,
+            [
+                "fuel_category",
+                "fuel_type",
+                "provision_of_the_act",
+                "custom_fuel_type",
+                "end_use_type",
+            ],
         )
         return updated_fuel_export
 
@@ -222,18 +233,28 @@ class FuelExportRepository:
         await self.db.flush()
         await self.db.refresh(
             fuel_export,
-            ["fuel_category", "fuel_type", "provision_of_the_act", "custom_fuel_type", "end_use_type"],
+            [
+                "fuel_category",
+                "fuel_type",
+                "provision_of_the_act",
+                "custom_fuel_type",
+                "end_use_type",
+            ],
         )
         return fuel_export
 
     @repo_handler
     async def delete_fuel_export(self, fuel_export_id: int):
         """Delete a fuel supply row from the database"""
-        await self.db.execute(delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id))
+        await self.db.execute(
+            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
+        )
         await self.db.flush()
 
     @repo_handler
-    async def get_fuel_exports(self, report_id: int, is_supplemental: bool = False) -> List[FuelExport]:
+    async def get_fuel_exports(
+        self, report_id: int, is_supplemental: bool = False
+    ) -> List[FuelExport]:
         """
         Retrieve the list of fuel supplies for a given report (compliance or supplemental).
         """
@@ -243,7 +264,7 @@ class FuelExportRepository:
             joinedload(FuelExport.fuel_type),
             joinedload(FuelExport.provision_of_the_act),
             joinedload(FuelExport.custom_fuel_type),
-            joinedload(FuelExport.end_use_type)
+            joinedload(FuelExport.end_use_type),
         )
 
         if is_supplemental:

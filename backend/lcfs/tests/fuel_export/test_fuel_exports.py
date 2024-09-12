@@ -49,7 +49,9 @@ base_payload_fuel_export_list = {
 
 
 @pytest.mark.anyio
-async def test_get_fuel_export_table_options(client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role):
+async def test_get_fuel_export_table_options(
+    client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role
+):
     url = fastapi_app.url_path_for("get_fuel_export_table_options")
     response = await client.get(url, params={"compliancePeriod": "2024"})
 
@@ -60,7 +62,9 @@ async def test_get_fuel_export_table_options(client: AsyncClient, fastapi_app: F
 
 
 @pytest.mark.anyio
-async def test_get_fuel_export_list(client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role):
+async def test_get_fuel_export_list(
+    client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role
+):
     url = fastapi_app.url_path_for("get_fuel_exports")
     response = await client.post(url, json=base_payload_fuel_export_list)
 
@@ -72,7 +76,9 @@ async def test_get_fuel_export_list(client: AsyncClient, fastapi_app: FastAPI, s
 
 
 @pytest.mark.anyio
-async def test_get_fuel_export_list_without_pagination(client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role):
+async def test_get_fuel_export_list_without_pagination(
+    client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role
+):
     url = fastapi_app.url_path_for("get_fuel_exports")
     response = await client.post(url, json=base_payload_fuel_export_no_pagination)
 
@@ -82,17 +88,27 @@ async def test_get_fuel_export_list_without_pagination(client: AsyncClient, fast
 
 
 @pytest.mark.anyio
-async def test_save_fuel_export_row_create(client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role):
+async def test_save_fuel_export_row_create(
+    client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role
+):
     # Create compliance report
     url = fastapi_app.url_path_for("create_compliance_report", organization_id=1)
-    compliance_report_payload = {"compliancePeriod": "2024", "organizationId": 1, "status": "Draft"}
+    compliance_report_payload = {
+        "compliancePeriod": "2024",
+        "organizationId": 1,
+        "status": "Draft",
+    }
     response = await client.post(url, json=compliance_report_payload)
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
 
     # Save fuel export row
     url = fastapi_app.url_path_for("save_fuel_export_row")
-    payload = {**base_payload_fuel_export, "complianceReportId": data["complianceReportId"], "fuelExportId": None}
+    payload = {
+        **base_payload_fuel_export,
+        "complianceReportId": data["complianceReportId"],
+        "fuelExportId": None,
+    }
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -104,23 +120,39 @@ async def test_save_fuel_export_row_create(client: AsyncClient, fastapi_app: Fas
 
 
 @pytest.mark.anyio
-async def test_save_fuel_export_row_delete(client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role):
+async def test_save_fuel_export_row_delete(
+    client: AsyncClient, fastapi_app: FastAPI, setup_supplier_role
+):
     # Create compliance report
     url = fastapi_app.url_path_for("create_compliance_report", organization_id=1)
-    compliance_report_payload = {"compliancePeriod": "2024", "organizationId": 1, "status": "Draft"}
+    compliance_report_payload = {
+        "compliancePeriod": "2024",
+        "organizationId": 1,
+        "status": "Draft",
+    }
     response = await client.post(url, json=compliance_report_payload)
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
 
     # Save fuel export row
     url = fastapi_app.url_path_for("save_fuel_export_row")
-    payload = {**base_payload_fuel_export, "complianceReportId": data["complianceReportId"], "fuelExportId": None}
+    payload = {
+        **base_payload_fuel_export,
+        "complianceReportId": data["complianceReportId"],
+        "fuelExportId": None,
+    }
     response = await client.post(url, json=payload)
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
 
     # Delete fuel export row
-    delete_payload = {**base_payload_fuel_export, "complianceReportId": data["complianceReportId"], "fuelExportId": data["fuelExportId"], "id": "d2f970db-8ec2-433f-be98-7f068021508e", "deleted": True}
+    delete_payload = {
+        **base_payload_fuel_export,
+        "complianceReportId": data["complianceReportId"],
+        "fuelExportId": data["fuelExportId"],
+        "id": "d2f970db-8ec2-433f-be98-7f068021508e",
+        "deleted": True,
+    }
     response = await client.post(url, json=delete_payload)
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -130,9 +162,15 @@ async def test_save_fuel_export_row_delete(client: AsyncClient, fastapi_app: Fas
 
 
 @pytest.mark.anyio
-async def test_save_fuel_export_row_unauthorized(client: AsyncClient, fastapi_app: FastAPI, setup_government_role):
+async def test_save_fuel_export_row_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, setup_government_role
+):
     url = fastapi_app.url_path_for("save_fuel_export_row")
-    payload = {**base_payload_fuel_export, "complianceReportId": 1, "fuelExportId": None}
+    payload = {
+        **base_payload_fuel_export,
+        "complianceReportId": 1,
+        "fuelExportId": None,
+    }
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN

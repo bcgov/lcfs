@@ -31,7 +31,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
-    CompliancePeriodSchema
+    CompliancePeriodSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -54,8 +54,7 @@ get_async_db = dependencies.get_async_db_session
 async def get_org_users(
     request: Request,
     organization_id: int,
-    status: str = Query(
-        default="Active", description="Active or Inactive users list"),
+    status: str = Query(default="Active", description="Active or Inactive users list"),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
     org_service: OrganizationService = Depends(),
@@ -271,7 +270,7 @@ async def get_compliance_reports(
 @router.get(
     "/{organization_id}/reports/reported-years",
     response_model=List[CompliancePeriodSchema],
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
 async def get_all_org_reported_years(

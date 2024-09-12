@@ -11,7 +11,7 @@ from .services import InternalCommentService
 from .schema import (
     InternalCommentCreateSchema,
     InternalCommentUpdateSchema,
-    InternalCommentResponseSchema
+    InternalCommentResponseSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -21,12 +21,16 @@ router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 
 
-@router.post("/", response_model=InternalCommentResponseSchema, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=InternalCommentResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def create_comment(
     request: Request,
     comment_data: InternalCommentCreateSchema,
-    service: InternalCommentService = Depends()
+    service: InternalCommentService = Depends(),
 ):
     """
     API endpoint to create a new internal comment. Requires the user to have the 'Government' role.
@@ -42,13 +46,17 @@ async def create_comment(
     return await service.create_internal_comment(comment_data)
 
 
-@router.get("/{entity_type}/{entity_id}", response_model=List[InternalCommentResponseSchema], status_code=status.HTTP_200_OK)
+@router.get(
+    "/{entity_type}/{entity_id}",
+    response_model=List[InternalCommentResponseSchema],
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_comments(
     request: Request,
     entity_type: str,
     entity_id: int,
-    service: InternalCommentService = Depends()
+    service: InternalCommentService = Depends(),
 ):
     """
     Retrieves all internal comments associated with a specified entity type and ID. Requires 'Government' role.
@@ -71,7 +79,7 @@ async def update_comment(
     request: Request,
     internal_comment_id: int,
     comment_data: InternalCommentUpdateSchema = Body(...),
-    service: InternalCommentService = Depends()
+    service: InternalCommentService = Depends(),
 ):
     """
     Updates the text of an existing internal comment. Requires the user to have the 'Government' role.
@@ -89,19 +97,14 @@ async def update_comment(
     existing_comment = await service.get_internal_comment_by_id(internal_comment_id)
 
     if not existing_comment:
-        raise HTTPException(
-            status_code=404,
-            detail="Internal comment not found."
-        )
+        raise HTTPException(status_code=404, detail="Internal comment not found.")
 
     current_username = request.user.keycloak_username
     if existing_comment.create_user != current_username:
         raise HTTPException(
-            status_code=403,
-            detail="User is not the creator of the comment."
+            status_code=403, detail="User is not the creator of the comment."
         )
 
     return await service.update_internal_comment(
-        internal_comment_id,
-        comment_data.comment
+        internal_comment_id, comment_data.comment
     )

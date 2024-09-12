@@ -30,10 +30,10 @@ class LCFS_Constants:
         TransferStatusEnum.Rescinded.value,
     ]
     GOV_TRANSFER_STATUSES = [
-        TransferStatusEnum.Submitted.value, # To handle the save comment feature
+        TransferStatusEnum.Submitted.value,  # To handle the save comment feature
         TransferStatusEnum.Recommended.value,
         TransferStatusEnum.Refused.value,
-        TransferStatusEnum.Recorded.value
+        TransferStatusEnum.Recorded.value,
     ]
 
     # Export transactions
@@ -51,7 +51,7 @@ class LCFS_Constants:
         "Effective Date",
         "Recorded",
         "Approved",
-        "Comments (external)"
+        "Comments (external)",
     ]
     TRANSACTIONS_EXPORT_SHEETNAME = "Transactions"
     TRANSACTIONS_EXPORT_FILENAME = "BC-LCFS-transactions"

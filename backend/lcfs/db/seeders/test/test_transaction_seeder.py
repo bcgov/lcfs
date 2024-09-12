@@ -13,8 +13,18 @@ async def seed_test_transactions(session):
     """
 
     transactions_to_seed = [
-        {"transaction_id": 1, 'compliance_units': 50000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 1},
-        {"transaction_id": 2, 'compliance_units': 1000, 'transaction_action': TransactionActionEnum.Adjustment, 'organization_id': 1}
+        {
+            "transaction_id": 1,
+            "compliance_units": 50000,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 1,
+        },
+        {
+            "transaction_id": 2,
+            "compliance_units": 1000,
+            "transaction_action": TransactionActionEnum.Adjustment,
+            "organization_id": 1,
+        },
     ]
 
     try:
@@ -22,12 +32,11 @@ async def seed_test_transactions(session):
             # Check if the transaction already exists
             exists = await session.execute(
                 select(Transaction).where(
-                    Transaction.compliance_units ==
-                    transaction_data["compliance_units"],
-                    Transaction.transaction_action ==
-                    transaction_data["transaction_action"],
-                    Transaction.organization_id ==
-                    transaction_data["organization_id"],
+                    Transaction.compliance_units
+                    == transaction_data["compliance_units"],
+                    Transaction.transaction_action
+                    == transaction_data["transaction_action"],
+                    Transaction.organization_id == transaction_data["organization_id"],
                 )
             )
             if not exists.scalars().first():

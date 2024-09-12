@@ -10,15 +10,14 @@ class RoleSchema(BaseSchema):
     is_government_role: bool
 
 
-
 def user_has_roles(user, desired_role_names: List[str]) -> bool:
     """
     Checks if the user has all specified roles, ignoring invalid role names.
-    
+
     Parameters:
     - user: User object with a user_roles attribute containing role objects.
     - desired_role_names: List of strings representing the desired role names.
-    
+
     Returns:
     - True if the user has all the desired roles, False otherwise.
     """

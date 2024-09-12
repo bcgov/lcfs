@@ -13,4 +13,6 @@ class UnitOfMeasure(BaseModel, Auditable, DisplayOrder):
     description = Column(Text)
 
     energy_density = relationship("EnergyDensity", back_populates="uom")
-    additional_carbon_intensity = relationship("AdditionalCarbonIntensity", back_populates="uom")
+    additional_carbon_intensity = relationship(
+        "AdditionalCarbonIntensity", back_populates="uom"
+    )

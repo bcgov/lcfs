@@ -31,6 +31,8 @@ async def get_roles(
     service: RoleServices = Depends(),
     response: Response = None,
 ) -> List[RoleSchema]:
-    logger.info(f'''Retrieving roles: government_roles_only : {
-                government_roles_only}''')
+    logger.info(
+        f"""Retrieving roles: government_roles_only : {
+                government_roles_only}"""
+    )
     return await service.get_roles(government_roles_only)

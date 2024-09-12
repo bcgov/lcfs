@@ -1,7 +1,9 @@
 from logging import getLogger
 from typing import List, Tuple
 from lcfs.db.models.compliance import FinalSupplyEquipment
-from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import FinalSupplyEquipmentRegNumber
+from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
+    FinalSupplyEquipmentRegNumber,
+)
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
@@ -23,7 +25,9 @@ class FinalSupplyEquipmentRepository:
         self.db = db
 
     @repo_handler
-    async def get_fse_options(self) -> Tuple[List[EndUseType], List[LevelOfEquipment], List[FuelMeasurementType]]:
+    async def get_fse_options(
+        self,
+    ) -> Tuple[List[EndUseType], List[LevelOfEquipment], List[FuelMeasurementType]]:
         """
         Retrieve all FSE options in a single database transaction
         """
@@ -33,21 +37,39 @@ class FinalSupplyEquipmentRepository:
             fuel_measurement_types = await self.get_fuel_measurement_types()
         return intended_use_types, levels_of_equipment, fuel_measurement_types
 
-
     async def get_intended_use_types(self) -> List[EndUseType]:
         """
         Retrieve a list of intended use types from the database
         """
-        return ((await self.db.execute(select(EndUseType).where(EndUseType.intended_use == True)))
+        return (
+            (
+                await self.db.execute(
+                    select(EndUseType).where(EndUseType.intended_use == True)
+                )
+            )
             .scalars()
-            .all())
+            .all()
+        )
 
     @repo_handler
     async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
         """
         Retrieve intended use type by name from the database
         """
-        return (await self.db.execute(select(EndUseType).where(and_(EndUseType.type == intended_use, EndUseType.intended_use == True)))).unique().scalar_one_or_none()
+        return (
+            (
+                await self.db.execute(
+                    select(EndUseType).where(
+                        and_(
+                            EndUseType.type == intended_use,
+                            EndUseType.intended_use == True,
+                        )
+                    )
+                )
+            )
+            .unique()
+            .scalar_one_or_none()
+        )
 
     async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
         """
@@ -60,8 +82,15 @@ class FinalSupplyEquipmentRepository:
         """
         Get the levels of equipment by name
         """
-        return ((await self.db.execute(select(LevelOfEquipment).where(LevelOfEquipment.name == name)))
-            .unique().scalar_one_or_none())
+        return (
+            (
+                await self.db.execute(
+                    select(LevelOfEquipment).where(LevelOfEquipment.name == name)
+                )
+            )
+            .unique()
+            .scalar_one_or_none()
+        )
 
     async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
         """
@@ -74,7 +103,15 @@ class FinalSupplyEquipmentRepository:
         """
         Get the levels of equipment by name
         """
-        return (await self.db.execute(select(FuelMeasurementType).where(FuelMeasurementType.type == type))).unique().scalar_one_or_none()
+        return (
+            (
+                await self.db.execute(
+                    select(FuelMeasurementType).where(FuelMeasurementType.type == type)
+                )
+            )
+            .unique()
+            .scalar_one_or_none()
+        )
 
     @repo_handler
     async def get_fse_list(self, report_id: int) -> List[FinalSupplyEquipment]:
@@ -124,7 +161,9 @@ class FinalSupplyEquipmentRepository:
         return final_supply_equipments, total_count
 
     @repo_handler
-    async def get_final_supply_equipment_by_id(self, final_supply_equipment_id: int) -> FinalSupplyEquipment:
+    async def get_final_supply_equipment_by_id(
+        self, final_supply_equipment_id: int
+    ) -> FinalSupplyEquipment:
         """
         Retrieve a final supply equipment from the database
         """
@@ -135,47 +174,67 @@ class FinalSupplyEquipmentRepository:
                 joinedload(FinalSupplyEquipment.intended_use_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
             )
-            .where(FinalSupplyEquipment.final_supply_equipment_id == final_supply_equipment_id)
+            .where(
+                FinalSupplyEquipment.final_supply_equipment_id
+                == final_supply_equipment_id
+            )
         )
         return result.unique().scalar_one_or_none()
 
     @repo_handler
-    async def update_final_supply_equipment(self, final_supply_equipment: FinalSupplyEquipment) -> FinalSupplyEquipment:
+    async def update_final_supply_equipment(
+        self, final_supply_equipment: FinalSupplyEquipment
+    ) -> FinalSupplyEquipment:
         """
         Update an existing final supply equipment in the database.
         """
         updated_final_supply_equipment = await self.db.merge(final_supply_equipment)
         await self.db.flush()
-        await self.db.refresh(final_supply_equipment, ['fuel_measurement_type', 'level_of_equipment', 'intended_use_types'])
+        await self.db.refresh(
+            final_supply_equipment,
+            ["fuel_measurement_type", "level_of_equipment", "intended_use_types"],
+        )
         return updated_final_supply_equipment
 
     @repo_handler
-    async def create_final_supply_equipment(self, final_supply_equipment: FinalSupplyEquipment) -> FinalSupplyEquipment:
+    async def create_final_supply_equipment(
+        self, final_supply_equipment: FinalSupplyEquipment
+    ) -> FinalSupplyEquipment:
         """
         Create a new final supply equipment in the database.
         """
         self.db.add(final_supply_equipment)
         await self.db.flush()
-        await self.db.refresh(final_supply_equipment, ['fuel_measurement_type', 'level_of_equipment', 'intended_use_types'])
+        await self.db.refresh(
+            final_supply_equipment,
+            ["fuel_measurement_type", "level_of_equipment", "intended_use_types"],
+        )
         return final_supply_equipment
 
     @repo_handler
     async def delete_final_supply_equipment(self, final_supply_equipment_id: int):
         """Delete a final supply equipment from the database"""
-        await self.db.execute(delete(FinalSupplyEquipment).where(FinalSupplyEquipment.final_supply_equipment_id == final_supply_equipment_id))
+        await self.db.execute(
+            delete(FinalSupplyEquipment).where(
+                FinalSupplyEquipment.final_supply_equipment_id
+                == final_supply_equipment_id
+            )
+        )
         await self.db.flush()
 
     @repo_handler
-    async def get_current_seq_by_org_and_postal_code(self, organization_code: str, postal_code: str) -> int:
+    async def get_current_seq_by_org_and_postal_code(
+        self, organization_code: str, postal_code: str
+    ) -> int:
         """
         Retrieve the current sequence number for a given organization code and postal code.
         """
         result = await self.db.execute(
-            select(FinalSupplyEquipmentRegNumber.current_sequence_number)
-            .where(
+            select(FinalSupplyEquipmentRegNumber.current_sequence_number).where(
                 and_(
-                    FinalSupplyEquipmentRegNumber.organization_code == organization_code,
-                    FinalSupplyEquipmentRegNumber.postal_code == postal_code
+                    FinalSupplyEquipmentRegNumber.organization_code
+                    == organization_code,
+                    FinalSupplyEquipmentRegNumber.postal_code == postal_code,
                 )
             )
         )
@@ -183,7 +242,9 @@ class FinalSupplyEquipmentRepository:
         return current_sequence_number if current_sequence_number is not None else 0
 
     @repo_handler
-    async def increment_seq_by_org_and_postal_code(self, organization_code: str, postal_code: str) -> int:
+    async def increment_seq_by_org_and_postal_code(
+        self, organization_code: str, postal_code: str
+    ) -> int:
         """
         Increment and return the next sequence number for a given organization code and postal code.
         """
@@ -192,11 +253,15 @@ class FinalSupplyEquipmentRepository:
             update(FinalSupplyEquipmentRegNumber)
             .where(
                 and_(
-                    FinalSupplyEquipmentRegNumber.organization_code == organization_code,
-                    FinalSupplyEquipmentRegNumber.postal_code == postal_code
+                    FinalSupplyEquipmentRegNumber.organization_code
+                    == organization_code,
+                    FinalSupplyEquipmentRegNumber.postal_code == postal_code,
                 )
             )
-            .values(current_sequence_number=FinalSupplyEquipmentRegNumber.current_sequence_number + 1)
+            .values(
+                current_sequence_number=FinalSupplyEquipmentRegNumber.current_sequence_number
+                + 1
+            )
             .returning(FinalSupplyEquipmentRegNumber.current_sequence_number)
         )
         sequence_number = result.scalar()
@@ -206,7 +271,7 @@ class FinalSupplyEquipmentRepository:
             new_record = FinalSupplyEquipmentRegNumber(
                 organization_code=organization_code,
                 postal_code=postal_code,
-                current_sequence_number=1
+                current_sequence_number=1,
             )
             self.db.add(new_record)
             await self.db.flush()

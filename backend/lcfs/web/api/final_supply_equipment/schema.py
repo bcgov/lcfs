@@ -6,6 +6,7 @@ from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 from pydantic import Field
 
+
 class FuelMeasurementTypeSchema(BaseSchema):
     fuel_measurement_type_id: int
     type: str
@@ -38,11 +39,12 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     intended_uses: List[str]
     street_address: str
     city: str
-    postal_code: str = Field(pattern=r'^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$')
+    postal_code: str = Field(pattern=r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$")
     latitude: float
     longitude: float
     notes: Optional[str] = None
     deleted: Optional[bool] = None
+
 
 class DeleteFinalSupplyEquipmentResponseSchema(BaseSchema):
     message: str

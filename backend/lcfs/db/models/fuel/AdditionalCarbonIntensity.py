@@ -20,5 +20,7 @@ class AdditionalCarbonIntensity(BaseModel, Auditable, DisplayOrder):
     intensity = Column(Float(10, 2), nullable=False)
 
     fuel_type = relationship("FuelType", back_populates="additional_carbon_intensity")
-    end_use_type = relationship("EndUseType", back_populates="additional_carbon_intensity")
+    end_use_type = relationship(
+        "EndUseType", back_populates="additional_carbon_intensity"
+    )
     uom = relationship("UnitOfMeasure", back_populates="additional_carbon_intensity")

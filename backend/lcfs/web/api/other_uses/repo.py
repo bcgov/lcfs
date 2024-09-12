@@ -20,10 +20,14 @@ logger = getLogger("other_uses_repo")
 
 
 class OtherUsesRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session), fuel_repo: FuelCodeRepository = Depends()):
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_async_db_session),
+        fuel_repo: FuelCodeRepository = Depends(),
+    ):
         self.db = db
         self.fuel_code_repo = fuel_repo
-    
+
     @repo_handler
     async def get_table_options(self) -> dict:
         """Get all table options"""
@@ -36,7 +40,7 @@ class OtherUsesRepository:
             "fuel_types": fuel_types,
             "fuel_categories": fuel_categories,
             "expected_uses": expected_uses,
-            "units_of_measure": units_of_measure
+            "units_of_measure": units_of_measure,
         }
 
     @repo_handler
@@ -65,11 +69,11 @@ class OtherUsesRepository:
                 fuel_category=ou.fuel_category.category,
                 expected_use=ou.expected_use.name,
                 units=ou.units,
-                rationale=ou.rationale
+                rationale=ou.rationale,
             )
             for ou in other_uses
         ]
-    
+
     async def get_other_uses_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> List[OtherUsesSchema]:
@@ -77,11 +81,15 @@ class OtherUsesRepository:
         offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
-        query = select(OtherUses).options(
-            joinedload(OtherUses.fuel_category),
-            joinedload(OtherUses.fuel_type),
-            joinedload(OtherUses.expected_use)
-        ).where(*conditions)
+        query = (
+            select(OtherUses)
+            .options(
+                joinedload(OtherUses.fuel_category),
+                joinedload(OtherUses.fuel_type),
+                joinedload(OtherUses.expected_use),
+            )
+            .where(*conditions)
+        )
 
         count_query = query.with_only_columns(func.count()).order_by(None)
         total_count = (await self.db.execute(count_query)).scalar()
@@ -93,19 +101,20 @@ class OtherUsesRepository:
 
         return other_uses, total_count
 
-
     @repo_handler
     async def get_other_use(self, other_uses_id: int) -> OtherUses:
         """
         Get a specific other use by id.
         """
-        return await self.db.scalar(select(OtherUses)
-                                    .options(
-                                        joinedload(OtherUses.fuel_category),
-                                        joinedload(OtherUses.fuel_type),
-                                        joinedload(OtherUses.expected_use),
-                                    )
-                                    .where(OtherUses.other_uses_id == other_uses_id))
+        return await self.db.scalar(
+            select(OtherUses)
+            .options(
+                joinedload(OtherUses.fuel_category),
+                joinedload(OtherUses.fuel_type),
+                joinedload(OtherUses.expected_use),
+            )
+            .where(OtherUses.other_uses_id == other_uses_id)
+        )
 
     @repo_handler
     async def update_other_use(self, other_use: OtherUses) -> OtherUses:
@@ -114,7 +123,7 @@ class OtherUsesRepository:
         """
         updated_other_use = await self.db.merge(other_use)
         await self.db.flush()
-        await self.db.refresh(other_use, ['fuel_category', 'fuel_type', 'expected_use'])
+        await self.db.refresh(other_use, ["fuel_category", "fuel_type", "expected_use"])
         return updated_other_use
 
     @repo_handler
@@ -124,11 +133,13 @@ class OtherUsesRepository:
         """
         self.db.add(other_use)
         await self.db.flush()
-        await self.db.refresh(other_use, ['fuel_category', 'fuel_type', 'expected_use'])
+        await self.db.refresh(other_use, ["fuel_category", "fuel_type", "expected_use"])
         return other_use
-    
+
     @repo_handler
     async def delete_other_use(self, other_uses_id: int):
         """Delete an other use from the database"""
-        await self.db.execute(delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id))
+        await self.db.execute(
+            delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
+        )
         await self.db.flush()

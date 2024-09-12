@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jwt import ExpiredSignatureError
 from unittest.mock import patch
 
+
 # Mock for JWKS client
 @pytest.fixture
 def mock_jwks_client():
@@ -21,10 +22,13 @@ def mock_jwks_client():
     client.get_signing_key_from_jwt = MagicMock()
     return client
 
+
 # Fixture for the UserAuthentication backend
 @pytest.fixture
 def user_auth_backend(fake_redis_pool, dbsession_factory, mock_jwks_client):
-    backend = UserAuthentication(redis_pool=fake_redis_pool, session=dbsession_factory, settings=settings)
+    backend = UserAuthentication(
+        redis_pool=fake_redis_pool, session=dbsession_factory, settings=settings
+    )
     backend.test_mode = True
     backend.jwks_client = mock_jwks_client  # Replace JWKS client with a mock
     return backend
@@ -35,12 +39,12 @@ async def test_successful_authentication(user_auth_backend, dbsession_factory):
     # Mock token and user profile
     token = "valid.jwt.token"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'idiruser@idir',
-        'idir_username': 'IDIRUSER',
-        'email': 'idir@test.com',
-        'identity_provider': 'idir',
+        "preferred_username": "idiruser@idir",
+        "idir_username": "IDIRUSER",
+        "email": "idir@test.com",
+        "identity_provider": "idir",
     }
 
     # Simulate request
@@ -86,19 +90,19 @@ async def test_keycloak_user_not_found(user_auth_backend, dbsession_factory):
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {token}"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'random_lcfs1',
-        'idir_username': 'random_lcfs1',
-        'email': 'random_lcfs1@gov.bc.ca',
-        'identity_provider': 'idir',
+        "preferred_username": "random_lcfs1",
+        "idir_username": "random_lcfs1",
+        "email": "random_lcfs1@gov.bc.ca",
+        "identity_provider": "idir",
     }
 
     with pytest.raises(HTTPException) as exc_info:
         await user_auth_backend.authenticate(request)
 
     assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert 'No User with that configuration exists.' in str(exc_info.value.detail)
+    assert "No User with that configuration exists." in str(exc_info.value.detail)
 
 
 @pytest.mark.anyio
@@ -109,12 +113,12 @@ async def test_active_user_authentication(user_auth_backend, dbsession_factory):
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {token}"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'activeuser@bceidbusiness',
-        'bceid_username': 'ACTIVEUSER',
-        'email': 'active@test.com',
-        'identity_provider': 'bceidbusiness',
+        "preferred_username": "activeuser@bceidbusiness",
+        "bceid_username": "ACTIVEUSER",
+        "email": "active@test.com",
+        "identity_provider": "bceidbusiness",
     }
 
     # Perform authentication
@@ -132,12 +136,12 @@ async def test_inactive_user_authentication(user_auth_backend, dbsession_factory
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {token}"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'inactiveuser@bceidbusiness',
-        'bceid_username': 'INACTIVEUSER',
-        'email': 'inactive@test.com',
-        'identity_provider': 'bceidbusiness',
+        "preferred_username": "inactiveuser@bceidbusiness",
+        "bceid_username": "INACTIVEUSER",
+        "email": "inactive@test.com",
+        "identity_provider": "bceidbusiness",
     }
 
     # Perform authentication and expect an HTTPException for inactive user
@@ -145,23 +149,25 @@ async def test_inactive_user_authentication(user_auth_backend, dbsession_factory
         await user_auth_backend.authenticate(request)
 
     assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert 'The account is currently inactive.' in str(exc_info.value.detail)
+    assert "The account is currently inactive." in str(exc_info.value.detail)
 
 
 @pytest.mark.anyio
-async def test_idir_identity_provider_authentication(user_auth_backend, dbsession_factory):
+async def test_idir_identity_provider_authentication(
+    user_auth_backend, dbsession_factory
+):
     token = "valid.jwt.token"
 
     # Simulate request with JWT token
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {token}"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'idiruser@idir',
-        'idir_username': 'IDIRUSER',
-        'email': 'idir@test.com',
-        'identity_provider': "idir", 
+        "preferred_username": "idiruser@idir",
+        "idir_username": "IDIRUSER",
+        "email": "idir@test.com",
+        "identity_provider": "idir",
     }
 
     # Perform authentication for idir identity provider
@@ -172,19 +178,21 @@ async def test_idir_identity_provider_authentication(user_auth_backend, dbsessio
 
 
 @pytest.mark.anyio
-async def test_bceidbusiness_identity_provider_authentication(user_auth_backend, dbsession_factory):
+async def test_bceidbusiness_identity_provider_authentication(
+    user_auth_backend, dbsession_factory
+):
     token = "valid.jwt.token"
 
     # Simulate request with JWT token
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {token}"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'bceiduser@bceidbusiness',
-        'bceid_username': 'BCEIDUSER',
-        'email': 'bceid@test.com',
-        'identity_provider': "bceidbusiness", 
+        "preferred_username": "bceiduser@bceidbusiness",
+        "bceid_username": "BCEIDUSER",
+        "email": "bceid@test.com",
+        "identity_provider": "bceidbusiness",
     }
 
     # Perform authentication for bceidbusiness identity provider
@@ -202,12 +210,12 @@ async def test_unknown_identity_provider_authentication(user_auth_backend):
     request = MagicMock()
     request.headers.get.return_value = f"Bearer {token}"
 
-    # Set test user 
+    # Set test user
     user_auth_backend.test_keycloak_user = {
-        'preferred_username': 'unknownuser',
-        'idir_username': 'IDIRUSER',
-        'email': 'user@test.com',
-        'identity_provider': "unknown", 
+        "preferred_username": "unknownuser",
+        "idir_username": "IDIRUSER",
+        "email": "user@test.com",
+        "identity_provider": "unknown",
     }
 
     # Perform authentication for an unknown identity provider and expect an HTTPException
@@ -215,5 +223,4 @@ async def test_unknown_identity_provider_authentication(user_auth_backend):
         await user_auth_backend.authenticate(request)
 
     # assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert 'Unknown or missing identity provider' in str(exc_info.value.detail)
-
+    assert "Unknown or missing identity provider" in str(exc_info.value.detail)

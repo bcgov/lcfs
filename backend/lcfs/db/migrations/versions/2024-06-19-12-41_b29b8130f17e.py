@@ -19,21 +19,21 @@ depends_on = None
 
 def upgrade() -> None:
     op.alter_column(
-        'fuel_code',
-        'last_updated',
+        "fuel_code",
+        "last_updated",
         existing_type=sa.DateTime(timezone=True),
         nullable=False,
         server_default=sa.func.now(),
-        existing_comment="Date at which the record was last updated."
+        existing_comment="Date at which the record was last updated.",
     )
 
 
 def downgrade() -> None:
     op.alter_column(
-        'fuel_code',
-        'last_updated',
+        "fuel_code",
+        "last_updated",
         existing_type=sa.DateTime(timezone=True),
         nullable=False,
         server_default=None,
-        existing_comment="Date at which the record was last updated."
+        existing_comment="Date at which the record was last updated.",
     )
