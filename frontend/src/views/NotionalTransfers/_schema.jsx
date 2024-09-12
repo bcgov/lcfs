@@ -72,11 +72,13 @@ export const notionalTransferColDefs = (optionsData, errors) => [
         return response.data
       },
       title: 'legalName',
-      api: params.api,
+      api: params.api
     }),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Enter or search a name</Typography>),
+      (!params.value && (
+        <Typography variant="body4">Enter or search a name</Typography>
+      )),
     suppressKeyboardEvent,
     minWidth: 300,
     cellStyle: (params) => cellErrorStyle(params, errors),
@@ -84,17 +86,20 @@ export const notionalTransferColDefs = (optionsData, errors) => [
       const { newValue: selectedName, node, data } = params
       const apiData = node.data.apiDataCache || []
       // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(company => company.name === selectedName)
+      const selectedOption = apiData.find(
+        (company) => company.name === selectedName
+      )
       if (selectedOption) {
         // Only update related fields if a match is found in the API data
         data.legalName = selectedOption.name
-        data.addressForService = selectedOption.address || data.addressForService
+        data.addressForService =
+          selectedOption.address || data.addressForService
       } else {
         // If no match, only update the legalName field, leave others unchanged
         data.legalName = selectedName
       }
       return true
-    },
+    }
   },
   {
     field: 'addressForService',

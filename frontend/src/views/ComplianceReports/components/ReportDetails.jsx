@@ -145,11 +145,19 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
               ).replace(':complianceReportId', complianceReportId)
             ),
           useFetch: useGetFuelExports,
-          component: (data) => !isArrayEmpty(data) && <FuelExportSummary data={data} />
+          component: (data) =>
+            !isArrayEmpty(data) && <FuelExportSummary data={data} />
         }
       ]
     ],
-    [currentStatus, t, navigate, compliancePeriod, complianceReportId, isArrayEmpty]
+    [
+      currentStatus,
+      t,
+      navigate,
+      compliancePeriod,
+      complianceReportId,
+      isArrayEmpty
+    ]
   )
 
   const [expanded, setExpanded] = useState(() =>

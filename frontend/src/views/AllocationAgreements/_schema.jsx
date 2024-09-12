@@ -113,7 +113,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     }),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Enter or search a name</Typography>),
+      (!params.value && (
+        <Typography variant="body4">Enter or search a name</Typography>
+      )),
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
     minWidth: 310,
@@ -121,21 +123,25 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
       const apiData = node.data.apiDataCache || [] // Safely access cached data or default to an empty array
-    
+
       // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(company => company.name === selectedName)
-    
+      const selectedOption = apiData.find(
+        (company) => company.name === selectedName
+      )
+
       if (selectedOption) {
         // Only update related fields if a match is found in the API data
         data.transactionPartner = selectedOption.name
         data.postalAddress = selectedOption.address || data.postalAddress
-        data.transactionPartnerEmail = selectedOption.email || data.transactionPartnerEmail
-        data.transactionPartnerPhone = selectedOption.phone || data.transactionPartnerPhone
+        data.transactionPartnerEmail =
+          selectedOption.email || data.transactionPartnerEmail
+        data.transactionPartnerPhone =
+          selectedOption.phone || data.transactionPartnerPhone
       } else {
         // If no match, only update the transactionPartner field, leave others unchanged
         data.transactionPartner = selectedName
       }
-    
+
       return true
     },
     tooltipValueGetter: (p) =>

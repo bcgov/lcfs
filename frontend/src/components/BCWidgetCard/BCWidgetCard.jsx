@@ -5,7 +5,13 @@ import { Card, CardContent, Divider } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-function BCWidgetCard({ color='nav', title, content, style, disableHover=false }) {
+function BCWidgetCard({
+  color = 'nav',
+  title,
+  content,
+  style,
+  disableHover = false
+}) {
   return (
     <Card
       sx={{

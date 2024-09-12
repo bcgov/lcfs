@@ -170,4 +170,6 @@ export const nonComplianceColumns = [
   { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' }
 ]
 
-export const defaultSortModel = [{ field: 'compliancePeriod', direction: 'desc' }]
+export const defaultSortModel = [
+  { field: 'compliancePeriod', direction: 'desc' }
+]

@@ -143,12 +143,22 @@ class ComplianceReportRepository:
         self, compliance_report_id: int
     ) -> Optional[ComplianceReport]:
         """
-        Identify and retrieve the compliance report by id.
+        Identify and retrieve the compliance report by id, including its related objects.
         """
         return await self.db.scalar(
-            select(ComplianceReport).where(
-                ComplianceReport.compliance_report_id == compliance_report_id
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(
+                    ComplianceReport.fuel_supplies
+                ),  # Add more relationships if needed
+                joinedload(ComplianceReport.other_uses),
+                joinedload(ComplianceReport.history),
             )
+            .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
 
     @repo_handler
@@ -181,15 +191,17 @@ class ComplianceReportRepository:
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
         """
-        Retrieve the compliance report status ID from the database based on the description
+        Retrieve the compliance report status ID from the database based on the description.
+        Replaces spaces with underscores in the status description.
         """
-        result = await self.db.scalar(
+        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
+        result = await self.db.execute(
             select(ComplianceReportStatus).where(
                 ComplianceReportStatus.status
-                == getattr(ComplianceReportStatusEnum, status)
+                == getattr(ComplianceReportStatusEnum, status_enum)
             )
         )
-        return result
+        return result.scalars().first()
 
     @repo_handler
     async def get_compliance_report_by_period(self, organization_id: int, period: str):
@@ -562,7 +574,6 @@ class ComplianceReportRepository:
                 summary_obj.total_non_compliance_penalty_payable = row.total_value
 
         summary_obj.version += 1
-        summary_obj.is_locked = False  # Or set based on some condition
 
         self.db.add(summary_obj)
         await self.db.flush()
