@@ -180,7 +180,6 @@ export const formatNumberWithoutCommas = (value) => {
   return Number(number)
 }
 
-
 export const isArrayEmpty = (data) => {
   if (Array.isArray(data)) {
     return data.length === 0

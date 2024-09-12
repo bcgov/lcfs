@@ -12,7 +12,10 @@ export const DateEditor = ({ value, onValueChange, minDate, maxDate }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
         setIsOpen(false)
       }
     }
@@ -44,7 +47,11 @@ export const DateEditor = ({ value, onValueChange, minDate, maxDate }) => {
   }
 
   return (
-    <div ref={containerRef} onMouseDown={stopPropagation} onClick={stopPropagation}>
+    <div
+      ref={containerRef}
+      onMouseDown={stopPropagation}
+      onClick={stopPropagation}
+    >
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <DatePicker
           className="ag-grid-date-editor ag-input-field"

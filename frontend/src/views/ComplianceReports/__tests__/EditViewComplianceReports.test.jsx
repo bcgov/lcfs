@@ -182,27 +182,37 @@ describe('EditViewComplianceReport', () => {
     mockHasRoles.mockReturnValue(true)
 
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } } },
+      data: {
+        data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } }
+      },
       isLoading: false,
       isError: false
     })
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('report:actionBtns.saveDraftBtn')).toBeInTheDocument()
-      expect(screen.getByText('report:actionBtns.submitReportBtn')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:actionBtns.saveDraftBtn')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('report:actionBtns.submitReportBtn')
+      ).toBeInTheDocument()
     })
   })
 
   it('displays the correct buttons for Submitted status with Analyst role', async () => {
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED } } },
+      data: {
+        data: {
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        }
+      },
       isLoading: false,
       isError: false
     })
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
-      data: { 
+      data: {
         organization: { organizationId: '123' },
         isGovernmentUser: true
       },
@@ -214,19 +224,27 @@ describe('EditViewComplianceReport', () => {
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('report:actionBtns.recommendReportAnalystBtn')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:actionBtns.recommendReportAnalystBtn')
+      ).toBeInTheDocument()
     })
   })
 
   it('displays the correct buttons for Recommended by Analyst status with Compliance Manager role', async () => {
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST } } },
+      data: {
+        data: {
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+          }
+        }
+      },
       isLoading: false,
       isError: false
     })
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
-      data: { 
+      data: {
         organization: { organizationId: '123' },
         isGovernmentUser: true
       },
@@ -236,19 +254,27 @@ describe('EditViewComplianceReport', () => {
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('report:actionBtns.recommendReportManagerBtn')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:actionBtns.recommendReportManagerBtn')
+      ).toBeInTheDocument()
     })
   })
 
   it('displays the correct buttons for Recommended by Manager status with Director role', async () => {
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER } } },
+      data: {
+        data: {
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+          }
+        }
+      },
       isLoading: false,
       isError: false
     })
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
-      data: { 
+      data: {
         organization: { organizationId: '123' },
         isGovernmentUser: true
       },
@@ -258,19 +284,23 @@ describe('EditViewComplianceReport', () => {
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('report:actionBtns.assessReportBtn')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:actionBtns.assessReportBtn')
+      ).toBeInTheDocument()
     })
   })
 
   it('displays the correct buttons for Assessed status with Analyst role', async () => {
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED } } },
+      data: {
+        data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED } }
+      },
       isLoading: false,
       isError: false
     })
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
-      data: { 
+      data: {
         organization: { organizationId: '123' },
         isGovernmentUser: true
       },
@@ -280,19 +310,25 @@ describe('EditViewComplianceReport', () => {
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.getByText('report:actionBtns.reAssessReportBtn')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:actionBtns.reAssessReportBtn')
+      ).toBeInTheDocument()
     })
   })
 
   it('does not display action buttons for non-government users on submitted reports', async () => {
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED } } },
+      data: {
+        data: {
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        }
+      },
       isLoading: false,
       isError: false
     })
 
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
-      data: { 
+      data: {
         organization: { organizationId: '123' },
         isGovernmentUser: false
       },
@@ -302,17 +338,27 @@ describe('EditViewComplianceReport', () => {
 
     customRender(<EditViewComplianceReport />)
     await waitFor(() => {
-      expect(screen.queryByText('report:actionBtns.recommendReportAnalystBtn')).not.toBeInTheDocument()
-      expect(screen.queryByText('report:actionBtns.recommendReportManagerBtn')).not.toBeInTheDocument()
-      expect(screen.queryByText('report:actionBtns.assessReportBtn')).not.toBeInTheDocument()
-      expect(screen.queryByText('report:actionBtns.reAssessReportBtn')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:actionBtns.recommendReportAnalystBtn')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:actionBtns.recommendReportManagerBtn')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:actionBtns.assessReportBtn')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('report:actionBtns.reAssessReportBtn')
+      ).not.toBeInTheDocument()
     })
   })
 
   it('disables submit button when signing authority declaration is not checked', async () => {
     mockHasRoles.mockReturnValue(true)
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: { data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } } },
+      data: {
+        data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } }
+      },
       isLoading: false,
       isError: false
     })

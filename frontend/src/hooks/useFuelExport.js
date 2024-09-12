@@ -5,7 +5,8 @@ import { useCurrentUser } from './useCurrentUser'
 
 export const useFuelExportOptions = (params, options) => {
   const client = useApiService()
-  const path = apiRoutes.fuelExportOptions + 'compliancePeriod=' + params.compliancePeriod
+  const path =
+    apiRoutes.fuelExportOptions + 'compliancePeriod=' + params.compliancePeriod
   return useQuery({
     queryKey: ['fuel-export-options'],
     queryFn: async () => (await client.get(path)).data,
@@ -18,7 +19,10 @@ export const useGetFuelExports = (complianceReportId, pagination, options) => {
   return useQuery({
     queryKey: ['fuel-exports', complianceReportId, pagination],
     queryFn: async () => {
-      const response = await client.post(apiRoutes.getAllFuelExports, { complianceReportId, ...pagination })
+      const response = await client.post(apiRoutes.getAllFuelExports, {
+        complianceReportId,
+        ...pagination
+      })
       return response.data
     },
     ...options
@@ -35,18 +39,21 @@ export const useSaveFuelExport = (params, options) => {
     mutationFn: async (data) => {
       const modifedData = {
         complianceReportId: params.complianceReportId,
-        ...data,
+        ...data
       }
       return await client.post(
         apiRoutes.saveFuelExports
           .replace(':orgID', currentUser.organization.organizationId)
           .replace(':reportID', params.complianceReportId),
-          modifedData
+        modifedData
       )
     },
     onSettled: () => {
       queryClient.invalidateQueries(['fuel-exports', params.complianceReportId])
-      queryClient.invalidateQueries(['compliance-report-summary', params.complianceReportId])
+      queryClient.invalidateQueries([
+        'compliance-report-summary',
+        params.complianceReportId
+      ])
     }
   })
 }

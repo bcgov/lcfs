@@ -82,7 +82,10 @@ export const buttonClusterConfigFn = ({
       }
     },
     recommendByAnalyst: {
-      ...containedButton(t('report:actionBtns.recommendReportAnalystBtn'), faPencil),
+      ...containedButton(
+        t('report:actionBtns.recommendReportAnalystBtn'),
+        faPencil
+      ),
       id: 'recommend-report-analyst-btn',
       handler: (formData) => {
         setModalData({
@@ -99,7 +102,10 @@ export const buttonClusterConfigFn = ({
       }
     },
     recommendByManager: {
-      ...containedButton(t('report:actionBtns.recommendReportManagerBtn'), faPencil),
+      ...containedButton(
+        t('report:actionBtns.recommendReportManagerBtn'),
+        faPencil
+      ),
       id: 'recommend-report-manager-btn',
       handler: (formData) => {
         setModalData({

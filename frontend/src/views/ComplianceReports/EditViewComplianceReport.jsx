@@ -46,7 +46,8 @@ export const EditViewComplianceReport = () => {
   const [modalData, setModalData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] = useState(false)
+  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
+    useState(false)
   const alertRef = useRef()
 
   const { compliancePeriod, complianceReportId } = useParams()
@@ -156,7 +157,7 @@ export const EditViewComplianceReport = () => {
   }
   return (
     <>
-      {alertMessage &&
+      {alertMessage && (
         <BCAlert
           ref={alertRef}
           data-test="alert-box"
@@ -165,7 +166,7 @@ export const EditViewComplianceReport = () => {
         >
           {alertMessage}
         </BCAlert>
-      }
+      )}
       <BCBox pl={2} pr={2}>
         <BCModal
           open={!!modalData}
@@ -212,11 +213,11 @@ export const EditViewComplianceReport = () => {
           )}
           <Introduction expanded={location.state?.newReport} />
         </Stack>
-        {currentStatus === 'Draft' &&
-          <SigningAuthorityDeclaration 
-            onChange={setIsSigningAuthorityDeclared} 
+        {currentStatus === 'Draft' && (
+          <SigningAuthorityDeclaration
+            onChange={setIsSigningAuthorityDeclared}
           />
-        }
+        )}
         <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
           {buttonClusterConfig[currentStatus]?.map(
             (config) =>
@@ -245,9 +246,7 @@ export const EditViewComplianceReport = () => {
           )}
         </Stack>
         <Tooltip
-          title={
-            isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')
-          }
+          title={isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')}
           placement="left"
           arrow
         >

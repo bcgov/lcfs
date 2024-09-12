@@ -145,24 +145,26 @@ describe('useOrgComplianceReportCounts', () => {
 
   it('fetches the org compliance report counts successfully', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { org_compliance_report_counts: 40 },
+      data: { org_compliance_report_counts: 40 }
     })
 
     const { result } = renderHook(() => useOrgComplianceReportCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(result.current.data).toEqual({ org_compliance_report_counts: 40 })
-    expect(mockGet).toHaveBeenCalledWith('/dashboard/org-compliance-report-counts')
+    expect(mockGet).toHaveBeenCalledWith(
+      '/dashboard/org-compliance-report-counts'
+    )
   })
 
   it('handles errors correctly', async () => {
     mockGet.mockRejectedValueOnce(new Error('Failed to fetch'))
 
     const { result } = renderHook(() => useOrgComplianceReportCounts(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper()
     })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
