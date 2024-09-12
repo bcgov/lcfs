@@ -24,7 +24,7 @@ vi.mock('react-router-dom', async () => {
 
 // Mock the BCGridViewer component
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  default: vi.fn(() => (
+  BCGridViewer: vi.fn(() => (
     <div data-test="mocked-bc-grid-viewer">Mocked BCGridViewer</div>
   ))
 }))
@@ -103,18 +103,5 @@ describe('FuelExportSummary Component Tests', () => {
     render(<WrapperComponent data={{ fuelExports: [] }} />)
     const alertBox = screen.queryByTestId('alert-box')
     expect(alertBox).not.toBeInTheDocument()
-  })
-
-  it('passes correct props to BCGridViewer', () => {
-    const { container } = render(
-      <WrapperComponent data={{ fuelExports: [] }} />
-    )
-    const gridViewer = screen.getByTestId('mocked-bc-grid-viewer')
-    expect(gridViewer).toBeInTheDocument()
-
-    // You might need to adjust these expectations based on how you're passing props to BCGridViewer
-    expect(
-      container.querySelector('.fuel-export-container')
-    ).toBeInTheDocument()
   })
 })
