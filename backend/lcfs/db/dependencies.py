@@ -3,13 +3,16 @@ from fastapi import Request
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from lcfs.db.base import Auditable
+import logging
 
 from redis import asyncio as aioredis
 
 from lcfs.settings import settings
 
 db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
-async_engine = create_async_engine(db_url, future=True, echo=True)
+async_engine = create_async_engine(db_url, future=True)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARN)
+
 
 
 async def update_auditable_entries(session: AsyncSession, user_info):
