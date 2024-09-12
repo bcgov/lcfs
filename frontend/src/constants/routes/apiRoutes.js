@@ -48,6 +48,9 @@ export const apiRoutes = {
   fuelSupplyOptions: '/fuel-supply/table-options?',
   getAllFuelSupplies: '/fuel-supply/list-all',
   saveFuelSupplies: '/fuel-supply/save',
+  fuelExportOptions: '/fuel-exports/table-options?',
+  getAllFuelExports: '/fuel-exports/list-all',
+  saveFuelExports: '/fuel-exports/save',
   directorReviewCounts: '/dashboard/director-review-counts/',
   TransactionCounts: '/dashboard/transaction-counts',
   OrgTransactionCounts: '/dashboard/org-transaction-counts',
@@ -55,5 +58,6 @@ export const apiRoutes = {
   allocationAgreementOptions: '/allocation-agreement/table-options?',
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',
-  OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts'
+  OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
+  organizationSearch: '/organizations/search?'
 }

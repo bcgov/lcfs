@@ -6,16 +6,16 @@ import { useLocation, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { defaultColDef, fuelExportColDefs } from './_schema'
 import {
-  useFuelSupplyOptions,
-  useGetFuelSupplies,
-  useSaveFuelSupply
-} from '@/hooks/useFuelSupply'
+  useFuelExportOptions,
+  useGetFuelExports,
+  useSaveFuelExport
+} from '@/hooks/useFuelExport'
 import { v4 as uuid } from 'uuid'
 import { isArrayEmpty } from '@/utils/formatters'
 
-export const AddEditFuelSupplies = () => {
+export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [gridApi, setGridApi] = useState()
@@ -23,7 +23,7 @@ export const AddEditFuelSupplies = () => {
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'fuelSupply'])
+  const { t } = useTranslation(['common', 'fuelExport'])
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
 
@@ -31,15 +31,16 @@ export const AddEditFuelSupplies = () => {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
-  } = useFuelSupplyOptions({ compliancePeriod })
-  const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
+  } = useFuelExportOptions({ compliancePeriod })
+  const { mutateAsync: saveRow } = useSaveFuelExport({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } =
-    useGetFuelSupplies(complianceReportId)
+  const { data, isLoading: fuelExportsLoading } =
+    useGetFuelExports(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
-      overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
+      overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
+      stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -62,8 +63,9 @@ export const AddEditFuelSupplies = () => {
     async (params) => {
       setGridApi(params.api)
       if (!isArrayEmpty(data)) {
-        const updatedRowData = data.fuelSupplies.map((item) => ({
+        const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
+          compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
           provisionOfTheAct: item.provisionOfTheAct?.name,
@@ -73,35 +75,37 @@ export const AddEditFuelSupplies = () => {
         }))
         setRowData(updatedRowData)
       } else {
-        setRowData([{ id: uuid() }])
+        setRowData([{ id: uuid(), compliancePeriod }])
       }
+      params.api.sizeColumnsToFit()
     },
-    [data]
+    [compliancePeriod, data]
   )
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelSupplyColDefs(optionsData, errors)
+      const updatedColumnDefs = fuelExportColDefs(optionsData, errors)
       setColumnDefs(updatedColumnDefs)
     }
   }, [errors, optionsData])
 
   useEffect(() => {
-    if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.fuelSupplies.map((item) => ({
+    if (!fuelExportsLoading && !isArrayEmpty(data)) {
+      const updatedRowData = data.fuelExports.map((item) => ({
         ...item,
         fuelCategory: item.fuelCategory?.category,
         fuelType: item.fuelType?.fuelType,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
         endUse: item.endUse?.type || 'Any',
-        id: uuid()
+        id: uuid(),
+        compliancePeriod
       }))
       setRowData(updatedRowData)
     } else {
       setRowData([{ id: uuid() }])
     }
-  }, [data, fuelSuppliesLoading])
+  }, [compliancePeriod, data, fuelExportsLoading])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -112,75 +116,6 @@ export const AddEditFuelSupplies = () => {
         if (options.length === 1) {
           params.node.setDataValue('fuelCategory', options[0])
         }
-      }
-      if (
-        params.column.colId === 'quantity' &&
-        params.node.data.fuelType &&
-        params.node.data.fuelCategory &&
-        params.node.data.provisionOfTheAct
-      ) {
-        const energyDensity =
-          params.node.data.energyDensity ||
-          optionsData?.fuelTypes?.find(
-            (obj) => params.node.data.fuelType === obj.fuelType
-          )?.energyDensity.energyDensity
-        const targetCi =
-          optionsData?.fuelTypes
-            ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-            ?.targetCarbonIntensities.find(
-              (item) =>
-                item.fuelCategory.fuelCategory === params.node.data.fuelCategory
-            )?.targetCarbonIntensity || 0
-        const effectiveCarbonIntensity = /Fuel code/i.test(
-          params.node.data.determiningCarbonIntensity
-        )
-          ? optionsData?.fuelTypes
-              ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-              ?.fuelCodes.find(
-                (item) => item.fuelCode === params.node.data.fuelCode
-              )?.fuelCodeCarbonIntensity
-          : optionsData &&
-            optionsData?.fuelTypes?.find(
-              (obj) => params.node.data.fuelType === obj.fuelType
-            )?.defaultCarbonIntensity
-        const eerOptions = optionsData?.fuelTypes?.find(
-          (obj) => params.node.data.fuelType === obj.fuelType
-        )
-        let eer =
-          eerOptions &&
-          eerOptions?.eerRatios.find(
-            (item) =>
-              item.fuelCategory.fuelCategory ===
-                params.node.data.fuelCategory &&
-              item.endUseType?.type === params.node.data.endUse
-          )?.energyEffectivenessRatio
-        if (!eer) {
-          eer = eerOptions?.eerRatios?.find(
-            (item) =>
-              item.fuelCategory.fuelCategory ===
-                params.node.data.fuelCategory && item.endUseType === null
-          )?.energyEffectivenessRatio
-        }
-        const energyContent = (energyDensity * Number(params.newValue)).toFixed(
-          0
-        )
-        // TODO Compliance units should be calculated on the backend and returned
-        const complianceUnits = (
-          ((Number(targetCi) * Number(eer) - Number(effectiveCarbonIntensity)) *
-            energyContent) /
-          1000000
-        ).toFixed(0)
-        const updatedData = {
-          ...params.node.data,
-          energy: energyContent,
-          targetCi,
-          eer,
-          endUse: params.node.data.endUse || null,
-          ciOfFuel: effectiveCarbonIntensity,
-          complianceUnits: Number(complianceUnits),
-          energyDensity
-        }
-        params.node.updateData(updatedData)
       }
     },
     [optionsData]
@@ -236,7 +171,7 @@ export const AddEditFuelSupplies = () => {
         if (error.code === 'ERR_BAD_REQUEST') {
           const field = error.response?.data?.detail[0]?.loc[1]
             ? t(
-                `fuelSupply:fuelSupplyColLabels.${error.response?.data?.detail[0]?.loc[1]}`
+                `fuelExport:fuelExportColLabels.${error.response?.data?.detail[0]?.loc[1]}`
               )
             : ''
           const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
@@ -263,7 +198,7 @@ export const AddEditFuelSupplies = () => {
       const updatedRow = { ...params.node.data, deleted: true }
 
       params.api.applyTransaction({ remove: [params.node.data] })
-      if (updatedRow.fuelSupplyId) {
+      if (updatedRow.fuelExportId) {
         try {
           await saveRow(updatedRow)
           alertRef.current?.triggerAlert({
@@ -282,9 +217,10 @@ export const AddEditFuelSupplies = () => {
       const newRowID = uuid()
       const rowData = {
         ...params.node.data,
+        compliancePeriod,
         id: newRowID,
-        fuelSupplyId: null,
-        fuelSupply: null,
+        fuelExportId: null,
+        fuelExport: null,
         validationStatus: 'error',
         modified: true
       }
@@ -294,10 +230,10 @@ export const AddEditFuelSupplies = () => {
         addIndex: params.node?.rowIndex + 1
       })
 
-      setErrors({ [newRowID]: 'fuelSupply' })
+      setErrors({ [newRowID]: 'fuelExport' })
 
       alertRef.current?.triggerAlert({
-        message: 'Error updating row: Fuel supply Fields required',
+        message: 'Error updating row: Fuel export Fields required',
         severity: 'error'
       })
     }
@@ -305,12 +241,12 @@ export const AddEditFuelSupplies = () => {
 
   return (
     isFetched &&
-    !fuelSuppliesLoading && (
-      <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
+    !fuelExportsLoading && (
+      <Grid2 className="add-edit-fuel-export-container" mx={-1}>
         <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
-            {t('fuelSupply:addFuelSupplyRowsTitle')}
+            {t('fuelExport:addFuelExportRowsTitle')}
           </Typography>
           <Typography
             variant="body4"
@@ -318,7 +254,7 @@ export const AddEditFuelSupplies = () => {
             sx={{ marginY: '2rem' }}
             component="div"
           >
-            {t('fuelSupply:fuelSupplySubtitle')}
+            {t('fuelExport:fuelExportSubtitle')}
           </Typography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
@@ -329,9 +265,11 @@ export const AddEditFuelSupplies = () => {
             onGridReady={onGridReady}
             rowData={rowData}
             gridOptions={gridOptions}
-            loading={optionsLoading || fuelSuppliesLoading}
+            loading={optionsLoading || fuelExportsLoading}
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
+            showAddRowsButton={true}
+            context={{ errors }}
             onAction={onAction}
             stopEditingWhenCellsLoseFocus
           />

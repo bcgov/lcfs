@@ -250,6 +250,7 @@ class ComplianceReportRepository:
             [
                 "compliance_period",
                 "fuel_supplies",
+                "fuel_exports",
                 "history",
                 "notional_transfers",
                 "organization",

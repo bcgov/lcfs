@@ -54,6 +54,7 @@ class ComplianceReport(BaseModel, Auditable):
     # Schedule relationships
     notional_transfers = relationship('NotionalTransfer', back_populates='compliance_report')
     fuel_supplies = relationship('FuelSupply', back_populates='compliance_report')
+    fuel_exports = relationship('FuelExport', back_populates='compliance_report')
     allocation_agreements = relationship('AllocationAgreement', back_populates='compliance_report')
     other_uses = relationship('OtherUses', back_populates='compliance_report')
     final_supply_equipment = relationship('FinalSupplyEquipment', back_populates='compliance_report')

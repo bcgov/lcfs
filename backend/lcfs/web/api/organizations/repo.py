@@ -4,7 +4,7 @@ from typing import List
 from fastapi import Depends
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, func, select, asc, desc, distinct
+from sqlalchemy import and_, func, select, asc, desc, distinct, or_
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -233,3 +233,35 @@ class OrganizationsRepository:
             )
         )
         return result is not None
+
+    @repo_handler
+    async def search_organizations_by_name(self, search_query: str) -> List[Organization]:
+        """
+        Search for organizations based on a query string.
+        Return exact match first if found, followed by partial matches.
+        """
+        query = (
+            select(Organization)
+            .options(joinedload(Organization.org_address))
+            .filter(
+                or_(
+                    Organization.name.ilike(f"%{search_query}%"),
+                    Organization.operating_name.ilike(f"%{search_query}%")
+                )
+            )
+            .order_by(Organization.name)
+            .limit(10)
+        )
+        
+        result = await self.db.execute(query)
+        organizations = result.scalars().all()
+
+        # Separate exact matches and partial matches
+        exact_matches = [
+            org for org in organizations 
+            if org.name.lower() == search_query.lower() or org.operating_name.lower() == search_query.lower()
+        ]
+        partial_matches = [org for org in organizations if org not in exact_matches]
+        
+        # Return exact matches first, followed by partial matches
+        return exact_matches + partial_matches

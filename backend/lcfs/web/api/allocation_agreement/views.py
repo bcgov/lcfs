@@ -18,6 +18,7 @@ from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
+from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
@@ -28,7 +29,8 @@ from lcfs.web.api.allocation_agreement.schema import (
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     #     AllocationAgreementListSchema,
-    AllocationAgreementAllSchema
+    AllocationAgreementAllSchema,
+    OrganizationDetailsSchema
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.allocation_agreement.validation import AllocationAgreementValidation
@@ -119,15 +121,15 @@ async def save_allocation_agreements_row(
         await validate.validate_compliance_report_id(compliance_report_id, [request_data])
         return await service.create_allocation_agreement(request_data)
 
-@router.get("/search", response_model=List[str], status_code=200)
+@router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=200)
 @view_handler(['*'])
 async def search_table_options_strings(
     request: Request,
     transaction_partner: Optional[str] = Query(None, alias="transactionPartner", description="Trading partner (company) for filtering options"),
-    service: AllocationAgreementServices = Depends(),
+    service: OrganizationsService = Depends(),
 ):
     """Endpoint to search allocation agreement options based on a query string"""
     if transaction_partner:
-        return await service.search_trading_partner(transaction_partner)
+        return await service.search_organization_details(transaction_partner)
     else:
         return []
