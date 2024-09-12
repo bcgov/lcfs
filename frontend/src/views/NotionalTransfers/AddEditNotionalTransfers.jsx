@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import Loading from '@/components/Loading'
@@ -14,6 +14,8 @@ import {
 } from '@/hooks/useNotionalTransfer'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import { useApiService } from '@/services/useApiService'
+import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -23,8 +25,9 @@ export const AddEditNotionalTransfers = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'notionalTransfer'])
-  const { complianceReportId } = useParams()
+  const apiService = useApiService()
+  const { t } = useTranslation(['common', 'notionalTransfer', 'reports'])
+  const { complianceReportId, compliancePeriod } = useParams()
   const {
     data: optionsData,
     isLoading: optionsLoading,
@@ -33,6 +36,7 @@ export const AddEditNotionalTransfers = () => {
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfers(complianceReportId)
   const { mutateAsync: saveRow } = useSaveNotionalTransfer()
+  const navigate = useNavigate()
 
   const gridOptions = useMemo(
     () => ({
@@ -61,6 +65,7 @@ export const AddEditNotionalTransfers = () => {
         if (!row.id) {
           return {
             ...row,
+            complianceReportId,
             id: uuid(),
             isValid: false
           }
@@ -91,8 +96,10 @@ export const AddEditNotionalTransfers = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      // Initialize updated data with 'pending' status
       params.node.updateData({
         ...params.node.data,
+        complianceReportId,
         validationStatus: 'pending'
       })
 
@@ -114,6 +121,7 @@ export const AddEditNotionalTransfers = () => {
         await saveRow(updatedData)
         updatedData = {
           ...updatedData,
+          complianceReportId,
           validationStatus: 'success',
           modified: false
         }
@@ -131,6 +139,7 @@ export const AddEditNotionalTransfers = () => {
 
         updatedData = {
           ...updatedData,
+          complianceReportId,
           validationStatus: 'error'
         }
 
@@ -156,7 +165,7 @@ export const AddEditNotionalTransfers = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, complianceReportId]
   )
 
   const onAction = async (action, params) => {
@@ -211,6 +220,15 @@ export const AddEditNotionalTransfers = () => {
     }
   }, [errors, optionsData, optionsLoading])
 
+  const handleNavigateBack = useCallback(() => {
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }, [navigate, compliancePeriod, complianceReportId])
+
   if (optionsLoading || transfersLoading) {
     return <Loading />
   }
@@ -237,6 +255,14 @@ export const AddEditNotionalTransfers = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             showAddRowsButton={true}
+            stopEditingWhenCellsLoseFocus
+            saveButtonProps={{
+              enabled: true,
+              text: t('report:saveReturn'),
+              onSave: handleNavigateBack,
+              confirmText: t('report:incompleteReport'),
+              confirmLabel: t('report:returnToReport')
+            }}
           />
         </BCBox>
       </Grid2>

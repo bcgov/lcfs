@@ -43,6 +43,7 @@
     "assessReportBtn": "Assess Report",
     "reAssessReportBtn": "Re-Assess Report"
   },
+  "savedSuccessText": "Compliance report successfully saved",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "assessConfirmText": "Are you sure you want to assess this compliance report?",
@@ -71,6 +72,9 @@
   "expandAll": "expand all",
   "collapseAll": "collapse all",
   "fuelSupply": "Fuel supply",
+  "returnToReport": "Return to report",
+  "incompleteReport": "Incomplete data will not be saved, cancel to fix.",
+  "saveReturn": "Save & return to report",
   "reportHistory": "Report history",
   "complianceReportHistory": {
     "SubmittedTitle": "Signing authority declaration",

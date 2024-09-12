@@ -13,7 +13,9 @@ from lcfs.web.api.transaction.schema import TransactionListSchema
 
 # Tests for exporting transactions
 @pytest.mark.anyio
-async def test_export_transactions_for_org_successful(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
+async def test_export_transactions_for_org_successful(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+):
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("export_transactions_for_org")
     response = await client.get(url)
@@ -33,17 +35,23 @@ async def test_export_transactions_for_org_successful(client: AsyncClient, fasta
             column in excel_data.columns
         ), f"Column {column} not found in exported data."
 
+
 @pytest.mark.anyio
-async def test_export_transactions_for_org_forbidden(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
+async def test_export_transactions_for_org_forbidden(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+):
     set_mock_user_roles(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("export_transactions_for_org")
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+
 # Tests for getting paginated transactions
 @pytest.mark.anyio
-async def test_get_transactions_paginated_for_org_successful(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models):
+async def test_get_transactions_paginated_for_org_successful(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
+):
     transfer = Transfer(
         from_organization_id=1,
         to_organization_id=2,
@@ -54,7 +62,7 @@ async def test_get_transactions_paginated_for_org_successful(client: AsyncClient
         transfer_category_id=1,
         current_status_id=1,
         recommendation=TransferRecommendationEnum.Record,
-        effective_status=True
+        effective_status=True,
     )
 
     await add_models([transfer])
@@ -72,16 +80,22 @@ async def test_get_transactions_paginated_for_org_successful(client: AsyncClient
     assert len(content.transactions) == 1
     assert content.pagination.page == 1
 
+
 @pytest.mark.anyio
-async def test_get_transactions_paginated_for_org_forbidden(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
+async def test_get_transactions_paginated_for_org_forbidden(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+):
     set_mock_user_roles(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_transactions_paginated_for_org")
     response = await client.post(url, json={})
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+
 @pytest.mark.anyio
-async def test_get_transactions_paginated_for_org_not_found(client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles):
+async def test_get_transactions_paginated_for_org_not_found(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+):
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_transactions_paginated_for_org")
     request_data = {"page": 1, "size": 5, "sortOrders": [], "filters": []}

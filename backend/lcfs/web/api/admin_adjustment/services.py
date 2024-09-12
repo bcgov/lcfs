@@ -1,8 +1,14 @@
 from datetime import datetime
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.admin_adjustment import AdminAdjustment
-from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatusEnum
-from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentCreateSchema, AdminAdjustmentSchema, AdminAdjustmentUpdateSchema
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
+    AdminAdjustmentStatusEnum,
+)
+from lcfs.web.api.admin_adjustment.schema import (
+    AdminAdjustmentCreateSchema,
+    AdminAdjustmentSchema,
+    AdminAdjustmentUpdateSchema,
+)
 from lcfs.web.api.admin_adjustment.repo import AdminAdjustmentRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.core.decorators import service_handler
@@ -10,14 +16,21 @@ from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.internal_comment.services import InternalCommentService
-from lcfs.web.api.internal_comment.schema import InternalCommentCreateSchema, AudienceScopeEnum, EntityTypeEnum
+from lcfs.web.api.internal_comment.schema import (
+    InternalCommentCreateSchema,
+    AudienceScopeEnum,
+    EntityTypeEnum,
+)
+
 
 class AdminAdjustmentServices:
     def __init__(
-        self, 
+        self,
         repo: AdminAdjustmentRepository = Depends(AdminAdjustmentRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
-        internal_comment_service: InternalCommentService = Depends(InternalCommentService),
+        internal_comment_service: InternalCommentService = Depends(
+            InternalCommentService
+        ),
         request: Request = None,
     ) -> None:
         self.repo = repo
@@ -26,19 +39,31 @@ class AdminAdjustmentServices:
         self.request = request
 
     @service_handler
-    async def get_admin_adjustment(self, admin_adjustment_id: int) -> AdminAdjustmentSchema:
+    async def get_admin_adjustment(
+        self, admin_adjustment_id: int
+    ) -> AdminAdjustmentSchema:
         """Fetch an admin adjustment by its ID."""
-        admin_adjustment = await self.repo.get_admin_adjustment_by_id(admin_adjustment_id)
+        admin_adjustment = await self.repo.get_admin_adjustment_by_id(
+            admin_adjustment_id
+        )
         return AdminAdjustmentSchema.from_orm(admin_adjustment)
 
     @service_handler
-    async def update_admin_adjustment(self, admin_adjustment_data: AdminAdjustmentUpdateSchema) -> AdminAdjustmentSchema:
+    async def update_admin_adjustment(
+        self, admin_adjustment_data: AdminAdjustmentUpdateSchema
+    ) -> AdminAdjustmentSchema:
         """Update an existing admin adjustment."""
-        admin_adjustment = await self.repo.get_admin_adjustment_by_id(admin_adjustment_data.admin_adjustment_id)
+        admin_adjustment = await self.repo.get_admin_adjustment_by_id(
+            admin_adjustment_data.admin_adjustment_id
+        )
         if not admin_adjustment:
-            raise DataNotFoundException(f"Admin Adjustment with ID {admin_adjustment_data.admin_adjustment_id} not found.")
-        
-        new_status = await self.repo.get_admin_adjustment_status_by_name(admin_adjustment_data.current_status)
+            raise DataNotFoundException(
+                f"Admin Adjustment with ID {admin_adjustment_data.admin_adjustment_id} not found."
+            )
+
+        new_status = await self.repo.get_admin_adjustment_status_by_name(
+            admin_adjustment_data.current_status
+        )
         status_has_changed = admin_adjustment.current_status != new_status
 
         # Update the fields except for 'current_status'
@@ -46,7 +71,7 @@ class AdminAdjustmentServices:
         # FIXME: 2. a draft transaction can be approved directly by the Director via backend api.
         # FIXME: 3. should the Director/Compliance Manager be allowed to change the draft transaction to recommend? A validation may be required? NOTE: please confirm
         for field, value in admin_adjustment_data.dict(exclude_unset=True).items():
-            if field != 'current_status':
+            if field != "current_status":
                 setattr(admin_adjustment, field, value)
 
         # Initialize status flags
@@ -61,7 +86,8 @@ class AdminAdjustmentServices:
 
             # Check previous recommended status
             previous_recommended = any(
-                history.admin_adjustment_status.status == AdminAdjustmentStatusEnum.Recommended 
+                history.admin_adjustment_status.status
+                == AdminAdjustmentStatusEnum.Recommended
                 for history in admin_adjustment.history
             )
 
@@ -73,7 +99,8 @@ class AdminAdjustmentServices:
 
             # Update or add history record based on status flags
             history_method = (
-                self.repo.update_admin_adjustment_history if re_recommended
+                self.repo.update_admin_adjustment_history
+                if re_recommended
                 else self.repo.add_admin_adjustment_history
             )
             # We only track history changes on Recommended and Approved, not Draft
@@ -81,11 +108,13 @@ class AdminAdjustmentServices:
                 await history_method(
                     admin_adjustment.admin_adjustment_id,
                     new_status.admin_adjustment_status_id,
-                    self.request.user.user_profile_id
+                    self.request.user.user_profile_id,
                 )
 
         # Save the updated admin adjustment
-        updated_admin_adjustment = await self.repo.update_admin_adjustment(admin_adjustment)
+        updated_admin_adjustment = await self.repo.update_admin_adjustment(
+            admin_adjustment
+        )
 
         # Return the updated admin adjustment schema with the returned status flag
         aa_schema = AdminAdjustmentSchema.from_orm(updated_admin_adjustment)
@@ -107,35 +136,40 @@ class AdminAdjustmentServices:
 
         # Create the admin adjustment
         admin_adjustment = AdminAdjustment(
-            **admin_adjustment_data.model_dump(exclude={"current_status", "internal_comment"})
+            **admin_adjustment_data.model_dump(
+                exclude={"current_status", "internal_comment"}
+            )
         )
 
         admin_adjustment.current_status = current_status
 
         # Save the admin adjustment
         admin_adjustment = await self.repo.create_admin_adjustment(admin_adjustment)
-        
+
         if current_status.status == AdminAdjustmentStatusEnum.Recommended:
             await self.repo.add_admin_adjustment_history(
                 admin_adjustment.admin_adjustment_id,
                 current_status.admin_adjustment_status_id,
-                self.request.user.user_profile_id
+                self.request.user.user_profile_id,
             )
-        
+
         # Create internal comment if provided
         if admin_adjustment_data.internal_comment:
             internal_comment_data = InternalCommentCreateSchema(
                 entity_type=EntityTypeEnum.ADMIN_ADJUSTMENT,
                 entity_id=admin_adjustment.admin_adjustment_id,
                 comment=admin_adjustment_data.internal_comment,
-                audience_scope=AudienceScopeEnum.ANALYST
+                audience_scope=AudienceScopeEnum.ANALYST,
             )
-            await self.internal_comment_service.create_internal_comment(internal_comment_data)
+            await self.internal_comment_service.create_internal_comment(
+                internal_comment_data
+            )
 
         return AdminAdjustmentSchema.from_orm(admin_adjustment)
 
-
-    async def director_approve_admin_adjustment(self, admin_adjustment: AdminAdjustment):
+    async def director_approve_admin_adjustment(
+        self, admin_adjustment: AdminAdjustment
+    ):
         """Create ledger transaction for approved admin adjustment"""
 
         user = self.request.user
@@ -143,7 +177,7 @@ class AdminAdjustmentServices:
 
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
-        
+
         if admin_adjustment.transaction != None:
             raise HTTPException(status_code=403, detail="Transaction already exists.")
 

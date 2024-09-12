@@ -87,9 +87,7 @@ class UserRepository:
         return role_filter_present
 
     async def find_user_role(self, role_name):
-        role_result = await self.db.execute(
-            select(Role).filter(Role.name == role_name)
-        )
+        role_result = await self.db.execute(select(Role).filter(Role.name == role_name))
         role = role_result.scalar_one_or_none()
         if role:
             db_user_role = UserRole(role=role)
@@ -263,7 +261,7 @@ class UserRepository:
             .scalars()
             .all()
         )
-    
+
         profile_id_list = [user.user_profile_id for user in unique_ids]
         if limit <= 0:
             query = query.where(*conditions)
@@ -392,8 +390,9 @@ class UserRepository:
         """
         full_name_result = await self.db.execute(
             select(
-                (UserProfile.first_name + " " + UserProfile.last_name).label("full_name")
+                (UserProfile.first_name + " " + UserProfile.last_name).label(
+                    "full_name"
+                )
             ).where(UserProfile.keycloak_username == username)
         )
         return full_name_result.scalars().first()
-    

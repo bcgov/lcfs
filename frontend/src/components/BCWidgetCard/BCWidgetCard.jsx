@@ -5,7 +5,13 @@ import { Card, CardContent, Divider } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-function BCWidgetCard({ color, title, content, style, disableHover }) {
+function BCWidgetCard({
+  color = 'nav',
+  title,
+  content,
+  style,
+  disableHover = false
+}) {
   return (
     <Card
       sx={{
@@ -46,12 +52,6 @@ function BCWidgetCard({ color, title, content, style, disableHover }) {
       <CardContent>{content}</CardContent>
     </Card>
   )
-}
-
-// Setting default values for the props of BCWidgetCard
-BCWidgetCard.defaultProps = {
-  color: 'nav',
-  disableHover: false
 }
 
 // Typechecking props for the BCWidgetCard

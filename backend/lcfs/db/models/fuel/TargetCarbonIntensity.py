@@ -5,13 +5,31 @@ from sqlalchemy.orm import relationship
 
 class TargetCarbonIntensity(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "target_carbon_intensity"
-    __table_args__ = {"comment": "Target carbon intensity values for various fuel categories"}
+    __table_args__ = {
+        "comment": "Target carbon intensity values for various fuel categories"
+    }
 
     target_carbon_intensity_id = Column(Integer, primary_key=True, autoincrement=True)
-    compliance_period_id = Column(Integer, ForeignKey("compliance_period.compliance_period_id"), nullable=False, comment="Compliance period ID")
-    fuel_category_id = Column(Integer, ForeignKey("fuel_category.fuel_category_id"), nullable=False, comment="Fuel category ID")
-    target_carbon_intensity = Column(Float, nullable=False, comment="Target Carbon Intensity (gCO2e/MJ)")
-    reduction_target_percentage = Column(Float, nullable=False, comment="Reduction target percentage")
+    compliance_period_id = Column(
+        Integer,
+        ForeignKey("compliance_period.compliance_period_id"),
+        nullable=False,
+        comment="Compliance period ID",
+    )
+    fuel_category_id = Column(
+        Integer,
+        ForeignKey("fuel_category.fuel_category_id"),
+        nullable=False,
+        comment="Fuel category ID",
+    )
+    target_carbon_intensity = Column(
+        Float, nullable=False, comment="Target Carbon Intensity (gCO2e/MJ)"
+    )
+    reduction_target_percentage = Column(
+        Float, nullable=False, comment="Reduction target percentage"
+    )
 
-    fuel_category = relationship("FuelCategory", back_populates="target_carbon_intensities")
+    fuel_category = relationship(
+        "FuelCategory", back_populates="target_carbon_intensities"
+    )
     compliance_period = relationship("CompliancePeriod")

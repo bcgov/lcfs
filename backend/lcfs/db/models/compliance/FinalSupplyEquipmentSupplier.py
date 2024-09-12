@@ -7,14 +7,20 @@ from lcfs.db.dependencies import get_async_db_session
 
 Base = declarative_base()
 
+
 class FinalSupplyEquipmentSupplier(Base):
-    __tablename__ = 'fianl_supply_equipment_supplier'
+    __tablename__ = "fianl_supply_equipment_supplier"
 
     supplier_id = Column(Integer, primary_key=True)
     postal_code = Column(String, nullable=False)
     registration_number = Column(String, nullable=False, unique=True)
 
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session), supplier_id: int = None, postal_code: str = None):
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_async_db_session),
+        supplier_id: int = None,
+        postal_code: str = None,
+    ):
         self.db = db
         self.supplier_id = supplier_id
         self.postal_code = postal_code
@@ -31,7 +37,9 @@ class FinalSupplyEquipmentSupplier(Base):
         # Get the max sequential number for the given postal code
         result = await self.db.execute(
             select([FinalSupplyEquipmentSupplier])
-            .where(FinalSupplyEquipmentSupplier.postal_code.endswith(postal_code_suffix))
+            .where(
+                FinalSupplyEquipmentSupplier.postal_code.endswith(postal_code_suffix)
+            )
             .order_by(FinalSupplyEquipmentSupplier.registration_number.desc())
         )
         exists = result.scalars().first() is not None
@@ -44,5 +52,7 @@ class FinalSupplyEquipmentSupplier(Base):
             sequential_number = f"{(last_sequential_number + 1):03}"
 
         # Construct the registration number
-        registration_number = f"{supplier_id_str}{postal_code_suffix}{sequential_number}"
+        registration_number = (
+            f"{supplier_id_str}{postal_code_suffix}{sequential_number}"
+        )
         return registration_number

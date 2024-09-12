@@ -32,7 +32,10 @@ class EnergyEffectivenessRatio(BaseModel, Auditable, DisplayOrder, EffectiveDate
         Float(3, 2), nullable=False, comment="Energy effectiveness ratio constant"
     )
 
-    fuel_category = relationship("FuelCategory", back_populates="energy_effectiveness_ratio")
+    fuel_category = relationship(
+        "FuelCategory", back_populates="energy_effectiveness_ratio"
+    )
     fuel_type = relationship("FuelType", back_populates="energy_effectiveness_ratio")
-    end_use_type = relationship("EndUseType", back_populates="energy_effectiveness_ratio")
-    
+    end_use_type = relationship(
+        "EndUseType", back_populates="energy_effectiveness_ratio"
+    )

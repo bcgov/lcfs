@@ -6,8 +6,8 @@ from pydantic import ConfigDict
 
 
 class TransferRecommendationEnumSchema(str, Enum):
-    Record = 'Record'
-    Refuse = 'Refuse'
+    Record = "Record"
+    Refuse = "Refuse"
 
 
 class TransferStatusSchema(BaseSchema):
@@ -15,17 +15,14 @@ class TransferStatusSchema(BaseSchema):
     status: str
 
 
-
 class TransferCategorySchema(BaseSchema):
     transfer_category_id: int
     category: str
 
 
-
 class TransferOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
-
 
 
 class TransferHistoryUserSchema(BaseSchema):
@@ -34,18 +31,15 @@ class TransferHistoryUserSchema(BaseSchema):
     organization: Optional[TransferOrganizationSchema] = None
 
 
-
 class TransferHistorySchema(BaseSchema):
     create_date: datetime
     transfer_status: TransferStatusSchema
     user_profile: TransferHistoryUserSchema
 
 
-
 class TransferCommentSchema(BaseSchema):
     name: str
     comment: Optional[str] = None
-
 
 
 class TransferSchema(BaseSchema):
@@ -63,14 +57,14 @@ class TransferSchema(BaseSchema):
     transfer_category: Optional[TransferCategorySchema] = None
     transfer_history: Optional[List[TransferHistorySchema]] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
-    model_config = ConfigDict(extra='ignore', from_attributes=True)
+    model_config = ConfigDict(extra="ignore", from_attributes=True)
 
 
 class TransferCreateSchema(BaseSchema):
     transfer_id: Optional[int] = None
     from_organization_id: int
     to_organization_id: int
-    from_transaction_id:  Optional[int] = None
+    from_transaction_id: Optional[int] = None
     to_transaction_id: Optional[int] = None
     agreement_date: Optional[date] = None
     quantity: Optional[int] = None
@@ -84,7 +78,6 @@ class TransferCreateSchema(BaseSchema):
     recommendation: Optional[TransferRecommendationEnumSchema] = None
 
 
-
 class TransferUpdate(BaseSchema):
     current_status_id: int
     comments: Optional[str] = None
@@ -94,4 +87,3 @@ class TransferUpdate(BaseSchema):
 class TransferHistory(BaseSchema):
     transfer_history_id: int
     transfer_id: int
-

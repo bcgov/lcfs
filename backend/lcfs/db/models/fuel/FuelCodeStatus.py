@@ -22,4 +22,4 @@ class FuelCodeStatus(BaseModel, Auditable, DisplayOrder):
     )
     description = Column(String(500), nullable=True, comment="Organization description")
 
-    fuel_codes = relationship('FuelCode', back_populates='fuel_code_status')
+    fuel_codes = relationship("FuelCode", back_populates="fuel_code_status")

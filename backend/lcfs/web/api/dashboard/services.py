@@ -6,10 +6,11 @@ from lcfs.web.api.dashboard.schema import (
     DirectorReviewCountsSchema,
     TransactionCountsSchema,
     OrganizarionTransactionCountsSchema,
-    OrgComplianceReportCountsSchema
+    OrgComplianceReportCountsSchema,
 )
 
 logger = getLogger("dashboard_services")
+
 
 class DashboardServices:
     def __init__(self, repo: DashboardRepository = Depends(DashboardRepository)):
@@ -20,10 +21,10 @@ class DashboardServices:
         counts = await self.repo.get_director_review_counts()
 
         return DirectorReviewCountsSchema(
-            transfers=counts.get('transfers', 0),
-            compliance_reports=counts.get('compliance_reports', 0),
-            initiative_agreements=counts.get('initiative_agreements', 0),
-            admin_adjustments=counts.get('admin_adjustments', 0)
+            transfers=counts.get("transfers", 0),
+            compliance_reports=counts.get("compliance_reports", 0),
+            initiative_agreements=counts.get("initiative_agreements", 0),
+            admin_adjustments=counts.get("admin_adjustments", 0),
         )
 
     @service_handler
@@ -31,24 +32,26 @@ class DashboardServices:
         counts = await self.repo.get_transaction_counts()
 
         return TransactionCountsSchema(
-            transfers=counts.get('transfers', 0),
-            initiative_agreements=counts.get('initiative_agreements', 0),
-            admin_adjustments=counts.get('admin_adjustments', 0)
+            transfers=counts.get("transfers", 0),
+            initiative_agreements=counts.get("initiative_agreements", 0),
+            admin_adjustments=counts.get("admin_adjustments", 0),
         )
 
     @service_handler
-    async def get_org_transaction_counts(self, organization_id) -> OrganizarionTransactionCountsSchema:
+    async def get_org_transaction_counts(
+        self, organization_id
+    ) -> OrganizarionTransactionCountsSchema:
         counts = await self.repo.get_org_transaction_counts(organization_id)
 
-        return OrganizarionTransactionCountsSchema(
-            transfers=counts.get('transfers', 0)
-        )
+        return OrganizarionTransactionCountsSchema(transfers=counts.get("transfers", 0))
 
     @service_handler
-    async def get_org_compliance_report_counts(self, organization_id: int) -> OrgComplianceReportCountsSchema:
+    async def get_org_compliance_report_counts(
+        self, organization_id: int
+    ) -> OrgComplianceReportCountsSchema:
         counts = await self.repo.get_org_compliance_report_counts(organization_id)
 
         return OrgComplianceReportCountsSchema(
-            in_progress=counts.get('in_progress', 0),
-            awaiting_gov_review=counts.get('awaiting_gov_review', 0),
+            in_progress=counts.get("in_progress", 0),
+            awaiting_gov_review=counts.get("awaiting_gov_review", 0),
         )

@@ -15,11 +15,11 @@ class TransportMode(BaseModel, Auditable, DisplayOrder):
     feedstock_fuel_transport_modes = relationship(
         "FeedstockFuelTransportMode",
         back_populates="feedstock_fuel_transport_mode",
-        primaryjoin="TransportMode.transport_mode_id == FeedstockFuelTransportMode.transport_mode_id"
+        primaryjoin="TransportMode.transport_mode_id == FeedstockFuelTransportMode.transport_mode_id",
     )
 
     finished_fuel_transport_modes = relationship(
         "FinishedFuelTransportMode",
         back_populates="finished_fuel_transport_mode",
-        primaryjoin="TransportMode.transport_mode_id == FinishedFuelTransportMode.transport_mode_id"
+        primaryjoin="TransportMode.transport_mode_id == FinishedFuelTransportMode.transport_mode_id",
     )

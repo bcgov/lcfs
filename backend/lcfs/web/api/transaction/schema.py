@@ -8,15 +8,18 @@ from typing import List, Optional
 from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
 from lcfs.web.api.base import PaginationResponseSchema
 
+
 # --------------------------------------
 # Base Configuration
 # --------------------------------------
 class BaseConfig:
     from_attributes = True
 
+
 # --------------------------------------
 # Transaction Status
 # --------------------------------------
+
 
 class TransactionStatusEnum(str, Enum):
     DRAFT = "Draft"
@@ -29,6 +32,7 @@ class TransactionStatusEnum(str, Enum):
     DELETED = "Deleted"
     DECLINED = "Declined"
     RESCINDED = "Rescinded"
+
 
 class TransactionStatusBase(BaseSchema):
     status: TransactionStatusEnum

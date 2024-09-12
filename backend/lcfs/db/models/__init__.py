@@ -1,16 +1,18 @@
 """lcfs models."""
+
 from pathlib import Path
 import pkgutil
+
 
 def load_all_models() -> None:
     """Load all models from this folder, loading specific models first."""
 
     # Models that need to be loaded first
     priority_models = [
-        'organization.OrganizationStatus',
-        'organization.Organization',
-        'user.UserProfile',
-        'user.Role',
+        "organization.OrganizationStatus",
+        "organization.Organization",
+        "user.UserProfile",
+        "user.Role",
     ]
 
     # Load priority models
@@ -27,6 +29,7 @@ def load_all_models() -> None:
     for module in modules:
         if module.name not in priority_models:
             __import__(module.name)  # noqa: WPS421
+
 
 # Explicit model imports from subdirectories
 from .admin_adjustment import *

@@ -6,7 +6,12 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.transfer.services import TransferServices
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.web.api.organizations.repo import OrganizationsRepository
-from lcfs.tests.transfer.transfer_payloads import transfer_create_payload, transfer_update_payload, transfer_update_draft_payload, transfer_update_payload_2
+from lcfs.tests.transfer.transfer_payloads import (
+    transfer_create_payload,
+    transfer_update_payload,
+    transfer_update_draft_payload,
+    transfer_update_payload_2,
+)
 
 
 @pytest.fixture
@@ -23,6 +28,7 @@ def org_repo(dbsession):
 def transfer_service(transfer_repo, org_repo):
     return TransferServices(repo=transfer_repo, org_repo=org_repo)
 
+
 # Test retrieving all transfers
 
 
@@ -31,6 +37,7 @@ async def test_get_all_transfers(transfer_service):
     transfers = await transfer_service.get_all_transfers()
     assert len(transfers) == 3
     assert transfers[0].transfer_id == 1
+
 
 # Test retrieving a transfer by ID
 
@@ -47,24 +54,40 @@ async def test_create_transfer(transfer_service, transfer_repo):
     created_transfer = await transfer_service.create_transfer(transfer_create_payload)
     assert created_transfer.from_org_comment == transfer_create_payload.from_org_comment
 
+
 # Test updating an existing draft transfer
 
 
 @pytest.mark.anyio
 async def test_update_transfer_draft(transfer_service, transfer_repo):
-    transfer = await transfer_service.update_transfer_draft(transfer_id=1, transfer_data=transfer_update_draft_payload)
-    assert transfer.from_organization.organization_id == transfer_update_draft_payload.from_organization_id
-    assert transfer.to_organization.organization_id == transfer_update_draft_payload.to_organization_id
+    transfer = await transfer_service.update_transfer_draft(
+        transfer_id=1, transfer_data=transfer_update_draft_payload
+    )
+    assert (
+        transfer.from_organization.organization_id
+        == transfer_update_draft_payload.from_organization_id
+    )
+    assert (
+        transfer.to_organization.organization_id
+        == transfer_update_draft_payload.to_organization_id
+    )
     assert transfer.quantity == transfer_update_draft_payload.quantity
+
 
 # Test updating an existing transfer
 
 
 @pytest.mark.anyio
 async def test_update_transfer(transfer_service, transfer_repo):
-    transfer = await transfer_service.update_transfer(transfer_id=1, transfer_data=transfer_update_payload_2)
-    assert transfer.current_status.transfer_status_id == transfer_update_payload_2.current_status_id
+    transfer = await transfer_service.update_transfer(
+        transfer_id=1, transfer_data=transfer_update_payload_2
+    )
+    assert (
+        transfer.current_status.transfer_status_id
+        == transfer_update_payload_2.current_status_id
+    )
     assert transfer.comments.comment == transfer_update_payload_2.comments
+
 
 # Test retrieving a non-existent transfer
 
@@ -77,6 +100,7 @@ async def test_get_transfer_non_existent(transfer_service, transfer_repo):
         await transfer_service.get_transfer(transfer_id=99999)
         assert "Transfer with ID 99999 not found" in str(exc_info.value.detail)
 
+
 # Test updating a non-existent transfer
 
 
@@ -84,10 +108,10 @@ async def test_get_transfer_non_existent(transfer_service, transfer_repo):
 async def test_update_transfer_non_existent(transfer_service, transfer_repo):
     with pytest.raises(DataNotFoundException) as exc_info:
         await transfer_service.update_transfer_draft(
-            transfer_id=99999,
-            transfer_data=transfer_update_payload
+            transfer_id=99999, transfer_data=transfer_update_payload
         )
         assert "Transfer with ID 99999 not found" in str(exc_info.value.detail)
+
 
 # Test creating a transfer with non-existent organizations
 

@@ -5,6 +5,7 @@ Revises: f141c1431961
 Create Date: 2024-05-13 15:36:40.362106
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
@@ -144,7 +145,11 @@ def downgrade() -> None:
         sa.PrimaryKeyConstraint("comment_id", name="comment_pkey"),
         comment="Comment for transaction",
     )
-    op.drop_constraint("initiative_agreement_history_initiative_agreement_id_fkey", "initiative_agreement_history", type_="foreignkey")
+    op.drop_constraint(
+        "initiative_agreement_history_initiative_agreement_id_fkey",
+        "initiative_agreement_history",
+        type_="foreignkey",
+    )
     op.drop_column("initiative_agreement_history", "user_profile_id")
     op.add_column(
         "initiative_agreement",
@@ -158,7 +163,11 @@ def downgrade() -> None:
         ["comment_id"],
     )
     op.drop_column("initiative_agreement", "gov_comment")
-    op.drop_constraint("admin_adjustment_history_admin_adjustment_id_fkey", "admin_adjustment_history", type_="foreignkey")
+    op.drop_constraint(
+        "admin_adjustment_history_admin_adjustment_id_fkey",
+        "admin_adjustment_history",
+        type_="foreignkey",
+    )
     op.drop_column("admin_adjustment_history", "user_profile_id")
     op.add_column(
         "admin_adjustment",

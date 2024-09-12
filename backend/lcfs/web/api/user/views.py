@@ -101,7 +101,7 @@ async def get_users(
 
 
 @router.get("/current", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_current_user(
     request: Request, response: Response = None
 ) -> UserBaseSchema:

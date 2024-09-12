@@ -89,7 +89,13 @@ def downgrade() -> None:
         existing_type=sa.DOUBLE_PRECISION(precision=53),
         nullable=False,
     )
-    op.drop_constraint("fk_supplemental_report_organization", "supplemental_report", type_="foreignkey")
-    op.drop_constraint("fk_supplemental_report_compliance_period", "supplemental_report", type_="foreignkey")
+    op.drop_constraint(
+        "fk_supplemental_report_organization", "supplemental_report", type_="foreignkey"
+    )
+    op.drop_constraint(
+        "fk_supplemental_report_compliance_period",
+        "supplemental_report",
+        type_="foreignkey",
+    )
     op.drop_column("supplemental_report", "organization_id")
     op.drop_column("supplemental_report", "compliance_period_id")

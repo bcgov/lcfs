@@ -42,12 +42,13 @@ const iconStyle = {
   color: colors.white.main
 }
 export const EditViewComplianceReport = () => {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] = useState(false)
+  const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
+    useState(false)
   const alertRef = useRef()
 
   const { compliancePeriod, complianceReportId } = useParams()
@@ -104,6 +105,8 @@ export const EditViewComplianceReport = () => {
     {
       onSuccess: (response) => {
         setModalData(null)
+        setAlertMessage(t('report:savedSuccessText'))
+        setAlertSeverity('success')
       },
       onError: (error) => {
         setModalData(null)
@@ -155,7 +158,7 @@ export const EditViewComplianceReport = () => {
   }
   return (
     <>
-      {alertMessage ? (
+      {alertMessage && (
         <BCAlert
           ref={alertRef}
           data-test="alert-box"
@@ -164,115 +167,112 @@ export const EditViewComplianceReport = () => {
         >
           {alertMessage}
         </BCAlert>
-      ) : (
-        <BCBox pl={2} pr={2}>
-          <BCModal
-            open={!!modalData}
-            onClose={() => setModalData(null)}
-            data={modalData}
-          />
-          <BCBox pb={2}>
-            <Typography variant="h5" color="primary">
-              {compliancePeriod + ' ' + t('report:complianceReport')}
-            </Typography>
-          </BCBox>
-          <Stack direction="column" spacing={2} mt={2}>
-            <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
-              {currentStatus === 'Assessed' && (
-                <AssessmentCard
-                  orgName={orgData?.name}
-                  assessedDate={timezoneFormatter({
-                    value: reportData?.data?.updateDate
-                  })}
-                />
-              )}
-              {currentStatus === 'Draft' ? (
-                <>
-                  <ActivityListCard
-                    name={orgData?.name}
-                    period={compliancePeriod}
-                  />
-                  <UploadCard />
-                </>
-              ) : (
-                    <>
-                      <ReportHistoryCard history={reportData?.data?.history} />
-                      {!isGovernmentUser && <ImportantInfoCard />}
-                    </>
-              )}
-              <OrgDetailsCard
+      )}
+      <BCBox pl={2} pr={2}>
+        <BCModal
+          open={!!modalData}
+          onClose={() => setModalData(null)}
+          data={modalData}
+        />
+        <BCBox pb={2}>
+          <Typography variant="h5" color="primary">
+            {compliancePeriod + ' ' + t('report:complianceReport')}
+          </Typography>
+        </BCBox>
+        <Stack direction="column" spacing={2} mt={2}>
+          <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
+            {currentStatus === 'Assessed' && (
+              <AssessmentCard
                 orgName={orgData?.name}
-                orgAddress={orgData?.orgAddress}
-                orgAttorneyAddress={orgData?.orgAttorneyAddress}
+                assessedDate={timezoneFormatter({
+                  value: reportData?.data?.updateDate
+                })}
               />
-            </Stack>
-            {!location.state?.newReport && (
+            )}
+            {currentStatus === 'Draft' ? (
               <>
-                <ReportDetails currentStatus={currentStatus} />
-                <ComplianceReportSummary reportID={complianceReportId} currentStatus={currentStatus}/>
+                <ActivityListCard
+                  name={orgData?.name}
+                  period={compliancePeriod}
+                />
+                <UploadCard />
+              </>
+            ) : (
+              <>
+                <ReportHistoryCard history={reportData?.data?.history} />
+                {!isGovernmentUser && <ImportantInfoCard />}
               </>
             )}
-            <Introduction expanded={location.state?.newReport} />
-          </Stack>
-          {currentStatus === 'Draft' &&
-            <SigningAuthorityDeclaration 
-              onChange={setIsSigningAuthorityDeclared} 
+            <OrgDetailsCard
+              orgName={orgData?.name}
+              orgAddress={orgData?.orgAddress}
+              orgAttorneyAddress={orgData?.orgAttorneyAddress}
             />
-          }
-          <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
-            {buttonClusterConfig[currentStatus]?.map(
-              (config) =>
-                config && (
-                  <BCButton
-                    key={config.id}
-                    data-test={config.id}
-                    id={config.id}
-                    size="large"
-                    variant={config.variant}
-                    color={config.color}
-                    onClick={methods.handleSubmit(config.handler)}
-                    startIcon={
-                      config.startIcon && (
-                        <FontAwesomeIcon
-                          icon={config.startIcon}
-                          className="small-icon"
-                        />
-                      )
-                    }
-                    disabled={config.disabled}
-                  >
-                    {config.label}
-                  </BCButton>
-                )
-            )}
           </Stack>
-          <Tooltip
-            title={
-              isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')
-            }
-            placement="left"
-            arrow
+          {!location.state?.newReport && (
+            <>
+              <ReportDetails currentStatus={currentStatus} />
+              <ComplianceReportSummary reportID={complianceReportId} currentStatus={currentStatus} />
+            </>
+          )}
+          <Introduction expanded={location.state?.newReport} />
+        </Stack>
+        {currentStatus === 'Draft' && (
+          <SigningAuthorityDeclaration
+            onChange={setIsSigningAuthorityDeclared}
+          />
+        )}
+        <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
+          {buttonClusterConfig[currentStatus]?.map(
+            (config) =>
+              config && (
+                <BCButton
+                  key={config.id}
+                  data-test={config.id}
+                  id={config.id}
+                  size="large"
+                  variant={config.variant}
+                  color={config.color}
+                  onClick={methods.handleSubmit(config.handler)}
+                  startIcon={
+                    config.startIcon && (
+                      <FontAwesomeIcon
+                        icon={config.startIcon}
+                        className="small-icon"
+                      />
+                    )
+                  }
+                  disabled={config.disabled}
+                >
+                  {config.label}
+                </BCButton>
+              )
+          )}
+        </Stack>
+        <Tooltip
+          title={isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')}
+          placement="left"
+          arrow
+        >
+          <Fab
+            color="secondary"
+            size="large"
+            aria-label={isAtTop ? 'scroll to bottom' : 'scroll to top'}
+            onClick={scrollToTopOrBottom}
+            sx={{
+              position: 'fixed',
+              bottom: 75,
+              right: 24
+            }}
           >
-            <Fab
-              color="secondary"
-              size="large"
-              aria-label={isAtTop ? 'scroll to bottom' : 'scroll to top'}
-              onClick={scrollToTopOrBottom}
-              sx={{
-                position: 'fixed',
-                bottom: 75,
-                right: 24
-              }}
-            >
-              {isAtTop ? (
-                <KeyboardArrowDownIcon sx={iconStyle} />
-              ) : (
-                <KeyboardArrowUpIcon sx={iconStyle} />
-              )}
-            </Fab>
-          </Tooltip>
-        </BCBox>
-      )}
+            {isAtTop ? (
+              <KeyboardArrowDownIcon sx={iconStyle} />
+            ) : (
+              <KeyboardArrowUpIcon sx={iconStyle} />
+            )}
+          </Fab>
+        </Tooltip>
+      </BCBox>
     </>
   )
 }

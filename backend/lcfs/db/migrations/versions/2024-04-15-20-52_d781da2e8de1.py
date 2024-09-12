@@ -5,6 +5,7 @@ Revises: abcdef123456
 Create Date: 2024-04-15 20:52:43.019634
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -38,7 +39,8 @@ def upgrade() -> None:
             comment="The reserved balance of compliance units for the specified organization.",
         ),
     )
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION update_organization_balance()
         RETURNS TRIGGER AS $$
         DECLARE
@@ -66,18 +68,23 @@ def upgrade() -> None:
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE TRIGGER update_organization_balance_trigger
         AFTER INSERT OR UPDATE OR DELETE ON "transaction"
         FOR EACH ROW
         EXECUTE FUNCTION update_organization_balance();
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
     op.drop_column("organization", "total_balance")
     op.drop_column("organization", "reserved_balance")
-    op.execute("DROP TRIGGER IF EXISTS update_organization_balance_trigger ON transaction;")
+    op.execute(
+        "DROP TRIGGER IF EXISTS update_organization_balance_trigger ON transaction;"
+    )
     op.execute("DROP FUNCTION IF EXISTS update_organization_balance();")

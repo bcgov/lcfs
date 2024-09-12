@@ -25,7 +25,9 @@ class FinishedFuelTransportMode(BaseModel, Auditable):
         comment="Transport mode identifier",
     )
     # Define relationships
-    finished_fuel_code = relationship("FuelCode", back_populates="finished_fuel_transport_modes")
+    finished_fuel_code = relationship(
+        "FuelCode", back_populates="finished_fuel_transport_modes"
+    )
     finished_fuel_transport_mode = relationship(
         "TransportMode", back_populates="finished_fuel_transport_modes"
     )

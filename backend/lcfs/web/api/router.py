@@ -14,6 +14,7 @@ from lcfs.web.api import (
     transaction,
     internal_comment,
     fuel_code,
+    fuel_export,
     admin_adjustment,
     initiative_agreement,
     compliance_report,
@@ -21,25 +22,25 @@ from lcfs.web.api import (
     other_uses,
     final_supply_equipment,
     dashboard,
-    allocation_agreement
+    allocation_agreement,
 )
 
 api_router = APIRouter()
 api_router.include_router(monitoring.router)
 api_router.include_router(
-    allocation_agreement.router, prefix="/allocation-agreement", tags=["allocation-agreements"]
+    allocation_agreement.router,
+    prefix="/allocation-agreement",
+    tags=["allocation-agreements"],
 )
 api_router.include_router(
     transaction.router, prefix="/transactions", tags=["transactions"]
 )
-api_router.include_router(
-    transfer.router, prefix="/transfers", tags=["transfers"])
+api_router.include_router(transfer.router, prefix="/transfers", tags=["transfers"])
 api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
 api_router.include_router(redis.router, prefix="/redis", tags=["redis"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
-api_router.include_router(
-    dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(
     notification.router, prefix="/notifications", tags=["notifications"]
 )
@@ -52,14 +53,17 @@ api_router.include_router(
 api_router.include_router(
     internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
 )
+api_router.include_router(fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"])
 api_router.include_router(
-    fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"]
+    fuel_export.router, prefix="/fuel-exports", tags=["fuel-exports"]
 )
 api_router.include_router(
     admin_adjustment.router, prefix="/admin-adjustments", tags=["admin_adjustments"]
 )
 api_router.include_router(
-    initiative_agreement.router, prefix="/initiative-agreements", tags=["initiative_agreements"]
+    initiative_agreement.router,
+    prefix="/initiative-agreements",
+    tags=["initiative_agreements"],
 )
 api_router.include_router(
     compliance_report.router, prefix="/reports", tags=["compliance_reports"]
@@ -67,11 +71,11 @@ api_router.include_router(
 api_router.include_router(
     notional_transfer.router, prefix="/notional-transfers", tags=["notional_transfers"]
 )
+api_router.include_router(other_uses.router, prefix="/other-uses", tags=["other_uses"])
 api_router.include_router(
-    other_uses.router, prefix="/other-uses", tags=["other_uses"]
-)
-api_router.include_router(
-    final_supply_equipment.router, prefix="/final-supply-equipments", tags=["final_supply_equipments"]
+    final_supply_equipment.router,
+    prefix="/final-supply-equipments",
+    tags=["final_supply_equipments"],
 )
 api_router.include_router(
     fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]

@@ -37,20 +37,19 @@ def upgrade() -> None:
     )
 
     # Create a SQLAlchemy table object for the allocation_agreement table
-    allocation_agreement = table('allocation_agreement',
-        column('ci_fuel', sa.Integer),
-        column('ci_of_fuel', sa.Float)
+    allocation_agreement = table(
+        "allocation_agreement",
+        column("ci_fuel", sa.Integer),
+        column("ci_of_fuel", sa.Float),
     )
 
     # Transfer data from ci_fuel to ci_of_fuel
     op.execute(
-        allocation_agreement.update().values(
-            ci_of_fuel=allocation_agreement.c.ci_fuel
-        )
+        allocation_agreement.update().values(ci_of_fuel=allocation_agreement.c.ci_fuel)
     )
 
     # Now make ci_of_fuel non-nullable
-    op.alter_column('allocation_agreement', 'ci_of_fuel', nullable=False)
+    op.alter_column("allocation_agreement", "ci_of_fuel", nullable=False)
 
     # Drop the old ci_fuel column
     op.drop_column("allocation_agreement", "ci_fuel")
@@ -70,9 +69,10 @@ def downgrade() -> None:
     )
 
     # Create a SQLAlchemy table object for the allocation_agreement table
-    allocation_agreement = table('allocation_agreement',
-        column('ci_fuel', sa.Integer),
-        column('ci_of_fuel', sa.Float)
+    allocation_agreement = table(
+        "allocation_agreement",
+        column("ci_fuel", sa.Integer),
+        column("ci_of_fuel", sa.Float),
     )
 
     # Transfer data from ci_of_fuel back to ci_fuel
@@ -83,7 +83,7 @@ def downgrade() -> None:
     )
 
     # Now make ci_fuel non-nullable
-    op.alter_column('allocation_agreement', 'ci_fuel', nullable=False)
+    op.alter_column("allocation_agreement", "ci_fuel", nullable=False)
 
     # Drop the ci_of_fuel column
     op.drop_column("allocation_agreement", "ci_of_fuel")

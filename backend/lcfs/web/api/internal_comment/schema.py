@@ -3,11 +3,13 @@ from enum import Enum
 from datetime import datetime
 from lcfs.web.api.base import BaseSchema
 
+
 # --------------------------------------
 # Base Configuration
 # --------------------------------------
 class BaseConfig:
     from_attributes = True
+
 
 # --------------------------------------
 # Internal Comment
@@ -18,9 +20,11 @@ class EntityTypeEnum(str, Enum):
     ADMIN_ADJUSTMENT = "administrativeAdjustment"
     ASSESSMENT = "Assessment"
 
+
 class AudienceScopeEnum(str, Enum):
     DIRECTOR = "Director"
     ANALYST = "Analyst"
+
 
 class InternalCommentCreateSchema(BaseSchema):
     entity_type: EntityTypeEnum
@@ -28,8 +32,10 @@ class InternalCommentCreateSchema(BaseSchema):
     comment: str
     audience_scope: AudienceScopeEnum
 
+
 class InternalCommentUpdateSchema(BaseSchema):
     comment: Optional[str] = None
+
 
 class InternalCommentResponseSchema(BaseSchema):
     internal_comment_id: int
@@ -39,4 +45,3 @@ class InternalCommentResponseSchema(BaseSchema):
     create_date: Optional[datetime] = None
     update_date: Optional[datetime] = None
     full_name: Optional[str] = None
-

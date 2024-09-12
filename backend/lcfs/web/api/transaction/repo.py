@@ -19,9 +19,9 @@ from lcfs.db.models.transfer.TransferStatus import TransferStatus
 
 
 class EntityType(Enum):
-    Government = 'Government'
-    Transferor = 'Transferor'
-    Transferee = 'Transferee'
+    Government = "Government"
+    Transferor = "Transferor"
+    Transferee = "Transferee"
 
 
 class TransactionRepository:
@@ -29,7 +29,14 @@ class TransactionRepository:
         self.db = db
 
     @repo_handler
-    async def get_transactions_paginated(self, offset: int, limit: int, conditions: list = [], sort_orders: list = [], organization_id: int = None):
+    async def get_transactions_paginated(
+        self,
+        offset: int,
+        limit: int,
+        conditions: list = [],
+        sort_orders: list = [],
+        organization_id: int = None,
+    ):
         """
         Fetches paginated, filtered, and sorted transactions.
         Adjusts visibility based on the requester's role: transferor, transferee, or government.
@@ -47,47 +54,64 @@ class TransactionRepository:
         query_conditions = conditions
 
         # Base condition for transaction type "Transfer"
-        transfer_type_condition = TransactionView.transaction_type == 'Transfer'
+        transfer_type_condition = TransactionView.transaction_type == "Transfer"
 
         if organization_id is not None:
             # Fetch visible statuses for both roles for "Transfer" transactions
-            visible_statuses_transferor = await self.get_visible_statuses(EntityType.Transferor)
-            visible_statuses_transferee = await self.get_visible_statuses(EntityType.Transferee)
+            visible_statuses_transferor = await self.get_visible_statuses(
+                EntityType.Transferor
+            )
+            visible_statuses_transferee = await self.get_visible_statuses(
+                EntityType.Transferee
+            )
 
             # Construct role-specific conditions, applying them only to "Transfer" transactions
             transferor_condition = and_(
                 transfer_type_condition,
                 TransactionView.from_organization_id == organization_id,
                 TransactionView.status.in_(
-                    [status.value for status in visible_statuses_transferor])
+                    [status.value for status in visible_statuses_transferor]
+                ),
             )
             transferee_condition = and_(
                 transfer_type_condition,
                 TransactionView.to_organization_id == organization_id,
                 TransactionView.status.in_(
-                    [status.value for status in visible_statuses_transferee])
+                    [status.value for status in visible_statuses_transferee]
+                ),
             )
 
             # Conditions for non-transfer transactions, only "Approved" for suppliers
             non_transfer_condition = and_(
-                TransactionView.transaction_type != 'Transfer',
+                TransactionView.transaction_type != "Transfer",
                 TransactionView.to_organization_id == organization_id,
-                TransactionView.status == 'Approved' # This status includes InitiativeAgreement and AdminAdjustment
+                TransactionView.status
+                == "Approved",  # This status includes InitiativeAgreement and AdminAdjustment
             )
 
             # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions
             combined_role_condition = or_(
-                transferor_condition, transferee_condition, non_transfer_condition)
+                transferor_condition, transferee_condition, non_transfer_condition
+            )
             query_conditions.append(combined_role_condition)
         else:
             # Government view should see all non-transfer transactions regardless of status
             gov_transfer_condition = and_(
                 transfer_type_condition,
-                TransactionView.status.in_([status.value for status in await self.get_visible_statuses(EntityType.Government)])
+                TransactionView.status.in_(
+                    [
+                        status.value
+                        for status in await self.get_visible_statuses(
+                            EntityType.Government
+                        )
+                    ]
+                ),
             )
-            gov_non_transfer_condition = TransactionView.transaction_type != 'Transfer'
+            gov_non_transfer_condition = TransactionView.transaction_type != "Transfer"
 
-            query_conditions.append(or_(gov_transfer_condition, gov_non_transfer_condition))
+            query_conditions.append(
+                or_(gov_transfer_condition, gov_non_transfer_condition)
+            )
 
         # Add additional conditions
         if conditions:
@@ -97,9 +121,8 @@ class TransactionRepository:
 
         # Apply sorting
         for order in sort_orders:
-            direction = asc if order.direction == 'asc' else desc
-            query = query.order_by(
-                direction(getattr(TransactionView, order.field)))
+            direction = asc if order.direction == "asc" else desc
+            query = query.order_by(direction(getattr(TransactionView, order.field)))
 
         # Execute count query for total records matching the filter
         count_query = select(func.count()).select_from(query.subquery())
@@ -123,10 +146,10 @@ class TransactionRepository:
         Returns:
             List[TransactionStatusView]: A list of TransactionStatusView objects containing the basic transaction status details.
         """
-        query = select(TransactionStatusView).distinct(
-            TransactionStatusView.status
-        ).order_by(
-            asc(TransactionStatusView.status)
+        query = (
+            select(TransactionStatusView)
+            .distinct(TransactionStatusView.status)
+            .order_by(asc(TransactionStatusView.status))
         )
         status_results = await self.db.execute(query)
         return status_results.scalars().all()
@@ -146,11 +169,16 @@ class TransactionRepository:
         """
         total_balance = await self.db.scalar(
             select(
-                func.sum(case(
-                    (Transaction.transaction_action ==
-                     TransactionActionEnum.Adjustment, Transaction.compliance_units),
-                    else_=0
-                )).label('total_balance')
+                func.sum(
+                    case(
+                        (
+                            Transaction.transaction_action
+                            == TransactionActionEnum.Adjustment,
+                            Transaction.compliance_units,
+                        ),
+                        else_=0,
+                    )
+                ).label("total_balance")
             ).where(Transaction.organization_id == organization_id)
         )
         return total_balance or 0
@@ -168,11 +196,16 @@ class TransactionRepository:
         """
         reserved_balance = await self.db.scalar(
             select(
-                func.sum(case(
-                    (Transaction.transaction_action ==
-                     TransactionActionEnum.Reserved, Transaction.compliance_units),
-                    else_=0
-                )).label('reserved_balance')
+                func.sum(
+                    case(
+                        (
+                            Transaction.transaction_action
+                            == TransactionActionEnum.Reserved,
+                            Transaction.compliance_units,
+                        ),
+                        else_=0,
+                    )
+                ).label("reserved_balance")
             ).where(Transaction.organization_id == organization_id)
         )
         return reserved_balance or 0
@@ -190,21 +223,36 @@ class TransactionRepository:
         """
         available_balance = await self.db.scalar(
             select(
-                (func.sum(case(
-                    (Transaction.transaction_action ==
-                     TransactionActionEnum.Adjustment, Transaction.compliance_units),
-                    else_=0
-                )) - func.sum(case(
-                    (Transaction.transaction_action ==
-                     TransactionActionEnum.Reserved, Transaction.compliance_units),
-                    else_=0
-                ))).label('available_balance')
+                (
+                    func.sum(
+                        case(
+                            (
+                                Transaction.transaction_action
+                                == TransactionActionEnum.Adjustment,
+                                Transaction.compliance_units,
+                            ),
+                            else_=0,
+                        )
+                    )
+                    - func.sum(
+                        case(
+                            (
+                                Transaction.transaction_action
+                                == TransactionActionEnum.Reserved,
+                                Transaction.compliance_units,
+                            ),
+                            else_=0,
+                        )
+                    )
+                ).label("available_balance")
             ).where(Transaction.organization_id == organization_id)
         )
         return available_balance or 0
 
     @repo_handler
-    async def calculate_available_balance_for_period(self, organization_id: int, period: int):
+    async def calculate_available_balance_for_period(
+        self, organization_id: int, period: int
+    ):
         """
         Calculate the available balance for a specific organization available to a specific compliance period.
 
@@ -215,7 +263,9 @@ class TransactionRepository:
         Returns:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
         """
-        compliance_period_end = datetime.strptime(f'{str(period + 1)}-12-31', '%Y-%m-%d')
+        compliance_period_end = datetime.strptime(
+            f"{str(period + 1)}-12-31", "%Y-%m-%d"
+        )
         async with self.db.begin_nested():
             # Calculate the sum of all transactions up to the specified date
             balance_to_date = await self.db.scalar(
@@ -223,7 +273,8 @@ class TransactionRepository:
                     and_(
                         Transaction.organization_id == organization_id,
                         Transaction.create_date <= compliance_period_end,
-                        Transaction.transaction_action != TransactionActionEnum.Released
+                        Transaction.transaction_action
+                        != TransactionActionEnum.Released,
                     )
                 )
             )
@@ -235,13 +286,16 @@ class TransactionRepository:
                         Transaction.organization_id == organization_id,
                         Transaction.create_date > compliance_period_end,
                         Transaction.compliance_units < 0,
-                        Transaction.transaction_action != TransactionActionEnum.Released
+                        Transaction.transaction_action
+                        != TransactionActionEnum.Released,
                     )
                 )
             )
 
         # Calculate the available balance, round to the nearest whole number, and if negative, set to zero
-        available_balance = max(round(balance_to_date - abs(future_negative_transactions)), 0)
+        available_balance = max(
+            round(balance_to_date - abs(future_negative_transactions)), 0
+        )
 
         return available_balance
 
@@ -250,7 +304,7 @@ class TransactionRepository:
         self,
         transaction_action: TransactionActionEnum,
         compliance_units: int,
-        organization_id: int
+        organization_id: int,
     ):
         """
         Creates and saves a new transaction to the database.
@@ -266,11 +320,11 @@ class TransactionRepository:
         new_transaction = Transaction(
             transaction_action=transaction_action,
             compliance_units=compliance_units,
-            organization_id=organization_id
+            organization_id=organization_id,
         )
         self.db.add(new_transaction)
         await self.db.flush()
-        await self.db.refresh(new_transaction, ['organization'])
+        await self.db.refresh(new_transaction, ["organization"])
         return new_transaction
 
     @repo_handler
@@ -335,7 +389,8 @@ class TransactionRepository:
         if result.rowcount > 0:
             # Retrieve the updated transaction instance
             query = select(Transaction).where(
-                Transaction.transaction_id == transaction_id)
+                Transaction.transaction_id == transaction_id
+            )
             updated_transaction = await self.db.scalar(query)
 
             # If the transaction is found, refresh it and return True

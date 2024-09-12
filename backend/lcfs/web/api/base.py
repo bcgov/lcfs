@@ -12,12 +12,14 @@ import re
 
 logger = getLogger("base")
 
+
 class BaseSchema(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
     )
+
 
 def row_to_dict(row, schema):
     d = {}
@@ -32,7 +34,7 @@ def row_to_dict(row, schema):
 class SortOrder(BaseSchema):
     field: str
     direction: str
-    
+
     @classmethod
     def validate_field(cls, value):
         # Convert CamelCase to snake_case
@@ -88,18 +90,23 @@ class EntityResponse(BaseModel):
     total_pages: int = 1
     data: Any = {}
 
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True, arbitrary_types_allowed=True, json_schema_extra={
-        "example": {
-            "status": 200,
-            "message": "Success",
-            "error": {},
-            "total": 0,
-            "page": 1,
-            "size": 10,
-            "total_pages": 1,
-            "data": [],
-        }
-    })
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_schema_extra={
+            "example": {
+                "status": 200,
+                "message": "Success",
+                "error": {},
+                "total": 0,
+                "page": 1,
+                "size": 10,
+                "total_pages": 1,
+                "data": [],
+            }
+        },
+    )
 
 
 def validate_pagination(pagination: PaginationRequestSchema):
@@ -209,10 +216,14 @@ def apply_date_filter_conditions(field, filter_value, filter_option):
         "notEqual": cast(field, Date) != func.date(filter_value),
         "greaterThan": cast(field, Date) > func.date(filter_value),
         "lessThan": cast(field, Date) < func.date(filter_value),
-        "inRange": and_(cast(field, Date) >= func.date(filter_value[0]), cast(field, Date) <= func.date(filter_value[1])),
+        "inRange": and_(
+            cast(field, Date) >= func.date(filter_value[0]),
+            cast(field, Date) <= func.date(filter_value[1]),
+        ),
     }
 
     return date_filter_mapping.get(filter_option)
+
 
 def apply_set_filter_conditions(field, filter_values):
     """
@@ -279,10 +290,12 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
             detail=f"Failed to apply filter conditions",
         )
 
+
 def camel_to_snake(name):
     """Convert a camel case string to snake case."""
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
 
 async def lcfs_cache_key_builder(
     func,

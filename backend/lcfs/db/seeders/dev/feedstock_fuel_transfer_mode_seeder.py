@@ -55,25 +55,26 @@ async def seed_feedstock_fuel_transfer_modes(session):
             "fuel_code_id": 6,
             "transport_mode_id": 4,
         },
-
     ]
 
     try:
         for feedstock_fuel_transferm_mode_data in feedstock_fuel_transfer_modes_to_seed:
             exists = await session.execute(
                 select(FeedstockFuelTransportMode).where(
-                    FeedstockFuelTransportMode.fuel_code_id == feedstock_fuel_transferm_mode_data[
-                        "fuel_code_id"],
-                    FeedstockFuelTransportMode.transport_mode_id == feedstock_fuel_transferm_mode_data[
-                        "transport_mode_id"],
+                    FeedstockFuelTransportMode.fuel_code_id
+                    == feedstock_fuel_transferm_mode_data["fuel_code_id"],
+                    FeedstockFuelTransportMode.transport_mode_id
+                    == feedstock_fuel_transferm_mode_data["transport_mode_id"],
                 )
             )
             if not exists.scalars().first():
                 feedstock_fuel_transfer_mode = FeedstockFuelTransportMode(
-                    **feedstock_fuel_transferm_mode_data)
+                    **feedstock_fuel_transferm_mode_data
+                )
                 session.add(feedstock_fuel_transfer_mode)
 
     except Exception as e:
         logger.error(
-            "Error occurred while seeding feedstock fuel transfer modes: %s", e)
+            "Error occurred while seeding feedstock fuel transfer modes: %s", e
+        )
         raise

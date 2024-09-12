@@ -17,11 +17,13 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
     ComplianceReportSummaryRowSchema,
-    ComplianceReportUpdateSchema
+    ComplianceReportUpdateSchema,
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
+from lcfs.web.api.compliance_report.summary_service import (
+    ComplianceReportSummaryService,
+)
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 
 logger = getLogger(__name__)
@@ -56,7 +58,7 @@ class ComplianceReportServices:
                 compliance_period=period,
                 organization_id=organization_id,
                 current_status=draft_status,
-                summary=ComplianceReportSummary() # Create an empty summary object
+                summary=ComplianceReportSummary(),  # Create an empty summary object
             )
         )
         await self.repo.add_compliance_report_history(report, self.request.user)
@@ -96,14 +98,18 @@ class ComplianceReportServices:
         return report
 
     @service_handler
-    async def get_supplemental_reports(self, original_report_id: int) -> List[SupplementalReport]:
+    async def get_supplemental_reports(
+        self, original_report_id: int
+    ) -> List[SupplementalReport]:
         """
         Retrieve all supplemental reports for a given original compliance report,
         ordered by version.
         """
-        query = select(SupplementalReport).where(
-            SupplementalReport.original_report_id == original_report_id
-        ).order_by(SupplementalReport.version)
+        query = (
+            select(SupplementalReport)
+            .where(SupplementalReport.original_report_id == original_report_id)
+            .order_by(SupplementalReport.version)
+        )
 
         result = await self.repo.db.execute(query)
         return result.scalars().all()

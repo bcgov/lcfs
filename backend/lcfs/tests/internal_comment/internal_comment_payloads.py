@@ -1,14 +1,24 @@
 from datetime import datetime
 
-from lcfs.web.api.internal_comment.schema import AudienceScopeEnum, EntityTypeEnum, InternalCommentCreateSchema, InternalCommentUpdateSchema
+from lcfs.web.api.internal_comment.schema import (
+    AudienceScopeEnum,
+    EntityTypeEnum,
+    InternalCommentCreateSchema,
+    InternalCommentUpdateSchema,
+)
 
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
-from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus, InitiativeAgreementStatusEnum
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
+    InitiativeAgreementStatus,
+    InitiativeAgreementStatusEnum,
+)
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 
 # User ORM Model
@@ -23,7 +33,7 @@ user_orm_model = UserProfile(
     first_name="John",
     last_name="Doe",
     is_active=True,
-    organization_id=1
+    organization_id=1,
 )
 
 # InternalComment ORM Model
@@ -37,7 +47,7 @@ internal_comment_orm_model = InternalComment(
 transaction_orm_model = Transaction(
     compliance_units=1000,
     organization_id=1,
-    transaction_action=TransactionActionEnum.Adjustment
+    transaction_action=TransactionActionEnum.Adjustment,
 )
 
 # Transfer ORM Model
@@ -50,13 +60,12 @@ transfer_orm_model = Transfer(
     price_per_unit=100,
     quantity=500,
     transfer_category_id=1,
-    current_status_id=1
+    current_status_id=1,
 )
 
 # TransferInternalComment ORM Model
 transfer_internal_comment_orm_model = TransferInternalComment(
-    transfer_id=1000,
-    internal_comment_id=1000
+    transfer_id=1000, internal_comment_id=1000
 )
 
 # InitiativeAgreementStatus ORM Model
@@ -70,32 +79,31 @@ initiative_agreement_orm_model = InitiativeAgreement(
     transaction_effective_date=datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
     to_organization_id=2,
     transaction_id=1000,
-    current_status_id=1000
+    current_status_id=1000,
 )
 
 # InitiativeAgreementInternalComment ORM Model
 initiative_agreement_internal_comment_orm_model = InitiativeAgreementInternalComment(
-    initiative_agreement_id=1000,
-    internal_comment_id=1000
+    initiative_agreement_id=1000, internal_comment_id=1000
 )
 
 # InternalComment ORM Fields
 internal_comment_orm_fields = {
     "internal_comment_id": 1000,
     "comment": "Comment",
-    "audience_scope": AudienceScopeEnum.ANALYST
+    "audience_scope": AudienceScopeEnum.ANALYST,
 }
 
 # TransferInternalComment ORM Fields
 transfer_internal_comment_orm_fields = {
     "transfer_id": 1000,
-    'internal_comment_id': 1000
+    "internal_comment_id": 1000,
 }
 
 # InitiativeAgreementInternalComment ORM Fields
 initiative_agreement_internal_comment_orm_fields = {
     "initiative_agreement_id": 1000,
-    'internal_comment_id': 1000
+    "internal_comment_id": 1000,
 }
 
 # create payload
@@ -103,5 +111,5 @@ intenal_comment_create_payload = InternalCommentCreateSchema(
     entity_type=EntityTypeEnum.TRANSFER,
     entity_id=1,
     comment="Comment",
-    audience_scope=AudienceScopeEnum.DIRECTOR
+    audience_scope=AudienceScopeEnum.DIRECTOR,
 )

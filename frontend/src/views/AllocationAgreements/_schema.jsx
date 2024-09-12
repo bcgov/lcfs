@@ -9,6 +9,7 @@ import {
 import i18n from '@/i18n'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
+import { apiRoutes } from '@/constants/routes'
 
 export const PROVISION_APPROVED_FUEL_CODE =
   'Approved fuel code - Section 6 (5) (c)'
@@ -95,44 +96,54 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartner'
     ),
+    cellDataType: 'text',
     cellEditor: AsyncSuggestionEditor,
-    // cellEditorParams: (params) => ({
-    //   queryKey: 'trading-partner-name-search',
-    //   queryFn: async ({ queryKey, client }) => {
-    //     let path = apiRoutes.allocationAgreementSearch
-    //     path += 'trading_partner=' + queryKey[1]
-    //     const response = await client.get(path)
-    //     return response.data
-    //   },
-    //   title: 'transactionPartner',
-    //   api: params.api,
-    // }),
+    cellEditorParams: (params) => ({
+      queryKey: 'trading-partner-name-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.organizationSearch
+        path += 'org_name=' + queryKey[1]
+        const response = await client.get(path)
+        params.node.data.apiDataCache = response.data
+        return response.data
+      },
+      title: 'transactionPartner',
+      api: params.api,
+      minWords: 3
+    }),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Enter</Typography>),
+      (!params.value && (
+        <Typography variant="body4">Enter or search a name</Typography>
+      )),
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
     minWidth: 310,
     editable: true,
-    // valueSetter: (params) => {
-    //   if (params.newValue) {
-    //     const company = optionsData?.companies?.find(
-    //       (c) => c.name === params.newValue
-    //     )
-    //     if (company) {
-    //       params.data.transactionPartner = params.newValue
-    //       params.data.postalAddress = company.address
-    //       params.data.transactionPartnerEmail = company.email
-    //       params.data.transactionPartnerPhone = company.phone
-    //     } else {
-    //       params.data.transactionPartner = params.newValue
-    //       params.data.postalAddress = ''
-    //       params.data.transactionPartnerEmail = ''
-    //       params.data.transactionPartnerPhone = ''
-    //     }
-    //   }
-    //   return true
-    // },
+    valueSetter: (params) => {
+      const { newValue: selectedName, node, data } = params
+      const apiData = node.data.apiDataCache || [] // Safely access cached data or default to an empty array
+
+      // Attempt to find the selected company from the cached API data
+      const selectedOption = apiData.find(
+        (company) => company.name === selectedName
+      )
+
+      if (selectedOption) {
+        // Only update related fields if a match is found in the API data
+        data.transactionPartner = selectedOption.name
+        data.postalAddress = selectedOption.address || data.postalAddress
+        data.transactionPartnerEmail =
+          selectedOption.email || data.transactionPartnerEmail
+        data.transactionPartnerPhone =
+          selectedOption.phone || data.transactionPartnerPhone
+      } else {
+        // If no match, only update the transactionPartner field, leave others unchanged
+        data.transactionPartner = selectedName
+      }
+
+      return true
+    },
     tooltipValueGetter: (p) =>
       'Enter or select the legal name of the trading partner'
   },
@@ -144,7 +155,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: true,
-    minWidth: 220
+    minWidth: 350
   },
   {
     field: 'transactionPartnerEmail',
@@ -154,7 +165,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: true,
-    minWidth: 150
+    minWidth: 200
   },
   {
     field: 'transactionPartnerPhone',
@@ -164,7 +175,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) => cellErrorStyle(params, errors),
     editable: true,
-    minWidth: 120
+    minWidth: 200
   },
   {
     field: 'fuelType',

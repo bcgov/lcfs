@@ -27,7 +27,7 @@ from lcfs.web.api.other_uses.schema import (
     DeleteOtherUsesResponseSchema,
     PaginatedOtherUsesRequestSchema,
     OtherUsesListSchema,
-    OtherUsesAllSchema
+    OtherUsesAllSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
@@ -39,9 +39,11 @@ get_async_db = dependencies.get_async_db_session
 
 
 @router.get(
-    "/table-options", response_model=OtherUsesTableOptionsSchema, status_code=status.HTTP_200_OK
+    "/table-options",
+    response_model=OtherUsesTableOptionsSchema,
+    status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 # @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
     request: Request,
@@ -51,8 +53,10 @@ async def get_table_options(
     return await service.get_table_options()
 
 
-@router.post("/list-all", response_model=OtherUsesAllSchema, status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@router.post(
+    "/list-all", response_model=OtherUsesAllSchema, status_code=status.HTTP_200_OK
+)
+@view_handler(["*"])
 async def get_other_uses(
     request: Request,
     request_data: ComplianceReportRequestSchema = Body(...),
@@ -68,7 +72,7 @@ async def get_other_uses(
     response_model=OtherUsesListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_other_uses_paginated(
     request: Request,
     request_data: PaginatedOtherUsesRequestSchema = Body(...),
@@ -78,7 +82,7 @@ async def get_other_uses_paginated(
         page=request_data.page,
         size=request_data.size,
         sort_orders=request_data.sort_orders,
-        filters=request_data.filters
+        filters=request_data.filters,
     )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_other_uses_paginated(pagination, compliance_report_id)
@@ -104,14 +108,20 @@ async def save_other_uses_row(
 
     if request_data.deleted:
         # Delete existing other use
-        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        await validate.validate_compliance_report_id(
+            compliance_report_id, [request_data]
+        )
         await service.delete_other_use(other_uses_id)
         return DeleteOtherUsesResponseSchema(message="Other use deleted successfully")
     elif other_uses_id:
         # Update existing other use
-        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        await validate.validate_compliance_report_id(
+            compliance_report_id, [request_data]
+        )
         return await service.update_other_use(request_data)
     else:
         # Create new other use
-        await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+        await validate.validate_compliance_report_id(
+            compliance_report_id, [request_data]
+        )
         return await service.create_other_use(request_data)

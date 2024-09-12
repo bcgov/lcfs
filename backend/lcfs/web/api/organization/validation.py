@@ -15,7 +15,7 @@ class OrganizationValidation:
         request: Request = None,
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
-        report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository)
+        report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
     ):
         self.org_repo = org_repo
         self.request = request
@@ -23,7 +23,9 @@ class OrganizationValidation:
         self.report_repo = report_repo
 
     async def check_available_balance(self, organization_id, quantity):
-        available_balance = await self.transaction_repo.calculate_available_balance(organization_id)
+        available_balance = await self.transaction_repo.calculate_available_balance(
+            organization_id
+        )
         if available_balance < quantity:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -53,7 +55,9 @@ class OrganizationValidation:
         await self.check_available_balance(organization_id, transfer_create.quantity)
         return
 
-    async def update_transfer(self, organization_id, transfer_create: TransferCreateSchema):
+    async def update_transfer(
+        self, organization_id, transfer_create: TransferCreateSchema
+    ):
         # Before updating, check for available balance
         await self.check_available_balance(organization_id, transfer_create.quantity)
         if (
@@ -71,20 +75,28 @@ class OrganizationValidation:
             detail="Validation for authorization failed.",
         )
 
-    async def create_compliance_report(self, organization_id, report_data: ComplianceReportCreateSchema):
+    async def create_compliance_report(
+        self, organization_id, report_data: ComplianceReportCreateSchema
+    ):
         # Before creating ensure that there isn't any existing report for the given compliance period.
-        period = await self.report_repo.get_compliance_period(report_data.compliance_period)
+        period = await self.report_repo.get_compliance_period(
+            report_data.compliance_period
+        )
         if not period:
             raise HTTPException(status_code=404, detail="Compliance period not found")
-        is_report_present = await self.report_repo.get_compliance_report_by_period(organization_id, report_data.compliance_period)
-        if (is_report_present):
+        is_report_present = await self.report_repo.get_compliance_report_by_period(
+            organization_id, report_data.compliance_period
+        )
+        if is_report_present:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Duplicate report for the compliance period"
+                detail="Duplicate report for the compliance period",
             )
         return
 
-    async def save_final_supply_equipment_rows(self,organization_id, report_id, fse_list):
+    async def save_final_supply_equipment_rows(
+        self, organization_id, report_id, fse_list
+    ):
         report = await self.report_repo.get_compliance_report_by_id(report_id)
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
