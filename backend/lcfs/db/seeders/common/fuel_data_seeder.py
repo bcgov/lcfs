@@ -16,7 +16,7 @@ from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
-from lcfs.db.models.fuel.FuelClass import FuelClass
+from lcfs.db.models.fuel.FuelInstance import FuelInstance
 from lcfs.db.models.compliance import FuelMeasurementType, LevelOfEquipment
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,9 @@ async def seed_static_fuel_data(session):
                 "target_carbon_intensity_id",
                 data["target_carbon_intensities"],
             )
-            await add_if_not_exists(FuelClass, "fuel_class_id", data["fuel_classes"])
+            await add_if_not_exists(
+                FuelInstance, "fuel_instance_id", data["fuel_instances"]
+            )
             await add_if_not_exists(
                 FuelMeasurementType,
                 "fuel_measurement_type_id",

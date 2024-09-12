@@ -104,6 +104,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         params.data.fuelCode = undefined
         params.data.quantity = 0
         params.data.units = fuelType?.unit
+        params.data.unrecognized = fuelType?.unrecognized
       }
       return true
     },

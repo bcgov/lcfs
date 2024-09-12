@@ -80,6 +80,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fossil_derived: bool
     default_carbon_intensity: float
     unit: str
+    unrecognized: bool
     energy_density: Optional[EnergyDensitySchema]
     provisions: List[ProvisionOfTheActSchema]
     fuel_categories: List[FuelCategorySchema]

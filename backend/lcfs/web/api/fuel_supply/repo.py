@@ -5,7 +5,7 @@ from lcfs.db.models.fuel import (
     EnergyDensity,
     EnergyEffectivenessRatio,
     FuelCategory,
-    FuelClass,
+    FuelInstance,
     FuelCode,
     FuelCodePrefix,
     FuelCodeStatus,
@@ -76,8 +76,8 @@ class FuelSupplyRepository:
         query = (
             select(
                 FuelType.fuel_type_id,
-                FuelClass.fuel_class_id,
-                FuelClass.fuel_category_id,
+                FuelInstance.fuel_instance_id,
+                FuelInstance.fuel_category_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
                 FuelType.default_carbon_intensity,
@@ -87,6 +87,7 @@ class FuelSupplyRepository:
                 EnergyDensity.energy_density_id,
                 EnergyDensity.density.label("energy_density"),
                 FuelType.units.label("unit"),
+                FuelType.unrecognized,
                 EndUseType.end_use_type_id,
                 EndUseType.type.label("end_use_type"),
                 EndUseType.sub_type.label("end_use_sub_type"),
@@ -106,10 +107,10 @@ class FuelSupplyRepository:
                 ),
                 FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),
             )
-            .join(FuelClass, FuelClass.fuel_type_id == FuelType.fuel_type_id)
+            .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
             .join(
                 FuelCategory,
-                FuelCategory.fuel_category_id == FuelClass.fuel_category_id,
+                FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
             )
             .outerjoin(
                 ProvisionOfTheAct,
@@ -133,7 +134,7 @@ class FuelSupplyRepository:
                 and_(
                     EnergyEffectivenessRatio.fuel_category_id
                     == FuelCategory.fuel_category_id,
-                    EnergyEffectivenessRatio.fuel_type_id == FuelClass.fuel_type_id,
+                    EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
                 ),
             )
             .outerjoin(
