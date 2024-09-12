@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import Loading from '@/components/Loading'
@@ -15,6 +15,7 @@ import {
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { useApiService } from '@/services/useApiService'
+import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -25,8 +26,8 @@ export const AddEditNotionalTransfers = () => {
   const alertRef = useRef()
   const location = useLocation()
   const apiService = useApiService()
-  const { t } = useTranslation(['common', 'notionalTransfer'])
-  const { complianceReportId } = useParams()
+  const { t } = useTranslation(['common', 'notionalTransfer', 'reports'])
+  const { complianceReportId, compliancePeriod } = useParams()
   const {
     data: optionsData,
     isLoading: optionsLoading,
@@ -35,6 +36,7 @@ export const AddEditNotionalTransfers = () => {
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfers(complianceReportId)
   const { mutateAsync: saveRow } = useSaveNotionalTransfer()
+  const navigate = useNavigate()
 
   const gridOptions = useMemo(
     () => ({
@@ -218,6 +220,15 @@ export const AddEditNotionalTransfers = () => {
     }
   }, [errors, optionsData, optionsLoading])
 
+  const handleNavigateBack = useCallback(() => {
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }, [navigate, compliancePeriod, complianceReportId])
+
   if (optionsLoading || transfersLoading) {
     return <Loading />
   }
@@ -245,6 +256,13 @@ export const AddEditNotionalTransfers = () => {
             onAction={onAction}
             showAddRowsButton={true}
             stopEditingWhenCellsLoseFocus
+            saveButtonProps={{
+              enabled: true,
+              text: t('report:saveReturn'),
+              onSave: handleNavigateBack,
+              confirmText: t('report:incompleteReport'),
+              confirmLabel: t('report:returnToReport')
+            }}
           />
         </BCBox>
       </Grid2>

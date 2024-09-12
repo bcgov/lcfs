@@ -12,6 +12,8 @@ import BCButton from '@/components/BCButton'
 import { Menu, MenuItem } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import BCModal from '@/components/BCModal.jsx'
+import { useTranslation } from 'react-i18next'
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -32,12 +34,16 @@ export const BCGridEditor = ({
   onCellValueChanged,
   onAction,
   showAddRowsButton = true,
+  saveButtonProps = {
+    enabled: false
+  },
   ...props
 }) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
+  const { t } = useTranslation(['common'])
 
   const handleExcelPaste = useCallback(
     (params) => {
@@ -118,9 +124,32 @@ export const BCGridEditor = ({
   const handleAddRows = (numRows) => {
     const newRows = Array(numRows)
       .fill()
-      .map(() => ({ id: uuid(), validationStatus: 'error' }))
+      .map(() => ({ id: uuid() }))
     ref.current.api.applyTransaction({ add: newRows })
     setAnchorEl(null)
+  }
+
+  const isGridValid = () => {
+    let isValid = true
+
+    ref.current.api.forEachNode((node) => {
+      if (!node.data || node.data.validationStatus === 'error') {
+        isValid = false
+      }
+    })
+
+    return isValid
+  }
+
+  const [showCloseModal, setShowCloseModal] = useState(false)
+  const onSaveExit = () => {
+    const isValid = isGridValid()
+    if (isValid) {
+      saveButtonProps.onSave()
+      return
+    }
+
+    setShowCloseModal(true)
   }
 
   return (
@@ -169,6 +198,34 @@ export const BCGridEditor = ({
             <MenuItem onClick={() => handleAddRows(10)}>10 rows</MenuItem>
           </Menu>
         </BCBox>
+      )}
+      {saveButtonProps.enabled && (
+        <>
+          <BCButton
+            onClick={onSaveExit}
+            variant="contained"
+            color="primary"
+            style={{
+              gap: 8,
+              marginTop: 20
+            }}
+          >
+            {saveButtonProps.text}
+          </BCButton>
+          <BCModal
+            open={showCloseModal}
+            onClose={() => {
+              setShowCloseModal(false)
+            }}
+            data={{
+              title: saveButtonProps.text,
+              content: saveButtonProps.confirmText,
+              primaryButtonAction: saveButtonProps.onSave,
+              primaryButtonText: saveButtonProps.confirmLabel,
+              secondaryButtonText: t('cancelBtn')
+            }}
+          />
+        </>
       )}
     </BCBox>
   )
