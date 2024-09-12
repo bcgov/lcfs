@@ -2,12 +2,14 @@ from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
 
+
 class AdminAdjustmentStatusSchema(BaseSchema):
     admin_adjustment_status_id: int
     status: str
 
     class Config:
         from_attributes = True
+
 
 class HistoryUserSchema(BaseSchema):
     first_name: str
@@ -16,11 +18,13 @@ class HistoryUserSchema(BaseSchema):
     class Config:
         from_attributes = True
 
+
 class OrganizationSchema(BaseSchema):
     name: str
 
     class Config:
         from_attributes = True
+
 
 class AdminAdjustmentHistorySchema(BaseSchema):
     create_date: datetime
@@ -29,6 +33,7 @@ class AdminAdjustmentHistorySchema(BaseSchema):
 
     class Config:
         from_attributes = True
+
 
 class AdminAdjustmentBaseSchema(BaseSchema):
     compliance_units: int
@@ -41,6 +46,7 @@ class AdminAdjustmentBaseSchema(BaseSchema):
     class Config:
         from_attributes = True
 
+
 class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):
     admin_adjustment_id: int
     to_organization: OrganizationSchema
@@ -48,8 +54,10 @@ class AdminAdjustmentSchema(AdminAdjustmentBaseSchema):
     returned: Optional[bool] = False
     create_date: datetime
 
+
 class AdminAdjustmentCreateSchema(AdminAdjustmentBaseSchema):
     current_status: str
+
 
 class AdminAdjustmentUpdateSchema(AdminAdjustmentBaseSchema):
     admin_adjustment_id: int

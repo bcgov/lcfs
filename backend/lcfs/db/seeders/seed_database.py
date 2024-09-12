@@ -13,6 +13,7 @@ from lcfs.settings import settings
 
 logger = logging.getLogger(__name__)
 
+
 async def seed_database(environment):
     engine = create_async_engine(str(settings.db_url))
     AsyncSessionLocal = sessionmaker(bind=engine, class_=AsyncSession)
@@ -23,15 +24,15 @@ async def seed_database(environment):
                 logger.info("Database seeding started.")
                 await seed_common(session)
 
-                if environment == 'dev':
+                if environment == "dev":
                     await seed_dev(session)
-                elif environment == 'prod':
+                elif environment == "prod":
                     await seed_prod(session)
-                elif environment == 'test':
+                elif environment == "test":
                     await seed_test(session)
                 else:
                     raise ValueError("Unknown environment")
-                
+
                 # commit all seeders
                 await session.commit()
 
@@ -40,6 +41,7 @@ async def seed_database(environment):
                 await session.rollback()  # Ensure to rollback in case of an error
                 raise
 
+
 if __name__ == "__main__":
-    env = sys.argv[1] if len(sys.argv) > 1 else 'dev'
+    env = sys.argv[1] if len(sys.argv) > 1 else "dev"
     asyncio.run(seed_database(env))

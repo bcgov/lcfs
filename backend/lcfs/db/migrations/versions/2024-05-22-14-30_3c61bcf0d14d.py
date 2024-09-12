@@ -490,12 +490,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
         comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
     )
-    op.add_column(
-        "fuel_type", sa.Column("provision_1_id", sa.Integer(), nullable=True)
-    )
-    op.add_column(
-        "fuel_type", sa.Column("provision_2_id", sa.Integer(), nullable=True)
-    )
+    op.add_column("fuel_type", sa.Column("provision_1_id", sa.Integer(), nullable=True))
+    op.add_column("fuel_type", sa.Column("provision_2_id", sa.Integer(), nullable=True))
     op.add_column(
         "fuel_type",
         sa.Column(
@@ -506,10 +502,18 @@ def upgrade() -> None:
         ),
     )
     op.create_foreign_key(
-        None, "fuel_type", "provision_of_the_act", ["provision_1_id"], ["provision_of_the_act_id"]
+        None,
+        "fuel_type",
+        "provision_of_the_act",
+        ["provision_1_id"],
+        ["provision_of_the_act_id"],
     )
     op.create_foreign_key(
-        None, "fuel_type", "provision_of_the_act", ["provision_2_id"], ["provision_of_the_act_id"]
+        None,
+        "fuel_type",
+        "provision_of_the_act",
+        ["provision_2_id"],
+        ["provision_of_the_act_id"],
     )
     op.create_table(
         "compliance_report",
@@ -1177,28 +1181,74 @@ def upgrade() -> None:
     )
 
     # Create unique constraints with default names
-    op.create_unique_constraint("transfer_category_transfer_category_id_key", "transfer_category", ["transfer_category_id"])
+    op.create_unique_constraint(
+        "transfer_category_transfer_category_id_key",
+        "transfer_category",
+        ["transfer_category_id"],
+    )
     op.create_unique_constraint("transfer_transfer_id_key", "transfer", ["transfer_id"])
-    op.create_unique_constraint("transaction_transaction_id_key", "transaction", ["transaction_id"])
-    op.create_unique_constraint("internal_comment_internal_comment_id_key", "internal_comment", ["internal_comment_id"])
-    op.create_unique_constraint("initiative_agreement_history_initiative_agreement_history_i_key", "initiative_agreement_history", ["initiative_agreement_history_id"])
-    op.create_unique_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", ["initiative_agreement_id"])
-    op.create_unique_constraint("admin_adjustment_history_admin_adjustment_history_id_key", "admin_adjustment_history", ["admin_adjustment_history_id"])
-    op.create_unique_constraint("admin_adjustment_admin_adjustment_id_key", "admin_adjustment", ["admin_adjustment_id"])
+    op.create_unique_constraint(
+        "transaction_transaction_id_key", "transaction", ["transaction_id"]
+    )
+    op.create_unique_constraint(
+        "internal_comment_internal_comment_id_key",
+        "internal_comment",
+        ["internal_comment_id"],
+    )
+    op.create_unique_constraint(
+        "initiative_agreement_history_initiative_agreement_history_i_key",
+        "initiative_agreement_history",
+        ["initiative_agreement_history_id"],
+    )
+    op.create_unique_constraint(
+        "initiative_agreement_initiative_agreement_id_key",
+        "initiative_agreement",
+        ["initiative_agreement_id"],
+    )
+    op.create_unique_constraint(
+        "admin_adjustment_history_admin_adjustment_history_id_key",
+        "admin_adjustment_history",
+        ["admin_adjustment_history_id"],
+    )
+    op.create_unique_constraint(
+        "admin_adjustment_admin_adjustment_id_key",
+        "admin_adjustment",
+        ["admin_adjustment_id"],
+    )
 
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # Drop unique constraints with default names
-    op.drop_constraint("transfer_category_transfer_category_id_key", "transfer_category", type_="unique")
+    op.drop_constraint(
+        "transfer_category_transfer_category_id_key",
+        "transfer_category",
+        type_="unique",
+    )
     op.drop_constraint("transfer_transfer_id_key", "transfer", type_="unique")
     op.drop_constraint("transaction_transaction_id_key", "transaction", type_="unique")
-    op.drop_constraint("internal_comment_internal_comment_id_key", "internal_comment", type_="unique")
-    op.drop_constraint("initiative_agreement_history_initiative_agreement_history_i_key", "initiative_agreement_history", type_="unique")
-    op.drop_constraint("initiative_agreement_initiative_agreement_id_key", "initiative_agreement", type_="unique")
-    op.drop_constraint("admin_adjustment_history_admin_adjustment_history_id_key", "admin_adjustment_history", type_="unique")
-    op.drop_constraint("admin_adjustment_admin_adjustment_id_key", "admin_adjustment", type_="unique")
+    op.drop_constraint(
+        "internal_comment_internal_comment_id_key", "internal_comment", type_="unique"
+    )
+    op.drop_constraint(
+        "initiative_agreement_history_initiative_agreement_history_i_key",
+        "initiative_agreement_history",
+        type_="unique",
+    )
+    op.drop_constraint(
+        "initiative_agreement_initiative_agreement_id_key",
+        "initiative_agreement",
+        type_="unique",
+    )
+    op.drop_constraint(
+        "admin_adjustment_history_admin_adjustment_history_id_key",
+        "admin_adjustment_history",
+        type_="unique",
+    )
+    op.drop_constraint(
+        "admin_adjustment_admin_adjustment_id_key", "admin_adjustment", type_="unique"
+    )
 
     op.alter_column(
         "energy_effectiveness_ratio",

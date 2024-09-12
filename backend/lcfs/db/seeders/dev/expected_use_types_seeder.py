@@ -4,6 +4,7 @@ from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 
 logger = logging.getLogger(__name__)
 
+
 async def seed_expected_use_types(session):
     """
     Seeds initial expected use types into the database, if they do not already exist.
@@ -12,8 +13,8 @@ async def seed_expected_use_types(session):
     """
 
     expected_use_types_to_seed = [
-        {'name': 'Heating oil', 'description': 'Fuel used for heating purposes'},
-        {'name': 'Other', 'description': 'Other type of fuel description'}
+        {"name": "Heating oil", "description": "Fuel used for heating purposes"},
+        {"name": "Other", "description": "Other type of fuel description"},
     ]
 
     try:

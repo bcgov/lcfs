@@ -45,7 +45,8 @@ export const AsyncSuggestionEditor = ({
   })
 
   const debouncedSetInputValue = useMemo(
-    () => debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
+    () =>
+      debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
     [debounceValue]
   )
 
@@ -84,7 +85,7 @@ export const AsyncSuggestionEditor = ({
         }}
         freeSolo
         id="async-search-editor"
-        getOptionLabel={(option) => 
+        getOptionLabel={(option) =>
           typeof option === 'string' ? option : option[optionLabel]
         }
         options={options || []}
@@ -96,7 +97,8 @@ export const AsyncSuggestionEditor = ({
         noOptionsText="No suggestions..."
         renderInput={(params) => <TextField {...params} fullWidth autoFocus />}
         renderOption={({ key, ...props }, option, { inputValue }) => {
-          const label = typeof option === 'string' ? option : option[optionLabel]
+          const label =
+            typeof option === 'string' ? option : option[optionLabel]
           const matches = match(label, inputValue, { insideWords: true })
           const parts = parse(label, matches)
 

@@ -29,7 +29,7 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_final_supply_equipment_registration_nbr"),
         "final_supply_equipment",
-        ["registration_nbr"]
+        ["registration_nbr"],
     )
 
 

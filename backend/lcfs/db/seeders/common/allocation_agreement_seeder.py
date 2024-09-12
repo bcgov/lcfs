@@ -1,9 +1,12 @@
 import logging
 from sqlalchemy import select
 from datetime import datetime
-from lcfs.db.models.compliance.AllocationTransactionType import AllocationTransactionType
+from lcfs.db.models.compliance.AllocationTransactionType import (
+    AllocationTransactionType,
+)
 
 logger = logging.getLogger(__name__)
+
 
 async def seed_allocation_transaction_types(session):
     """
@@ -33,7 +36,8 @@ async def seed_allocation_transaction_types(session):
         for type_data in allocation_transaction_types_to_seed:
             exists = await session.execute(
                 select(AllocationTransactionType).where(
-                    AllocationTransactionType.type == type_data["type"])
+                    AllocationTransactionType.type == type_data["type"]
+                )
             )
             if not exists.scalars().first():
                 transaction_type = AllocationTransactionType(**type_data)
@@ -41,6 +45,5 @@ async def seed_allocation_transaction_types(session):
 
         logger.info("Successfully seeded allocation transaction types.")
     except Exception as e:
-        logger.error(
-            "Error occurred while seeding allocation transaction types: %s", e)
+        logger.error("Error occurred while seeding allocation transaction types: %s", e)
         raise

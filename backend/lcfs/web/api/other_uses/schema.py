@@ -1,6 +1,12 @@
 from typing import Optional, List
 from pydantic import Field, field_validator
-from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder, PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.base import (
+    BaseSchema,
+    FilterModel,
+    SortOrder,
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+)
 from enum import Enum
 
 
@@ -11,24 +17,28 @@ class FuelCodeStatusEnumSchema(str, Enum):
 
 
 class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = 'L'
+    Litres = "L"
     Kilograms = "kg"
-    Kilowatt_hour = 'kWh'
-    Cubic_metres = 'm3'
+    Kilowatt_hour = "kWh"
+    Cubic_metres = "m3"
+
 
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
+
 
 class UnitOfMeasureSchema(BaseSchema):
     uom_id: int
     name: str
     description: Optional[str] = None
 
+
 class ExpectedUseTypeSchema(BaseSchema):
     expected_use_type_id: int
     name: str
     description: Optional[str] = None
+
 
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
@@ -64,6 +74,7 @@ class OtherUsesTableOptionsSchema(BaseSchema):
     units_of_measure: List[str]
     expected_uses: List[ExpectedUseTypeSchema]
 
+
 class OtherUsesCreateSchema(BaseSchema):
     other_uses_id: Optional[int] = None
     compliance_report_id: int
@@ -75,11 +86,14 @@ class OtherUsesCreateSchema(BaseSchema):
     rationale: Optional[str] = None
     deleted: Optional[bool] = None
 
+
 class OtherUsesSchema(OtherUsesCreateSchema):
     pass
 
+
 class ComplianceReportRequestSchema(BaseSchema):
     compliance_report_id: int
+
 
 class PaginatedOtherUsesRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
@@ -88,16 +102,20 @@ class PaginatedOtherUsesRequestSchema(BaseSchema):
     size: int
     sort_orders: List[SortOrder]
 
+
 class OtherUsesListSchema(BaseSchema):
     other_uses: List[OtherUsesSchema]
     pagination: PaginationResponseSchema
 
+
 class OtherUsesAllSchema(BaseSchema):
     other_uses: List[OtherUsesSchema]
+
 
 class DeleteOtherUsesSchema(BaseSchema):
     other_uses_id: int
     compliance_report_id: int
+
 
 class DeleteOtherUsesResponseSchema(BaseSchema):
     message: str

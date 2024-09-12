@@ -4,6 +4,7 @@ from lcfs.db.base import BaseModel, Auditable
 from sqlalchemy.orm import relationship
 
 
+<<<<<<< HEAD:backend/lcfs/db/models/fuel/FuelInstance.py
 class FuelInstance(BaseModel, Auditable):
     
     __tablename__ = "fuel_instance"

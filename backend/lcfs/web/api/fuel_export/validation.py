@@ -15,4 +15,3 @@ class FuelExportValidation:
         self.fse_repo = fs_repo
         self.request = request
         self.report_repo = report_repo
-

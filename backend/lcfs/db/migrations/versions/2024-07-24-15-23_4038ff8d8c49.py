@@ -18,7 +18,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("""
+    op.execute(
+        """
     CREATE MATERIALIZED VIEW mv_transaction_count AS
     SELECT
         'transfers' AS transaction_type,
@@ -43,11 +44,15 @@ def upgrade() -> None:
                 aa.current_status_id IN (1, 2)  -- Draft, Recommended
         ) AS count_in_progress
     FROM admin_adjustment aa;
-    """)
+    """
+    )
 
-    op.execute("""CREATE UNIQUE INDEX mv_transaction_count_unique_idx ON mv_transaction_count (transaction_type);""")
+    op.execute(
+        """CREATE UNIQUE INDEX mv_transaction_count_unique_idx ON mv_transaction_count (transaction_type);"""
+    )
 
-    op.execute("""
+    op.execute(
+        """
     CREATE OR REPLACE FUNCTION refresh_mv_transaction_count()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -55,32 +60,45 @@ def upgrade() -> None:
         RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
     # Create triggers on transfer, initiative_agreement, and admin_adjustment tables
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_mv_transaction_count_after_transfer
     AFTER INSERT OR UPDATE OR DELETE ON transfer
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_mv_transaction_count();
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_mv_transaction_count_after_initiative_agreement
     AFTER INSERT OR UPDATE OR DELETE ON initiative_agreement
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_mv_transaction_count();
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_mv_transaction_count_after_admin_adjustment
     AFTER INSERT OR UPDATE OR DELETE ON admin_adjustment
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_mv_transaction_count();
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
-    op.execute("""DROP TRIGGER IF EXISTS refresh_mv_transaction_count_after_transfer ON transfer;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_mv_transaction_count_after_initiative_agreement ON initiative_agreement;""")
-    op.execute("""DROP TRIGGER IF EXISTS refresh_mv_transaction_count_after_admin_adjustment ON admin_adjustment;""")
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_mv_transaction_count_after_transfer ON transfer;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_mv_transaction_count_after_initiative_agreement ON initiative_agreement;"""
+    )
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_mv_transaction_count_after_admin_adjustment ON admin_adjustment;"""
+    )
 
     op.execute("""DROP FUNCTION IF EXISTS refresh_mv_transaction_count();""")
 

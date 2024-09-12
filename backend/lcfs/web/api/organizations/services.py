@@ -21,8 +21,13 @@ from lcfs.web.api.base import (
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
-from lcfs.db.models.organization.OrganizationStatus import OrganizationStatus, OrgStatusEnum
-from lcfs.db.models.organization.OrganizationAttorneyAddress import OrganizationAttorneyAddress
+from lcfs.db.models.organization.OrganizationStatus import (
+    OrganizationStatus,
+    OrgStatusEnum,
+)
+from lcfs.db.models.organization.OrganizationAttorneyAddress import (
+    OrganizationAttorneyAddress,
+)
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 
@@ -34,7 +39,7 @@ from .schema import (
     OrganizationListSchema,
     OrganizationCreateSchema,
     OrganizationSummaryResponseSchema,
-    OrganizationStatusSchema
+    OrganizationDetailsSchema,
 )
 
 
@@ -46,9 +51,9 @@ class OrganizationsService:
         self,
         request: Request = None,
         repo: OrganizationsRepository = Depends(OrganizationsRepository),
-        transaction_repo: TransactionRepository = Depends(TransactionRepository)
+        transaction_repo: TransactionRepository = Depends(TransactionRepository),
     ) -> None:
-        self.request = request,
+        self.request = (request,)
         self.repo = repo
         self.transaction_repo = transaction_repo
 
@@ -73,15 +78,14 @@ class OrganizationsService:
                 field = get_field_for_filter(Organization, filter.field)
 
             conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
             )
 
     @service_handler
     async def export_organizations(self) -> StreamingResponse:
-        '''
+        """
         Prepares a list of organizations in a .xls file that is downloadable
-        '''
+        """
         organizations = await self.repo.get_organizations()
 
         data = [
@@ -92,7 +96,7 @@ class OrganizationsService:
                 # once the Compliance Units models are implemented.
                 123456,
                 123456,
-                organization.org_status.status.value
+                organization.org_status.status.value,
             ]
             for organization in organizations
         ]
@@ -121,18 +125,18 @@ class OrganizationsService:
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         filename = f"BC-LCFS-organizations-{current_date}.{export_format}"
-        headers = {
-            "Content-Disposition": f'attachment; filename="{filename}"'}
+        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
         return StreamingResponse(
-            io.BytesIO(file_content), media_type="application/vnd.ms-excel", headers=headers
+            io.BytesIO(file_content),
+            media_type="application/vnd.ms-excel",
+            headers=headers,
         )
 
     @service_handler
     async def create_organization(self, organization_data: OrganizationCreateSchema):
-        '''handles creating an organization'''
-        org_address = OrganizationAddress(
-            **organization_data.address.dict())
+        """handles creating an organization"""
+        org_address = OrganizationAddress(**organization_data.address.dict())
         org_attorney_address = OrganizationAttorneyAddress(
             **organization_data.attorney_address.dict()
         )
@@ -153,8 +157,10 @@ class OrganizationsService:
         return await self.repo.create_organization(org_model)
 
     @service_handler
-    async def update_organization(self, organization_id: int, organization_data: OrganizationCreateSchema):
-        '''handles updating an organization'''
+    async def update_organization(
+        self, organization_id: int, organization_data: OrganizationCreateSchema
+    ):
+        """handles updating an organization"""
 
         organization = await self.repo.get_organization(organization_id)
 
@@ -166,7 +172,9 @@ class OrganizationsService:
                 setattr(organization, key, value)
 
         if organization.organization_address_id:
-            org_address = await self.repo.get_organization_address(organization.organization_address_id)
+            org_address = await self.repo.get_organization_address(
+                organization.organization_address_id
+            )
 
             if not org_address:
                 raise DataNotFoundException("Organization address not found")
@@ -176,11 +184,12 @@ class OrganizationsService:
                     setattr(org_address, key, value)
 
         if organization.organization_attorney_address_id:
-            org_attorney_address = await self.repo.get_organization_attorney_address(organization.organization_attorney_address_id)
+            org_attorney_address = await self.repo.get_organization_attorney_address(
+                organization.organization_attorney_address_id
+            )
 
             if not org_attorney_address:
-                raise DataNotFoundException(
-                    "Organization attorney address not found")
+                raise DataNotFoundException("Organization attorney address not found")
 
             for key, value in organization_data.attorney_address.dict().items():
                 if hasattr(org_attorney_address, key):
@@ -190,7 +199,7 @@ class OrganizationsService:
 
     @service_handler
     async def get_organization(self, organization_id: int):
-        '''handles fetching an organization'''
+        """handles fetching an organization"""
         organization = await self.repo.get_organization(organization_id)
 
         if organization is None:
@@ -202,7 +211,7 @@ class OrganizationsService:
     async def get_organizations(
         self, pagination: PaginationRequestSchema = {}
     ) -> List[OrganizationSchema]:
-        '''handles fetching organizations and providing pagination data'''
+        """handles fetching organizations and providing pagination data"""
         """
         Get all organizations based on the provided filters and pagination.
         This method returns a list of OrganizationSchema objects.
@@ -236,21 +245,18 @@ class OrganizationsService:
             try:
                 self.apply_organization_filters(pagination, conditions)
             except Exception:
-                raise ValueError(
-                    f"Invalid filter provided: {pagination.filters}."
-                )
+                raise ValueError(f"Invalid filter provided: {pagination.filters}.")
 
         # Apply pagination
-        offset = (
-            0 if (pagination.page < 1) else (
-                pagination.page - 1) * pagination.size
-        )
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
-        organizations, total_count = await self.repo.get_organizations_paginated(offset, limit, conditions, pagination)
+        organizations, total_count = await self.repo.get_organizations_paginated(
+            offset, limit, conditions, pagination
+        )
 
         if not organizations:
-            raise DataNotFoundException('Organizations not found')
+            raise DataNotFoundException("Organizations not found")
 
         return OrganizationListSchema(
             organizations=organizations,
@@ -264,11 +270,10 @@ class OrganizationsService:
 
     @service_handler
     async def get_organization_types(self) -> List[OrganizationTypeSchema]:
-        '''handles fetching all organization types'''
+        """handles fetching all organization types"""
         result = await self.repo.get_organization_types()
 
-        types = [OrganizationTypeSchema.model_validate(
-            types) for types in result]
+        types = [OrganizationTypeSchema.model_validate(types) for types in result]
 
         if len(types) == 0:
             raise DataNotFoundException("No organization types found")
@@ -276,17 +281,19 @@ class OrganizationsService:
         return types
 
     @service_handler
-    async def get_organization_names(self, only_registered: bool = False, order_by=('name', 'asc')) -> List[OrganizationSummaryResponseSchema]:
-        '''
+    async def get_organization_names(
+        self, only_registered: bool = False, order_by=("name", "asc")
+    ) -> List[OrganizationSummaryResponseSchema]:
+        """
         Fetches all organization names and their detailed information, formatted as per OrganizationSummaryResponseSchema.
-        
+
         Parameters:
             only_registered (bool): If true, fetches only registered organizations.
             order_by (tuple): Tuple containing the field name to sort by and the direction ('asc' or 'desc').
 
         Returns:
             List[OrganizationSummaryResponseSchema]: List of organizations with their summary information.
-        '''
+        """
         conditions = []
         if only_registered:
             conditions.append(OrganizationStatus.status == OrgStatusEnum.Registered)
@@ -300,7 +307,7 @@ class OrganizationsService:
                 name=org["name"],
                 operating_name=org["operating_name"],
                 total_balance=org["total_balance"],
-                reserved_balance=org["reserved_balance"]
+                reserved_balance=org["reserved_balance"],
             )
             for org in organization_data
         ]
@@ -309,24 +316,27 @@ class OrganizationsService:
     async def get_externally_registered_organizations(
         self, org_id: int
     ) -> List[OrganizationSummaryResponseSchema]:
-        '''handles getting a list of organizations excluding the current organization'''
-        conditions = [Organization.org_status.has(status='Registered'),
-                      Organization.organization_id != org_id]
+        """handles getting a list of organizations excluding the current organization"""
+        conditions = [
+            Organization.org_status.has(status="Registered"),
+            Organization.organization_id != org_id,
+        ]
         results = await self.repo.get_externally_registered_organizations(conditions)
 
         # Map the results to OrganizationSummaryResponseSchema
-        organizations = [OrganizationSummaryResponseSchema.model_validate(organization)
-                         for organization in results]
+        organizations = [
+            OrganizationSummaryResponseSchema.model_validate(organization)
+            for organization in results
+        ]
 
         if not organizations:
-            raise DataNotFoundException(
-                "No externally registered organizations found")
+            raise DataNotFoundException("No externally registered organizations found")
 
         return organizations
 
     @service_handler
     async def get_organization_statuses(self):
-        '''handles fetching all organization statuses'''
+        """handles fetching all organization statuses"""
         statuses = await self.repo.get_organization_statuses()
 
         if len(statuses) == 0:
@@ -345,7 +355,9 @@ class OrganizationsService:
         Returns:
             int: The total balance of the organization.
         """
-        total_balance = await self.transaction_repo.calculate_total_balance(organization_id)
+        total_balance = await self.transaction_repo.calculate_total_balance(
+            organization_id
+        )
         return total_balance
 
     @service_handler
@@ -359,7 +371,9 @@ class OrganizationsService:
         Returns:
             int: The reserved balance of the organization.
         """
-        reserved_balance = await self.transaction_repo.calculate_reserved_balance(organization_id)
+        reserved_balance = await self.transaction_repo.calculate_reserved_balance(
+            organization_id
+        )
         return reserved_balance
 
     @service_handler
@@ -373,7 +387,9 @@ class OrganizationsService:
         Returns:
             int: The available balance of the organization.
         """
-        available_balance = await self.transaction_repo.calculate_available_balance(organization_id)
+        available_balance = await self.transaction_repo.calculate_available_balance(
+            organization_id
+        )
         return available_balance
 
     @service_handler
@@ -381,7 +397,7 @@ class OrganizationsService:
         self,
         transaction_action: TransactionActionEnum,
         compliance_units: int,
-        organization_id: int
+        organization_id: int,
     ):
         """
         Adjusts an organization's balance based on the transaction action.
@@ -411,14 +427,46 @@ class OrganizationsService:
         elif transaction_action == TransactionActionEnum.Released:
             if abs(compliance_units) > reserved_balance:
                 raise ValueError("Release amount cannot exceed reserved balance.")
-        elif transaction_action == TransactionActionEnum.Adjustment and compliance_units < 0:
+        elif (
+            transaction_action == TransactionActionEnum.Adjustment
+            and compliance_units < 0
+        ):
             if abs(compliance_units) > available_balance:
                 raise ValueError("Cannot decrement available balance below zero.")
 
         # Create a new transaction record in the database
         new_transaction = await self.transaction_repo.create_transaction(
-            transaction_action,
-            compliance_units,
-            organization_id
+            transaction_action, compliance_units, organization_id
         )
         return new_transaction
+
+    @service_handler
+    async def search_organization_details(
+        self, search_query: str
+    ) -> List[OrganizationDetailsSchema]:
+        """
+        Get organizations matching the transaction partner query.
+        The organization details include name, full address, email, and phone.
+        """
+        organizations = await self.repo.search_organizations_by_name(search_query)
+
+        return [
+            {
+                "name": org.name,
+                "address": " ".join(
+                    part
+                    for part in [
+                        org.org_address.street_address,
+                        org.org_address.address_other,
+                        org.org_address.city,
+                        org.org_address.province_state,
+                        org.org_address.country,
+                        org.org_address.postalCode_zipCode,
+                    ]
+                    if part
+                ),
+                "email": org.email,
+                "phone": org.phone,
+            }
+            for org in organizations
+        ]

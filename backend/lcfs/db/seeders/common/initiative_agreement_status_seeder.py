@@ -1,6 +1,9 @@
 import logging
 from sqlalchemy import select
-from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus, InitiativeAgreementStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
+    InitiativeAgreementStatus,
+    InitiativeAgreementStatusEnum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,8 @@ async def seed_initiative_agreement_statuses(session):
         for status_data in initiative_agreement_statuses_to_seed:
             exists = await session.execute(
                 select(InitiativeAgreementStatus).where(
-                    InitiativeAgreementStatus.status == status_data["status"])
+                    InitiativeAgreementStatus.status == status_data["status"]
+                )
             )
             if not exists.scalars().first():
                 status = InitiativeAgreementStatus(**status_data)
@@ -43,5 +47,6 @@ async def seed_initiative_agreement_statuses(session):
 
     except Exception as e:
         logger.error(
-            "Error occurred while seeding initiative agreement statuses: %s", e)
+            "Error occurred while seeding initiative agreement statuses: %s", e
+        )
         raise

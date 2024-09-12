@@ -18,7 +18,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("""
+    op.execute(
+        """
     CREATE MATERIALIZED VIEW mv_org_compliance_report_count AS
     SELECT
         organization_id,
@@ -28,11 +29,15 @@ def upgrade() -> None:
         compliance_report
     GROUP BY
         organization_id;
-    """)
+    """
+    )
 
-    op.execute("""CREATE UNIQUE INDEX mv_org_compliance_report_count_org_id_idx ON mv_org_compliance_report_count (organization_id);""")
+    op.execute(
+        """CREATE UNIQUE INDEX mv_org_compliance_report_count_org_id_idx ON mv_org_compliance_report_count (organization_id);"""
+    )
 
-    op.execute("""
+    op.execute(
+        """
     CREATE OR REPLACE FUNCTION refresh_mv_org_compliance_report_count()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -40,16 +45,21 @@ def upgrade() -> None:
         RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
     CREATE TRIGGER refresh_mv_org_compliance_report_count_after_compliance_report
     AFTER INSERT OR UPDATE OR DELETE ON compliance_report
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_mv_org_compliance_report_count();
-    """)
+    """
+    )
 
 
 def downgrade() -> None:
-    op.execute("""DROP TRIGGER IF EXISTS refresh_mv_org_compliance_report_count_after_compliance_report ON compliance_report;""")
+    op.execute(
+        """DROP TRIGGER IF EXISTS refresh_mv_org_compliance_report_count_after_compliance_report ON compliance_report;"""
+    )
     op.execute("""DROP FUNCTION IF EXISTS refresh_mv_org_compliance_report_count();""")
     op.execute("""DROP MATERIALIZED VIEW IF EXISTS mv_org_compliance_report_count;""")

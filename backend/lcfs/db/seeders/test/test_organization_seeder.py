@@ -5,6 +5,7 @@ from faker import Faker
 
 logger = logging.getLogger(__name__)
 
+
 async def seed_test_organizations(session):
     """
     Seeds the organizations into the database, if they do not already exist.
@@ -19,20 +20,20 @@ async def seed_test_organizations(session):
             "name": fake.company(),
             "operating_name": fake.company(),
             "organization_status_id": 2,
-            "organization_type_id": 1
+            "organization_type_id": 1,
         },
         {
             "name": fake.company(),
             "operating_name": fake.company(),
             "organization_status_id": 2,
-            "organization_type_id": 1
+            "organization_type_id": 1,
         },
         {
             "name": fake.company(),
             "operating_name": fake.company(),
             "organization_status_id": 2,
-            "organization_type_id": 1
-        }
+            "organization_type_id": 1,
+        },
     ]
 
     try:

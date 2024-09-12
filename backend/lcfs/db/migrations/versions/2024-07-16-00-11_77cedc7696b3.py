@@ -23,19 +23,14 @@ def upgrade() -> None:
             "organization_code",
             sa.String(),
             nullable=False,
-            comment="Organization Code"
+            comment="Organization Code",
         ),
-        sa.Column(
-            "postal_code",
-            sa.String(),
-            nullable=False,
-            comment="Postal code"
-        ),
+        sa.Column("postal_code", sa.String(), nullable=False, comment="Postal code"),
         sa.Column(
             "current_sequence_number",
             sa.Integer,
             nullable=False,
-            comment="Current sequence number used for the postal code"
+            comment="Current sequence number used for the postal code",
         ),
         sa.Column(
             "create_date",
@@ -50,16 +45,19 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=True,
             comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        )
+        ),
     )
 
     op.create_index(
         "idx_organization_code_postal_code",
         "final_supply_equipment_reg_number",
-        ["organization_code", "postal_code"]
+        ["organization_code", "postal_code"],
     )
 
 
 def downgrade() -> None:
-    op.drop_index("idx_organization_code_postal_code", table_name="final_supply_equipment_reg_number")
+    op.drop_index(
+        "idx_organization_code_postal_code",
+        table_name="final_supply_equipment_reg_number",
+    )
     op.drop_table("final_supply_equipment_reg_number")

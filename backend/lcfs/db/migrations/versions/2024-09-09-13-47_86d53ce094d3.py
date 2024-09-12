@@ -21,7 +21,13 @@ def upgrade() -> None:
     # Add 'unrecognized' boolean column to 'fuel_type' table, default is False (recognized fuel types)
     op.add_column(
         "fuel_type",
-        sa.Column("unrecognized", sa.Boolean(), nullable=False, server_default=sa.false(), comment="Indicates if the fuel type is unrecognized")
+        sa.Column(
+            "unrecognized",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+            comment="Indicates if the fuel type is unrecognized",
+        ),
     )
 
 

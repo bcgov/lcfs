@@ -29,7 +29,7 @@ from lcfs.web.api.fuel_code.schema import (
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
-    DeleteFuelCodeResponseSchema
+    DeleteFuelCodeResponseSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.db.models.user.Role import RoleEnum
@@ -52,34 +52,60 @@ async def get_table_options(
     logger.info("Retrieving table options")
     return await service.get_table_options()
 
-@router.get("/search", response_model=Union[SearchFuelCodeList, List[str]], status_code=status.HTTP_200_OK)
+
+@router.get(
+    "/search",
+    response_model=Union[SearchFuelCodeList, List[str]],
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def search_table_options_strings(
     request: Request,
-    company: Optional[str] = Query(None, alias="company", description="Company for filtering options"),
-    contact_name: Optional[str] = Query(None, alias="contactName", description="Contact name for filtering options"),
-    contact_email: Optional[str] = Query(None, alias="contactEmail", description="Contact email for filtering options"),
-    fuel_code: Optional[str] = Query(None, alias="fuelCode", description="Fuel code for filtering options"),
-    prefix: Optional[str] = Query(None, alias="prefix", description="Prefix for filtering options"),
-    distinct_search: Optional[bool] = Query(False, alias="distinctSearch", description="Based on flag retrieve entire row data or just the list of distinct values"),
+    company: Optional[str] = Query(
+        None, alias="company", description="Company for filtering options"
+    ),
+    contact_name: Optional[str] = Query(
+        None, alias="contactName", description="Contact name for filtering options"
+    ),
+    contact_email: Optional[str] = Query(
+        None, alias="contactEmail", description="Contact email for filtering options"
+    ),
+    fuel_code: Optional[str] = Query(
+        None, alias="fuelCode", description="Fuel code for filtering options"
+    ),
+    prefix: Optional[str] = Query(
+        None, alias="prefix", description="Prefix for filtering options"
+    ),
+    distinct_search: Optional[bool] = Query(
+        False,
+        alias="distinctSearch",
+        description="Based on flag retrieve entire row data or just the list of distinct values",
+    ),
     service: FuelCodeServices = Depends(),
 ):
     """Endpoint to search fuel codes based on a query string"""
-    if (fuel_code):
+    if fuel_code:
         logger.info(f"Searching for fuel code: {fuel_code} with prfix: {prefix}")
         return await service.search_fuel_code(fuel_code, prefix, distinct_search)
-    elif (company):
+    elif company:
         logger.info(f"Searching for company: {company} with prefix: {prefix}")
-        if (contact_email and contact_name and company):
-            logger.info(f"Searching for contact email: {contact_email} under the company: {company}")
-            return await service.search_contact_email(company, contact_name, contact_email)
-        elif (contact_name and company):
-            logger.info(f"Searching for contact name: {contact_name} under the company: {company}")
+        if contact_email and contact_name and company:
+            logger.info(
+                f"Searching for contact email: {contact_email} under the company: {company}"
+            )
+            return await service.search_contact_email(
+                company, contact_name, contact_email
+            )
+        elif contact_name and company:
+            logger.info(
+                f"Searching for contact name: {contact_name} under the company: {company}"
+            )
             return await service.search_contact_name(company, contact_name)
         return await service.search_company(company)
     else:
         logger.info("Invalid search parameters")
         return {"error": "Invalid search parameters"}
+
 
 @router.post("/list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
@@ -109,7 +135,7 @@ async def save_fuel_codes(
 
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_fuel_code(
     request: Request,
     fuel_code_id: int,
@@ -119,7 +145,7 @@ async def get_fuel_code(
 
 
 @router.put("/{fuel_code_id}", status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@view_handler(["*"])
 async def update_fuel_code(
     request: Request,
     fuel_code_id: int,
@@ -130,11 +156,9 @@ async def update_fuel_code(
 
 
 @router.delete("/{fuel_code_id}", status_code=status.HTTP_200_OK)
-@view_handler(['*'])
+@view_handler(["*"])
 async def delete_fuel_code(
-    request: Request,
-    fuel_code_id: int,
-    service: FuelCodeServices = Depends()
+    request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
 
@@ -144,7 +168,7 @@ async def delete_fuel_code(
     response_model=List[EnergyDensitySchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_energy_densities(
     request: Request,
     service: FuelCodeServices = Depends(),
@@ -158,7 +182,7 @@ async def get_energy_densities(
     response_model=List[EnergyEffectivenessRatioSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_energy_effectiveness_ratios(
     request: Request,
     service: FuelCodeServices = Depends(),
@@ -172,7 +196,7 @@ async def get_energy_effectiveness_ratios(
     response_model=List[AdditionalCarbonIntensitySchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_use_of_a_carbon_intensities(
     request: Request,
     service: FuelCodeServices = Depends(),

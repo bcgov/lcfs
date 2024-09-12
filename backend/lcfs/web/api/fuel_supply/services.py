@@ -3,7 +3,11 @@ import math
 from fastapi import Depends, Request
 
 
-from lcfs.db.models.compliance.FuelSupply import FuelSupply, ChangeType, QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelSupply import (
+    FuelSupply,
+    ChangeType,
+    QuantityUnitsEnum,
+)
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
@@ -28,10 +32,10 @@ logger = getLogger(__name__)
 
 class FuelSupplyServices:
     def __init__(
-        self, 
-        request: Request = None, 
+        self,
+        request: Request = None,
         repo: FuelSupplyRepository = Depends(),
-        compliance_report_repo: ComplianceReportRepository = Depends()
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.request = request
         self.repo = repo
@@ -41,95 +45,172 @@ class FuelSupplyServices:
         column_names = row._fields
         row_data = dict(zip(column_names, row))
         fuel_category = FuelCategorySchema(
-                fuel_category_id=row_data["fuel_category_id"],
-                fuel_category=row_data["category"],
-                default_and_prescribed_ci=round(row_data["default_carbon_intensity"], 2),
-            )
+            fuel_category_id=row_data["fuel_category_id"],
+            fuel_category=row_data["category"],
+            default_and_prescribed_ci=round(row_data["default_carbon_intensity"], 2),
+        )
         provision = ProvisionOfTheActSchema(
-                provision_of_the_act_id=row_data["provision_of_the_act_id"],
-                name=row_data["provision_of_the_act"],
-            )
-        end_use_type = EndUseTypeSchema(
+            provision_of_the_act_id=row_data["provision_of_the_act_id"],
+            name=row_data["provision_of_the_act"],
+        )
+        end_use_type = (
+            EndUseTypeSchema(
                 end_use_type_id=row_data["end_use_type_id"],
                 type=row_data["end_use_type"],
                 sub_type=row_data["end_use_sub_type"],
-            ) if row_data["end_use_type_id"] else None
+            )
+            if row_data["end_use_type_id"]
+            else None
+        )
         eer = EnergyEffectivenessRatioSchema(
-                eer_id=row_data["eer_id"],
-                energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
-                fuel_category=fuel_category,
-                end_use_type=end_use_type
-            )
+            eer_id=row_data["eer_id"],
+            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
+            fuel_category=fuel_category,
+            end_use_type=end_use_type,
+        )
         tci = TargetCarbonIntensitySchema(
-                target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-                target_carbon_intensity=round(row_data["target_carbon_intensity"], 2),
-                reduction_target_percentage=round(row_data["reduction_target_percentage"], 2),
-                fuel_category=fuel_category,
-                compliance_period=compliance_period
-            )
-        fuel_code = FuelCodeSchema(
+            target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
+            target_carbon_intensity=round(row_data["target_carbon_intensity"], 2),
+            reduction_target_percentage=round(
+                row_data["reduction_target_percentage"], 2
+            ),
+            fuel_category=fuel_category,
+            compliance_period=compliance_period,
+        )
+        fuel_code = (
+            FuelCodeSchema(
                 fuel_code_id=row_data["fuel_code_id"],
                 fuel_code=row_data["fuel_code"],
                 fuel_code_prefix_id=row_data["fuel_code_prefix_id"],
-                fuel_code_carbon_intensity=round(row_data["fuel_code_carbon_intensity"], 2)
-            ) if row_data["fuel_code_id"] else None
+                fuel_code_carbon_intensity=round(
+                    row_data["fuel_code_carbon_intensity"], 2
+                ),
+            )
+            if row_data["fuel_code_id"]
+            else None
+        )
         # Find the existing fuel type if it exists
         existing_fuel_type = next(
-                (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
-            )
+            (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
+        )
 
         if existing_fuel_type:
             # Append to the existing fuel type's
-            existing_fuel_type.fuel_categories.append(fuel_category) if not next(
-                (fc for fc in existing_fuel_type.fuel_categories if fc.fuel_category == row_data["category"]), None
-            ) else None
+            (
+                existing_fuel_type.fuel_categories.append(fuel_category)
+                if not next(
+                    (
+                        fc
+                        for fc in existing_fuel_type.fuel_categories
+                        if fc.fuel_category == row_data["category"]
+                    ),
+                    None,
+                )
+                else None
+            )
             # Only add provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
-            if (row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)" and fuel_code) or row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)":
-                existing_fuel_type.provisions.append(provision) if not next(
-                    (p for p in existing_fuel_type.provisions if p.name == row_data["provision_of_the_act"]), None
-                ) else None
+            if (
+                row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)"
+                and fuel_code
+            ) or row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)":
+                (
+                    existing_fuel_type.provisions.append(provision)
+                    if not next(
+                        (
+                            p
+                            for p in existing_fuel_type.provisions
+                            if p.name == row_data["provision_of_the_act"]
+                        ),
+                        None,
+                    )
+                    else None
+                )
 
-            existing_fuel_type.eer_ratios.append(eer) if not next(
-                (e for e in existing_fuel_type.eer_ratios if e.end_use_type == row_data["end_use_type"] and e.fuel_category == fuel_category), None
-            ) else None
-            existing_fuel_type.target_carbon_intensities.append(tci) if not next(
-                (t for t in existing_fuel_type.target_carbon_intensities if t.fuel_category == fuel_category and t.compliance_period == compliance_period), None
-            ) else None
-            existing_fuel_type.fuel_codes.append(fuel_code) if fuel_code and not next(
-                (fc for fc in existing_fuel_type.fuel_codes if fc.fuel_code == row_data["fuel_code"]), None
-            ) else None
+            (
+                existing_fuel_type.eer_ratios.append(eer)
+                if not next(
+                    (
+                        e
+                        for e in existing_fuel_type.eer_ratios
+                        if e.end_use_type == row_data["end_use_type"]
+                        and e.fuel_category == fuel_category
+                    ),
+                    None,
+                )
+                else None
+            )
+            (
+                existing_fuel_type.target_carbon_intensities.append(tci)
+                if not next(
+                    (
+                        t
+                        for t in existing_fuel_type.target_carbon_intensities
+                        if t.fuel_category == fuel_category
+                        and t.compliance_period == compliance_period
+                    ),
+                    None,
+                )
+                else None
+            )
+            (
+                existing_fuel_type.fuel_codes.append(fuel_code)
+                if fuel_code
+                and not next(
+                    (
+                        fc
+                        for fc in existing_fuel_type.fuel_codes
+                        if fc.fuel_code == row_data["fuel_code"]
+                    ),
+                    None,
+                )
+                else None
+            )
         else:
             if row_data["energy_density_id"]:
                 unit = UnitOfMeasureSchema(
-                        uom_id=row_data["uom_id"],
-                        name=row_data["name"],
-                    )
+                    uom_id=row_data["uom_id"],
+                    name=row_data["name"],
+                )
                 energy_density = EnergyDensitySchema(
-                        energy_density_id=row_data["energy_density_id"],
-                        energy_density=round(row_data["energy_density"], 2),
-                        unit=unit,
-                    )
+                    energy_density_id=row_data["energy_density_id"],
+                    energy_density=round(row_data["energy_density"], 2),
+                    unit=unit,
+                )
             # Only include provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
-            provisions = [provision] if (row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)" and fuel_code) or (row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)") else []
+            provisions = (
+                [provision]
+                if (
+                    row_data["provision_of_the_act"] == "Fuel code - section 19 (b) (i)"
+                    and fuel_code
+                )
+                or (
+                    row_data["provision_of_the_act"] != "Fuel code - section 19 (b) (i)"
+                )
+                else []
+            )
             # Create a new fuel type and append
             fuel_type = FuelTypeOptionsSchema(
-                    fuel_type_id=row_data["fuel_type_id"],
-                    fuel_type=row_data["fuel_type"],
-                    fossil_derived=row_data["fossil_derived"],
-                    default_carbon_intensity=round(row_data["default_carbon_intensity"], 2),
-                    unit=row_data["unit"].value,
-                    energy_density=energy_density if row_data["energy_density_id"] else None,
-                    fuel_categories=[fuel_category],
-                    provisions=provisions,
-                    eer_ratios=[eer],
-                    target_carbon_intensities=[tci],
-                    fuel_codes=[fuel_code] if fuel_code else [],
-                    unrecognized=row_data["unrecognized"],
-                )
+                fuel_type_id=row_data["fuel_type_id"],
+                fuel_type=row_data["fuel_type"],
+                fossil_derived=row_data["fossil_derived"],
+                default_carbon_intensity=round(row_data["default_carbon_intensity"], 2),
+                unit=row_data["unit"].value,
+                energy_density=(
+                    energy_density if row_data["energy_density_id"] else None
+                ),
+                fuel_categories=[fuel_category],
+                provisions=provisions,
+                eer_ratios=[eer],
+                target_carbon_intensities=[tci],
+                fuel_codes=[fuel_code] if fuel_code else [],
+                unrecognized=row_data["unrecognized"],
+            )
             fuel_types.append(fuel_type)
 
     @service_handler
-    async def get_fuel_supply_options(self, compliance_period: str) -> FuelTypeOptionsResponse:
+    async def get_fuel_supply_options(
+        self, compliance_period: str
+    ) -> FuelTypeOptionsResponse:
         """Get fuel supply table options"""
         logger.info("Getting fuel supply table options")
         fs_options = await self.repo.get_fuel_supply_table_options(compliance_period)
@@ -139,24 +220,37 @@ class FuelSupplyServices:
         return FuelTypeOptionsResponse(fuel_types=fuel_types)
 
     @service_handler
-    async def get_fuel_supply_list(self, compliance_report_id: int) -> FuelSuppliesSchema:
+    async def get_fuel_supply_list(
+        self, compliance_report_id: int
+    ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
-        logger.info("Getting fuel supply list for compliance report %s", compliance_report_id)
+        logger.info(
+            "Getting fuel supply list for compliance report %s", compliance_report_id
+        )
         fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id)
         fs_list = [FuelSupplySchema.model_validate(fs) for fs in fuel_supply_models]
         return FuelSuppliesSchema(fuel_supplies=fs_list if fs_list else [])
 
     @service_handler
-    async def get_fuel_supplies_paginated(self, pagination: PaginationRequestSchema, compliance_report_id: int):
+    async def get_fuel_supplies_paginated(
+        self, pagination: PaginationRequestSchema, compliance_report_id: int
+    ):
         """Get paginated fuel supply list for a compliance report"""
-        logger.info("Getting paginated fuel supply list for compliance report %s", compliance_report_id)
-        fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(pagination, compliance_report_id)
+        logger.info(
+            "Getting paginated fuel supply list for compliance report %s",
+            compliance_report_id,
+        )
+        fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(
+            pagination, compliance_report_id
+        )
         return FuelSuppliesSchema(
             pagination=PaginationResponseSchema(
                 page=pagination.page,
                 size=pagination.size,
                 total=total_count,
-                total_pages=math.ceil(total_count / pagination.size) if total_count > 0 else 0,
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                ),
             ),
             fuel_supplies=[FuelSupplySchema.model_validate(fs) for fs in fuel_supplies],
         )
@@ -216,10 +310,12 @@ class FuelSupplyServices:
     async def delete_fuel_supply(self, fuel_supply_id: int) -> str:
         """Delete a fuel supply record"""
         return await self.repo.delete_fuel_supply(fuel_supply_id)
-    
+
     # TODO Left here for example for version tracking work
     @service_handler
-    async def create_supplemental_fuel_supply(self, supplemental_report_id: int, data: dict):
+    async def create_supplemental_fuel_supply(
+        self, supplemental_report_id: int, data: dict
+    ):
         new_supply = FuelSupply(
             supplemental_report_id=supplemental_report_id,
             change_type=ChangeType.CREATE,
@@ -228,7 +324,9 @@ class FuelSupplyServices:
         return await self.repo.create_fuel_supply(new_supply)
 
     @service_handler
-    async def update_supplemental_fuel_supply(self, supplemental_report_id: int, original_fuel_supply_id: int, data: dict):
+    async def update_supplemental_fuel_supply(
+        self, supplemental_report_id: int, original_fuel_supply_id: int, data: dict
+    ):
         updated_supply = FuelSupply(
             supplemental_report_id=supplemental_report_id,
             previous_fuel_supply_id=original_fuel_supply_id,
@@ -238,37 +336,64 @@ class FuelSupplyServices:
         return await self.repo.create_fuel_supply(updated_supply)
 
     @service_handler
-    async def delete_supplemental_fuel_supply(self, supplemental_report_id: int, original_fuel_supply_id: int):
+    async def delete_supplemental_fuel_supply(
+        self, supplemental_report_id: int, original_fuel_supply_id: int
+    ):
         delete_record = FuelSupply(
             supplemental_report_id=supplemental_report_id,
             previous_fuel_supply_id=original_fuel_supply_id,
             change_type=ChangeType.DELETE,
-            quantity=None  # or any appropriate default value
+            quantity=None,  # or any appropriate default value
         )
         return await self.repo.create_fuel_supply(delete_record)
 
     @service_handler
-    async def get_fuel_supply_changes(self, original_report_id: int, supplemental_report_id: int):
+    async def get_fuel_supply_changes(
+        self, original_report_id: int, supplemental_report_id: int
+    ):
         original_supplies = await self.get_effective_fuel_supplies(original_report_id)
-        supplemental_supplies = await self.get_effective_fuel_supplies(supplemental_report_id, is_supplemental=True)
+        supplemental_supplies = await self.get_effective_fuel_supplies(
+            supplemental_report_id, is_supplemental=True
+        )
 
         changes = []
 
         # Check for updates and deletes
         for original_supply in original_supplies:
-            supplemental_supply = next((s for s in supplemental_supplies if s.previous_fuel_supply_id == original_supply.fuel_supply_id), None)
+            supplemental_supply = next(
+                (
+                    s
+                    for s in supplemental_supplies
+                    if s.previous_fuel_supply_id == original_supply.fuel_supply_id
+                ),
+                None,
+            )
             if not supplemental_supply:
-                changes.append({"type": ChangeType.DELETE, "original": original_supply, "updated": None})
+                changes.append(
+                    {
+                        "type": ChangeType.DELETE,
+                        "original": original_supply,
+                        "updated": None,
+                    }
+                )
             elif original_supply != supplemental_supply:
-                changes.append({
-                    "type": ChangeType.UPDATE, 
-                    "original": original_supply, 
-                    "updated": supplemental_supply
-                })
+                changes.append(
+                    {
+                        "type": ChangeType.UPDATE,
+                        "original": original_supply,
+                        "updated": supplemental_supply,
+                    }
+                )
 
         # Check for new records
         for supplemental_supply in supplemental_supplies:
             if supplemental_supply.change_type == ChangeType.CREATE:
-                changes.append({"type": ChangeType.CREATE, "original": None, "updated": supplemental_supply})
+                changes.append(
+                    {
+                        "type": ChangeType.CREATE,
+                        "original": None,
+                        "updated": supplemental_supply,
+                    }
+                )
 
         return changes

@@ -12,6 +12,7 @@ from lcfs.web.api.base import PaginationResponseSchema
 class BaseConfig:
     from_attributes = True
 
+
 # --------------------------------------
 # Organization Type
 # --------------------------------------
@@ -30,9 +31,9 @@ class OrganizationTypeBase(BaseSchema):
     description: Optional[str] = None
 
 
-
 class OrganizationTypeSchema(OrganizationTypeBase):
     pass
+
 
 # --------------------------------------
 # Organization Status
@@ -52,9 +53,9 @@ class OrganizationStatusBase(BaseSchema):
     description: Optional[str] = None
 
 
-
 class OrganizationStatusSchema(OrganizationStatusBase):
     pass
+
 
 # --------------------------------------
 # Address Base Model
@@ -70,6 +71,7 @@ class AddressBase(BaseSchema):
     province_state: str
     country: str
     postalCode_zipCode: Optional[str] = None
+
 
 # --------------------------------------
 # Organization Address
@@ -91,6 +93,7 @@ class OrganizationAddressSchema(OrganizationAddressBase):
 class OrganizationAddressCreateSchema(OrganizationAddressBase):
     pass
 
+
 # --------------------------------------
 # Organization Attorney Address
 # --------------------------------------
@@ -111,6 +114,7 @@ class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBase):
 class OrganizationAttorneyAddressCreateSchema(OrganizationAddressBase):
     pass
 
+
 # --------------------------------------
 # Organization
 # --------------------------------------
@@ -127,7 +131,6 @@ class OrganizationBase(BaseSchema):
     reserved_balance: Optional[int] = None
     organization_status_id: int
     organization_type_id: int
-
 
 
 class OrganizationSchema(OrganizationBase):
@@ -177,7 +180,6 @@ class OrganizationResponseSchema(BaseSchema):
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
 
 
-
 class OrganizationSummaryResponseSchema(BaseSchema):
     organization_id: int
     name: Optional[str] = None
@@ -190,9 +192,17 @@ class OrganizationSummaryResponseSchema(BaseSchema):
 class OrganizationCreateResponseSchema(BaseSchema):
     organization_id: int
 
+
 class OrganizationBalanceResponseSchema(BaseSchema):
     name: str
     registered: bool
     organization_id: int
     total_balance: int
     reserved_balance: int
+
+
+class OrganizationDetailsSchema(BaseSchema):
+    name: str
+    address: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]

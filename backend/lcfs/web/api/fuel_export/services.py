@@ -364,6 +364,7 @@ class FuelExportServices:
             (
                 (target_ci * (eer or 0) - (effective_carbon_intensity or 0))
                 * energy_content
+                * -1
             )
             / 1_000_000
         )

@@ -1,4 +1,14 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, Date, DateTime, func, Enum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Numeric,
+    Date,
+    DateTime,
+    func,
+    Enum,
+)
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 from sqlalchemy.orm import relationship
 from .FuelType import QuantityUnitsEnum
@@ -28,14 +38,17 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     fuel_code = Column(String(20), nullable=False, comment="Fuel code")
     company = Column(String(500), nullable=False, comment="Company name")
     contact_name = Column(String(500), nullable=True, comment="Contact name")
-    contact_email = Column(String(500), nullable=True,
-                           comment="Contact email")
+    contact_email = Column(String(500), nullable=True, comment="Contact email")
     carbon_intensity = Column(
         Numeric(precision=10, scale=2, asdecimal=True), nullable=False
     )
     edrms = Column(String(255), nullable=False, comment="EDRMS #")
     last_updated = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False, comment="Date at which the record was last updated."
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+        comment="Date at which the record was last updated.",
     )
     application_date = Column(
         Date, nullable=False, comment="application recorded date."
@@ -53,8 +66,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     feedstock_location = Column(
         String(1000), nullable=False, comment="Feedstock location"
     )
-    feedstock_misc = Column(String(500), nullable=True,
-                            comment="Feedstock misc")
+    feedstock_misc = Column(String(500), nullable=True, comment="Feedstock misc")
 
     fuel_production_facility_city = Column(
         String(1000), nullable=True, comment="City of the fuel production"
@@ -69,10 +81,10 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     facility_nameplate_capacity = Column(
         Integer, nullable=True, comment="Nameplate capacity"
     )
-    facility_nameplate_capacity_unit = Column(Enum(QuantityUnitsEnum), nullable=True,
-                                              comment="Units of fuel quantity")
-    former_company = Column(String(500), nullable=True,
-                            comment="Former company")
+    facility_nameplate_capacity_unit = Column(
+        Enum(QuantityUnitsEnum), nullable=True, comment="Units of fuel quantity"
+    )
+    former_company = Column(String(500), nullable=True, comment="Former company")
     notes = Column(String(1000), nullable=True, comment="Notes")
 
     # Define the relationships
@@ -90,12 +102,12 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         "FeedstockFuelTransportMode",
         back_populates="feedstock_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FeedstockFuelTransportMode.fuel_code_id",
-        cascade="all, delete, delete-orphan"
+        cascade="all, delete, delete-orphan",
     )
 
     finished_fuel_transport_modes = relationship(
         "FinishedFuelTransportMode",
         back_populates="finished_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FinishedFuelTransportMode.fuel_code_id",
-        cascade="all, delete, delete-orphan"
+        cascade="all, delete, delete-orphan",
     )

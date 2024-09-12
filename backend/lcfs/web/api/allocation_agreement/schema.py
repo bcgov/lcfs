@@ -1,6 +1,12 @@
 from typing import Optional, List
 from pydantic import Field, field_validator
-from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder, PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.base import (
+    BaseSchema,
+    FilterModel,
+    SortOrder,
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+)
 from enum import Enum
 
 
@@ -8,14 +14,17 @@ class AllocationTransactionTypeSchema(BaseSchema):
     allocation_transaction_type_id: int
     type: str
 
+
 class FuelCategorySchema(BaseSchema):
     fuel_category_id: int
     category: str
+
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
     fuel_code: str
     carbon_intensity: float
+
 
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
@@ -26,9 +35,11 @@ class FuelTypeSchema(BaseSchema):
     fuel_categories: List[FuelCategorySchema]
     fuel_codes: Optional[List[FuelCodeSchema]] = []
 
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
+
 
 class AllocationAgreementTableOptionsSchema(BaseSchema):
     allocation_transaction_types: List[AllocationTransactionTypeSchema]
@@ -93,6 +104,7 @@ class DeleteAllocationAgreementsSchema(BaseSchema):
 
 class DeleteAllocationAgreementResponseSchema(BaseSchema):
     message: str
+
 
 class OrganizationDetailsSchema(BaseSchema):
     name: str

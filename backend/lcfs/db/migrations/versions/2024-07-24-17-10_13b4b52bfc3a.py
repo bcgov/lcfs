@@ -30,7 +30,8 @@ def upgrade() -> None:
         ),
     )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE OR REPLACE FUNCTION update_count_transfers_in_progress()
         RETURNS TRIGGER AS $$
         DECLARE
@@ -74,16 +75,22 @@ def upgrade() -> None:
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
-    """)
+    """
+    )
 
-    op.execute("""
+    op.execute(
+        """
         CREATE TRIGGER update_count_transfers_in_progress_trigger
         AFTER INSERT OR UPDATE OR DELETE ON transfer
         FOR EACH ROW
         EXECUTE FUNCTION update_count_transfers_in_progress();
-    """)
+    """
+    )
+
 
 def downgrade() -> None:
     op.drop_column("organization", "count_transfers_in_progress")
-    op.execute("DROP TRIGGER IF EXISTS update_count_transfers_in_progress_trigger ON transfer;")
+    op.execute(
+        "DROP TRIGGER IF EXISTS update_count_transfers_in_progress_trigger ON transfer;"
+    )
     op.execute("DROP FUNCTION IF EXISTS update_count_transfers_in_progress();")

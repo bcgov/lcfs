@@ -25,8 +25,9 @@ UNITS_MAPPING = {
     "L": QuantityUnitsEnum.Litres,
     "kg": QuantityUnitsEnum.Kilograms,
     "kWh": QuantityUnitsEnum.Kilowatt_hour,
-    "m3": QuantityUnitsEnum.Cubic_metres
+    "m3": QuantityUnitsEnum.Cubic_metres,
 }
+
 
 async def seed_static_fuel_data(session):
     """
@@ -42,7 +43,9 @@ async def seed_static_fuel_data(session):
             async def add_if_not_exists(model, unique_field, records):
                 for record in records:
                     exists = await session.execute(
-                        select(model).where(getattr(model, unique_field) == record[unique_field])
+                        select(model).where(
+                            getattr(model, unique_field) == record[unique_field]
+                        )
                     )
                     if not exists.scalars().first():
                         session.add(model(**record))
@@ -51,21 +54,49 @@ async def seed_static_fuel_data(session):
             for fuel_type in data["fuel_types"]:
                 fuel_type["units"] = QuantityUnitsEnum(fuel_type["units"])
 
-            await add_if_not_exists(TransportMode, 'transport_mode_id', data["transport_modes"])
-            await add_if_not_exists(ProvisionOfTheAct, 'provision_of_the_act_id', data["provision_acts"])
-            await add_if_not_exists(FuelType, 'fuel_type_id', data["fuel_types"])
-            await add_if_not_exists(FuelCodePrefix, 'fuel_code_prefix_id', data["fuel_code_prefixes"])
-            await add_if_not_exists(FuelCodeStatus, 'fuel_code_status_id', data["fuel_code_statuses"])
-            await add_if_not_exists(FuelCategory, 'fuel_category_id', data["fuel_categories"])
-            await add_if_not_exists(EndUseType, 'end_use_type_id', data["end_use_types"])
-            await add_if_not_exists(UnitOfMeasure, 'uom_id', data["unit_of_measures"])
-            await add_if_not_exists(AdditionalCarbonIntensity, 'additional_uci_id', data["ucis"])
-            await add_if_not_exists(EnergyEffectivenessRatio, 'eer_id', data["eers"])
-            await add_if_not_exists(EnergyDensity, 'energy_density_id', data["energy_densities"])
-            await add_if_not_exists(TargetCarbonIntensity, 'target_carbon_intensity_id', data["target_carbon_intensities"])
-            await add_if_not_exists(FuelInstance, 'fuel_instance_id', data["fuel_instances"])
-            await add_if_not_exists(FuelMeasurementType, 'fuel_measurement_type_id', data["fuel_measurement_types"])
-            await add_if_not_exists(LevelOfEquipment, 'level_of_equipment_id', data["levels_of_equipment"])
+            await add_if_not_exists(
+                TransportMode, "transport_mode_id", data["transport_modes"]
+            )
+            await add_if_not_exists(
+                ProvisionOfTheAct, "provision_of_the_act_id", data["provision_acts"]
+            )
+            await add_if_not_exists(FuelType, "fuel_type_id", data["fuel_types"])
+            await add_if_not_exists(
+                FuelCodePrefix, "fuel_code_prefix_id", data["fuel_code_prefixes"]
+            )
+            await add_if_not_exists(
+                FuelCodeStatus, "fuel_code_status_id", data["fuel_code_statuses"]
+            )
+            await add_if_not_exists(
+                FuelCategory, "fuel_category_id", data["fuel_categories"]
+            )
+            await add_if_not_exists(
+                EndUseType, "end_use_type_id", data["end_use_types"]
+            )
+            await add_if_not_exists(UnitOfMeasure, "uom_id", data["unit_of_measures"])
+            await add_if_not_exists(
+                AdditionalCarbonIntensity, "additional_uci_id", data["ucis"]
+            )
+            await add_if_not_exists(EnergyEffectivenessRatio, "eer_id", data["eers"])
+            await add_if_not_exists(
+                EnergyDensity, "energy_density_id", data["energy_densities"]
+            )
+            await add_if_not_exists(
+                TargetCarbonIntensity,
+                "target_carbon_intensity_id",
+                data["target_carbon_intensities"],
+            )
+            await add_if_not_exists(
+                FuelInstance, "fuel_instance_id", data["fuel_instances"]
+            )
+            await add_if_not_exists(
+                FuelMeasurementType,
+                "fuel_measurement_type_id",
+                data["fuel_measurement_types"],
+            )
+            await add_if_not_exists(
+                LevelOfEquipment, "level_of_equipment_id", data["levels_of_equipment"]
+            )
 
             f_data.close()
 

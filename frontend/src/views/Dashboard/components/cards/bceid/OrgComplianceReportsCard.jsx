@@ -32,7 +32,7 @@ const OrgComplianceReportsCard = () => {
 
   const handleNavigation = (route, status) => {
     const filters = [
-      { field: "status", filterType: "text", type: "equals", filter: status }
+      { field: 'status', filterType: 'text', type: 'equals', filter: status }
     ]
     navigate(route, { state: { filters } })
   }
@@ -46,7 +46,7 @@ const OrgComplianceReportsCard = () => {
           color="link"
           sx={{
             textDecoration: 'underline',
-            '&:hover': { color: 'info.main' },
+            '&:hover': { color: 'info.main' }
           }}
           onClick={onClick}
         >
@@ -67,26 +67,30 @@ const OrgComplianceReportsCard = () => {
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={
         isLoading ? (
-          <Loading message={t('dashboard:orgComplianceReports.loadingMessage')} />
+          <Loading
+            message={t('dashboard:orgComplianceReports.loadingMessage')}
+          />
         ) : (
           <Stack spacing={1}>
-            {(inProgressCount === 0 && awaitingGovReviewCount === 0) ? (
+            {inProgressCount === 0 && awaitingGovReviewCount === 0 ? (
               <BCTypography variant="body2" style={{ marginTop: '10px' }}>
                 {t('dashboard:orgComplianceReports.noActionRequired')}
               </BCTypography>
             ) : (
               <>
                 <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
-                  {t('dashboard:orgComplianceReports.orgHas', { name: orgData?.name })}
+                  {t('dashboard:orgComplianceReports.orgHas', {
+                    name: orgData?.name
+                  })}
                 </BCTypography>
-                <List 
-                  component="div" 
-                  sx={{ 
-                    maxWidth: '100%', 
+                <List
+                  component="div"
+                  sx={{
+                    maxWidth: '100%',
                     padding: 0,
                     '& .MuiListItemButton-root': {
                       padding: '2px 0'
-                    },
+                    }
                   }}
                 >
                   {renderLinkWithCount(
@@ -110,6 +114,9 @@ const OrgComplianceReportsCard = () => {
 }
 
 const AllowedRoles = [roles.compliance_reporting, roles.signing_authority]
-const OrgComplianceReportsWidgetWithRole = withRole(OrgComplianceReportsCard, AllowedRoles)
+const OrgComplianceReportsWidgetWithRole = withRole(
+  OrgComplianceReportsCard,
+  AllowedRoles
+)
 
 export default OrgComplianceReportsWidgetWithRole

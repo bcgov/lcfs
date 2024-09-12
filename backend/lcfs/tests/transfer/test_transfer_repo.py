@@ -1,6 +1,10 @@
 import pytest
 from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.tests.transfer.transfer_payloads import transfer_orm_model, transfer_orm_model_2, transfer_orm_fields
+from lcfs.tests.transfer.transfer_payloads import (
+    transfer_orm_model,
+    transfer_orm_model_2,
+    transfer_orm_fields,
+)
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from sqlalchemy import select, and_
@@ -9,6 +13,7 @@ from sqlalchemy import select, and_
 @pytest.fixture
 def transfer_repo(dbsession):
     return TransferRepository(db=dbsession)
+
 
 # REPOSITORY LAYER TESTS
 
@@ -22,6 +27,7 @@ async def test_get_all_transfers(dbsession, transfer_repo):
     transfers = await transfer_repo.get_all_transfers()
     assert len(transfers) == 4
 
+
 # Test retrieving a transfer by ID
 
 
@@ -29,7 +35,9 @@ async def test_get_all_transfers(dbsession, transfer_repo):
 async def test_get_transfer_by_id(dbsession, transfer_repo):
     dbsession.add(transfer_orm_model_2)
     await dbsession.commit()
-    new_transfer = await transfer_repo.get_transfer_by_id(transfer_orm_model_2.transfer_id)
+    new_transfer = await transfer_repo.get_transfer_by_id(
+        transfer_orm_model_2.transfer_id
+    )
     assert new_transfer is not None
     assert new_transfer.transfer_id == transfer_orm_model_2.transfer_id
 

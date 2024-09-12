@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -17,6 +17,7 @@ import {
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
 import { v4 as uuid } from 'uuid'
+import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
@@ -26,9 +27,10 @@ export const AddEditAllocationAgreements = () => {
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
-  const { t } = useTranslation(['common', 'allocationAgreement'])
+  const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
+  const navigate = useNavigate()
 
   const {
     data: optionsData,
@@ -242,6 +244,15 @@ export const AddEditAllocationAgreements = () => {
     }
   }
 
+  const handleNavigateBack = useCallback(() => {
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }, [navigate, compliancePeriod, complianceReportId])
+
   return (
     isFetched &&
     !allocationAgreementsLoading && (
@@ -274,6 +285,13 @@ export const AddEditAllocationAgreements = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             stopEditingWhenCellsLoseFocus
+            saveButtonProps={{
+              enabled: true,
+              text: t('report:saveReturn'),
+              onSave: handleNavigateBack,
+              confirmText: t('report:incompleteReport'),
+              confirmLabel: t('report:returnToReport')
+            }}
           />
         </BCBox>
       </Grid2>

@@ -4,53 +4,58 @@ from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from fastapi import status
 
+
 class ComplianceReportValidation:
     def __init__(
-            self,
-            request: Request = None,
-            service: ComplianceReportServices = Depends(
-                ComplianceReportServices),
-            repo: ComplianceReportRepository = Depends(
-                ComplianceReportRepository)
+        self,
+        request: Request = None,
+        service: ComplianceReportServices = Depends(ComplianceReportServices),
+        repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
     ) -> None:
         self.request = request
         self.service = service
         self.repo = repo
 
-    async def validate_fuel_for_other_uses_create(self, request, fuel_for_other_uses: OtherUsesSchema):
+    async def validate_fuel_for_other_uses_create(
+        self, request, fuel_for_other_uses: OtherUsesSchema
+    ):
         fuel_type = await self.repo.get_fuel_type(fuel_for_other_uses.fuel_type_id)
 
         if not fuel_type:
             raise HTTPException(
                 status_code=422,
-                detail="Invalid fuel type. Please select a valid fuel type from the available options."
+                detail="Invalid fuel type. Please select a valid fuel type from the available options.",
             )
 
-        fuel_category = await self.repo.get_fuel_category(fuel_for_other_uses.fuel_category_id)
+        fuel_category = await self.repo.get_fuel_category(
+            fuel_for_other_uses.fuel_category_id
+        )
 
         if not fuel_category:
             raise HTTPException(
                 status_code=422,
-                detail="Invalid fuel category. Please select a valid fuel category from the available options."
+                detail="Invalid fuel category. Please select a valid fuel category from the available options.",
             )
 
-        expected_use = await self.repo.get_expected_use(fuel_for_other_uses.expected_use_id)
+        expected_use = await self.repo.get_expected_use(
+            fuel_for_other_uses.expected_use_id
+        )
 
         if not expected_use:
             raise HTTPException(
                 status_code=422,
-                detail="Invalid expected use. Please select a valid expected use from the available options."
+                detail="Invalid expected use. Please select a valid expected use from the available options.",
             )
 
         return
 
-    async def validate_fuel_for_other_uses_update(self, request, fuel_for_other_uses: OtherUsesSchema):
+    async def validate_fuel_for_other_uses_update(
+        self, request, fuel_for_other_uses: OtherUsesSchema
+    ):
         pass
 
     async def validate_organization_access(self, compliance_report_id: int):
-        compliance_report = await self.repo.get_compliance_report(
-            compliance_report_id
-        )
+        compliance_report = await self.repo.get_compliance_report(compliance_report_id)
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

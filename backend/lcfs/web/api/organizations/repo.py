@@ -4,17 +4,29 @@ from typing import List
 from fastapi import Depends
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, func, select, asc, desc, distinct
+from sqlalchemy import and_, func, select, asc, desc, distinct, or_
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
-from lcfs.db.models.organization.OrganizationAttorneyAddress import OrganizationAttorneyAddress
-from lcfs.db.models.organization.OrganizationStatus import OrgStatusEnum, OrganizationStatus
+from lcfs.db.models.organization.OrganizationAttorneyAddress import (
+    OrganizationAttorneyAddress,
+)
+from lcfs.db.models.organization.OrganizationStatus import (
+    OrgStatusEnum,
+    OrganizationStatus,
+)
 from lcfs.db.models.organization.OrganizationType import OrganizationType
 
-from .schema import OrganizationSchema, OrganizationStatusSchema, OrganizationTypeSchema, OrganizationCreateSchema, OrganizationCreateResponseSchema, OrganizationResponseSchema
+from .schema import (
+    OrganizationSchema,
+    OrganizationStatusSchema,
+    OrganizationTypeSchema,
+    OrganizationCreateSchema,
+    OrganizationCreateResponseSchema,
+    OrganizationResponseSchema,
+)
 
 
 logger = getLogger("organizations_repo")
@@ -26,9 +38,9 @@ class OrganizationsRepository:
 
     @repo_handler
     async def get_organizations(self) -> List[Organization]:
-        '''
+        """
         Fetch all organizations from the database
-        '''
+        """
         result = await self.db.execute(
             select(Organization)
             .options(joinedload(Organization.org_status))
@@ -37,13 +49,10 @@ class OrganizationsRepository:
         return result.scalars().all()
 
     @repo_handler
-    async def create_organization(
-            self,
-            org_model: Organization
-    ):
-        '''
+    async def create_organization(self, org_model: Organization):
+        """
         save an organization in the database
-        '''
+        """
 
         self.db.add(org_model)
         await self.db.flush()
@@ -52,9 +61,9 @@ class OrganizationsRepository:
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
-        '''
+        """
         Fetch a single organization by organization id from the database
-        '''
+        """
         return await self.db.scalar(
             select(Organization)
             .options(
@@ -67,19 +76,18 @@ class OrganizationsRepository:
 
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:
-        '''
+        """
         Fetch a single organization by organization id from the database without related tables
-        '''
+        """
         return await self.db.scalar(
-            select(Organization).where(
-                Organization.organization_id == organization_id)
+            select(Organization).where(Organization.organization_id == organization_id)
         )
 
     @repo_handler
     async def get_organizations_paginated(self, offset, limit, conditions, pagination):
-        '''
+        """
         Fetch all organizations. returns pagination data
-        '''
+        """
         query = (
             select(Organization)
             .join(
@@ -108,9 +116,7 @@ class OrganizationsRepository:
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             query = query.order_by(
-                sort_method(
-                    order.field if order.field != "status" else "description"
-                )
+                sort_method(order.field if order.field != "status" else "description")
             )
 
         results = await self.db.execute(query.offset(offset).limit(limit))
@@ -136,17 +142,17 @@ class OrganizationsRepository:
 
     @repo_handler
     async def get_organization_types(self) -> List[OrganizationTypeSchema]:
-        '''
+        """
         Get all available types for organizations from the database.
-        '''
+        """
         query = select(OrganizationType).distinct()
         result = await self.db.execute(query)
 
         return result.scalars().all()
 
     @repo_handler
-    async def get_organization_names(self, conditions=None, order_by=('name', 'asc')):
-        '''
+    async def get_organization_names(self, conditions=None, order_by=("name", "asc")):
+        """
         Fetches organization names and details based on provided conditions and dynamic ordering.
 
         Parameters:
@@ -156,7 +162,7 @@ class OrganizationsRepository:
 
         Returns:
             List of dictionaries with organization details including ID, names, balances, and status.
-        '''
+        """
         query = select(Organization).join(OrganizationStatus)
 
         if conditions:
@@ -166,8 +172,10 @@ class OrganizationsRepository:
         if order_by:
             field_name, direction = order_by
             if hasattr(Organization, field_name):  # Ensure the field is valid
-                order_function = asc if direction.lower() == 'asc' else desc
-                query = query.order_by(order_function(getattr(Organization, field_name)))
+                order_function = asc if direction.lower() == "asc" else desc
+                query = query.order_by(
+                    order_function(getattr(Organization, field_name))
+                )
             else:
                 raise ValueError(f"Invalid ordering field specified: {field_name}")
 
@@ -180,16 +188,16 @@ class OrganizationsRepository:
                 "name": org.name,
                 "operating_name": org.operating_name,
                 "total_balance": org.total_balance,
-                "reserved_balance": org.reserved_balance
+                "reserved_balance": org.reserved_balance,
             }
             for org in organizations
         ]
 
     @repo_handler
     async def get_externally_registered_organizations(self, conditions):
-        '''
+        """
         Get all externally registered  organizations from the database.
-        '''
+        """
 
         query = (
             select(Organization)
@@ -208,15 +216,20 @@ class OrganizationsRepository:
     @repo_handler
     async def get_organization_address(self, organization_address_id: int):
         return await self.db.scalar(
-            select(OrganizationAddress)
-            .where(OrganizationAddress.organization_address_id == organization_address_id)
+            select(OrganizationAddress).where(
+                OrganizationAddress.organization_address_id == organization_address_id
+            )
         )
 
     @repo_handler
-    async def get_organization_attorney_address(self, organization_attorney_address_id: int):
+    async def get_organization_attorney_address(
+        self, organization_attorney_address_id: int
+    ):
         return await self.db.scalar(
-            select(OrganizationAttorneyAddress)
-            .where(OrganizationAttorneyAddress.organization_attorney_address_id == organization_attorney_address_id)
+            select(OrganizationAttorneyAddress).where(
+                OrganizationAttorneyAddress.organization_attorney_address_id
+                == organization_attorney_address_id
+            )
         )
 
     @repo_handler
@@ -228,26 +241,44 @@ class OrganizationsRepository:
             select(Organization.organization_id).where(
                 and_(
                     Organization.organization_id == organization_id,
-                    OrganizationStatus.status == OrgStatusEnum.Registered
+                    OrganizationStatus.status == OrgStatusEnum.Registered,
                 )
             )
         )
         return result is not None
 
     @repo_handler
-    async def get_organization_details(self, transaction_partner: str) -> List[Organization]:
+    async def search_organizations_by_name(
+        self, search_query: str
+    ) -> List[Organization]:
         """
-        Fetches organizations where the name matches the given transaction_partner query.
-        Includes organization details like full address, email, and phone.
+        Search for organizations based on a query string.
+        Return exact match first if found, followed by partial matches.
         """
         query = (
             select(Organization)
-            .where(func.lower(Organization.name).like(func.lower(transaction_partner + "%")))
-            .options(
-                joinedload(Organization.org_address)
+            .options(joinedload(Organization.org_address))
+            .filter(
+                or_(
+                    Organization.name.ilike(f"%{search_query}%"),
+                    Organization.operating_name.ilike(f"%{search_query}%"),
+                )
             )
             .order_by(Organization.name)
             .limit(10)
         )
+
         result = await self.db.execute(query)
-        return result.scalars().all()
+        organizations = result.scalars().all()
+
+        # Separate exact matches and partial matches
+        exact_matches = [
+            org
+            for org in organizations
+            if org.name.lower() == search_query.lower()
+            or org.operating_name.lower() == search_query.lower()
+        ]
+        partial_matches = [org for org in organizations if org not in exact_matches]
+
+        # Return exact matches first, followed by partial matches
+        return exact_matches + partial_matches

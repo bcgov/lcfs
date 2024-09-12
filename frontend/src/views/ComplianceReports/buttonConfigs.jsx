@@ -6,6 +6,7 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { roles } from '@/constants/roles'
 
 const outlineBase = {
   variant: 'outlined',
@@ -43,12 +44,12 @@ export const containedButton = (label, startIcon) => ({
 export const buttonClusterConfigFn = ({
   hasRoles,
   currentUser,
-  methods,
   t,
   setModalData,
   updateComplianceReport,
   reportData,
-  isGovernmentUser
+  isGovernmentUser,
+  isSigningAuthorityDeclared
 }) => {
   const reportButtons = {
     saveDraft: {
@@ -63,6 +64,8 @@ export const buttonClusterConfigFn = ({
     },
     submitReport: {
       ...containedButton(t('report:actionBtns.submitReportBtn'), faPencil),
+      disabled:
+        !hasRoles(roles.signing_authority) || !isSigningAuthorityDeclared,
       id: 'submit-report-btn',
       handler: (formData) => {
         setModalData({
@@ -78,9 +81,12 @@ export const buttonClusterConfigFn = ({
         })
       }
     },
-    recommendReport: {
-      ...containedButton(t('report:actionBtns.recommendReportBtn'), faPencil),
-      id: 'recommend-report-btn',
+    recommendByAnalyst: {
+      ...containedButton(
+        t('report:actionBtns.recommendReportAnalystBtn'),
+        faPencil
+      ),
+      id: 'recommend-report-analyst-btn',
       handler: (formData) => {
         setModalData({
           primaryButtonAction: () =>
@@ -88,10 +94,64 @@ export const buttonClusterConfigFn = ({
               ...formData,
               status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
             }),
-          primaryButtonText: t('report:actionBtns.recommendReportBtn'),
+          primaryButtonText: t('report:actionBtns.recommendReportAnalystBtn'),
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
           content: t('report:recommendConfirmText')
+        })
+      }
+    },
+    recommendByManager: {
+      ...containedButton(
+        t('report:actionBtns.recommendReportManagerBtn'),
+        faPencil
+      ),
+      id: 'recommend-report-manager-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+            }),
+          primaryButtonText: t('report:actionBtns.recommendReportManagerBtn'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:recommendManagerConfirmText')
+        })
+      }
+    },
+    assessReport: {
+      ...containedButton(t('report:actionBtns.assessReportBtn'), faPencil),
+      id: 'assess-report-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.ASSESSED
+            }),
+          primaryButtonText: t('report:actionBtns.assessReportBtn'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:assessConfirmText')
+        })
+      }
+    },
+    reAssessReport: {
+      ...containedButton(t('report:actionBtns.reAssessReportBtn'), faPencil),
+      id: 're-assess-report-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.REASSESSED
+            }),
+          primaryButtonText: t('report:actionBtns.reAssessReportBtn'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:reAssessConfirmText')
         })
       }
     }
@@ -103,8 +163,23 @@ export const buttonClusterConfigFn = ({
       reportButtons.submitReport
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
-      ...(isGovernmentUser && hasRoles('analyst')
-        ? [reportButtons.recommendReport]
+      ...(isGovernmentUser && hasRoles('Analyst')
+        ? [reportButtons.recommendByAnalyst]
+        : [])
+    ],
+    [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
+      ...(isGovernmentUser && hasRoles('Compliance Manager')
+        ? [reportButtons.recommendByManager]
+        : [])
+    ],
+    [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: [
+      ...(isGovernmentUser && hasRoles('Director')
+        ? [reportButtons.assessReport]
+        : [])
+    ],
+    [COMPLIANCE_REPORT_STATUSES.ASSESSED]: [
+      ...(isGovernmentUser && hasRoles('Analyst')
+        ? [reportButtons.reAssessReport]
         : [])
     ]
   }

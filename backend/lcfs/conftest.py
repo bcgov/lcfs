@@ -33,7 +33,7 @@ from lcfs.db.models.user.UserRole import UserRole
 from lcfs.db.models.user.Role import Role
 from lcfs.db.models.organization.Organization import Organization
 
-logging.getLogger('faker').setLevel(logging.INFO)
+logging.getLogger("faker").setLevel(logging.INFO)
 
 
 @pytest.fixture(scope="session")
@@ -57,13 +57,13 @@ async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     await create_test_database()
 
     # Run Alembic migrations
-    subprocess.run(["alembic", "upgrade", "head"], check=True)  
+    subprocess.run(["alembic", "upgrade", "head"], check=True)
 
     # Create AsyncEngine instance
     engine = create_async_engine(str(settings.db_test_url))
 
     # Seed the database with test data
-    await seed_database('test')
+    await seed_database("test")
 
     try:
         yield engine
@@ -94,18 +94,17 @@ async def dbsession(
 
         # Add test user info into the session
         user_info = UserProfile(
-            user_profile_id=1,
-            keycloak_username='test_user',
-            organization_id=1
+            user_profile_id=1, keycloak_username="test_user", organization_id=1
         )  # Mocked user ID
 
-        session.info['user'] = user_info
+        session.info["user"] = user_info
 
         try:
             yield session
         finally:
             await session.rollback()
             await session.close()
+
 
 @pytest.fixture
 async def fake_redis_pool() -> AsyncGenerator[ConnectionPool, None]:
@@ -124,7 +123,9 @@ async def fake_redis_pool() -> AsyncGenerator[ConnectionPool, None]:
 
 
 @pytest.fixture
-async def dbsession_factory(_engine: AsyncEngine) -> Callable[[], AsyncGenerator[AsyncSession, None]]:
+async def dbsession_factory(
+    _engine: AsyncEngine,
+) -> Callable[[], AsyncGenerator[AsyncSession, None]]:
     """
     Get a factory function for database sessions.
 
@@ -137,12 +138,13 @@ async def dbsession_factory(_engine: AsyncEngine) -> Callable[[], AsyncGenerator
     )
     return session_factory
 
+
 @pytest.fixture
 def fastapi_app(
     dbsession: AsyncSession,
     fake_redis_pool: ConnectionPool,
     set_mock_user_roles,  # Fixture for setting up mock authentication
-    user_roles: List[str] = ["Administrator"]  # Default role
+    user_roles: List[str] = ["Administrator"],  # Default role
 ) -> FastAPI:
     # Create the FastAPI application instance
     application = get_app()
@@ -162,6 +164,7 @@ def fastapi_app(
     FastAPICache.init(RedisBackend(fake_redis), prefix="lcfs")
 
     return application
+
 
 @pytest.fixture
 async def client(
@@ -184,6 +187,7 @@ def role_enum_member(role_name):
             return role
     raise ValueError(f"Invalid role name: {role_name}")
 
+
 class MockAuthenticationBackend(AuthenticationBackend):
     def __init__(self, user_roles: List[RoleEnum]):
         # Convert list of role names (strings) to RoleEnum members
@@ -200,13 +204,10 @@ class MockAuthenticationBackend(AuthenticationBackend):
             email="test@test.com",
             first_name="Test",
             last_name="User",
-            is_active=True
+            is_active=True,
         )
 
-        organization = Organization(
-            organization_id=1,
-            name="Test"
-        )
+        organization = Organization(organization_id=1, name="Test")
         user.organization = organization
 
         # Create UserRole instances based on the RoleEnum members provided
@@ -219,10 +220,14 @@ class MockAuthenticationBackend(AuthenticationBackend):
     def create_user_role(self, user_profile, role_enum):
         role = Role(
             role_id=self.role_count,
-            name=role_enum, 
-            description=f"Mocked role for {role_enum.value}", 
-            is_government_role=role_enum.value in ['Government', 'Analyst', 'Administrator'])
-        user_role = UserRole(user_role_id=self.role_count, user_profile=user_profile, role=role)
+            name=role_enum,
+            description=f"Mocked role for {role_enum.value}",
+            is_government_role=role_enum.value
+            in ["Government", "Analyst", "Administrator"],
+        )
+        user_role = UserRole(
+            user_role_id=self.role_count, user_profile=user_profile, role=role
+        )
         self.role_count += 1
         return user_role
 
@@ -238,17 +243,15 @@ def set_mock_user_roles():
             CORSMiddleware,
             allow_origins=["*"],
             allow_methods=["*"],
-            allow_headers=["*"]
+            allow_headers=["*"],
         )
 
         # Add the Mock Authentication Middleware
         mock_auth_backend = MockAuthenticationBackend(user_roles=roles)
-        application.add_middleware(
-            AuthenticationMiddleware,
-            backend=mock_auth_backend
-        )
+        application.add_middleware(AuthenticationMiddleware, backend=mock_auth_backend)
 
     return _set_mock_auth
+
 
 @pytest.fixture
 async def add_models(dbsession):
@@ -257,11 +260,12 @@ async def add_models(dbsession):
 
     Args:
         dbsession: The active database session for transaction management.
-    
+
     Returns:
         A function that takes a list of models and flushes them to the database. It includes
         error handling to manage any exceptions that occur during database operations.
     """
+
     async def _add(models):
         try:
             dbsession.add_all(models)
@@ -270,7 +274,9 @@ async def add_models(dbsession):
             logging.error("Error adding models to the database: %s", e)
             await dbsession.rollback()
             raise
+
     return _add
+
 
 @pytest.fixture
 async def update_model(dbsession):
@@ -279,10 +285,11 @@ async def update_model(dbsession):
 
     Args:
         dbsession: The active database session for transaction management.
-    
+
     Returns:
         A function that takes a model instance, updates it in the database, and handles exceptions.
     """
+
     async def _update(model):
         try:
             dbsession.add(model)
@@ -291,13 +298,16 @@ async def update_model(dbsession):
             logging.error("Error updating model in the database: %s", e)
             await dbsession.rollback()
             raise
+
     return _update
 
 
 @pytest.fixture(autouse=True)
 def ignore_specific_warnings():
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="This endpoint is accessible by all roles")
+        warnings.filterwarnings(
+            "ignore", message="This endpoint is accessible by all roles"
+        )
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         # Add more specific warnings to ignore as needed
         yield

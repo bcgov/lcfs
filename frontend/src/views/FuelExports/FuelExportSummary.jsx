@@ -47,22 +47,71 @@ export const FuelExportSummary = ({ data }) => {
   )
 
   // TODO: The values for the following columns must be determined
-  const columns = useMemo(() => ([
-    { headerName: t('fuelExport:fuelExportColLabels.complianceUnits'), field: "complianceUnits", valueFormatter },
-    { headerName: t('fuelExport:fuelExportColLabels.exportDate'), field: "exportDate" },
-    { headerName: t('fuelExport:fuelExportColLabels.fuelType'), field: "fuelType", valueGetter: (params) => params.data.fuelType?.fuelType },
-    { headerName: t('fuelExport:fuelExportColLabels.fuelCategory'), field: "fuelCategory", valueGetter: (params) => params.data.fuelCategory?.category },
-    { headerName: t('fuelExport:fuelExportColLabels.endUse'), field: "endUse", valueGetter: (params) => params.data.endUseType?.type || 'Any' },
-    { headerName: t('fuelExport:fuelExportColLabels.determiningCarbonIntensity'), field: "determiningCarbonIntensity", valueGetter: params => params.data.provisionOfTheAct?.name },
-    { headerName: t('fuelExport:fuelExportColLabels.fuelCode'), field: "fuelCode", valueGetter: (params) => params.data.fuelCode?.fuelCode },
-    { headerName: t('fuelExport:fuelExportColLabels.quantity'), field: "quantity", valueFormatter },
-    { headerName: t('fuelExport:fuelExportColLabels.units'), field: "units" },
-    { headerName: t('fuelExport:fuelExportColLabels.targetCI'), field: "targetCi" },
-    { headerName: t('fuelExport:fuelExportColLabels.ciOfFuel'), field: "ciOfFuel" },
-    { headerName: t('fuelExport:fuelExportColLabels.energyDensity'), field: "energyDensity" },
-    { headerName: t('fuelExport:fuelExportColLabels.eer'), field: "eer" },
-    { headerName: t('fuelExport:fuelExportColLabels.energy'), field: "energy", valueFormatter },
-  ]), [t])
+  const columns = useMemo(
+    () => [
+      {
+        headerName: t('fuelExport:fuelExportColLabels.complianceUnits'),
+        field: 'complianceUnits',
+        valueFormatter
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.exportDate'),
+        field: 'exportDate'
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.fuelType'),
+        field: 'fuelType',
+        valueGetter: (params) => params.data.fuelType?.fuelType
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.fuelCategory'),
+        field: 'fuelCategory',
+        valueGetter: (params) => params.data.fuelCategory?.category
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.endUse'),
+        field: 'endUse',
+        valueGetter: (params) => params.data.endUseType?.type || 'Any'
+      },
+      {
+        headerName: t(
+          'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
+        ),
+        field: 'determiningCarbonIntensity',
+        valueGetter: (params) => params.data.provisionOfTheAct?.name
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.fuelCode'),
+        field: 'fuelCode',
+        valueGetter: (params) => params.data.fuelCode?.fuelCode
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.quantity'),
+        field: 'quantity',
+        valueFormatter
+      },
+      { headerName: t('fuelExport:fuelExportColLabels.units'), field: 'units' },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.targetCI'),
+        field: 'targetCi'
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.ciOfFuel'),
+        field: 'ciOfFuel'
+      },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.energyDensity'),
+        field: 'energyDensity'
+      },
+      { headerName: t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
+      {
+        headerName: t('fuelExport:fuelExportColLabels.energy'),
+        field: 'energy',
+        valueFormatter
+      }
+    ],
+    [t]
+  )
 
   const getRowId = (params) => {
     return params.data.fuelExportId
@@ -79,7 +128,7 @@ export const FuelExportSummary = ({ data }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={"fuel-exports"}
+          gridKey={'fuel-exports'}
           gridRef={gridRef}
           query={useGetFuelExports}
           dataKey={'fuelExports'}
