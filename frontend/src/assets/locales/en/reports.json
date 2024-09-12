@@ -43,6 +43,7 @@
     "assessReportBtn": "Assess Report",
     "reAssessReportBtn": "Re-Assess Report"
   },
+  "savedSuccessText": "Compliance report successfully saved",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "assessConfirmText": "Are you sure you want to assess this compliance report?",
