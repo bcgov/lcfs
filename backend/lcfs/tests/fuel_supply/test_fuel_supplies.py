@@ -15,9 +15,9 @@ async def test_get_fs_table_options(
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert "fuel_types" in data
-    assert "fuel_classes" in data
+    assert "fuel_instances" in data
     assert isinstance(data["fuel_types"], list)
-    assert isinstance(data["fuel_classes"], list)
+    assert isinstance(data["fuel_instances"], list)
 
 
 @pytest.mark.anyio
@@ -66,7 +66,7 @@ async def test_save_fuel_supply_row_create(
         "compliance_report_id": 1,
         "fuel_supply_id": None,
         "fuel_type": "Gasoline",
-        "fuel_class": "Class 1",
+        "fuel_instance": "Instance 1",
         "quantity": 1000,
         "deleted": False,
     }
@@ -76,7 +76,7 @@ async def test_save_fuel_supply_row_create(
     data = response.json()
     assert "fuel_supply_id" in data
     assert data["fuel_type"] == "Gasoline"
-    assert data["fuel_class"] == "Class 1"
+    assert data["fuel_instance"] == "Instance 1"
     assert data["quantity"] == 1000
 
 
@@ -90,7 +90,7 @@ async def test_save_fuel_supply_row_update(
         "compliance_report_id": 1,
         "fuel_supply_id": 1,
         "fuel_type": "Diesel",
-        "fuel_class": "Class 2",
+        "fuel_instance": "Instance 2",
         "quantity": 2000,
         "deleted": False,
     }
@@ -100,7 +100,7 @@ async def test_save_fuel_supply_row_update(
     data = response.json()
     assert data["fuel_supply_id"] == 1
     assert data["fuel_type"] == "Diesel"
-    assert data["fuel_class"] == "Class 2"
+    assert data["fuel_instance"] == "Instance 2"
     assert data["quantity"] == 2000
 
 
@@ -129,7 +129,7 @@ async def test_save_fuel_supply_row_unauthorized(
         "compliance_report_id": 1,
         "fuel_supply_id": None,
         "fuel_type": "Gasoline",
-        "fuel_class": "Class 1",
+        "fuel_instance": "Instance 1",
         "quantity": 1000,
         "deleted": False,
     }

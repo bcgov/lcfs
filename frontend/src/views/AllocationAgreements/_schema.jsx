@@ -210,6 +210,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         params.data.fuelCategory =
           fuelType.fuelCategories?.[0]?.category ?? null
         params.data.units = fuelType?.units
+        params.data.unrecognized = fuelType?.unrecognized
       }
       return true
     },
@@ -223,7 +224,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
       const conditionalStyle =
-        params.data.fuelType === 'Other'
+         params.data.fuelType === 'Other'
           ? { backgroundColor: '#fff', borderColor: 'unset' }
           : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }

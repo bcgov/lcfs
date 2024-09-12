@@ -45,7 +45,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 100.21,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 2,
@@ -55,7 +56,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 63.91,
-      "units": "m3"
+      "units": "m3",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 3,
@@ -65,7 +67,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 12.14,
-      "units": "kWh"
+      "units": "kWh",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 4,
@@ -75,7 +78,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 93.67,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 5,
@@ -85,7 +89,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 100.21,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 6,
@@ -95,7 +100,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 123.96,
-      "units": "kWh"
+      "units": "kWh",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 7,
@@ -105,7 +111,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 90.11,
-      "units": "kg"
+      "units": "kg",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 9,
@@ -115,7 +122,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 100.21,
-      "units": "L"
+      "units": "L",
+      "unrecognized": true
     },
     {
       "fuel_type_id": 11,
@@ -125,7 +133,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 88.83,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 13,
@@ -135,7 +144,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 79.87,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 14,
@@ -145,7 +155,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 93.67,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 15,
@@ -155,7 +166,8 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 93.67,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 16,
@@ -164,7 +176,8 @@
       "other_uses_fossil_derived": true,
       "provision_1_id": 1,
       "default_carbon_intensity": 94.38,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 17,
@@ -173,7 +186,8 @@
       "other_uses_fossil_derived": true,
       "provision_1_id": 1,
       "default_carbon_intensity": 93.67,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     },
     {
       "fuel_type_id": 18,
@@ -182,7 +196,8 @@
       "other_uses_fossil_derived": true,
       "provision_1_id": 1,
       "default_carbon_intensity": 88.83,
-      "units": "L"
+      "units": "L",
+      "unrecognized": false
     }
   ],
   "fuel_code_prefixes": [
@@ -852,109 +867,109 @@
       "reduction_target_percentage": 10.0
     }
   ],
-  "fuel_classes": [
+  "fuel_instances": [
     {
-      "fuel_class_id": 1,
+      "fuel_instance_id": 1,
       "fuel_type_id": 1,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 2,
+      "fuel_instance_id": 2,
       "fuel_type_id": 2,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 3,
+      "fuel_instance_id": 3,
       "fuel_type_id": 2,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 4,
+      "fuel_instance_id": 4,
       "fuel_type_id": 3,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 5,
+      "fuel_instance_id": 5,
       "fuel_type_id": 3,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 6,
+      "fuel_instance_id": 6,
       "fuel_type_id": 3,
       "fuel_category_id": 3
     },
     {
-      "fuel_class_id": 7,
+      "fuel_instance_id": 7,
       "fuel_type_id": 4,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 8,
+      "fuel_instance_id": 8,
       "fuel_type_id": 5,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 9,
+      "fuel_instance_id": 9,
       "fuel_type_id": 6,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 10,
+      "fuel_instance_id": 10,
       "fuel_type_id": 6,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 11,
+      "fuel_instance_id": 11,
       "fuel_type_id": 6,
       "fuel_category_id": 3
     },
     {
-      "fuel_class_id": 12,
+      "fuel_instance_id": 12,
       "fuel_type_id": 7,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 14,
+      "fuel_instance_id": 14,
       "fuel_type_id": 9,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 16,
+      "fuel_instance_id": 16,
       "fuel_type_id": 11,
       "fuel_category_id": 3
     },
     {
-      "fuel_class_id": 18,
+      "fuel_instance_id": 18,
       "fuel_type_id": 13,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 19,
+      "fuel_instance_id": 19,
       "fuel_type_id": 13,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 20,
+      "fuel_instance_id": 20,
       "fuel_type_id": 14,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 21,
+      "fuel_instance_id": 21,
       "fuel_type_id": 15,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 22,
+      "fuel_instance_id": 22,
       "fuel_type_id": 16,
       "fuel_category_id": 2
     },
     {
-      "fuel_class_id": 23,
+      "fuel_instance_id": 23,
       "fuel_type_id": 17,
       "fuel_category_id": 1
     },
     {
-      "fuel_class_id": 24,
+      "fuel_instance_id": 24,
       "fuel_type_id": 18,
       "fuel_category_id": 3
     }

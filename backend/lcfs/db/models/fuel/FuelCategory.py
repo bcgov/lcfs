@@ -31,4 +31,4 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
     target_carbon_intensities = relationship(
         "TargetCarbonIntensity", back_populates="fuel_category"
     )
-    fuel_classes = relationship("FuelClass", back_populates="fuel_category")
+    fuel_instances = relationship("FuelInstance", back_populates="fuel_category")

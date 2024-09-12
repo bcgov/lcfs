@@ -39,7 +39,6 @@ from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.fuel.FuelClass import FuelClass
 
 logger = getLogger("compliance_reports_repo")
 
