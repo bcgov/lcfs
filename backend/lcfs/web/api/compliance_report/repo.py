@@ -153,9 +153,10 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.summary),
                 joinedload(
                     ComplianceReport.fuel_supplies
-                ),  # Add more relationships if needed
+                ),
                 joinedload(ComplianceReport.other_uses),
-                joinedload(ComplianceReport.history),
+                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.status),
+                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.user_profile),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
