@@ -1,8 +1,6 @@
 from logging import getLogger
 import math
-from datetime import datetime
-from typing import List, Dict
-from datetime import datetime
+from typing import List
 from fastapi import Depends, Request
 from sqlalchemy import select
 
@@ -16,8 +14,6 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
-    ComplianceReportSummaryRowSchema,
-    ComplianceReportUpdateSchema,
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException

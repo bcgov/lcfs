@@ -19,9 +19,11 @@ class EntityTypeEnum(str, Enum):
     INITIATIVE_AGREEMENT = "initiativeAgreement"
     ADMIN_ADJUSTMENT = "administrativeAdjustment"
     ASSESSMENT = "Assessment"
+    COMPLIANCE_REPORT = "complianceReport"
 
 
 class AudienceScopeEnum(str, Enum):
+    COMPLIANCE_MANAGER = "Compliance Manager"
     DIRECTOR = "Director"
     ANALYST = "Analyst"
 

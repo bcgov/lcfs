@@ -2,6 +2,7 @@ from logging import getLogger
 from typing import List
 
 from fastapi import Depends
+from lcfs.db.models.comment.ComplianceReportInternalComment import ComplianceReportInternalComment
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -84,6 +85,11 @@ class InternalCommentRepository:
                 admin_adjustment_id=entity_id,
                 internal_comment_id=internal_comment.internal_comment_id,
             )
+        elif entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+            association = ComplianceReportInternalComment(
+                compliance_report_id=entity_id,
+                internal_comment_id=internal_comment.internal_comment_id,
+            )
 
         # Add the association to the session and commit
         self.db.add(association)
@@ -129,6 +135,10 @@ class InternalCommentRepository:
             EntityTypeEnum.ADMIN_ADJUSTMENT: (
                 AdminAdjustmentInternalComment,
                 AdminAdjustmentInternalComment.admin_adjustment_id,
+            ),
+            EntityTypeEnum.COMPLIANCE_REPORT: (
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.compliance_report_id,
             ),
         }
 
