@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
@@ -10,7 +10,7 @@ import i18n from '@/i18n'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
+import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 
 export const PROVISION_APPROVED_FUEL_CODE =
   'Approved fuel code - Section 6 (5) (c)'

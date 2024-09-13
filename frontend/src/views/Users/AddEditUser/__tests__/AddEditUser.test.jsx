@@ -2,15 +2,8 @@ import { userData } from './test.mock'
 import { AddEditUser } from '@/views/Users'
 import { apiRoutes } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  render,
-  renderHook,
-  screen,
-  waitFor,
-  fireEvent
-} from '@testing-library/react'
+import { render, renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { userInfoSchema } from '../_schema'
 import { wrapper } from '@/tests/utils/wrapper'
 import { describe, it } from 'vitest'
 import { HttpResponse } from 'msw'

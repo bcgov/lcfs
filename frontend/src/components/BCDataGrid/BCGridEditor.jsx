@@ -12,7 +12,7 @@ import BCButton from '@/components/BCButton'
 import { Menu, MenuItem } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
-import BCModal from '@/components/BCModal.jsx'
+import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 
 /**

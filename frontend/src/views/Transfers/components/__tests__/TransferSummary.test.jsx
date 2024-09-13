@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { TransferSummary } from '../TransferSummary'
 import { vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

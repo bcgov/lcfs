@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react'
 import { TransferView } from '../TransferView'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 import { FormProvider, useForm } from 'react-hook-form'
-import { TRANSFER_STATUSES } from '@/constants/statuses.js'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: () => ({

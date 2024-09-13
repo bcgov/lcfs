@@ -155,12 +155,12 @@ export const AddEditOtherUses = () => {
         setErrors(errArr)
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
+          const field = error.response?.data?.details[0]?.loc[1]
             ? t(
-                `fuelCode:fuelCodeColLabels.${error.response?.data?.detail[0]?.loc[1]}`
+                `fuelCode:fuelCodeColLabels.${error.response?.data?.details[0]?.loc[1]}`
               )
             : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const errMsg = `Error updating row: ${field} ${error.response?.data?.details[0]?.msg}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,
@@ -214,12 +214,12 @@ export const AddEditOtherUses = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
+          const field = error.response?.data?.details[0]?.loc[1]
             ? t(
-                `fuelCode:fuelCodeColLabels.${error.response?.data?.detail[0]?.loc[1]}`
+                `fuelCode:fuelCodeColLabels.${error.response?.data?.details[0]?.loc[1]}`
               )
             : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const errMsg = `Error updating row: ${field} ${error.response?.data?.details[0]?.msg}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,

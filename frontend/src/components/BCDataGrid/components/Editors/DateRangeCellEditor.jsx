@@ -32,7 +32,6 @@ export const DateRangeCellEditor = forwardRef(
     }
 
     const handleTextFieldChange = (event) => {
-      console.log(event.target.value)
       onValueChange(event.target.value)
     }
     return (

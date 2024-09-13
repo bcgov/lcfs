@@ -7,6 +7,7 @@ import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
 import { Typography } from '@mui/material'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
 
 export const otherUsesColDefs = (optionsData, errors) => [
   validation,

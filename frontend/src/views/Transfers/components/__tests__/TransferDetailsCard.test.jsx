@@ -4,7 +4,7 @@ import { TransferDetailsCard } from '../TransferDetailsCard'
 import { vi } from 'vitest'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 const keycloak = vi.hoisted(() => ({
   useKeycloak: () => ({

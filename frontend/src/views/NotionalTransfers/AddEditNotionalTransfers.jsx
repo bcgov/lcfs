@@ -131,7 +131,7 @@ export const AddEditNotionalTransfers = () => {
         })
       } catch (error) {
         const errArr = {
-          [params.node.data.id]: error.response?.data?.detail?.map(
+          [params.node.data.id]: error.response?.data?.details?.map(
             (err) => err.loc[1]
           )
         }
@@ -144,12 +144,12 @@ export const AddEditNotionalTransfers = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
+          const field = error.response?.data?.details[0]?.loc[1]
             ? t(
-                `notionalTransfer:notionalTransferColLabels.${error.response?.data?.detail[0]?.loc[1]}`
+                `notionalTransfer:notionalTransferColLabels.${error.response?.data?.details[0]?.loc[1]}`
               )
             : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const errMsg = `Error updating row: ${field} ${error.response?.data?.details[0]?.msg}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,

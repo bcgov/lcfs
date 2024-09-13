@@ -101,7 +101,7 @@ class FuelExportRepository:
                 TargetCarbonIntensity.reduction_target_percentage,
                 FuelCode.fuel_code_id,
                 FuelCodePrefix.fuel_code_prefix_id,
-                func.concat(FuelCodePrefix.prefix, FuelCode.fuel_code).label(
+                func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix).label(
                     "fuel_code"
                 ),
                 FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),

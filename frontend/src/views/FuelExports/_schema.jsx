@@ -291,6 +291,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'quantity',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
+    minWidth: 200,
     valueFormatter,
     cellEditor: NumberEditor,
     cellEditorParams: {
@@ -303,7 +304,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   {
     field: 'units',
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
-    minWidth: 60,
+    minWidth: 100,
     cellEditor: AutocompleteEditor,
     cellEditorParams: (params) => ({
       options: ['L', 'kg', 'kWh', 'm3'],
@@ -329,6 +330,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'targetCi',
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     editable: false,
+    minWidth: 100,
     cellStyle: (params) => cellErrorStyle(params, errors),
     valueGetter: (params) =>
       optionsData?.fuelTypes
@@ -341,6 +343,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'ciOfFuel',
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
     editable: false,
+    minWidth: 100,
     cellStyle: (params) => cellErrorStyle(params, errors),
     valueGetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
@@ -363,6 +366,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'energyDensity',
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',
+    minWidth: 100,
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
       const conditionalStyle = /other/i.test(params.data.fuelType)
@@ -391,6 +395,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'eer',
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     editable: false,
+    minWidth: 100,
     cellStyle: (params) => cellErrorStyle(params, errors),
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
@@ -429,6 +434,5 @@ export const defaultColDef = {
   filter: true,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true,
-  cellStyle: cellErrorStyle
+  singleClickEdit: true
 }

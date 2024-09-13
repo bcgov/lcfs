@@ -171,7 +171,6 @@ const BCDataGridEditor = ({
             if (onValidated) {
               if (error.code === 'ERR_BAD_REQUEST') {
                 onValidated('error', error, params)
-                // errMsg = `Error updating row: ${error.response?.data?.detail[0]?.loc[1].replace(/([A-Z])/g, ' $1').trim()}  ${error.response?.data?.detail[0]?.msg}`
               } else {
                 onValidated('error', `Error updating row: ${error.message}`)
               }

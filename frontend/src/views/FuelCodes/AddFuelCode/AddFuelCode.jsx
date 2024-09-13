@@ -102,7 +102,7 @@ const AddFuelCodeBase = () => {
         console.error('Error updating row:', error)
 
         const errArr = {
-          [params.node.data.id]: error.response?.data?.detail?.map(
+          [params.node.data.id]: error.response?.data?.details?.map(
             (err) => err.loc[1]
           )
         }
