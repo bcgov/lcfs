@@ -17,9 +17,11 @@ const InternalCommentList = ({
   comments,
   onAddComment,
   onEditComment,
-  addCommentFormKey,
   showAddCommentBtn = true,
-  onCommentChange
+  isAddingComment,
+  isEditingComment,
+  commentInput,
+  onCommentInputChange
 }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
@@ -131,6 +133,7 @@ const InternalCommentList = ({
                   onSubmit={submitEdit}
                   onCancel={stopEditing}
                   isEditing
+                  isSubmitting={isEditingComment}
                 />
               ) : (
                 <BCBox>
@@ -168,19 +171,20 @@ const InternalCommentList = ({
           </BCBox>
         ))}
         {/* Conditionally renders the form to add a new comment based on the user's role */}
-        {hasAnyRole(roles.analyst, roles.director) && (
+        {hasAnyRole(roles.analyst, roles.director, roles.compliance_manager) && (
           <BCBox sx={{ backgroundColor: '#fff' }} p={2}>
             <InternalCommentForm
               title={
-                (hasAnyRole(roles.analyst) &&
+                ((hasAnyRole(roles.analyst) || hasAnyRole(roles.compliance_manager)) &&
                   t('internalComment:commentToDirector')) ||
                 (hasAnyRole(roles.director) &&
                   t('internalComment:commentToAnalyst'))
               }
               onSubmit={onAddComment}
-              key={addCommentFormKey}
               showAddCommentBtn={showAddCommentBtn}
-              onCommentChange={onCommentChange}
+              commentText={commentInput || ''}  // Ensure commentInput is not undefined
+              onCommentChange={onCommentInputChange}
+              isSubmitting={isAddingComment}
             />
           </BCBox>
         )}
@@ -192,15 +196,20 @@ const InternalCommentList = ({
 InternalCommentList.propTypes = {
   comments: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
-      text: PropTypes.string.isRequired,
-      author: PropTypes.string.isRequired,
-      timestamp: PropTypes.string.isRequired
+      internalCommentId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      comment: PropTypes.string.isRequired,
+      fullName: PropTypes.string.isRequired,
+      createDate: PropTypes.string.isRequired,
+      updateDate: PropTypes.string
     })
   ).isRequired,
   onAddComment: PropTypes.func.isRequired,
   onEditComment: PropTypes.func.isRequired,
-  onCommentChange: PropTypes.func
+  showAddCommentBtn: PropTypes.bool,
+  isAddingComment: PropTypes.bool,
+  isEditingComment: PropTypes.bool,
+  commentInput: PropTypes.string,
+  onCommentInputChange: PropTypes.func
 }
 
 export default InternalCommentList

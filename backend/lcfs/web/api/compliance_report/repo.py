@@ -522,6 +522,7 @@ class ComplianceReportRepository:
                 "current_status",
                 "summary",
                 "history",
+                "update_date"
             ],
         )
         return ComplianceReportBaseSchema.model_validate(report)

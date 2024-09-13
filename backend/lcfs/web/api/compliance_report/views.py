@@ -7,7 +7,7 @@ GET: /reports/<report_id> - retrieve the compliance report by ID
 """
 
 from logging import getLogger
-from typing import List, Dict
+from typing import List
 
 from fastapi import (
     APIRouter,
@@ -18,12 +18,11 @@ from fastapi import (
 )
 
 from lcfs.db import dependencies
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
-    ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
     ComplianceReportUpdateSchema,
 )
@@ -66,7 +65,8 @@ async def get_compliance_reports(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
-    # TODO: Add filter on statuses so that IDIR users won't be able to see draft reports
+    # Add filter on statuses so that IDIR users won't be able to see draft reports
+    pagination.filters.append(FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual"))
     return await service.get_compliance_reports_paginated(pagination)
 
 

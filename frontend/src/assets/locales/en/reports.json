@@ -37,11 +37,11 @@
   "actionBtns": {
     "saveDraftBtn": "Save draft report",
     "deleteDraftBtn": "Delete draft report",
-    "submitReportBtn": "Submit Report",
-    "recommendReportAnalystBtn": "Recommend Report (Analyst)",
-    "recommendReportManagerBtn": "Recommend Report (Manager)",
-    "assessReportBtn": "Assess Report",
-    "reAssessReportBtn": "Re-Assess Report"
+    "submitReportBtn": "Submit report",
+    "recommendReportAnalystBtn": "Recommend report (Analyst)",
+    "recommendReportManagerBtn": "Recommend report (Manager)",
+    "assessReportBtn": "Assess report",
+    "reAssessReportBtn": "Re-assess report"
   },
   "savedSuccessText": "Compliance report successfully saved",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
@@ -83,5 +83,6 @@
     "Recommended_by_manager": "Recommended by manager",
     "Assessed": "Assessed",
     "ReAssessed": "Re-assessed"
-  }
+  },
+  "internalComments": "Internal comments"
 }

@@ -40,3 +40,6 @@ class InternalComment(BaseModel, Auditable):
     admin_adjustment_internal_comments = relationship(
         "AdminAdjustmentInternalComment", back_populates="internal_comment"
     )
+    compliance_report_internal_comments = relationship(
+        "ComplianceReportInternalComment", back_populates="internal_comment"
+    )
