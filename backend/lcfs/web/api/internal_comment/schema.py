@@ -23,6 +23,7 @@ class EntityTypeEnum(str, Enum):
 
 
 class AudienceScopeEnum(str, Enum):
+    COMPLIANCE_MANAGER = "Compliance Manager"
     DIRECTOR = "Director"
     ANALYST = "Analyst"
 

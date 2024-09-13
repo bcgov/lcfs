@@ -1,8 +1,7 @@
 // This component renders a list of internal comments and includes functionality
 // for editing and adding new comments. It showcases the use of child components
 // and passing callback functions for interactive features.
-
-import React, { useState } from 'react'
+import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
@@ -26,13 +25,25 @@ const InternalCommentList = ({
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const [editCommentId, setEditCommentId] = useState(null)
-  const startEditing = (id) => setEditCommentId(id)
-  const stopEditing = () => setEditCommentId(null)
+  const [editCommentText, setEditCommentText] = useState('')
 
-  // Submits the edited comment and resets the editing state.
-  const submitEdit = (text) => {
-    onEditComment(editCommentId, text)
+  const startEditing = (id, text) => {
+    setEditCommentId(id)
+    setEditCommentText(text)
+  }
+
+  const stopEditing = () => {
+    setEditCommentId(null)
+    setEditCommentText('')
+  }
+
+  const submitEdit = () => {
+    onEditComment(editCommentId, editCommentText)
     stopEditing()
+  }
+
+  const handleEditCommentChange = (value) => {
+    setEditCommentText(value)
   }
 
   // Formats the provided date string into a readable format.
@@ -129,11 +140,13 @@ const InternalCommentList = ({
               {editCommentId === comment.internalCommentId ? (
                 <InternalCommentForm
                   title={t('internalComment:editComment')}
-                  initialCommentText={comment.comment}
+                  commentText={editCommentText}
                   onSubmit={submitEdit}
                   onCancel={stopEditing}
-                  isEditing
+                  onCommentChange={handleEditCommentChange}
+                  isEditing={true}
                   isSubmitting={isEditingComment}
+                  showAddCommentBtn={true}
                 />
               ) : (
                 <BCBox>
@@ -154,7 +167,7 @@ const InternalCommentList = ({
                           marginLeft: '10px',
                           color: '#1976d2'
                         }}
-                        onClick={() => startEditing(comment.internalCommentId)}
+                        onClick={() => startEditing(comment.internalCommentId, comment.comment)}
                       >
                         {t('internalComment:edit')}
                       </span>
@@ -182,9 +195,10 @@ const InternalCommentList = ({
               }
               onSubmit={onAddComment}
               showAddCommentBtn={showAddCommentBtn}
-              commentText={commentInput || ''}  // Ensure commentInput is not undefined
+              commentText={commentInput || ''}
               onCommentChange={onCommentInputChange}
               isSubmitting={isAddingComment}
+              isEditing={false}
             />
           </BCBox>
         )}

@@ -5,7 +5,7 @@ from lcfs.db.base import BaseModel, Auditable
 
 # ENUM for audience scope
 audience_scope_enum = ENUM(
-    "Director", "Analyst", name="audience_scope", create_type=False
+    "Director", "Analyst", "Compliance Manager", name="audience_scope", create_type=False
 )
 
 
@@ -27,7 +27,7 @@ class InternalComment(BaseModel, Auditable):
     audience_scope = Column(
         audience_scope_enum,
         nullable=False,
-        comment="Defines the audience scope for the comment, e.g., Director, Analyst.",
+        comment="Defines the audience scope for the comment, e.g., Director, Analyst, Compliance Manager",
     )
 
     # Relationships

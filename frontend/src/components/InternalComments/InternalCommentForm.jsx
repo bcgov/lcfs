@@ -60,7 +60,7 @@ const InternalCommentForm = ({
         formats={['bold', 'italic', 'list', 'bullet']}
       />
       <BCBox sx={{ marginTop: 1 }}>
-        {showAddCommentBtn && (
+        {(showAddCommentBtn || isEditing) && (
           <BCButton
             size="small"
             variant="contained"
