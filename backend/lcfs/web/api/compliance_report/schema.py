@@ -44,9 +44,21 @@ class ComplianceReportStatusSchema(BaseSchema):
 class SnapshotSchema(BaseSchema):
     pass
 
+class ComplianceReportOrganizationSchema(BaseSchema):
+    organization_id: int
+    name: str
+
+class ComplianceReportUserSchema(BaseSchema):
+    first_name: str
+    last_name: str
+    organization: Optional[ComplianceReportOrganizationSchema] = None
 
 class ComplianceReportHistorySchema(BaseSchema):
-    pass
+    compliance_report_history_id: int
+    compliance_report_id: int
+    status: ComplianceReportStatusSchema
+    user_profile: ComplianceReportUserSchema
+    create_date: datetime
 
 
 class NotionalTransfersSchema(BaseSchema):
@@ -114,6 +126,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     nickname: Optional[str] = None
     supplemental_note: Optional[str] = None
     update_date: Optional[datetime] = None
+    history: Optional[List[ComplianceReportHistorySchema]] = None
 
 
 class ComplianceReportCreateSchema(BaseSchema):

@@ -74,5 +74,14 @@
   "fuelSupply": "Fuel supply",
   "returnToReport": "Return to report",
   "incompleteReport": "Incomplete data will not be saved, cancel to fix.",
-  "saveReturn": "Save & return to report"
+  "saveReturn": "Save & return to report",
+  "reportHistory": "Report history",
+  "complianceReportHistory": {
+    "SubmittedTitle": "Signing authority declaration",
+    "Submitted": "Signed and submitted {{createDate}} by {{firstName}} {{lastName}}.",
+    "Recommended_by_analyst": "Recommended by analyst",
+    "Recommended_by_manager": "Recommended by manager",
+    "Assessed": "Assessed",
+    "ReAssessed": "Re-assessed"
+  }
 }

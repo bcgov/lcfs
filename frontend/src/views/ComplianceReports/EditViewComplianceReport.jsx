@@ -34,6 +34,7 @@ import { AssessmentCard } from './components/AssessmentCard'
 import { ImportantInfoCard } from './components/ImportantInfoCard'
 import { timezoneFormatter } from '@/utils/formatters'
 import SigningAuthorityDeclaration from './components/SigningAuthorityDeclaration'
+import { ReportHistoryCard } from './components/ReportHistoryCard'
 
 const iconStyle = {
   width: '2rem',
@@ -197,7 +198,10 @@ export const EditViewComplianceReport = () => {
                 <UploadCard />
               </>
             ) : (
-              <ImportantInfoCard />
+              <>
+                <ReportHistoryCard history={reportData?.data?.history} />
+                {!isGovernmentUser && <ImportantInfoCard />}
+              </>
             )}
             <OrgDetailsCard
               orgName={orgData?.name}
@@ -208,7 +212,7 @@ export const EditViewComplianceReport = () => {
           {!location.state?.newReport && (
             <>
               <ReportDetails currentStatus={currentStatus} />
-              <ComplianceReportSummary reportID={complianceReportId} />
+              <ComplianceReportSummary reportID={complianceReportId} currentStatus={currentStatus} />
             </>
           )}
           <Introduction expanded={location.state?.newReport} />

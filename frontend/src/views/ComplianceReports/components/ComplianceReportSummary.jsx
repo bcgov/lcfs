@@ -19,12 +19,11 @@ import {
   useGetComplianceReportSummary,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
-import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 
-const ComplianceReportSummary = ({ reportID }) => {
+const ComplianceReportSummary = ({ reportID, currentStatus }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -109,9 +108,9 @@ const ComplianceReportSummary = ({ reportID }) => {
             columns={
               summaryData
                 ? renewableFuelColumns(
-                    summaryData?.renewableFuelTargetSummary,
-                    true
-                  )
+                  summaryData?.renewableFuelTargetSummary,
+                  currentStatus === 'Draft'
+                )
                 : []
             }
             data={summaryData?.renewableFuelTargetSummary}

@@ -10,7 +10,7 @@ export const ImportantInfoCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      style={{ height: 'fit-content', width: '30%' }}
+      style={{ height: 'fit-content', maxWidth: '25%' }}
       title={
         <>
           <Typography component="span" variant="body4">

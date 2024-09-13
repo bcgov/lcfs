@@ -44,7 +44,7 @@ async def get_fs_table_options(
 @router.post(
     "/list-all", response_model=FuelSuppliesSchema, status_code=status.HTTP_200_OK
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler(['*'])
 async def get_fuel_supply(
     request: Request,
     request_data: CommmonPaginatedReportRequestSchema = Body(...),
