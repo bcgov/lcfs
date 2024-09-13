@@ -623,9 +623,18 @@ class FuelCodeRepository:
         return result
 
     @repo_handler
-    async def get_fuel_code_by_name(self, fuel_suffix: str) -> FuelCode:
+    async def get_fuel_code_by_name(self, fuel_code: str) -> FuelCode:
         result = await self.db.execute(
-            select(FuelCode).where(FuelCode.fuel_suffix == fuel_suffix)
+            select(FuelCode)
+            .join(FuelCode.fuel_code_prefix)
+            .options(
+                contains_eager(FuelCode.fuel_code_prefix).subqueryload(
+                    FuelCodePrefix.fuel_codes
+                )
+            )
+            .where(
+                func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix) == fuel_code
+            )
         )
         return result.scalar_one_or_none()
 

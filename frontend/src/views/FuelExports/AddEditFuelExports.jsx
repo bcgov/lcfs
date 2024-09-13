@@ -156,12 +156,9 @@ export const AddEditFuelExports = () => {
           severity: 'success'
         })
       } catch (error) {
-        const errArr = {
-          [params.node.data.id]: error.response?.data?.details?.map(
-            (err) => err.loc[1]
-          )
-        }
-        setErrors(errArr)
+        setErrors({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
 
         updatedData = {
           ...updatedData,
@@ -169,12 +166,13 @@ export const AddEditFuelExports = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.details[0]?.loc[1]
-            ? t(
-                `fuelExport:fuelExportColLabels.${error.response?.data?.details[0]?.loc[1]}`
-              )
-            : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.details[0]?.msg}`
+          const { fields, message } = error.response.data.errors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`fuelExport:fuelExportColLabels.${field}`)
+          )
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,

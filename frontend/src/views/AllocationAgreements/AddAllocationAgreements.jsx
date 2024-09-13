@@ -174,7 +174,7 @@ export const AddEditAllocationAgreements = () => {
         if (error.code === 'ERR_BAD_REQUEST') {
           const { fields, message } = error.response.data.errors[0]
           const fieldLabels = fields.map((field) =>
-            t(`fuelSupply:fuelSupplyColLabels.${field}`)
+            t(`allocationAgreement:allocationAgreementColLabels.${field}`)
           )
           const errMsg = `Error updating row: ${
             fieldLabels.length === 1 ? fieldLabels[0] : ''
