@@ -1,8 +1,7 @@
 // This component renders a list of internal comments and includes functionality
 // for editing and adding new comments. It showcases the use of child components
 // and passing callback functions for interactive features.
-
-import React, { useState } from 'react'
+import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
@@ -17,20 +16,34 @@ const InternalCommentList = ({
   comments,
   onAddComment,
   onEditComment,
-  addCommentFormKey,
   showAddCommentBtn = true,
-  onCommentChange
+  isAddingComment,
+  isEditingComment,
+  commentInput,
+  onCommentInputChange
 }) => {
   const { t } = useTranslation(['internalComment'])
   const { data: currentUser, hasAnyRole } = useCurrentUser()
   const [editCommentId, setEditCommentId] = useState(null)
-  const startEditing = (id) => setEditCommentId(id)
-  const stopEditing = () => setEditCommentId(null)
+  const [editCommentText, setEditCommentText] = useState('')
 
-  // Submits the edited comment and resets the editing state.
-  const submitEdit = (text) => {
-    onEditComment(editCommentId, text)
+  const startEditing = (id, text) => {
+    setEditCommentId(id)
+    setEditCommentText(text)
+  }
+
+  const stopEditing = () => {
+    setEditCommentId(null)
+    setEditCommentText('')
+  }
+
+  const submitEdit = () => {
+    onEditComment(editCommentId, editCommentText)
     stopEditing()
+  }
+
+  const handleEditCommentChange = (value) => {
+    setEditCommentText(value)
   }
 
   // Formats the provided date string into a readable format.
@@ -127,10 +140,13 @@ const InternalCommentList = ({
               {editCommentId === comment.internalCommentId ? (
                 <InternalCommentForm
                   title={t('internalComment:editComment')}
-                  initialCommentText={comment.comment}
+                  commentText={editCommentText}
                   onSubmit={submitEdit}
                   onCancel={stopEditing}
-                  isEditing
+                  onCommentChange={handleEditCommentChange}
+                  isEditing={true}
+                  isSubmitting={isEditingComment}
+                  showAddCommentBtn={true}
                 />
               ) : (
                 <BCBox>
@@ -151,7 +167,7 @@ const InternalCommentList = ({
                           marginLeft: '10px',
                           color: '#1976d2'
                         }}
-                        onClick={() => startEditing(comment.internalCommentId)}
+                        onClick={() => startEditing(comment.internalCommentId, comment.comment)}
                       >
                         {t('internalComment:edit')}
                       </span>
@@ -168,19 +184,21 @@ const InternalCommentList = ({
           </BCBox>
         ))}
         {/* Conditionally renders the form to add a new comment based on the user's role */}
-        {hasAnyRole(roles.analyst, roles.director) && (
+        {hasAnyRole(roles.analyst, roles.director, roles.compliance_manager) && (
           <BCBox sx={{ backgroundColor: '#fff' }} p={2}>
             <InternalCommentForm
               title={
-                (hasAnyRole(roles.analyst) &&
+                ((hasAnyRole(roles.analyst) || hasAnyRole(roles.compliance_manager)) &&
                   t('internalComment:commentToDirector')) ||
                 (hasAnyRole(roles.director) &&
                   t('internalComment:commentToAnalyst'))
               }
               onSubmit={onAddComment}
-              key={addCommentFormKey}
               showAddCommentBtn={showAddCommentBtn}
-              onCommentChange={onCommentChange}
+              commentText={commentInput || ''}
+              onCommentChange={onCommentInputChange}
+              isSubmitting={isAddingComment}
+              isEditing={false}
             />
           </BCBox>
         )}
@@ -192,15 +210,20 @@ const InternalCommentList = ({
 InternalCommentList.propTypes = {
   comments: PropTypes.arrayOf(
     PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
-      text: PropTypes.string.isRequired,
-      author: PropTypes.string.isRequired,
-      timestamp: PropTypes.string.isRequired
+      internalCommentId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      comment: PropTypes.string.isRequired,
+      fullName: PropTypes.string.isRequired,
+      createDate: PropTypes.string.isRequired,
+      updateDate: PropTypes.string
     })
   ).isRequired,
   onAddComment: PropTypes.func.isRequired,
   onEditComment: PropTypes.func.isRequired,
-  onCommentChange: PropTypes.func
+  showAddCommentBtn: PropTypes.bool,
+  isAddingComment: PropTypes.bool,
+  isEditingComment: PropTypes.bool,
+  commentInput: PropTypes.string,
+  onCommentInputChange: PropTypes.func
 }
 
 export default InternalCommentList

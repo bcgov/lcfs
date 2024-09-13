@@ -1,7 +1,5 @@
 // This component renders a form for adding or editing an internal comment.
 // It uses ReactQuill for rich text editing.
-
-import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import ReactQuill from 'react-quill'
 import { GlobalStyles } from '@mui/system'
@@ -13,25 +11,21 @@ import BCTypography from '@/components/BCTypography'
 
 const InternalCommentForm = ({
   title,
-  initialCommentText = '',
+  commentText = '',  // Provide a default empty string
   onSubmit,
   onCancel,
   isEditing = false,
   showAddCommentBtn = true,
-  onCommentChange
+  onCommentChange,
+  isSubmitting
 }) => {
   const { t } = useTranslation(['internalComment'])
-  const [commentText, setCommentText] = useState(initialCommentText)
 
-  useEffect(() => {
-    setCommentText(initialCommentText)
-  }, [initialCommentText, isEditing])
+  const handleSubmit = () => {
+    onSubmit(commentText)
+  }
 
-  useEffect(() => {
-    if (onCommentChange) {
-      onCommentChange(commentText)
-    }
-  }, [commentText, onCommentChange])
+  const isCommentEmpty = !commentText || commentText.trim() === ''
 
   return (
     <>
@@ -52,7 +46,7 @@ const InternalCommentForm = ({
       </BCTypography>
       <ReactQuill
         value={commentText}
-        onChange={setCommentText}
+        onChange={onCommentChange}
         theme="snow"
         modules={{
           toolbar: [
@@ -66,13 +60,13 @@ const InternalCommentForm = ({
         formats={['bold', 'italic', 'list', 'bullet']}
       />
       <BCBox sx={{ marginTop: 1 }}>
-        {showAddCommentBtn && (
+        {(showAddCommentBtn || isEditing) && (
           <BCButton
             size="small"
             variant="contained"
             color="primary"
-            onClick={() => onSubmit(commentText)}
-            disabled={!commentText.trim()}
+            onClick={handleSubmit}
+            disabled={isCommentEmpty || isSubmitting}
             sx={{ marginRight: 1 }}
           >
             {isEditing
@@ -97,12 +91,13 @@ const InternalCommentForm = ({
 
 InternalCommentForm.propTypes = {
   title: PropTypes.string.isRequired,
-  initialCommentText: PropTypes.string,
+  commentText: PropTypes.string,
   onSubmit: PropTypes.func.isRequired,
   onCancel: PropTypes.func,
   isEditing: PropTypes.bool,
   showAddCommentBtn: PropTypes.bool,
-  onCommentChange: PropTypes.func
+  onCommentChange: PropTypes.func,
+  isSubmitting: PropTypes.bool
 }
 
 export default InternalCommentForm

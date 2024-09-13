@@ -39,13 +39,13 @@ class ComplianceReportUpdateService:
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
 
+        updated_report = await self.repo.update_compliance_report(report)
         if status_has_changed:
             await self.handle_status_change(report, new_status.status)
 
             # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
 
-        updated_report = await self.repo.update_compliance_report(report)
         return updated_report
 
     async def handle_status_change(

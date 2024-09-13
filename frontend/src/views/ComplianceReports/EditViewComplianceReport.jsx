@@ -1,5 +1,5 @@
 // react and npm library components
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -9,11 +9,14 @@ import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import BCButton from '@/components/BCButton'
+import { Role } from '@/components/Role'
 import { Stack, Typography, Fab, Tooltip } from '@mui/material'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 // styles
 import colors from '@/themes/base/colors.js'
+// constants
+import { govRoles, roles } from '@/constants/roles'
 // hooks
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -35,6 +38,7 @@ import { ImportantInfoCard } from './components/ImportantInfoCard'
 import { timezoneFormatter } from '@/utils/formatters'
 import SigningAuthorityDeclaration from './components/SigningAuthorityDeclaration'
 import { ReportHistoryCard } from './components/ReportHistoryCard'
+import InternalComments from '@/components/InternalComments'
 
 const iconStyle = {
   width: '2rem',
@@ -47,6 +51,7 @@ export const EditViewComplianceReport = () => {
   const [modalData, setModalData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [internalComment, setInternalComment] = useState('')
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
@@ -69,7 +74,9 @@ export const EditViewComplianceReport = () => {
       setIsAtTop(true)
     }
   }
-
+  const handleCommentChange = useCallback((newComment) => {
+    setInternalComment(newComment)
+  }, [])
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop
@@ -215,7 +222,23 @@ export const EditViewComplianceReport = () => {
               <ComplianceReportSummary reportID={complianceReportId} currentStatus={currentStatus} />
             </>
           )}
-          <Introduction expanded={location.state?.newReport} />
+          {!isGovernmentUser && <Introduction expanded={location.state?.newReport} />}
+          {/* Internal Comments */}
+          {isGovernmentUser &&
+            <BCBox mt={4}>
+              <Typography variant="h6" color="primary">
+                {t(`report:internalComments`)}
+              </Typography>
+              <BCBox>
+                <Role roles={govRoles}>
+                  <InternalComments
+                    entityType={'complianceReport'}
+                    entityId={parseInt(complianceReportId)}
+                    onCommentChange={handleCommentChange}
+                  />
+                </Role>
+              </BCBox>
+            </BCBox>}
         </Stack>
         {currentStatus === 'Draft' && (
           <SigningAuthorityDeclaration

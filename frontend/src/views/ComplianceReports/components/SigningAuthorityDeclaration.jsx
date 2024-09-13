@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Checkbox, FormControlLabel, Paper, Typography } from '@mui/material'
+import { Checkbox, FormControlLabel, Paper } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
 const SigningAuthorityDeclaration = ({ onChange }) => {
@@ -18,7 +18,6 @@ const SigningAuthorityDeclaration = ({ onChange }) => {
   return (
     <Paper
       sx={{
-        padding: 2,
         marginTop: 2,
         textAlign: 'left',
         boxShadow: 'none',
@@ -41,7 +40,6 @@ const SigningAuthorityDeclaration = ({ onChange }) => {
         }
         label={t('report:declarationText')}
         style={{
-          marginLeft: 20,
           marginTop: 20,
           alignItems: 'flex-start'
         }}
