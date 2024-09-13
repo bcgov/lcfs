@@ -1,30 +1,30 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import {
   AddEditViewTransaction,
-  INITIATIVE_AGREEMENT,
-  ADMIN_ADJUSTMENT
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
 } from '../AddEditViewTransaction'
 import { useTranslation } from 'react-i18next'
 import {
   MemoryRouter,
-  useMatches,
   useLocation,
+  useMatches,
   useParams
 } from 'react-router-dom'
-// import { yupResolver } from '@hookform/resolvers/yup'
 import {
   useAdminAdjustment,
   useCreateUpdateAdminAdjustment
 } from '@/hooks/useAdminAdjustment'
 import {
-  useInitiativeAgreement,
-  useCreateUpdateInitiativeAgreement
+  useCreateUpdateInitiativeAgreement,
+  useInitiativeAgreement
 } from '@/hooks/useInitiativeAgreement'
-import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useOrganizationBalance } from '@/hooks/useOrganization'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 
@@ -109,7 +109,7 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 }))
 
 // Mock the hooks
-vi.mock('@/hooks/useOrganization', () => ({
+vi.mock('@/hooks/useOrganizations', () => ({
   useRegExtOrgs: vi.fn().mockReturnValue({
     data: [
       {
@@ -140,7 +140,9 @@ vi.mock('@/hooks/useOrganization', () => ({
     isLoading: false,
     isFetched: true,
     isLoadingError: false
-  }),
+  })
+}))
+vi.mock('@/hooks/useOrganization', () => ({
   useOrganizationBalance: vi.fn().mockReturnValue({
     data: {
       organizationId: 1,

@@ -7,6 +7,16 @@ import theme from '@/themes'
 import { FormProvider, useForm } from 'react-hook-form'
 import { MemoryRouter } from 'react-router-dom'
 
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: () => ({
+    keycloak: {
+      token: 'mock-token',
+      authenticated: true,
+      initialized: true
+    }
+  })
+}))
+
 // Mock the translation function
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

@@ -1,5 +1,5 @@
 import { Typography } from '@mui/material'
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
+import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 
 export const notionalTransferColDefs = (optionsData, errors) => [
   validation,

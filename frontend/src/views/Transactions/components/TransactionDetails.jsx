@@ -16,7 +16,8 @@ import {
 } from '@mui/material'
 import { dateFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
-import { useRegExtOrgs, useOrganizationBalance } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useOrganizationBalance } from '@/hooks/useOrganization'
 import Loading from '@/components/Loading'
 import {
   ADMIN_ADJUSTMENT,

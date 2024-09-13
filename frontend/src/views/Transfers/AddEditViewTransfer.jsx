@@ -1,4 +1,3 @@
-// react and npm library components
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FormProvider, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -8,21 +7,17 @@ import {
   useNavigate,
   useParams
 } from 'react-router-dom'
-// constants
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { TRANSACTIONS } from '@/constants/routes/routes'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
-// hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCurrentOrgBalance, useRegExtOrgs } from '@/hooks/useOrganization'
+import { useCurrentOrgBalance } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
 import { yupResolver } from '@hookform/resolvers/yup'
-
-// icons and related components
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// mui components
 import {
   Stack,
   Step,
@@ -32,14 +27,12 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material'
-// reusable custom mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-// sub components
 import { dateFormatter } from '@/utils/formatters'
 import {
   AgreementDate,

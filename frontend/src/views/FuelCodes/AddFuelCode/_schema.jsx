@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import {
   AsyncSuggestionEditor,
   AutocompleteEditor,

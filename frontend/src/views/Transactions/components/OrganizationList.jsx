@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box, Stack, Typography, Autocomplete, TextField } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { useOrganizationNames } from '@/hooks/useOrganization'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { numberFormatter } from '@/utils/formatters'
 
 const OrganizationList = ({ onOrgChange }) => {

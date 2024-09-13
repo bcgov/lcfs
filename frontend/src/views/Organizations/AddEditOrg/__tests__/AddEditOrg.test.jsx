@@ -7,7 +7,7 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
 import { useNavigate, useParams } from 'react-router-dom'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { schemaValidation } from '@/views/Organizations/AddEditOrg/_schema.js'
 

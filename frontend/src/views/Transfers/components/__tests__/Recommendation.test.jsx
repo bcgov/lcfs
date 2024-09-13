@@ -4,8 +4,8 @@ import { Recommendation } from '../Recommendation'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi } from 'vitest'
 import { useTransfer } from '@/hooks/useTransfer'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
-import { TRANSFER_STATUSES } from '@/constants/statuses.js'
+import { wrapper } from '@/tests/utils/wrapper'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 
 vi.mock('@/hooks/useTransfer')
 vi.mock('react-i18next', () => ({

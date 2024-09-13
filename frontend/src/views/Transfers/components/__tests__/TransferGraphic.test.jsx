@@ -4,12 +4,13 @@ import { TransferGraphic } from '../TransferGraphic'
 import { FormProvider, useForm, useFormContext } from 'react-hook-form'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useRegExtOrgs } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useTransfer } from '@/hooks/useTransfer'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
+vi.mock('@/hooks/useOrganizations')
 vi.mock('@/hooks/useTransfer')
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ transferId: '1' })
