@@ -1,7 +1,7 @@
 """Add Fuel Supply Other
 
 Revision ID: 2180a947bdf2
-Revises: 86d53ce094d3
+Revises: 29327a0069bd
 Create Date: 2024-09-06 21:06:26.913084
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "2180a947bdf2"
-down_revision = "86d53ce094d3"
+down_revision = "29327a0069bd"
 branch_labels = None
 depends_on = None
 

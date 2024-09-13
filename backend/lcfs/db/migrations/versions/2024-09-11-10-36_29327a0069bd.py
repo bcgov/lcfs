@@ -5,6 +5,7 @@ Revises: 86d53ce094d3
 Create Date: 2024-09-13 10:36:06.808681
 
 """
+
 import sqlalchemy as sa
 from alembic import op
 from alembic_postgresql_enum import TableReference
