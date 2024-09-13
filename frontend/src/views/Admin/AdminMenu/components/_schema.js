@@ -3,7 +3,7 @@ import {
   LinkRenderer,
   RoleRenderer,
   StatusRenderer
-} from '@/utils/cellRenderers'
+} from '@/utils/grid/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useRoleList } from '@/hooks/useRole'
 

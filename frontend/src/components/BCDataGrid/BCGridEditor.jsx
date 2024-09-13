@@ -1,6 +1,6 @@
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
-import { isEqual } from '@/utils/eventHandlers'
+import { isEqual } from '@/utils/grid/eventHandlers'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
@@ -12,7 +12,7 @@ import BCButton from '@/components/BCButton'
 import { Menu, MenuItem } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
-import BCModal from '@/components/BCModal.jsx'
+import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 
 /**

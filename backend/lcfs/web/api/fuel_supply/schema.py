@@ -122,24 +122,45 @@ class FuelCodeResponseSchema(BaseSchema):
     fuel_status_id: Optional[int] = None
     fuel_status: Optional[FuelCodeStatusSchema] = None
     prefix_id: Optional[int] = None
-    fuel_code: str
+    fuel_code: Optional[str]
     carbon_intensity: float
 
 
-class FuelSupplySchema(BaseSchema):
+class FuelSupplyCreateUpdateSchema(BaseSchema):
     fuel_supply_id: Optional[int] = None
-    compliance_report_id: int
     fuel_type_id: int
-    fuel_type: FuelTypeSchema
+    compliance_report_id: int
+    fuel_category_id: int
     quantity: int
-    units: str
-    compliance_units: int
+    end_use_id: Optional[int] = None
+    fuel_code_id: Optional[int] = None
+    units: Optional[str] = None
     target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_category_id: int
+    fuel_type_other: Optional[str] = None
+    provision_of_the_act_id: int
+    custom_fuel_id: Optional[int] = None
+    deleted: Optional[bool] = None
+
+
+class FuelSupplyResponseSchema(BaseSchema):
+    fuel_supply_id: int
+    compliance_report_id: int
+    fuel_type_id: int
+    fuel_type: FuelTypeSchema
+    quantity: int
+    units: str
+    compliance_units: Optional[int] = None
+    target_ci: Optional[float] = None
+    ci_of_fuel: Optional[float] = None
+    energy_density: Optional[float] = None
+    eer: Optional[float] = None
+    energy: Optional[float] = None
+    fuel_type_other: Optional[str] = None
+    fuel_category_id: Optional[int] = None
     fuel_category: FuelCategoryResponseSchema
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
@@ -150,36 +171,11 @@ class FuelSupplySchema(BaseSchema):
     end_use_type: Optional[EndUseTypeSchema] = None
 
 
-class FuelSupplyCreateSchema(BaseSchema):
-    fuel_supply_id: Optional[int] = None
-    compliance_report_id: int
-    fuel_type: Union[str, FuelTypeSchema]
-    fuel_type_id: int
-    fuel_category: Union[str, FuelCategoryResponseSchema]
-    fuel_category_id: int
-    end_use_type: Optional[Union[str, EndUseTypeSchema]] = None
-    end_use_id: Optional[int] = None
-    provision_of_the_act: Union[str, ProvisionOfTheActSchema]
-    provision_of_the_act_id: int
-    fuel_code: Optional[Union[str, FuelCodeSchema]] = None
-    fuel_code_id: Optional[int] = None
-    quantity: int
-    units: str
-    compliance_units: int
-    target_ci: float
-    ci_of_fuel: float
-    energy_density: float
-    eer: float
-    energy: float
-    custom_fuel_id: Optional[int] = None
-    deleted: Optional[bool] = None
-
-
 class DeleteFuelSupplyResponseSchema(BaseSchema):
     success: bool
     message: str
 
 
 class FuelSuppliesSchema(BaseSchema):
-    fuel_supplies: Optional[List[FuelSupplySchema]] = []
+    fuel_supplies: Optional[List[FuelSupplyResponseSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}

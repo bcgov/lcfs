@@ -135,7 +135,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_status_id: Optional[int] = None
     prefix_id: int
-    fuel_code: str
+    fuel_suffix: str
     company: str
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
@@ -172,7 +172,7 @@ class FuelCodeCloneSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_status_id: Optional[int] = None
     prefix_id: Optional[int] = None
-    fuel_code: Optional[str] = None
+    fuel_suffix: Optional[str] = None
     company: Optional[str] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
@@ -246,7 +246,7 @@ class FuelCodeCreateSchema(BaseSchema):
     status: Optional[str] = None
     prefix: Optional[str] = None
     prefix_id: Optional[int] = None
-    fuel_code: str
+    fuel_suffix: str
     carbon_intensity: float
     edrms: str
     company: str

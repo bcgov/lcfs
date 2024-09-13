@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { ActionsRenderer2, ValidationRenderer2 } from './components'
 
 export const validation = {

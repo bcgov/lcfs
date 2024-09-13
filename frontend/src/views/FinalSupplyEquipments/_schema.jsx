@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
@@ -8,33 +8,8 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import moment from 'moment'
-import { CommonArrayRenderer } from '@/utils/cellRenderers'
-
-const cellErrorStyle = (params, errors) => {
-  let style = {}
-  if (
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: 'red' }
-  } else {
-    style = { ...style, borderColor: 'unset' }
-  }
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
-    style = { ...style, backgroundColor: '#fff' }
-  } else {
-    style = {
-      ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
-    }
-  }
-  return style
-}
+import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -76,7 +51,7 @@ export const finalSupplyEquipmentColDefs = (
       </Typography>
     ),
     suppressKeyboardEvent,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     cellEditor: DateRangeCellEditor,
     cellEditorParams: {
       minDate: moment(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
@@ -103,7 +78,7 @@ export const finalSupplyEquipmentColDefs = (
     minWidth: 220,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'manufacturer',
@@ -114,7 +89,7 @@ export const finalSupplyEquipmentColDefs = (
     minWidth: 320,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'levelOfEquipment',
@@ -132,7 +107,7 @@ export const finalSupplyEquipmentColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>)
@@ -153,7 +128,7 @@ export const finalSupplyEquipmentColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>)
@@ -171,7 +146,7 @@ export const finalSupplyEquipmentColDefs = (
       disableCloseOnSelect: true,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       (params.value && params.value !== '' && (
         <CommonArrayRenderer disableLink {...params} />
@@ -188,7 +163,7 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 260
   },
   {
@@ -199,7 +174,7 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 260
   },
   {
@@ -223,7 +198,7 @@ export const finalSupplyEquipmentColDefs = (
     },
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 260
   },
   {
@@ -238,7 +213,7 @@ export const finalSupplyEquipmentColDefs = (
       showStepperButtons: false
     },
     type: 'numericColumn',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 260
   },
   {
@@ -253,7 +228,7 @@ export const finalSupplyEquipmentColDefs = (
       showStepperButtons: false
     },
     type: 'numericColumn',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 260
   },
   {

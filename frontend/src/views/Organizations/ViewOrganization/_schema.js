@@ -1,5 +1,5 @@
 import { numberFormatter } from '@/utils/formatters'
-import { LinkRenderer, OrgStatusRenderer } from '@/utils/cellRenderers'
+import { LinkRenderer, OrgStatusRenderer } from '@/utils/grid/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationStatuses } from '@/hooks/useOrganization'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'

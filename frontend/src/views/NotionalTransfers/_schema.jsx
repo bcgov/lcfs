@@ -1,5 +1,5 @@
 import { Typography } from '@mui/material'
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
@@ -9,32 +9,7 @@ import {
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
-
-const cellErrorStyle = (params, errors) => {
-  let style = {}
-  if (
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: 'red' }
-  } else {
-    style = { ...style, borderColor: 'unset' }
-  }
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
-    style = { ...style, backgroundColor: '#fff' }
-  } else {
-    style = {
-      ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
-    }
-  }
-  return style
-}
+import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
 
 export const notionalTransferColDefs = (optionsData, errors) => [
   validation,
@@ -81,7 +56,6 @@ export const notionalTransferColDefs = (optionsData, errors) => [
       )),
     suppressKeyboardEvent,
     minWidth: 300,
-    cellStyle: (params) => cellErrorStyle(params, errors),
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
       const apiData = node.data.apiDataCache || []
@@ -99,7 +73,8 @@ export const notionalTransferColDefs = (optionsData, errors) => [
         data.legalName = selectedName
       }
       return true
-    }
+    },
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'addressForService',
@@ -108,7 +83,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'fuelCategory',
@@ -125,7 +100,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>)
@@ -145,7 +120,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>)
@@ -160,7 +135,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
       showStepperButtons: false
     },
     valueFormatter,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors)
   }
 ]
 

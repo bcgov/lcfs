@@ -262,7 +262,7 @@ const BCDataGridServer = ({
     <div className="error-container">
       <div className="error-message">
         <BCAlert severity="error">
-          {error}. Pleae contact your administrator.
+          {error}. Please contact your administrator.
         </BCAlert>
       </div>
     </div>

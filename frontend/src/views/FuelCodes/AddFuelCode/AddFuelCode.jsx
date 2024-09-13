@@ -40,7 +40,7 @@ const AddFuelCodeBase = () => {
         {
           id: uuid(),
           prefix: 'BCLCF',
-          fuelCode: optionsData?.fuelCodePrefixes?.find(
+          fuelSuffix: optionsData?.fuelCodePrefixes?.find(
             (item) => item.prefix === 'BCLCF'
           ).nextFuelCode
         }
@@ -55,7 +55,7 @@ const AddFuelCodeBase = () => {
       const updatedData = { ...params.data, modified: true }
 
       if (params.colDef.field === 'prefix') {
-        updatedData.fuelCode = optionsData?.fuelCodePrefixes?.find(
+        updatedData.fuelSuffix = optionsData?.fuelCodePrefixes?.find(
           (item) => item.prefix === params.newValue
         ).nextFuelCode
       }
@@ -101,12 +101,9 @@ const AddFuelCodeBase = () => {
       } catch (error) {
         console.error('Error updating row:', error)
 
-        const errArr = {
-          [params.node.data.id]: error.response?.data?.detail?.map(
-            (err) => err.loc[1]
-          )
-        }
-        setErrors(errArr)
+        setErrors({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
 
         updatedData = {
           ...updatedData,
@@ -117,11 +114,13 @@ const AddFuelCodeBase = () => {
           error.response?.data?.detail &&
           error.response.data.detail.length > 0
         ) {
-          const firstError = error.response.data.detail[0]
-          const field = firstError.loc[1]
-            ? t(`fuelCode:fuelCodeColLabels.${firstError.loc[1]}`)
-            : ''
-          const errMsg = `Error updating row: ${field} ${firstError.msg}`
+          const { fields, message } = error.response.data.errors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`fuelCode:fuelCodeColLabels.${field}`)
+          )
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,

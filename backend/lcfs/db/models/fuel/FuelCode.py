@@ -13,7 +13,6 @@ from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 from sqlalchemy.orm import relationship
 from .FuelType import QuantityUnitsEnum
 
-
 class FuelCode(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "fuel_code"
     __table_args__ = {"comment": "Contains a list of all of fuel codes"}
@@ -35,7 +34,8 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         comment="Prefix ID",
     )
-    fuel_code = Column(String(20), nullable=False, comment="Fuel code")
+    fuel_suffix = Column(String(20), nullable=False, comment="Fuel suffix")
+
     company = Column(String(500), nullable=False, comment="Company name")
     contact_name = Column(String(500), nullable=True, comment="Contact name")
     contact_email = Column(String(500), nullable=True, comment="Contact email")
@@ -111,3 +111,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         primaryjoin="FuelCode.fuel_code_id == FinishedFuelTransportMode.fuel_code_id",
         cascade="all, delete, delete-orphan",
     )
+
+    @property
+    def fuel_code(self):
+        return self.fuel_code_prefix.prefix + self.fuel_suffix

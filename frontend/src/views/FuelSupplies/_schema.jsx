@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/eventHandlers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
@@ -8,34 +8,9 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { StandardCellErrors, StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 
-const cellErrorStyle = (params, errors) => {
-  let style = {}
-  if (
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: 'red' }
-  } else {
-    style = { ...style, borderColor: 'unset' }
-  }
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
-    style = { ...style, backgroundColor: '#fff' }
-  } else {
-    style = {
-      ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
-    }
-  }
-  return style
-}
-
-export const fuelSupplyColDefs = (optionsData, errors) => [
+export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -62,12 +37,24 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     hide: true
   },
   {
+    field: 'fuelCodeId',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    hide: true
+  },
+  {
+    field: 'endUseId',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    hide: true
+  },
+  {
     field: 'complianceUnits',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     minWidth: 100,
     valueFormatter,
     editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'fuelType',
@@ -84,7 +71,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -96,12 +83,14 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         )
         params.data.fuelType = params.newValue
         params.data.fuelTypeId = fuelType?.fuelTypeId
-        params.data.fuelTypeOther = undefined
-        params.data.fuelCategory = undefined
-        params.data.endUse = ''
-        params.data.eer = undefined
-        params.data.provisionOfTheAct = undefined
-        params.data.fuelCode = undefined
+        params.data.fuelTypeOther = null
+        params.data.fuelCategory = null
+        params.data.endUseId = null
+        params.data.endUseType = null
+        params.data.eer = null
+        params.data.provisionOfTheAct = null
+        params.data.fuelCode = null
+        params.data.fuelCodeId = null
         params.data.quantity = 0
         params.data.units = fuelType?.unit
         params.data.unrecognized = fuelType?.unrecognized
@@ -114,7 +103,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'fuelTypeOther',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
     cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
+      const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle = /other/i.test(params.data.fuelType)
         ? { backgroundColor: '#fff', borderColor: 'unset' }
         : { backgroundColor: '#f2f2f2' }
@@ -140,7 +129,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -149,10 +138,11 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
           ?.fuelCategories?.find(
             (obj) => params.newValue === obj.fuelCategory
           )?.fuelCategoryId
-        params.data.endUse = undefined
-        params.data.eer = undefined
-        params.data.provisionOfTheAct = undefined
-        params.data.fuelCode = undefined
+        params.data.endUseId = null
+        params.data.endUseType = null
+        params.data.eer = null
+        params.data.provisionOfTheAct = null
+        params.data.fuelCode = null
         params.data.quantity = 0
       }
       return true
@@ -176,11 +166,11 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     tooltipValueGetter: (p) => 'Select the fuel category from the list'
   },
   {
-    field: 'endUse',
+    field: 'endUseType',
     headerComponent: HeaderComponent,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUse'),
-    options: (params) =>
-      [
+    cellEditorParams: (params) => ({
+      options: [
         ...new Set(
           optionsData?.fuelTypes
             ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -192,8 +182,6 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
             .sort()
         )
       ].filter((item) => item != null) || ['Any'],
-    cellEditorParams: (params) => ({
-      options: params.colDef.options(params),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -203,11 +191,32 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
-    valueGetter: (params) =>
-      params.colDef?.options(params).length < 1 ? 'Any' : params.data?.endUse,
-    editable: (params) => params.colDef?.options(params).length > 0,
+    valueGetter: (params) => {
+      return params.colDef?.cellEditorParams(params).options.length < 1
+        ? 'Any'
+        : params.data?.endUseType?.type
+    },
+    editable: (params) => {
+      const cellParams = params.colDef?.cellEditorParams(params)
+      return cellParams.options.length > 0
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        const eerRatio = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.eerRatios.filter(
+            (item) =>
+              item.fuelCategory.fuelCategory === params.data.fuelCategory
+          )
+          .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
+
+        params.data.endUseType = eerRatio.endUseType
+        params.data.endUseId = eerRatio.endUseType.endUseTypeId
+      }
+      return true
+    },
     minWidth: 260
   },
   {
@@ -224,7 +233,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         ?.provisions.map((item) => item.name)
         .sort()
     }),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -235,7 +244,8 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
           ?.provisions.find(
             (item) => item.name === params.newValue
           )?.provisionOfTheActId
-        params.data.fuelCode = undefined
+        params.data.fuelCode = null
+        params.data.fuelCodeId = null
       }
       return true
     },
@@ -253,23 +263,48 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         ?.fuelCodes.map((item) => item.fuelCode)
     }),
     cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
+      const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle =
         optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
         /Fuel code/i.test(params.data.provisionOfTheAct)
-          ? { backgroundColor: '#fff', borderColor: 'unset' }
-          : { backgroundColor: '#f2f2f2' }
+          ? { backgroundColor: '#fff' }
+          : { backgroundColor: '#f2f2f2', borderColor: 'unset' }
       return { ...style, ...conditionalStyle }
     },
     suppressKeyboardEvent,
     minWidth: 135,
-    editable: (params) =>
-      optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-      /Fuel code/i.test(params.data.provisionOfTheAct)
+    editable: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      if (fuelType) {
+        return (
+          fuelType.fuelCodes.map((item) => item.fuelCode).length > 0 &&
+          /Fuel code/i.test(params.data.provisionOfTheAct)
+        )
+      }
+      return false
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.fuelCode = params.newValue
+
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+        if (/Fuel code/i.test(params.data.provisionOfTheAct)) {
+          const matchingFuelCode = fuelType.fuelCodes?.find(
+            (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
+          )
+          if (matchingFuelCode) {
+            params.data.fuelCodeId = matchingFuelCode.fuelCodeId
+          }
+        }
+      }
+      return true
+    }
   },
   {
     field: 'quantity',
@@ -282,7 +317,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'units',
@@ -302,7 +337,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     editable: (params) => /other/i.test(params.data.fuelType),
     cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
+      const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle = /other/i.test(params.data.fuelType)
         ? { backgroundColor: '#fff' }
         : { backgroundColor: '#f2f2f2' }
@@ -313,7 +348,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'targetCi',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -325,7 +360,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
         return optionsData?.fuelTypes
@@ -348,7 +383,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',
     cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
+      const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle = /other/i.test(params.data.fuelType)
         ? { backgroundColor: '#fff', borderColor: 'unset' }
         : { backgroundColor: '#f2f2f2' }
@@ -375,7 +410,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
     field: 'eer',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -385,7 +420,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUse
+            item.endUseType?.type === params.data.endUseType
         )
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(
@@ -399,7 +434,7 @@ export const fuelSupplyColDefs = (optionsData, errors) => [
   },
   {
     field: 'energy',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     valueFormatter,
     minWidth: 100,

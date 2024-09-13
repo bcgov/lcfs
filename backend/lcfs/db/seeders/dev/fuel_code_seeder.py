@@ -12,7 +12,7 @@ async def seed_fuel_codes(session):
             "fuel_code_id": 1,
             "fuel_status_id": 1,
             "prefix_id": 1,
-            "fuel_code": "100.0",
+            "fuel_suffix": "100.0",
             "company": "Company 1",
             "contact_name": "John Doe",
             "contact_email": "john.doe@lcfs.com",
@@ -34,7 +34,7 @@ async def seed_fuel_codes(session):
             "fuel_code_id": 2,
             "fuel_status_id": 1,
             "prefix_id": 1,
-            "fuel_code": "100.1",
+            "fuel_suffix": "100.1",
             "company": "Company 1",
             "contact_name": "Jane Smith",
             "contact_email": "jane.smith@lcfs.com",
@@ -58,7 +58,7 @@ async def seed_fuel_codes(session):
             "fuel_code_id": 3,
             "fuel_status_id": 1,
             "prefix_id": 1,
-            "fuel_code": "101.0",
+            "fuel_suffix": "101.0",
             "company": "Company 2",
             "contact_name": "Michael Johnson",
             "contact_email": "michael.johnson@lcfs.com",
@@ -82,7 +82,7 @@ async def seed_fuel_codes(session):
             "fuel_code_id": 4,
             "fuel_status_id": 1,
             "prefix_id": 1,
-            "fuel_code": "101.1",
+            "fuel_suffix": "101.1",
             "company": "Company 2",
             "contact_name": "Emily Davis",
             "contact_email": "emily.davis@lcfs.com",
@@ -104,7 +104,7 @@ async def seed_fuel_codes(session):
             "fuel_code_id": 5,
             "fuel_status_id": 1,
             "prefix_id": 1,
-            "fuel_code": "101.2",
+            "fuel_suffix": "101.2",
             "company": "Company 2",
             "contact_name": "William Brown",
             "contact_email": "william.brown@lcfs.com",
@@ -126,7 +126,7 @@ async def seed_fuel_codes(session):
             "fuel_code_id": 6,
             "fuel_status_id": 1,
             "prefix_id": 1,
-            "fuel_code": "200.0",
+            "fuel_suffix": "200.0",
             "company": "Company 3",
             "contact_name": "Olivia Taylor",
             "contact_email": "olivia.taylor@lcfs.com",
@@ -152,7 +152,7 @@ async def seed_fuel_codes(session):
         for fuel_code_data in fuel_codes_to_seed:
             exists = await session.execute(
                 select(FuelCode).where(
-                    FuelCode.fuel_code == fuel_code_data["fuel_code"],
+                    FuelCode.fuel_suffix == fuel_code_data["fuel_suffix"],
                 )
             )
             if not exists.scalars().first():

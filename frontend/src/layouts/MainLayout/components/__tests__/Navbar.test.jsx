@@ -4,8 +4,8 @@ import { Navbar } from '../Navbar'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMediaQuery, useTheme } from '@mui/material'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
-import { roles } from '@/constants/roles.js'
+import { wrapper } from '@/tests/utils/wrapper'
+import { roles } from '@/constants/roles'
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('react-i18next', () => ({

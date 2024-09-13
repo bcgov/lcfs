@@ -149,18 +149,18 @@ export const AddEditOtherUses = () => {
           severity: 'success'
         })
       } catch (error) {
-        const errArr = {
-          [params.data.id]: error.response.data.detail.map((err) => err.loc[1])
-        }
-        setErrors(errArr)
+        setErrors({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
-            ? t(
-                `fuelCode:fuelCodeColLabels.${error.response?.data?.detail[0]?.loc[1]}`
-              )
-            : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const { fields, message } = error.response.data.errors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`fuelCode:fuelCodeColLabels.${field}`)
+          )
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,
@@ -203,10 +203,9 @@ export const AddEditOtherUses = () => {
           severity: 'success'
         })
       } catch (error) {
-        const errArr = {
-          [params.data.id]: error.response.data.detail.map((err) => err.loc[1])
-        }
-        setErrors(errArr)
+        setErrors({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
 
         updatedData = {
           ...updatedData,
@@ -214,12 +213,13 @@ export const AddEditOtherUses = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
-            ? t(
-                `fuelCode:fuelCodeColLabels.${error.response?.data?.detail[0]?.loc[1]}`
-              )
-            : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const { fields, message } = error.response.data.errors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`otherUses:otherUsesColLabels.${field}`)
+          )
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,

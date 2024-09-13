@@ -131,12 +131,9 @@ export const AddEditFinalSupplyEquipments = () => {
           severity: 'success'
         })
       } catch (error) {
-        const errArr = {
-          [params.node.data.id]: error.response?.data?.detail?.map(
-            (err) => err.loc[1]
-          )
-        }
-        setErrors(errArr)
+        setErrors({
+          [params.node.data.id]: error.response.data.errors[0].fields
+        })
 
         updatedData = {
           ...updatedData,
@@ -144,12 +141,14 @@ export const AddEditFinalSupplyEquipments = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const field = error.response?.data?.detail[0]?.loc[1]
-            ? t(
-                `finalSupplyEquipment:finalSupplyEquipmentColLabels.${error.response?.data?.detail[0]?.loc[1]}`
-              )
-            : ''
-          const errMsg = `Error updating row: ${field} ${error.response?.data?.detail[0]?.msg}`
+          const { fields, message } = error.response.data.errors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${field}`)
+          )
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
+                `.${error.response?.data?.details[0]?.loc[1]}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,

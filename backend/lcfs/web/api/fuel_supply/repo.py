@@ -1,5 +1,13 @@
 from logging import getLogger
 from typing import List
+
+from fastapi import Depends
+from sqlalchemy import and_, delete, or_, select, exists
+from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import CompliancePeriod, FuelSupply
 from lcfs.db.models.fuel import (
     EnergyDensity,
@@ -16,14 +24,8 @@ from lcfs.db.models.fuel import (
     EndUseType,
 )
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, delete, or_, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
-
+from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.dependencies import get_async_db_session
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload
 
 logger = getLogger("fuel_supply_repo")
 
@@ -101,10 +103,9 @@ class FuelSupplyRepository:
                 TargetCarbonIntensity.target_carbon_intensity,
                 TargetCarbonIntensity.reduction_target_percentage,
                 FuelCode.fuel_code_id,
+                FuelCode.fuel_suffix,
                 FuelCodePrefix.fuel_code_prefix_id,
-                func.concat(FuelCodePrefix.prefix, FuelCode.fuel_code).label(
-                    "fuel_code"
-                ),
+                FuelCodePrefix.prefix,
                 FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),
             )
             .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
@@ -211,19 +212,20 @@ class FuelSupplyRepository:
         """
         Update an existing fuel supply row in the database.
         """
-        updated_fuel_supply = await self.db.merge(fuel_supply)
+        fuel_supply = await self.db.merge(fuel_supply)
         await self.db.flush()
         await self.db.refresh(
             fuel_supply,
             [
                 "fuel_category",
                 "fuel_type",
+                "fuel_code",
                 "provision_of_the_act",
                 "custom_fuel_type",
                 "end_use_type",
             ],
         )
-        return updated_fuel_supply
+        return fuel_supply
 
     @repo_handler
     async def create_fuel_supply(self, fuel_supply: FuelSupply) -> FuelSupply:
@@ -237,6 +239,7 @@ class FuelSupplyRepository:
             [
                 "fuel_category",
                 "fuel_type",
+                "fuel_code",
                 "provision_of_the_act",
                 "custom_fuel_type",
                 "end_use_type",
@@ -275,3 +278,24 @@ class FuelSupplyRepository:
 
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
+        """Check if this would duplicate an existing row"""
+        ### Type, Category, and Determine CI/Fuel codes are included
+        query = select(FuelSupply.fuel_supply_id).where(
+            FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
+            FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
+            FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
+            FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
+            FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
+            # Do not count the row of a duplicate of itself
+            and_(
+                FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
+                if fuel_supply.fuel_supply_id is not None
+                else True  # If fuel_supply_id is None, don't add this condition
+            ),
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
