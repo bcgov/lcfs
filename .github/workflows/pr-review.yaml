@@ -22,8 +22,14 @@ jobs:
       - name: Install dependencies
         run: pip install openai PyGithub
 
+      - name: Print Debug Info
+        run: |
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "PR_NUMBER: $PR_NUMBER"
+      
       - name: Run ChatGPT Code Review
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: python .github/workflows/chatgpt_review.py

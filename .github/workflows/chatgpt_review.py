@@ -8,7 +8,10 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Set up GitHub API
 g = Github(os.getenv("GITHUB_TOKEN"))
 repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
-pr_number = os.getenv("GITHUB_REF").split('/')[-1]
+# Get the pull request number from environment variable
+pr_number = os.getenv("PR_NUMBER")
+if not pr_number:
+    raise ValueError("PR_NUMBER environment variable is not set.")
 pr = repo.get_pull(int(pr_number))
 
 # Initialize variables
