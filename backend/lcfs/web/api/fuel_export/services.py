@@ -355,9 +355,8 @@ class FuelExportServices:
         # Adjust compliance units to negative to act as exporting fuel
         compliance_units = -compliance_units
 
-        # TODO double check business logic here
-        # Ensure compliance units are not negative and round the value
-        compliance_units = max(round(compliance_units), 0)
+        # Ensure compliance units are rounded and remain negative
+        compliance_units = round(compliance_units) if compliance_units < 0 else 0
 
         # Calculate energy content
         energy_content = round(energy_density * quantity)
