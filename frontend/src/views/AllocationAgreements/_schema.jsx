@@ -2,7 +2,7 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
-  HeaderComponent,
+  RequiredHeader,
   AsyncSuggestionEditor,
   NumberEditor
 } from '@/components/BCDataGrid/components'
@@ -46,7 +46,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'allocationTransactionType',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transaction'
     ),
@@ -66,7 +66,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'transactionPartner',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartner'
     ),
@@ -123,6 +123,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'postalAddress',
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.postalAddress'
     ),
@@ -133,6 +134,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'transactionPartnerEmail',
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
     ),
@@ -143,6 +145,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'transactionPartnerPhone',
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
     ),
@@ -153,7 +156,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelType',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelType'
     ),
@@ -231,7 +234,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'provisionOfTheAct',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
@@ -306,7 +309,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
   },
   {
     field: 'quantity',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.quantity'
     ),

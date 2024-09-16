@@ -211,7 +211,7 @@ class ComplianceReportSummaryService:
         summary_id: int,
         summary_data: ComplianceReportSummarySchema,
         is_edit=True,
-    ) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    ) -> ComplianceReportSummarySchema:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
@@ -226,7 +226,7 @@ class ComplianceReportSummaryService:
     @service_handler
     async def calculate_compliance_report_summary(
         self, report_id: int, is_edit=False
-    ) -> Dict[str, List[ComplianceReportSummaryRowSchema]]:
+    ) -> ComplianceReportSummarySchema:
         """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
         # TODO this method will have to be updated to handle supplemental reports
 
@@ -347,7 +347,7 @@ class ComplianceReportSummaryService:
         previous_retained: dict,
         previous_obligation: dict,
         notional_transfers_sums: dict,
-        compliance_period: datetime,
+        compliance_period: int,
         summary_model: ComplianceReportSummary,
     ) -> List[ComplianceReportSummaryRowSchema]:
         # line 3
@@ -509,22 +509,21 @@ class ComplianceReportSummaryService:
         compliance_period_end: datetime,
         organization_id: int,
         report_id: int,
-    ) -> List[ComplianceReportSummaryRowSchema]:
-
+    ) -> Tuple[List[ComplianceReportSummaryRowSchema], int]:
         compliance_units_transferred_out = (
             await self.repo.get_transferred_out_compliance_units(
                 compliance_period_start, compliance_period_end, organization_id
             )
-        )
+        )  # line 12
         compliance_units_received = await self.repo.get_received_compliance_units(
             compliance_period_start, compliance_period_end, organization_id
-        )
+        )  # line 13
         compliance_units_issued = await self.repo.get_issued_compliance_units(
             compliance_period_start, compliance_period_end, organization_id
-        )
+        )  # line 14
         # TODO - add the logic as required
         compliance_units_prev_issued_for_fuel_supply = 0  # line 15
-        compliance_units_prev_issued_for_fuel_export = 0  # line 16
+        compliance_units_prev_issued_for_fuel_export = 0  # line 16 - always 0
         available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
             organization_id, compliance_period_start.year
         )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
@@ -536,6 +535,7 @@ class ComplianceReportSummaryService:
             compliance_units_curr_issued_for_fuel_supply
             + compliance_units_curr_issued_for_fuel_export
         )  # line 20
+
         calculated_penalty_units = int(
             available_balance_for_period
             + compliance_units_curr_issued_for_fuel_supply
@@ -549,8 +549,14 @@ class ComplianceReportSummaryService:
             if non_compliance_penalty_payable_units < 0
             else 0
         )  # line 21
-        available_balance_for_period_after_assessment = 0  # line 22
 
+        available_balance_for_period_after_assessment = (  # line 22 = line 17 - line 20
+            max(
+                available_balance_for_period
+                - compliance_unit_balance_change_from_assessment,
+                0,
+            )
+        )
         low_carbon_summary_lines = {
             "12": {"value": compliance_units_transferred_out},
             "13": {"value": compliance_units_received},

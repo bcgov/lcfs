@@ -3,7 +3,7 @@ import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
   NumberEditor,
-  HeaderComponent,
+  RequiredHeader,
   DateEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
@@ -74,7 +74,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   {
     field: 'exportDate',
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     maxWidth: 220,
     minWidth: 200,
     cellRenderer: (params) => (
@@ -88,7 +88,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelType',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
@@ -140,7 +140,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelCategory',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
@@ -193,7 +193,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   },
   {
     field: 'endUse',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUse'),
     options: (params) =>
       [
@@ -228,7 +228,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   },
   {
     field: 'provisionOfTheAct',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.provisionOfTheAct'),
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
@@ -289,7 +289,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   },
   {
     field: 'quantity',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
     minWidth: 200,
     valueFormatter,
