@@ -1,7 +1,7 @@
 import os
 import anthropic
 
-client = anthropic.Anthropic()
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 from github import Github
 
 # Set up GitHub API
