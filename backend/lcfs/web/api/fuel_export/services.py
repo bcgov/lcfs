@@ -31,6 +31,7 @@ from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.utils.calculations import calculate_compliance_units
 
 logger = getLogger(__name__)
 
@@ -269,76 +270,14 @@ class FuelExportServices:
         self, fs_data: FuelExportSchema
     ) -> FuelExportSchema:
         """Validate and update the compliance units"""
+
+        # Fetch fuel export options based on the compliance period
         fuel_export_options = await self.get_fuel_export_options(
             fs_data.compliance_period
         )
-        energy_density = next(
-            (
-                obj["energyDensity"]["energyDensity"]
-                for obj in fuel_export_options["fuelTypes"]
-                if fs_data.fuel_type == obj["fuelType"]
-            ),
-            None,
-        )
-        target_ci = (
-            next(
-                (
-                    item["targetCarbonIntensity"]
-                    for item in (
-                        next(
-                            (
-                                obj["targetCarbonIntensities"]
-                                for obj in fuel_export_options["fuelTypes"]
-                                if fs_data.fuel_type == obj["fuelType"]
-                            ),
-                            [],
-                        )
-                    )
-                    if item["fuelCategory"]["fuelCategory"] == fs_data.fuel_category
-                ),
-                0,
-            )
-            if fuel_export_options["fuelTypes"]
-            else 0
-        )
 
-        if "Fuel code" in fs_data.provision_of_the_act:
-            effective_carbon_intensity = (
-                next(
-                    (
-                        item["fuelCodeCarbonIntensity"]
-                        for item in (
-                            next(
-                                (
-                                    obj["fuelCodes"]
-                                    for obj in fuel_export_options["fuelTypes"]
-                                    if fs_data.fuel_type == obj["fuelType"]
-                                ),
-                                [],
-                            )
-                        )
-                        if item["fuelCode"] == fs_data.fuel_code
-                    ),
-                    None,
-                )
-                if fuel_export_options["fuelTypes"]
-                else None
-            )
-        else:
-            effective_carbon_intensity = (
-                next(
-                    (
-                        obj["defaultCarbonIntensity"]
-                        for obj in fuel_export_options["fuelTypes"]
-                        if fs_data.fuel_type == obj["fuelType"]
-                    ),
-                    None,
-                )
-                if fuel_export_options
-                else None
-            )
-
-        eer_options = next(
+        # Extract the relevant fuel type data
+        fuel_type_data = next(
             (
                 obj
                 for obj in fuel_export_options["fuelTypes"]
@@ -346,34 +285,91 @@ class FuelExportServices:
             ),
             None,
         )
+
+        if not fuel_type_data:
+            # Handle the case where the fuel type is not found
+            raise ValueError(
+                f"Fuel type {fs_data.fuel_type} not found in export options."
+            )
+
+        # Get energy density
+        energy_density = fuel_type_data.get("energyDensity", {}).get("energyDensity", 0)
+
+        # Get target carbon intensity (TCI)
+        target_ci = next(
+            (
+                item["targetCarbonIntensity"]
+                for item in fuel_type_data.get("targetCarbonIntensities", [])
+                if item["fuelCategory"]["fuelCategory"] == fs_data.fuel_category
+            ),
+            0,
+        )
+
+        # Determine the recorded carbon intensity (RCI)
+        if "Fuel code" in fs_data.provision_of_the_act:
+            # Use fuel code carbon intensity
+            effective_carbon_intensity = next(
+                (
+                    item["fuelCodeCarbonIntensity"]
+                    for item in fuel_type_data.get("fuelCodes", [])
+                    if item["fuelCode"] == fs_data.fuel_code
+                ),
+                0,
+            )
+        else:
+            # Use default carbon intensity
+            effective_carbon_intensity = fuel_type_data.get("defaultCarbonIntensity", 0)
+
+        # Get Energy Effectiveness Ratio (EER)
         eer = next(
             (
                 item["energyEffectivenessRatio"]
-                for item in (eer_options["eerRatios"] if eer_options else [])
+                for item in fuel_type_data.get("eerRatios", [])
                 if item["fuelCategory"]["fuelCategory"] == fs_data.fuel_category
                 and (
-                    item.get("endeUseType") is None
+                    item.get("endUseType") is None
                     or item["endUseType"]["type"] == fs_data.end_use
                 )
             ),
-            None,
+            0,
         )
 
-        energy_content = round(energy_density * float(fs_data.quantity))
-        compliance_units = round(
-            (
-                (target_ci * (eer or 0) - (effective_carbon_intensity or 0))
-                * energy_content
-                * -1
-            )
-            / 1_000_000
+        # Ensure all values are floats and handle None values
+        target_ci = float(target_ci or 0)
+        eer = float(eer or 0)
+        effective_carbon_intensity = float(effective_carbon_intensity or 0)
+        energy_density = float(energy_density or 0)
+        quantity = float(fs_data.quantity or 0)
+        uci = 0  # Assuming Additional Carbon Intensity Attributable to Use is zero
+
+        # Calculate compliance units using the shared utility function
+        compliance_units = calculate_compliance_units(
+            TCI=target_ci,
+            EER=eer,
+            RCI=effective_carbon_intensity,
+            UCI=uci,
+            Q=quantity,
+            ED=energy_density,
         )
+
+        # Adjust compliance units to negative to act as exporting fuel
+        compliance_units = -compliance_units
+
+        # TODO double check business logic here
+        # Ensure compliance units are not negative and round the value
+        compliance_units = max(round(compliance_units), 0)
+
+        # Calculate energy content
+        energy_content = round(energy_density * quantity)
+
+        # Update the fs_data object with calculated values
         fs_data.target_ci = target_ci
         fs_data.ci_of_fuel = effective_carbon_intensity
         fs_data.energy_density = energy_density
         fs_data.energy = energy_content
         fs_data.eer = eer
-        fs_data.compliance_units = max(compliance_units, 0)
+        fs_data.compliance_units = compliance_units
+
         return fs_data
 
     @service_handler

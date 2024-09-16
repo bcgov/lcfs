@@ -12,8 +12,7 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
 import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 
-export const PROVISION_APPROVED_FUEL_CODE =
-  'Approved fuel code - Section 6 (5) (c)'
+export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
 export const allocationAgreementColDefs = (optionsData, errors) => [
   validation,

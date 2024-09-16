@@ -66,7 +66,7 @@ class AllocationAgreementCreateSchema(BaseSchema):
     fuel_type: str
     fuel_category: str
     provision_of_the_act: Optional[str] = None
-    fuel_code: str
+    fuel_code: Optional[str] = None
 
     deleted: Optional[bool] = None
 

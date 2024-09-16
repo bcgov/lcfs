@@ -266,7 +266,7 @@ export const AddEditFuelSupplies = () => {
             t(`fuelSupply:fuelSupplyColLabels.${field}`)
           )
 
-          //Only show field label if there is one
+          // Only show field label if there is one
           const errMsg = `Error updating row: ${
             fieldLabels.length === 1 ? fieldLabels[0] : ''
           } ${message}`
