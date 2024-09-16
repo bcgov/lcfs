@@ -195,7 +195,7 @@ const SummaryTable = ({
                       }}
                     >
                       {row?.format &&
-                      row[column.id] &&
+                      row[column.id] !== undefined &&
                       row.format === 'currency'
                         ? currencyFormatter(row[column.id])
                         : numberFormatter(row[column.id])}
