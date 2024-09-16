@@ -58,13 +58,13 @@ class AllocationAgreementCreateSchema(BaseSchema):
     transaction_partner_email: str
     transaction_partner_phone: str
     fuel_type: str
-    provision_of_the_act: str
-    fuel_code: str
     ci_of_fuel: float
     quantity: int
     units: str
     allocation_transaction_type: str
     fuel_category: str
+    provision_of_the_act: Optional[str] = None
+    fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
 
 

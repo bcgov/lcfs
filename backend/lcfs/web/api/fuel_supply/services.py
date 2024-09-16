@@ -1,6 +1,6 @@
 from logging import getLogger
 import math
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 
 from lcfs.db.models.compliance.FuelSupply import (
     FuelSupply,
@@ -26,6 +26,7 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.utils.calculations import calculate_compliance_units
 
 logger = getLogger(__name__)
 
@@ -267,15 +268,15 @@ class FuelSupplyServices:
         self, fs_data: FuelSupplyCreateUpdateSchema
     ) -> FuelSupplyResponseSchema:
         """Update an existing fuel supply record"""
+        fuel_supply = await self.repo.get_fuel_supply_by_id(fs_data.fuel_supply_id)
+        if not fuel_supply:
+            raise HTTPException(status_code=404, detail="Fuel supply not found")
 
-        existing_fs = await self.repo.get_fuel_supply_by_id(fs_data.fuel_supply_id)
-        if not existing_fs:
-            raise ValueError("fuel supply record not found")
-
-        for key, value in fs_data.model_dump().items():
-            if key not in [
-                "fuel_supply_id",
+        # Update fields
+        update_data = fs_data.model_dump(
+            exclude={
                 "id",
+                "fuel_supply_id",
                 "fuel_type",
                 "fuel_category",
                 "provision_of_the_act",
@@ -283,13 +284,20 @@ class FuelSupplyServices:
                 "fuel_code",
                 "units",
                 "deleted",
-            ]:
-                if key == "units":
-                    value = QuantityUnitsEnum(value)
-                setattr(existing_fs, key, value)
+            }
+        )
+        for field, value in update_data.items():
+            setattr(fuel_supply, field, value)
+        fuel_supply.units = QuantityUnitsEnum(fs_data.units)
 
-        updated_transfer = await self.repo.update_fuel_supply(existing_fs)
-        return FuelSupplyResponseSchema.model_validate(updated_transfer)
+        # Recalculate compliance units
+        compliance_units = self.calculate_compliance_units_for_supply(fuel_supply)
+        fuel_supply.compliance_units = compliance_units
+
+        # Save updates
+        updated_supply = await self.repo.update_fuel_supply(fuel_supply)
+
+        return FuelSupplyResponseSchema.model_validate(updated_supply)
 
     @service_handler
     async def create_fuel_supply(
@@ -312,7 +320,15 @@ class FuelSupplyServices:
         )
         fuel_supply.units = QuantityUnitsEnum(fs_data.units)
         created_supply = await self.repo.create_fuel_supply(fuel_supply)
-        return FuelSupplyResponseSchema.model_validate(created_supply)
+
+        # Calculate compliance units
+        compliance_units = self.calculate_compliance_units_for_supply(created_supply)
+        created_supply.compliance_units = compliance_units
+
+        # Update the fuel supply record with compliance units
+        updated_supply = await self.repo.update_fuel_supply(created_supply)
+
+        return FuelSupplyResponseSchema.model_validate(updated_supply)
 
     @service_handler
     async def delete_fuel_supply(self, fuel_supply_id: int) -> str:
@@ -327,7 +343,7 @@ class FuelSupplyServices:
         new_supply = FuelSupply(
             supplemental_report_id=supplemental_report_id,
             change_type=ChangeType.CREATE,
-            **data
+            **data,
         )
         return await self.repo.create_fuel_supply(new_supply)
 
@@ -339,7 +355,7 @@ class FuelSupplyServices:
             supplemental_report_id=supplemental_report_id,
             previous_fuel_supply_id=original_fuel_supply_id,
             change_type=ChangeType.UPDATE,
-            **data
+            **data,
         )
         return await self.repo.create_fuel_supply(updated_supply)
 
@@ -354,6 +370,21 @@ class FuelSupplyServices:
             quantity=None,  # or any appropriate default value
         )
         return await self.repo.create_fuel_supply(delete_record)
+
+    def calculate_compliance_units_for_supply(self, fuel_supply: FuelSupply) -> float:
+        """
+        Calculate the compliance units for a single fuel supply record.
+        """
+        TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
+        EER = fuel_supply.eer or 0  # Energy Efficiency Ratio
+        RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
+        UCI = 0  # Additional carbon intensity attributable to use (assumed 0)
+        Q = fuel_supply.quantity or 0  # Quantity of Fuel Supplied
+        ED = fuel_supply.energy_density or 0  # Energy Density
+
+        # Apply the compliance units formula
+        compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+        return compliance_units
 
     @service_handler
     async def get_fuel_supply_changes(

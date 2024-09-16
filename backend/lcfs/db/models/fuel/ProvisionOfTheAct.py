@@ -7,7 +7,7 @@ class ProvisionOfTheAct(BaseModel, Auditable, DisplayOrder, EffectiveDates):
     __tablename__ = "provision_of_the_act"
     __table_args__ = {
         "comment": """List of provisions within Greenhouse Gas Reduction
-         (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a).
+         (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 19 (a).
          Used in determining carbon intensity needed for for compliance reporting calculation."""
     }
 
@@ -21,14 +21,13 @@ class ProvisionOfTheAct(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         String(100),
         unique=True,
         nullable=False,
-        comment="Name of the Provision. e.g. Section 6 (5) (a)",
+        comment="Name of the Provision. e.g. Section 19 (a)",
     )
     description = Column(
         String(1000),
         nullable=False,
         comment="Description of the provision. This is the displayed name. e.g. Prescribed Carbon Intensity, Approved Fuel Code.",
     )
-    is_allocation_provision = Column(Boolean, default=False)
 
     # relationships
     fuel_type_provision_1 = relationship(

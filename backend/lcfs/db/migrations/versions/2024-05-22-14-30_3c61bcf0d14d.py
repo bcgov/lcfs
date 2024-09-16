@@ -428,7 +428,7 @@ def upgrade() -> None:
             "name",
             sa.String(length=100),
             nullable=False,
-            comment="Name of the Provision. e.g. Section 6 (5) (a)",
+            comment="Name of the Provision. e.g. Section 19 (a)",
         ),
         sa.Column(
             "description",
@@ -488,7 +488,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("provision_of_the_act_id"),
         sa.UniqueConstraint("name"),
-        comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
+        comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 19 (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
     )
     op.add_column("fuel_type", sa.Column("provision_1_id", sa.Integer(), nullable=True))
     op.add_column("fuel_type", sa.Column("provision_2_id", sa.Integer(), nullable=True))
