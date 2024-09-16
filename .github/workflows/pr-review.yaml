@@ -1,4 +1,4 @@
-name: ChatGPT Code Review
+name: ClaudeAI Code Review
 
 on:
   pull_request:
@@ -20,7 +20,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install anthropic
+        run: pip install anthropic PyGithub
 
       - name: Print Debug Info
         run: |
