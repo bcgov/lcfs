@@ -1,10 +1,7 @@
 import os
 from openai import OpenAI
-client = OpenAI()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 from github import Github
-
-# Set up OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Set up GitHub API
 g = Github(os.getenv("GITHUB_TOKEN"))
@@ -81,7 +78,7 @@ max_prompt_tokens = 3500  # Adjust based on the model's context length
 prompt = prompt[:max_prompt_tokens]
 
 # Call OpenAI API
-response = client.chat_completions.create(
+response = client.chat.completions.create(
     model="gpt-3.5-turbo",
     messages=[{"role": "user", "content": prompt}],
     max_tokens=500,
