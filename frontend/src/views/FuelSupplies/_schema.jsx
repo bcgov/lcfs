@@ -3,7 +3,7 @@ import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
   NumberEditor,
-  HeaderComponent
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -58,7 +58,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'fuelType',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
@@ -113,7 +113,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'fuelCategory',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategory'),
     cellEditor: AutocompleteEditor,
     cellRenderer: (params) =>
@@ -167,7 +167,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'endUseType',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUse'),
     cellEditorParams: (params) => ({
       options: [
@@ -221,7 +221,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'provisionOfTheAct',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheAct'),
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
@@ -308,7 +308,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'quantity',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
     valueFormatter,
     cellEditor: NumberEditor,

@@ -16,7 +16,7 @@ class FuelTypeQuantityUnitsEnumSchema(str, Enum):
     Cubic_metres = "m3"
 
 
-class CommmonPaginatedReportRequestSchema(BaseSchema):
+class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None
@@ -127,12 +127,14 @@ class FuelCodeResponseSchema(BaseSchema):
 
 
 class FuelSupplyCreateUpdateSchema(BaseSchema):
+    compliance_report_id: int
     fuel_supply_id: Optional[int] = None
     fuel_type_id: int
-    compliance_report_id: int
     fuel_category_id: int
-    quantity: int
     end_use_id: Optional[int] = None
+    provision_of_the_act_id: int
+    quantity: int
+
     fuel_code_id: Optional[int] = None
     units: Optional[str] = None
     target_ci: Optional[float] = None
@@ -141,7 +143,6 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     eer: Optional[float] = None
     energy: Optional[float] = None
     fuel_type_other: Optional[str] = None
-    provision_of_the_act_id: int
     custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
