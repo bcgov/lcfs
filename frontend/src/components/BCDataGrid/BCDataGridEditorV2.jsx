@@ -13,7 +13,7 @@ import {
   ActionsRenderer,
   AsyncSuggestionEditor,
   ValidationRenderer,
-  HeaderComponent,
+  RequiredHeader,
   LargeTextareaEditor,
   TextCellEditor
 } from '@/components/BCDataGrid/components'
@@ -54,7 +54,7 @@ const BCDataGridEditorV2 = ({
       dateRangeCellEditor: DateRangeCellEditor,
       largeTextareaEditor: LargeTextareaEditor,
       textCellEditor: TextCellEditor,
-      headerComponent: HeaderComponent
+      headerComponent: RequiredHeader
     }),
     []
   )
