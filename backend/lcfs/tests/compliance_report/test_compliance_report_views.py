@@ -119,7 +119,7 @@ async def test_get_compliance_report_summary_line_1(
         compliance_report_id=1,
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
-        status_id=6,  # Recorded
+        current_status_id=6,  # Recorded
     )
 
     expected_use_type = ExpectedUseType(
@@ -266,7 +266,7 @@ async def test_get_compliance_report_summary_line_2(
         compliance_report_id=1,
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
-        status_id=6,  # Recorded
+        current_status_id=6,  # Recorded
     )
 
     expected_use_type = ExpectedUseType(
@@ -279,14 +279,14 @@ async def test_get_compliance_report_summary_line_2(
         fuel_code_id=1,
         fuel_status_id=1,
         prefix_id=1,
-        fuel_code="100.0",
+        fuel_suffix="100.0",
         company="Company 1",
         contact_name="John Doe",
         contact_email="john.doe@lcfs.com",
         carbon_intensity=123,
         edrms="edrms",
-        last_updated=datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
-        application_date=datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
+        last_updated=datetime.strptime("2023-01-01", "%Y-%m-%d"),
+        application_date=datetime.strptime("2023-01-01", "%Y-%m-%d"),
         fuel_type_id=1,
         feedstock="feedstock",
         feedstock_location="123 main street",
@@ -391,9 +391,8 @@ async def test_get_compliance_report_summary_line_2(
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
-        quantity_not_sold=1,
         fuel_type_id=14,  # Renewable gasoline
-        transaction_type_id=1,
+        allocation_transaction_type_id=1,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
@@ -404,9 +403,8 @@ async def test_get_compliance_report_summary_line_2(
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
-        quantity_not_sold=1,
         fuel_type_id=14,  # Renewable gasoline
-        transaction_type_id=1,
+        allocation_transaction_type_id=1,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
@@ -417,9 +415,8 @@ async def test_get_compliance_report_summary_line_2(
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
-        quantity_not_sold=1,
         fuel_type_id=13,  # Propane
-        transaction_type_id=1,
+        allocation_transaction_type_id=1,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
@@ -430,9 +427,8 @@ async def test_get_compliance_report_summary_line_2(
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
-        quantity_not_sold=1,
         fuel_type_id=1,  # Biodiesel
-        transaction_type_id=1,
+        allocation_transaction_type_id=1,
         fuel_category_id=1,  # Gasoline
         provision_of_the_act_id=1,
         fuel_code_id=1,
@@ -443,9 +439,8 @@ async def test_get_compliance_report_summary_line_2(
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
-        quantity_not_sold=1,
         fuel_type_id=1,  # Biodiesel
-        transaction_type_id=1,
+        allocation_transaction_type_id=1,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
@@ -512,7 +507,7 @@ async def test_get_compliance_report_summary_line_3(
         compliance_report_id=1,
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
-        status_id=6,  # Recorded
+        current_status_id=6,  # Recorded
     )
 
     fuel_supply1 = FuelSupply(
@@ -610,15 +605,15 @@ async def test_get_compliance_report_summary_line_12(
     compliance_report = ComplianceReport(
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
-        status_id=6,  # Recorded
+        current_status_id=6,  # Recorded
     )
 
     transfer_out1 = Transfer(
         from_organization_id=1,  # LCFS Org 1
         to_organization_id=2,  # LCFS Org 2
-        agreement_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -628,9 +623,9 @@ async def test_get_compliance_report_summary_line_12(
     transfer_out2 = Transfer(
         from_organization_id=1,  # LCFS Org 1
         to_organization_id=2,  # LCFS Org 2
-        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -640,9 +635,9 @@ async def test_get_compliance_report_summary_line_12(
     transfer_out3 = Transfer(
         from_organization_id=2,  # LCFS Org 2
         to_organization_id=1,  # LCFS Org 1
-        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -652,9 +647,9 @@ async def test_get_compliance_report_summary_line_12(
     transfer_out4 = Transfer(
         from_organization_id=1,  # LCFS Org 1
         to_organization_id=2,  # LCFS Org 2
-        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -664,9 +659,9 @@ async def test_get_compliance_report_summary_line_12(
     transfer_out5 = Transfer(
         from_organization_id=1,  # LCFS Org 1
         to_organization_id=2,  # LCFS Org 2
-        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=5,  # Recommended
@@ -713,15 +708,15 @@ async def test_get_compliance_report_summary_line_13(
     compliance_report = ComplianceReport(
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
-        status_id=6,  # Recorded
+        current_status_id=6,  # Recorded
     )
 
     transfer_in1 = Transfer(
         from_organization_id=2,  # LCFS Org 2
         to_organization_id=1,  # LCFS Org 1
-        agreement_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -731,9 +726,9 @@ async def test_get_compliance_report_summary_line_13(
     transfer_in2 = Transfer(
         from_organization_id=2,  # LCFS Org 2
         to_organization_id=1,  # LCFS Org 1
-        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -743,9 +738,9 @@ async def test_get_compliance_report_summary_line_13(
     transfer_in3 = Transfer(
         from_organization_id=1,  # LCFS Org 1
         to_organization_id=2,  # LCFS Org 2
-        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2024-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2024-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -755,9 +750,9 @@ async def test_get_compliance_report_summary_line_13(
     transfer_in4 = Transfer(
         from_organization_id=2,  # LCFS Org 2
         to_organization_id=1,  # LCFS Org 1
-        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=6,  # Recorded
@@ -767,9 +762,9 @@ async def test_get_compliance_report_summary_line_13(
     transfer_in5 = Transfer(
         from_organization_id=2,  # LCFS Org 2
         to_organization_id=1,  # LCFS Org 1
-        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d").date(),
-        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d").date(),
-        price_per_unit=1.0,
+        agreement_date=datetime.strptime("2023-05-10", "%Y-%m-%d"),
+        transaction_effective_date=datetime.strptime("2023-06-01", "%Y-%m-%d"),
+        price_per_unit=1,
         quantity=100,
         transfer_category_id=1,  # A
         current_status_id=5,  # Recommended
@@ -816,40 +811,40 @@ async def test_get_compliance_report_summary_line_14(
     compliance_report = ComplianceReport(
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
-        status_id=6,  # Recorded
+        current_status_id=6,  # Recorded
     )
 
     issued_units1 = InitiativeAgreement(
         compliance_units=75,
-        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
         gov_comment="Issued units 1",
         to_organization_id=1,  # LCFS Org 1
         current_status_id=3,  # Approved
     )
     issued_units2 = InitiativeAgreement(
         compliance_units=25,
-        transaction_effective_date=datetime.strptime("2024-02-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-02-01", "%Y-%m-%d"),
         gov_comment="Issued units 2",
         to_organization_id=1,  # LCFS Org 1
         current_status_id=3,  # Approved
     )
     issued_units3 = InitiativeAgreement(
         compliance_units=25,
-        transaction_effective_date=datetime.strptime("2024-02-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2024-02-01", "%Y-%m-%d"),
         gov_comment="Issued units 2",
         to_organization_id=2,  # LCFS Org 2
         current_status_id=3,  # Approved
     )
     issued_units4 = InitiativeAgreement(
         compliance_units=25,
-        transaction_effective_date=datetime.strptime("2023-02-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2023-02-01", "%Y-%m-%d"),
         gov_comment="Issued units 2",
         to_organization_id=2,  # LCFS Org 2
         current_status_id=3,  # Approved
     )
     issued_units5 = InitiativeAgreement(
         compliance_units=25,
-        transaction_effective_date=datetime.strptime("2023-02-01", "%Y-%m-%d").date(),
+        transaction_effective_date=datetime.strptime("2023-02-01", "%Y-%m-%d"),
         gov_comment="Issued units 2",
         to_organization_id=2,  # LCFS Org 2
         current_status_id=1,  # Draft

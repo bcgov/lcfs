@@ -610,7 +610,7 @@ class ComplianceReportRepository:
         return result.scalars().first()
 
     @repo_handler
-    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+    async def get_summary_versions(self, report_id: int):
         query = (
             select(
                 ComplianceReportSummary.summary_id,
@@ -630,6 +630,7 @@ class ComplianceReportRepository:
         result = await self.db.execute(query)
         return result.all()
 
+    @repo_handler
     async def get_transferred_out_compliance_units(
         self,
         compliance_period_start: datetime,
