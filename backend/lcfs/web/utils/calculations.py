@@ -25,9 +25,6 @@ def calculate_compliance_units(
 
     # Perform the calculation
     compliance_units = (TCI * EER - (RCI + UCI)) * ((Q * ED) / 1_000_000)
-    print("UNITS HERE")
-    print(compliance_units)
-    print(round(compliance_units))
 
     # Return the rounded integer
     return round(compliance_units)
