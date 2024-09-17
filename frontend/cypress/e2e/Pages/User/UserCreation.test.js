@@ -19,7 +19,6 @@ When('the IDIR user logs in with valid credentials', () => {
     Cypress.env('admin_idir_username'),
     Cypress.env('admin_idir_password')
   )
-  cy.wait(5000)
   cy.setIDIRRoles('analyst')
   cy.visit('/')
   cy.getByDataTest('dashboard-container').should('exist')
@@ -27,7 +26,6 @@ When('the IDIR user logs in with valid credentials', () => {
 
 When('the IDIR user navigates to the user creation page', () => {
     cy.get('a[href="/admin"]').click()
-    cy.wait(3000)
     cy.url().should('include', '/admin/users')
     cy.contains('New user').click()
     cy.url().should('include', '/admin/users/add-user')
@@ -48,7 +46,6 @@ When('the IDIR user fills out the form with valid data', () => {
 
 When('the IDIR user submits the form', () => {
     cy.get('button[data-test="saveUser"]').click()
-    cy.wait(3000)
 })
 
 Then('a success message is displayed', () => {
@@ -60,7 +57,6 @@ Then('a success message is displayed', () => {
 
 Then('the new user appears in the user list', () => {
     cy.visit('/admin/users')
-    cy.wait(3000)
     cy.contains('a', Cypress.env('john.doe@example.com')).should('be.visible')
 })
 
