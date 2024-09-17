@@ -43,15 +43,7 @@ class AllocationAgreementRepository:
             (await self.db.execute(select(AllocationTransactionType))).scalars().all()
         )
         provisions_of_the_act = (
-            (
-                await self.db.execute(
-                    select(ProvisionOfTheAct).where(
-                        ProvisionOfTheAct.is_allocation_provision == True
-                    )
-                )
-            )
-            .scalars()
-            .all()
+            (await self.db.execute(select(ProvisionOfTheAct))).scalars().all()
         )
         fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
 
@@ -102,7 +94,12 @@ class AllocationAgreementRepository:
                 fuel_type=allocation_agreement.fuel_type.fuel_type,
                 fuel_category=allocation_agreement.fuel_category.category,
                 provision_of_the_act=allocation_agreement.provision_of_the_act.name,
-                fuel_code=allocation_agreement.fuel_code.fuel_code,
+                # Set fuel_code only if it exists
+                fuel_code=(
+                    allocation_agreement.fuel_code.fuel_code
+                    if allocation_agreement.fuel_code
+                    else None
+                ),
             )
             for allocation_agreement in allocation_agreements
         ]

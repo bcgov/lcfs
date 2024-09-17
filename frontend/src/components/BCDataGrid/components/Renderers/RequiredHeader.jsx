@@ -1,4 +1,4 @@
-export const HeaderComponent = (props) => {
+export const RequiredHeader = (props) => {
   return (
     <div>
       <span style={{ color: 'red' }}>*</span>

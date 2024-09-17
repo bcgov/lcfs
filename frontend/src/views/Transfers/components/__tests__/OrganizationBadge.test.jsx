@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { OrganizationBadge } from '../OrganizationBadge'
 import { vi } from 'vitest'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useOrganization')
 

@@ -1,17 +1,60 @@
-import React from 'react'
-import { Box, Tooltip, Fade, Select, MenuItem } from '@mui/material'
-import InfoIcon from '@mui/icons-material/Info'
+import React, { useEffect, useState } from 'react'
+import { Box, MenuItem, Select } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
-
-// Placeholder data object
-const placeholderData = {
-  totalUnits: 857361,
-  reservedUnits: 113867,
-  organizations: ['All organizations', 'Organization 1', 'Organization 2']
-}
+import { useOrganizationNames } from '@/hooks/useOrganizations.js'
+import { numberFormatter } from '@/utils/formatters.js'
+import { useTranslation } from 'react-i18next'
 
 const OrganizationsSummaryCard = () => {
+  const { data: organizations, isLoading } = useOrganizationNames()
+  const { t } = useTranslation(['common', 'transaction'])
+
+  const [formattedOrgs, setFormattedOrgs] = useState([])
+  const [selectedOrganization, setSelectedOrganization] = useState({
+    name: t('txn:allOrganizations'),
+    totalBalance: 0,
+    reservedBalance: 0
+  })
+
+  const setAllOrgSelected = () => {
+    const totalBalance = organizations.reduce((total, org) => {
+      return total + org.totalBalance
+    }, 0)
+    const reservedBalance = organizations.reduce((total, org) => {
+      return total + Math.abs(org.reservedBalance)
+    }, 0)
+
+    setSelectedOrganization({
+      name: t('txn:allOrganizations'),
+      totalBalance,
+      reservedBalance
+    })
+  }
+
+  useEffect(() => {
+    if (!isLoading) {
+      const formattedOrgs = organizations.map((org) => ({
+        name: org.name,
+        totalBalance: org.totalBalance,
+        reservedBalance: Math.abs(org.reservedBalance)
+      }))
+
+      setFormattedOrgs(formattedOrgs)
+      setAllOrgSelected()
+    }
+  }, [organizations, isLoading, t])
+
+  const onSelectOrganization = (event) => {
+    const orgName = event.target.value
+    if (orgName === t('txn:allOrganizations')) {
+      setAllOrgSelected()
+    } else {
+      const selectedOrg = formattedOrgs.find((org) => org.name === orgName)
+      setSelectedOrganization(selectedOrg)
+    }
+  }
+
   return (
     <BCWidgetCard
       component="div"
@@ -37,13 +80,13 @@ const OrganizationsSummaryCard = () => {
           <BCTypography
             style={{ fontSize: '16px', color: '#003366', marginBottom: '2px' }}
           >
-            All organizations
+            {t('txn:allOrganizations')}
           </BCTypography>
           <BCTypography
             style={{ fontSize: '32px', color: '#578260', marginBottom: '-2px' }}
             component="span"
           >
-            {placeholderData.totalUnits.toLocaleString()}
+            {numberFormatter(selectedOrganization.totalBalance)}
           </BCTypography>
           <BCTypography
             style={{ fontSize: '18px', color: '#003366', marginBottom: '-4px' }}
@@ -56,15 +99,9 @@ const OrganizationsSummaryCard = () => {
               style={{ fontSize: '22px', color: '#578260' }}
               component="span"
             >
-              ({placeholderData.reservedUnits.toLocaleString()} in reserve)
+              ({numberFormatter(selectedOrganization.reservedBalance)} in
+              reserve)
             </BCTypography>
-            <Tooltip
-              title="These units are reserved and not currently in circulation."
-              TransitionComponent={Fade}
-              arrow
-            >
-              <InfoIcon style={{ marginLeft: '4px', color: '#578260' }} />
-            </Tooltip>
           </Box>
           <BCTypography
             style={{ fontSize: '14px', color: '#003366', marginTop: '6px' }}
@@ -72,7 +109,7 @@ const OrganizationsSummaryCard = () => {
             Show balance for:
           </BCTypography>
           <Select
-            defaultValue={placeholderData.organizations[0]}
+            defaultValue={t('txn:allOrganizations')}
             fullWidth
             sx={{
               marginTop: 1,
@@ -81,12 +118,18 @@ const OrganizationsSummaryCard = () => {
               bgcolor: 'background.paper',
               borderRadius: 1
             }}
+            variant="outlined"
+            onChange={onSelectOrganization}
           >
-            {placeholderData.organizations.map((org, index) => (
-              <MenuItem key={index} value={org}>
-                {org}
-              </MenuItem>
-            ))}
+            <MenuItem key="default" value={t('txn:allOrganizations')}>
+              {t('txn:allOrganizations')}
+            </MenuItem>
+            {!isLoading &&
+              formattedOrgs.map((org, index) => (
+                <MenuItem key={index} value={org.name}>
+                  {org.name}
+                </MenuItem>
+              ))}
           </Select>
         </Box>
       }

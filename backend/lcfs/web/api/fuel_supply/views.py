@@ -20,7 +20,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
     FuelSupplyResponseSchema,
     FuelTypeOptionsResponse,
-    CommmonPaginatedReportRequestSchema,
+    CommonPaginatedReportRequestSchema,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
@@ -51,7 +51,7 @@ async def get_fs_table_options(
 @view_handler(['*'])
 async def get_fuel_supply(
     request: Request,
-    request_data: CommmonPaginatedReportRequestSchema = Body(...),
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     response: Response = None,
     service: FuelSupplyServices = Depends(),
 ) -> FuelSuppliesSchema:

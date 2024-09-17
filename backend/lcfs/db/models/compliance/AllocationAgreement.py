@@ -70,7 +70,7 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     fuel_code_id = Column(
         Integer,
         ForeignKey("fuel_code.fuel_code_id"),
-        nullable=False,
+        nullable=True,
         comment="Foreign key to the fuel code",
     )
     compliance_report_id = Column(

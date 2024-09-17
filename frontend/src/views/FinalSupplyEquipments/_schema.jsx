@@ -2,7 +2,7 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
-  HeaderComponent,
+  RequiredHeader,
   DateRangeCellEditor,
   TextCellEditor,
   AsyncSuggestionEditor
@@ -44,7 +44,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFrom'
     ),
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     minWidth: 330,
     cellRenderer: (params) => (
       <Typography variant="body4">
@@ -74,7 +74,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'serialNbr',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
     ),
@@ -85,7 +85,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'manufacturer',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
     ),
@@ -107,7 +107,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'levelOfEquipment',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
@@ -128,7 +128,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'fuelMeasurementType',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
     ),
@@ -149,7 +149,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'intendedUses',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
@@ -171,7 +171,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'streetAddress',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
     ),
@@ -182,7 +182,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'city',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.city'
     ),
@@ -193,7 +193,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'postalCode',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
@@ -217,7 +217,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'latitude',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
     ),
@@ -231,7 +231,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'longitude',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
     ),

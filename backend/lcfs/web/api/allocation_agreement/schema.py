@@ -51,23 +51,20 @@ class AllocationAgreementTableOptionsSchema(BaseSchema):
 
 
 class AllocationAgreementCreateSchema(BaseSchema):
+    compliance_report_id: int
     allocation_agreement_id: Optional[int] = None
     transaction_partner: str
+    postal_address: str
     transaction_partner_email: str
     transaction_partner_phone: str
-    postal_address: str
+    fuel_type: str
     ci_of_fuel: float
     quantity: int
     units: str
-    compliance_report_id: int
-
-    provision_of_the_act: str
     allocation_transaction_type: str
-    fuel_type: str
     fuel_category: str
     provision_of_the_act: Optional[str] = None
-    fuel_code: str
-
+    fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
 
 

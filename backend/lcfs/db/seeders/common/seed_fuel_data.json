@@ -4,36 +4,19 @@
       "provision_of_the_act_id": 1,
       "name": "Prescribed carbon intensity - section 19 (a)",
       "description": "Prescribed carbon intensity - section 19 (a)",
-      "effective_status": true,
-      "is_allocation_provision": false
+      "effective_status": true
     },
     {
       "provision_of_the_act_id": 2,
       "name": "Fuel code - section 19 (b) (i)",
       "description": "Fuel code - section 19 (b) (i)",
-      "effective_status": true,
-      "is_allocation_provision": false
+      "effective_status": true
     },
     {
       "provision_of_the_act_id": 3,
       "name": "Default carbon intensity - section 19 (b) (ii)",
       "description": "Default carbon intensity - section 19 (b) (ii)",
-      "effective_status": true,
-      "is_allocation_provision": false
-    },
-    {
-      "provision_of_the_act_id": 4,
-      "name": "Approved fuel code - Section 6 (5) (c)",
-      "description": "Approved fuel code - Section 6 (5) (c)",
-      "effective_status": true,
-      "is_allocation_provision": true
-    },
-    {
-      "provision_of_the_act_id": 5,
-      "name": "Default carbon intensity - Section 6 (5) (d)",
-      "description": "Default carbon intensity - Section 6 (5) (d)",
-      "effective_status": true,
-      "is_allocation_provision": true
+      "effective_status": true
     }
   ],
   "fuel_types": [

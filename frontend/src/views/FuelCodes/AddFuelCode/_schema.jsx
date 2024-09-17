@@ -1,9 +1,9 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import {
   AsyncSuggestionEditor,
   AutocompleteEditor,
   DateEditor,
-  HeaderComponent
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
@@ -49,7 +49,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'prefix',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
@@ -82,7 +82,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelSuffix',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelSuffix'),
@@ -116,7 +116,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'carbonIntensity',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
@@ -128,7 +128,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'edrms',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
@@ -136,7 +136,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'company',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.company'),
     cellDataType: 'text',
     cellEditor: AsyncSuggestionEditor,
@@ -211,7 +211,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'applicationDate',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.applicationDate'),
     maxWidth: 220,
     minWidth: 200,
@@ -265,7 +265,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuel',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
     cellEditor: AutocompleteEditor,
     cellRenderer: createCellRenderer('fuel'),
@@ -283,7 +283,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'feedstock',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstock'),
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
@@ -301,7 +301,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'feedstockLocation',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockLocation'),
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
@@ -336,7 +336,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelProductionFacilityCity',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
     cellEditor: AutocompleteEditor,
     suppressKeyboardEvent,
@@ -376,7 +376,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelProductionFacilityProvinceState',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
@@ -416,7 +416,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelProductionFacilityCountry',
-    headerComponent: HeaderComponent,
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
     ),

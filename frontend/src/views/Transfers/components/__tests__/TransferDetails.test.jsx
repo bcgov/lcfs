@@ -4,12 +4,13 @@ import { TransferDetails } from '../TransferDetails'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useRegExtOrgs } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { calculateTotalValue } from '@/utils/formatters'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
+vi.mock('@/hooks/useOrganizations')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key

@@ -133,8 +133,8 @@ def upgrade() -> None:
     )
     op.create_table_comment(
         "provision_of_the_act",
-        "List of provisions within Greenhouse Gas Reduction\n         (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a).\n         Used in determining carbon intensity needed for for compliance reporting calculation.",
-        existing_comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
+        "List of provisions within Greenhouse Gas Reduction\n         (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 19 (a).\n         Used in determining carbon intensity needed for for compliance reporting calculation.",
+        existing_comment="List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 19 (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
         schema=None,
     )
     op.create_index(
@@ -154,8 +154,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.create_table_comment(
         "provision_of_the_act",
-        "List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
-        existing_comment="List of provisions within Greenhouse Gas Reduction\n         (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 6 (5) (a).\n         Used in determining carbon intensity needed for for compliance reporting calculation.",
+        "List of provisions within Greenhouse Gas Reduction (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 19 (a). Used in determining carbon intensity needed for for compliance reporting calculation.",
+        existing_comment="List of provisions within Greenhouse Gas Reduction\n         (Renewable and Low Carbon Fuel Requirement) Act. e.g. Section 19 (a).\n         Used in determining carbon intensity needed for for compliance reporting calculation.",
         schema=None,
     )
     op.alter_column(

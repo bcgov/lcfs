@@ -57,9 +57,14 @@ class AllocationAgreementServices:
         provision_of_the_act = await self.fuel_repo.get_provision_of_the_act_by_name(
             allocation_agreement.provision_of_the_act
         )
-        fuel_code = await self.fuel_repo.get_fuel_code_by_name(
-            allocation_agreement.fuel_code
-        )
+
+        # Fetch fuel code only if provided, else set it to None
+        fuel_code_id = None
+        if allocation_agreement.fuel_code:
+            fuel_code = await self.fuel_repo.get_fuel_code_by_name(
+                allocation_agreement.fuel_code
+            )
+            fuel_code_id = fuel_code.fuel_code_id
 
         return AllocationAgreement(
             **allocation_agreement.model_dump(
@@ -77,7 +82,7 @@ class AllocationAgreementServices:
             fuel_category_id=fuel_category.fuel_category_id,
             fuel_type_id=fuel_type.fuel_type_id,
             provision_of_the_act_id=provision_of_the_act.provision_of_the_act_id,
-            fuel_code_id=fuel_code.fuel_code_id
+            fuel_code_id=fuel_code_id
         )
 
     @service_handler
@@ -164,7 +169,12 @@ class AllocationAgreementServices:
                     fuel_type=allocation_agreement.fuel_type.fuel_type,
                     fuel_category=allocation_agreement.fuel_category.category,
                     provision_of_the_act=allocation_agreement.provision_of_the_act.name,
-                    fuel_code=allocation_agreement.fuel_code.fuel_code,
+                    # Set fuel_code only if it exists
+                    fuel_code=(
+                        allocation_agreement.fuel_code.fuel_code
+                        if allocation_agreement.fuel_code
+                        else None
+                    ),
                     compliance_report_id=allocation_agreement.compliance_report_id,
                 )
                 for allocation_agreement in allocation_agreements
@@ -287,7 +297,13 @@ class AllocationAgreementServices:
         provision_of_the_act_value = (
             created_allocation_agreement.provision_of_the_act.name
         )
-        fuel_code_value = created_allocation_agreement.fuel_code.fuel_code
+
+        # Set fuel_code_value only if the fuel_code is present
+        fuel_code_value = (
+            created_allocation_agreement.fuel_code.fuel_code
+            if created_allocation_agreement.fuel_code
+            else None
+        )
 
         return AllocationAgreementSchema(
             allocation_agreement_id=created_allocation_agreement.allocation_agreement_id,

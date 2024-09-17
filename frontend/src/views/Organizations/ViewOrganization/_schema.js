@@ -1,7 +1,7 @@
 import { numberFormatter } from '@/utils/formatters'
 import { LinkRenderer, OrgStatusRenderer } from '@/utils/grid/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
-import { useOrganizationStatuses } from '@/hooks/useOrganization'
+import { useOrganizationStatuses } from '@/hooks/useOrganizations'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
 
