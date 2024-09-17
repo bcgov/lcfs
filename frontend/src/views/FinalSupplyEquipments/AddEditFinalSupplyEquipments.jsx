@@ -153,8 +153,12 @@ export const AddEditFinalSupplyEquipments = () => {
           const fieldLabels = fields.map((field) =>
             t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${field}`)
           )
-          errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
-            } ${String(message).toLowerCase()}`
+          if (fields[0] === 'postalCode') {
+            errMsg = t('finalSupplyEquipment:postalCodeError')
+          } else {
+            errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
+              } ${String(message).toLowerCase()}`
+          }
         } else {
           errMsg = error.response.data?.detail
         }

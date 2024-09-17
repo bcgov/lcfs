@@ -43,6 +43,7 @@
     "longitude": "Longitude",
     "notes": "Notes"
   },
+  "postalCodeError": "Please enter a valid postal code.",
   "validateMsg": {
     "isRequired": "{{field}} is required"
   }
