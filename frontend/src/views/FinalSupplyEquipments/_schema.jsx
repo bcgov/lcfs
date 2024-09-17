@@ -213,7 +213,7 @@ export const finalSupplyEquipmentColDefs = (
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellStyle: (params) => StandardCellErrors(params, errors),
-    minWidth: 260
+    minWidth: 150
   },
   {
     field: 'latitude',
@@ -228,6 +228,7 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellDataType: 'number',
     cellStyle: (params) => StandardCellErrors(params, errors),
+    minWidth: 150
   },
   {
     field: 'longitude',
@@ -242,6 +243,7 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellDataType: 'number',
     cellStyle: (params) => StandardCellErrors(params, errors),
+    minWidth: 150
   },
   {
     field: 'notes',
