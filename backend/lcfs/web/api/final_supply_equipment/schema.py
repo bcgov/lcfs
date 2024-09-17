@@ -39,10 +39,7 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     intended_uses: List[str]
     street_address: str
     city: str
-    postal_code: str = Field(
-        pattern=r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$",
-        error_messages={"pattern": "Please enter a valid postal code."},
-    )
+    postal_code: str = Field(pattern=r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$")
     latitude: float
     longitude: float
     notes: Optional[str] = None
