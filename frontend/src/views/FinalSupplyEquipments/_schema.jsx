@@ -3,13 +3,16 @@ import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
   HeaderComponent,
-  DateRangeCellEditor
+  DateRangeCellEditor,
+  TextCellEditor,
+  AsyncSuggestionEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import moment from 'moment'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import { StandardCellErrors } from '@/utils/grid/errorRenderers'
+import { apiRoutes } from '@/constants/routes'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -87,7 +90,18 @@ export const finalSupplyEquipmentColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
     ),
     minWidth: 320,
-    cellEditor: 'agTextCellEditor',
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-code-search',
+      queryFn: async ({ client }) => {
+        const path = `${apiRoutes.searchFinalSupplyEquipments}manufacturer${params.data.manufacturer}`
+        const response = await client.get(path)
+        return response.data
+      },
+      optionLabel: 'fuelCodes',
+      title: 'fuelCode'
+    }),
+    suppressKeyboardEvent,
     cellDataType: 'text',
     cellStyle: (params) => StandardCellErrors(params, errors)
   },
@@ -184,11 +198,11 @@ export const finalSupplyEquipmentColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
     ),
     valueSetter: (params) => {
-      const newValue = params.newValue.toUpperCase().replace(/(.{3})/, '$1 ')
+      const newValue = params.newValue.toUpperCase()
       params.data[params.colDef.field] = newValue
       return true
     },
-    cellEditor: 'textCellEditor',
+    cellEditor: TextCellEditor,
     cellEditorParams: {
       mask: 'A1A 1A1',
       formatChars: {
@@ -212,9 +226,8 @@ export const finalSupplyEquipmentColDefs = (
       precision: 4,
       showStepperButtons: false
     },
-    type: 'numericColumn',
+    cellDataType: 'number',
     cellStyle: (params) => StandardCellErrors(params, errors),
-    minWidth: 260
   },
   {
     field: 'longitude',
@@ -227,9 +240,8 @@ export const finalSupplyEquipmentColDefs = (
       precision: 4,
       showStepperButtons: false
     },
-    type: 'numericColumn',
+    cellDataType: 'number',
     cellStyle: (params) => StandardCellErrors(params, errors),
-    minWidth: 260
   },
   {
     field: 'notes',

@@ -8,7 +8,8 @@ from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, delete, select, update
+from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
+from sqlalchemy import and_, delete, distinct, exists, select, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -278,3 +279,66 @@ class FinalSupplyEquipmentRepository:
             sequence_number = 1
 
         return sequence_number
+    
+    @repo_handler
+    async def check_uniques_of_fse_row(self, row: FinalSupplyEquipmentCreateSchema) -> bool:
+        """
+        Check if a duplicate final supply equipment row exists in the database based on the provided data.
+        Returns True if a duplicate is found, False otherwise.
+        """
+        conditions = [
+            FinalSupplyEquipment.supply_from_date == row.supply_from_date,
+            FinalSupplyEquipment.supply_to_date == row.supply_to_date,
+            FinalSupplyEquipment.serial_nbr == row.serial_nbr,
+            FinalSupplyEquipment.postal_code == row.postal_code,
+            FinalSupplyEquipment.latitude == row.latitude,
+            FinalSupplyEquipment.longitude == row.longitude,
+        ]
+        
+        # If final_supply_equipment_id is provided, exclude it from the search
+        if row.final_supply_equipment_id is not None:
+            conditions.append(FinalSupplyEquipment.final_supply_equipment_id != row.final_supply_equipment_id)
+
+        # Use exists() for efficient checking
+        query = select(exists().where(*conditions))
+        result = await self.db.execute(query)
+        
+        # The result of exists() is a tuple with a single boolean value
+        return result.scalar()
+
+    @repo_handler
+    async def check_overlap_of_fse_row(self, row: FinalSupplyEquipmentCreateSchema) -> bool:
+        """
+        Check if there's an overlapping final supply equipment row in the database based on the provided data.
+        Returns True if an overlap is found, False otherwise.
+        """
+        conditions = [
+            and_(
+                FinalSupplyEquipment.supply_from_date <= row.supply_to_date,
+                FinalSupplyEquipment.supply_to_date >= row.supply_from_date
+            ),
+            FinalSupplyEquipment.serial_nbr == row.serial_nbr,
+        ]
+        
+        # If final_supply_equipment_id is provided, exclude it from the search
+        if row.final_supply_equipment_id is not None:
+            conditions.append(FinalSupplyEquipment.final_supply_equipment_id != row.final_supply_equipment_id)
+
+        # Use exists() for efficient checking
+        query = select(exists().where(*conditions))
+        result = await self.db.execute(query)
+        
+        # The result of exists() is a tuple with a single boolean value
+        return result.scalar()
+
+    @repo_handler
+    async def search_manufacturers(self, query: str) -> list[str]:
+        """
+        Search for manufacturers based on the provided query.
+        """
+        result = await self.db.execute(
+            select(distinct(FinalSupplyEquipment.manufacturer)).where(
+                FinalSupplyEquipment.manufacturer.ilike(f"%{query}%")
+            )
+        )
+        return result.scalars().all()

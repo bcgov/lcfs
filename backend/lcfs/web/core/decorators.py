@@ -70,14 +70,17 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
             # run through the view function
             try:
                 return await func(request, *args, **kwargs)
+            except ValueError as e:
+                logger.error(str(e))
+                raise HTTPException(status_code=400, detail=str(e))
             except (DatabaseException, ServiceException) as e:
                 logger.error(str(e))
-                raise HTTPException(status_code=500, detail=f"Internal Server Error")
+                raise HTTPException(status_code=500, detail="Internal Server Error")
             except HTTPException as e:
                 logger.error(str(e))
                 raise
             except DataNotFoundException:
-                raise HTTPException(status_code=404, detail=f"Not Found")
+                raise HTTPException(status_code=404, detail="Not Found")
             except Exception as e:
                 file_path = inspect.getfile(func)
                 func_name = func.__name__
@@ -86,7 +89,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                              file_path}) - {e}""",
                     exc_info=True,
                 )
-                raise HTTPException(status_code=500, detail=f"Internal Server Error")
+                raise HTTPException(status_code=500, detail="Internal Server Error")
 
         return wrapper
 

@@ -243,3 +243,8 @@ class FinalSupplyEquipmentServices:
 
         # Concatenate to form the registration number and return it
         return f"{org_code}-{postal_code_no_space}-{formatted_next_number}"
+
+    @service_handler
+    async def search_manufacturers(self, query: str) -> list[str]:
+        """Search for manufacturers based on the provided query."""
+        return await self.repo.search_manufacturers(query)
