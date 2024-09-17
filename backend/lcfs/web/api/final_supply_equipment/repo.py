@@ -295,15 +295,12 @@ class FinalSupplyEquipmentRepository:
             FinalSupplyEquipment.longitude == row.longitude,
         ]
         
-        # If final_supply_equipment_id is provided, exclude it from the search
         if row.final_supply_equipment_id is not None:
             conditions.append(FinalSupplyEquipment.final_supply_equipment_id != row.final_supply_equipment_id)
 
-        # Use exists() for efficient checking
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
-        
-        # The result of exists() is a tuple with a single boolean value
+
         return result.scalar()
 
     @repo_handler
@@ -320,15 +317,12 @@ class FinalSupplyEquipmentRepository:
             FinalSupplyEquipment.serial_nbr == row.serial_nbr,
         ]
         
-        # If final_supply_equipment_id is provided, exclude it from the search
         if row.final_supply_equipment_id is not None:
             conditions.append(FinalSupplyEquipment.final_supply_equipment_id != row.final_supply_equipment_id)
 
-        # Use exists() for efficient checking
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
-        
-        # The result of exists() is a tuple with a single boolean value
+
         return result.scalar()
 
     @repo_handler
