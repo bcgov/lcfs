@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { CommentList } from '../CommentList'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 describe('CommentList', () => {
   const mockComments = [

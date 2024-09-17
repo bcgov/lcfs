@@ -7,7 +7,7 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat'
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule'
 import { useFormContext } from 'react-hook-form'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useRegExtOrgs } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useParams } from 'react-router-dom'
 import { useTransfer } from '@/hooks/useTransfer'
 

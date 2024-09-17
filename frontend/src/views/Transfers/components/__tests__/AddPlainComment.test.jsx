@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AddPlainComment } from '../AddPlainComment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { describe, expect, it, vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')
 

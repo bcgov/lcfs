@@ -1,4 +1,4 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AutocompleteEditor,
@@ -8,7 +8,7 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { StandardCellErrors, StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
+import { StandardCellErrors, StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,

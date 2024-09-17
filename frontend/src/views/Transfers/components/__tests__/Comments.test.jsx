@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Comments } from '../Comments'
 import { useForm, FormProvider } from 'react-hook-form'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 import { vi } from 'vitest'
 
 const MockFormProvider = ({ children }) => {

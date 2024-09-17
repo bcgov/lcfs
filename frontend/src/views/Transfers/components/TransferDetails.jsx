@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useRegExtOrgs } from '@/hooks/useOrganization'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import {
   FormControl,
   MenuItem,

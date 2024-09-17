@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { SigningAuthority } from '../SigningAuthority'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi } from 'vitest'
-import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -37,7 +37,6 @@ describe('SigningAuthority', () => {
     expect(screen.getByLabelText('transfer:saConfirmation')).toBeInTheDocument()
 
     const checkbox = screen.getByLabelText('transfer:saConfirmation')
-    console.log(checkbox)
     // Initially unchecked
     expect(checkbox.checked).toEqual(false)
 

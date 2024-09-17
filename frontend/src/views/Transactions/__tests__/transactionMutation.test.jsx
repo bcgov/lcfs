@@ -44,7 +44,7 @@ describe('useTransactionMutation', () => {
 
   beforeEach(() => {
     navigate = vi.fn()
-    vi.clearAllMocks()
+    window.scrollTo = vi.fn()
     vi.mock('react-router-dom', async () => {
       const actual = await vi.importActual('react-router-dom')
       return {
@@ -52,6 +52,10 @@ describe('useTransactionMutation', () => {
         useNavigate: () => navigate
       }
     })
+  })
+
+  afterAll(() => {
+    vi.clearAllMocks()
   })
 
   it('should navigate to edit route if status is DRAFT and no recommended history', () => {
@@ -93,7 +97,6 @@ describe('useTransactionMutation', () => {
       ':transactionId',
       '123'
     )
-    console.log(navigate)
     expect(navigate).toHaveBeenCalledWith(expectedPath, {
       state: {
         message: 'initiativeAgreement:actionMsgs.updatedText',

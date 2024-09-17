@@ -77,7 +77,6 @@ vi.mock('@/services/useApiService', () => {
 
 const LocationDisplay = () => {
   const location = useLocation()
-  console.log(location)
   return <div data-test="location-display">{location.pathname}</div>
 }
 
@@ -104,7 +103,7 @@ const WrapperComponent = ({ children, initialEntries = ['/'] }) => {
   )
 }
 
-describe('Transactions Component', () => {
+describe('Transactions', () => {
   afterEach(() => {
     cleanup()
     vi.resetAllMocks()
