@@ -94,7 +94,7 @@ export const finalSupplyEquipmentColDefs = (
     cellEditorParams: (params) => ({
       queryKey: 'fuel-code-search',
       queryFn: async ({ client }) => {
-        const path = `${apiRoutes.searchFinalSupplyEquipments}manufacturer${params.data.manufacturer}`
+        const path = `${apiRoutes.searchFinalSupplyEquipments}manufacturer=${params.data.manufacturer}`
         const response = await client.get(path)
         return response.data
       },
