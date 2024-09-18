@@ -1,6 +1,5 @@
 from fastapi import Depends, HTTPException, Request
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from fastapi import status
 
@@ -9,11 +8,9 @@ class ComplianceReportValidation:
     def __init__(
         self,
         request: Request = None,
-        service: ComplianceReportServices = Depends(ComplianceReportServices),
         repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
     ) -> None:
         self.request = request
-        self.service = service
         self.repo = repo
 
     async def validate_fuel_for_other_uses_create(
