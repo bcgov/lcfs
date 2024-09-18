@@ -7,7 +7,7 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCButton from '@/components/BCButton'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 
-const StyledCard = styled(Card)(({ theme, isDragActive }) => ({
+const StyledCard = styled(Card)(({ theme, isDragActive=false }) => ({
   width: '100%',
   textAlign: 'center',
   border: '1px dashed #ccc',

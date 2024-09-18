@@ -1,9 +1,10 @@
 from logging import getLogger
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from fastapi import (
     APIRouter,
     Body,
+    Query,
     status,
     Request,
     Response,
@@ -94,7 +95,6 @@ async def save_final_supply_equipment_row(
     fse_id: Optional[int] = request_data.final_supply_equipment_id
 
     await report_validate.validate_organization_access(compliance_report_id)
-    await fse_validate.validate_fse_record(compliance_report_id, [request_data])
 
     if request_data.deleted:
         # Delete existing final supply equipment row
@@ -103,8 +103,22 @@ async def save_final_supply_equipment_row(
             message="Final supply equipment row deleted successfully"
         )
     elif fse_id:
+        await fse_validate.check_equipment_uniqueness_and_overlap(data=request_data)
         # Update existing final supply equipment row
         return await fse_service.update_final_supply_equipment(request_data)
     else:
+        await fse_validate.check_equipment_uniqueness_and_overlap(data=request_data)
         # Create new final supply equipment row
         return await fse_service.create_final_supply_equipment(request_data)
+
+@router.get("/search", response_model=List[str], status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.SUPPLIER])
+async def search_table_options(
+    request: Request,
+    manufacturer: Optional[str] = Query(None, alias="manufacturer", description="Manfacturer for filtering options"),
+    service: FinalSupplyEquipmentServices = Depends(),
+) -> List[str]:
+    """Endpoint to search table options strings"""
+    if manufacturer:
+        return await service.search_manufacturers(manufacturer)
+    return []

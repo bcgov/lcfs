@@ -57,35 +57,35 @@ export const EditViewComplianceReport = () => {
   const alertRef = useRef()
 
   const { compliancePeriod, complianceReportId } = useParams()
-  const [isAtTop, setIsAtTop] = useState(true)
+  const [isScrollingUp, setIsScrollingUp] = useState(false)
+  const [lastScrollTop, setLastScrollTop] = useState(0)
 
   const scrollToTopOrBottom = () => {
-    if (isAtTop) {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: 'smooth'
-      })
-      setIsAtTop(false)
-    } else {
+    if (isScrollingUp) {
       window.scrollTo({
         top: 0,
         behavior: 'smooth'
       })
-      setIsAtTop(true)
+    } else {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth'
+      })
     }
   }
   const handleCommentChange = useCallback((newComment) => {
     setInternalComment(newComment)
   }, [])
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop
-      setIsAtTop(scrollTop === 0)
-    }
+  const handleScroll = useCallback(() => {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+    setIsScrollingUp(scrollTop < lastScrollTop || scrollTop === 0)
+    setLastScrollTop(scrollTop)
+  }, [lastScrollTop])
 
+  useEffect(() => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [handleScroll])
 
   // hooks
   const {
@@ -273,14 +273,14 @@ export const EditViewComplianceReport = () => {
           )}
         </Stack>
         <Tooltip
-          title={isAtTop ? t('common:scrollToBottom') : t('common:scrollToTop')}
+          title={isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')}
           placement="left"
           arrow
         >
           <Fab
             color="secondary"
             size="large"
-            aria-label={isAtTop ? 'scroll to bottom' : 'scroll to top'}
+            aria-label={isScrollingUp ? 'scroll to top' : 'scroll to bottom'}
             onClick={scrollToTopOrBottom}
             sx={{
               position: 'fixed',
@@ -288,10 +288,10 @@ export const EditViewComplianceReport = () => {
               right: 24
             }}
           >
-            {isAtTop ? (
-              <KeyboardArrowDownIcon sx={iconStyle} />
-            ) : (
+            {isScrollingUp ? (
               <KeyboardArrowUpIcon sx={iconStyle} />
+            ) : (
+              <KeyboardArrowDownIcon sx={iconStyle} />
             )}
           </Fab>
         </Tooltip>

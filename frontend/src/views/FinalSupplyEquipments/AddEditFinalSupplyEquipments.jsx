@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
+import { isArrayEmpty } from '@/utils/formatters'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -64,10 +65,21 @@ export const AddEditFinalSupplyEquipments = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      setRowData([...(data || { id: uuid() })])
+      if (isArrayEmpty(data)) {
+        setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
+      }
+      else {
+        setRowData(data.finalSupplyEquipments.map((item) => ({
+          ...item,
+          levelOfEquipment: item.levelOfEquipment.name,
+          fuelMeasurementType: item.fuelMeasurementType.type,
+          intendedUses: item.intendedUseTypes.map((i) => i.type),
+          id: uuid()
+        })))
+      }
       params.api.sizeColumnsToFit()
     },
-    [data]
+    [compliancePeriod, complianceReportId, data]
   )
 
   useEffect(() => {
@@ -79,10 +91,10 @@ export const AddEditFinalSupplyEquipments = () => {
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData])
+  }, [compliancePeriod, errors, optionsData])
 
   useEffect(() => {
-    if (!equipmentsLoading && data?.finalSupplyEquipments?.length > 0) {
+    if (!equipmentsLoading && !isArrayEmpty(data)) {
       const updatedRowData = data.finalSupplyEquipments.map((item) => ({
         ...item,
         levelOfEquipment: item.levelOfEquipment.name,
@@ -92,9 +104,9 @@ export const AddEditFinalSupplyEquipments = () => {
       }))
       setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid() }])
+      setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
     }
-  }, [data, equipmentsLoading])
+  }, [compliancePeriod, complianceReportId, data, equipmentsLoading])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -131,9 +143,25 @@ export const AddEditFinalSupplyEquipments = () => {
           severity: 'success'
         })
       } catch (error) {
-        setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
-        })
+        const newErrors = error.response.data.errors
+        let errMsg = ''
+        if (newErrors) {
+          setErrors({
+            [params.node.data.id]: newErrors[0].fields[0]
+          })
+          const { fields, message } = newErrors[0]
+          const fieldLabels = fields.map((field) =>
+            t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${field}`)
+          )
+          if (fields[0] === 'postalCode') {
+            errMsg = t('finalSupplyEquipment:postalCodeError')
+          } else {
+            errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
+              } ${String(message).toLowerCase()}`
+          }
+        } else {
+          errMsg = error.response.data?.detail
+        }
 
         updatedData = {
           ...updatedData,
@@ -141,15 +169,6 @@ export const AddEditFinalSupplyEquipments = () => {
         }
 
         if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${field}`)
-          )
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-                `.${error.response?.data?.details[0]?.loc[1]}`
-
           alertRef.current?.triggerAlert({
             message: errMsg,
             severity: 'error'
@@ -192,6 +211,9 @@ export const AddEditFinalSupplyEquipments = () => {
       const rowData = {
         ...params.node.data,
         id: newRowID,
+        serialNbr: null,
+        latitude: null,
+        longitude: null,
         finalSupplyEquipmentId: null,
         finalSupplyEquipment: null,
         validationStatus: 'error',
