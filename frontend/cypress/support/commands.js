@@ -19,7 +19,6 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
 Cypress.Commands.add('loginWith', (userType, username, password) => {
   // Determine which login link to click based on user type
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
-  cy.wait(5000)
   // Define the login process for IDIR and BCeID
   // cy.get("#user").type(username, { log: false });
   // cy.get("#password").type(password, { log: false });
@@ -40,7 +39,7 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     loginProcess
   )
   // Check to confirm successful login
-  // cy.getByDataTest('logout-button').should('be.visible')
+  cy.getByDataTest('logout-button').should('be.visible')
 })
 
 /**
@@ -71,7 +70,6 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
       Cypress.env('admin_idir_username'),
       Cypress.env('admin_idir_password')
     )
-    cy.wait(5000)
     // If BCeID user then update the roles using the IDIR user
     cy.visit(
       `/organizations/${Cypress.env(`${userType}_id`)}/${Cypress.env(
@@ -122,8 +120,6 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
 
   // Save the changes by clicking the button with data-test=saveUser
   cy.get('button[data-test="saveUser"]').click()
-
-  cy.wait(3000)
 
   cy.get("[data-test='alert-box'] .MuiBox-root").should(
     'contain',

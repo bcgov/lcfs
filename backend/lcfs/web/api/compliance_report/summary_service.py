@@ -497,6 +497,7 @@ class ComplianceReportSummaryService:
                 gasoline=values.get("gasoline", 0),
                 diesel=values.get("diesel", 0),
                 jet_fuel=values.get("jet_fuel", 0),
+                format='currency' if (str(line) == "11") else None
             )
             for line, values in summary_lines.items()
         ]
@@ -553,7 +554,7 @@ class ComplianceReportSummaryService:
         available_balance_for_period_after_assessment = (  # line 22 = line 17 - line 20
             max(
                 available_balance_for_period
-                - compliance_unit_balance_change_from_assessment,
+                + compliance_unit_balance_change_from_assessment,
                 0,
             )
         )
