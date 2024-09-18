@@ -497,6 +497,7 @@ class ComplianceReportSummaryService:
                 gasoline=values.get("gasoline", 0),
                 diesel=values.get("diesel", 0),
                 jet_fuel=values.get("jet_fuel", 0),
+                format='currency' if (str(line) == "11") else None
             )
             for line, values in summary_lines.items()
         ]
