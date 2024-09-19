@@ -5,8 +5,15 @@ import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
 import theme from '@/themes'
 import { ThemeProvider, useMediaQuery } from '@mui/material'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  within,
+  waitFor
+} from '@testing-library/react'
 import { useTranslation } from 'react-i18next'
+import userEvent from '@testing-library/user-event'
 import {
   MemoryRouter,
   useLocation,
@@ -272,6 +279,52 @@ describe('AddEditViewTransfer Component Tests', () => {
       expect(buttonClusterDeleteButton).toBeInTheDocument()
       expect(buttonClusterSaveButton).toBeInTheDocument()
       expect(buttonClusterSignButton).toBeInTheDocument()
+    })
+
+    it('should not reset the comment field when the signing authority checkbox is toggled', async () => {
+      // Setup mocks and data
+      useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
+      useParams.mockReturnValue({
+        transferId: 1
+      })
+      useTransfer.mockReturnValue({
+        data: {
+          currentStatus: { status: 'Draft' },
+          comments: [{ name: 'john doe' }],
+          fromOrganization: { name: 'from Org', organizationId: 1 },
+          toOrganization: { name: 'to Org', organizationId: 2 },
+          transferHistory: []
+        },
+        isFetched: true,
+        isLoadingError: false
+      })
+      useLocation.mockReturnValue({
+        state: null
+      })
+
+      renderComponent()
+
+      const commentField = await screen.findByTestId('external-comments')
+
+      // Target the actual input within the MUI TextField
+      const commentInput = within(commentField).getByRole('textbox')
+
+      // Simulate entering text into the comment field
+      await userEvent.type(commentInput, 'Test comment')
+      await waitFor(() => {
+        expect(commentInput).toHaveValue('Test comment')
+      })
+
+      // Toggle the signing authority checkbox
+      const signingAuthorityCheckbox = await screen.findByTestId(
+        'signing-authority-checkbox'
+      )
+      await userEvent.click(signingAuthorityCheckbox)
+
+      // Verify that the comment field still has the same value
+      await waitFor(() => {
+        expect(commentInput).toHaveValue('Test comment')
+      })
     })
   })
   describe('When in view mode', async () => {
