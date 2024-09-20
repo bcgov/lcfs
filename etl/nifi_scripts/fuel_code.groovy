@@ -27,7 +27,7 @@ def transformCallback = { inputStream, outputStream ->
         def transformedRecord = [
             fuel_status_id                     : record.status_id,
             prefix_id                          : 1, // BCLCF
-            fuel_code                          : "${record.fuel_code_version}.${record.fuel_code_version_minor}",
+            fuel_suffix                        : "${record.fuel_code_version}.${record.fuel_code_version_minor}",
             company                            : record.company,
             carbon_intensity                   : record.carbon_intensity,
             edrms                              : "",

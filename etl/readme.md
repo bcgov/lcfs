@@ -26,12 +26,14 @@ Drag the template onto the canvas.
 
 **4. Configure Databases:**
 
-Set "pass" as the password for lcfs and tfrs services in their configuration settings.
-
+* In NiFi, click on the Configuration gear in the Operate Box
+* Switch to the Controller Services Tab
+* Click the configure button on the LCFS and TFRS Databasepool rows to Edit them
+* Switch to the properties tab and set "pass" as the password
 
 **5. Enable Services:**
 
-Enable all NiFi services.
+Click the lignting bolt next to all services to Enable them
 
 **6. Import Databases:**
 
