@@ -92,4 +92,4 @@ export const transactionsColDefs = (t) => [
   }
 ]
 
-export const defaultSortModel = [{ field: 'transactionId', direction: 'desc' }]
+export const defaultSortModel = [{ field: 'updateDate', direction: 'desc' }]
