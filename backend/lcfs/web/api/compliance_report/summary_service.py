@@ -608,7 +608,7 @@ class ComplianceReportSummaryService:
         non_compliance_summary_lines = {
             "11": {"total_value": line_11.diesel + line_11.gasoline + line_11.jet_fuel},
             "21": {"total_value": non_compliance_penalty_payable},
-            "": {"total_value": line_11.total_value + non_compliance_penalty_payable},
+            "": {"total_value": line_11.diesel + line_11.gasoline + line_11.jet_fuel + non_compliance_penalty_payable},
         }
 
         non_compliance_penalty_summary = [
