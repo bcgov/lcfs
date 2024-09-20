@@ -135,7 +135,10 @@ export const AddEditViewTransfer = () => {
         pricePerUnit: transferData.pricePerUnit,
         fromOrgComment: transferData.fromOrgComment,
         toOrgComment: transferData.toOrgComment,
-        govComment: transferData.govComment,
+        govComment:
+          methods.getValues().govComment !== ''
+            ? methods.getValues().govComment
+            : transferData.govComment,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
@@ -157,7 +160,7 @@ export const AddEditViewTransfer = () => {
     transferId,
     isLoadingError,
     transferData,
-    queryState,
+    queryState.status,
     methods,
     t
   ])
