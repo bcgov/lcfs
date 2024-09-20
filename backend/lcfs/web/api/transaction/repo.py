@@ -264,7 +264,7 @@ class TransactionRepository:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
         """
         compliance_period_end = datetime.strptime(
-            f"{str(period + 1)}-12-31", "%Y-%m-%d"
+            f"{str(period + 1)}-03-31", "%Y-%m-%d"
         )
         async with self.db.begin_nested():
             # Calculate the sum of all transactions up to the specified date
