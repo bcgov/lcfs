@@ -142,7 +142,10 @@ export const AddEditViewTransfer = () => {
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
-        recommendation: transferData.recommendation,
+        recommendation:
+          methods.getValues().recommendation !== undefined
+            ? methods.getValues().recommendation
+            : transferData.recommendation,
         signingAuthorityDeclaration:
           methods.getValues().signingAuthorityDeclaration ?? false
       })
@@ -276,6 +279,11 @@ export const AddEditViewTransfer = () => {
     }
   }, [currentStatus, isGovernmentUser, transferData])
 
+  const recommendation = methods.watch('recommendation')
+  const signingAuthorityDeclaration = methods.watch(
+    'signingAuthorityDeclaration'
+  )
+
   const buttonClusterConfig = useMemo(
     () =>
       buttonClusterConfigFn({
@@ -289,7 +297,9 @@ export const AddEditViewTransfer = () => {
         setModalData,
         createUpdateTransfer,
         transferData,
-        isGovernmentUser
+        isGovernmentUser,
+        recommendation,
+        signingAuthorityDeclaration
       }),
     [
       transferId,
@@ -302,7 +312,9 @@ export const AddEditViewTransfer = () => {
       setModalData,
       createUpdateTransfer,
       transferData,
-      isGovernmentUser
+      isGovernmentUser,
+      recommendation,
+      signingAuthorityDeclaration
     ]
   )
 

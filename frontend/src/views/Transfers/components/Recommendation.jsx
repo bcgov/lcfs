@@ -38,12 +38,12 @@ export const Recommendation = ({ currentStatus }) => {
             >
               <FormControlLabel
                 value="Record"
-                control={<Radio />}
+                control={<Radio data-test="recommend-record-radio" />}
                 label={t('transfer:recommendRecord')}
               />
               <FormControlLabel
                 value="Refuse"
-                control={<Radio />}
+                control={<Radio data-test="recommend-refuse-radio" />}
                 label={t('transfer:recommendRefuse')}
               />
             </RadioGroup>
