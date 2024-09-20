@@ -67,7 +67,7 @@ export const reportsColDefs = (t, bceidRole) => [
   }
 ]
 
-export const renewableFuelColumns = (data, editable) => {
+export const renewableFuelColumns = (data, editable, compliancePeriod) => {
   // Line 6 & 7: only visible if cells G2, D2, and J2 do not show a balance of zero and there is a surplus above the renewable requirement.
   // Line 8 & 9: When I am short of my renewable obligation and in a penalty situation,
   //         then the free text fields in cells G8, D8, and J8 are available for input and I see the fields only if there is a deficiency.
@@ -104,6 +104,16 @@ export const renewableFuelColumns = (data, editable) => {
     data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
   )
     jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
+
+  if (compliancePeriod === '2024') {
+    // by default enable in editing mode for compliance period 2024
+    gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+  }
+  if (Number(compliancePeriod) && parseInt(compliancePeriod) < 2029) {
+    // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
+    jetFuelEditableCells = []
+  }
 
   return [
     { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },

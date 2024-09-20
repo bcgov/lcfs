@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
@@ -27,6 +27,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const { compliancePeriod, complianceReportId } = useParams()
   const alertRef = useRef()
 
   const { t } = useTranslation(['report'])
@@ -109,7 +110,8 @@ const ComplianceReportSummary = ({ reportID, currentStatus }) => {
               summaryData
                 ? renewableFuelColumns(
                   summaryData?.renewableFuelTargetSummary,
-                  currentStatus === 'Draft'
+                  currentStatus === 'Draft', // flag for edit mode 
+                  compliancePeriod
                 )
                 : []
             }
