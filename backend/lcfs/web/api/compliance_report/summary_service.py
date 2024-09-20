@@ -1,6 +1,5 @@
 from datetime import datetime
 from decimal import Decimal
-import math
 from typing import List, Dict, Any, Tuple
 from lcfs.web.api.transaction.repo import TransactionRepository
 from sqlalchemy import Float, inspect
@@ -9,7 +8,6 @@ from fastapi import Depends
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
-    SummarySchema,
 )
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
@@ -88,18 +86,18 @@ class ComplianceReportSummaryService:
                             RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)][
                                 "description"
                             ].format(
-                                int(
+                                "{:,}".format(int(
                                     summary_obj.line_4_eligible_renewable_fuel_required_gasoline
                                     * 0.05
-                                ),
-                                int(
+                                )),
+                                "{:,}".format(int(
                                     summary_obj.line_4_eligible_renewable_fuel_required_diesel
                                     * 0.05
-                                ),
-                                int(
+                                )),
+                                "{:,}".format(int(
                                     summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel
                                     * 0.05
-                                ),
+                                )),
                             )
                             if (str(line) in ["6", "8"])
                             else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)][
@@ -127,10 +125,10 @@ class ComplianceReportSummaryService:
                             LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)][
                                 "description"
                             ].format(
-                                int(
+                                "{:,}".format(int(
                                     summary_obj.line_21_non_compliance_penalty_payable
                                     / 600
-                                )
+                                ))
                             )
                             if (str(line) == "21")
                             else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)][
@@ -160,10 +158,10 @@ class ComplianceReportSummaryService:
                             NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)][
                                 "description"
                             ].format(
-                                int(
+                                "{:,}".format(int(
                                     summary_obj.line_21_non_compliance_penalty_payable
                                     / 600
-                                )
+                                ))
                             )
                             if (str(line) == "21")
                             else NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)][
@@ -489,9 +487,9 @@ class ComplianceReportSummaryService:
                 line=line,
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        int(summary_lines["4"]["gasoline"] * 0.05),
-                        int(summary_lines["4"]["diesel"] * 0.05),
-                        int(summary_lines["4"]["jet_fuel"] * 0.05),
+                        "{:,}".format(int(summary_lines["4"]["gasoline"] * 0.05)),
+                        "{:,}".format(int(summary_lines["4"]["diesel"] * 0.05)),
+                        "{:,}".format(int(summary_lines["4"]["jet_fuel"] * 0.05)),
                     )
                     if (line in ["6", "8"])
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
@@ -583,7 +581,7 @@ class ComplianceReportSummaryService:
                 description=(
                     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)][
                         "description"
-                    ].format(non_compliance_penalty_payable_units * -1)
+                    ].format("{:,}".format(non_compliance_penalty_payable_units * -1))
                     if (str(line) == "21")
                     else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["description"]
                 ),
