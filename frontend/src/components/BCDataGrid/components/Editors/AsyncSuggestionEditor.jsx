@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import match from 'autosuggest-highlight/match'
 import parse from 'autosuggest-highlight/parse'
 import { debounce } from 'lodash'
-import { useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 /**
  * AsyncSuggestionEditor component
@@ -36,7 +36,7 @@ export const AsyncSuggestionEditor = ({
   const [inputValue, setInputValue] = useState('')
   const apiService = useApiService()
 
-  const { data: options } = useQuery({
+  const { data: options, isLoading } = useQuery({
     queryKey: [queryKey || 'async-suggestion', inputValue],
     queryFn: async ({ queryKey }) => queryFn({ client: apiService, queryKey }),
     enabled: inputValue.length >= minWords && enabled,
@@ -44,11 +44,10 @@ export const AsyncSuggestionEditor = ({
     refetchOnWindowFocus: false
   })
 
-  const debouncedSetInputValue = useMemo(
-    () =>
-      debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
+  const debouncedSetInputValue = useCallback(
+    debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
     [debounceValue]
-  )
+  );
 
   const handleInputChange = (_, newInputValue) => {
     debouncedSetInputValue(newInputValue)
@@ -93,7 +92,7 @@ export const AsyncSuggestionEditor = ({
         value={value}
         onInputChange={handleInputChange}
         onKeyDownCapture={handleKeyDown}
-        // loading={isLoading}
+        loading={isLoading}
         noOptionsText="No suggestions..."
         renderInput={(params) => <TextField {...params} fullWidth autoFocus />}
         renderOption={({ key, ...props }, option, { inputValue }) => {

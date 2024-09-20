@@ -93,21 +93,6 @@ export const AddEditFinalSupplyEquipments = () => {
     }
   }, [compliancePeriod, errors, optionsData])
 
-  useEffect(() => {
-    if (!equipmentsLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.finalSupplyEquipments.map((item) => ({
-        ...item,
-        levelOfEquipment: item.levelOfEquipment.name,
-        fuelMeasurementType: item.fuelMeasurementType.type,
-        intendedUses: item.intendedUseTypes.map((i) => i.type),
-        id: uuid()
-      }))
-      setRowData(updatedRowData)
-    } else {
-      setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
-    }
-  }, [compliancePeriod, complianceReportId, data, equipmentsLoading])
-
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
@@ -132,9 +117,10 @@ export const AddEditFinalSupplyEquipments = () => {
 
       try {
         setErrors({})
-        await saveRow(updatedData)
+        const response = await saveRow(updatedData)
         updatedData = {
           ...updatedData,
+          finalSupplyEquipmentId: response.data.finalSupplyEquipmentId,
           validationStatus: 'success',
           modified: false
         }
@@ -243,6 +229,17 @@ export const AddEditFinalSupplyEquipments = () => {
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
+  const onAddRows = useCallback((numRows) => {
+    return Array(numRows).fill().map(()=>({
+      id: uuid(),
+      complianceReportId,
+      supplyFromDate: `${compliancePeriod}-01-01`,
+      supplyToDate: `${compliancePeriod}-12-31`,
+      validationStatus: 'error',
+      modified: true
+    }))
+  }, [compliancePeriod, complianceReportId])
+
   return (
     isFetched &&
     !equipmentsLoading && (
@@ -268,6 +265,7 @@ export const AddEditFinalSupplyEquipments = () => {
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
+            onAddRows={onAddRows}
             gridOptions={gridOptions}
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}

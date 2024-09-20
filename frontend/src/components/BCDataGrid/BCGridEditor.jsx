@@ -122,9 +122,13 @@ export const BCGridEditor = ({
   }
 
   const handleAddRows = (numRows) => {
-    const newRows = Array(numRows)
-      .fill()
-      .map(() => ({ id: uuid() }))
+    let newRows = []
+    if (props.onAddRows) { newRows = props.onAddRows(numRows) }
+    else {
+      newRows = Array(numRows)
+        .fill()
+        .map(() => ({ id: uuid() }))
+    }
     ref.current.api.applyTransaction({ add: newRows })
     setAnchorEl(null)
   }
