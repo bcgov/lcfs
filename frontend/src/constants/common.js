@@ -49,3 +49,5 @@ export const SUMMARY = {
   LINE_21: 20,
   LINE_22: 21
 }
+
+export const COMPLIANCE_PERIOD_2024 = '2024'

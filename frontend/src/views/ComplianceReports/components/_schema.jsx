@@ -1,6 +1,6 @@
 /* eslint-disable chai-friendly/no-unused-expressions */
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
-import { SUMMARY } from '@/constants/common'
+import { SUMMARY, COMPLIANCE_PERIOD_2024 } from '@/constants/common'
 import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 
@@ -105,7 +105,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriod) => {
   )
     jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
 
-  if (compliancePeriod === '2024') {
+  if (compliancePeriod === COMPLIANCE_PERIOD_2024) {
     // by default enable in editing mode for compliance period 2024
     gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
     dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
