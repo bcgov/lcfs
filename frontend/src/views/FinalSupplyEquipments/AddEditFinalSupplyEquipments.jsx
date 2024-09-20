@@ -66,16 +66,24 @@ export const AddEditFinalSupplyEquipments = () => {
     async (params) => {
       setGridApi(params.api)
       if (isArrayEmpty(data)) {
-        setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
-      }
-      else {
-        setRowData(data.finalSupplyEquipments.map((item) => ({
-          ...item,
-          levelOfEquipment: item.levelOfEquipment.name,
-          fuelMeasurementType: item.fuelMeasurementType.type,
-          intendedUses: item.intendedUseTypes.map((i) => i.type),
-          id: uuid()
-        })))
+        setRowData([
+          {
+            id: uuid(),
+            complianceReportId,
+            supplyFromDate: `${compliancePeriod}-01-01`,
+            supplyToDate: `${compliancePeriod}-12-31`
+          }
+        ])
+      } else {
+        setRowData(
+          data.finalSupplyEquipments.map((item) => ({
+            ...item,
+            levelOfEquipment: item.levelOfEquipment.name,
+            fuelMeasurementType: item.fuelMeasurementType.type,
+            intendedUses: item.intendedUseTypes.map((i) => i.type),
+            id: uuid()
+          }))
+        )
       }
       params.api.sizeColumnsToFit()
     },
@@ -104,12 +112,20 @@ export const AddEditFinalSupplyEquipments = () => {
       }))
       setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
+      setRowData([
+        {
+          id: uuid(),
+          complianceReportId,
+          supplyFromDate: `${compliancePeriod}-01-01`,
+          supplyToDate: `${compliancePeriod}-12-31`
+        }
+      ])
     }
   }, [compliancePeriod, complianceReportId, data, equipmentsLoading])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
+      debugger
       if (params.oldValue === params.newValue) return
 
       params.node.updateData({
@@ -156,8 +172,9 @@ export const AddEditFinalSupplyEquipments = () => {
           if (fields[0] === 'postalCode') {
             errMsg = t('finalSupplyEquipment:postalCodeError')
           } else {
-            errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
-              } ${String(message).toLowerCase()}`
+            errMsg = `Error updating row: ${
+              fieldLabels.length === 1 ? fieldLabels[0] : ''
+            } ${String(message).toLowerCase()}`
           }
         } else {
           errMsg = error.response.data?.detail
@@ -271,6 +288,7 @@ export const AddEditFinalSupplyEquipments = () => {
             gridOptions={gridOptions}
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}
+            stopEditingWhenCellsLoseFocus
             onAction={onAction}
             showAddRowsButton={true}
             saveButtonProps={{
