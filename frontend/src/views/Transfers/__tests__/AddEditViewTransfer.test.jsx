@@ -22,6 +22,7 @@ import {
 } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AddEditViewTransfer } from '../AddEditViewTransfer'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -234,14 +235,11 @@ describe('AddEditViewTransfer Component Tests', () => {
       })
       useTransfer.mockReturnValue({
         data: {
-          currentStatus: { status: 'Draft' },
+          currentStatus: { status: TRANSFER_STATUSES.DRAFT },
           comments: [{ name: 'john doe' }],
           fromOrganization: { name: 'from Org', organizationId: 1 }
         }
       })
-      //   useCreateUpdateTransfer.mockReturnValue({
-      //     mutate: vi.fn()
-      //   })
       useLocation.mockReturnValue({
         state: null
       })
@@ -289,7 +287,7 @@ describe('AddEditViewTransfer Component Tests', () => {
       })
       useTransfer.mockReturnValue({
         data: {
-          currentStatus: { status: 'Draft' },
+          currentStatus: { status: TRANSFER_STATUSES.DRAFT },
           comments: [{ name: 'john doe' }],
           fromOrganization: { name: 'from Org', organizationId: 1 },
           toOrganization: { name: 'to Org', organizationId: 2 },
@@ -335,7 +333,7 @@ describe('AddEditViewTransfer Component Tests', () => {
       })
       useTransfer.mockReturnValue({
         data: {
-          currentStatus: { status: 'Draft' },
+          currentStatus: { status: TRANSFER_STATUSES.DRAFT },
           comments: [{ name: 'john doe' }],
           fromOrganization: { name: 'from Org' },
           transferHistory: []
@@ -366,7 +364,7 @@ describe('AddEditViewTransfer Component Tests', () => {
     it('renders the correct button components (sent status & signing auth)', async () => {
       useTransfer.mockReturnValue({
         data: {
-          currentStatus: { status: 'Sent' },
+          currentStatus: { status: TRANSFER_STATUSES.SENT },
           comments: [{ name: 'john doe' }],
           fromOrganization: { name: 'from Org' },
           transferHistory: [],
@@ -392,7 +390,7 @@ describe('AddEditViewTransfer Component Tests', () => {
     it('renders the correct button components (Submitted status & signing auth)', async () => {
       useTransfer.mockReturnValue({
         data: {
-          currentStatus: { status: 'Submitted' },
+          currentStatus: { status: TRANSFER_STATUSES.SUBMITTED },
           comments: [{ name: 'john doe' }],
           fromOrganization: { name: 'from Org' },
           transferHistory: [],
@@ -413,7 +411,7 @@ describe('AddEditViewTransfer Component Tests', () => {
     it('renders the correct button components (Recommended status & director)', async () => {
       useTransfer.mockReturnValue({
         data: {
-          currentStatus: { status: 'Sent' },
+          currentStatus: { status: TRANSFER_STATUSES.SENT },
           comments: [{ name: 'john doe' }],
           fromOrganization: { name: 'from Org' },
           transferHistory: [],
@@ -473,7 +471,7 @@ describe('AddEditViewTransfer Component Tests', () => {
     it('renders the alert box when there is a loading error', async () => {
       useTransfer.mockReturnValue({
         // data: {
-        //   currentStatus: { status: 'Draft' },
+        //   currentStatus: { status: TRANSFER_STATUSES.DRAFT },
         //   comments: [{ name: 'john doe' }],
         //   fromOrganization: { name: 'from Org' },
         //   transferHistory: []
@@ -502,6 +500,46 @@ describe('AddEditViewTransfer Component Tests', () => {
 
       expect(stepper).toBeInTheDocument()
       expect(stepper).toHaveClass('MuiStepper-vertical')
+    })
+
+    it('enables "Recommend" button when recommendation is selected', async () => {
+      useTransfer.mockReturnValue({
+        data: {
+          currentStatus: { status: TRANSFER_STATUSES.SUBMITTED },
+          comments: [],
+          fromOrganization: { name: 'from Org', organizationId: 2 },
+          transferHistory: [],
+          toOrganization: { organizationId: 2 }
+        },
+        isFetched: true,
+        isLoadingError: false
+      })
+      useCurrentUser.mockReturnValue({
+        data: {
+          roles: [{ name: roles.analyst }],
+          isGovernmentUser: true,
+          organization: { organizationId: 1 }
+        },
+        hasRoles: vi.fn().mockReturnValue(true),
+        hasAnyRole: vi.fn().mockReturnValue(true),
+        sameOrganization: vi.fn().mockReturnValue(false)
+      })
+      useLocation.mockReturnValue({ state: null })
+
+      renderComponent()
+
+      // Find the "Recommend" button
+      const recommendButton = await screen.findByTestId('recommend-btn')
+
+      // Assert that the button is disabled
+      expect(recommendButton).toBeDisabled()
+
+      // Simulate selecting a recommendation
+      const recommendRecordRadio = screen.getByTestId('recommend-record-radio')
+      await userEvent.click(recommendRecordRadio)
+
+      // Assert that the button is now enabled
+      expect(recommendButton).toBeEnabled()
     })
   })
 })
