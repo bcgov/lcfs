@@ -3,7 +3,7 @@ import { Stack, Typography } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { constructAddress } from '@/utils/constructAddress'
 
-export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress }) => {
+export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress, isGovermentUser = false }) => {
   const { t } = useTranslation(['report'])
   return (
     <BCWidgetCard
@@ -29,13 +29,13 @@ export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress }) => {
               {constructAddress(orgAttorneyAddress)}
             </Typography>
           </div>
-          <Typography
+          {!isGovermentUser && <Typography
             component="div"
             variant="body4"
             dangerouslySetInnerHTML={{
               __html: t('report:contactForAddrChange')
             }}
-          />
+          />}
         </Stack>
       }
     />

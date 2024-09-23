@@ -93,12 +93,18 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'fuel-code-search',
-      queryFn: async ({ client }) => {
-        const path = `${apiRoutes.searchFinalSupplyEquipments}manufacturer=${params.data.manufacturer}`
-        const response = await client.get(path)
-        return response.data
+      queryFn: async ({ client, queryKey }) => {
+        try {
+          const [, searchTerm] = queryKey;
+          const path = `${apiRoutes.searchFinalSupplyEquipments}manufacturer=${encodeURIComponent(searchTerm)}`;
+          const response = await client.get(path);
+          return response.data;
+        } catch (error) {
+          console.error('Error fetching manufacturer data:', error);
+          return [];
+        }
       },
-      optionLabel: 'fuelCodes',
+      optionLabel: 'manufacturer',
       title: 'fuelCode'
     }),
     suppressKeyboardEvent,

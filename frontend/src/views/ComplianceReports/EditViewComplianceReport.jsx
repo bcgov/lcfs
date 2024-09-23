@@ -214,6 +214,7 @@ export const EditViewComplianceReport = () => {
               orgName={orgData?.name}
               orgAddress={orgData?.orgAddress}
               orgAttorneyAddress={orgData?.orgAttorneyAddress}
+              isGovernmentUser={isGovernmentUser}
             />
           </Stack>
           {!location.state?.newReport && (
