@@ -371,6 +371,44 @@ def upgrade():
     FOR EACH STATEMENT EXECUTE FUNCTION refresh_mv_org_compliance_report_count();
     """)
 
+    # Create update_organization_balance function
+    op.execute("""
+    CREATE OR REPLACE FUNCTION update_organization_balance()
+    RETURNS TRIGGER AS $$
+    DECLARE
+        new_total_balance BIGINT;
+        new_reserved_balance BIGINT;
+    BEGIN
+        -- Calculate new total balance for specific organization_id
+        SELECT COALESCE(SUM(compliance_units), 0) INTO new_total_balance
+        FROM "transaction"
+        WHERE organization_id = COALESCE(NEW.organization_id, OLD.organization_id)
+        AND transaction_action = 'Adjustment';
+
+        -- Calculate new reserved balance for specific organization_id
+        SELECT COALESCE(SUM(compliance_units), 0) INTO new_reserved_balance
+        FROM "transaction"
+        WHERE organization_id = COALESCE(NEW.organization_id, OLD.organization_id)
+        AND transaction_action = 'Reserved';
+
+        -- Update the organization with the new balances
+        UPDATE organization
+        SET total_balance = new_total_balance,
+            reserved_balance = new_reserved_balance
+        WHERE organization_id = COALESCE(NEW.organization_id, OLD.organization_id);
+
+        RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+    """)
+
+    # Create trigger to update organization balance
+    op.execute("""
+    CREATE TRIGGER update_organization_balance_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON "transaction"
+    FOR EACH ROW EXECUTE FUNCTION update_organization_balance();
+    """)
+
 
 def downgrade():
     # Drop triggers
@@ -388,12 +426,14 @@ def downgrade():
     op.execute("""DROP TRIGGER IF EXISTS refresh_mv_director_review_transaction_count_after_initiative_agreement ON initiative_agreement;""")
     op.execute("""DROP TRIGGER IF EXISTS refresh_mv_director_review_transaction_count_after_admin_adjustment ON admin_adjustment;""")
     op.execute("""DROP TRIGGER IF EXISTS refresh_mv_org_compliance_report_count_after_compliance_report ON compliance_report;""")
+    op.execute("""DROP TRIGGER IF EXISTS update_organization_balance_trigger ON "transaction";""")
 
     # Drop functions
     op.execute("""DROP FUNCTION IF EXISTS refresh_transaction_aggregate();""")
     op.execute("""DROP FUNCTION IF EXISTS refresh_mv_transaction_count();""")
     op.execute("""DROP FUNCTION IF EXISTS refresh_mv_director_review_transaction_count();""")
     op.execute("""DROP FUNCTION IF EXISTS refresh_mv_org_compliance_report_count();""")
+    op.execute("""DROP FUNCTION IF EXISTS update_organization_balance();""")
 
     # Drop materialized views and views
     op.execute("""DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate;""")
