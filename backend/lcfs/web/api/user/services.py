@@ -12,22 +12,25 @@ from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import DataNotFoundException, PermissionDeniedException
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
     PaginationResponseSchema,
+    validate_pagination,
 )
 from lcfs.db.models import UserProfile
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
-    UserHistorySchema,
     UsersSchema,
+    UserActivitySchema,
+    UserActivitiesResponseSchema,
 )
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.user.repo import UserRepository
 from fastapi_cache import FastAPICache
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = getLogger("user_service")
 
@@ -188,13 +191,75 @@ class UserServices:
         return [RoleSchema.model_validate(role.to_dict()) for role in user.user_roles]
 
     @service_handler
-    async def get_user_history(self, user_id: str) -> List[UserHistorySchema]:
+    async def get_user_activities(
+        self, user_id: int, current_user, pagination: PaginationRequestSchema
+    ) -> UserActivitiesResponseSchema:
         """
-        Get user activities
+        Retrieves activities for a specific user with proper permission checks.
         """
-        result = await self.repo.get_user_history(user_id)
-        if len(result) <= 0:
-            raise DataNotFoundException("User history not found")
-        return [
-            UserHistorySchema.model_validate(history._data[0]) for history in result
-        ]
+        # Permission Checks
+        if not await self._has_access_to_user_activities(current_user, user_id):
+            raise PermissionDeniedException("You do not have permission to view this user's activities.")
+
+        pagination = validate_pagination(pagination)
+
+        activities, total_count = await self.repo.get_user_activities_paginated(user_id, pagination)
+        activities_schema = [UserActivitySchema(**activity._asdict()) for activity in activities]
+
+        return UserActivitiesResponseSchema(
+            activities=activities_schema,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            )
+        )
+
+    @service_handler
+    async def get_all_user_activities(
+        self, current_user, pagination: PaginationRequestSchema
+    ) -> UserActivitiesResponseSchema:
+        """
+        Retrieves activities for all users (Administrator role only).
+        """
+        if not any(role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles):
+            raise PermissionDeniedException("You do not have permission to view all user activities.")
+
+        pagination = validate_pagination(pagination)
+
+        activities, total_count = await self.repo.get_all_user_activities_paginated(pagination)
+        activities_schema = [UserActivitySchema(**activity._asdict()) for activity in activities]
+
+        return UserActivitiesResponseSchema(
+            activities=activities_schema,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            )
+        )
+
+    async def _has_access_to_user_activities(self, current_user, target_user_id) -> bool:
+        """
+        Checks if the current user has access to the target user's activities.
+        """
+        target_user = await self.repo.get_user_by_id(target_user_id)
+        if not target_user:
+            return False
+
+        current_user_roles = {role.role.name for role in current_user.user_roles}
+
+        # Administrator users can access any user's activities
+        if RoleEnum.ADMINISTRATOR in current_user_roles:
+            return True
+
+        # Manage Users can access activities of users within the same organization
+        if (
+            RoleEnum.MANAGE_USERS in current_user_roles and
+            current_user.organization_id == target_user.organization_id
+        ):
+            return True
+
+        return False

@@ -1,7 +1,7 @@
 import * as Yup from 'yup'
 
 export const AddEditTransactionSchema = Yup.object({
-  txnType: Yup.string().required('Transaction type is required.'),
+  txnType: Yup.string().required('Transaction type is required'),
   toOrganizationId: Yup.string().required('Organization selection is required'),
   complianceUnits: Yup.number()
     .typeError('Compliance units must be a number')

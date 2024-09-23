@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Users } from './components/Users'
+import { UserActivity } from './components/UserActivity'
 
 function a11yProps(index) {
   return {
@@ -71,7 +72,7 @@ export function AdminMenu({ tabIndex }) {
         <Users />
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={1} component="div" mx={-3}>
-        <>User activity</>
+        <UserActivity />
       </AdminTabPanel>
       <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
         <>Compliance reporting</>
