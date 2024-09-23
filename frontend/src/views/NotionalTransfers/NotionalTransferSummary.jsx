@@ -33,11 +33,31 @@ export const NotionalTransferSummary = ({ data }) => {
   )
 
   const columns = [
-    { headerName: 'Legal name of trading partner', field: 'legalName' },
-    { headerName: 'Address for service', field: 'addressForService' },
-    { headerName: 'Fuel category', field: 'fuelCategory' },
-    { headerName: 'Received OR Transferred', field: 'receivedOrTransferred' },
-    { headerName: 'Quantity (L)', field: 'quantity', valueFormatter }
+    {
+      headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
+      field: 'legalName'
+    },
+    {
+      headerName: t(
+        'notionalTransfer:notionalTransferColLabels.addressForService'
+      ),
+      field: 'addressForService'
+    },
+    {
+      headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
+      field: 'fuelCategory'
+    },
+    {
+      headerName: t(
+        'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
+      ),
+      field: 'receivedOrTransferred'
+    },
+    {
+      headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
+      field: 'quantity',
+      valueFormatter
+    }
   ]
 
   return (
@@ -49,7 +69,7 @@ export const NotionalTransferSummary = ({ data }) => {
           </BCAlert>
         )}
       </div>
-      <BCBox component="div" sx={{ height: '100%', width: '74rem' }}>
+      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey={'notional-transfers'}
           getRowId={getRowId}

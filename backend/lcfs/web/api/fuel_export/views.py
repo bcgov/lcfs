@@ -16,7 +16,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportsSchema,
     FuelExportCreateSchema,
     FuelTypeOptionsResponse,
-    CommmonPaginatedReportRequestSchema,
+    CommonPaginatedReportRequestSchema,
 )
 from lcfs.web.api.fuel_export.services import FuelExportServices
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
@@ -47,7 +47,7 @@ async def get_fuel_export_table_options(
 @view_handler(["*"])
 async def get_fuel_exports(
     request: Request,
-    request_data: CommmonPaginatedReportRequestSchema = Body(...),
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     response: Response = None,
     service: FuelExportServices = Depends(),
 ) -> FuelExportsSchema:

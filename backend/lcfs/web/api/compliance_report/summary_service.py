@@ -554,7 +554,7 @@ class ComplianceReportSummaryService:
             else 0
         )  # line 21
 
-        available_balance_for_period_after_assessment = (  # line 22 = line 17 - line 20
+        available_balance_for_period_after_assessment = (  # line 22 = line 17 + line 20
             max(
                 available_balance_for_period
                 + compliance_unit_balance_change_from_assessment,
