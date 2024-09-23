@@ -55,15 +55,14 @@ export const buttonClusterConfigFn = ({
   setModalData,
   createUpdateTransfer,
   transferData,
-  isGovernmentUser
+  isGovernmentUser,
+  recommendation,
+  signingAuthorityDeclaration
 }) => {
   const toOrganization = toOrgData?.find(
     (org) => org?.organizationId === methods.getValues('toOrganizationId')
   )
   const fromOrgId = methods.getValues('fromOrganizationId')
-  const signingAuthorityDeclaration = methods.watch(
-    'signingAuthorityDeclaration'
-  )
 
   const transferButtons = {
     saveDraft: {
@@ -266,6 +265,7 @@ export const buttonClusterConfigFn = ({
     recommendTransfer: {
       ...containedButton(t('transfer:actionBtns.recommendBtn')),
       id: 'recommend-btn',
+      disabled: !recommendation,
       handler: (formData) =>
         setModalData({
           primaryButtonAction: () =>
@@ -329,7 +329,7 @@ export const buttonClusterConfigFn = ({
     Rescinded: [],
     Declined: [],
     Submitted: [
-      ...(currentUser?.isGovernmentUser && hasRoles(roles.analyst)
+      ...(currentUser?.isGovernmentUser
         ? [transferButtons.saveComment, transferButtons.recommendTransfer]
         : []),
       // Until the transfer is recorded, Org user has ability to rescind transfer

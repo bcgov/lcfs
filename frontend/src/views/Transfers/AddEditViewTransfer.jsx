@@ -135,11 +135,17 @@ export const AddEditViewTransfer = () => {
         pricePerUnit: transferData.pricePerUnit,
         fromOrgComment: transferData.fromOrgComment,
         toOrgComment: transferData.toOrgComment,
-        govComment: transferData.govComment,
+        govComment:
+          methods.getValues().govComment !== ''
+            ? methods.getValues().govComment
+            : transferData.govComment,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
-        recommendation: transferData.recommendation,
+        recommendation:
+          methods.getValues().recommendation !== undefined
+            ? methods.getValues().recommendation
+            : transferData.recommendation,
         signingAuthorityDeclaration:
           methods.getValues().signingAuthorityDeclaration ?? false
       })
@@ -157,7 +163,7 @@ export const AddEditViewTransfer = () => {
     transferId,
     isLoadingError,
     transferData,
-    queryState,
+    queryState.status,
     methods,
     t
   ])
@@ -273,6 +279,11 @@ export const AddEditViewTransfer = () => {
     }
   }, [currentStatus, isGovernmentUser, transferData])
 
+  const recommendation = methods.watch('recommendation')
+  const signingAuthorityDeclaration = methods.watch(
+    'signingAuthorityDeclaration'
+  )
+
   const buttonClusterConfig = useMemo(
     () =>
       buttonClusterConfigFn({
@@ -286,7 +297,9 @@ export const AddEditViewTransfer = () => {
         setModalData,
         createUpdateTransfer,
         transferData,
-        isGovernmentUser
+        isGovernmentUser,
+        recommendation,
+        signingAuthorityDeclaration
       }),
     [
       transferId,
@@ -299,7 +312,9 @@ export const AddEditViewTransfer = () => {
       setModalData,
       createUpdateTransfer,
       transferData,
-      isGovernmentUser
+      isGovernmentUser,
+      recommendation,
+      signingAuthorityDeclaration
     ]
   )
 

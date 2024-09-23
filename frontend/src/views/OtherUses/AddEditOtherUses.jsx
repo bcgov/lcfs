@@ -273,6 +273,7 @@ export const AddEditOtherUses = () => {
           onAction={onAction}
           onCellEditingStopped={onCellEditingStopped}
           showAddRowsButton
+          stopEditingWhenCellsLoseFocus
           saveButtonProps={{
             enabled: true,
             text: t('report:saveReturn'),
