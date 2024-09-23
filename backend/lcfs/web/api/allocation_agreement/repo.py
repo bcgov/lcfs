@@ -75,6 +75,7 @@ class AllocationAgreementRepository:
                 joinedload(AllocationAgreement.compliance_report),
             )
             .where(AllocationAgreement.compliance_report_id == compliance_report_id)
+            .order_by(AllocationAgreement.allocation_agreement_id)
         )
         result = await self.db.execute(query)
         allocation_agreements = result.unique().scalars().all()
