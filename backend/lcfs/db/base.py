@@ -1,8 +1,20 @@
 from sqlalchemy.ext.declarative import AbstractConcreteBase
-from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func, Boolean
+from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func, Boolean, MetaData
 from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+# Define naming conventions for all constraints
+naming_convention = {
+    "ix": "ix_%(table_name)s_%(column_0_name)s",  # Index
+    "uq": "uq_%(table_name)s_%(column_0_name)s",  # Unique constraint
+    "ck": "ck_%(table_name)s_%(constraint_name)s",  # Check constraint
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",  # Foreign key
+    "pk": "pk_%(table_name)s"  # Primary key
+}
+
+# Apply this naming convention to the MetaData object
+metadata = MetaData(naming_convention=naming_convention)
+
+Base = declarative_base(metadata=metadata)
 
 
 class BaseModel(AbstractConcreteBase, Base):
