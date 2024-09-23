@@ -6,10 +6,12 @@ import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { useTranslation } from 'react-i18next'
 
 export const OtherUsesSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const { t } = useTranslation(['common', 'otherUses'])
 
   const { complianceReportId } = useParams()
 
@@ -24,25 +26,37 @@ export const OtherUsesSummary = ({ data }) => {
 
   const columns = [
     {
-      headerName: 'Fuel Type',
+      headerName: t('otherUses:otherUsesColLabels.fuelType'),
       field: 'fuelType',
       floatingFilter: false,
       width: '260px'
     },
     {
-      headerName: 'Fuel Category',
+      headerName: t('otherUses:otherUsesColLabels.fuelCategory'),
       field: 'fuelCategory',
       floatingFilter: false
     },
     {
-      headerName: 'Quantity Supplied',
+      headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
       field: 'quantitySupplied',
       floatingFilter: false,
       valueFormatter
     },
-    { headerName: 'Units', field: 'units', floatingFilter: false },
-    { headerName: 'Expected Use', field: 'expectedUse', floatingFilter: false },
-    { headerName: 'Rationale', field: 'rationale', floatingFilter: false }
+    {
+      headerName: t('otherUses:otherUsesColLabels.units'),
+      field: 'units',
+      floatingFilter: false
+    },
+    {
+      headerName: t('otherUses:otherUsesColLabels.expectedUse'),
+      field: 'expectedUse',
+      floatingFilter: false
+    },
+    {
+      headerName: t('otherUses:otherUsesColLabels.rationale'),
+      field: 'rationale',
+      floatingFilter: false
+    }
   ]
 
   const getRowId = (params) => params.data.otherUsesId
@@ -56,7 +70,7 @@ export const OtherUsesSummary = ({ data }) => {
           </BCAlert>
         )}
       </div>
-      <BCBox component="div" sx={{ height: '100%', width: '75rem' }}>
+      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey={'other-uses'}
           getRowId={getRowId}

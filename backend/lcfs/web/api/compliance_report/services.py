@@ -17,10 +17,6 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.api.compliance_report.summary_service import (
-    ComplianceReportSummaryService,
-)
-from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 
 logger = getLogger(__name__)
 
@@ -31,8 +27,6 @@ class ComplianceReportServices:
     ) -> None:
         self.request = request
         self.repo = repo
-        self.summary_service = ComplianceReportSummaryService()
-        self.update_service = ComplianceReportUpdateService(repo, request)
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:

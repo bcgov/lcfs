@@ -164,7 +164,7 @@ class ComplianceReportSummarySchema(BaseSchema):
     quarter: Optional[int] = None
 
 
-class CommmonPaginatedReportRequestSchema(BaseSchema):
+class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None

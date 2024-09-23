@@ -47,7 +47,7 @@ get_async_db = dependencies.get_async_db_session
 @view_handler(["*"])
 async def get_compliance_periods(
     request: Request, service: ComplianceReportServices = Depends()
-) -> CompliancePeriodSchema:
+) -> list[CompliancePeriodSchema]:
     """
     Get a list of compliance periods
     """
