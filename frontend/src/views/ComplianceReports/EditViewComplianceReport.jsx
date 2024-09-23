@@ -220,7 +220,11 @@ export const EditViewComplianceReport = () => {
           {!location.state?.newReport && (
             <>
               <ReportDetails currentStatus={currentStatus} />
-              <ComplianceReportSummary reportID={complianceReportId} currentStatus={currentStatus} />
+              <ComplianceReportSummary
+                reportID={complianceReportId}
+                currentStatus={currentStatus}
+                compliancePeriodYear={compliancePeriod}
+              />
             </>
           )}
           {!isGovernmentUser && <Introduction expanded={location.state?.newReport} />}
