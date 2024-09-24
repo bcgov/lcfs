@@ -29,7 +29,7 @@ async def test_create_other_use(
         "fuel_type": "Diesel",
         "fuel_category": "Biofuel",
         "expected_use": "Transport",
-        "units": "liters",
+        "units": "litres",
         "rationale": "Initial setup of the other use.",
     }
     response = await client.post(url, json=other_use_payload)

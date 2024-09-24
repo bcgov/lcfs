@@ -1,6 +1,10 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Dict, Any, Tuple
+
+from sqlalchemy.orm import make_transient
+
 from lcfs.web.api.transaction.repo import TransactionRepository
 from sqlalchemy import Float, inspect
 import re
@@ -25,6 +29,8 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
+logger = logging.getLogger(__name__)
+
 
 class ComplianceReportSummaryService:
     def __init__(
@@ -35,7 +41,7 @@ class ComplianceReportSummaryService:
             NotionalTransferServices
         ),
         fuel_supply_repo: FuelSupplyRepository = Depends(FuelSupplyRepository),
-        fuel_export_repo: FuelExportRepository = Depends(FuelExportRepository)
+        fuel_export_repo: FuelExportRepository = Depends(FuelExportRepository),
     ):
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
@@ -45,7 +51,7 @@ class ComplianceReportSummaryService:
 
     def convert_summary_to_dict(
         self, summary_obj: ComplianceReportSummary
-    ) -> Dict[str, Any]:
+    ) -> ComplianceReportSummarySchema:
         """
         Convert a ComplianceReportSummary object to a dictionary representation.
         """
@@ -62,15 +68,10 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
         )
-        FUEL_CATEGORIES = ("gasoline", "diesel", "jet_fuel")
         for column in inspector.mapper.column_attrs:
             match = re.search(r"line_(\d+)_", column.key)
             line = int(match.group(1)) if match else None
-            if (
-                line in range(1, 12)
-                and column.key.endswith(FUEL_CATEGORIES)
-                and not column.key.startswith("line_11_fossil_derived_base_fuel")
-            ):
+            if line in range(1, 12) and line != 11:
                 existing_element = next(
                     (
                         existing
@@ -82,22 +83,29 @@ class ComplianceReportSummaryService:
                 if not existing_element:
                     existing_element = ComplianceReportSummaryRowSchema(
                         line=str(line),
+                        format=None,
                         description=(
                             RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)][
                                 "description"
                             ].format(
-                                "{:,}".format(int(
-                                    summary_obj.line_4_eligible_renewable_fuel_required_gasoline
-                                    * 0.05
-                                )),
-                                "{:,}".format(int(
-                                    summary_obj.line_4_eligible_renewable_fuel_required_diesel
-                                    * 0.05
-                                )),
-                                "{:,}".format(int(
-                                    summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel
-                                    * 0.05
-                                )),
+                                "{:,}".format(
+                                    int(
+                                        summary_obj.line_4_eligible_renewable_fuel_required_gasoline
+                                        * 0.05
+                                    )
+                                ),
+                                "{:,}".format(
+                                    int(
+                                        summary_obj.line_4_eligible_renewable_fuel_required_diesel
+                                        * 0.05
+                                    )
+                                ),
+                                "{:,}".format(
+                                    int(
+                                        summary_obj.line_4_eligible_renewable_fuel_required_jet_fuel
+                                        * 0.05
+                                    )
+                                ),
                             )
                             if (str(line) in ["6", "8"])
                             else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)][
@@ -115,20 +123,21 @@ class ComplianceReportSummaryService:
                 elif column.key.endswith("_jet_fuel"):
                     existing_element.jet_fuel = value
 
-            elif line in range(12, 23) and not column.key.startswith(
-                "line_21_non_compliance_penalty_payable"
-            ):
+            elif line in range(12, 23) and line != 21:
                 summary.low_carbon_fuel_target_summary.append(
                     ComplianceReportSummaryRowSchema(
                         line=str(line),
+                        format=None,
                         description=(
                             LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)][
                                 "description"
                             ].format(
-                                "{:,}".format(int(
-                                    summary_obj.line_21_non_compliance_penalty_payable
-                                    / 600
-                                ))
+                                "{:,}".format(
+                                    int(
+                                        summary_obj.line_21_non_compliance_penalty_payable
+                                        / 600
+                                    )
+                                )
                             )
                             if (str(line) == "21")
                             else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)][
@@ -139,9 +148,7 @@ class ComplianceReportSummaryService:
                         value=int(getattr(summary_obj, column.key) or 0),
                     )
                 )
-            elif (
-                line in [11, 21] or column.key == "total_non_compliance_penalty_payable"
-            ):
+            elif line in [11, 21]:
                 line = "" if line is None else line
                 existing_element = next(
                     (
@@ -154,16 +161,19 @@ class ComplianceReportSummaryService:
                 if not existing_element:
                     existing_element = ComplianceReportSummaryRowSchema(
                         line=str(line),
+                        format="currency",
                         description=(
                             NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)][
                                 "description"
                             ].format(
-                                "{:,}".format(int(
-                                    summary_obj.line_21_non_compliance_penalty_payable
-                                    / 600
-                                ))
+                                "{:,}".format(
+                                    int(
+                                        summary_obj.line_21_non_compliance_penalty_payable
+                                        / 600
+                                    )
+                                )
                             )
-                            if (str(line) == "21")
+                            if line == 21
                             else NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)][
                                 "description"
                             ]
@@ -181,7 +191,7 @@ class ComplianceReportSummaryService:
                 elif column.key.endswith("_jet_fuel"):
                     existing_element.jet_fuel = value
                 elif column.key.endswith("_total"):
-                    existing_element.jet_fuel = value
+                    existing_element.total_value = value
                 else:
                     existing_element.value = value
         return summary
@@ -198,37 +208,34 @@ class ComplianceReportSummaryService:
 
     @service_handler
     async def get_compliance_report_summary(
-        self, summary_id: int
-    ) -> ComplianceReportSummary:
+        self, report_id: int
+    ) -> ComplianceReportSummarySchema:
         """
         Get a specific compliance report summary by its ID.
         """
-        return await self.repo.get_summary_by_id(summary_id)
+        report = await self.repo.get_summary_by_report_id(report_id)
+        return self.map_to_schema(report)
 
     @service_handler
-    async def auto_save_compliance_report_summary(
+    async def update_compliance_report_summary(
         self,
-        reportId: int,
-        summary_id: int,
+        report_id: int,
         summary_data: ComplianceReportSummarySchema,
-        is_edit=True,
     ) -> ComplianceReportSummarySchema:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
-        # TODO recalculate pending penalties for line 21
-        await self.repo.save_compliance_report_summary(summary_id, summary_data)
-        if is_edit:
-            summary_data = await self.calculate_compliance_report_summary(
-                reportId, is_edit=False
-            )
+
+        await self.repo.save_compliance_report_summary(report_id, summary_data)
+        summary_data = await self.calculate_compliance_report_summary(report_id)
+
         return summary_data
 
     @service_handler
     async def calculate_compliance_report_summary(
-        self, report_id: int, is_edit=False
+        self, report_id: int
     ) -> ComplianceReportSummarySchema:
-        """Generate the comprehensive compliance report summary for a specific compliance report by ID."""
+        """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
         # TODO this method will have to be updated to handle supplemental reports
 
         # Fetch the compliance report details
@@ -237,12 +244,14 @@ class ComplianceReportSummaryService:
         )
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
+
         prev_compliance_report = (
             await self.repo.get_assessed_compliance_report_by_period(
                 compliance_report.organization_id,
                 int(compliance_report.compliance_period.description) - 1,
             )
         )
+
         summary_model = compliance_report.summary
 
         # After the report has been submitted, the summary becomes locked
@@ -254,25 +263,11 @@ class ComplianceReportSummaryService:
         compliance_period_end = compliance_report.compliance_period.expiration_date
         organization_id = compliance_report.organization_id
 
-        # Fetch fuel quantities
-        fuel_quantities = await self.repo.calculate_fuel_quantities(report_id)
-        fossil_quantities = fuel_quantities["fossil_fuel_quantities"]
-        renewable_quantities = fuel_quantities["renewable_fuel_quantities"]
-
         # Placeholder values for demonstration purposes
         # need to get these values from the db after fuel supply is implemented
-        if prev_compliance_report is None:
-            previous_retained = {
-                "gasoline": summary_model.line_7_previously_retained_gasoline,
-                "diesel": summary_model.line_7_previously_retained_diesel,
-                "jet_fuel": summary_model.line_7_previously_retained_jet_fuel,
-            }
-            previous_obligation = {
-                "gasoline": summary_model.line_9_obligation_added_gasoline,
-                "diesel": summary_model.line_9_obligation_added_diesel,
-                "jet_fuel": summary_model.line_9_obligation_added_jet_fuel,
-            }
-        else:
+
+        # If report for previous period copy carryover amounts
+        if prev_compliance_report:
             # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
             previous_retained = {
                 "gasoline": prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
@@ -283,6 +278,17 @@ class ComplianceReportSummaryService:
                 "gasoline": prev_compliance_report.summary.line_8_obligation_deferred_gasoline,
                 "diesel": prev_compliance_report.summary.line_8_obligation_deferred_diesel,
                 "jet_fuel": prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel,
+            }
+        else:
+            previous_retained = {
+                "gasoline": summary_model.line_7_previously_retained_gasoline,
+                "diesel": summary_model.line_7_previously_retained_diesel,
+                "jet_fuel": summary_model.line_7_previously_retained_jet_fuel,
+            }
+            previous_obligation = {
+                "gasoline": summary_model.line_9_obligation_added_gasoline,
+                "diesel": summary_model.line_9_obligation_added_diesel,
+                "jet_fuel": summary_model.line_9_obligation_added_jet_fuel,
             }
 
         notional_transfers = (
@@ -302,6 +308,14 @@ class ComplianceReportSummaryService:
                 notional_transfers_sums[normalized_category] += transfer.quantity
             elif transfer.received_or_transferred.lower() == "transferred":
                 notional_transfers_sums[normalized_category] -= transfer.quantity
+
+        # Fetch fuel quantities
+        fossil_quantities = await self.repo.calculate_fuel_quantities(
+            report_id, fossil_derived=True
+        )
+        renewable_quantities = await self.repo.calculate_fuel_quantities(
+            report_id, fossil_derived=False
+        )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities,
@@ -324,6 +338,33 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_payable_units, renewable_fuel_target_summary
         )
 
+        prev_summary = self.convert_summary_to_dict(summary_model)
+
+        summary = self.map_to_schema(
+            compliance_report,
+            low_carbon_fuel_target_summary,
+            non_compliance_penalty_summary,
+            renewable_fuel_target_summary,
+            summary_model,
+        )
+
+        # FIXME: Fix this, equality is always false
+        # The two summaries (one from DB, one calculated) do not currently match
+        if prev_summary != summary:
+            logger.debug("Report has changed, updating summary")
+            await self.repo.save_compliance_report_summary(report_id, summary)
+            return summary
+
+        return prev_summary
+
+    def map_to_schema(
+        self,
+        compliance_report,
+        low_carbon_fuel_target_summary,
+        non_compliance_penalty_summary,
+        renewable_fuel_target_summary,
+        summary_model,
+    ):
         summary = ComplianceReportSummarySchema(
             summary_id=summary_model.summary_id,
             compliance_report_id=compliance_report.compliance_report_id,
@@ -331,13 +372,10 @@ class ComplianceReportSummaryService:
             is_locked=summary_model.is_locked,
             supplemental_report_id=summary_model.supplemental_report_id,
             quarter=summary_model.quarter,
-            # total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
+            total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary,
-        )
-        await self.auto_save_compliance_report_summary(
-            report_id, summary.summary_id, summary, is_edit
         )
         return summary
 
@@ -360,7 +398,7 @@ class ComplianceReportSummaryService:
 
         # line 4
         if 2024 <= compliance_period <= 2027:
-            jet_fuel_percentage = 0 / 100
+            jet_fuel_percentage = 0
         elif compliance_period == 2028:
             jet_fuel_percentage = 1 / 100
         elif compliance_period == 2029:
@@ -380,18 +418,23 @@ class ComplianceReportSummaryService:
         deferred_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            fossil_quantity = fossil_quantities.get(category, 0) or 0
+            required_renewable_quantity = eligible_renewable_fuel_required.get(
+                category, 0
+            )
             renewable_quantity = renewable_quantities.get(category, 0) or 0
-            if fossil_quantity - renewable_quantity < 0:
+
+            # Passes Check, use line 6
+            if renewable_quantity >= required_renewable_quantity:
                 retained_renewables[category] = min(
-                    0.05 * eligible_renewable_fuel_required.get(category, 0),
+                    eligible_renewable_fuel_required.get(category, 0),
                     getattr(
                         summary_model, f"line_6_renewable_fuel_retained_{category}"
                     ),
                 )
-            elif fossil_quantity > 0:
+            # Fails check, use line 8
+            else:
                 deferred_renewables[category] = min(
-                    0.05 * eligible_renewable_fuel_required.get(category, 0),
+                    eligible_renewable_fuel_required.get(category, 0),
                     getattr(summary_model, f"line_8_obligation_deferred_{category}"),
                 )
         # line 10
@@ -498,7 +541,7 @@ class ComplianceReportSummaryService:
                 gasoline=values.get("gasoline", 0),
                 diesel=values.get("diesel", 0),
                 jet_fuel=values.get("jet_fuel", 0),
-                format='currency' if (str(line) == "11") else None
+                format="currency" if (str(line) == "11") else None,
             )
             for line, values in summary_lines.items()
         ]
@@ -599,30 +642,27 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable_units: int,
         renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema],
     ) -> List[ComplianceReportSummaryRowSchema]:
-        non_compliance_penalty_payable = (
-            int((non_compliance_penalty_payable_units * Decimal(-600.0)).max(0))
-            if non_compliance_penalty_payable_units < 0
-            else 0
+        non_compliance_penalty_payable = int(
+            (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
         )
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == "11")
         non_compliance_summary_lines = {
-            "11": {"total_value": line_11.diesel + line_11.gasoline + line_11.jet_fuel},
+            "11": {"total_value": line_11.total_value},
             "21": {"total_value": non_compliance_penalty_payable},
-            "": {"total_value": line_11.diesel + line_11.gasoline + line_11.jet_fuel + non_compliance_penalty_payable},
         }
 
         non_compliance_penalty_summary = [
             ComplianceReportSummaryRowSchema(
                 line=line,
                 description=(
-                    NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)][
+                    NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line][
                         "description"
                     ].format(non_compliance_penalty_payable_units * -1)
                 ),
                 field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["field"],
-                gasoline=values.get("gasoline", None),
-                diesel=values.get("diesel", None),
-                jet_fuel=values.get("jet_fuel", None),
+                gasoline=values.get("gasoline", 0),
+                diesel=values.get("diesel", 0),
+                jet_fuel=values.get("jet_fuel", 0),
                 total_value=values.get("total_value", 0),
                 format="currency",
             )
@@ -781,8 +821,26 @@ class ComplianceReportSummaryService:
 
         return list(effective_exports.values())
 
+    async def are_identical(
+        self,
+        report_id: int,
+        summary_1: ComplianceReportSummarySchema,
+        summary_2: ComplianceReportSummarySchema,
+    ) -> bool:
+        comparison = self.compare_summaries(report_id, summary_1, summary_2)
+
+        # Check if all deltas are zero
+        for field, values in comparison.items():
+            if values["delta"] != 0:
+                return False
+
+        return True
+
     async def compare_summaries(
-        self, report_id: int, summary_1_id: int, summary_2_id: int
+        self,
+        report_id: int,
+        summary_1: ComplianceReportSummarySchema,
+        summary_2: ComplianceReportSummarySchema,
     ) -> Dict[str, Dict[str, Any]]:
         """
         Compare two compliance report summaries and return the values and delta for each field.
@@ -792,13 +850,10 @@ class ComplianceReportSummaryService:
         :param summary_2_id: The ID of the second summary to compare
         :return: A dictionary containing the values and delta for each field
         """
-        summary_1 = await self.repo.get_summary_by_id(summary_1_id)
-        summary_2 = await self.repo.get_summary_by_id(summary_2_id)
-
         if not summary_1 or not summary_2:
             raise ValueError(
                 f"""One or both summaries not found: {
-                             summary_1_id}, {summary_2_id}"""
+                             summary_1.summary_id}, {summary_2.summary_id}"""
             )
 
         if (

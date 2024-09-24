@@ -57,25 +57,23 @@ export const useGetComplianceReportSummary = (reportID, options) => {
 }
 
 export const useUpdateComplianceReportSummary = (
-  complianceReportId,
-  summaryId,
+  reportId,
   options
 ) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const path = apiRoutes.updateComplianceReportSummary
-    .replace(':reportID', complianceReportId)
-    .replace(':summaryID', summaryId)
+    .replace(':reportID', reportId)
   return useMutation({
     ...options,
     mutationFn: async (data) => {
       return await client.put(path, data)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries([
-        'compliance-report-summary',
-        complianceReportId
-      ])
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ['compliance-report-summary', reportId],
+        data.data
+      )
     }
   })
 }

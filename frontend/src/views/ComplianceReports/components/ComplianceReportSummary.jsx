@@ -35,20 +35,16 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
   const { data, isLoading, isError, error } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(
-      data?.complianceReportId,
-      data?.summaryId,
-      {
-        onSuccess: (response) => {
-          setSummaryData(response.data)
-        },
-        onError: (error) => {
-          setAlertMessage(error.message)
-          setAlertSeverity('error')
-          alertRef.current.triggerAlert()
-        }
+    useUpdateComplianceReportSummary(data?.complianceReportId, {
+      onSuccess: (response) => {
+        setSummaryData(response.data)
+      },
+      onError: (error) => {
+        setAlertMessage(error.message)
+        setAlertSeverity('error')
+        alertRef.current.triggerAlert()
       }
-    )
+    })
   useEffect(() => {
     if (data) {
       setSummaryData(data)
