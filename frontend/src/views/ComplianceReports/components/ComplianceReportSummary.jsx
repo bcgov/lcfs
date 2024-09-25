@@ -23,7 +23,7 @@ import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 
-const ComplianceReportSummary = ({ reportID, currentStatus }) => {
+const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -109,7 +109,8 @@ const ComplianceReportSummary = ({ reportID, currentStatus }) => {
               summaryData
                 ? renewableFuelColumns(
                   summaryData?.renewableFuelTargetSummary,
-                  currentStatus === 'Draft'
+                  currentStatus === 'Draft',
+                  compliancePeriodYear
                 )
                 : []
             }

@@ -67,11 +67,30 @@ export const reportsColDefs = (t, bceidRole) => [
   }
 ]
 
-export const renewableFuelColumns = (data, editable) => {
-  // Line 6 & 7: only visible if cells G2, D2, and J2 do not show a balance of zero and there is a surplus above the renewable requirement.
-  // Line 8 & 9: When I am short of my renewable obligation and in a penalty situation,
-  //         then the free text fields in cells G8, D8, and J8 are available for input and I see the fields only if there is a deficiency.
+export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
+  /**
+   * Editable Lines Logic:
+   *
+   * Lines 6 & 7:
+   * - Only visible if cells G2, D2, and J2 do not show a balance of zero and
+   *   there is a surplus above the renewable requirement.
+   *
+   * Lines 8 & 9:
+   * - When I am short of my renewable obligation and in a penalty situation,
+   *   then the free text fields in cells G8, D8, and J8 are available
+   *   for input and I see the fields only if there is a deficiency.
+   *
+   * Line 8:
+   * - Line 8 is editable when Line 2 < Line 4 (indicating a deficiency).
+   * - For Jet Fuel, Line 8 is unavailable until 2028.
+   * - From 2028 onward, Jet Fuel follows the same logic as Gasoline and Diesel.
+   */
+
   let gasolineEditableCells = []
+  let dieselEditableCells = []
+  let jetFuelEditableCells = []
+
+  // ========= Gasoline Logic ============
   if (
     data[SUMMARY.LINE_2].gasoline > 0 &&
     data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
@@ -82,7 +101,21 @@ export const renewableFuelColumns = (data, editable) => {
     data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
   )
     gasolineEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
-  let dieselEditableCells = []
+
+  // Line 8
+  if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
+    // If Line 2 is less than Line 4, ensure Line 8 is available
+    if (!gasolineEditableCells.includes(SUMMARY.LINE_8)) {
+      gasolineEditableCells.push(SUMMARY.LINE_8)
+    }
+  } else {
+    // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
+    gasolineEditableCells = gasolineEditableCells.filter(
+      (line) => line !== SUMMARY.LINE_8
+    )
+  }
+  
+  // ============ Diesel Logic ============
   if (
     data[SUMMARY.LINE_2].diesel > 0 &&
     data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
@@ -93,7 +126,21 @@ export const renewableFuelColumns = (data, editable) => {
     data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
   )
     dieselEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
-  let jetFuelEditableCells = []
+  
+  // Line 8
+  if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
+    // If Line 2 is less than Line 4, ensure Line 8 is available
+    if (!dieselEditableCells.includes(SUMMARY.LINE_8)) {
+      dieselEditableCells.push(SUMMARY.LINE_8)
+    }
+  } else {
+    // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
+    dieselEditableCells = dieselEditableCells.filter(
+      (line) => line !== SUMMARY.LINE_8
+    )
+  }
+  
+  // ============ Jet Fuel Logic ============
   if (
     data[SUMMARY.LINE_2].jetFuel > 0 &&
     data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
@@ -104,6 +151,27 @@ export const renewableFuelColumns = (data, editable) => {
     data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
   )
     jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
+  
+
+  // Line 8
+  if (compliancePeriodYear >= 2028) {
+    if (data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel) {
+      // If Line 2 is less than Line 4, ensure Line 8 is available
+      if (!jetFuelEditableCells.includes(SUMMARY.LINE_8)) {
+        jetFuelEditableCells.push(SUMMARY.LINE_8)
+      }
+    } else {
+      // If Line 2 meets or exceeds Line 4, remove Line 8 if it's there
+      jetFuelEditableCells = jetFuelEditableCells.filter(
+        (line) => line !== SUMMARY.LINE_8
+      )
+    }
+  } else {
+    // Before 2028, Line 8 is unavailable for Jet Fuel
+    jetFuelEditableCells = jetFuelEditableCells.filter(
+      (line) => line !== SUMMARY.LINE_8
+    )
+  }
 
   return [
     { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
