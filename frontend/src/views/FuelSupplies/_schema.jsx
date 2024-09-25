@@ -8,7 +8,10 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { StandardCellErrors, StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import {
+  StandardCellErrors,
+  StandardCellWarningAndErrors
+} from '@/utils/grid/errorRenderers'
 
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,
@@ -54,7 +57,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 100,
     valueFormatter,
     editable: false,
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'fuelType',
@@ -71,7 +75,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -129,7 +134,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -191,7 +197,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     valueGetter: (params) => {
       return params.colDef?.cellEditorParams(params).options.length < 1
@@ -233,7 +240,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         ?.provisions.map((item) => item.name)
         .sort()
     }),
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -317,7 +325,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'units',
@@ -348,7 +357,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'targetCi',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -360,7 +370,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
         return optionsData?.fuelTypes
@@ -410,7 +421,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'eer',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -420,7 +432,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUseType
+            item.endUseType?.type === params.data.endUseType.type
         )
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(
@@ -434,7 +446,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'energy',
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     valueFormatter,
     minWidth: 100,

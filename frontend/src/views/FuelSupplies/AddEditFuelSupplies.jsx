@@ -171,7 +171,7 @@ export const AddEditFuelSupplies = () => {
             (item) =>
               item.fuelCategory.fuelCategory ===
                 params.node.data.fuelCategory &&
-              item.endUseType?.type === params.node.data.endUse
+              item.endUseType?.type === params.node.data.endUseType.type
           )?.energyEffectivenessRatio
         if (!eer) {
           eer = eerOptions?.eerRatios?.find(
