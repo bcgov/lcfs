@@ -432,7 +432,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUseType.type
+            item.endUseType?.type === params.data.endUseType?.type
         )
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(
