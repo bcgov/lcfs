@@ -50,6 +50,7 @@ class NotionalTransferRepository:
             select(NotionalTransfer)
             .options(joinedload(NotionalTransfer.fuel_category))
             .where(NotionalTransfer.compliance_report_id == compliance_report_id)
+            .order_by(NotionalTransfer.notional_transfer_id)
         )
         result = await self.db.execute(query)
         notional_transfers = result.unique().scalars().all()

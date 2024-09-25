@@ -175,7 +175,7 @@ class FuelSupplyRepository:
         """
         query = self.query.where(
             FuelSupply.compliance_report_id == compliance_report_id
-        )
+        ).order_by(FuelSupply.fuel_supply_id)
         results = (await self.db.execute(query)).unique().scalars().all()
         return results
 

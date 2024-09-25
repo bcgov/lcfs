@@ -127,6 +127,7 @@ class FinalSupplyEquipmentRepository:
                 joinedload(FinalSupplyEquipment.level_of_equipment),
             )
             .where(FinalSupplyEquipment.compliance_report_id == report_id)
+            .order_by(FinalSupplyEquipment.final_supply_equipment_id)
         )
         return result.unique().scalars().all()
 
