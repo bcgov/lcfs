@@ -4,6 +4,7 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "LCFS - pytests",
       "type": "debugpy",
@@ -73,6 +74,16 @@
       "url": "http://localhost:6006",
       "webRoot": "${workspaceFolder}/frontend",
       "sourceMaps": true,
+    },
+    {
+      "name": "Bash",
+      "type": "bashdb",
+      "request": "launch",
+      "program": "${workspaceFolder}/etl/data-transfer.sh",
+      "args": ["tfrs", "prod", "import", "0f0d2a03e06a2c078632c08133dcf1e01ccc435c36ef229df6d7353266debb40"],
+      "env": {},
+      "terminalKind": "integrated"
     }
+       
   ]
 }
