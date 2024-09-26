@@ -4,6 +4,8 @@ from datetime import datetime
 import pytest
 from httpx import AsyncClient
 from fastapi import FastAPI, status
+
+from lcfs.db.models import ComplianceReportSummary
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -23,9 +25,9 @@ async def test_get_compliance_periods_for_idir_users(
 ) -> None:
     set_mock_user_roles(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_compliance_periods")
-    reposnse = await client.get(url)
-    assert reposnse.status_code == status.HTTP_200_OK
-    assert reposnse.content
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content
 
 
 @pytest.mark.anyio
@@ -34,9 +36,9 @@ async def test_get_compliance_periods_for_bceid_users(
 ) -> None:
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_compliance_periods")
-    reposnse = await client.get(url)
-    assert reposnse.status_code == status.HTTP_200_OK
-    assert reposnse.content
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content
 
 
 @pytest.mark.anyio
@@ -45,9 +47,9 @@ async def test_get_fse_options(
 ) -> None:
     set_mock_user_roles(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_fse_options")
-    reposnse = await client.get(url)
-    assert reposnse.status_code == status.HTTP_200_OK
-    assert reposnse.content
+    response = await client.get(url)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content
 
 
 @pytest.mark.anyio
@@ -122,6 +124,11 @@ async def test_get_compliance_report_summary_line_1(
         current_status_id=6,  # Recorded
     )
 
+    compliance_report_summary = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=1,
+    )
+
     expected_use_type = ExpectedUseType(
         expected_use_type_id=1,
         name="Heating Oil",
@@ -134,6 +141,7 @@ async def test_get_compliance_report_summary_line_1(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=16,  # Fossil-derived diesel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply2 = FuelSupply(
@@ -142,6 +150,7 @@ async def test_get_compliance_report_summary_line_1(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=17,  # Fossil-derived gasoline
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply3 = FuelSupply(
@@ -150,6 +159,7 @@ async def test_get_compliance_report_summary_line_1(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=1,  # Biodiesel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply4 = FuelSupply(
@@ -158,6 +168,7 @@ async def test_get_compliance_report_summary_line_1(
         fuel_category_id=2,  # Diesel
         fuel_type_id=17,  # Fossil-derived gasoline
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply5 = FuelSupply(
@@ -166,6 +177,7 @@ async def test_get_compliance_report_summary_line_1(
         fuel_category_id=3,  # Jet fuel
         fuel_type_id=18,  # Fossil-derived jet fuel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     other_uses1 = OtherUses(
@@ -216,6 +228,7 @@ async def test_get_compliance_report_summary_line_1(
     await add_models(
         [
             compliance_report,
+            compliance_report_summary,
             expected_use_type,
             fuel_supply1,
             fuel_supply2,
@@ -244,18 +257,24 @@ async def test_get_compliance_report_summary_line_1(
     assert "renewableFuelTargetSummary" in content
 
     renewable_fuel_target_summary = content["renewableFuelTargetSummary"]
-    assert any(
-        row["line"] == "1" and row["gasoline"] == 400
-        for row in renewable_fuel_target_summary
+
+    line_1_row = next(
+        (row for row in renewable_fuel_target_summary if row["line"] == "1"), None
     )
-    assert any(
-        row["line"] == "1" and row["diesel"] == 200
-        for row in renewable_fuel_target_summary
-    )
-    assert any(
-        row["line"] == "1" and row["jetFuel"] == 200
-        for row in renewable_fuel_target_summary
-    )
+
+    if line_1_row is None:
+        raise AssertionError(
+            f"No row found with line='1'. Actual data: {renewable_fuel_target_summary}"
+        )
+
+    expected_values = {"gasoline": 400, "diesel": 200, "jetFuel": 200}
+
+    for field, expected_value in expected_values.items():
+        actual_value = line_1_row.get(field)
+        assert actual_value == expected_value, (
+            f"Mismatch for {field}. Expected: {expected_value}, Got: {actual_value}. "
+            f"Row data: {line_1_row}"
+        )
 
 
 @pytest.mark.anyio
@@ -267,6 +286,11 @@ async def test_get_compliance_report_summary_line_2(
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
         current_status_id=6,  # Recorded
+    )
+
+    compliance_report_summary = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=1,
     )
 
     expected_use_type = ExpectedUseType(
@@ -299,7 +323,7 @@ async def test_get_compliance_report_summary_line_2(
     )
 
     allocation_transaction_type = AllocationTransactionType(
-        allocation_transaction_type_id=1, type="Allocation", description="Allocation"
+        allocation_transaction_type_id=3, type="Allocation", description="Allocation"
     )
 
     fuel_supply1 = FuelSupply(
@@ -308,6 +332,7 @@ async def test_get_compliance_report_summary_line_2(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=1,  # Biodiesel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply2 = FuelSupply(
@@ -316,6 +341,7 @@ async def test_get_compliance_report_summary_line_2(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=17,  # Fossil-derived gasoline
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply3 = FuelSupply(
@@ -324,6 +350,7 @@ async def test_get_compliance_report_summary_line_2(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=2,  # CNG
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply4 = FuelSupply(
@@ -332,6 +359,7 @@ async def test_get_compliance_report_summary_line_2(
         fuel_category_id=2,  # Diesel
         fuel_type_id=2,  # CNG
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply5 = FuelSupply(
@@ -340,6 +368,7 @@ async def test_get_compliance_report_summary_line_2(
         fuel_category_id=3,  # Jet fuel
         fuel_type_id=18,  # Fossil-derived jet fuel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     other_uses1 = OtherUses(
@@ -388,68 +417,94 @@ async def test_get_compliance_report_summary_line_2(
     )
 
     allocation_agreement1 = AllocationAgreement(
+        allocation_agreement_id=1,
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
+        transaction_partner_email="email",
+        transaction_partner_phone="phone",
         fuel_type_id=14,  # Renewable gasoline
-        allocation_transaction_type_id=1,
+        allocation_transaction_type_id=3,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
         quantity=100,
+        units="Litres",
+        ci_of_fuel=1.0,
     )
 
     allocation_agreement2 = AllocationAgreement(
+        allocation_agreement_id=2,
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
+        transaction_partner_email="email",
+        transaction_partner_phone="phone",
         fuel_type_id=14,  # Renewable gasoline
-        allocation_transaction_type_id=1,
+        allocation_transaction_type_id=3,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
         quantity=100,
+        units="Litres",
+        ci_of_fuel=1.0,
     )
 
     allocation_agreement3 = AllocationAgreement(
+        allocation_agreement_id=3,
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
+        transaction_partner_email="email",
+        transaction_partner_phone="phone",
         fuel_type_id=13,  # Propane
-        allocation_transaction_type_id=1,
+        allocation_transaction_type_id=3,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
         quantity=100,
+        units="Litres",
+        ci_of_fuel=1.0,
     )
 
     allocation_agreement4 = AllocationAgreement(
+        allocation_agreement_id=4,
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
+        transaction_partner_email="email",
+        transaction_partner_phone="phone",
         fuel_type_id=1,  # Biodiesel
-        allocation_transaction_type_id=1,
+        allocation_transaction_type_id=3,
         fuel_category_id=1,  # Gasoline
         provision_of_the_act_id=1,
         fuel_code_id=1,
         quantity=100,
+        units="Litres",
+        ci_of_fuel=1.0,
     )
 
     allocation_agreement5 = AllocationAgreement(
+        allocation_agreement_id=5,
         compliance_report_id=1,
         transaction_partner="1",
         postal_address="address",
+        transaction_partner_email="email",
+        transaction_partner_phone="phone",
         fuel_type_id=1,  # Biodiesel
-        allocation_transaction_type_id=1,
+        allocation_transaction_type_id=3,
         fuel_category_id=3,  # Jet fuel
         provision_of_the_act_id=1,
         fuel_code_id=1,
         quantity=100,
+        units="Litres",
+        ci_of_fuel=1.0,
     )
 
     await add_models(
         [
             compliance_report,
+            compliance_report_summary,
             expected_use_type,
             fuel_code,
             allocation_transaction_type,
@@ -485,18 +540,24 @@ async def test_get_compliance_report_summary_line_2(
     assert "renewableFuelTargetSummary" in content
 
     renewable_fuel_target_summary = content["renewableFuelTargetSummary"]
-    assert any(
-        row["line"] == "2" and row["gasoline"] == 400
-        for row in renewable_fuel_target_summary
+
+    line_2_row = next(
+        (row for row in renewable_fuel_target_summary if row["line"] == "2"), None
     )
-    assert any(
-        row["line"] == "2" and row["diesel"] == 300
-        for row in renewable_fuel_target_summary
-    )
-    assert any(
-        row["line"] == "2" and row["jetFuel"] == 500
-        for row in renewable_fuel_target_summary
-    )
+
+    if line_2_row is None:
+        raise AssertionError(
+            f"No row found with line='2'. Actual data: {renewable_fuel_target_summary}"
+        )
+
+    expected_values_line_2 = {"gasoline": 400, "diesel": 300, "jetFuel": 500}
+
+    for field, expected_value in expected_values_line_2.items():
+        actual_value = line_2_row.get(field)
+        assert actual_value == expected_value, (
+            f"Mismatch for {field} in line 2. Expected: {expected_value}, Got: {actual_value}. "
+            f"Row data: {line_2_row}"
+        )
 
 
 @pytest.mark.anyio
@@ -510,12 +571,18 @@ async def test_get_compliance_report_summary_line_3(
         current_status_id=6,  # Recorded
     )
 
+    compliance_report_summary = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=1,
+    )
+
     fuel_supply1 = FuelSupply(
         compliance_report_id=1,
         quantity=100,
         fuel_category_id=1,  # Gasoline
         fuel_type_id=1,  # Biodiesel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply2 = FuelSupply(
@@ -524,6 +591,7 @@ async def test_get_compliance_report_summary_line_3(
         fuel_category_id=1,  # Gasoline
         fuel_type_id=17,  # Fossil-derived gasoline
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply3 = FuelSupply(
@@ -532,6 +600,7 @@ async def test_get_compliance_report_summary_line_3(
         fuel_category_id=2,  # Diesel
         fuel_type_id=1,  # Biodiesel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply4 = FuelSupply(
@@ -540,6 +609,7 @@ async def test_get_compliance_report_summary_line_3(
         fuel_category_id=2,  # Diesel
         fuel_type_id=17,  # Fossil-derived gasoline
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply5 = FuelSupply(
@@ -548,6 +618,7 @@ async def test_get_compliance_report_summary_line_3(
         fuel_category_id=3,  # Jet fuel
         fuel_type_id=1,  # Biodiesel
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     fuel_supply6 = FuelSupply(
@@ -556,11 +627,13 @@ async def test_get_compliance_report_summary_line_3(
         fuel_category_id=3,  # Jet fuel
         fuel_type_id=17,  # Fossil-derived gasoline
         provision_of_the_act_id=1,
+        units="Litres",
     )
 
     await add_models(
         [
             compliance_report,
+            compliance_report_summary,
             fuel_supply1,
             fuel_supply2,
             fuel_supply3,
@@ -584,18 +657,23 @@ async def test_get_compliance_report_summary_line_3(
     assert "renewableFuelTargetSummary" in content
 
     renewable_fuel_target_summary = content["renewableFuelTargetSummary"]
-    assert any(
-        row["line"] == "3" and row["gasoline"] == 200
-        for row in renewable_fuel_target_summary
+    line_3_row = next(
+        (row for row in renewable_fuel_target_summary if row["line"] == "3"), None
     )
-    assert any(
-        row["line"] == "3" and row["diesel"] == 200
-        for row in renewable_fuel_target_summary
-    )
-    assert any(
-        row["line"] == "3" and row["jetFuel"] == 200
-        for row in renewable_fuel_target_summary
-    )
+
+    if line_3_row is None:
+        raise AssertionError(
+            f"No row found with line='3'. Actual data: {renewable_fuel_target_summary}"
+        )
+
+    expected_values_line_3 = {"gasoline": 200, "diesel": 200, "jetFuel": 200}
+
+    for field, expected_value in expected_values_line_3.items():
+        actual_value = line_3_row.get(field)
+        assert actual_value == expected_value, (
+            f"Mismatch for {field} in line 3. Expected: {expected_value}, Got: {actual_value}. "
+            f"Row data: {line_3_row}"
+        )
 
 
 @pytest.mark.anyio
@@ -603,9 +681,15 @@ async def test_get_compliance_report_summary_line_12(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
 ):
     compliance_report = ComplianceReport(
+        compliance_report_id=1,
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
         current_status_id=6,  # Recorded
+    )
+
+    compliance_report_summary = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=1,
     )
 
     transfer_out1 = Transfer(
@@ -672,6 +756,7 @@ async def test_get_compliance_report_summary_line_12(
     await add_models(
         [
             compliance_report,
+            compliance_report_summary,
             transfer_out1,
             transfer_out2,
             transfer_out3,
@@ -706,9 +791,15 @@ async def test_get_compliance_report_summary_line_13(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
 ):
     compliance_report = ComplianceReport(
+        compliance_report_id=13,
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
         current_status_id=6,  # Recorded
+    )
+
+    compliance_report_summary = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=13,
     )
 
     transfer_in1 = Transfer(
@@ -775,6 +866,7 @@ async def test_get_compliance_report_summary_line_13(
     await add_models(
         [
             compliance_report,
+            compliance_report_summary,
             transfer_in1,
             transfer_in2,
             transfer_in3,
@@ -809,9 +901,15 @@ async def test_get_compliance_report_summary_line_14(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, add_models
 ):
     compliance_report = ComplianceReport(
+        compliance_report_id=14,
         compliance_period_id=15,  # 2024
         organization_id=1,  # LCFS Org 1
         current_status_id=6,  # Recorded
+    )
+
+    compliance_report_summary = ComplianceReportSummary(
+        summary_id=1,
+        compliance_report_id=14,
     )
 
     issued_units1 = InitiativeAgreement(
@@ -853,6 +951,7 @@ async def test_get_compliance_report_summary_line_14(
     await add_models(
         [
             compliance_report,
+            compliance_report_summary,
             issued_units1,
             issued_units2,
             issued_units3,
