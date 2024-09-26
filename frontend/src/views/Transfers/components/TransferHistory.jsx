@@ -20,6 +20,10 @@ function TransferHistory({ transferHistory }) {
 
   const { t } = useTranslation(['common', 'transfer'])
 
+  if (!transferData) {
+    return null
+  }
+
   const getTransferStatusLabel = (status) => {
     const basePath = 'transfer:transferHistory'
     const statusNotFound = 'Status not found'
@@ -39,13 +43,15 @@ function TransferHistory({ transferHistory }) {
     A: 6,
     B: 12
   }
-  const currentStatus = transferData?.currentStatus.status
-  const agreementDate = dayjs(transferData.agreementDate)
+  const currentStatus = transferData?.currentStatus?.status
+  const agreementDate = transferData?.agreementDate
+    ? dayjs(transferData.agreementDate)
+    : null
   const today = dayjs().subtract(1, 'day')
-  const diff = dayjs.duration(today.diff(agreementDate))
-  const diffYears = diff.years()
-  const diffMonths = diff.months()
-  const diffDays = diff.days()
+  const diff = agreementDate ? dayjs.duration(today.diff(agreementDate)) : null
+  const diffYears = diff?.years() || 0
+  const diffMonths = diff?.months() || 0
+  const diffDays = diff?.days() || 0
 
   let category = 'A'
   if (
@@ -68,50 +74,51 @@ function TransferHistory({ transferHistory }) {
             TRANSFER_STATUSES.SENT,
             TRANSFER_STATUSES.SUBMITTED,
             TRANSFER_STATUSES.RECOMMENDED,
-            TRANSFER_STATUSES.RECORDED
-          ].includes(currentStatus) && (
-            <li>
-              <Typography variant="body2" component="div">
-                <span>
-                  Date of written agreement reached between the two
-                  organizations: {agreementDate.format('LL')} (proposal falls
-                  under{' '}
-                  <strong>
-                    Category{' '}
-                    {transferData.transferCategory?.category ?? category}
-                  </strong>
-                  {!transferData.transferCategory?.category &&
-                    (category === 'A' || category === 'B') && (
-                      <>
-                        {' '}
-                        if approved by:{' '}
-                        <strong>
-                          {agreementDate
-                            .add(dateCutoffMonths[category], 'M')
-                            .format('LL')}
-                        </strong>
-                      </>
-                    )}
-                  )
-                </span>
-              </Typography>
-            </li>
-          )}
+            TRANSFER_STATUSES.RECORDED,
+          ].includes(currentStatus) &&
+            agreementDate && (
+              <li>
+                <Typography variant="body2" component="div">
+                  <span>
+                    Date of written agreement reached between the two
+                    organizations: {agreementDate.format('LL')} (proposal falls
+                    under{' '}
+                    <strong>
+                      Category{' '}
+                      {transferData.transferCategory?.category ?? category}
+                    </strong>
+                    {!transferData.transferCategory?.category &&
+                      (category === 'A' || category === 'B') && (
+                        <>
+                          {' '}
+                          if approved by:{' '}
+                          <strong>
+                            {agreementDate
+                              .add(dateCutoffMonths[category], 'M')
+                              .format('LL')}
+                          </strong>
+                        </>
+                      )}
+                    )
+                  </span>
+                </Typography>
+              </li>
+            )}
           {transferHistory?.map((item, index) => (
-            <li key={item.transferStatus.transferStatusId + index}>
+            <li key={(item.transferStatus?.transferStatusId || index) + index}>
               <Typography variant="body2" component="div">
-                <b>{getTransferStatusLabel(item.transferStatus.status)}</b>{' '}
+                <b>{getTransferStatusLabel(item.transferStatus?.status)}</b>{' '}
                 <span> on </span>
                 {dayjs(item.createDate).format('LL')}
                 <span> by </span>
                 <strong>
                   {' '}
-                  {item.userProfile.firstName} {item.userProfile.lastName}
+                  {item.userProfile?.firstName} {item.userProfile?.lastName}
                 </strong>{' '}
                 <span> of </span>
                 <strong>
                   {' '}
-                  {item.userProfile.organization
+                  {item.userProfile?.organization
                     ? item.userProfile.organization.name
                     : t('govOrg')}{' '}
                 </strong>

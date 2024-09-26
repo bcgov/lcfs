@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { LabelBox } from '../LabelBox'
 import { wrapper } from '@/tests/utils/wrapper'
 
-describe('LabelBox', () => {
+describe('LabelBox Component', () => {
   test('renders correctly with label and description', () => {
     render(
       <LabelBox label="Test Label" description="Test Description">
