@@ -112,5 +112,9 @@ class ComplianceReport(BaseModel, Auditable):
         "ComplianceReportInternalComment", back_populates="compliance_report"
     )
 
+    documents = relationship(
+        "Document", back_populates="compliance_report", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
         return f"<ComplianceReport(id={self.compliance_report_id}, nickname={self.nickname})>"

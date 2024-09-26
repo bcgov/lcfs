@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType

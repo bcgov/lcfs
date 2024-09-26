@@ -78,17 +78,80 @@ export const useUpdateComplianceReportSummary = (
   })
 }
 
-export const useUpdateComplianceReport = (reportId, options) => {
+export const useUpdateComplianceReport = (reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.updateComplianceReport.replace(':reportID', reportID)
+
+  return useMutation({
+    ...options,
+    mutationFn: async (data) => {
+      return await client.put(path, data)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['compliance-report', reportID])
+    }
+  })
+}
+
+export const useComplianceReportDocuments = (reportID, options) => {
+  const client = useApiService()
+  const path = apiRoutes.getComplianceReportDocuments.replace(
+    ':reportID',
+    reportID
+  )
+
+  return useQuery({
+    queryKey: ['compliance-report-documents', reportID],
+    queryFn: async () => {
+      const res = await client.get(path)
+      return res.data
+    },
+    ...options
+  })
+}
+
+export const useUploadComplianceReportDocument = (reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.getComplianceReportDocuments.replace(
+    ':reportID',
+    reportID
+  )
+
+  return useMutation({
+    ...options,
+    mutationFn: async (file) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('filename', file.name)
+
+      return await client.post(path, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['compliance-report-documents', reportID])
+    }
+  })
+}
+
+export const useDeleteComplianceReportDocument = (reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
     ...options,
-    mutationFn: async (data) => {
-      return await client.put(`/reports/${reportId}`, data)
+    mutationFn: async (documentID) => {
+      const path = apiRoutes.getComplianceReportDocumentUrl
+        .replace(':reportID', reportID)
+        .replace(':documentID', documentID)
+      return await client.delete(path)
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['compliance-report', reportId])
+      queryClient.invalidateQueries(['compliance-report-documents', reportID])
     }
   })
 }

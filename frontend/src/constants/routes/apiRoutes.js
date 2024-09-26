@@ -36,8 +36,12 @@ export const apiRoutes = {
   getAllOtherUses: '/other-uses/list-all',
   otherUsesOptions: '/other-uses/table-options',
   getComplianceReport: '/reports/:reportID',
+  updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  getComplianceReportDocuments: '/reports/:reportID/files',
+  updateComplianceReportDocuments: '/reports/:reportID/files',
+  getComplianceReportDocumentUrl: '/reports/:reportID/files/:documentID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
   getOrgComplianceReportReportedYears:

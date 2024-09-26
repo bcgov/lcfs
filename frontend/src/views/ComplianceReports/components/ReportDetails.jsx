@@ -7,7 +7,8 @@ import {
   AccordionDetails,
   Typography,
   Link,
-  CircularProgress
+  CircularProgress,
+  IconButton
 } from '@mui/material'
 import { faPen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -28,11 +29,17 @@ import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
+import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
+import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import Button from '@mui/material/Button'
 
 const ReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
+
+  const [isFileDialogOpen, setFileDialogOpen] = useState(false)
 
   const isArrayEmpty = useCallback((data) => {
     if (Array.isArray(data)) {
@@ -50,105 +57,101 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
 
   const activityList = useMemo(
     () => [
-      ...(currentStatus === 'Draft'
-        ? [
-            {
-              name: t('report:supportingDocs'),
-              action: () => console.log('clicked on supporting documents'),
-              useFetch: async () => ({
-                data: [],
-                isLoading: false,
-                isError: false,
-                isFetched: true
-              }),
-              component: (data) => <>Coming soon...</>
-            }
-          ]
-        : []),
-      ...[
-        {
-          name: t('report:activityLists.supplyOfFuel'),
-          action: () =>
-            navigate(
-              ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            ),
-          useFetch: useGetFuelSupplies,
-          component: (data) =>
-            data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
+      {
+        name: t('report:supportingDocs'),
+        action: (e) => {
+          e.stopPropagation()
+          setFileDialogOpen(true)
         },
-        {
-          name: t('finalSupplyEquipment:fseTitle'),
-          action: () =>
-            navigate(
-              ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            ),
-          useFetch: useGetFinalSupplyEquipments,
-          component: (data) =>
-            data.finalSupplyEquipments.length > 0 && (
-              <FinalSupplyEquipmentSummary data={data} />
-            )
-        },
-        {
-          name: t('report:activityLists.allocationAgreements'),
-          action: () =>
-            navigate(
-              ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            ),
-          useFetch: useGetAllocationAgreements,
-          component: (data) =>
-            data.allocationAgreements.length > 0 && (
-              <AllocationAgreementSummary data={data} />
-            )
-        },
-        {
-          name: t('report:activityLists.notionalTransfers'),
-          action: () =>
-            navigate(
-              ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            ),
-          useFetch: useGetAllNotionalTransfers,
-          component: (data) =>
-            data.length > 0 && <NotionalTransferSummary data={data} />
-        },
-        {
-          name: t('otherUses:summaryTitle'),
-          action: () =>
-            navigate(
-              ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            ),
-          useFetch: useGetAllOtherUses,
-          component: (data) =>
-            data.length > 0 && <OtherUsesSummary data={data} />
-        },
-        {
-          name: t('fuelExport:fuelExportTitle'),
-          action: () =>
-            navigate(
-              ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            ),
-          useFetch: useGetFuelExports,
-          component: (data) =>
-            !isArrayEmpty(data) && <FuelExportSummary data={data} />
-        }
-      ]
+        useFetch: useComplianceReportDocuments,
+        component: (data) => (
+          <SupportingDocumentSummary
+            data={data}
+            reportId={complianceReportId}
+          />
+        )
+      },
+      {
+        name: t('report:activityLists.supplyOfFuel'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetFuelSupplies,
+        component: (data) =>
+          data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
+      },
+      {
+        name: t('finalSupplyEquipment:fseTitle'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetFinalSupplyEquipments,
+        component: (data) =>
+          data.finalSupplyEquipments.length > 0 && (
+            <FinalSupplyEquipmentSummary data={data} />
+          )
+      },
+      {
+        name: t('report:activityLists.allocationAgreements'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetAllocationAgreements,
+        component: (data) =>
+          data.allocationAgreements.length > 0 && (
+            <AllocationAgreementSummary data={data} />
+          )
+      },
+      {
+        name: t('report:activityLists.notionalTransfers'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetAllNotionalTransfers,
+        component: (data) =>
+          data.length > 0 && <NotionalTransferSummary data={data} />
+      },
+      {
+        name: t('otherUses:summaryTitle'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetAllOtherUses,
+        component: (data) => data.length > 0 && <OtherUsesSummary data={data} />
+      },
+      {
+        name: t('fuelExport:fuelExportTitle'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetFuelExports,
+        component: (data) =>
+          !isArrayEmpty(data) && <FuelExportSummary data={data} />
+      }
     ],
     [
       currentStatus,
@@ -221,7 +224,12 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
                 id={`panel${index}-header`}
                 data-test={`panel${index}-summary`}
               >
-                <Typography variant="h6" color="primary" component="div">
+                <Typography
+                  style={{ display: 'flex', alignItems: 'center' }}
+                  variant="h6"
+                  color="primary"
+                  component="div"
+                >
                   {activity.name}&nbsp;&nbsp;
                   {currentStatus === 'Draft' && (
                     <>
@@ -232,12 +240,17 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
                           roles.compliance_reporting
                         ]}
                       >
-                        <FontAwesomeIcon
-                          component="div"
-                          icon={faPen}
-                          size={'sm'}
+                        <IconButton
+                          color="primary"
+                          size="small"
+                          aria-label="edit"
                           onClick={activity.action}
-                        />
+                        >
+                          <FontAwesomeIcon
+                            className="small-icon"
+                            icon={faPen}
+                          />
+                        </IconButton>
                       </Role>
                     </>
                   )}
@@ -258,6 +271,13 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           )
         )
       })}
+      <DocumentUploadDialog
+        reportID={complianceReportId}
+        open={isFileDialogOpen}
+        close={() => {
+          setFileDialogOpen(false)
+        }}
+      />
     </>
   )
 }

@@ -13,8 +13,7 @@ import { Close, Warning } from '@mui/icons-material'
 import BCButton from './BCButton'
 import colors from '@/themes/base/colors'
 
-const BCModal = (props) => {
-  const { open, onClose, data = null } = props
+const BCModal = ({ open, onClose, data = null }) => {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
@@ -83,7 +82,7 @@ const BCModal = (props) => {
       <DialogContent>{content}</DialogContent>
       <Divider />
       <DialogActions>
-        <BCButton
+        {secondaryButtonText && <BCButton
           variant="outlined"
           id={
             'modal-btn-' +
@@ -93,7 +92,7 @@ const BCModal = (props) => {
           onClick={secondaryButtonAction ?? onClose}
         >
           {secondaryButtonText}
-        </BCButton>
+        </BCButton>}
         {customButtons}
         <BCButton
           variant="contained"
