@@ -1,3 +1,4 @@
+version: '3'
 services:
   db:
     container_name: db
@@ -11,6 +12,8 @@ services:
       - 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - shared_network
 
   redis:
     container_name: redis
@@ -22,6 +25,8 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/bitnami/redis/data
+    networks:
+      - shared_network
 
   backend:
     container_name: backend
@@ -52,6 +57,8 @@ services:
     depends_on:
       - db
       - redis
+    networks:
+      - shared_network
 
   frontend:
     container_name: frontend
@@ -69,6 +76,8 @@ services:
       - type: volume
         source: node_modules
         target: /app/node_modules
+    networks:
+      - shared_network
 
 volumes:
   postgres_data:
@@ -77,3 +86,7 @@ volumes:
     name: lcfs_redis_data
   node_modules:
     name: lcfs_node_data
+
+networks:
+  shared_network:
+    external: true
