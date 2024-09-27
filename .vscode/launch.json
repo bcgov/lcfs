@@ -73,6 +73,6 @@
       "url": "http://localhost:6006",
       "webRoot": "${workspaceFolder}/frontend",
       "sourceMaps": true,
-    }       
+    }
   ]
 }
