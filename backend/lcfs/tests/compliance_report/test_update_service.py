@@ -1,15 +1,15 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
-)
-from lcfs.db.models.compliance.ComplianceReportStatus import (
-    ComplianceReportStatus,
-    ComplianceReportStatusEnum,
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 

@@ -551,32 +551,40 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, summary_id: int, summary: ComplianceReportSummarySchema
+        self, report_id: int, summary: ComplianceReportSummarySchema
     ):
         """
         Save the compliance report summary to the database.
 
-        :param summary_id: The ID of the compliance report summary
+        :param report_id: The ID of the compliance report
         :param summary: The generated summary data
         """
-        existing_summary = await self.get_summary_by_id(summary_id)
+        existing_summary = await self.get_summary_by_report_id(report_id)
 
         if existing_summary:
             summary_obj = existing_summary
         else:
-            raise ValueError(f"No summary found with ID {summary_id}")
+            raise ValueError(f"No summary found with report ID {report_id}")
 
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                setattr(summary_obj, column_name, int(getattr(row, fuel_type) or 0))
+                setattr(
+                    summary_obj,
+                    column_name,
+                    int(getattr(row, fuel_type) or getattr(summary_obj, column_name)),
+                )
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:
             column_name = f"line_{row.line}_{row.field}"
-            setattr(summary_obj, column_name, int(row.value or 0))
+            setattr(
+                summary_obj,
+                column_name,
+                int(row.value or getattr(summary_obj, column_name)),
+            )
 
         # Update non-compliance penalty summary
         non_compliance_summary = summary.non_compliance_penalty_summary
@@ -594,14 +602,6 @@ class ComplianceReportRepository:
         await self.db.flush()
         await self.db.refresh(summary_obj)
         return summary_obj
-
-    @repo_handler
-    async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
-        query = select(ComplianceReportSummary).where(
-            ComplianceReportSummary.summary_id == summary_id
-        )
-        result = await self.db.execute(query)
-        return result.scalars().first()
 
     @repo_handler
     async def get_summary_by_report_id(
@@ -696,21 +696,6 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def calculate_fuel_quantities(
-        self, compliance_report_id: int
-    ) -> Dict[str, Dict[str, float]]:
-        fossil_fuel_quantities = await self._calculate_fuel_quantities(
-            compliance_report_id, fossil_derived=True
-        )
-        renewable_fuel_quantities = await self._calculate_fuel_quantities(
-            compliance_report_id, fossil_derived=False
-        )
-
-        return {
-            "fossil_fuel_quantities": fossil_fuel_quantities,
-            "renewable_fuel_quantities": renewable_fuel_quantities,
-        }
-
-    async def _calculate_fuel_quantities(
         self, compliance_report_id: int, fossil_derived: bool
     ) -> Dict[str, float]:
         fuel_quantities = defaultdict(float)
@@ -735,9 +720,11 @@ class ComplianceReportRepository:
             .where(
                 FuelSupply.compliance_report_id == compliance_report_id,
                 FuelType.fossil_derived.is_(fossil_derived),
+                FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
             .group_by(FuelCategory.category)
         )
+
         aggregate_fuel_quantities(await self.db.execute(fuel_supply_query))
 
         # Aggregate other uses quantities
@@ -756,10 +743,12 @@ class ComplianceReportRepository:
             )
             .where(
                 OtherUses.compliance_report_id == compliance_report_id,
+                FuelType.fossil_derived.is_(fossil_derived),
                 FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
             .group_by(FuelCategory.category)
         )
+
         aggregate_fuel_quantities(await self.db.execute(other_uses_query))
 
         # Aggregate allocation agreement quantities for renewable fuels
@@ -783,6 +772,7 @@ class ComplianceReportRepository:
                 .where(
                     AllocationAgreement.compliance_report_id == compliance_report_id,
                     FuelType.fossil_derived.is_(False),
+                    FuelType.other_uses_fossil_derived.is_(False),
                 )
                 .group_by(FuelCategory.category)
             )

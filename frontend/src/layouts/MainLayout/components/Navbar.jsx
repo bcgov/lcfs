@@ -16,7 +16,7 @@ export const Navbar = () => {
 
   // Nav Links
   const navMenuItems = useMemo(() => {
-    const isAnalyst = currentUser.roles.find(
+    const isAnalyst = currentUser && currentUser.roles.find(
       (role) => role.name === roles.analyst
     )
     const idirRoutes = [
