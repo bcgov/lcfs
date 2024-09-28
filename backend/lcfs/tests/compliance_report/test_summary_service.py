@@ -95,6 +95,9 @@ async def test_calculate_renewable_fuel_target_summary_2024(
     notional_transfers_sum = {"gasoline": 100, "diesel": 100, "jet_fuel": 100}
     compliance_period = 2024
     summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=100,
+        line_6_renewable_fuel_retained_diesel=200,
+        line_6_renewable_fuel_retained_jet_fuel=300,
         line_8_obligation_deferred_gasoline=100,
         line_8_obligation_deferred_diesel=100,
         line_8_obligation_deferred_jet_fuel=100,
@@ -114,8 +117,7 @@ async def test_calculate_renewable_fuel_target_summary_2024(
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
     assert result[2].gasoline == 200
     assert result[3].diesel == 8.0
-    assert result[7].gasoline == 0.5
-    assert result[9].gasoline == 200.5
+    assert result[9].gasoline == 190
 
 
 @pytest.mark.anyio
@@ -153,8 +155,8 @@ async def test_calculate_renewable_fuel_target_summary_2028(
 
     assert result[2].diesel == 700
     assert result[3].jet_fuel == 11
-    assert result[5].gasoline == 0.75
-    assert result[9].diesel == 398.6
+    assert result[5].gasoline == 15
+    assert result[9].diesel == 372.0
 
 
 @pytest.mark.anyio
@@ -192,9 +194,8 @@ async def test_calculate_renewable_fuel_target_summary_2029(
 
     assert result[2].diesel == 500
     assert result[3].jet_fuel == 6
-    assert result[5].gasoline == 0
-    assert result[7].gasoline == 1
-    assert result[9].jet_fuel == 599.7
+    assert result[5].gasoline == 20
+    assert result[9].jet_fuel == 594
 
 
 @pytest.mark.anyio
@@ -231,8 +232,8 @@ async def test_calculate_renewable_fuel_target_summary_2030(
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
     assert result[2].gasoline == 300
     assert result[3].diesel == 20
-    assert result[5].gasoline == 0.75
-    assert result[9].diesel == 499
+    assert result[5].gasoline == 15
+    assert result[9].diesel == 480
 
 
 @pytest.mark.anyio
@@ -241,10 +242,7 @@ async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11",
-            gasoline=1000,
-            diesel=2000,
-            jet_fuel=3000,
+            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
@@ -252,10 +250,9 @@ async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
         0, mock_compliance_report_summary
     )
 
-    assert len(result) == 3
+    assert len(result) == 2
     assert result[0].total_value == 6000
     assert result[1].total_value == 0
-    assert result[2].total_value == 6000
 
 
 @pytest.mark.anyio
@@ -264,10 +261,7 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11",
-            gasoline=1000,
-            diesel=2000,
-            jet_fuel=3000,
+            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
@@ -275,7 +269,6 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
         -2, mock_compliance_report_summary
     )
 
-    assert len(result) == 3
+    assert len(result) == 2
     assert result[0].total_value == 6000
     assert result[1].total_value == 1200
-    assert result[2].total_value == 7200

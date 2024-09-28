@@ -60,6 +60,7 @@ async def fuel_types(dbsession):
             units="Litres",
             unrecognized=False,
             fossil_derived=True,
+            other_uses_fossil_derived=True,
         ),
         FuelType(
             fuel_type_id=997,
@@ -67,6 +68,7 @@ async def fuel_types(dbsession):
             units="Litres",
             unrecognized=False,
             fossil_derived=True,
+            other_uses_fossil_derived=True,
         ),
         FuelType(
             fuel_type_id=998,
@@ -858,27 +860,6 @@ async def test_save_compliance_report_summary_exception(
 
 
 @pytest.mark.anyio
-async def test_get_summary_by_id_success(
-    compliance_report_repo, compliance_report_summaries
-):
-
-    summary = await compliance_report_repo.get_summary_by_id(
-        summary_id=compliance_report_summaries[0].summary_id
-    )
-
-    assert isinstance(summary, ComplianceReportSummary)
-    assert summary.summary_id == compliance_report_summaries[0].summary_id
-
-
-@pytest.mark.anyio
-async def test_get_summary_by_id_not_found(compliance_report_repo):
-
-    summary = await compliance_report_repo.get_summary_by_id(summary_id=1000)
-
-    assert summary == None
-
-
-@pytest.mark.anyio
 async def test_get_summary_by_report_id_success_is_not_supplemental(
     compliance_report_repo, compliance_report_summaries
 ):
@@ -998,7 +979,7 @@ async def test_get_issued_compliance_units_not_found(compliance_report_repo):
 
 
 @pytest.mark.anyio
-async def test_calculate_fuel_quantities_success(
+async def test_calculate_fuel_quantities_success_not_fossil_derived(
     compliance_report_repo,
     compliance_reports,
     fuel_categories,
@@ -1006,13 +987,27 @@ async def test_calculate_fuel_quantities_success(
     fuel_types,
 ):
     result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report_id=compliance_reports[0].compliance_report_id
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        fossil_derived=False,
     )
 
-    assert result == {
-        "fossil_fuel_quantities": {"gasoline": 1.0, "diesel": 1.0},
-        "renewable_fuel_quantities": {"gasoline": 1.0, "diesel": 1.0},
-    }
+    assert result == {"gasoline": 1.0, "diesel": 1.0}
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_quantities_success_fossil_derived(
+    compliance_report_repo,
+    compliance_reports,
+    fuel_categories,
+    fuel_supplies,
+    fuel_types,
+):
+    result = await compliance_report_repo.calculate_fuel_quantities(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        fossil_derived=True,
+    )
+
+    assert result == {"gasoline": 1.0, "diesel": 1.0}
 
 
 @pytest.mark.anyio

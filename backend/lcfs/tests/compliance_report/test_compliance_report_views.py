@@ -1,30 +1,18 @@
-import warnings
 import json
 import pytest
 
-from datetime import datetime
 from unittest.mock import patch
 from httpx import AsyncClient
-from fastapi import FastAPI, status
+from fastapi import FastAPI
 
-from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
-from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
-from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.db.models.compliance.AllocationTransactionType import (
-    AllocationTransactionType,
-)
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import FilterModel
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
 )
+
 
 # get_compliance_periods
 @pytest.mark.anyio
@@ -268,20 +256,6 @@ async def test_get_compliance_report_by_id_forbidden(
 
     assert response.status_code == 403
 
-    if line_1_row is None:
-        raise AssertionError(
-            f"No row found with line='1'. Actual data: {renewable_fuel_target_summary}"
-        )
-
-    expected_values = {"gasoline": 400, "diesel": 200, "jetFuel": 200}
-
-    for field, expected_value in expected_values.items():
-        actual_value = line_1_row.get(field)
-        assert actual_value == expected_value, (
-            f"Mismatch for {field}. Expected: {expected_value}, Got: {actual_value}. "
-            f"Row data: {line_1_row}"
-        )
-
 
 @pytest.mark.anyio
 async def test_get_compliance_report_by_id_invalid_payload(
@@ -350,9 +324,7 @@ async def test_get_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_calculate_compliance_report_summary.assert_called_once_with(
-            1, is_edit=False
-        )
+        mock_calculate_compliance_report_summary.assert_called_once_with(1)
 
 
 @pytest.mark.anyio
@@ -395,20 +367,6 @@ async def test_get_compliance_report_summary_not_found(
 
         assert response.status_code == 404  # Not Found
 
-    if line_2_row is None:
-        raise AssertionError(
-            f"No row found with line='2'. Actual data: {renewable_fuel_target_summary}"
-        )
-
-    expected_values_line_2 = {"gasoline": 400, "diesel": 300, "jetFuel": 500}
-
-    for field, expected_value in expected_values_line_2.items():
-        actual_value = line_2_row.get(field)
-        assert actual_value == expected_value, (
-            f"Mismatch for {field} in line 2. Expected: {expected_value}, Got: {actual_value}. "
-            f"Row data: {line_2_row}"
-        )
-
 
 # update_compliance_report_summary
 @pytest.mark.anyio
@@ -419,19 +377,17 @@ async def test_update_compliance_report_summary_success(
     set_mock_user_roles,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.auto_save_compliance_report_summary"
-    ) as mock_auto_save_compliance_report_summary:
+        "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.update_compliance_report_summary"
+    ) as mock_update_compliance_report_summary:
         set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
 
         mock_compliance_report_summary = compliance_report_summary_schema()
 
-        mock_auto_save_compliance_report_summary.return_value = (
+        mock_update_compliance_report_summary.return_value = (
             mock_compliance_report_summary
         )
 
-        url = fastapi_app.url_path_for(
-            "update_compliance_report_summary", report_id=1, summary_id=1
-        )
+        url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
 
         payload = mock_compliance_report_summary.dict(by_alias=True)
 
@@ -444,8 +400,8 @@ async def test_update_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_auto_save_compliance_report_summary.assert_called_once_with(
-            1, 1, mock_compliance_report_summary
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, mock_compliance_report_summary
         )
 
 
@@ -460,28 +416,12 @@ async def test_update_compliance_report_summary_forbidden(
         fastapi_app, [RoleEnum.GOVERNMENT.value]
     )  # User with the wrong role
 
-    url = fastapi_app.url_path_for(
-        "update_compliance_report_summary", report_id=1, summary_id=1
-    )
+    url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
     payload = compliance_report_summary_schema().dict(by_alias=True)
 
     response = await client.put(url, json=payload)
 
     assert response.status_code == 403  # Forbidden
-
-    if line_3_row is None:
-        raise AssertionError(
-            f"No row found with line='3'. Actual data: {renewable_fuel_target_summary}"
-        )
-
-    expected_values_line_3 = {"gasoline": 200, "diesel": 200, "jetFuel": 200}
-
-    for field, expected_value in expected_values_line_3.items():
-        actual_value = line_3_row.get(field)
-        assert actual_value == expected_value, (
-            f"Mismatch for {field} in line 3. Expected: {expected_value}, Got: {actual_value}. "
-            f"Row data: {line_3_row}"
-        )
 
 
 @pytest.mark.anyio
@@ -492,9 +432,7 @@ async def test_update_compliance_report_summary_invalid_payload(
 ):
     set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
 
-    url = fastapi_app.url_path_for(
-        "update_compliance_report_summary", report_id=1, summary_id=1
-    )
+    url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
     payload = {"invalidField": "invalidValue"}  # Invalid payload structure
 
     response = await client.put(url, json=payload)
@@ -510,18 +448,16 @@ async def test_update_compliance_report_summary_not_found(
     compliance_report_summary_schema,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.summary_service.ComplianceReportSummaryService.auto_save_compliance_report_summary"
-    ) as mock_auto_save_compliance_report_summary:
+        "lcfs.web.api.compliance_report.summary_service.ComplianceReportSummaryService.update_compliance_report_summary"
+    ) as mock_update_compliance_report_summary:
         set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
 
         # Simulate DataNotFoundException for a non-existent summary
-        mock_auto_save_compliance_report_summary.side_effect = DataNotFoundException(
+        mock_update_compliance_report_summary.side_effect = DataNotFoundException(
             "Summary not found"
         )
 
-        url = fastapi_app.url_path_for(
-            "update_compliance_report_summary", report_id=1, summary_id=9999
-        )
+        url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
         payload = compliance_report_summary_schema().dict(by_alias=True)
 
         response = await client.put(url, json=payload)
