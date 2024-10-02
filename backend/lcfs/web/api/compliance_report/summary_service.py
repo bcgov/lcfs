@@ -196,25 +196,26 @@ class ComplianceReportSummaryService:
                     existing_element.value = value
         return summary
 
-    @service_handler
-    async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
-        """
-        Get a list of all summary versions for a given report, including the original and all supplementals.
+#     @service_handler
+#     async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+#         """
+#         Get a list of all summary versions for a given report, including the original and all supplementals.
 
-        :param report_id: The ID of the original compliance report
-        :return: A list of tuples containing (summary_id, version, type)
-        """
-        return await self.repo.get_summary_versions(report_id)
+#         :param report_id: The ID of the original compliance report
+#         :return: A list of tuples containing (summary_id, version, type)
+#         """
+#         return await self.repo.get_summary_versions(report_id)
 
-    @service_handler
-    async def get_compliance_report_summary(
-        self, report_id: int
-    ) -> ComplianceReportSummarySchema:
-        """
-        Get a specific compliance report summary by its ID.
-        """
-        report = await self.repo.get_summary_by_report_id(report_id)
-        return self.map_to_schema(report)
+#     @service_handler
+#     async def get_compliance_report_summary(
+#         self, report_id: int
+#     ) -> ComplianceReportSummarySchema:
+#         """
+#         Get a specific compliance report summary by its ID.
+#         """
+#         report = await self.repo.get_summary_by_report_id(report_id)
+#         return self.map_to_schema(report)
+
 
     @service_handler
     async def update_compliance_report_summary(
@@ -648,7 +649,7 @@ class ComplianceReportSummaryService:
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == "11")
         non_compliance_summary_lines = {
             "11": {"total_value": line_11.total_value},
-            "21": {"total_value": non_compliance_penalty_payable},
+            "21": {"total_value": non_compliance_penalty_payable}
         }
 
         non_compliance_penalty_summary = [
@@ -821,65 +822,65 @@ class ComplianceReportSummaryService:
 
         return list(effective_exports.values())
 
-    async def are_identical(
-        self,
-        report_id: int,
-        summary_1: ComplianceReportSummarySchema,
-        summary_2: ComplianceReportSummarySchema,
-    ) -> bool:
-        comparison = self.compare_summaries(report_id, summary_1, summary_2)
+#     async def are_identical(
+#         self,
+#         report_id: int,
+#         summary_1: ComplianceReportSummarySchema,
+#         summary_2: ComplianceReportSummarySchema,
+#     ) -> bool:
+#         comparison = self.compare_summaries(report_id, summary_1, summary_2)
 
-        # Check if all deltas are zero
-        for field, values in comparison.items():
-            if values["delta"] != 0:
-                return False
+#         # Check if all deltas are zero
+#         for field, values in comparison.items():
+#             if values["delta"] != 0:
+#                 return False
 
-        return True
+#         return True
 
-    async def compare_summaries(
-        self,
-        report_id: int,
-        summary_1: ComplianceReportSummarySchema,
-        summary_2: ComplianceReportSummarySchema,
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        Compare two compliance report summaries and return the values and delta for each field.
+#     async def compare_summaries(
+#         self,
+#         report_id: int,
+#         summary_1: ComplianceReportSummarySchema,
+#         summary_2: ComplianceReportSummarySchema,
+#     ) -> Dict[str, Dict[str, Any]]:
+#         """
+#         Compare two compliance report summaries and return the values and delta for each field.
 
-        :param report_id: The ID of the original compliance report
-        :param summary_1_id: The ID of the first summary to compare
-        :param summary_2_id: The ID of the second summary to compare
-        :return: A dictionary containing the values and delta for each field
-        """
-        if not summary_1 or not summary_2:
-            raise ValueError(
-                f"""One or both summaries not found: {
-                             summary_1.summary_id}, {summary_2.summary_id}"""
-            )
+#         :param report_id: The ID of the original compliance report
+#         :param summary_1_id: The ID of the first summary to compare
+#         :param summary_2_id: The ID of the second summary to compare
+#         :return: A dictionary containing the values and delta for each field
+#         """
+#         if not summary_1 or not summary_2:
+#             raise ValueError(
+#                 f"""One or both summaries not found: {
+#                              summary_1.summary_id}, {summary_2.summary_id}"""
+#             )
 
-        if (
-            summary_1.compliance_report_id != report_id
-            or summary_2.compliance_report_id != report_id
-        ):
-            raise ValueError(
-                f"""Summaries do not belong to the specified report: {report_id}"""
-            )
+#         if (
+#             summary_1.compliance_report_id != report_id
+#             or summary_2.compliance_report_id != report_id
+#         ):
+#             raise ValueError(
+#                 f"""Summaries do not belong to the specified report: {report_id}"""
+#             )
 
-        comparison = {}
+#         comparison = {}
 
-        # Compare all float fields
-        float_columns = [
-            c.name
-            for c in ComplianceReportSummary.__table__.columns
-            if isinstance(c.type, Float)
-        ]
-        for column in float_columns:
-            value_1 = getattr(summary_1, column)
-            value_2 = getattr(summary_2, column)
-            delta = value_2 - value_1
-            comparison[column] = {
-                "summary_1_value": value_1,
-                "summary_2_value": value_2,
-                "delta": delta,
-            }
+#         # Compare all float fields
+#         float_columns = [
+#             c.name
+#             for c in ComplianceReportSummary.__table__.columns
+#             if isinstance(c.type, Float)
+#         ]
+#         for column in float_columns:
+#             value_1 = getattr(summary_1, column)
+#             value_2 = getattr(summary_2, column)
+#             delta = value_2 - value_1
+#             comparison[column] = {
+#                 "summary_1_value": value_1,
+#                 "summary_2_value": value_2,
+#                 "delta": delta,
+#             }
 
-        return comparison
+#         return comparison
