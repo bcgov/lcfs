@@ -154,7 +154,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
   
 
   // Line 8
-  if (compliancePeriodYear >= 2028) {
+  if (parseInt(compliancePeriodYear) >= 2028) {
     if (data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel) {
       // If Line 2 is less than Line 4, ensure Line 8 is available
       if (!jetFuelEditableCells.includes(SUMMARY.LINE_8)) {
@@ -171,6 +171,16 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
     jetFuelEditableCells = jetFuelEditableCells.filter(
       (line) => line !== SUMMARY.LINE_8
     )
+  }
+
+  if (parseInt(compliancePeriodYear) === 2024) {
+    // by default enable in editing mode for compliance period 2024
+    gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+  }
+  if (parseInt(compliancePeriodYear) < 2029) {
+    // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
+    jetFuelEditableCells = []
   }
 
   return [
