@@ -56,7 +56,6 @@ function DocumentUploadDialog({ open, close, reportID }) {
   const { t } = useTranslation(['report'])
   const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
-  const [file, setFile] = useState(null)
   const [files, setFiles] = useState([])
   const apiService = useApiService()
 
@@ -128,21 +127,36 @@ function DocumentUploadDialog({ open, close, reportID }) {
       return
     }
 
+    const fileId = Date.now()
+
+    setFiles([
+      ...files,
+      {
+        documentId: fileId,
+        fileName: file.name,
+        fileSize: file.size,
+        scanning: true
+      }
+    ])
+
     try {
-      uploadFile(file)
-      setFiles([
-        ...files,
-        {
-          documentId: 'new',
-          fileName: file.name,
-          fileSize: file.size,
-          scanning: true
+      uploadFile(file, {
+        onError: (error) => {
+          if (error.response?.status === 422) {
+            setFiles([
+              ...files,
+              {
+                documentId: fileId,
+                fileName: file.name,
+                fileSize: file.size,
+                virus: true
+              }
+            ])
+          }
         }
-      ])
+      })
     } catch (error) {
       console.error('Error uploading file:', error)
-    } finally {
-      setFile(null)
     }
   }
 
@@ -157,8 +171,6 @@ function DocumentUploadDialog({ open, close, reportID }) {
       )
     } catch (error) {
       console.error('Error uploading file:', error)
-    } finally {
-      setFile(null)
     }
   }
 
@@ -237,10 +249,13 @@ function DocumentUploadDialog({ open, close, reportID }) {
             </TableCell>
             <TableCell>{prettyBytes(file.fileSize)}</TableCell>
             <TableCell style={{ justifyContent: 'center' }}>
-              {!file.scanning && (
+              {!file.scanning && !file.virus && (
                 <Icon style={{ color: colors.success.main }}>check</Icon>
               )}
               {file.scanning && <CircularProgress size={22} />}
+              {file.virus && (
+                <Icon style={{ color: colors.error.main }}>close</Icon>
+              )}
             </TableCell>
             <TableCell>
               <Tooltip title="Delete">
@@ -271,8 +286,8 @@ function DocumentUploadDialog({ open, close, reportID }) {
       open={open}
       data={{
         title: 'Upload supporting documents for your compliance report',
-        primaryButtonAction: onClose,
-        primaryButtonText: 'Return to compliance report',
+        secondaryButtonAction: onClose,
+        secondaryButtonText: 'Return to compliance report',
         content
       }}
     ></BCModal>

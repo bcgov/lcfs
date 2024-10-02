@@ -82,30 +82,35 @@ const BCModal = ({ open, onClose, data = null }) => {
       <DialogContent>{content}</DialogContent>
       <Divider />
       <DialogActions>
-        {secondaryButtonText && <BCButton
-          variant="outlined"
-          id={
-            'modal-btn-' +
-            secondaryButtonText.toLowerCase().replaceAll(' ', '-')
-          }
-          color={secondaryButtonColor ?? 'dark'}
-          onClick={secondaryButtonAction ?? onClose}
-        >
-          {secondaryButtonText}
-        </BCButton>}
+        {secondaryButtonText && (
+          <BCButton
+            variant="outlined"
+            id={
+              'modal-btn-' +
+              secondaryButtonText.toLowerCase().replaceAll(' ', '-')
+            }
+            color={secondaryButtonColor ?? 'dark'}
+            onClick={secondaryButtonAction ?? onClose}
+          >
+            {secondaryButtonText}
+          </BCButton>
+        )}
         {customButtons}
-        <BCButton
-          variant="contained"
-          id={
-            'modal-btn-' + primaryButtonText.toLowerCase().replaceAll(' ', '-')
-          }
-          color={primaryButtonColor ?? 'primary'}
-          autoFocus
-          onClick={handlePrimaryButtonClick}
-          isLoading={isLoading}
-        >
-          {primaryButtonText}
-        </BCButton>
+        {primaryButtonText && (
+          <BCButton
+            variant="contained"
+            id={
+              'modal-btn-' +
+              primaryButtonText.toLowerCase().replaceAll(' ', '-')
+            }
+            color={primaryButtonColor ?? 'primary'}
+            autoFocus
+            onClick={handlePrimaryButtonClick}
+            isLoading={isLoading}
+          >
+            {primaryButtonText}
+          </BCButton>
+        )}
       </DialogActions>
     </Dialog>
   )

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.document import Document
+from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.core.decorators import repo_handler
 
@@ -16,8 +17,13 @@ BUCKET_NAME = settings.s3_bucket
 
 
 class DocumentService:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_async_db_session),
+        clamav_service: ClamAVService = Depends(),
+    ):
         self.db = db
+        self.clamav_service = clamav_service
         self.s3_client = boto3.client(
             "s3",
             aws_access_key_id=settings.s3_access_key,
@@ -34,6 +40,8 @@ class DocumentService:
 
         # Scan file size
         file_size = os.fstat(file.file.fileno()).st_size
+
+        self.clamav_service.scan_file(file)
 
         # Upload file to S3
         self.s3_client.upload_fileobj(

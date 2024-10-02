@@ -132,7 +132,7 @@ export const useUploadComplianceReportDocument = (reportID, options) => {
         }
       })
     },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries(['compliance-report-documents', reportID])
     }
   })
