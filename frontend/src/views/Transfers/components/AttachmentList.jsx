@@ -10,10 +10,10 @@ export const AttachmentList = ({ attachments = [] }) => {
         Attachments
       </Typography>
       <List sx={{ maxWidth: '30%' }}>
-        {attachments.map((attachment, index) => (
+        {attachments.map((attachment) => (
           <ListItemButton
             component="a"
-            key={`${attachment.attachmentID}-${index}`}
+            key={attachment.attachmentID}
             alignItems="flex-start"
           >
             <AttachFileIcon data-test="AttachFileIcon" sx={{ marginTop: '8px' }} />

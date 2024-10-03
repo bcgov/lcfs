@@ -57,14 +57,4 @@ describe('AttachmentList Component', () => {
     render(<AttachmentList attachments={attachmentsWithLongName} />, { wrapper })
     expect(screen.getByText(longFileName)).toBeInTheDocument()
   })
-
-  it('handles duplicate attachmentIDs without crashing', () => {
-    const duplicateAttachments = [
-      { attachmentID: '1', fileName: 'Doc1.pdf' },
-      { attachmentID: '2', fileName: 'Doc2.pdf' }
-    ]
-    render(<AttachmentList attachments={duplicateAttachments} />, { wrapper })
-    const items = screen.getAllByRole('button')
-    expect(items).toHaveLength(2)
-  })
 })

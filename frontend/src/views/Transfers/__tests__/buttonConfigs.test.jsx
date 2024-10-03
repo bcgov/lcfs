@@ -176,11 +176,26 @@ describe('buttonClusterConfigFn', () => {
       // Expect the buttons to be deleteDraft, saveDraft, and signAndSend
       expect(buttons).toHaveLength(3)
 
+      const deleteDraftButton = buttons.find(
+        (button) => button.id === 'delete-draft-btn'
+      )
+      const saveDraftButton = buttons.find(
+        (button) => button.id === 'save-draft-btn'
+      )
       const signAndSendButton = buttons.find(
         (button) => button.id === 'sign-and-send-btn'
       )
 
+      expect(deleteDraftButton).toBeDefined()
+      expect(saveDraftButton).toBeDefined()
+      expect(signAndSendButton).toBeDefined()
+
+      // signAndSend should be disabled because 'signingAuthorityDeclaration' is false
       expect(signAndSendButton.disabled).toBe(true)
+
+      // The other buttons should not be disabled
+      expect(deleteDraftButton.disabled).toBeUndefined()
+      expect(saveDraftButton.disabled).toBeUndefined()
 
       // Now, simulate that 'signingAuthorityDeclaration' is true
       signingAuthorityDeclaration = true
@@ -458,11 +473,21 @@ describe('buttonClusterConfigFn', () => {
 
       expect(buttons).toHaveLength(2)
 
+      const declineTransferButton = buttons.find(
+        (button) => button.id === 'decline-btn'
+      )
       const signAndSubmitButton = buttons.find(
         (button) => button.id === 'sign-and-submit-btn'
-      )
+      )    
 
+      expect(declineTransferButton).toBeDefined()
+      expect(signAndSubmitButton).toBeDefined()
+    
+      // signAndSubmit should be disabled because 'signingAuthorityDeclaration' is false
       expect(signAndSubmitButton.disabled).toBe(true)
+    
+      // declineTransferButton should not be disabled
+      expect(declineTransferButton.disabled).toBeUndefined()
 
       signingAuthorityDeclaration = true
 
@@ -487,6 +512,7 @@ describe('buttonClusterConfigFn', () => {
         (button) => button.id === 'sign-and-submit-btn'
       )
 
+      // signAndSubmit should now be enabled
       expect(signAndSubmitButton2.disabled).toBe(false)
     })
 

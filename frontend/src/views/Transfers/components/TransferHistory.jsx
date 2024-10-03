@@ -43,7 +43,7 @@ function TransferHistory({ transferHistory }) {
     A: 6,
     B: 12
   }
-  const currentStatus = transferData?.currentStatus?.status
+  const currentStatus = transferData?.currentStatus.status
   const agreementDate = transferData?.agreementDate
     ? dayjs(transferData.agreementDate)
     : null
