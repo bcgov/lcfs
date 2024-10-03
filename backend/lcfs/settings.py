@@ -69,6 +69,7 @@ class Settings(BaseSettings):
     s3_access_key: str = "s3_access_key"
     s3_secret_key: str = "development_only"
 
+    clamav_enabled: bool = False
     clamav_host: str = "clamav"
     clamav_port: int = 3310
 

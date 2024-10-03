@@ -8,10 +8,11 @@ export const SupportingDocumentSummary = ({ reportID, data }) => {
   const apiService = useApiService()
 
   const viewDocument = async (documentID) => {
-    if (!documentID) return
+    if (!reportID || !documentID) return
     const res = await apiService.get(
-      apiRoutes.getComplianceReportDocumentUrl
-        .replace(':reportID', reportID)
+      apiRoutes.getDocument
+        .replace(':parentType', 'compliance_report')
+        .replace(':parentID', reportID)
         .replace(':documentID', documentID),
       {
         responseType: 'blob'

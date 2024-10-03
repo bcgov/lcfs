@@ -39,9 +39,9 @@ export const apiRoutes = {
   updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
-  getComplianceReportDocuments: '/reports/:reportID/files',
-  updateComplianceReportDocuments: '/reports/:reportID/files',
-  getComplianceReportDocumentUrl: '/reports/:reportID/files/:documentID',
+  getDocuments: '/documents/:parentType/:parentID',
+  uploadDocument: '/documents/:parentType/:parentID',
+  getDocument: '/documents/:parentType/:parentID/:documentID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
   getOrgComplianceReportReportedYears:

@@ -23,13 +23,13 @@ services:
     volumes:
       - redis_data:/bitnami/redis/data
 
-  clamav:
-    image: clamav/clamav:stable_base
-    volumes:
-      - clamsocket:/var/run/clamav/
-      - clamav:/var/lib/clamav
-    ports:
-      - "3310:3310"
+  #  clamav:
+  #    image: clamav/clamav:stable_base
+  #    volumes:
+  #      - clamsocket:/var/run/clamav/
+  #      - clamav:/var/lib/clamav
+  #    ports:
+  #      - "3310:3310"
 
   minio:
     image: minio/minio:latest
@@ -90,7 +90,7 @@ services:
       - db
       - redis
       - create_bucket
-      - clamav
+     # - clamav
 
   frontend:
     container_name: frontend

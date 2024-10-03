@@ -40,7 +40,8 @@ const UploadCard = ({ reportID }) => {
         }
       />
       <DocumentUploadDialog
-        reportID={reportID}
+        parentID={reportID}
+        parentType="compliance_report"
         open={isOpen}
         close={() => {
           setIsOpen(false)

@@ -14,16 +14,14 @@ import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'
 import { Delete } from '@mui/icons-material'
-import {
-  useComplianceReportDocuments,
-  useDeleteComplianceReportDocument,
-  useUploadComplianceReportDocument
-} from '@/hooks/useComplianceReports'
 import prettyBytes from 'pretty-bytes'
 import colors from '@/themes/base/colors'
-import axios from 'axios'
-import { useApiService } from '@/services/useApiService'
-import { apiRoutes } from '@/constants/routes'
+import {
+  useDeleteDocument,
+  useDocuments,
+  useUploadDocument,
+  useViewDocument
+} from '@/hooks/useDocuments'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -52,23 +50,24 @@ const TableCell = styled(Box)({
   alignItems: 'center'
 })
 
-function DocumentUploadDialog({ open, close, reportID }) {
+const BYTES_50 = 52428800
+
+function DocumentUploadDialog({ open, close, parentType, parentID }) {
   const { t } = useTranslation(['report'])
   const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
-  const apiService = useApiService()
 
-  const { data: loadedFiles, isLoading } =
-    useComplianceReportDocuments(reportID)
+  const { data: loadedFiles } = useDocuments(parentType, parentID)
   useEffect(() => {
     if (loadedFiles) {
       setFiles(loadedFiles)
     }
   }, [loadedFiles])
 
-  const { mutate: uploadFile } = useUploadComplianceReportDocument(reportID)
-  const { mutate: deleteFile } = useDeleteComplianceReportDocument(reportID)
+  const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
+  const { mutate: deleteFile } = useDeleteDocument(parentType, parentID)
+  const viewDocument = useViewDocument(parentType, parentID)
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -81,20 +80,6 @@ function DocumentUploadDialog({ open, close, reportID }) {
     if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
       setIsDragActive(true)
     }
-  }
-
-  const viewDocument = async (documentID) => {
-    if (!documentID) return
-    const res = await apiService.get(
-      apiRoutes.getComplianceReportDocumentUrl
-        .replace(':reportID', reportID)
-        .replace(':documentID', documentID),
-      {
-        responseType: 'blob'
-      }
-    )
-    const fileURL = URL.createObjectURL(res.data)
-    window.open(fileURL, '_blank')
   }
 
   const handleDragOut = (e) => {
@@ -129,46 +114,58 @@ function DocumentUploadDialog({ open, close, reportID }) {
 
     const fileId = Date.now()
 
+    const baseDocument = {
+      documentId: fileId,
+      fileName: file.name,
+      fileSize: file.size
+    }
+
+    if (file.size > BYTES_50) {
+      debugger
+      setFiles([
+        ...files,
+        {
+          ...baseDocument,
+          oversize: true
+        }
+      ])
+      return
+    }
+
     setFiles([
       ...files,
       {
-        documentId: fileId,
-        fileName: file.name,
-        fileSize: file.size,
+        ...baseDocument,
         scanning: true
       }
     ])
 
-    try {
-      uploadFile(file, {
-        onError: (error) => {
-          if (error.response?.status === 422) {
-            setFiles([
-              ...files,
-              {
-                documentId: fileId,
-                fileName: file.name,
-                fileSize: file.size,
-                virus: true
-              }
-            ])
-          }
+    uploadFile(file, {
+      onError: (error) => {
+        if (error.response?.status === 422) {
+          setFiles([
+            ...files,
+            {
+              ...baseDocument,
+              virus: true
+            }
+          ])
+        } else {
+          console.error('Error uploading file:', error)
         }
-      })
-    } catch (error) {
-      console.error('Error uploading file:', error)
-    }
+      }
+    })
   }
 
   const handleDeleteFile = async (documentId) => {
     try {
-      deleteFile(documentId)
       setFiles(
         files.map((file) => ({
           ...file,
           deleting: file.documentId === documentId
         }))
       )
+      await deleteFile(documentId)
     } catch (error) {
       console.error('Error uploading file:', error)
     }
@@ -236,20 +233,30 @@ function DocumentUploadDialog({ open, close, reportID }) {
                 viewDocument(file.documentId)
               }}
             >
-              <BCTypography
-                variant="subtitle2"
-                color="link"
-                sx={{
-                  textDecoration: 'underline',
-                  '&:hover': { color: 'info.main' }
-                }}
-              >
-                {file.fileName}
-              </BCTypography>
+              {!file.oversize && (
+                <BCTypography
+                  variant="subtitle2"
+                  color="link"
+                  sx={{
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'info.main' }
+                  }}
+                >
+                  {file.fileName}
+                </BCTypography>
+              )}
+              {file.oversize && (
+                <span>{file.fileName} (File is over 50MB)</span>
+              )}
             </TableCell>
-            <TableCell>{prettyBytes(file.fileSize)}</TableCell>
+            <TableCell>
+              {file.oversize && (
+                <Icon style={{ color: colors.error.main }}>close</Icon>
+              )}
+              {prettyBytes(file.fileSize)}
+            </TableCell>
             <TableCell style={{ justifyContent: 'center' }}>
-              {!file.scanning && !file.virus && (
+              {!file.scanning && !file.virus && !file.oversize && (
                 <Icon style={{ color: colors.success.main }}>check</Icon>
               )}
               {file.scanning && <CircularProgress size={22} />}
@@ -259,18 +266,21 @@ function DocumentUploadDialog({ open, close, reportID }) {
             </TableCell>
             <TableCell>
               <Tooltip title="Delete">
-                {!file.deleting && (
-                  <IconButton
-                    onClick={() => {
-                      handleDeleteFile(file.documentId)
-                    }}
-                    aria-label="delete row"
-                    data-test="delete-button"
-                    color="error"
-                  >
-                    <Delete style={{ pointerEvents: 'none' }} />
-                  </IconButton>
-                )}
+                {!file.deleting &&
+                  !file.virus &&
+                  !file.scanning &&
+                  !file.oversize && (
+                    <IconButton
+                      onClick={() => {
+                        handleDeleteFile(file.documentId)
+                      }}
+                      aria-label="delete row"
+                      data-test="delete-button"
+                      color="error"
+                    >
+                      <Delete style={{ pointerEvents: 'none' }} />
+                    </IconButton>
+                  )}
                 {file.deleting && <CircularProgress size={22} />}
               </Tooltip>
             </TableCell>

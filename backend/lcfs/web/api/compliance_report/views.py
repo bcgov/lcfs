@@ -15,14 +15,10 @@ from fastapi import (
     status,
     Request,
     Depends,
-    UploadFile,
 )
-from fastapi.params import File
-from starlette.responses import StreamingResponse
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
-from lcfs.services.s3.schema import FileResponseSchema, UrlResponseSchema
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
@@ -123,62 +119,6 @@ async def update_compliance_report_summary(
     """
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
-    )
-
-
-@router.get(
-    "/{report_id}/files",
-    response_model=List[FileResponseSchema],
-    status_code=status.HTTP_200_OK,
-)
-async def get_all_documents(
-    request: Request,
-    report_id: int,
-    document_service: DocumentService = Depends(),
-) -> List[FileResponseSchema]:
-    documents = await document_service.get_by_report_id(report_id)
-
-    file_responses = [
-        (FileResponseSchema.model_validate(document)) for document in documents
-    ]
-
-    return file_responses
-
-
-@router.post(
-    "/{report_id}/files",
-    response_model=FileResponseSchema,
-    status_code=status.HTTP_201_CREATED,
-)
-@view_handler([RoleEnum.SUPPLIER])
-async def upload_file(
-    request: Request,
-    report_id: int,
-    file: UploadFile = File(...),
-    document_service: DocumentService = Depends(),
-) -> FileResponseSchema:
-    document = await document_service.upload_file(report_id, file)
-    return FileResponseSchema.model_validate(document)
-
-
-@router.get(
-    "/{report_id}/files/{document_id}",
-    status_code=status.HTTP_200_OK,
-)
-async def stream_document(
-    request: Request,
-    document_id: int,
-    document_service: DocumentService = Depends(),
-):
-    file, document = await document_service.get_object(document_id)
-
-    headers = {
-        "Content-Disposition": f'inline; filename="{document.file_name}"',
-        "content-length": str(file["ContentLength"]),
-    }
-
-    return StreamingResponse(
-        content=file["Body"], media_type=file["ContentType"], headers=headers
     )
 
 

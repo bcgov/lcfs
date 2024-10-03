@@ -18,6 +18,7 @@ class ClamAVService:
 
     def scan_file(self, file):
         # Create a socket connection to ClamAV
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((settings.clamav_host, settings.clamav_port))
             sock.sendall(b"zINSTREAM\0")  # Initiate the INSTREAM scan

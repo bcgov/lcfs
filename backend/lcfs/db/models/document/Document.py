@@ -3,6 +3,9 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.models.compliance.ComplianceReport import (
+    compliance_report_document_association,
+)
 
 
 class Document(BaseModel, Auditable):
@@ -24,7 +27,8 @@ class Document(BaseModel, Auditable):
     file_size = Column(Integer, nullable=False)
     mime_type = Column(String, nullable=False)
 
-    compliance_report_id = Column(
-        Integer, ForeignKey("compliance_report.compliance_report_id")
+    compliance_reports = relationship(
+        "ComplianceReport",
+        secondary=compliance_report_document_association,
+        back_populates="documents",
     )
-    compliance_report = relationship("ComplianceReport", back_populates="documents")

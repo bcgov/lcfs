@@ -30,9 +30,8 @@ import { AllocationAgreementSummary } from '@/views/AllocationAgreements/Allocat
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
-import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
-import Button from '@mui/material/Button'
+import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 
 const ReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation()
@@ -67,7 +66,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         component: (data) => (
           <SupportingDocumentSummary
             data={data}
-            reportId={complianceReportId}
+            reportID={complianceReportId}
           />
         )
       },
@@ -272,7 +271,8 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         )
       })}
       <DocumentUploadDialog
-        reportID={complianceReportId}
+        parentID={complianceReportId}
+        parentType="compliance_report"
         open={isFileDialogOpen}
         close={() => {
           setFileDialogOpen(false)
