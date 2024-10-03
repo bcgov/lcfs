@@ -101,6 +101,9 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
+      if (params.colDef.field === 'provisionOfTheAct') {
+        params.node.setDataValue('fuelCode', '')
+      }
       if (
         ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
           params.colDef.field
