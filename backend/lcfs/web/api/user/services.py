@@ -4,7 +4,7 @@ from datetime import datetime
 from logging import getLogger
 from typing import List
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -199,7 +199,10 @@ class UserServices:
         """
         # Permission Checks
         if not await self._has_access_to_user_activities(current_user, user_id):
-            raise PermissionDeniedException("You do not have permission to view this user's activities.")
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to view this user's activities.",
+            )
 
         pagination = validate_pagination(pagination)
 
@@ -224,7 +227,10 @@ class UserServices:
         Retrieves activities for all users (Administrator role only).
         """
         if not any(role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles):
-            raise PermissionDeniedException("You do not have permission to view all user activities.")
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to view all user activities.",
+            )
 
         pagination = validate_pagination(pagination)
 

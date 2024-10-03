@@ -399,6 +399,10 @@ class UserRepository:
             Tuple: Combined query for user activities, list of relevant conditions.
         """
 
+        # Note: If we encounter performance issues in the future,
+        # consider replacing the current UNION ALL with a materialized view to pre-compute the union of activity logs.
+        # We also need to add indexes on create_date and other sorting columns to improve performance across the system.
+
         # TransferHistory Query
         transfer_query = (
             select(
@@ -496,7 +500,7 @@ class UserRepository:
                     order_by_clauses.append(order)
         else:
             # Default ordering by timestamp descending
-            order_by_clauses.append(desc(combined_query.c.timestamp))
+            order_by_clauses.append(desc(combined_query.c.create_date))
 
         # Build the final query with conditions, ordering, and pagination
         final_query = (
