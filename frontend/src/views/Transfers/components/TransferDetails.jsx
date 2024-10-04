@@ -79,7 +79,7 @@ export const TransferDetails = () => {
             placeholder={t('common:quantity')}
             size="small"
             error={!!errors.quantity}
-            helperext={errors.quantity?.message}
+            helperText={errors.quantity?.message}
             sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
           />
           {t('transfer:complianceUnitsTo')}

@@ -8,7 +8,8 @@ POST: /users (Create a new user)
 PUT: /users/<user_id> (Update the user)
 DELETE: /users/<user_id> (Delete only if the user has never logged in/mapped)
 GET: /users/<user_id>/roles {List of Roles with IDs}
-GET: /users/<user_id>/history
+POST: /users/<user_id>/activity
+POST: /users/activities/all
 """
 
 from logging import getLogger
@@ -31,8 +32,8 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
-    UserHistorySchema,
     UsersSchema,
+    UserActivitiesResponseSchema,
 )
 
 from lcfs.web.core.decorators import view_handler
@@ -190,20 +191,35 @@ async def get_user_roles(
     return await service.get_user_roles(user_id)
 
 
-@router.get(
-    "/{user_id}/activity",
-    response_model=List[UserHistorySchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.GOVERNMENT])
+@router.post("/{user_id}/activity", response_model=UserActivitiesResponseSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.ADMINISTRATOR, RoleEnum.MANAGE_USERS])
 async def get_user_activities(
     request: Request,
-    response: Response = None,
-    user_id: int = None,
+    user_id: int,
+    pagination: PaginationRequestSchema = Body(...),
     service: UserServices = Depends(),
-) -> List[UserHistorySchema]:
+) -> UserActivitiesResponseSchema:
     """
-    Endpoint to get the activities of a user
-    It provides the details of the user login history
+    Get activities of a specific user.
+
+    Permissions:
+    - Government users with 'ADMINISTRATOR' role can access any user's activities.
+    - Supplier users with 'MANAGE_USERS' role can access activities of users within
+        their own organization.
     """
-    return await service.get_user_history(user_id)
+    current_user = request.user
+    return await service.get_user_activities(user_id, current_user, pagination)
+
+
+@router.post("/activities/all", response_model=UserActivitiesResponseSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def get_all_user_activities(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(...),
+    service: UserServices = Depends(),
+) -> UserActivitiesResponseSchema:
+    """
+    Get activities of all users.
+    """
+    current_user = request.user
+    return await service.get_all_user_activities(current_user, pagination)

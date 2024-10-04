@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import Depends
 from fastapi_cache.decorator import cache
-from sqlalchemy import and_, select, asc, desc
+from sqlalchemy import and_, select, asc, desc, union_all, literal_column, func, cast, String
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,10 +11,15 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
-from lcfs.db.models.user.UserLoginHistory import UserLoginHistory
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import Role, RoleEnum
-from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserHistorySchema
+from lcfs.db.models.transfer.TransferHistory import TransferHistory
+from lcfs.db.models.transfer.TransferStatus import TransferStatus
+from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import InitiativeAgreementHistory
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus
+from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
+from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     camel_to_snake,
@@ -27,6 +32,8 @@ logger = getLogger("user_repo")
 
 
 class UserRepository:
+    EXCLUDED_USER_ACTIVITY_STATUSES = ['Draft']
+
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
@@ -361,22 +368,6 @@ class UserRepository:
         logger.info(f"Deleted user with id: {user.user_profile_id}")
         return None
 
-    # TODO: User History pagination implementation if needed
-    @repo_handler
-    async def get_user_history(self, user_id: int = None) -> List[UserHistorySchema]:
-        histories = await self.db.execute(
-            select(UserLoginHistory)
-            .join(
-                UserProfile,
-                UserProfile.keycloak_username == UserLoginHistory.external_username,
-            )
-            .filter(
-                UserProfile.user_profile_id == user_id,
-                UserLoginHistory.is_login_successful == True,
-            )
-        )
-        return histories.all()
-
     @repo_handler
     async def get_full_name(self, username: str) -> str:
         """
@@ -396,3 +387,159 @@ class UserRepository:
             ).where(UserProfile.keycloak_username == username)
         )
         return full_name_result.scalars().first()
+    
+    def _build_activity_queries(self, user_id: int = None):
+        """
+        Builds the activity queries for user-specific or all-user activity logs.
+
+        Args:
+            user_id (Optional[int]): If provided, filters activities for a specific user.
+
+        Returns:
+            Tuple: Combined query for user activities, list of relevant conditions.
+        """
+
+        # Note: If we encounter performance issues in the future,
+        # consider replacing the current UNION ALL with a materialized view to pre-compute the union of activity logs.
+        # We also need to add indexes on create_date and other sorting columns to improve performance across the system.
+
+        # TransferHistory Query
+        transfer_query = (
+            select(
+                cast(TransferHistory.transfer_id, String).label('transaction_id'),
+                cast(TransferStatus.status, String).label('action_taken'),
+                literal_column("'Transfer'").label('transaction_type'),
+                TransferHistory.create_date.label('create_date'),
+                TransferHistory.user_profile_id.label('user_id')
+            )
+            .select_from(TransferHistory)
+            .join(TransferStatus, TransferHistory.transfer_status_id == TransferStatus.transfer_status_id)
+            .where(
+                cast(TransferStatus.status, String).notin_(self.EXCLUDED_USER_ACTIVITY_STATUSES)
+            )
+        )
+
+        # InitiativeAgreementHistory Query
+        initiative_query = (
+            select(
+                cast(InitiativeAgreementHistory.initiative_agreement_id, String).label('transaction_id'),
+                cast(InitiativeAgreementStatus.status, String).label('action_taken'),
+                literal_column("'InitiativeAgreement'").label('transaction_type'),
+                InitiativeAgreementHistory.create_date.label('create_date'),
+                InitiativeAgreementHistory.user_profile_id.label('user_id')
+            )
+            .select_from(InitiativeAgreementHistory)
+            .join(InitiativeAgreementStatus, InitiativeAgreementHistory.initiative_agreement_status_id == InitiativeAgreementStatus.initiative_agreement_status_id)
+            .where(
+                cast(InitiativeAgreementStatus.status, String).notin_(self.EXCLUDED_USER_ACTIVITY_STATUSES)
+            )
+        )
+
+        # AdminAdjustmentHistory Query
+        admin_adjustment_query = (
+            select(
+                cast(AdminAdjustmentHistory.admin_adjustment_id, String).label('transaction_id'),
+                cast(AdminAdjustmentStatus.status, String).label('action_taken'),
+                literal_column("'AdminAdjustment'").label('transaction_type'),
+                AdminAdjustmentHistory.create_date.label('create_date'),
+                AdminAdjustmentHistory.user_profile_id.label('user_id')
+            )
+            .select_from(AdminAdjustmentHistory)
+            .join(AdminAdjustmentStatus, AdminAdjustmentHistory.admin_adjustment_status_id == AdminAdjustmentStatus.admin_adjustment_status_id)
+            .where(
+                cast(AdminAdjustmentStatus.status, String).notin_(self.EXCLUDED_USER_ACTIVITY_STATUSES)
+            )
+        )
+
+        # Combine all queries using union_all
+        combined_query = union_all(
+            transfer_query,
+            initiative_query,
+            admin_adjustment_query
+        ).alias('activities')
+
+        # If a specific user_id is provided, filter by that user_id
+        conditions = []
+        if user_id is not None:
+            conditions.append(combined_query.c.user_id == user_id)
+
+        return combined_query, conditions
+
+    async def _get_paginated_user_activities(self, combined_query, conditions, pagination):
+        """
+        Handles pagination, filtering, and sorting for user activities.
+
+        Args:
+            combined_query: The SQLAlchemy query for activities.
+            conditions: List of conditions to apply to the query.
+            pagination: PaginationRequestSchema for pagination and filtering.
+
+        Returns:
+            Tuple: List of activities and total count.
+        """
+        # Apply filters from pagination
+        if pagination.filters:
+            for filter in pagination.filters:
+                field_name = camel_to_snake(filter.field)
+                field = getattr(combined_query.c, field_name, None)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field, filter.filter, filter.type, filter.filter_type
+                    )
+                    if condition is not None:
+                        conditions.append(condition)
+
+        # Apply ordering
+        order_by_clauses = []
+        if pagination.sort_orders:
+            for sort_order in pagination.sort_orders:
+                field_name = camel_to_snake(sort_order.field)
+                field = getattr(combined_query.c, field_name, None)
+                if field is not None:
+                    order = asc(field) if sort_order.direction == 'asc' else desc(field)
+                    order_by_clauses.append(order)
+        else:
+            # Default ordering by timestamp descending
+            order_by_clauses.append(desc(combined_query.c.create_date))
+
+        # Build the final query with conditions, ordering, and pagination
+        final_query = (
+            select(combined_query)
+            .where(and_(*conditions))
+            .order_by(*order_by_clauses)
+            .offset((pagination.page - 1) * pagination.size)
+            .limit(pagination.size)
+        )
+
+        # Execute the query
+        result = await self.db.execute(final_query)
+        activities = result.fetchall()
+
+        # Get total count for pagination
+        count_query = (
+            select(func.count())
+            .select_from(combined_query)
+            .where(and_(*conditions))
+        )
+        total_count_result = await self.db.execute(count_query)
+        total_count = total_count_result.scalar()
+
+        return activities, total_count
+
+    @repo_handler
+    async def get_user_activities_paginated(self, user_id: int, pagination: PaginationRequestSchema) -> List[dict]:
+        """
+        Fetches major activities for a specific user with pagination and filters,
+        excluding specified statuses.
+        """
+        combined_query, conditions = self._build_activity_queries(user_id=user_id)
+        return await self._get_paginated_user_activities(combined_query, conditions, pagination)
+
+    @repo_handler
+    async def get_all_user_activities_paginated(self, pagination: PaginationRequestSchema) -> List[dict]:
+        """
+        Fetches major activities for all users with pagination and filters,
+        excluding specified statuses.
+        """
+        combined_query, conditions = self._build_activity_queries()
+        return await self._get_paginated_user_activities(combined_query, conditions, pagination)
