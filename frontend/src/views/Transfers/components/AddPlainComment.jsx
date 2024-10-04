@@ -13,7 +13,7 @@ export const AddPlainComment = ({
   handleCommentChange,
   comment,
   transferStatus,
-  isGovernmentUser
+  isGovernmentUser = false
 }) => {
   const { t } = useTranslation(['transfer'])
   const { sameOrganization } = useCurrentUser()
@@ -48,7 +48,11 @@ export const AddPlainComment = ({
           sx={{ cursor: 'pointer' }}
         >
           <IconButton data-test="toggle-comments" aria-label="expand comments">
-            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            {isExpanded ? (
+              <ExpandLessIcon data-testid="ExpandLessIcon" />
+            ) : (
+              <ExpandMoreIcon data-testid="ExpandMoreIcon" />
+            )}
           </IconButton>
         </Box>
 
@@ -60,7 +64,7 @@ export const AddPlainComment = ({
             rows={4}
             variant="outlined"
             value={comment}
-            onChange={handleCommentChange}
+            onChange={(e) => handleCommentChange(e.target.value)}
           />
         </Collapse>
       </LabelBox>
@@ -68,10 +72,6 @@ export const AddPlainComment = ({
   )
 }
 
-AddPlainComment.defaultProps = {
-  isGovernmentUser: false
-}
-// Define PropTypes for the component
 AddPlainComment.propTypes = {
   toOrgId: PropTypes.any.isRequired,
   handleCommentChange: PropTypes.func.isRequired,

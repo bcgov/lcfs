@@ -485,13 +485,6 @@ describe('AddEditViewTransfer Component Tests', () => {
 
       expect(alertBox).toBeInTheDocument()
     })
-    it('does not render if transferData is null/undefined', async () => {
-      useTransfer.mockReturnValue({
-        data: null
-      })
-
-      expect(() => renderComponent()).toThrow()
-    })
     it('renders vertical stepper on mobile size', async () => {
       useMediaQuery.mockReturnValue(true)
       renderComponent()

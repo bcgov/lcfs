@@ -22,7 +22,7 @@ const MockFormProvider = ({ children }) => {
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
-describe('Recommendation', () => {
+describe('Recommendation Component', () => {
   beforeEach(() => {
     useTransfer.mockReturnValue({
       data: {

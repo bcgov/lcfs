@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TransferDetails } from '../TransferDetails'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi } from 'vitest'
@@ -9,21 +9,31 @@ import { calculateTotalValue } from '@/utils/formatters'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')
-vi.mock('@/hooks/useOrganization')
 vi.mock('@/hooks/useOrganizations')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key
-  })
+  }),
 }))
 
+// MockFormProvider Component
 const MockFormProvider = ({ children }) => {
-  const methods = useForm()
+  const methods = useForm({
+    defaultValues: {
+      toOrganizationId: '',
+      quantity: '',
+      pricePerUnit: '',
+    },
+    mode: 'onBlur',
+  })
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
 describe('TransferDetails Component', () => {
   beforeEach(() => {
+    // Reset mocks before each test
+    vi.resetAllMocks()
+
     useCurrentUser.mockReturnValue({
       data: {
         organization: { name: 'Test Organization' }
@@ -55,13 +65,13 @@ describe('TransferDetails Component', () => {
       { wrapper }
     )
     const quantityInput = screen.getByTestId('quantity')
-    const priceInput = screen.getByPlaceholderText('transfer:fairMarketText')
+    const priceInput = screen.getByTestId('price-per-unit')
 
     expect(quantityInput).toBeInTheDocument()
     expect(priceInput).toBeInTheDocument()
   })
 
-  test('calculates total value correctly', () => {
+  test('calculates total value correctly', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -76,13 +86,64 @@ describe('TransferDetails Component', () => {
     fireEvent.change(quantityInput, { target: { value: '10' } })
     fireEvent.change(priceInput, { target: { value: '5' } })
 
-    // Assuming calculateTotalValue is defined as quantity * pricePerUnit
-    const expectedTotalValue = calculateTotalValue(10, 5)
-    expect(totalValueDisplay).toHaveTextContent(
-      `${expectedTotalValue.toLocaleString('en-CA', {
-        style: 'currency',
-        currency: 'CAD'
-      })} CAD.`
+    // Wait for state updates
+    await waitFor(() => {
+      const expectedTotalValue = calculateTotalValue(10, 5)
+      expect(totalValueDisplay).toHaveTextContent(
+        `${expectedTotalValue.toLocaleString('en-CA', {
+          style: 'currency',
+          currency: 'CAD',
+        })} CAD.`
+      )
+    })
+  })
+
+  test('updates total value when inputs change', async () => {
+    render(
+      <MockFormProvider>
+        <TransferDetails />
+      </MockFormProvider>,
+      { wrapper }
     )
+    const quantityInput = screen.getByTestId('quantity')
+    const priceInput = screen.getByTestId('price-per-unit')
+    const totalValueDisplay = screen.getByTestId('transfer-total-value')
+
+    // Initial values
+    fireEvent.change(quantityInput, { target: { value: '5' } })
+    fireEvent.change(priceInput, { target: { value: '2' } })
+
+    await waitFor(() => {
+      expect(totalValueDisplay).toHaveTextContent('$10.00 CAD.')
+    })
+
+    // Update values
+    fireEvent.change(quantityInput, { target: { value: '8' } })
+    fireEvent.change(priceInput, { target: { value: '3' } })
+
+    await waitFor(() => {
+      expect(totalValueDisplay).toHaveTextContent('$24.00 CAD.')
+    })
+  })
+
+  test('selects an organization from the dropdown', async () => {
+    render(
+      <MockFormProvider>
+        <TransferDetails />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    // Find the Select component by its accessible label
+    const selectInput = screen.getByLabelText('org:selectOrgLabel')
+    fireEvent.mouseDown(selectInput)
+
+    const listbox = await screen.findByRole('listbox')
+    expect(listbox).toBeInTheDocument()
+
+    const option = screen.getByText('Org One')
+    fireEvent.click(option)
+
+    expect(selectInput).toHaveTextContent('Org One')
   })
 })
