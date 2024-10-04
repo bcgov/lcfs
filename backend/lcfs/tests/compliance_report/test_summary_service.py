@@ -1,9 +1,10 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from typing import List, Dict, Any, Tuple
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
 
 
 @pytest.mark.anyio
@@ -113,11 +114,60 @@ async def test_calculate_renewable_fuel_target_summary_2024(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    assert result[2].gasoline == 200
-    assert result[3].diesel == 8.0
-    assert result[9].gasoline == 190
+    # Line 1: Volume of fossil-derived base fuel supplied
+    assert result[0].gasoline == 100.0
+    assert result[0].diesel == 100.0
+    assert result[0].jet_fuel == 100.0
+
+    # Line 2: Volume of eligible renewable fuel supplied
+    assert result[1].gasoline == 100.0
+    assert result[1].diesel == 100.0
+    assert result[1].jet_fuel == 100.0
+
+    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    assert result[2].gasoline == 200.0
+    assert result[2].diesel == 200.0
+    assert result[2].jet_fuel == 200.0
+
+    # Line 4: Volume of eligible renewable fuel required
+    assert result[3].gasoline == 10.0  # 5% of 200
+    assert result[3].diesel == 8.0  # 4% of 200
+    assert result[3].jet_fuel == 0.0  # Jet fuel percentage is 0 in 2024
+
+    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    assert result[4].gasoline == 100.0
+    assert result[4].diesel == 100.0
+    assert result[4].jet_fuel == 100.0
+
+    # Line 6: Volume of eligible renewable fuel retained
+    assert result[5].gasoline == 0.0
+    assert result[5].diesel == 0.0
+    assert result[5].jet_fuel == 0.0
+
+    # Line 7: Volume of eligible renewable fuel previously retained
+    assert result[6].gasoline == 100.0
+    assert result[6].diesel == 100.0
+    assert result[6].jet_fuel == 100.0
+
+    # Line 8: Volume of eligible renewable obligation deferred
+    assert result[7].gasoline == 0.0
+    assert result[7].diesel == 0.0
+    assert result[7].jet_fuel == 0.0
+
+    # Line 9: Volume of renewable obligation added
+    assert result[8].gasoline == 100.0
+    assert result[8].diesel == 100.0
+    assert result[8].jet_fuel == 100.0
+
+    # Line 10: Net volume of eligible renewable fuel supplied
+    assert result[9].gasoline == 200.0
+    assert result[9].diesel == 200.0
+    assert result[9].jet_fuel == 200.0
+
+    # Line 11: Non-compliance penalty payable
+    assert result[10].gasoline == 0.0
+    assert result[10].diesel == 0.0
+    assert result[10].jet_fuel == 0.0
 
 
 @pytest.mark.anyio
@@ -153,10 +203,60 @@ async def test_calculate_renewable_fuel_target_summary_2028(
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
 
-    assert result[2].diesel == 700
-    assert result[3].jet_fuel == 11
-    assert result[5].gasoline == 15
-    assert result[9].diesel == 372.0
+    # Line 1: Volume of fossil-derived base fuel supplied
+    assert result[0].gasoline == 100.0
+    assert result[0].diesel == 300.0
+    assert result[0].jet_fuel == 500.0
+
+    # Line 2: Volume of eligible renewable fuel supplied
+    assert result[1].gasoline == 200.0
+    assert result[1].diesel == 400.0
+    assert result[1].jet_fuel == 600.0
+
+    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    assert result[2].gasoline == 300.0
+    assert result[2].diesel == 700.0
+    assert result[2].jet_fuel == 1100.0
+
+    # Line 4: Volume of eligible renewable fuel required
+    assert result[3].gasoline == 15.0  # 5% of 300
+    assert result[3].diesel == 28.0  # 4% of 700
+    assert result[3].jet_fuel == 11  # 1% of 1100
+
+    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    assert result[4].gasoline == 500.0
+    assert result[4].diesel == 100.0
+    assert result[4].jet_fuel == 300.0
+
+    # Line 6: Volume of eligible renewable fuel retained
+    assert result[5].gasoline == 0.0
+    assert result[5].diesel == 0.0
+    assert result[5].jet_fuel == 0.0
+
+    # Line 7: Volume of eligible renewable fuel previously retained
+    assert result[6].gasoline == 300.0
+    assert result[6].diesel == 500.0
+    assert result[6].jet_fuel == 100.0
+
+    # Line 8: Volume of eligible renewable obligation deferred
+    assert result[7].gasoline == 0.0
+    assert result[7].diesel == 0.0
+    assert result[7].jet_fuel == 0.0
+
+    # Line 9: Volume of renewable obligation added
+    assert result[8].gasoline == 400.0
+    assert result[8].diesel == 600.0
+    assert result[8].jet_fuel == 200.0
+
+    # Line 10: Net volume of eligible renewable fuel supplied
+    assert result[9].gasoline == 600.0
+    assert result[9].diesel == 400.0
+    assert result[9].jet_fuel == 800.0
+
+    # Line 11: Non-compliance penalty payable
+    assert result[10].gasoline == 0.0
+    assert result[10].diesel == 0.0
+    assert result[10].jet_fuel == 0.0
 
 
 @pytest.mark.anyio
@@ -192,10 +292,60 @@ async def test_calculate_renewable_fuel_target_summary_2029(
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
 
-    assert result[2].diesel == 500
-    assert result[3].jet_fuel == 6
-    assert result[5].gasoline == 20
-    assert result[9].jet_fuel == 594
+    # Line 1: Volume of fossil-derived base fuel supplied
+    assert result[0].gasoline == 300.0
+    assert result[0].diesel == 200.0
+    assert result[0].jet_fuel == 100.0
+
+    # Line 2: Volume of eligible renewable fuel supplied
+    assert result[1].gasoline == 100.0
+    assert result[1].diesel == 300.0
+    assert result[1].jet_fuel == 200.0
+
+    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    assert result[2].gasoline == 400.0
+    assert result[2].diesel == 500.0
+    assert result[2].jet_fuel == 300.0
+
+    # Line 4: Volume of eligible renewable fuel required
+    assert result[3].gasoline == 20.0  # 5% of 400
+    assert result[3].diesel == 20.0  # 4% of 500
+    assert result[3].jet_fuel == 6.0  # 2% of 300
+
+    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    assert result[4].gasoline == 100.0
+    assert result[4].diesel == 300.0
+    assert result[4].jet_fuel == 200.0
+
+    # Line 6: Volume of eligible renewable fuel retained
+    assert result[5].gasoline == 0.0
+    assert result[5].diesel == 0.0
+    assert result[5].jet_fuel == 0.0
+
+    # Line 7: Volume of eligible renewable fuel previously retained
+    assert result[6].gasoline == 200.0
+    assert result[6].diesel == 100.0
+    assert result[6].jet_fuel == 300.0
+
+    # Line 8: Volume of eligible renewable obligation deferred
+    assert result[7].gasoline == 0.0
+    assert result[7].diesel == 0.0
+    assert result[7].jet_fuel == 0.0
+
+    # Line 9: Volume of renewable obligation added
+    assert result[8].gasoline == 300.0
+    assert result[8].diesel == 200.0
+    assert result[8].jet_fuel == 100.0
+
+    # Line 10: Net volume of eligible renewable fuel supplied
+    assert result[9].gasoline == 100.0
+    assert result[9].diesel == 500.0
+    assert result[9].jet_fuel == 600.0
+
+    # Line 11: Non-compliance penalty payable
+    assert result[10].gasoline == 0.0
+    assert result[10].diesel == 0.0
+    assert result[10].jet_fuel == 0.0
 
 
 @pytest.mark.anyio
@@ -228,12 +378,60 @@ async def test_calculate_renewable_fuel_target_summary_2030(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    assert result[2].gasoline == 300
-    assert result[3].diesel == 20
-    assert result[5].gasoline == 15
-    assert result[9].diesel == 480
+    # Line 1: Volume of fossil-derived base fuel supplied
+    assert result[0].gasoline == 100.0
+    assert result[0].diesel == 200.0
+    assert result[0].jet_fuel == 300.0
+
+    # Line 2: Volume of eligible renewable fuel supplied
+    assert result[1].gasoline == 200.0
+    assert result[1].diesel == 300.0
+    assert result[1].jet_fuel == 100.0
+
+    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    assert result[2].gasoline == 300.0
+    assert result[2].diesel == 500.0
+    assert result[2].jet_fuel == 400.0
+
+    # Line 4: Volume of eligible renewable fuel required
+    assert result[3].gasoline == 15.0  # 5% of 300
+    assert result[3].diesel == 20.0  # 4% of 500
+    assert result[3].jet_fuel == 12.0
+
+    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    assert result[4].gasoline == 200.0
+    assert result[4].diesel == 300.0
+    assert result[4].jet_fuel == 100.0
+
+    # Line 6: Volume of eligible renewable fuel retained
+    assert result[5].gasoline == 0.0
+    assert result[5].diesel == 0.0
+    assert result[5].jet_fuel == 0.0
+
+    # Line 7: Volume of eligible renewable fuel previously retained
+    assert result[6].gasoline == 300.0
+    assert result[6].diesel == 100.0
+    assert result[6].jet_fuel == 200.0
+
+    # Line 8: Volume of eligible renewable obligation deferred
+    assert result[7].gasoline == 0.0
+    assert result[7].diesel == 0.0
+    assert result[7].jet_fuel == 0.0
+
+    # Line 9: Volume of renewable obligation added
+    assert result[8].gasoline == 100.0
+    assert result[8].diesel == 200.0
+    assert result[8].jet_fuel == 300.0
+
+    # Line 10: Net volume of eligible renewable fuel supplied
+    assert result[9].gasoline == 600.0
+    assert result[9].diesel == 500.0
+    assert result[9].jet_fuel == 100.0
+
+    # Line 11: Non-compliance penalty payable
+    assert result[10].gasoline == 0.0
+    assert result[10].diesel == 0.0
+    assert result[10].jet_fuel == 0.0
 
 
 @pytest.mark.anyio
@@ -272,3 +470,200 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
     assert len(result) == 2
     assert result[0].total_value == 6000
     assert result[1].total_value == 1200
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_no_renewables(
+    compliance_report_summary_service,
+):
+    # Test case where there are no renewable quantities
+    fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 3000}
+    renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2030
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=0,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    assert len(result) == 11
+    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
+    assert result[10].gasoline > 0  # Penalty should be applied due to no renewables
+    assert result[10].diesel > 0
+    assert result[10].jet_fuel > 0
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_high_renewables(
+    compliance_report_summary_service,
+):
+    # Test case where renewable quantities exceed requirements
+    fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
+    renewable_quantities = {"gasoline": 500, "diesel": 600, "jet_fuel": 700}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2030
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=0,
+        line_6_renewable_fuel_retained_diesel=0,
+        line_6_renewable_fuel_retained_jet_fuel=0,
+        line_8_obligation_deferred_gasoline=0,
+        line_8_obligation_deferred_diesel=0,
+        line_8_obligation_deferred_jet_fuel=0,
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    assert len(result) == 11
+    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
+    assert result[10].gasoline == 0  # No penalty since renewables exceed requirements
+    assert result[10].diesel == 0
+    assert result[10].jet_fuel == 0
+
+
+import pytest
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
+    compliance_report_summary_service,
+):
+    # Test case where required renewable quantities have not changed, so lines 6 and 8 should be copied
+    fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
+    renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    compliance_period = 2030
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=10,
+        line_6_renewable_fuel_retained_diesel=20,
+        line_6_renewable_fuel_retained_jet_fuel=30,
+        line_8_obligation_deferred_gasoline=5,
+        line_8_obligation_deferred_diesel=10,
+        line_8_obligation_deferred_jet_fuel=15,
+    )
+
+    # Set the expected eligible renewable fuel required to match the summary model
+    expected_eligible_renewable_fuel_required = {
+        "gasoline": 5.0,  # 100 * 0.05
+        "diesel": 8.0,  # 200 * 0.04
+        "jet_fuel": 9.0,  # 300 * 0.03
+    }
+
+    # Mock the summary model's line 4 values to match the expected required values
+    summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
+        expected_eligible_renewable_fuel_required["gasoline"]
+    )
+    summary_model.line_4_eligible_renewable_fuel_required_diesel = (
+        expected_eligible_renewable_fuel_required["diesel"]
+    )
+    summary_model.line_4_eligible_renewable_fuel_required_jet_fuel = (
+        expected_eligible_renewable_fuel_required["jet_fuel"]
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    assert len(result) == 11
+    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
+
+    # Line 6: Volume of eligible renewable fuel retained
+    assert result[5].gasoline == 10.0  # Should be copied if conditions are met
+    assert result[5].diesel == 20.0
+    assert result[5].jet_fuel == 30.0
+
+    # Line 8: Volume of eligible renewable obligation deferred
+    assert result[7].gasoline == 5.0  # Should be copied if conditions are met
+    assert result[7].diesel == 10.0
+    assert result[7].jet_fuel == 15.0
+
+
+@pytest.mark.anyio
+async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
+    compliance_report_summary_service,
+):
+    # Test case where required renewable quantities have changed, so lines 6 and 8 should not be copied
+    fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
+    renewable_quantities = {"gasoline": 50, "diesel": 150, "jet_fuel": 50}
+    previous_retained = {"gasoline": 20, "diesel": 30, "jet_fuel": 40}
+    previous_obligation = {"gasoline": 10, "diesel": 20, "jet_fuel": 30}
+    notional_transfers_sum = {"gasoline": 5, "diesel": 10, "jet_fuel": 15}
+    compliance_period = 2030
+    summary_model = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=10,
+        line_6_renewable_fuel_retained_diesel=20,
+        line_6_renewable_fuel_retained_jet_fuel=30,
+        line_8_obligation_deferred_gasoline=5,
+        line_8_obligation_deferred_diesel=10,
+        line_8_obligation_deferred_jet_fuel=15,
+    )
+
+    # Set the expected eligible renewable fuel required to differ from the summary model
+    expected_eligible_renewable_fuel_required = {
+        "gasoline": 10.0,  # Different from summary model
+        "diesel": 16.0,  # Different from summary model
+        "jet_fuel": 18.0,  # Different from summary model
+    }
+
+    # Mock the summary model's line 4 values to differ from the expected required values
+    summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
+        expected_eligible_renewable_fuel_required["gasoline"] + 1
+    )
+    summary_model.line_4_eligible_renewable_fuel_required_diesel = (
+        expected_eligible_renewable_fuel_required["diesel"] + 1
+    )
+    summary_model.line_4_eligible_renewable_fuel_required_jet_fuel = (
+        expected_eligible_renewable_fuel_required["jet_fuel"] + 1
+    )
+
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sum,
+        compliance_period,
+        summary_model,
+    )
+
+    assert len(result) == 11
+    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
+    assert result[5].gasoline == 0  # Line 6 should not be copied
+    assert result[5].diesel == 0
+    assert result[5].jet_fuel == 0
+    assert result[7].gasoline == 0  # Line 8 should not be copied
+    assert result[7].diesel == 0
+    assert result[7].jet_fuel == 0
