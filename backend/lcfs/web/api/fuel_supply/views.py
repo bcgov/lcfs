@@ -1,5 +1,6 @@
 from logging import getLogger
 from typing import Optional, Union
+
 from fastapi import (
     APIRouter,
     Body,
@@ -11,9 +12,9 @@ from fastapi import (
 from starlette.responses import JSONResponse
 
 from lcfs.db import dependencies
-from lcfs.db.models import FuelSupply
-
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
@@ -25,8 +26,6 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
 from lcfs.web.core.decorators import view_handler
-from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("fuel_supply_view")
@@ -48,7 +47,7 @@ async def get_fs_table_options(
 @router.post(
     "/list-all", response_model=FuelSuppliesSchema, status_code=status.HTTP_200_OK
 )
-@view_handler(['*'])
+@view_handler(["*"])
 async def get_fuel_supply(
     request: Request,
     request_data: CommonPaginatedReportRequestSchema = Body(...),
