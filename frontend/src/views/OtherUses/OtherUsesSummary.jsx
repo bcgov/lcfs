@@ -50,12 +50,16 @@ export const OtherUsesSummary = ({ data }) => {
     {
       headerName: t('otherUses:otherUsesColLabels.expectedUse'),
       field: 'expectedUse',
-      floatingFilter: false
+      floatingFilter: false,
+      flex: 1,
+      minWidth: 200
     },
     {
       headerName: t('otherUses:otherUsesColLabels.rationale'),
       field: 'rationale',
-      floatingFilter: false
+      floatingFilter: false,
+      flex: 1,
+      minWidth: 200
     }
   ]
 

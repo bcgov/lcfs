@@ -103,7 +103,6 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const onCellEditingStopped = useCallback(
     async (params) => {
-      debugger
       if (params.oldValue === params.newValue) return
 
       params.node.updateData({

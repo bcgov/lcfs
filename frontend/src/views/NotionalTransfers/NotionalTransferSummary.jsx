@@ -35,13 +35,17 @@ export const NotionalTransferSummary = ({ data }) => {
   const columns = [
     {
       headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
-      field: 'legalName'
+      field: 'legalName',
+      flex: 1,
+      minWidth: 200
     },
     {
       headerName: t(
         'notionalTransfer:notionalTransferColLabels.addressForService'
       ),
-      field: 'addressForService'
+      field: 'addressForService',
+      flex: 1,
+      minWidth: 200
     },
     {
       headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
