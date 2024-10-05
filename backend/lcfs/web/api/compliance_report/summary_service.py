@@ -1,30 +1,29 @@
 import logging
+import re
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Dict, Any, Tuple
+from typing import List, Tuple
 
-from sqlalchemy.orm import make_transient
-
-from lcfs.web.api.transaction.repo import TransactionRepository
-from sqlalchemy import Float, inspect
-import re
 from fastapi import Depends
-from lcfs.web.api.compliance_report.schema import (
-    ComplianceReportSummaryRowSchema,
-    ComplianceReportSummarySchema,
-)
+from sqlalchemy import inspect
+
+from lcfs.db.models.compliance.ComplianceReport import ChangeType
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
 )
-from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.compliance.ComplianceReport import ChangeType
-from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportSummaryRowSchema,
+    ComplianceReportSummarySchema,
+)
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.notional_transfer.services import NotionalTransferServices
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
@@ -196,26 +195,25 @@ class ComplianceReportSummaryService:
                     existing_element.value = value
         return summary
 
-#     @service_handler
-#     async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
-#         """
-#         Get a list of all summary versions for a given report, including the original and all supplementals.
+    #     @service_handler
+    #     async def get_summary_versions(self, report_id: int) -> List[Tuple[int, int, str]]:
+    #         """
+    #         Get a list of all summary versions for a given report, including the original and all supplementals.
 
-#         :param report_id: The ID of the original compliance report
-#         :return: A list of tuples containing (summary_id, version, type)
-#         """
-#         return await self.repo.get_summary_versions(report_id)
+    #         :param report_id: The ID of the original compliance report
+    #         :return: A list of tuples containing (summary_id, version, type)
+    #         """
+    #         return await self.repo.get_summary_versions(report_id)
 
-#     @service_handler
-#     async def get_compliance_report_summary(
-#         self, report_id: int
-#     ) -> ComplianceReportSummarySchema:
-#         """
-#         Get a specific compliance report summary by its ID.
-#         """
-#         report = await self.repo.get_summary_by_report_id(report_id)
-#         return self.map_to_schema(report)
-
+    #     @service_handler
+    #     async def get_compliance_report_summary(
+    #         self, report_id: int
+    #     ) -> ComplianceReportSummarySchema:
+    #         """
+    #         Get a specific compliance report summary by its ID.
+    #         """
+    #         report = await self.repo.get_summary_by_report_id(report_id)
+    #         return self.map_to_schema(report)
 
     @service_handler
     async def update_compliance_report_summary(
@@ -414,30 +412,27 @@ class ComplianceReportSummaryService:
         }
 
         # line 6
-        retained_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+        retained_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
         # line 8
-        deferred_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+        deferred_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            required_renewable_quantity = eligible_renewable_fuel_required.get(
-                category, 0
+            required_renewable_quantity = eligible_renewable_fuel_required.get(category)
+            previous_required_renewable_quantity = getattr(
+                summary_model, f"line_4_eligible_renewable_fuel_required_{category}"
             )
-            renewable_quantity = renewable_quantities.get(category, 0) or 0
 
-            # Passes Check, use line 6
-            if renewable_quantity >= required_renewable_quantity:
-                retained_renewables[category] = min(
-                    eligible_renewable_fuel_required.get(category, 0),
-                    getattr(
-                        summary_model, f"line_6_renewable_fuel_retained_{category}"
-                    ),
+            # only carry over line 6,8 if required quantities have not changed
+            print("Previous", previous_required_renewable_quantity)
+            print("Required", required_renewable_quantity)
+            if not previous_required_renewable_quantity != required_renewable_quantity:
+                retained_renewables[category] = getattr(
+                    summary_model, f"line_6_renewable_fuel_retained_{category}"
                 )
-            # Fails check, use line 8
-            else:
-                deferred_renewables[category] = min(
-                    eligible_renewable_fuel_required.get(category, 0),
-                    getattr(summary_model, f"line_8_obligation_deferred_{category}"),
+                deferred_renewables[category] = getattr(
+                    summary_model, f"line_8_obligation_deferred_{category}"
                 )
+
         # line 10
         net_renewable_supplied = {
             category:
@@ -649,7 +644,7 @@ class ComplianceReportSummaryService:
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == "11")
         non_compliance_summary_lines = {
             "11": {"total_value": line_11.total_value},
-            "21": {"total_value": non_compliance_penalty_payable}
+            "21": {"total_value": non_compliance_penalty_payable},
         }
 
         non_compliance_penalty_summary = [
@@ -821,6 +816,7 @@ class ComplianceReportSummaryService:
                 break
 
         return list(effective_exports.values())
+
 
 #     async def are_identical(
 #         self,
