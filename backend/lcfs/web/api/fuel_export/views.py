@@ -17,6 +17,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportCreateSchema,
     FuelTypeOptionsResponse,
     CommonPaginatedReportRequestSchema,
+    FuelExportSchema,
 )
 from lcfs.web.api.fuel_export.services import FuelExportServices
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
@@ -70,7 +71,7 @@ async def get_fuel_exports(
 
 @router.post(
     "/save",
-    response_model=Union[FuelExportCreateSchema, DeleteFuelExportResponseSchema],
+    response_model=Union[FuelExportSchema, DeleteFuelExportResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler([RoleEnum.SUPPLIER])
