@@ -22,7 +22,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: ({ data }) => data.type?.description || ''
+    valueGetter: () => 'Compliance report'
   },
   {
     field: 'status',

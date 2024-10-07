@@ -255,7 +255,6 @@ export const AddEditAllocationAgreements = () => {
     isFetched &&
     !allocationAgreementsLoading && (
       <Grid2 className="add-edit-allocation-agreement-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('allocationAgreement:addAllocationAgreementRowsTitle')}
@@ -272,6 +271,7 @@ export const AddEditAllocationAgreements = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
