@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 // mui components
-import BCAlert from '@/components/BCAlert'
+import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
@@ -46,8 +46,6 @@ export const EditViewComplianceReport = () => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
   const [internalComment, setInternalComment] = useState('')
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
@@ -109,13 +107,17 @@ export const EditViewComplianceReport = () => {
     {
       onSuccess: (response) => {
         setModalData(null)
-        setAlertMessage(t('report:savedSuccessText'))
-        setAlertSeverity('success')
+        alertRef.current?.triggerAlert({
+          message: t('report:savedSuccessText'),
+          severity: 'success'
+        })
       },
       onError: (error) => {
         setModalData(null)
-        setAlertMessage(error.message)
-        setAlertSeverity('error')
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
       }
     }
   )
@@ -148,12 +150,10 @@ export const EditViewComplianceReport = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
+      alertRef.current?.triggerAlert({ message: location.state.message, severity: location.state.severity || 'info' })
     }
     if (isError) {
-      setAlertMessage(error.message)
-      setAlertSeverity('error')
+      alertRef.current?.triggerAlert({ message: error.message, severity: 'error' })
     }
   }, [location.state, isError, error])
 
@@ -162,16 +162,11 @@ export const EditViewComplianceReport = () => {
   }
   return (
     <>
-      {alertMessage && (
-        <BCAlert
-          ref={alertRef}
-          data-test="alert-box"
-          severity={alertSeverity}
-          delay={65000}
-        >
-          {alertMessage}
-        </BCAlert>
-      )}
+      <FloatingAlert
+        ref={alertRef}
+        data-test="alert-box"
+        delay={65000}
+      />
       <BCBox pl={2} pr={2}>
         <BCModal
           open={!!modalData}

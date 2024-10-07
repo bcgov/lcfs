@@ -22,7 +22,7 @@ const FloatingAlertRoot = styled(Box)(({ theme, ownerState }) => {
 
   return {
     position: 'fixed',
-    top: pxToRem(240),
+    top: pxToRem(200),
     left: '50%',
     transform: 'translateX(-50%)',
     zIndex: 1400, // Ensures it's on top of other elements

@@ -346,7 +346,7 @@ export const AddEditFuelSupplies = () => {
     isFetched &&
     !fuelSuppliesLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
-        <FloatingAlert ref={alertRef} data-test="alert-box" delay="10000" />
+        <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelSupply:addFuelSupplyRowsTitle')}
