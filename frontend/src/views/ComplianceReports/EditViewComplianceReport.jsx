@@ -165,7 +165,7 @@ export const EditViewComplianceReport = () => {
       <FloatingAlert
         ref={alertRef}
         data-test="alert-box"
-        delay={65000}
+        delay={10000}
       />
       <BCBox pl={2} pr={2}>
         <BCModal
