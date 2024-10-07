@@ -254,7 +254,6 @@ export const AddEditOtherUses = () => {
   return (
     isFetched && (
       <Grid2 className="add-edit-other-uses-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('otherUses:newOtherUsesTitle')}
@@ -263,6 +262,7 @@ export const AddEditOtherUses = () => {
 
         <BCGridEditor
           gridRef={gridRef}
+          alertRef={alertRef}
           getRowId={(params) => params.data.id}
           columnDefs={otherUsesColDefs(optionsData, errors)}
           defaultColDef={defaultColDef}

@@ -84,5 +84,15 @@
     "Assessed": "Assessed",
     "ReAssessed": "Re-assessed"
   },
-  "internalComments": "Internal comments"
+  "internalComments": "Internal comments",
+  "fuelLabels": {
+    "gasoline": "Gasoline",
+    "diesel": "Diesel",
+    "jetFuel": "Jet fuel"
+  },
+  "summaryLabels": {
+    "line": "Line",
+    "value": "Value",
+    "totalValue": "Total Value"
+  }
 }

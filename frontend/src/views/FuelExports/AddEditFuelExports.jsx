@@ -252,7 +252,6 @@ export const AddEditFuelExports = () => {
     isFetched &&
     !fuelExportsLoading && (
       <Grid2 className="add-edit-fuel-export-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelExport:addFuelExportRowsTitle')}
@@ -269,6 +268,7 @@ export const AddEditFuelExports = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
