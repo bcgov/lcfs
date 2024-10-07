@@ -122,17 +122,6 @@ async def update_compliance_report_summary(
     )
 
 
-# Delete a file from S3 and remove the entry from the database
-@router.delete(
-    "/{report_id}/files/{document_id}",
-)
-async def delete_file(
-    request: Request, document_id: int, document_service: DocumentService = Depends()
-):
-    await document_service.delete_file(document_id)
-    return {"message": "File and metadata deleted successfully"}
-
-
 @view_handler(["*"])
 @router.put(
     "/{report_id}",

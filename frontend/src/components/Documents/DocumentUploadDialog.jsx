@@ -228,18 +228,17 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
 
         {files.map((file, i) => (
           <div style={{ display: 'contents' }} key={file.documentId}>
-            <TableCell
-              onClick={() => {
-                viewDocument(file.documentId)
-              }}
-            >
+            <TableCell>
               {!file.oversize && (
                 <BCTypography
                   variant="subtitle2"
                   color="link"
+                  onClick={() => {
+                    viewDocument(file.documentId)
+                  }}
                   sx={{
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'info.main' }
+                    '&:hover': { cursor: 'pointer' },
+                    textDecoration: 'underline'
                   }}
                 >
                   {file.fileName}

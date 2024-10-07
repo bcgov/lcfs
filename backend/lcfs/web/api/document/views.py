@@ -74,3 +74,18 @@ async def stream_document(
     return StreamingResponse(
         content=file["Body"], media_type=file["ContentType"], headers=headers
     )
+
+
+@router.delete(
+    "/{parent_type}/{parent_id}/{document_id}",
+)
+async def delete_file(
+    request: Request,
+    parent_type: str,
+    parent_id: int,
+    document_id: int,
+    document_service: DocumentService = Depends(),
+):
+    # TODO: Use parent ID and parent type to check permissions / security
+    await document_service.delete_file(document_id)
+    return {"message": "File and metadata deleted successfully"}

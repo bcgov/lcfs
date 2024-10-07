@@ -36,12 +36,11 @@ export const SupportingDocumentSummary = ({ reportID, data }) => {
             }}
           >
             <BCTypography
+              sx={{
+                textDecoration: 'underline'
+              }}
               variant="subtitle2"
               color="link"
-              sx={{
-                textDecoration: 'underline',
-                '&:hover': { color: 'info.main' }
-              }}
             >
               {file.fileName}
             </BCTypography>
