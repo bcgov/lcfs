@@ -22,7 +22,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: () => 'Compliance report'
+    valueGetter: () => t('report:complianceReport')
   },
   {
     field: 'status',
@@ -67,7 +67,7 @@ export const reportsColDefs = (t, bceidRole) => [
   }
 ]
 
-export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
+export const renewableFuelColumns = (t, data, editable, compliancePeriodYear) => {
   /**
    * Editable Lines Logic:
    *
@@ -114,7 +114,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
       (line) => line !== SUMMARY.LINE_8
     )
   }
-  
+
   // ============ Diesel Logic ============
   if (
     data[SUMMARY.LINE_2].diesel > 0 &&
@@ -126,7 +126,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
     data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
   )
     dieselEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
-  
+
   // Line 8
   if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
     // If Line 2 is less than Line 4, ensure Line 8 is available
@@ -139,7 +139,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
       (line) => line !== SUMMARY.LINE_8
     )
   }
-  
+
   // ============ Jet Fuel Logic ============
   if (
     data[SUMMARY.LINE_2].jetFuel > 0 &&
@@ -151,7 +151,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
     data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
   )
     jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
-  
+
 
   // Line 8
   if (parseInt(compliancePeriodYear) >= 2028) {
@@ -184,15 +184,15 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
   }
 
   return [
-    { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+    { id: 'line', label: t('report:summaryLabels.line'), align: 'center', width: '100px', bold: true },
     {
       id: 'description',
-      label: 'Renewable fuel target summary',
+      label: t('report:renewableFuelTargetSummary'),
       maxWidth: '300px'
     },
     {
       id: 'gasoline',
-      label: 'Gasoline',
+      label: t('report:fuelLabels.gasoline'),
       align: 'right',
       width: '150px',
       editable,
@@ -204,7 +204,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
     },
     {
       id: 'diesel',
-      label: 'Diesel',
+      label: t('report:fuelLabels.diesel'),
       align: 'right',
       width: '150px',
       editable,
@@ -216,7 +216,7 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
     },
     {
       id: 'jetFuel',
-      label: 'Jet fuel',
+      label: t('report:fuelLabels.jetFuel'),
       align: 'right',
       width: '150px',
       editable,
@@ -229,23 +229,23 @@ export const renewableFuelColumns = (data, editable, compliancePeriodYear) => {
   ]
 }
 
-export const lowCarbonColumns = [
-  { id: 'line', label: 'Line', align: 'center', width: '100px', bold: true },
+export const lowCarbonColumns = (t) => [
+  { id: 'line', label: t('report:summaryLabels.line'), align: 'center', width: '100px', bold: true },
   {
     id: 'description',
-    label: 'Low carbon fuel target summary',
+    label: t('report:lowCarbonFuelTargetSummary'),
     maxWidth: '300px'
   },
-  { id: 'value', label: 'Value', align: 'center', width: '150px' }
+  { id: 'value', label: t('report:summaryLabels.value'), align: 'center', width: '150px' }
 ]
 
-export const nonComplianceColumns = [
+export const nonComplianceColumns = (t) => [
   {
     id: 'description',
-    label: 'Non-compliance penalty payable summary',
+    label: t('report:nonCompliancePenaltySummary'),
     maxWidth: '300px'
   },
-  { id: 'totalValue', label: 'Total Value', align: 'center', width: '150px' }
+  { id: 'totalValue', label: t('report:summaryLabels.totalValue'), align: 'center', width: '150px' }
 ]
 
 export const defaultSortModel = [
