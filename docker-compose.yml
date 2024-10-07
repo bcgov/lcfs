@@ -11,6 +11,8 @@ services:
       - 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - shared_network
 
   redis:
     container_name: redis
@@ -22,6 +24,8 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/bitnami/redis/data
+    networks:
+      - shared_network
 
   #  clamav:
   #    image: clamav/clamav:stable_base
@@ -30,6 +34,8 @@ services:
   #      - clamav:/var/lib/clamav
   #    ports:
   #      - "3310:3310"
+  #    networks:
+  #    - shared_network
 
   minio:
     image: minio/minio:latest
@@ -44,6 +50,8 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
+    networks:
+      - shared_network
 
   create_bucket:
     image: minio/mc
@@ -91,6 +99,8 @@ services:
       - redis
       - create_bucket
      # - clamav
+    networks:
+      - shared_network
 
   frontend:
     container_name: frontend
@@ -108,6 +118,8 @@ services:
       - type: volume
         source: node_modules
         target: /app/node_modules
+    networks:
+      - shared_network
 
 volumes:
   postgres_data:
@@ -122,3 +134,7 @@ volumes:
     name: clamav
   clamsocket:
     name: clamsocket
+
+networks:
+  shared_network:
+    external: true

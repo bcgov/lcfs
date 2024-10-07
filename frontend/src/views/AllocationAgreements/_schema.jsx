@@ -287,6 +287,9 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
+    valueFormatter: params => {
+      return parseFloat(params.value).toFixed(2);
+    },
     cellStyle: (params) => StandardCellErrors(params, errors),
     editable: false,
     valueGetter: (params) => {

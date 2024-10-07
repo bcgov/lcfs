@@ -12,6 +12,7 @@
   "MobilePhone": "Mobile phone",
   "Title": "Title",
   "usersNotFound": "No users found",
+  "activitiesNotFound": "No user activities found",
   "newUserBtn": "New user",
   "userColLabels": {
     "userName": "User name",

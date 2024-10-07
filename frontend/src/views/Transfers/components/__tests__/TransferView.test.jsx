@@ -46,7 +46,7 @@ const MockFormProvider = ({ children }) => {
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
-describe('TransferView', () => {
+describe('TransferView Component', () => {
   const transferData = {
     currentStatus: { status: TRANSFER_STATUSES.DRAFT },
     toOrganization: { name: 'Org B', organizationId: 2 },

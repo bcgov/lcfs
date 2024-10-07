@@ -6,6 +6,16 @@ import { useMediaQuery, useTheme } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
 import { wrapper } from '@/tests/utils/wrapper'
 
+global.XMLHttpRequest = vi.fn(() => ({
+  open: vi.fn(),
+  send: vi.fn(),
+  setRequestHeader: vi.fn(),
+  onreadystatechange: vi.fn(),
+  readyState: 4,
+  status: 200,
+  responseText: JSON.stringify({})
+}))
+
 const keycloak = vi.hoisted(() => ({
   useKeycloak: () => ({
     keycloak: vi.fn()
@@ -39,7 +49,7 @@ vi.mock('@mui/material', async (importOriginal) => {
   }
 })
 
-describe('TransferDetailsCard', () => {
+describe('TransferDetailsCard Component', () => {
   const mockUseTheme = {
     breakpoints: {
       down: vi.fn().mockReturnValue(false)
@@ -123,5 +133,41 @@ describe('TransferDetailsCard', () => {
       { wrapper }
     )
     expect(screen.getByTestId('SwapVertIcon')).toBeInTheDocument()
+  })
+
+  test('handles zero and negative quantities and prices', () => {
+    render(
+      <TransferDetailsCard
+        fromOrgId={1}
+        fromOrganization="Org A"
+        toOrgId={2}
+        toOrganization="Org B"
+        quantity={0}
+        pricePerUnit={0}
+        transferStatus="Submitted"
+        isGovernmentUser={true}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByText('$0.00')).toBeInTheDocument()
+    expect(screen.getByText('0 transfer:complianceUnits')).toBeInTheDocument()
+  })
+
+  test('formats large numbers correctly', () => {
+    render(
+      <TransferDetailsCard
+        fromOrgId={1}
+        fromOrganization="Org A"
+        toOrgId={2}
+        toOrganization="Org B"
+        quantity={1000000}
+        pricePerUnit={5000}
+        transferStatus="Submitted"
+        isGovernmentUser={true}
+      />,
+      { wrapper }
+    )
+    const totalValue = (1000000 * 5000).toFixed(2)
+    expect(screen.getByText(`$${decimalFormatter(totalValue)}`)).toBeInTheDocument()
   })
 })

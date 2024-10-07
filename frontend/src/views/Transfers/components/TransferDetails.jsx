@@ -79,7 +79,7 @@ export const TransferDetails = () => {
             placeholder={t('common:quantity')}
             size="small"
             error={!!errors.quantity}
-            helperext={errors.quantity?.message}
+            helperText={errors.quantity?.message}
             sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
           />
           {t('transfer:complianceUnitsTo')}
@@ -109,7 +109,7 @@ export const TransferDetails = () => {
                   error={!!errors.toOrganizationId}
                   // helperText={errors.toOrganizationId?.message}
                   displayEmpty
-                  menuProps={{
+                  menuprops={{
                     sx: {
                       marginTop: '0 !important'
                     }
@@ -162,7 +162,7 @@ export const TransferDetails = () => {
               step: '10',
               style: { textAlign: 'right' },
               'data-test': 'price-per-unit',
-              startAdornment: (
+              startadornment: (
                 <InputAdornment position="start">$</InputAdornment>
               )
             }}

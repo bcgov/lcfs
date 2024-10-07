@@ -8,7 +8,17 @@ import {
   dateFormatter
 } from '@/utils/formatters'
 
-export const TransferSummary = ({ transferData, formData }) => {
+export const TransferSummary = ({
+  transferData = {
+    fromOrganization: { name: '' },
+    toOrganization: { name: '' }
+  },
+  formData = {
+    quantity: 0,
+    pricePerUnit: 0,
+    agreementDate: new Date()
+  }
+}) => {
   const { t } = useTranslation()
 
   return (
@@ -62,20 +72,4 @@ TransferSummary.propTypes = {
     pricePerUnit: PropTypes.number.isRequired,
     agreementDate: PropTypes.instanceOf(Date).isRequired
   }).isRequired
-}
-
-TransferSummary.defaultProps = {
-  transferData: {
-    fromOrganization: {
-      name: ''
-    },
-    toOrganization: {
-      name: ''
-    }
-  },
-  formData: {
-    quantity: 0,
-    pricePerUnit: 0,
-    agreementDate: new Date()
-  }
 }

@@ -201,7 +201,11 @@ export const EditViewComplianceReport = () => {
               </>
             ) : (
               <>
-                <ReportHistoryCard history={reportData?.data?.history} />
+                <ReportHistoryCard
+                  history={reportData?.data?.history}
+                  isGovernmentUser={isGovernmentUser}
+                  currentStatus={currentStatus}
+                />
                 {!isGovernmentUser && <ImportantInfoCard />}
               </>
             )}
