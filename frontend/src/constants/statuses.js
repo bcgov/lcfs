@@ -33,6 +33,7 @@ export const ORGANIZATION_STATUSES = {
 
 export const COMPLIANCE_REPORT_STATUSES = {
   DRAFT: 'Draft',
+  DELETED: 'Deleted',
   SUBMITTED: 'Submitted',
   ASSESSED: 'Assessed',
   REASSESSED: 'Reassessed',
