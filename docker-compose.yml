@@ -1,7 +1,7 @@
 services:
   db:
     container_name: db
-    restart: 'no'
+    restart: no
     image: postgres:14.2
     environment:
       POSTGRES_DB: lcfs
@@ -16,7 +16,7 @@ services:
 
   redis:
     container_name: redis
-    restart: 'no'
+    restart: no
     image: bitnami/redis:6.2.5
     environment:
       REDIS_PASSWORD: development_only
@@ -27,9 +27,50 @@ services:
     networks:
       - shared_network
 
+  #  clamav:
+  #    image: clamav/clamav:stable_base
+  #    volumes:
+  #      - clamsocket:/var/run/clamav/
+  #      - clamav:/var/lib/clamav
+  #    ports:
+  #      - "3310:3310"
+  #    networks:
+  #    - shared_network
+
+  minio:
+    image: minio/minio:latest
+    restart: no
+    command: "server --console-address :9001 --address :9000 /data"
+    environment:
+      - MINIO_ROOT_USER=s3_access_key
+      - MINIO_ROOT_PASSWORD=development_only
+      - MINIO_SERVER_URL=http://localhost:9000
+    volumes:
+      - s3:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - shared_network
+
+  create_bucket:
+    image: minio/mc
+    restart: no
+    container_name: minio_init
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set myminio http://minio:9000 s3_access_key development_only; do
+        echo 'Waiting for MinIO...';
+        sleep 5;
+      done;
+      mc mb myminio/lcfs
+      "
+    depends_on:
+      - minio
+
   backend:
     container_name: backend
-    restart: 'no'
+    restart: no
     build:
       context: ./backend
       dockerfile: 'Dockerfile'
@@ -56,18 +97,20 @@ services:
     depends_on:
       - db
       - redis
+      - create_bucket
+     # - clamav
     networks:
       - shared_network
 
   frontend:
     container_name: frontend
-    restart: 'no'
+    restart: no
     build:
       dockerfile: Dockerfile.dev
       context: ./frontend
     command: npm run dev --force
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
       - type: bind
         source: ./frontend
@@ -85,6 +128,12 @@ volumes:
     name: lcfs_redis_data
   node_modules:
     name: lcfs_node_data
+  s3:
+    name: lfcs_s3_data
+  clamav:
+    name: clamav
+  clamsocket:
+    name: clamsocket
 
 networks:
   shared_network:

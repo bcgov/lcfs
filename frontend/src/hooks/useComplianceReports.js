@@ -56,14 +56,13 @@ export const useGetComplianceReportSummary = (reportID, options) => {
   })
 }
 
-export const useUpdateComplianceReportSummary = (
-  reportId,
-  options
-) => {
+export const useUpdateComplianceReportSummary = (reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const path = apiRoutes.updateComplianceReportSummary
-    .replace(':reportID', reportId)
+  const path = apiRoutes.updateComplianceReportSummary.replace(
+    ':reportID',
+    reportID
+  )
   return useMutation({
     ...options,
     mutationFn: async (data) => {
@@ -78,17 +77,35 @@ export const useUpdateComplianceReportSummary = (
   })
 }
 
-export const useUpdateComplianceReport = (reportId, options) => {
+export const useUpdateComplianceReport = (reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
+  const path = apiRoutes.updateComplianceReport.replace(':reportID', reportID)
 
   return useMutation({
     ...options,
     mutationFn: async (data) => {
-      return await client.put(`/reports/${reportId}`, data)
+      return await client.put(path, data)
     },
     onSettled: () => {
-      queryClient.invalidateQueries(['compliance-report', reportId])
+      queryClient.invalidateQueries(['compliance-report', reportID])
     }
+  })
+}
+
+export const useComplianceReportDocuments = (parentID, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['documents', 'compliance_report', parentID],
+    queryFn: async () => {
+      const path = apiRoutes.getDocuments
+        .replace(':parentID', parentID)
+        .replace(':parentType', 'compliance_report')
+
+      const res = await client.get(path)
+      return res.data
+    },
+    ...options
   })
 }

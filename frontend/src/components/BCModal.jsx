@@ -13,8 +13,7 @@ import { Close, Warning } from '@mui/icons-material'
 import BCButton from './BCButton'
 import colors from '@/themes/base/colors'
 
-const BCModal = (props) => {
-  const { open, onClose, data = null } = props
+const BCModal = ({ open, onClose, data = null }) => {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
@@ -83,30 +82,35 @@ const BCModal = (props) => {
       <DialogContent>{content}</DialogContent>
       <Divider />
       <DialogActions>
-        <BCButton
-          variant="outlined"
-          id={
-            'modal-btn-' +
-            secondaryButtonText.toLowerCase().replaceAll(' ', '-')
-          }
-          color={secondaryButtonColor ?? 'dark'}
-          onClick={secondaryButtonAction ?? onClose}
-        >
-          {secondaryButtonText}
-        </BCButton>
+        {secondaryButtonText && (
+          <BCButton
+            variant="outlined"
+            id={
+              'modal-btn-' +
+              secondaryButtonText.toLowerCase().replaceAll(' ', '-')
+            }
+            color={secondaryButtonColor ?? 'dark'}
+            onClick={secondaryButtonAction ?? onClose}
+          >
+            {secondaryButtonText}
+          </BCButton>
+        )}
         {customButtons}
-        <BCButton
-          variant="contained"
-          id={
-            'modal-btn-' + primaryButtonText.toLowerCase().replaceAll(' ', '-')
-          }
-          color={primaryButtonColor ?? 'primary'}
-          autoFocus
-          onClick={handlePrimaryButtonClick}
-          isLoading={isLoading}
-        >
-          {primaryButtonText}
-        </BCButton>
+        {primaryButtonText && (
+          <BCButton
+            variant="contained"
+            id={
+              'modal-btn-' +
+              primaryButtonText.toLowerCase().replaceAll(' ', '-')
+            }
+            color={primaryButtonColor ?? 'primary'}
+            autoFocus
+            onClick={handlePrimaryButtonClick}
+            isLoading={isLoading}
+          >
+            {primaryButtonText}
+          </BCButton>
+        )}
       </DialogActions>
     </Dialog>
   )

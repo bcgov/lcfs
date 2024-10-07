@@ -17,7 +17,8 @@ from fastapi import (
     Depends,
 )
 
-from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import (
     CompliancePeriodSchema,
@@ -32,11 +33,9 @@ from lcfs.web.api.compliance_report.summary_service import (
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.core.decorators import view_handler
-from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = getLogger("reports_view")
-get_async_db = dependencies.get_async_db_session
 
 
 @router.get(
