@@ -38,18 +38,6 @@ export const AddEditNotionalTransfers = () => {
   const { mutateAsync: saveRow } = useSaveNotionalTransfer()
   const navigate = useNavigate()
 
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('notionalTransfer:noNotionalTransfersFound'),
-      autoSizeStrategy: {
-        type: 'fitCellContents',
-        defaultMinWidth: 50,
-        defaultMaxWidth: 600
-      }
-    }),
-    [t]
-  )
-
   useEffect(() => {
     if (location.state?.message) {
       alertRef.triggerAlert({
@@ -248,10 +236,17 @@ export const AddEditNotionalTransfers = () => {
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
-            gridOptions={gridOptions}
+            overlayNoRowsTemplate={t(
+              'notionalTransfer:noNotionalTransfersFound'
+            )}
             loading={optionsLoading || transfersLoading}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
+            autoSizeStrategy={{
+              type: 'fitGridWidth',
+              defaultMinWidth: 50,
+              defaultMaxWidth: 600
+            }}
             showAddRowsButton={true}
             stopEditingWhenCellsLoseFocus
             saveButtonProps={{
