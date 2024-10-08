@@ -12,6 +12,7 @@ from lcfs.web.api.base import FilterModel
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
 )
+from lcfs.services.s3.client import DocumentService
 
 
 # get_compliance_periods

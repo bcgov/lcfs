@@ -235,7 +235,6 @@ export const AddEditNotionalTransfers = () => {
     isFetched &&
     !transfersLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('notionalTransfer:newNotionalTransferTitle')}
@@ -244,6 +243,7 @@ export const AddEditNotionalTransfers = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}

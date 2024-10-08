@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Table
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 
@@ -28,6 +28,25 @@ class QuantityUnitsEnum(enum.Enum):
     Kilowatt_hour = "kWh"
     Cubic_metres = "m3"
 
+# Association table for
+compliance_report_document_association = Table(
+    "compliance_report_document_association",
+    BaseModel.metadata,
+    Column(
+        "compliance_report_id",
+        Integer,
+        ForeignKey(
+            "compliance_report.compliance_report_id", ondelete="CASCADE"
+        ),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        Integer,
+        ForeignKey("document.document_id"),
+        primary_key=True,
+    ),
+)
 
 class ComplianceReport(BaseModel, Auditable):
     __tablename__ = "compliance_report"
@@ -110,6 +129,12 @@ class ComplianceReport(BaseModel, Auditable):
     )
     compliance_report_internal_comments = relationship(
         "ComplianceReportInternalComment", back_populates="compliance_report"
+    )
+
+    documents = relationship(
+        "Document",
+        secondary=compliance_report_document_association,
+        back_populates="compliance_reports",
     )
 
     def __repr__(self):

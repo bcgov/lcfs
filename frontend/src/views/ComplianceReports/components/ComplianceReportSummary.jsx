@@ -111,6 +111,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
               columns={
                 summaryData
                   ? renewableFuelColumns(
+                    t,
                     summaryData?.renewableFuelTargetSummary,
                     currentStatus === 'Draft',
                     compliancePeriodYear
@@ -122,13 +123,13 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
             />
             <SummaryTable
               title={t('report:lowCarbonFuelTargetSummary')}
-              columns={lowCarbonColumns}
+              columns={lowCarbonColumns(t)}
               data={summaryData?.lowCarbonFuelTargetSummary}
               width={'81%'}
             />
             <SummaryTable
               title={t('report:nonCompliancePenaltySummary')}
-              columns={nonComplianceColumns}
+              columns={nonComplianceColumns(t)}
               data={summaryData?.nonCompliancePenaltySummary}
               width={'81%'}
             />

@@ -1,0 +1,306 @@
+import BCModal from '@/components/BCModal'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Box,
+  Card,
+  CardContent,
+  CircularProgress,
+  Icon,
+  IconButton,
+  Tooltip
+} from '@mui/material'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import { useTranslation } from 'react-i18next'
+import { styled } from '@mui/system'
+import BCTypography from '@/components/BCTypography'
+import { Delete } from '@mui/icons-material'
+import prettyBytes from 'pretty-bytes'
+import colors from '@/themes/base/colors'
+import {
+  useDeleteDocument,
+  useDocuments,
+  useUploadDocument,
+  useViewDocument
+} from '@/hooks/useDocuments'
+
+const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
+  width: '100%',
+  textAlign: 'center',
+  border: '1px dashed #ccc',
+  boxShadow: 'none',
+  padding: '20px',
+  boxSizing: 'border-box',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  backgroundColor: isDragActive ? theme.palette.action.hover : 'transparent',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover
+  }
+}))
+
+const FileTable = styled(Box)(({ theme }) => ({
+  width: '100%',
+  display: 'grid',
+  gridTemplateColumns: '1fr max-content max-content max-content',
+  gridColumnGap: '8px'
+}))
+
+const TableCell = styled(Box)({
+  display: 'flex',
+  alignItems: 'center'
+})
+
+const BYTES_50 = 52428800
+
+function DocumentUploadDialog({ open, close, parentType, parentID }) {
+  const { t } = useTranslation(['report'])
+  const [isDragActive, setIsDragActive] = useState(false)
+  const fileInputRef = useRef(null)
+  const [files, setFiles] = useState([])
+
+  const { data: loadedFiles } = useDocuments(parentType, parentID)
+  useEffect(() => {
+    if (loadedFiles) {
+      setFiles(loadedFiles)
+    }
+  }, [loadedFiles])
+
+  const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
+  const { mutate: deleteFile } = useDeleteDocument(parentType, parentID)
+  const viewDocument = useViewDocument(parentType, parentID)
+
+  const handleDrag = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDragIn = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragActive(true)
+    }
+  }
+
+  const handleDragOut = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragActive(false)
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragActive(false)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileUpload(e.dataTransfer.files[0])
+      e.dataTransfer.clearData()
+    }
+  }
+
+  const handleCardClick = () => {
+    fileInputRef.current.click()
+  }
+
+  const handleFileChange = (e) => {
+    const files = e.target.files
+    handleFileUpload(files[0])
+  }
+
+  const handleFileUpload = async (file) => {
+    if (!file) {
+      return
+    }
+
+    const fileId = Date.now()
+
+    const baseDocument = {
+      documentId: fileId,
+      fileName: file.name,
+      fileSize: file.size
+    }
+
+    if (file.size > BYTES_50) {
+      debugger
+      setFiles([
+        ...files,
+        {
+          ...baseDocument,
+          oversize: true
+        }
+      ])
+      return
+    }
+
+    setFiles([
+      ...files,
+      {
+        ...baseDocument,
+        scanning: true
+      }
+    ])
+
+    uploadFile(file, {
+      onError: (error) => {
+        if (error.response?.status === 422) {
+          setFiles([
+            ...files,
+            {
+              ...baseDocument,
+              virus: true
+            }
+          ])
+        } else {
+          console.error('Error uploading file:', error)
+        }
+      }
+    })
+  }
+
+  const handleDeleteFile = async (documentId) => {
+    try {
+      setFiles(
+        files.map((file) => ({
+          ...file,
+          deleting: file.documentId === documentId
+        }))
+      )
+      await deleteFile(documentId)
+    } catch (error) {
+      console.error('Error uploading file:', error)
+    }
+  }
+
+  const onClose = () => {
+    close()
+  }
+
+  const content = (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+    >
+      <BCTypography variant="body2" style={{ marginTop: '10px' }}>
+        Add file attachments (maximum file size: 50 MB):
+      </BCTypography>
+      <input
+        id="file"
+        type="file"
+        data-test="file-input"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+      <StyledCard
+        onClick={handleCardClick}
+        onDragEnter={handleDragIn}
+        onDragLeave={handleDragOut}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <CardContent>
+          <IconButton aria-label="upload" size="medium">
+            <CloudUploadIcon style={{ fontSize: '40px', color: '#999' }} />
+          </IconButton>
+          <BCTypography variant="body2">{t('report:clickDrag')}</BCTypography>
+        </CardContent>
+      </StyledCard>
+      <FileTable>
+        <TableCell>
+          <BCTypography color="primary" variant="subtitle1">
+            File Name
+          </BCTypography>
+        </TableCell>
+        <TableCell>
+          <BCTypography color="primary" variant="subtitle1">
+            Size
+          </BCTypography>
+        </TableCell>
+        <TableCell>
+          <BCTypography color="primary" variant="subtitle1">
+            Virus Scan
+          </BCTypography>
+        </TableCell>
+        <TableCell></TableCell>
+
+        {files.map((file, i) => (
+          <div style={{ display: 'contents' }} key={file.documentId}>
+            <TableCell>
+              {!file.oversize && (
+                <BCTypography
+                  variant="subtitle2"
+                  color="link"
+                  onClick={() => {
+                    viewDocument(file.documentId)
+                  }}
+                  sx={{
+                    '&:hover': { cursor: 'pointer' },
+                    textDecoration: 'underline'
+                  }}
+                >
+                  {file.fileName}
+                </BCTypography>
+              )}
+              {file.oversize && (
+                <span>{file.fileName} (File is over 50MB)</span>
+              )}
+            </TableCell>
+            <TableCell>
+              {file.oversize && (
+                <Icon style={{ color: colors.error.main }}>close</Icon>
+              )}
+              {prettyBytes(file.fileSize)}
+            </TableCell>
+            <TableCell style={{ justifyContent: 'center' }}>
+              {!file.scanning && !file.virus && !file.oversize && (
+                <Icon style={{ color: colors.success.main }}>check</Icon>
+              )}
+              {file.scanning && <CircularProgress size={22} />}
+              {file.virus && (
+                <Icon style={{ color: colors.error.main }}>close</Icon>
+              )}
+            </TableCell>
+            <TableCell>
+              <Tooltip title="Delete">
+                {!file.deleting &&
+                  !file.virus &&
+                  !file.scanning &&
+                  !file.oversize && (
+                    <IconButton
+                      onClick={() => {
+                        handleDeleteFile(file.documentId)
+                      }}
+                      aria-label="delete row"
+                      data-test="delete-button"
+                      color="error"
+                    >
+                      <Delete style={{ pointerEvents: 'none' }} />
+                    </IconButton>
+                  )}
+                {file.deleting && <CircularProgress size={22} />}
+              </Tooltip>
+            </TableCell>
+          </div>
+        ))}
+      </FileTable>
+    </Box>
+  )
+
+  return (
+    <BCModal
+      onClose={onClose}
+      open={open}
+      data={{
+        title: 'Upload supporting documents for your compliance report',
+        secondaryButtonAction: onClose,
+        secondaryButtonText: 'Return to compliance report',
+        content
+      }}
+    ></BCModal>
+  )
+}
+
+export default DocumentUploadDialog

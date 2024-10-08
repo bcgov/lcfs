@@ -23,6 +23,7 @@ from lcfs.web.api import (
     final_supply_equipment,
     dashboard,
     allocation_agreement,
+    document,
 )
 
 api_router = APIRouter()
@@ -80,3 +81,4 @@ api_router.include_router(
 api_router.include_router(
     fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]
 )
+api_router.include_router(document.router, prefix="/documents", tags=["documents"])

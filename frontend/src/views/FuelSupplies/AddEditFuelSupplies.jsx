@@ -363,6 +363,7 @@ export const AddEditFuelSupplies = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
