@@ -173,7 +173,8 @@ class FuelExportRepository:
         """
         query = self.query.where(
             FuelExport.compliance_report_id == compliance_report_id
-        )
+        ).order_by(FuelExport.fuel_export_id)
+
         results = (await self.db.execute(query)).unique().scalars().all()
         return results
 

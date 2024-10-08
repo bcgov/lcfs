@@ -56,7 +56,9 @@ class OtherUsesRepository:
                 joinedload(OtherUses.expected_use),
             )
             .where(OtherUses.compliance_report_id == compliance_report_id)
+            .order_by(OtherUses.other_uses_id)
         )
+
         result = await self.db.execute(query)
         other_uses = result.unique().scalars().all()
 

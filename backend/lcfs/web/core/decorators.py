@@ -6,6 +6,7 @@ import warnings
 
 from fastapi import HTTPException, Request
 
+from lcfs.services.clamav.client import VirusScanException
 from lcfs.web.exception.exceptions import (
     ServiceException,
     DatabaseException,
@@ -81,6 +82,11 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 raise
             except DataNotFoundException:
                 raise HTTPException(status_code=404, detail="Not Found")
+            except VirusScanException:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Viruses detected in file, please upload another",
+                )
             except Exception as e:
                 file_path = inspect.getfile(func)
                 func_name = func.__name__
@@ -131,7 +137,7 @@ def repo_handler(func):
         try:
             return await func(*args, **kwargs)
         # raise the error to the service layer
-        except (HTTPException, DataNotFoundException):
+        except (HTTPException, DataNotFoundException, VirusScanException):
             raise
         # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
         except Exception as e:

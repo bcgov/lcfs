@@ -1,12 +1,13 @@
 from fastapi import Depends, Request
+
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportUpdateSchema
-from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 
 class ComplianceReportUpdateService:
@@ -138,7 +139,7 @@ class ComplianceReportUpdateService:
         if report.summary:
             # Update existing summary
             await self.repo.save_compliance_report_summary(
-                report.summary.summary_id, calculated_summary
+                report.compliance_report_id, calculated_summary
             )
         else:
             # Create new summary if it doesn't exist

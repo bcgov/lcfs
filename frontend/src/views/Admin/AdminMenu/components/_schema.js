@@ -1,4 +1,4 @@
-import { phoneNumberFormatter } from '@/utils/formatters'
+import { phoneNumberFormatter, dateFormatter } from '@/utils/formatters'
 import {
   LinkRenderer,
   RoleRenderer,
@@ -122,31 +122,40 @@ export const idirUserDefaultFilter = [
   { filterType: 'text', type: 'blank', field: 'organizationId', filter: '' }
 ]
 
+const prefixMap = {
+  Transfer: 'CT',
+  AdminAdjustment: 'AA',
+  InitiativeAgreement: 'IA'
+}
+
 export const userActivityColDefs = [
   {
-    colId: 'action',
+    colId: 'actionTaken',
     field: 'actionTaken',
-    headerName: 'Action Taken'
+    headerName: 'Action Taken',
   },
   {
     colId: 'transactionType',
     field: 'transactionType',
-    headerName: 'Transaction Type'
+    headerName: 'Transaction Type',
   },
   {
     colId: 'transactionId',
     field: 'transactionId',
-    headerName: 'Transaction ID'
+    headerName: 'Transaction ID',
+    valueGetter: (params) => {
+      const transactionType = params.data.transactionType
+      const prefix = prefixMap[transactionType] || ''
+      return `${prefix}${params.data.transactionId}`
+    },
   },
   {
-    colId: 'timestamp',
-    field: 'timestamp',
-    headerName: 'Timestamp',
-    filter: 'agDateColumnFilter'
+    colId: 'createDate',
+    field: 'createDate',
+    headerName: 'Date',
+    valueFormatter: dateFormatter,
+    filter: false,
   },
-  {
-    colId: 'organization',
-    field: 'organization',
-    headerName: 'Organization'
-  }
 ]
+
+export const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]

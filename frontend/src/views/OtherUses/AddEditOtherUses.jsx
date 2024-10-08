@@ -38,18 +38,6 @@ export const AddEditOtherUses = () => {
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
   const navigate = useNavigate()
 
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('otherUses:noOtherUsesFound'),
-      autoSizeStrategy: {
-        type: 'fitCellContents',
-        defaultMinWidth: 50,
-        defaultMaxWidth: 600
-      }
-    }),
-    [t]
-  )
-
   useEffect(() => {
     if (location.state?.message) {
       alertRef.triggerAlert({
@@ -254,7 +242,6 @@ export const AddEditOtherUses = () => {
   return (
     isFetched && (
       <Grid2 className="add-edit-other-uses-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('otherUses:newOtherUsesTitle')}
@@ -263,16 +250,23 @@ export const AddEditOtherUses = () => {
 
         <BCGridEditor
           gridRef={gridRef}
+          alertRef={alertRef}
           getRowId={(params) => params.data.id}
           columnDefs={otherUsesColDefs(optionsData, errors)}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}
-          gridOptions={gridOptions}
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50,
+            defaultMaxWidth: 600
+          }}
+          overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
           loading={optionsLoading || usesLoading}
           onAction={onAction}
           onCellEditingStopped={onCellEditingStopped}
           showAddRowsButton
+          stopEditingWhenCellsLoseFocus
           saveButtonProps={{
             enabled: true,
             text: t('report:saveReturn'),

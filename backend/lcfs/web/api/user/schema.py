@@ -1,4 +1,5 @@
 from typing import Optional, List, Union
+from datetime import datetime
 
 from pydantic import EmailStr
 from lcfs.web.api.base import BaseSchema
@@ -67,14 +68,14 @@ class UsersSchema(BaseSchema):
     users: List[UserBaseSchema]
 
 
-class UserHistorySchema(BaseSchema):
-    user_login_history_id: int
-    keycloak_email: EmailStr
-    external_username: str
-    is_login_successful: bool
-    login_error_message: Optional[str] = None
+class UserActivitySchema(BaseSchema):
+    transaction_id: int
+    action_taken: str
+    transaction_type: str
+    create_date: datetime
+    user_id: Optional[int] = None  # Present when fetching activities for all users
 
 
-class UserHistories(BaseSchema):
+class UserActivitiesResponseSchema(BaseSchema):
+    activities: List[UserActivitySchema]
     pagination: PaginationResponseSchema
-    history: List[UserHistorySchema]

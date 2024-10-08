@@ -98,4 +98,70 @@ describe('OrganizationBadge Component', () => {
     expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
+
+  test('handles loading state correctly', () => {
+    useOrganizationBalance.mockReturnValue({
+      data: null,
+      isLoading: true,
+      isLoadingError: false,
+    })
+
+    render(
+      <OrganizationBadge
+        organizationId={1}
+        organizationName="Test Organization"
+        transferStatus="Submitted"
+        isGovernmentUser={true}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByText('Test Organization')).toBeInTheDocument()
+    expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
+    expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
+  })
+
+  test('handles error state gracefully', () => {
+    useOrganizationBalance.mockReturnValue({
+      data: null,
+      isLoading: false,
+      isLoadingError: true,
+    })
+
+    render(
+      <OrganizationBadge
+        organizationId={1}
+        organizationName="Test Organization"
+        transferStatus="Submitted"
+        isGovernmentUser={true}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByText('Test Organization')).toBeInTheDocument()
+    expect(screen.queryByText('Balance:')).not.toBeInTheDocument()
+    expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
+  })
+
+  test('displays correct balance formatting', () => {
+    useOrganizationBalance.mockReturnValue({
+      data: {
+        totalBalance: 1234567.89,
+        reservedBalance: -123456.78,
+        registered: false,
+      },
+      isLoading: false,
+      isLoadingError: false,
+    })
+
+    render(
+      <OrganizationBadge
+        organizationId={1}
+        organizationName="Test Organization"
+        transferStatus="Submitted"
+        isGovernmentUser={true}
+      />,
+      { wrapper }
+    )
+    expect(screen.getByText('Balance: 1,234,567.89 (123,456.78)')).toBeInTheDocument()
+    expect(screen.getByText('Registered: No')).toBeInTheDocument()
+  })
 })

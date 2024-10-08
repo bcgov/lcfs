@@ -56,41 +56,56 @@ export const useGetComplianceReportSummary = (reportID, options) => {
   })
 }
 
-export const useUpdateComplianceReportSummary = (
-  complianceReportId,
-  summaryId,
-  options
-) => {
+export const useUpdateComplianceReportSummary = (reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const path = apiRoutes.updateComplianceReportSummary
-    .replace(':reportID', complianceReportId)
-    .replace(':summaryID', summaryId)
+  const path = apiRoutes.updateComplianceReportSummary.replace(
+    ':reportID',
+    reportID
+  )
+  return useMutation({
+    ...options,
+    mutationFn: async (data) => {
+      return await client.put(path, data)
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ['compliance-report-summary', reportId],
+        data.data
+      )
+    }
+  })
+}
+
+export const useUpdateComplianceReport = (reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.updateComplianceReport.replace(':reportID', reportID)
+
   return useMutation({
     ...options,
     mutationFn: async (data) => {
       return await client.put(path, data)
     },
     onSettled: () => {
-      queryClient.invalidateQueries([
-        'compliance-report-summary',
-        complianceReportId
-      ])
+      queryClient.invalidateQueries(['compliance-report', reportID])
     }
   })
 }
 
-export const useUpdateComplianceReport = (reportId, options) => {
+export const useComplianceReportDocuments = (parentID, options) => {
   const client = useApiService()
-  const queryClient = useQueryClient()
 
-  return useMutation({
-    ...options,
-    mutationFn: async (data) => {
-      return await client.put(`/reports/${reportId}`, data)
+  return useQuery({
+    queryKey: ['documents', 'compliance_report', parentID],
+    queryFn: async () => {
+      const path = apiRoutes.getDocuments
+        .replace(':parentID', parentID)
+        .replace(':parentType', 'compliance_report')
+
+      const res = await client.get(path)
+      return res.data
     },
-    onSettled: () => {
-      queryClient.invalidateQueries(['compliance-report', reportId])
-    }
+    ...options
   })
 }

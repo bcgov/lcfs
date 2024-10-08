@@ -23,7 +23,7 @@ import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 
-const ComplianceReportSummary = ({ reportID, currentStatus }) => {
+const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear }) => {
   const [summaryData, setSummaryData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -35,20 +35,16 @@ const ComplianceReportSummary = ({ reportID, currentStatus }) => {
   const { data, isLoading, isError, error } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(
-      data?.complianceReportId,
-      data?.summaryId,
-      {
-        onSuccess: (response) => {
-          setSummaryData(response.data)
-        },
-        onError: (error) => {
-          setAlertMessage(error.message)
-          setAlertSeverity('error')
-          alertRef.current.triggerAlert()
-        }
+    useUpdateComplianceReportSummary(data?.complianceReportId, {
+      onSuccess: (response) => {
+        setSummaryData(response.data)
+      },
+      onError: (error) => {
+        setAlertMessage(error.message)
+        setAlertSeverity('error')
+        alertRef.current.triggerAlert()
       }
-    )
+    })
   useEffect(() => {
     if (data) {
       setSummaryData(data)
@@ -108,8 +104,10 @@ const ComplianceReportSummary = ({ reportID, currentStatus }) => {
             columns={
               summaryData
                 ? renewableFuelColumns(
+                  t,
                   summaryData?.renewableFuelTargetSummary,
-                  currentStatus === 'Draft'
+                  currentStatus === 'Draft',
+                  compliancePeriodYear
                 )
                 : []
             }
@@ -118,13 +116,13 @@ const ComplianceReportSummary = ({ reportID, currentStatus }) => {
           />
           <SummaryTable
             title={t('report:lowCarbonFuelTargetSummary')}
-            columns={lowCarbonColumns}
+            columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
             width={'81%'}
           />
           <SummaryTable
             title={t('report:nonCompliancePenaltySummary')}
-            columns={nonComplianceColumns}
+            columns={nonComplianceColumns(t)}
             data={summaryData?.nonCompliancePenaltySummary}
             width={'81%'}
           />

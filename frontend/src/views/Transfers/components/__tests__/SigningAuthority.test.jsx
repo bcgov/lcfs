@@ -16,7 +16,7 @@ const MockFormProvider = ({ children }) => {
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
-describe('SigningAuthority', () => {
+describe('SigningAuthority Component', () => {
   test('renders correctly with title', () => {
     render(
       <MockFormProvider>
@@ -47,5 +47,16 @@ describe('SigningAuthority', () => {
     // Uncheck the checkbox
     fireEvent.click(checkbox)
     expect(checkbox.checked).toEqual(false)
+  })
+
+  test('checkbox has defaultChecked as false', () => {
+    render(
+      <MockFormProvider>
+        <SigningAuthority />
+      </MockFormProvider>,
+      { wrapper }
+    )
+    const checkbox = screen.getByLabelText('transfer:saConfirmation')
+    expect(checkbox).not.toBeChecked()
   })
 })

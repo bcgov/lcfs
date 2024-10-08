@@ -1,27 +1,21 @@
-// react and npm library components
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import BCButton from '@/components/BCButton'
 import { Role } from '@/components/Role'
-import { Stack, Typography, Fab, Tooltip } from '@mui/material'
+import { Fab, Stack, Tooltip, Typography } from '@mui/material'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-// styles
 import colors from '@/themes/base/colors.js'
-// constants
-import { govRoles, roles } from '@/constants/roles'
-// hooks
+import { govRoles } from '@/constants/roles'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
-// internal components
 import { Introduction } from './components/Introduction'
 import {
   useGetComplianceReport,
@@ -163,6 +157,7 @@ export const EditViewComplianceReport = () => {
   if (isLoading || isReportLoading || isCurrentUserLoading) {
     return <Loading />
   }
+
   return (
     <>
       {alertMessage && (
@@ -202,11 +197,15 @@ export const EditViewComplianceReport = () => {
                   name={orgData?.name}
                   period={compliancePeriod}
                 />
-                <UploadCard />
+                <UploadCard reportID={complianceReportId} />
               </>
             ) : (
               <>
-                <ReportHistoryCard history={reportData?.data?.history} />
+                <ReportHistoryCard
+                  history={reportData?.data?.history}
+                  isGovernmentUser={isGovernmentUser}
+                  currentStatus={currentStatus}
+                />
                 {!isGovernmentUser && <ImportantInfoCard />}
               </>
             )}
@@ -214,17 +213,24 @@ export const EditViewComplianceReport = () => {
               orgName={orgData?.name}
               orgAddress={orgData?.orgAddress}
               orgAttorneyAddress={orgData?.orgAttorneyAddress}
+              isGovernmentUser={isGovernmentUser}
             />
           </Stack>
           {!location.state?.newReport && (
             <>
               <ReportDetails currentStatus={currentStatus} />
-              <ComplianceReportSummary reportID={complianceReportId} currentStatus={currentStatus} />
+              <ComplianceReportSummary
+                reportID={complianceReportId}
+                currentStatus={currentStatus}
+                compliancePeriodYear={compliancePeriod}
+              />
             </>
           )}
-          {!isGovernmentUser && <Introduction expanded={location.state?.newReport} />}
+          {!isGovernmentUser && (
+            <Introduction expanded={location.state?.newReport} />
+          )}
           {/* Internal Comments */}
-          {isGovernmentUser &&
+          {isGovernmentUser && (
             <BCBox mt={4}>
               <Typography variant="h6" color="primary">
                 {t(`report:internalComments`)}
@@ -238,7 +244,8 @@ export const EditViewComplianceReport = () => {
                   />
                 </Role>
               </BCBox>
-            </BCBox>}
+            </BCBox>
+          )}
         </Stack>
         {currentStatus === 'Draft' && (
           <SigningAuthorityDeclaration
@@ -273,7 +280,9 @@ export const EditViewComplianceReport = () => {
           )}
         </Stack>
         <Tooltip
-          title={isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')}
+          title={
+            isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')
+          }
           placement="left"
           arrow
         >

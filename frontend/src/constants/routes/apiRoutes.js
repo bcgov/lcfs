@@ -36,8 +36,12 @@ export const apiRoutes = {
   getAllOtherUses: '/other-uses/list-all',
   otherUsesOptions: '/other-uses/table-options',
   getComplianceReport: '/reports/:reportID',
+  updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
-  updateComplianceReportSummary: '/reports/:reportID/summary/:summaryID',
+  updateComplianceReportSummary: '/reports/:reportID/summary',
+  getDocuments: '/documents/:parentType/:parentID',
+  uploadDocument: '/documents/:parentType/:parentID',
+  getDocument: '/documents/:parentType/:parentID/:documentID',
   getOrgComplianceReport: '/organization/:orgID/reports/:reportID',
   getOrgComplianceReports: '/organization/:orgID/reports/list',
   getOrgComplianceReportReportedYears:
@@ -60,5 +64,7 @@ export const apiRoutes = {
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',
   OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
-  organizationSearch: '/organizations/search?'
+  organizationSearch: '/organizations/search?',
+  getUserActivities: '/users/:userID/activity',
+  getAllUserActivities: '/users/activities/all',
 }

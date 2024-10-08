@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
 from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
@@ -151,12 +151,14 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
-                joinedload(
-                    ComplianceReport.fuel_supplies
-                ),
+                joinedload(ComplianceReport.fuel_supplies),
                 joinedload(ComplianceReport.other_uses),
-                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.status),
-                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.user_profile),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
@@ -336,8 +338,12 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.status),
-                joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.user_profile),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
             )
             .join(
                 ComplianceReportStatus,
@@ -402,8 +408,12 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.compliance_period),
                         joinedload(ComplianceReport.current_status),
                         joinedload(ComplianceReport.summary),
-                        joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.status),
-                        joinedload(ComplianceReport.history).joinedload(ComplianceReportHistory.user_profile),
+                        joinedload(ComplianceReport.history).joinedload(
+                            ComplianceReportHistory.status
+                        ),
+                        joinedload(ComplianceReport.history).joinedload(
+                            ComplianceReportHistory.user_profile
+                        ),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -417,74 +427,74 @@ class ComplianceReportRepository:
         else:
             return ComplianceReportBaseSchema.model_validate(result)
 
-    @repo_handler
-    async def get_intended_use_types(self) -> List[EndUseType]:
-        """
-        Retrieve a list of intended use types from the database
-        """
-        return (
-            (
-                await self.db.execute(
-                    select(EndUseType).where(EndUseType.intended_use == True)
-                )
-            )
-            .scalars()
-            .all()
-        )
+    # @repo_handler
+    # async def get_intended_use_types(self) -> List[EndUseType]:
+    #     """
+    #     Retrieve a list of intended use types from the database
+    #     """
+    #     return (
+    #         (
+    #             await self.db.execute(
+    #                 select(EndUseType).where(EndUseType.intended_use == True)
+    #             )
+    #         )
+    #         .scalars()
+    #         .all()
+    #     )
 
-    @repo_handler
-    async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
-        """
-        Retrieve intended use type by name from the database
-        """
-        result = await self.db.scalar(
-            select(EndUseType).where(EndUseType.name == intended_use)
-        )
-        return result
+    # @repo_handler
+    # async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
+    #     """
+    #     Retrieve intended use type by name from the database
+    #     """
+    #     result = await self.db.scalar(
+    #         select(EndUseType).where(EndUseType.name == intended_use)
+    #     )
+    #     return result
 
-    @repo_handler
-    async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
-        """
-        Retrieve a list of levels of equipment from the database
-        """
-        return (await self.db.execute(select(LevelOfEquipment))).scalars().all()
+    # @repo_handler
+    # async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
+    #     """
+    #     Retrieve a list of levels of equipment from the database
+    #     """
+    #     return (await self.db.execute(select(LevelOfEquipment))).scalars().all()
 
-    @repo_handler
-    async def get_levels_of_equipment_by_name(self, name: str) -> LevelOfEquipment:
-        """
-        Get the levels of equipment by name
-        """
-        return (
-            (
-                await self.db.execute(
-                    select(LevelOfEquipment).where(LevelOfEquipment.name == name)
-                )
-            )
-            .scalars()
-            .all()
-        )
+    # @repo_handler
+    # async def get_levels_of_equipment_by_name(self, name: str) -> LevelOfEquipment:
+    #     """
+    #     Get the levels of equipment by name
+    #     """
+    #     return (
+    #         (
+    #             await self.db.execute(
+    #                 select(LevelOfEquipment).where(LevelOfEquipment.name == name)
+    #             )
+    #         )
+    #         .scalars()
+    #         .all()
+    #     )
 
-    @repo_handler
-    async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
-        """
-        Retrieve a list of levels of equipment from the database
-        """
-        return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
+    # @repo_handler
+    # async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
+    #     """
+    #     Retrieve a list of levels of equipment from the database
+    #     """
+    #     return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
 
-    @repo_handler
-    async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
-        """
-        Get the levels of equipment by name
-        """
-        return (
-            (
-                await self.db.execute(
-                    select(FuelMeasurementType).where(FuelMeasurementType.type == type)
-                )
-            )
-            .scalars()
-            .all()
-        )
+    # @repo_handler
+    # async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
+    #     """
+    #     Get the levels of equipment by name
+    #     """
+    #     return (
+    #         (
+    #             await self.db.execute(
+    #                 select(FuelMeasurementType).where(FuelMeasurementType.type == type)
+    #             )
+    #         )
+    #         .scalars()
+    #         .all()
+    #     )
 
     @repo_handler
     async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
@@ -522,7 +532,7 @@ class ComplianceReportRepository:
                 "current_status",
                 "summary",
                 "history",
-                "update_date"
+                "update_date",
             ],
         )
         return ComplianceReportBaseSchema.model_validate(report)
@@ -541,32 +551,40 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, summary_id: int, summary: ComplianceReportSummarySchema
+        self, report_id: int, summary: ComplianceReportSummarySchema
     ):
         """
         Save the compliance report summary to the database.
 
-        :param summary_id: The ID of the compliance report summary
+        :param report_id: The ID of the compliance report
         :param summary: The generated summary data
         """
-        existing_summary = await self.get_summary_by_id(summary_id)
+        existing_summary = await self.get_summary_by_report_id(report_id)
 
         if existing_summary:
             summary_obj = existing_summary
         else:
-            raise ValueError(f"No summary found with ID {summary_id}")
+            raise ValueError(f"No summary found with report ID {report_id}")
 
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                setattr(summary_obj, column_name, int(getattr(row, fuel_type) or 0))
+                setattr(
+                    summary_obj,
+                    column_name,
+                    int(getattr(row, fuel_type) or getattr(summary_obj, column_name)),
+                )
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:
             column_name = f"line_{row.line}_{row.field}"
-            setattr(summary_obj, column_name, int(row.value or 0))
+            setattr(
+                summary_obj,
+                column_name,
+                int(row.value or getattr(summary_obj, column_name)),
+            )
 
         # Update non-compliance penalty summary
         non_compliance_summary = summary.non_compliance_penalty_summary
@@ -586,14 +604,6 @@ class ComplianceReportRepository:
         return summary_obj
 
     @repo_handler
-    async def get_summary_by_id(self, summary_id: int) -> ComplianceReportSummary:
-        query = select(ComplianceReportSummary).where(
-            ComplianceReportSummary.summary_id == summary_id
-        )
-        result = await self.db.execute(query)
-        return result.scalars().first()
-
-    @repo_handler
     async def get_summary_by_report_id(
         self, report_id: int, is_supplemental: bool = False
     ) -> ComplianceReportSummary:
@@ -609,26 +619,26 @@ class ComplianceReportRepository:
         result = await self.db.execute(query)
         return result.scalars().first()
 
-    @repo_handler
-    async def get_summary_versions(self, report_id: int):
-        query = (
-            select(
-                ComplianceReportSummary.summary_id,
-                ComplianceReportSummary.version,
-                case(
-                    (
-                        ComplianceReportSummary.supplemental_report_id.is_(None),
-                        "Original",
-                    ),
-                    else_="Supplemental",
-                ).label("type"),
-            )
-            .where(ComplianceReportSummary.compliance_report_id == report_id)
-            .order_by(ComplianceReportSummary.version)
-        )
+    # @repo_handler
+    # async def get_summary_versions(self, report_id: int):
+    #     query = (
+    #         select(
+    #             ComplianceReportSummary.summary_id,
+    #             ComplianceReportSummary.version,
+    #             case(
+    #                 (
+    #                     ComplianceReportSummary.supplemental_report_id.is_(None),
+    #                     "Original",
+    #                 ),
+    #                 else_="Supplemental",
+    #             ).label("type"),
+    #         )
+    #         .where(ComplianceReportSummary.compliance_report_id == report_id)
+    #         .order_by(ComplianceReportSummary.version)
+    #     )
 
-        result = await self.db.execute(query)
-        return result.all()
+    #     result = await self.db.execute(query)
+    #     return result.all()
 
     @repo_handler
     async def get_transferred_out_compliance_units(
@@ -686,21 +696,6 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def calculate_fuel_quantities(
-        self, compliance_report_id: int
-    ) -> Dict[str, Dict[str, float]]:
-        fossil_fuel_quantities = await self._calculate_fuel_quantities(
-            compliance_report_id, fossil_derived=True
-        )
-        renewable_fuel_quantities = await self._calculate_fuel_quantities(
-            compliance_report_id, fossil_derived=False
-        )
-
-        return {
-            "fossil_fuel_quantities": fossil_fuel_quantities,
-            "renewable_fuel_quantities": renewable_fuel_quantities,
-        }
-
-    async def _calculate_fuel_quantities(
         self, compliance_report_id: int, fossil_derived: bool
     ) -> Dict[str, float]:
         fuel_quantities = defaultdict(float)
@@ -725,9 +720,11 @@ class ComplianceReportRepository:
             .where(
                 FuelSupply.compliance_report_id == compliance_report_id,
                 FuelType.fossil_derived.is_(fossil_derived),
+                FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
             .group_by(FuelCategory.category)
         )
+
         aggregate_fuel_quantities(await self.db.execute(fuel_supply_query))
 
         # Aggregate other uses quantities
@@ -746,10 +743,12 @@ class ComplianceReportRepository:
             )
             .where(
                 OtherUses.compliance_report_id == compliance_report_id,
+                FuelType.fossil_derived.is_(fossil_derived),
                 FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
             .group_by(FuelCategory.category)
         )
+
         aggregate_fuel_quantities(await self.db.execute(other_uses_query))
 
         # Aggregate allocation agreement quantities for renewable fuels
@@ -773,6 +772,7 @@ class ComplianceReportRepository:
                 .where(
                     AllocationAgreement.compliance_report_id == compliance_report_id,
                     FuelType.fossil_derived.is_(False),
+                    FuelType.other_uses_fossil_derived.is_(False),
                 )
                 .group_by(FuelCategory.category)
             )

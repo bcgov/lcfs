@@ -38,18 +38,6 @@ export const AddEditNotionalTransfers = () => {
   const { mutateAsync: saveRow } = useSaveNotionalTransfer()
   const navigate = useNavigate()
 
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('notionalTransfer:noNotionalTransfersFound'),
-      autoSizeStrategy: {
-        type: 'fitCellContents',
-        defaultMinWidth: 50,
-        defaultMaxWidth: 600
-      }
-    }),
-    [t]
-  )
-
   useEffect(() => {
     if (location.state?.message) {
       alertRef.triggerAlert({
@@ -235,7 +223,6 @@ export const AddEditNotionalTransfers = () => {
     isFetched &&
     !transfersLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('notionalTransfer:newNotionalTransferTitle')}
@@ -244,14 +231,22 @@ export const AddEditNotionalTransfers = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
-            gridOptions={gridOptions}
+            overlayNoRowsTemplate={t(
+              'notionalTransfer:noNotionalTransfersFound'
+            )}
             loading={optionsLoading || transfersLoading}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
+            autoSizeStrategy={{
+              type: 'fitGridWidth',
+              defaultMinWidth: 50,
+              defaultMaxWidth: 600
+            }}
             showAddRowsButton={true}
             stopEditingWhenCellsLoseFocus
             saveButtonProps={{

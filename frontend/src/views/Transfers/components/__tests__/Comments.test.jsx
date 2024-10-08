@@ -16,7 +16,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-describe('Comments', () => {
+describe('Comments Component', () => {
   test('renders correctly when commentField is provided', () => {
     render(
       <MockFormProvider>
@@ -25,6 +25,16 @@ describe('Comments', () => {
       { wrapper }
     )
     expect(screen.getByTestId('comments')).toBeInTheDocument()
+  })
+
+  test('does not render when commentField is not provided', () => {
+    render(
+      <MockFormProvider>
+        <Comments commentField="" />
+      </MockFormProvider>,
+      { wrapper }
+    )
+    expect(screen.queryByTestId('comments')).not.toBeInTheDocument()
   })
 
   test('displays the correct label based on props', () => {

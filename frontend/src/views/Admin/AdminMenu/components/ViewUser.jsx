@@ -1,22 +1,18 @@
-// mui components
 import { Stack, IconButton } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import Loading from '@/components/Loading'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
-import BCDataGridClient from '@/components/BCDataGrid/BCDataGridClient'
-// react hooks
-import { useRef } from 'react'
+import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
-// ag-grid components
 import { phoneNumberFormatter } from '@/utils/formatters'
 import { RoleSpanRenderer, StatusRenderer } from '@/utils/grid/cellRenderers'
-import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
-// constants
-import { ROUTES } from '@/constants/routes'
+import { userActivityColDefs, defaultSortModel } from '@/views/Admin/AdminMenu/components/_schema'
+import { ROUTES, apiRoutes } from '@/constants/routes'
 import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 import { Role } from '@/components/Role'
@@ -25,7 +21,7 @@ export const ViewUser = () => {
   const { t } = useTranslation(['common', 'admin'])
   const gridRef = useRef()
   const gridOptions = {
-    overlayNoRowsTemplate: 'No previous user activities found',
+    overlayNoRowsTemplate: t('admin:activitiesNotFound'),
     suppressHeaderMenuButton: false,
     paginationPageSize: 20
   }
@@ -54,6 +50,31 @@ export const ViewUser = () => {
       )
     else navigate(ROUTES.ADMIN_USERS_EDIT.replace(':userID', userID))
   }
+
+  const apiEndpoint = apiRoutes.getUserActivities.replace(':userID', userID)
+  const gridKey = `user-activity-grid-${userID}`
+
+  const getRowId = useCallback((params) => {
+    return `${params.data.transactionType.toLowerCase()}-${params.data.transactionId}`;
+  }, []);
+
+  const handleRowClicked = useCallback((params) => {
+    const { transactionType, transactionId } = params.data;
+  
+    let route;
+    switch (transactionType) {
+      case 'Transfer':
+        route = ROUTES.TRANSFERS_VIEW.replace(':transferId', transactionId);
+        break;
+      case 'AdminAdjustment':
+        route = ROUTES.ADMIN_ADJUSTMENT_VIEW.replace(':transactionId', transactionId);
+        break;
+      case 'InitiativeAgreement':
+        route = ROUTES.INITIATIVE_AGREEMENT_VIEW.replace(':transactionId', transactionId);
+    }
+
+    navigate(route);
+  }, [navigate]);
 
   if (isLoading) return <Loading />
 
@@ -108,14 +129,17 @@ export const ViewUser = () => {
           <BCTypography variant="h5" color="primary" mb={1}>
             {t('admin:UserActivity')}
           </BCTypography>
-          {/* TODO: Once the table data and models are finalized implement below table */}
-          <BCDataGridClient
-            columnDefs={userActivityColDefs}
+          <BCDataGridServer
             gridRef={gridRef}
-            gridKey="user-activity-grid"
-            rowData={[]}
+            apiEndpoint={apiEndpoint}
+            apiData="activities"
+            columnDefs={userActivityColDefs}
+            gridKey={gridKey}
+            getRowId={getRowId}
             gridOptions={gridOptions}
-            getRowId={(data) => data.userProfileId}
+            defaultSortModel={defaultSortModel}
+            enableCopyButton={false}
+            handleRowClicked={handleRowClicked}
           />
         </>
       )}

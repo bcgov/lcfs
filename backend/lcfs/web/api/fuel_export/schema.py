@@ -17,7 +17,7 @@ class FuelTypeQuantityUnitsEnumSchema(str, Enum):
     Cubic_metres = "m3"
 
 
-class CommmonPaginatedReportRequestSchema(BaseSchema):
+class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None

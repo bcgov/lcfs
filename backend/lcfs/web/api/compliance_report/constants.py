@@ -20,7 +20,7 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "net_notionally_transferred",
     },
     "6": {
-        "description": "Volume of eligible renewable fuel retained (up to 5% of Line 4 - gasoline={}, diesel={}, jet fuel={})",
+        "description": "Volume of eligible renewable fuel retained (up to 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
         "field": "renewable_fuel_retained",
     },
     "7": {
@@ -28,7 +28,7 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "previously_retained",
     },
     "8": {
-        "description": "Volume of eligible renewable obligation deferred (up to 5% of Line 4 - gasoline={}, diesel={}, jet fuel={})",
+        "description": "Volume of eligible renewable obligation deferred (up to 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
         "field": "obligation_deferred",
     },
     "9": {

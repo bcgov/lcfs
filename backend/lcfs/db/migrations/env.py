@@ -22,23 +22,32 @@ load_all_models()
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
+# Add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
 target_metadata = Base.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+# Exclude specific tables (views and materialized views) from autogenerate
+exclude_tables = [
+    "mv_transaction_aggregate",
+    "mv_transaction_count",
+    "mv_director_review_transaction_count",
+    "mv_org_compliance_report_count",
+    "transaction_status_view",
+]
 
+def include_object(object, name, type_, reflected, compare_to):
+    if type_ == "table" and name in exclude_tables:
+        # Exclude these tables from autogenerate
+        return False
+    else:
+        return True
 
 async def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
     and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
+    here as well. By skipping the Engine creation
     we don't even need a DBAPI to be available.
 
     Calls to context.execute() here emit the given string to the
@@ -50,11 +59,11 @@ async def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
         context.run_migrations()
-
 
 def do_run_migrations(connection: Connection) -> None:
     """
@@ -62,11 +71,14 @@ def do_run_migrations(connection: Connection) -> None:
 
     :param connection: connection to the database.
     """
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
-
 
 async def run_migrations_online() -> None:
     """
@@ -79,7 +91,6 @@ async def run_migrations_online() -> None:
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
-
 
 loop = asyncio.get_event_loop()
 if context.is_offline_mode():

@@ -2,10 +2,8 @@ from logging import getLogger
 import math
 from typing import List
 from fastapi import Depends, Request
-from sqlalchemy import select
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
-from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -17,10 +15,6 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.api.compliance_report.summary_service import (
-    ComplianceReportSummaryService,
-)
-from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 
 logger = getLogger(__name__)
 
@@ -31,8 +25,6 @@ class ComplianceReportServices:
     ) -> None:
         self.request = request
         self.repo = repo
-        self.summary_service = ComplianceReportSummaryService()
-        self.update_service = ComplianceReportUpdateService(repo, request)
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -92,23 +84,6 @@ class ComplianceReportServices:
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
         return report
-
-    @service_handler
-    async def get_supplemental_reports(
-        self, original_report_id: int
-    ) -> List[SupplementalReport]:
-        """
-        Retrieve all supplemental reports for a given original compliance report,
-        ordered by version.
-        """
-        query = (
-            select(SupplementalReport)
-            .where(SupplementalReport.original_report_id == original_report_id)
-            .order_by(SupplementalReport.version)
-        )
-
-        result = await self.repo.db.execute(query)
-        return result.scalars().all()
 
     @service_handler
     async def get_all_org_reported_years(

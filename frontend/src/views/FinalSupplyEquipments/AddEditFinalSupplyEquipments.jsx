@@ -66,16 +66,24 @@ export const AddEditFinalSupplyEquipments = () => {
     async (params) => {
       setGridApi(params.api)
       if (isArrayEmpty(data)) {
-        setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
-      }
-      else {
-        setRowData(data.finalSupplyEquipments.map((item) => ({
-          ...item,
-          levelOfEquipment: item.levelOfEquipment.name,
-          fuelMeasurementType: item.fuelMeasurementType.type,
-          intendedUses: item.intendedUseTypes.map((i) => i.type),
-          id: uuid()
-        })))
+        setRowData([
+          {
+            id: uuid(),
+            complianceReportId,
+            supplyFromDate: `${compliancePeriod}-01-01`,
+            supplyToDate: `${compliancePeriod}-12-31`
+          }
+        ])
+      } else {
+        setRowData(
+          data.finalSupplyEquipments.map((item) => ({
+            ...item,
+            levelOfEquipment: item.levelOfEquipment.name,
+            fuelMeasurementType: item.fuelMeasurementType.type,
+            intendedUses: item.intendedUseTypes.map((i) => i.type),
+            id: uuid()
+          }))
+        )
       }
       params.api.sizeColumnsToFit()
     },
@@ -92,21 +100,6 @@ export const AddEditFinalSupplyEquipments = () => {
       setColumnDefs(updatedColumnDefs)
     }
   }, [compliancePeriod, errors, optionsData])
-
-  useEffect(() => {
-    if (!equipmentsLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.finalSupplyEquipments.map((item) => ({
-        ...item,
-        levelOfEquipment: item.levelOfEquipment.name,
-        fuelMeasurementType: item.fuelMeasurementType.type,
-        intendedUses: item.intendedUseTypes.map((i) => i.type),
-        id: uuid()
-      }))
-      setRowData(updatedRowData)
-    } else {
-      setRowData([{ id: uuid(), complianceReportId, supplyFromDate: `${compliancePeriod}-01-01`, supplyToDate: `${compliancePeriod}-12-31` }])
-    }
-  }, [compliancePeriod, complianceReportId, data, equipmentsLoading])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -132,9 +125,10 @@ export const AddEditFinalSupplyEquipments = () => {
 
       try {
         setErrors({})
-        await saveRow(updatedData)
+        const response = await saveRow(updatedData)
         updatedData = {
           ...updatedData,
+          finalSupplyEquipmentId: response.data.finalSupplyEquipmentId,
           validationStatus: 'success',
           modified: false
         }
@@ -156,8 +150,9 @@ export const AddEditFinalSupplyEquipments = () => {
           if (fields[0] === 'postalCode') {
             errMsg = t('finalSupplyEquipment:postalCodeError')
           } else {
-            errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
-              } ${String(message).toLowerCase()}`
+            errMsg = `Error updating row: ${
+              fieldLabels.length === 1 ? fieldLabels[0] : ''
+            } ${String(message).toLowerCase()}`
           }
         } else {
           errMsg = error.response.data?.detail
@@ -243,11 +238,21 @@ export const AddEditFinalSupplyEquipments = () => {
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
+  const onAddRows = useCallback((numRows) => {
+    return Array(numRows).fill().map(()=>({
+      id: uuid(),
+      complianceReportId,
+      supplyFromDate: `${compliancePeriod}-01-01`,
+      supplyToDate: `${compliancePeriod}-12-31`,
+      validationStatus: 'error',
+      modified: true
+    }))
+  }, [compliancePeriod, complianceReportId])
+
   return (
     isFetched &&
     !equipmentsLoading && (
       <Grid2 className="add-edit-final-supply-equipment-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('finalSupplyEquipment:addFSErowsTitle')}
@@ -264,13 +269,16 @@ export const AddEditFinalSupplyEquipments = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
+            onAddRows={onAddRows}
             gridOptions={gridOptions}
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}
+            stopEditingWhenCellsLoseFocus
             onAction={onAction}
             showAddRowsButton={true}
             saveButtonProps={{

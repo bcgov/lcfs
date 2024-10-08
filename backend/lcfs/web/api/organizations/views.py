@@ -162,6 +162,8 @@ async def get_organization_types(
     return await service.get_organization_types()
 
 
+# TODO review security of this endpoint around returning balances
+# for all organizations
 @router.get(
     "/names/",
     response_model=List[OrganizationSummaryResponseSchema],

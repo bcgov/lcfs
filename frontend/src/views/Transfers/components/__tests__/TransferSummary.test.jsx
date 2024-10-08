@@ -18,7 +18,7 @@ vi.mock('@/utils/formatters', () => ({
   dateFormatter: vi.fn((date) => '2022-12-31')
 }))
 
-describe('TransferSummary', () => {
+describe('TransferSummary Component', () => {
   const transferData = {
     fromOrganization: { name: 'Org A' },
     toOrganization: { name: 'Org B' }

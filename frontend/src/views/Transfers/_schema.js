@@ -3,7 +3,8 @@ import * as Yup from 'yup'
 export const AddEditTransferSchema = Yup.object({
   agreementDate: Yup.date()
     .required('Agreement Date is required')
-    .max(new Date(), 'Agreement Date cannot be in the future'),
+    .max(new Date(), 'Agreement Date cannot be in the future')
+    .typeError('Agreement Date is required'),
   quantity: Yup.number()
     .typeError('Quantity must be a number')
     .required('Quantity is required')

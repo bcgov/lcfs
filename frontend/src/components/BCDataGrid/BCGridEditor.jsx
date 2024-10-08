@@ -14,6 +14,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
+import { BCAlert2 } from '@/components/BCAlert'
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -29,6 +30,7 @@ import { useTranslation } from 'react-i18next'
  */
 export const BCGridEditor = ({
   gridRef,
+  alertRef,
   handlePaste,
   onCellEditingStopped,
   onCellValueChanged,
@@ -122,9 +124,13 @@ export const BCGridEditor = ({
   }
 
   const handleAddRows = (numRows) => {
-    const newRows = Array(numRows)
-      .fill()
-      .map(() => ({ id: uuid() }))
+    let newRows = []
+    if (props.onAddRows) { newRows = props.onAddRows(numRows) }
+    else {
+      newRows = Array(numRows)
+        .fill()
+        .map(() => ({ id: uuid() }))
+    }
     ref.current.api.applyTransaction({ add: newRows })
     setAnchorEl(null)
   }
@@ -166,6 +172,11 @@ export const BCGridEditor = ({
         onCellEditingStopped={handleOnCellEditingStopped}
         {...props}
       />
+      <BCBox 
+        sx={{ height: '40px', marginTop: '15px', width: '100%' }}
+      >
+        <BCAlert2 ref={alertRef} data-test="alert-box" />
+      </BCBox>
       {showAddRowsButton && (
         <BCBox mt={2}>
           <BCButton

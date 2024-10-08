@@ -171,7 +171,7 @@ export const AddEditFuelSupplies = () => {
             (item) =>
               item.fuelCategory.fuelCategory ===
                 params.node.data.fuelCategory &&
-              item.endUseType?.type === params.node.data.endUse
+              item.endUseType?.type === params.node.data.endUseType?.type
           )?.energyEffectivenessRatio
         if (!eer) {
           eer = eerOptions?.eerRatios?.find(
@@ -346,7 +346,6 @@ export const AddEditFuelSupplies = () => {
     isFetched &&
     !fuelSuppliesLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelSupply:addFuelSupplyRowsTitle')}
@@ -363,6 +362,7 @@ export const AddEditFuelSupplies = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}

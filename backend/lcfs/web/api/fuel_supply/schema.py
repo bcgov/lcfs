@@ -134,9 +134,9 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     end_use_id: Optional[int] = None
     provision_of_the_act_id: int
     quantity: int
+    units: str
 
     fuel_code_id: Optional[int] = None
-    units: Optional[str] = None
     target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
     energy_density: Optional[float] = None

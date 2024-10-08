@@ -14,7 +14,7 @@ from fastapi import (
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import (
-    CommmonPaginatedReportRequestSchema,
+    CommonPaginatedReportRequestSchema,
     FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
@@ -54,7 +54,7 @@ async def get_fse_options(
 @view_handler(["*"])
 async def get_final_supply_equipments(
     request: Request,
-    request_data: CommmonPaginatedReportRequestSchema = Body(...),
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     response: Response = None,
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> FinalSupplyEquipmentsSchema:

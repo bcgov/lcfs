@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useFuelExport'
 import { v4 as uuid } from 'uuid'
 import { isArrayEmpty } from '@/utils/formatters'
+import { ROUTES } from '@/constants/routes'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -26,6 +27,7 @@ export const AddEditFuelExports = () => {
   const { t } = useTranslation(['common', 'fuelExport'])
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
+  const navigate = useNavigate()
 
   const {
     data: optionsData,
@@ -237,11 +239,19 @@ export const AddEditFuelExports = () => {
     }
   }
 
+  const handleNavigateBack = useCallback(() => {
+    navigate(
+      ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }, [navigate, compliancePeriod, complianceReportId])
+
   return (
     isFetched &&
     !fuelExportsLoading && (
       <Grid2 className="add-edit-fuel-export-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelExport:addFuelExportRowsTitle')}
@@ -258,6 +268,7 @@ export const AddEditFuelExports = () => {
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
+            alertRef={alertRef}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
@@ -270,6 +281,13 @@ export const AddEditFuelExports = () => {
             context={{ errors }}
             onAction={onAction}
             stopEditingWhenCellsLoseFocus
+            saveButtonProps={{
+              enabled: true,
+              text: t('report:saveReturn'),
+              onSave: handleNavigateBack,
+              confirmText: t('report:incompleteReport'),
+              confirmLabel: t('report:returnToReport')
+            }}
           />
         </BCBox>
       </Grid2>
