@@ -4,6 +4,7 @@ from lcfs.db.models.admin_adjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
     AdminAdjustmentStatusEnum,
 )
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.schema import (
     AdminAdjustmentCreateSchema,
     AdminAdjustmentSchema,
@@ -173,7 +174,9 @@ class AdminAdjustmentServices:
         """Create ledger transaction for approved admin adjustment"""
 
         user = self.request.user
-        has_director_role = user_has_roles(user, ["GOVERNMENT", "DIRECTOR"])
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
 
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
