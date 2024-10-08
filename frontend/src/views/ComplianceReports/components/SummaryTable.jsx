@@ -198,7 +198,7 @@ const SummaryTable = ({
                       (row[column.id] || row[column.id] === 0) &&
                       row.format === 'currency'
                         ? currencyFormatter(row[column.id])
-                        : numberFormatter(row[column.id])}
+                        : numberFormatter(row[column.id], true)}
                     </span>
                   )}
                 </TableCell>
