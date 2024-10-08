@@ -3,7 +3,6 @@ import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
@@ -346,7 +345,6 @@ export const AddEditFuelSupplies = () => {
     isFetched &&
     !fuelSuppliesLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
-        <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelSupply:addFuelSupplyRowsTitle')}
