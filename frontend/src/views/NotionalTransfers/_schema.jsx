@@ -145,5 +145,6 @@ export const defaultColDef = {
   filter: true,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  flex: 1
 }
