@@ -6,6 +6,18 @@ from sqlalchemy import UniqueConstraint
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
+transaction_type_to_id_prefix_map = {
+    "Transfer": "CT",
+    "AdminAdjustment": "AA",
+    "InitiativeAgreement": "IA",
+}
+
+id_prefix_to_transaction_type_map = {
+    "CT": "Transfer",
+    "AA": "AdminAdjustment",
+    "IA": "InitiativeAgreement",
+}
+
 
 class TransactionActionEnum(enum.Enum):
     Adjustment = "Adjustment"

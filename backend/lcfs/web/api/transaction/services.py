@@ -6,6 +6,10 @@ from fastapi.responses import StreamingResponse
 from math import ceil
 from sqlalchemy import or_, and_, cast, String
 
+from lcfs.db.models.transaction.Transaction import (
+    transaction_type_to_id_prefix_map,
+    id_prefix_to_transaction_type_map,
+)
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.transaction.TransactionView import TransactionView
@@ -43,16 +47,14 @@ class TransactionsService:
         Returns:
             List[Transactions]: The list of transactions after applying the filters.
         """
-        prefix_map = {
-            "CT": "Transfer",
-            "AA": "AdminAdjustment",
-            "IA": "InitiativeAgreement",
-        }
 
         for filter in pagination.filters:
             if filter.field == "transaction_id":
                 filter_value = filter.filter.upper()
-                for prefix, transaction_type in prefix_map.items():
+                for (
+                    prefix,
+                    transaction_type,
+                ) in id_prefix_to_transaction_type_map.items():
                     if filter_value.startswith(prefix):
                         numeric_part = filter_value[len(prefix) :]
                         if numeric_part:
@@ -89,7 +91,7 @@ class TransactionsService:
     @service_handler
     async def get_transactions_paginated(
         self, pagination: PaginationRequestSchema = {}, organization_id: int = None
-    ) -> List[TransactionViewSchema]:
+    ) -> dict[str, list[TransactionViewSchema] | PaginationResponseSchema]:
         """
         Fetch transactions with filters, sorting, and pagination.
         """
@@ -172,9 +174,10 @@ class TransactionsService:
         # Prepare data for the spreadsheet
         data = []
         for result in results[0]:
+            print(result.transaction_type)
             data.append(
                 [
-                    result.transaction_id,
+                    f"{transaction_type_to_id_prefix_map[result.transaction_type]}{result.transaction_id}",
                     result.compliance_period,
                     result.transaction_type,
                     result.from_organization,

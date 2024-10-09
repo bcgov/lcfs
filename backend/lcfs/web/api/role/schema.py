@@ -1,5 +1,6 @@
 from typing import Optional, List
 
+from lcfs.db.models import UserProfile
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import BaseSchema
 
@@ -12,7 +13,7 @@ class RoleSchema(BaseSchema):
     is_government_role: bool
 
 
-def user_has_roles(user, desired_role_names: List[RoleEnum]) -> bool:
+def user_has_roles(user: UserProfile, desired_role_names: List[RoleEnum]) -> bool:
     """
     Checks if the user has all specified roles, ignoring invalid role names.
 
@@ -23,7 +24,7 @@ def user_has_roles(user, desired_role_names: List[RoleEnum]) -> bool:
     Returns:
     - True if the user has all the desired roles, False otherwise.
     """
-    user_role_names = {role_obj.role.name.name for role_obj in user.user_roles}
+    user_role_names = user.role_names
     desired_role_set = set(desired_role_names)
 
     # Check if all desired roles are in the user's roles
