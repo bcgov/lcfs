@@ -5,15 +5,15 @@ from starlette import status
 
 
 @pytest.fixture
-async def setup_supplier_role(fastapi_app: FastAPI, set_mock_user_roles):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+async def setup_supplier_role(fastapi_app: FastAPI, set_mock_user):
+    set_mock_user(fastapi_app, ["Supplier"])
     yield
     # Add teardown logic if needed
 
 
 @pytest.fixture
-async def setup_government_role(fastapi_app: FastAPI, set_mock_user_roles):
-    set_mock_user_roles(fastapi_app, ["Government"])
+async def setup_government_role(fastapi_app: FastAPI, set_mock_user):
+    set_mock_user(fastapi_app, ["Government"])
     yield
     # Add teardown logic if needed
 

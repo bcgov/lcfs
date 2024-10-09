@@ -2,7 +2,6 @@ from logging import getLogger
 from typing import List
 
 from fastapi import Depends
-from lcfs.db.models.comment.ComplianceReportInternalComment import ComplianceReportInternalComment
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 
@@ -10,19 +9,14 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 
+from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import InternalComment
-from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
-    InitiativeAgreementInternalComment,
-)
-from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
-    AdminAdjustmentInternalComment,
-)
-
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
-
-from lcfs.web.api.user.repo import UserRepository
+from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
+from lcfs.db.models.comment.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
+from lcfs.db.models.comment.ComplianceReportInternalComment import ComplianceReportInternalComment
 
 
 logger = getLogger("internal_comment_repo")

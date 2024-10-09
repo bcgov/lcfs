@@ -5,9 +5,9 @@ from fastapi import FastAPI, status
 
 @pytest.mark.anyio
 async def test_get_transactions_paginated(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_transactions_paginated")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)
@@ -20,9 +20,9 @@ async def test_get_transactions_paginated(
 
 @pytest.mark.anyio
 async def test_get_transactions_unauthenticated(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_transactions_paginated")
     pagination = {}
     response = await client.post(url, json=pagination)

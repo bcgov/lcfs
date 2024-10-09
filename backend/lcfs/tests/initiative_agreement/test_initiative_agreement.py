@@ -6,9 +6,9 @@ from datetime import datetime
 
 @pytest.mark.anyio
 async def test_get_initiative_agreement(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(
+    set_mock_user(
         fastapi_app, ["Government"]
     )  # Assuming the role needed is 'Government'
     initiative_agreement_id = 1  # Assume that there exists an initiative agreement with ID 1 in the test database.
@@ -21,9 +21,9 @@ async def test_get_initiative_agreement(
 
 @pytest.mark.anyio
 async def test_create_initiative_agreement(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("create_initiative_agreement")
     initiative_agreement_payload = {
         "compliance_units": 100,
@@ -38,9 +38,9 @@ async def test_create_initiative_agreement(
 
 @pytest.mark.anyio
 async def test_update_initiative_agreement(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     initiative_agreement_id = (
         1  # Assume there is an initiative agreement with ID 1 in the test database.
     )
@@ -61,9 +61,9 @@ async def test_update_initiative_agreement(
 # Test to ensure validation prevents editing an approved initiative agreement
 @pytest.mark.anyio
 async def test_fail_update_approved_initiative_agreement(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     initiative_agreement_id = (
         2  # Assuming this agreement is marked as "Approved" in the test setup.
     )

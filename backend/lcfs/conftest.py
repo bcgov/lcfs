@@ -143,7 +143,7 @@ async def dbsession_factory(
 def fastapi_app(
     dbsession: AsyncSession,
     fake_redis_pool: ConnectionPool,
-    set_mock_user_roles,  # Fixture for setting up mock authentication
+    set_mock_user,  # Fixture for setting up mock authentication
     user_roles: List[str] = ["Administrator"],  # Default role
 ) -> FastAPI:
     # Create the FastAPI application instance
@@ -157,7 +157,7 @@ def fastapi_app(
     application.state.settings = settings
 
     # Set up mock authentication backend with the specified roles
-    set_mock_user_roles(application, user_roles)
+    set_mock_user(application, user_roles)
 
     # Initialize the cache with fake Redis backend
     fake_redis = aioredis.FakeRedis(connection_pool=fake_redis_pool)
@@ -189,25 +189,44 @@ def role_enum_member(role_name):
 
 
 class MockAuthenticationBackend(AuthenticationBackend):
-    def __init__(self, user_roles: List[RoleEnum]):
+    def __init__(self, user_roles: List[RoleEnum], user_details: dict):
+        """
+        Initialize mock authentication backend with user details from a dictionary.
+
+        Args:
+            user_roles (List[RoleEnum]): List of user roles.
+            user_details (dict): A dictionary containing customizable user attributes (username, email, etc.).
+        """
         # Convert list of role names (strings) to RoleEnum members
         self.user_roles_enum = [RoleEnum[role.upper()] for role in user_roles]
         self.role_count = 0
 
+        # Use the provided user details
+        self.user_profile_id = user_details["user_profile_id"]
+        self.keycloak_username = user_details["keycloak_username"]
+        self.keycloak_email = user_details["keycloak_email"]
+        self.username = user_details["username"]
+        self.organization_id = user_details["organization_id"]
+        self.email = user_details["email"]
+        self.first_name = user_details["first_name"]
+        self.last_name = user_details["last_name"]
+        self.is_active = user_details["is_active"]
+        self.organization_name = user_details["organization_name"]
+
     async def authenticate(self, request):
         # Simulate a user object based on the role
         user = UserProfile(
-            user_profile_id=1,
-            keycloak_username="mockuser",
-            keycloak_email="test@test.com",
-            organization_id=1,
-            email="test@test.com",
-            first_name="Test",
-            last_name="User",
-            is_active=True,
+            user_profile_id=self.user_profile_id,
+            keycloak_username=self.keycloak_username,
+            keycloak_email=self.keycloak_email,
+            organization_id=self.organization_id,
+            email=self.email,
+            first_name=self.first_name,
+            last_name=self.last_name,
+            is_active=self.is_active,
         )
 
-        organization = Organization(organization_id=1, name="Test")
+        organization = Organization(organization_id=self.organization_id, name=self.organization_name)
         user.organization = organization
 
         # Create UserRole instances based on the RoleEnum members provided
@@ -233,8 +252,32 @@ class MockAuthenticationBackend(AuthenticationBackend):
 
 
 @pytest.fixture
-def set_mock_user_roles():
-    def _set_mock_auth(application: FastAPI, roles: List[str]):
+def set_mock_user():
+    def _set_mock_auth(application: FastAPI, roles: List[str], user_details: dict = None):
+        """
+        Fixture to mock user authentication with customizable user details.
+
+        Args:
+            application (FastAPI): The FastAPI application instance.
+            roles (List[str]): The roles to be assigned to the user.
+            user_details (dict): A dictionary containing customizable user attributes (username, email, etc.).
+        """
+        default_user_details = {
+            "user_profile_id": 1,
+            "keycloak_username": "mockuser",
+            "keycloak_email": "test@test.com",
+            "username": "mockuser",
+            "organization_id": 1,
+            "email": "test@test.com",
+            "first_name": "Test",
+            "last_name": "User",
+            "is_active": True,
+            "organization_name": "Test Organization"
+        }
+
+        # Merge default values with provided user details
+        user_details = {**default_user_details, **(user_details or {})}
+        
         # Clear existing middleware
         application.user_middleware = []
 
@@ -247,7 +290,7 @@ def set_mock_user_roles():
         )
 
         # Add the Mock Authentication Middleware
-        mock_auth_backend = MockAuthenticationBackend(user_roles=roles)
+        mock_auth_backend = MockAuthenticationBackend(user_roles=roles, user_details=user_details)
         application.add_middleware(AuthenticationMiddleware, backend=mock_auth_backend)
 
     return _set_mock_auth

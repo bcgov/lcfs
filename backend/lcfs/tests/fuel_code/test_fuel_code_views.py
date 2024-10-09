@@ -7,9 +7,9 @@ from pathlib import Path
 
 @pytest.mark.anyio
 async def test_save_fuel_codes(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     try:
         with open(Path(__file__).parent / "fuel_code_payload.json") as f_data:
             payload = json.load(f_data)
@@ -23,9 +23,9 @@ async def test_save_fuel_codes(
 
 @pytest.mark.anyio
 async def test_save_fuel_codes_forbidden(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     try:
         with open(Path(__file__).parent / "fuel_code_payload.json") as f_data:
             payload = json.load(f_data)
@@ -39,9 +39,9 @@ async def test_save_fuel_codes_forbidden(
 
 @pytest.mark.anyio
 async def test_get_energy_densities(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_energy_densities")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -49,9 +49,9 @@ async def test_get_energy_densities(
 
 @pytest.mark.anyio
 async def test_get_energy_effectiveness_ratios(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_energy_effectiveness_ratios")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -59,9 +59,9 @@ async def test_get_energy_effectiveness_ratios(
 
 @pytest.mark.anyio
 async def test_get_use_of_a_carbon_intensities(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_use_of_a_carbon_intensities")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -69,9 +69,9 @@ async def test_get_use_of_a_carbon_intensities(
 
 @pytest.mark.anyio
 async def test_get_fuel_codes(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     try:
         with open(Path(__file__).parent / "fuel_code_payload.json") as f_data:
             payload = json.load(f_data)

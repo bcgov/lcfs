@@ -23,9 +23,9 @@ def transfer_repo(dbsession):
 
 @pytest.mark.anyio
 async def test_update_transfer_recorded_forbidden(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["SUPPLIER"])
+    set_mock_user(fastapi_app, ["SUPPLIER"])
     url = fastapi_app.url_path_for("update_transfer", transfer_id=1)
     response = await client.put(url, json={"current_status_id": 6})
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -33,10 +33,10 @@ async def test_update_transfer_recorded_forbidden(
 
 @pytest.mark.anyio
 async def test_update_transfer_sign_and_send_successful(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, transfer_repo
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, transfer_repo
 ):
     transfer_id = 1
-    set_mock_user_roles(fastapi_app, ["SUPPLIER", "SIGNING_AUTHORITY"])
+    set_mock_user(fastapi_app, ["SUPPLIER", "SIGNING_AUTHORITY"])
     url = fastapi_app.url_path_for("update_transfer", transfer_id=transfer_id)
 
     response = await client.put(url, json={"current_status_id": 3})
@@ -49,10 +49,10 @@ async def test_update_transfer_sign_and_send_successful(
 
 @pytest.mark.anyio
 async def test_update_transfer_recorded_successful(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles, transfer_repo
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, transfer_repo
 ):
     transfer_id = 3
-    set_mock_user_roles(fastapi_app, ["GOVERNMENT", "DIRECTOR"])
+    set_mock_user(fastapi_app, ["GOVERNMENT", "DIRECTOR"])
     url = fastapi_app.url_path_for("update_transfer", transfer_id=transfer_id)
     response = await client.put(url, json={"current_status_id": 6})
     assert response.status_code == status.HTTP_200_OK
@@ -62,10 +62,10 @@ async def test_update_transfer_recorded_successful(
 
 @pytest.mark.anyio
 async def test_update_transfer_recorded_order_failed(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     transfer_id = 1
-    set_mock_user_roles(fastapi_app, ["GOVERNMENT", "DIRECTOR"])
+    set_mock_user(fastapi_app, ["GOVERNMENT", "DIRECTOR"])
     url = fastapi_app.url_path_for("update_transfer", transfer_id=transfer_id)
     response = await client.put(url, json={"current_status_id": 6})
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -75,7 +75,7 @@ async def test_update_transfer_recorded_order_failed(
 async def test_update_transfer_refused_successful(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     transfer_repo,
     add_models,
 ):
@@ -86,7 +86,7 @@ async def test_update_transfer_refused_successful(
     )
 
     transfer_id = 1
-    set_mock_user_roles(fastapi_app, ["GOVERNMENT", "DIRECTOR"])
+    set_mock_user(fastapi_app, ["GOVERNMENT", "DIRECTOR"])
     url = fastapi_app.url_path_for(
         "government_update_transfer", transfer_id=transfer_id
     )

@@ -6,9 +6,9 @@ from datetime import datetime
 
 @pytest.mark.anyio
 async def test_get_other_use(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     compliance_report_id = 1
     url = fastapi_app.url_path_for(
         "get_other_uses", compliance_report_id=compliance_report_id
@@ -19,9 +19,9 @@ async def test_get_other_use(
 
 @pytest.mark.anyio
 async def test_create_other_use(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("create_other_use")
     other_use_payload = {
         "compliance_report_id": 1,
@@ -38,9 +38,9 @@ async def test_create_other_use(
 
 @pytest.mark.anyio
 async def test_update_other_use(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     other_uses_id = 1
     url = fastapi_app.url_path_for("update_other_use", other_uses_id=other_uses_id)
     other_use_update_payload = {
@@ -59,9 +59,9 @@ async def test_update_other_use(
 # Test to ensure validation prevents deleting a non-existent other use
 @pytest.mark.anyio
 async def test_fail_delete_non_existent_other_use(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     other_uses_id = 999  # Assuming this ID does not exist in the test setup.
     url = fastapi_app.url_path_for("delete_other_use", other_uses_id=other_uses_id)
     response = await client.delete(url)
@@ -70,9 +70,9 @@ async def test_fail_delete_non_existent_other_use(
 
 @pytest.mark.anyio
 async def test_delete_other_use(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     other_uses_id = 1
     url = fastapi_app.url_path_for("delete_other_use", other_uses_id=other_uses_id)
     response = await client.delete(url)
