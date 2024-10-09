@@ -2,12 +2,14 @@ import { ROLES_BADGE_SIZE } from '@/constants/common'
 
 /**
  * Formats a number with commas and specified decimal places.
+ * Optionally uses parentheses instead of a minus sign for negative numbers.
  *
  * @param {Object|number|string} params - The input parameter which can be an object with a `value` property, a number, or a string.
  * @param {number|string} [params.value] - The value to be formatted, if params is an object.
+ * @param {boolean} [useParentheses=false] - Whether to use parentheses for negative numbers.
  * @returns {string} - The formatted number as a string, or the original value if it cannot be parsed as a number.
  */
-export const numberFormatter = (params) => {
+export const numberFormatter = (params, useParentheses = false) => {
   if (params == null || (typeof params === 'object' && params.value == null))
     return ''
 
@@ -16,10 +18,17 @@ export const numberFormatter = (params) => {
 
   if (isNaN(parsedValue)) return value
 
-  return parsedValue.toLocaleString(undefined, {
+  const absValue = Math.abs(parsedValue)
+  const formattedValue = absValue.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 10
   })
+
+  if (parsedValue < 0) {
+    return useParentheses ? `(${formattedValue})` : `-${formattedValue}`
+  }
+
+  return formattedValue
 }
 
 export const currencyFormatter = (params) => {
