@@ -1,4 +1,5 @@
 from logging import getLogger
+from datetime import date
 from typing import List, Dict, Any
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
@@ -71,7 +72,18 @@ class FuelCodeRepository:
 
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
+        current_date = date.today()
         for fuel_type in fuel_types:
+            active_fuel_codes = [
+                {
+                    "fuel_code_id": fc.fuel_code_id,
+                    "fuel_code": fc.fuel_code,
+                    "carbon_intensity": fc.carbon_intensity,
+                }
+                for fc in fuel_type.fuel_codes
+                if (fc.effective_date is None or fc.effective_date <= current_date)
+                and (fc.expiration_date is None or fc.expiration_date > current_date)
+            ]
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
@@ -85,14 +97,7 @@ class FuelCodeRepository:
                     }
                     for fc in fuel_type.fuel_instances
                 ],
-                "fuel_codes": [
-                    {
-                        "fuel_code_id": fc.fuel_code_id,
-                        "fuel_code": fc.fuel_code,
-                        "carbon_intensity": fc.carbon_intensity,
-                    }
-                    for fc in fuel_type.fuel_codes
-                ],
+                "fuel_codes": active_fuel_codes,
             }
             formatted_fuel_types.append(formatted_fuel_type)
 
