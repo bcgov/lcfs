@@ -26,7 +26,14 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCAlert from '@/components/BCAlert'
 
-const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear, setIsSigningAuthorityDeclared, buttonClusterConfig, methods }) => {
+const ComplianceReportSummary = ({
+  reportID,
+  currentStatus,
+  compliancePeriodYear,
+  setIsSigningAuthorityDeclared,
+  buttonClusterConfig,
+  methods
+}) => {
   const [summaryData, setSummaryData] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
@@ -95,10 +102,12 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
       </Typography>
       {(summaryData?.renewableFuelTargetSummary[2]?.gasoline > 0 ||
         summaryData?.renewableFuelTargetSummary[2]?.diesel > 0 ||
-        summaryData?.renewableFuelTargetSummary[2]?.jetFuel > 0) &&
+        summaryData?.renewableFuelTargetSummary[2]?.jetFuel > 0) && (
         <Accordion defaultExpanded>
           <AccordionSummary
-            expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+            expandIcon={
+              <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+            }
             aria-controls="panel1-content"
           >
             <BCTypography color="primary" variant="h6" component="div">
@@ -111,15 +120,16 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
               columns={
                 summaryData
                   ? renewableFuelColumns(
-                    t,
-                    summaryData?.renewableFuelTargetSummary,
-                    currentStatus === 'Draft',
-                    compliancePeriodYear
-                  )
+                      t,
+                      summaryData?.renewableFuelTargetSummary,
+                      currentStatus === 'Draft',
+                      compliancePeriodYear
+                    )
                   : []
               }
               data={summaryData?.renewableFuelTargetSummary}
               onCellEditStopped={handleCellEdit}
+              useParenthesis={true}
             />
             <SummaryTable
               title={t('report:lowCarbonFuelTargetSummary')}
@@ -167,7 +177,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
             </Stack>
           </AccordionDetails>
         </Accordion>
-      }
+      )}
     </>
   )
 }
