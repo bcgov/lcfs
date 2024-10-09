@@ -38,18 +38,6 @@ export const AddEditOtherUses = () => {
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
   const navigate = useNavigate()
 
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('otherUses:noOtherUsesFound'),
-      autoSizeStrategy: {
-        type: 'fitCellContents',
-        defaultMinWidth: 50,
-        defaultMaxWidth: 600
-      }
-    }),
-    [t]
-  )
-
   useEffect(() => {
     if (location.state?.message) {
       alertRef.triggerAlert({
@@ -268,7 +256,12 @@ export const AddEditOtherUses = () => {
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}
-          gridOptions={gridOptions}
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50,
+            defaultMaxWidth: 600
+          }}
+          overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
           loading={optionsLoading || usesLoading}
           onAction={onAction}
           onCellEditingStopped={onCellEditingStopped}

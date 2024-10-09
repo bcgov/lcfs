@@ -25,7 +25,7 @@ const SigningAuthorityDeclaration = ({ onChange }) => {
       }}
       elevation={0}
     >
-      <BCTypography color="primary" variant="h5">
+      <BCTypography color="primary" variant="h6">
         {t('report:signingAuthorityDeclaration')}
       </BCTypography>
       <FormControlLabel

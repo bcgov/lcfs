@@ -7,6 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
+import colors from '@/themes/base/colors'
 
 const outlineBase = {
   variant: 'outlined',
@@ -52,13 +53,21 @@ export const buttonClusterConfigFn = ({
   isSigningAuthorityDeclared
 }) => {
   const reportButtons = {
-    saveDraft: {
-      ...outlinedButton(t('report:actionBtns.saveDraftBtn'), faFloppyDisk),
-      id: 'save-draft-btn',
+    deleteDraft: {
+      ...redOutlinedButton(t('report:actionBtns.deleteDraftBtn'), faTrash),
+      id: 'delete-draft-btn',
       handler: (formData) => {
-        updateComplianceReport({
-          ...formData,
-          status: COMPLIANCE_REPORT_STATUSES.DRAFT
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.DELETED
+            }),
+          primaryButtonText: t('report:actionBtns.deleteDraftBtn'),
+          primaryButtonColor: 'error',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:deleteConfirmText')
         })
       }
     },
@@ -159,7 +168,7 @@ export const buttonClusterConfigFn = ({
 
   const buttons = {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
-      reportButtons.saveDraft,
+      reportButtons.deleteDraft,
       reportButtons.submitReport
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [

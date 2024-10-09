@@ -329,9 +329,9 @@ export const buttonClusterConfigFn = ({
     Rescinded: [],
     Declined: [],
     Submitted: [
-      ...(currentUser?.isGovernmentUser
+      ...(currentUser?.isGovernmentUser && hasRoles(roles.analyst)
         ? [transferButtons.saveComment, transferButtons.recommendTransfer]
-        : []),
+        : [transferButtons.saveComment]),
       // Until the transfer is recorded, Org user has ability to rescind transfer
       ...((currentUser?.organization?.organizationId === fromOrgId ||
         currentUser?.organization?.organizationId ===
