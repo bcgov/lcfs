@@ -4,6 +4,7 @@ from fastapi import Depends, Request, HTTPException
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.transfer.validation import TransferValidation
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
@@ -272,7 +273,9 @@ class TransferServices:
         """Confirm transaction for sending organization and create new transaction for receiving org."""
 
         user = self.request.user
-        has_director_role = user_has_roles(user, ["GOVERNMENT", "DIRECTOR"])
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
 
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
