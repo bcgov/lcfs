@@ -5,8 +5,6 @@ import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { v4 as uuid } from 'uuid'
-
-import { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
@@ -14,7 +12,6 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useFuelCodeOptions, useSaveFuelCode } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
-
 import { defaultColDef, fuelCodeColDefs } from './_schema'
 
 const AddFuelCodeBase = () => {
@@ -111,8 +108,8 @@ const AddFuelCodeBase = () => {
         }
 
         if (
-          error.response?.data?.detail &&
-          error.response.data.detail.length > 0
+          error.response?.data?.errors &&
+          error.response.data.errors.length > 0
         ) {
           const { fields, message } = error.response.data.errors[0]
           const fieldLabels = fields.map((field) =>
@@ -121,7 +118,7 @@ const AddFuelCodeBase = () => {
           const errMsg = `Error updating row: ${
             fieldLabels.length === 1 ? fieldLabels[0] : ''
           } ${message}`
-
+      
           alertRef.current?.triggerAlert({
             message: errMsg,
             severity: 'error'
@@ -219,7 +216,6 @@ const AddFuelCodeBase = () => {
   return (
     isFetched && (
       <Grid2 className="add-edit-fuel-code-container" mx={-1}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
         <div className="header">
           <Typography variant="h5" color="primary">
             {t('fuelCode:newFuelCodeTitle')}
@@ -227,6 +223,7 @@ const AddFuelCodeBase = () => {
         </div>
         <BCGridEditor
           gridRef={gridRef}
+          alertRef={alertRef}
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
@@ -242,7 +239,6 @@ const AddFuelCodeBase = () => {
           spacing={{ xs: 2, sm: 2, md: 3 }}
           useFlexGap
           flexWrap="wrap"
-          m={2}
         >
           <BCButton
             variant="contained"

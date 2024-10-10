@@ -18,7 +18,7 @@ export const ReportHistoryCard = ({ history, isGovernmentUser, currentStatus }) 
       return history.filter((item) => item.status.status !== 'Draft')
     } else {
       // Non-government users
-      if (['Assessed', 'ReAssessed'].includes(currentStatus)) {
+      if (['Submitted', 'Assessed', 'ReAssessed'].includes(currentStatus)) {
         // If report is 'Assessed' or 'ReAssessed', display only 'Submitted' status
         return history.filter((item) => item.status.status === 'Submitted')
       } else {
