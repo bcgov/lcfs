@@ -1,9 +1,10 @@
 from logging import getLogger
+from datetime import date
 from typing import List, Dict, Any
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import and_, select, func, text, update, distinct
+from sqlalchemy import and_, or_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
@@ -52,17 +53,30 @@ class FuelCodeRepository:
     @repo_handler
     async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
+        # Define the filtering conditions for fuel codes
+        current_date = date.today()
+        fuel_code_filters = or_(
+            FuelCode.effective_date == None,
+            FuelCode.effective_date <= current_date
+        ) & or_(
+            FuelCode.expiration_date == None,
+            FuelCode.expiration_date > current_date
+        )
+
+        # Build the query with filtered fuel_codes
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
+            .outerjoin(FuelType.fuel_codes)
+            .where(fuel_code_filters)
             .options(
                 contains_eager(FuelType.fuel_instances).contains_eager(
                     FuelInstance.fuel_category
                 ),
+                contains_eager(FuelType.fuel_codes),
                 joinedload(FuelType.provision_1),
                 joinedload(FuelType.provision_2),
-                joinedload(FuelType.fuel_codes),
             )
         )
 
