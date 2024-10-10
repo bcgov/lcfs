@@ -163,15 +163,19 @@ def apply_text_filter_conditions(field, filter_value, filter_option):
        filter_value: The value to filter by
        filter_option: The filtering operation (equals, contains, etc)
     """
+    # Convert both the field and filter_value to lowercase and remove spaces for case-insensitive and space-insensitive comparisons
+    lower_no_space_field = func.lower(func.replace(field, " ", ""))
+    lower_no_space_filter_value = filter_value.replace(" ", "").lower()
+
     text_filter_mapping = {
         "true": field.is_(True),
         "false": field.is_(False),
-        "contains": cast(field, String).ilike(f"%{filter_value}%"),
-        "notContains": field.notlike(f"%{filter_value}%"),
-        "equals": field == filter_value,
-        "notEqual": field != filter_value,
-        "startsWith": field.ilike(f"{filter_value}%"),
-        "endsWith": field.ilike(f"%{filter_value}%"),
+        "contains": lower_no_space_field.like(f"%{lower_no_space_filter_value}%"),
+        "notContains": lower_no_space_field.notlike(f"%{lower_no_space_filter_value}%"),
+        "equals": lower_no_space_field == lower_no_space_filter_value,
+        "notEqual": lower_no_space_field != lower_no_space_filter_value,
+        "startsWith": lower_no_space_field.like(f"{lower_no_space_filter_value}%"),
+        "endsWith": lower_no_space_field.like(f"%{lower_no_space_filter_value}"),
     }
 
     return text_filter_mapping.get(filter_option)

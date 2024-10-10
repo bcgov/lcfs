@@ -181,16 +181,26 @@ const BCDataGridServer = ({
     const filterModel = gridRef?.current?.api.getFilterModel()
     const filterArr = [
       ...Object.entries(filterModel).map(([field, value]) => {
+        // Check if the field is a date type and has an 'inRange' filter
+        if (value.filterType === 'date' && value.type === 'inRange') {
+          return {
+            field,
+            filterType: value.filterType,
+            type: value.type,
+            dateFrom: value.dateFrom,
+            dateTo: value.dateTo
+          }
+        }
         return { field, ...value }
       }),
       ...defaultFilterModel
     ]
     setFilterModel(filterArr)
     // save the filter state in browser cache.
-    localStorage.setItem(
-      `${gridKey}-filter`,
-      JSON.stringify(gridRef.current.api.getFilterModel())
-    )
+    // localStorage.setItem(
+    //   `${gridKey}-filter`,
+    //   JSON.stringify(gridRef.current.api.getFilterModel())
+    // )
   }, [])
 
   // Callback for grid sort changes.
