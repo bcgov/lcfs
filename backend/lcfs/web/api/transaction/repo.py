@@ -124,6 +124,7 @@ class TransactionRepository:
 
         # Execute count query for total records matching the filter
         count_query = select(func.count()).select_from(query.subquery())
+
         total_count_result = await self.db.execute(count_query)
         total_count = total_count_result.scalar_one()
 
