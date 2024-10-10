@@ -160,6 +160,7 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.user_profile
                 ),
+                joinedload(ComplianceReport.transaction)
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )

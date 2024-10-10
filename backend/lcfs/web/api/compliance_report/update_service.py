@@ -42,7 +42,7 @@ class ComplianceReportUpdateService:
             )
 
         # if we're just returning the compliance report back to either compliance manager or analyst,
-        # then history nor any updates to summary is not required.
+        # then neither history nor any updates to summary is required.
         if report_data.status in RETURN_STATUSES:
             status_has_changed = False
             report_data.status = (
@@ -64,6 +64,7 @@ class ComplianceReportUpdateService:
         updated_report = await self.repo.update_compliance_report(report)
         if status_has_changed:
             await self.handle_status_change(report, new_status.status)
+
             # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
 
@@ -197,9 +198,6 @@ class ComplianceReportUpdateService:
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
         # Update the transaction to assessed
-        report.transaction = await self.trx_service.get_transaction_by_id(
-            report.transaction_id
-        )
         report.transaction.transaction_action = TransactionActionEnum.Adjustment
         await self.repo.update_compliance_report(report)
 

@@ -7,7 +7,6 @@ from lcfs.db.base import BaseModel, EffectiveDates
 
 class ComplianceReportStatusEnum(enum.Enum):
     Draft = "Draft"
-    Deleted = "Deleted"
     Submitted = "Submitted"
     Recommended_by_analyst = "Recommended by analyst"
     Recommended_by_manager = "Recommended by manager"

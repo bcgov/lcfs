@@ -25,6 +25,7 @@ import {
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import Loading from '@/components/Loading'
 
 const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear, setIsSigningAuthorityDeclared, buttonClusterConfig, methods, setHasMet, alertRef }) => {
   const [summaryData, setSummaryData] = useState(null)
@@ -63,7 +64,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
   )
 
   if (isLoading) {
-    return <CircularProgress />
+    return <Loading message='Loading compliance report summary...' />
   }
 
   if (isError) {
