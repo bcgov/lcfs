@@ -70,7 +70,7 @@ export const useUpdateComplianceReportSummary = (reportID, options) => {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(
-        ['compliance-report-summary', reportId],
+        ['compliance-report-summary', reportID],
         data.data
       )
     }

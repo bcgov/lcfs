@@ -1,12 +1,17 @@
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportUpdateSchema
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 
@@ -16,26 +21,42 @@ class ComplianceReportUpdateService:
         repo: ComplianceReportRepository = Depends(),
         request: Request = None,
         summary_service: ComplianceReportSummaryService = Depends(),
+        org_service: OrganizationsService = Depends(OrganizationsService),
+        trx_service: TransactionsService = Depends(TransactionsService),
     ):
         self.repo = repo
         self.request = request
         self.summary_service = summary_service
+        self.org_service = org_service
+        self.trx_service = trx_service
 
     async def update_compliance_report(
         self, report_id: int, report_data: ComplianceReportUpdateSchema
     ) -> ComplianceReport:
         """Updates an existing compliance report."""
+        RETURN_STATUSES = ["Return to analyst", "Return to manager"]
         report = await self.repo.get_compliance_report(report_id)
         if not report:
             raise DataNotFoundException(
                 f"Compliance report with ID {report_id} not found"
             )
 
+        # if we're just returning the compliance report back to either compliance manager or analyst,
+        # then history nor any updates to summary is not required.
+        if report_data.status in RETURN_STATUSES:
+            status_has_changed = False
+            report_data.status = (
+                "Submitted"
+                if report_data.status == "Return to analyst"
+                else ComplianceReportStatusEnum.Recommended_by_analyst.value
+            )
+        else:
+            status_has_changed = report.current_status.status != getattr(
+                ComplianceReportStatusEnum, report_data.status.replace(" ", "_")
+            )
         new_status = await self.repo.get_compliance_report_status_by_desc(
             report_data.status
         )
-        status_has_changed = report.current_status != new_status
-
         # Update fields
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
@@ -43,7 +64,6 @@ class ComplianceReportUpdateService:
         updated_report = await self.repo.update_compliance_report(report)
         if status_has_changed:
             await self.handle_status_change(report, new_status.status)
-
             # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
 
@@ -138,7 +158,7 @@ class ComplianceReportUpdateService:
         # Save the summary
         if report.summary:
             # Update existing summary
-            await self.repo.save_compliance_report_summary(
+            report.summary = await self.repo.save_compliance_report_summary(
                 report.compliance_report_id, calculated_summary
             )
         else:
@@ -146,9 +166,15 @@ class ComplianceReportUpdateService:
             new_summary = await self.repo.add_compliance_report_summary(
                 calculated_summary
             )
-            report.summary = new_summary
             # Update the report with the new summary
-            await self.repo.update_compliance_report(report)
+            report.summary = new_summary
+        # Create a new reserved transaction for receiving organization
+        report.transaction = await self.org_service.adjust_balance(
+            transaction_action=TransactionActionEnum.Reserved,
+            compliance_units=report.summary.line_20_surplus_deficit_units,
+            organization_id=report.organization_id,
+        )
+        await self.repo.update_compliance_report(report)
 
         return calculated_summary
 
@@ -164,8 +190,18 @@ class ComplianceReportUpdateService:
 
     async def handle_assessed_status(self, report: ComplianceReport):
         """Handle actions when a report is Assessed."""
-        # Implement logic for Assessed status
-        pass
+        user = self.request.user
+        has_director_role = has_director_role = user_has_roles(
+            user, ["GOVERNMENT", "DIRECTOR"]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+        # Update the transaction to assessed
+        report.transaction = await self.trx_service.get_transaction_by_id(
+            report.transaction_id
+        )
+        report.transaction.transaction_action = TransactionActionEnum.Adjustment
+        await self.repo.update_compliance_report(report)
 
     async def handle_reassessed_status(self, report: ComplianceReport):
         """Handle actions when a report is ReAssessed."""

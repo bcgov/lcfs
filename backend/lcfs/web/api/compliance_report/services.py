@@ -4,6 +4,7 @@ from typing import List
 from fastapi import Depends, Request
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -55,15 +56,27 @@ class ComplianceReportServices:
 
     @service_handler
     async def get_compliance_reports_paginated(
-        self, pagination, organization_id: int = None
+        self, pagination, organization_id: int = None, bceid_user: bool = False
     ):
         """Fetches all compliance reports"""
-
+        if bceid_user:
+            for filter in pagination.filters:
+                if filter.field == "status" and filter.filter == ComplianceReportStatusEnum.Submitted.value:
+                    filter.filter_type = "set"
+                    filter.filter = [
+                        ComplianceReportStatusEnum.Recommended_by_analyst,
+                        ComplianceReportStatusEnum.Recommended_by_manager,
+                        ComplianceReportStatusEnum.Submitted,
+                    ]
         reports, total_count = await self.repo.get_reports_paginated(
             pagination, organization_id
         )
-        if len(reports) == 0:
+
+        if not reports:
             raise DataNotFoundException("No compliance reports found.")
+
+        if bceid_user:
+            reports = self._mask_report_status(reports)
 
         return ComplianceReportListSchema(
             pagination=PaginationResponseSchema(
@@ -75,14 +88,44 @@ class ComplianceReportServices:
             reports=reports,
         )
 
+    def _mask_report_status(self, reports: List) -> List:
+        recommended_statuses = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.value,
+            ComplianceReportStatusEnum.Recommended_by_manager.value,
+        }
+
+        masked_reports = []
+        for report in reports:
+            if report.current_status.status in recommended_statuses:
+                report.current_status.status = ComplianceReportStatusEnum.Submitted.value
+                report.current_status.compliance_report_status_id = None
+                masked_reports.append(report)
+            else:
+                masked_reports.append(report)
+
+        return masked_reports
+
     @service_handler
     async def get_compliance_report_by_id(
-        self, report_id: int
+        self, report_id: int, bceid_user: bool = False
     ) -> ComplianceReportBaseSchema:
         """Fetches a specific compliance report by ID."""
         report = await self.repo.get_compliance_report_by_id(report_id)
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
+        report = self._mask_report_status_for_history(report, bceid_user)
+        return report
+    
+    def _mask_report_status_for_history(self, report: ComplianceReportBaseSchema, bceid_user: bool = False) -> ComplianceReportBaseSchema:
+        recommended_statuses = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.value,
+            ComplianceReportStatusEnum.Recommended_by_manager.value,
+        }
+        if bceid_user or report.current_status.status == ComplianceReportStatusEnum.Submitted.value:
+            report.history = [h for h in report.history if h.status.status not in recommended_statuses]
+        elif report.current_status.status == ComplianceReportStatusEnum.Recommended_by_analyst.value:
+            report.history = [h for h in report.history if h.status.status != ComplianceReportStatusEnum.Recommended_by_manager.value]
+        
         return report
 
     @service_handler
