@@ -6,7 +6,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_
 
-from lcfs.db.models.transaction.Transaction import id_prefix_to_transaction_type_map
+from lcfs.utils.constants import id_prefix_to_transaction_type_map
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import service_handler

@@ -6,10 +6,6 @@ from fastapi.responses import StreamingResponse
 from math import ceil
 from sqlalchemy import or_, and_, cast, String
 
-from lcfs.db.models.transaction.Transaction import (
-    transaction_type_to_id_prefix_map,
-    id_prefix_to_transaction_type_map,
-)
 from .repo import TransactionRepository  # Adjust import path as needed
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.transaction.TransactionView import TransactionView
@@ -26,7 +22,12 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     validate_pagination,
 )
-from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
+from lcfs.utils.constants import (
+    LCFS_Constants,
+    FILE_MEDIA_TYPE,
+    transaction_type_to_id_prefix_map,
+    id_prefix_to_transaction_type_map,
+)
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 
 

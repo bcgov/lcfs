@@ -68,3 +68,16 @@ class FILE_MEDIA_TYPE(Enum):
     JSON = "application/json"
     XML = "application/xml"
     ZIP = "application/zip"
+
+
+transaction_type_to_id_prefix_map = {
+    "Transfer": "CT",
+    "AdminAdjustment": "AA",
+    "InitiativeAgreement": "IA",
+}
+
+id_prefix_to_transaction_type_map = {
+    "CT": "Transfer",
+    "AA": "AdminAdjustment",
+    "IA": "InitiativeAgreement",
+}
