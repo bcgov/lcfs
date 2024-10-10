@@ -39,7 +39,7 @@ export const Navbar = () => {
     ]
     const mobileRoutes = [{ name: t('logout'), route: ROUTES.LOG_OUT }]
 
-    const activeRoutes = currentUser.isGovernmentUser ? idirRoutes : bceidRoutes
+    const activeRoutes = currentUser?.isGovernmentUser ? idirRoutes : bceidRoutes
 
     if (isMobileView) {
       activeRoutes.push(...mobileRoutes)
