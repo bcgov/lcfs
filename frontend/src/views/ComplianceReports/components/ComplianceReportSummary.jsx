@@ -99,6 +99,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
             }
             data={summaryData?.renewableFuelTargetSummary}
             onCellEditStopped={handleCellEdit}
+            useParenthesis={true}
           />
           <SummaryTable
             title={t('report:lowCarbonFuelTargetSummary')}

@@ -20,6 +20,7 @@ const SummaryTable = ({
   columns,
   data: initialData,
   onCellEditStopped,
+  useParenthesis = false,
   width = '100%',
   ...props
 }) => {
@@ -198,7 +199,7 @@ const SummaryTable = ({
                       (row[column.id] || row[column.id] === 0) &&
                       row.format === 'currency'
                         ? currencyFormatter(row[column.id])
-                        : numberFormatter(row[column.id])}
+                        : numberFormatter(row[column.id], useParenthesis)}
                     </span>
                   )}
                 </TableCell>

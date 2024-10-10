@@ -1,4 +1,3 @@
-# initiative_agreement/routes.py
 from fastapi import APIRouter, Depends, Request, status
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.schema import (

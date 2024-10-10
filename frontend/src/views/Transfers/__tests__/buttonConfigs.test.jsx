@@ -27,7 +27,7 @@ describe('buttonClusterConfigFn', () => {
           organizationId: 1
         }
       }
-      const transferData = null  // No transfer data in 'New' status
+      const transferData = null // No transfer data in 'New' status
 
       // Call buttonClusterConfigFn with signingAuthorityDeclaration = false
       let config = buttonClusterConfigFn({
@@ -478,14 +478,14 @@ describe('buttonClusterConfigFn', () => {
       )
       const signAndSubmitButton = buttons.find(
         (button) => button.id === 'sign-and-submit-btn'
-      )    
+      )
 
       expect(declineTransferButton).toBeDefined()
       expect(signAndSubmitButton).toBeDefined()
-    
+
       // signAndSubmit should be disabled because 'signingAuthorityDeclaration' is false
       expect(signAndSubmitButton.disabled).toBe(true)
-    
+
       // declineTransferButton should not be disabled
       expect(declineTransferButton.disabled).toBeUndefined()
 
@@ -600,8 +600,78 @@ describe('buttonClusterConfigFn', () => {
       }
     }
 
+    it('should disable recommendTransfer button when recommendation is null', () => {
+      const hasRoles = vi.fn().mockReturnValue(true)
+      const hasAnyRole = vi.fn().mockReturnValue(true)
+      const currentUser = {
+        isGovernmentUser: true,
+        organization: {
+          organizationId: 3
+        }
+      }
+
+      const recommendation = null
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        transferData,
+        isGovernmentUser: true,
+        recommendation,
+        signingAuthorityDeclaration: false
+      })
+
+      const buttons = config[TRANSFER_STATUSES.SUBMITTED]
+      const recommendButton = buttons.find(
+        (button) => button.id === 'recommend-btn'
+      )
+
+      expect(recommendButton.disabled).toBe(true)
+    })
+
+    it('should enable recommendTransfer button when recommendation is not null', () => {
+      const hasRoles = vi.fn().mockReturnValue(true)
+      const hasAnyRole = vi.fn().mockReturnValue(true)
+      const currentUser = {
+        isGovernmentUser: true,
+        organization: {
+          organizationId: 3
+        }
+      }
+
+      const recommendation = 'Some recommendation'
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        transferData,
+        isGovernmentUser: true,
+        recommendation,
+        signingAuthorityDeclaration: false
+      })
+
+      const buttons = config[TRANSFER_STATUSES.SUBMITTED]
+      const recommendButton = buttons.find(
+        (button) => button.id === 'recommend-btn'
+      )
+
+      expect(recommendButton.disabled).toBe(false)
+    })
+
     it('should enable "Recommend" button when recommendation is selected', () => {
-      const hasRoles = vi.fn().mockReturnValue(false)
+      const hasRoles = vi.fn().mockReturnValue(true)
       const hasAnyRole = vi.fn()
       const currentUser = {
         isGovernmentUser: true,
@@ -746,6 +816,94 @@ describe('buttonClusterConfigFn', () => {
         organizationId: 2
       }
     }
+
+    it('should return director buttons for government user with director role', () => {
+      const hasRoles = vi
+        .fn()
+        .mockImplementation((role) => role === roles.director)
+      const hasAnyRole = vi.fn()
+      const currentUser = {
+        isGovernmentUser: true,
+        organization: {
+          organizationId: 3
+        }
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        transferData,
+        isGovernmentUser: true,
+        recommendation: null,
+        signingAuthorityDeclaration: false
+      })
+
+      const buttons = config[TRANSFER_STATUSES.RECOMMENDED]
+
+      expect(buttons).toContainEqual(
+        expect.objectContaining({ id: 'refuse-btn' })
+      )
+      expect(buttons).toContainEqual(
+        expect.objectContaining({ id: 'save-comment-btn' })
+      )
+      expect(buttons).toContainEqual(
+        expect.objectContaining({ id: 'return-to-analyst-btn' })
+      )
+      expect(buttons).toContainEqual(
+        expect.objectContaining({ id: 'record-btn' })
+      )
+
+      // Check that refuse and return-to-analyst buttons are not disabled
+      const refuseButton = buttons.find((button) => button.id === 'refuse-btn')
+      const returnToAnalystButton = buttons.find(
+        (button) => button.id === 'return-to-analyst-btn'
+      )
+      expect(refuseButton.disabled).toBe(false)
+      expect(returnToAnalystButton.disabled).toBe(false)
+    })
+
+    // Add a new test for the rescindTransfer button
+    it('should return rescindTransfer button for org user with signing_authority role', () => {
+      const hasRoles = vi
+        .fn()
+        .mockImplementation((role) => role === roles.signing_authority)
+      const hasAnyRole = vi.fn()
+      const currentUser = {
+        isGovernmentUser: false,
+        organization: {
+          organizationId: 1
+        }
+      }
+
+      const config = buttonClusterConfigFn({
+        toOrgData,
+        hasRoles,
+        hasAnyRole,
+        currentUser,
+        methods,
+        t,
+        setModalData,
+        createUpdateTransfer,
+        transferData,
+        isGovernmentUser: false,
+        recommendation: null,
+        signingAuthorityDeclaration: true
+      })
+
+      const buttons = config[TRANSFER_STATUSES.RECOMMENDED]
+      const rescindTransferButton = buttons.find(
+        (button) => button.id === 'rescind-btn'
+      )
+
+      expect(rescindTransferButton).toBeDefined()
+      expect(rescindTransferButton.disabled).toBeUndefined()
+    })
 
     it('should return director buttons for government user with director role', () => {
       const hasRoles = vi
@@ -907,7 +1065,6 @@ describe('buttonClusterConfigFn', () => {
         t,
         setModalData,
         createUpdateTransfer,
-        undefined,
         isGovernmentUser,
         recommendation,
         signingAuthorityDeclaration
