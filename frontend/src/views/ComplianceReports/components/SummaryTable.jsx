@@ -103,7 +103,7 @@ const SummaryTable = ({
             {columns.map((column, index) => (
               <TableCell
                 key={column.id}
-                align={column.align || 'center'}
+                align='center'
                 sx={{
                   fontWeight: 'bold',
                   backgroundColor: '#f0f0f0',
