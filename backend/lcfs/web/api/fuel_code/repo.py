@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import and_, select, func, text, update, distinct
+from sqlalchemy import and_, or_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
@@ -53,17 +53,30 @@ class FuelCodeRepository:
     @repo_handler
     async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
+        # Define the filtering conditions for fuel codes
+        current_date = date.today()
+        fuel_code_filters = or_(
+            FuelCode.effective_date == None,
+            FuelCode.effective_date <= current_date
+        ) & or_(
+            FuelCode.expiration_date == None,
+            FuelCode.expiration_date > current_date
+        )
+
+        # Build the query with filtered fuel_codes
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
+            .outerjoin(FuelType.fuel_codes)
+            .where(fuel_code_filters)
             .options(
                 contains_eager(FuelType.fuel_instances).contains_eager(
                     FuelInstance.fuel_category
                 ),
+                contains_eager(FuelType.fuel_codes),
                 joinedload(FuelType.provision_1),
                 joinedload(FuelType.provision_2),
-                joinedload(FuelType.fuel_codes),
             )
         )
 
@@ -72,18 +85,7 @@ class FuelCodeRepository:
 
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
-        current_date = date.today()
         for fuel_type in fuel_types:
-            active_fuel_codes = [
-                {
-                    "fuel_code_id": fc.fuel_code_id,
-                    "fuel_code": fc.fuel_code,
-                    "carbon_intensity": fc.carbon_intensity,
-                }
-                for fc in fuel_type.fuel_codes
-                if (fc.effective_date is None or fc.effective_date <= current_date)
-                and (fc.expiration_date is None or fc.expiration_date > current_date)
-            ]
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
@@ -97,7 +99,14 @@ class FuelCodeRepository:
                     }
                     for fc in fuel_type.fuel_instances
                 ],
-                "fuel_codes": active_fuel_codes,
+                "fuel_codes": [
+                    {
+                        "fuel_code_id": fc.fuel_code_id,
+                        "fuel_code": fc.fuel_code,
+                        "carbon_intensity": fc.carbon_intensity,
+                    }
+                    for fc in fuel_type.fuel_codes
+                ],
             }
             formatted_fuel_types.append(formatted_fuel_type)
 
