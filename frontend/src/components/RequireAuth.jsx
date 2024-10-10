@@ -7,10 +7,6 @@ export const RequireAuth = ({ children, redirectTo }) => {
   const { keycloak, initialized } = useKeycloak()
   const { isLoading, isError, error } = useCurrentUser()
 
-  if (!initialized || isLoading) {
-    return <Loading />
-  }
-
   if (isError) {
     const state = {
       message: error?.response?.data?.detail,
