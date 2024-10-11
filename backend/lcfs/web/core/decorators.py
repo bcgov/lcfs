@@ -49,7 +49,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
             if "*" in required_roles:
                 warnings.warn("This endpoint is accessible by all roles")
             else:
-                user_roles = {RoleEnum[role.role.name.name] for role in user.user_roles}
+                user_roles = user.role_names
 
                 # Check if user has all the required roles
                 if not any(role in user_roles for role in required_roles):
