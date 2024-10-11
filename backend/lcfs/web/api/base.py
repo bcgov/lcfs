@@ -67,7 +67,7 @@ class PaginationRequestSchema(BaseSchema):
     page: int = Field(Query(default=0, alias="page"))
     size: int = Field(Query(default=20, alias="size"))
     sort_orders: List[SortOrder] = Field(Query(default=[], alias="sortOrders"))
-    filters: List[FilterModel] = Field(Query(defautl=[], alias="filters"))
+    filters: List[FilterModel] = Field(Query(default=[], alias="filters"))
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 

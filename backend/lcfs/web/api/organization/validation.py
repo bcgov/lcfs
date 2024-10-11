@@ -94,11 +94,11 @@ class OrganizationValidation:
             )
         return
 
-    async def save_final_supply_equipment_rows(
-        self, organization_id, report_id, fse_list
-    ):
-        report = await self.report_repo.get_compliance_report_by_id(report_id)
-        if not report:
-            raise HTTPException(status_code=404, detail="Report not found")
-        # TODO: validate each row data
-        return
+    # async def save_final_supply_equipment_rows(
+    #     self, organization_id, report_id, fse_list
+    # ):
+    #     report = await self.report_repo.get_compliance_report_by_id(report_id)
+    #     if not report:
+    #         raise HTTPException(status_code=404, detail="Report not found")
+    #     # TODO: validate each row data
+    #     return
