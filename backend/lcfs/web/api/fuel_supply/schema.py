@@ -142,7 +142,6 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_type_other: Optional[str] = None
     custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
@@ -160,7 +159,6 @@ class FuelSupplyResponseSchema(BaseSchema):
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_type_other: Optional[str] = None
     fuel_category_id: Optional[int] = None
     fuel_category: FuelCategoryResponseSchema
     fuel_code_id: Optional[int] = None
