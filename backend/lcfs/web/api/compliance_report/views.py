@@ -32,6 +32,7 @@ from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()

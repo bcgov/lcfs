@@ -122,8 +122,8 @@ BCModal.propTypes = {
   data: PropTypes.shape({
     content: PropTypes.node.isRequired,
     title: PropTypes.string.isRequired,
-    primaryButtonText: PropTypes.string.isRequired,
-    primaryButtonAction: PropTypes.func.isRequired,
+    primaryButtonText: PropTypes.string,
+    primaryButtonAction: PropTypes.func,
     primaryButtonColor: PropTypes.string,
     warningText: PropTypes.string,
     secondaryButtonText: PropTypes.string,

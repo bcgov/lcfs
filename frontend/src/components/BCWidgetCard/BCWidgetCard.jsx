@@ -67,7 +67,7 @@ BCWidgetCard.propTypes = {
     'nav',
     'dark'
   ]),
-  title: PropTypes.string.isRequired,
+  title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
   disableHover: PropTypes.bool,
   subHeader: PropTypes.node

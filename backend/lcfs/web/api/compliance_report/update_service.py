@@ -92,11 +92,21 @@ class ComplianceReportUpdateService:
     async def handle_draft_status(self, report: ComplianceReport):
         """Handle actions when a report is set to Draft status."""
         # Implement logic for Draft status
-        pass
+        user = self.request.user
+        has_director_role = user_has_roles(
+            user, ["SUPPLIER"]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_submitted_status(self, report: ComplianceReport):
         """Handle actions when a report is submitted."""
-
+        user = self.request.user
+        has_director_role = user_has_roles(
+            user, ["SUPPLIER", "SIGNING_AUTHORITY"]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
         # Fetch the existing summary from the database, if any
         existing_summary = await self.repo.get_summary_by_report_id(
             report.compliance_report_id
@@ -182,17 +192,27 @@ class ComplianceReportUpdateService:
     async def handle_recommended_by_analyst_status(self, report: ComplianceReport):
         """Handle actions when a report is Recommended by analyst."""
         # Implement logic for Recommended by analyst status
-        pass
+        user = self.request.user
+        has_director_role = user_has_roles(
+            user, ["GOVERNMENT", "ANALYST"]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_recommended_by_manager_status(self, report: ComplianceReport):
         """Handle actions when a report is Recommended by manager."""
         # Implement logic for Recommended by manager status
-        pass
+        user = self.request.user
+        has_director_role = user_has_roles(
+            user, ["GOVERNMENT", "COMPLIANCE_MANAGER"]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_assessed_status(self, report: ComplianceReport):
         """Handle actions when a report is Assessed."""
         user = self.request.user
-        has_director_role = has_director_role = user_has_roles(
+        has_director_role = user_has_roles(
             user, ["GOVERNMENT", "DIRECTOR"]
         )
         if not has_director_role:

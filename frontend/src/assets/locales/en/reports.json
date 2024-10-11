@@ -34,7 +34,6 @@
   },
   "actionBtns": {
     "saveDraftBtn": "Save draft report",
-    "deleteDraftBtn": "Delete draft report",
     "submitReportBtn": "Submit report",
     "returnToAnalyst": "Return to analyst",
     "returnToManager": "Return to compliance manager",
@@ -99,5 +98,6 @@
     "line": "Line",
     "value": "Value",
     "totalValue": "Total Value"
-  }
+  },
+  "summaryLoadingMsg": "Loading compliance report summary..."
 }

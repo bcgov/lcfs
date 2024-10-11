@@ -1,12 +1,10 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
   Typography,
-  CircularProgress,
   Stack
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -64,7 +62,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
   )
 
   if (isLoading) {
-    return <Loading message='Loading compliance report summary...' />
+    return <Loading message={t('report:summaryLoadingMsg')} />
   }
 
   if (isError) {

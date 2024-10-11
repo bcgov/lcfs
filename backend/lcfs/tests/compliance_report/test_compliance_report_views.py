@@ -562,3 +562,180 @@ async def test_update_compliance_report_invalid_payload(
     response = await client.put(url, json=payload)
 
     assert response.status_code == 422  # Unprocessable Entity (Validation Error)
+
+@pytest.mark.anyio
+async def test_update_compliance_report_draft_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Draft", "supplementalNote": "Drafting a new report"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+@pytest.mark.anyio
+async def test_update_compliance_report_submitted_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Submitted", "supplementalNote": "Submitting the report"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_recommended_by_analyst_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Recommended by analyst", "supplementalNote": "Analyst recommendation"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_recommended_by_manager_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Recommended by manager", "supplementalNote": "Manager recommendation"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+@pytest.mark.anyio
+async def test_update_compliance_report_assessed_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Assessed", "supplementalNote": "Report has been assessed"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
