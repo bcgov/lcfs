@@ -248,11 +248,10 @@ async def test_update_transfer_success(
 
     assert response.status_code == 201
 
-    # data = response.json()
+    data = response.json()
 
-    # assert "id" in data
-    # assert data["transfer_type"] == "typeB"
-    # assert data["amount"] == 2000
+    assert "transferId" in data
+    assert data["transferId"] == 1
 
 
 @pytest.mark.anyio
