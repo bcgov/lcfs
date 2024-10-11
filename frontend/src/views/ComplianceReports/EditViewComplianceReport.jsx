@@ -192,12 +192,12 @@ export const EditViewComplianceReport = () => {
               </>
             ) : (
               <>
-                {(isGovernmentUser || (currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED)) && (<AssessmentCard
+                <AssessmentCard
                   orgName={orgData?.name}
                   history={reportData?.data?.history}
                   isGovernmentUser={isGovernmentUser}
                   hasMet={hasMet}
-                />)}
+                />
                 {!isGovernmentUser && <ImportantInfoCard />}
               </>
             )}
