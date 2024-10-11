@@ -12,7 +12,7 @@ import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
 export const otherUsesColDefs = (optionsData, errors) => [
   validation,
   actions({
-    enableDuplicate: true,
+    enableDuplicate: false,
     enableDelete: true
   }),
   {

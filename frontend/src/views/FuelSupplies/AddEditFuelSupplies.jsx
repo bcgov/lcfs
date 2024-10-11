@@ -307,29 +307,6 @@ export const AddEditFuelSupplies = () => {
         }
       }
     }
-    if (action === 'duplicate') {
-      const newRowID = uuid()
-      const rowData = {
-        ...params.node.data,
-        id: newRowID,
-        fuelSupplyId: null,
-        fuelSupply: null,
-        validationStatus: 'error',
-        modified: true
-      }
-
-      params.api.applyTransaction({
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      })
-
-      setErrors({ [newRowID]: 'fuelSupply' })
-
-      alertRef.current?.triggerAlert({
-        message: 'Error updating row: Fuel supply Fields required',
-        severity: 'error'
-      })
-    }
   }
 
   const handleNavigateBack = useCallback(() => {
