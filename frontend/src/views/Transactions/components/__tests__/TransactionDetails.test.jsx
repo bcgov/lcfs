@@ -3,9 +3,14 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { TransactionDetails } from '../TransactionDetails'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useOrganizationBalance } from '@/hooks/useOrganization'
 import theme from '@/themes'
 import { FormProvider, useForm } from 'react-hook-form'
 import { MemoryRouter } from 'react-router-dom'
+
+vi.mock('@/hooks/useOrganizations')
+vi.mock('@/hooks/useOrganization')
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -59,6 +64,16 @@ const WrapperComponent = (props) => {
 describe('TransactionDetails Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+
+    useRegExtOrgs.mockReturnValue({
+      data: mockOrganizations,
+      isLoading: false
+    })
+
+    useOrganizationBalance.mockReturnValue({
+      data: mockBalance,
+      isLoading: false
+    })
   })
 
   afterEach(() => {
@@ -66,17 +81,6 @@ describe('TransactionDetails Component', () => {
   })
 
   it('populates organization dropdown correctly', async () => {
-    vi.mock('@/hooks/useOrganization', () => ({
-      useRegExtOrgs: vi.fn(() => ({
-        data: mockOrganizations,
-        isLoading: false
-      })),
-      useOrganizationBalance: vi.fn((orgId) => ({
-        data: mockBalance,
-        isLoading: false
-      }))
-    }))
-
     render(<WrapperComponent transactionId={null} isEditable={true} />)
 
     // Open the organization dropdown
@@ -101,17 +105,6 @@ describe('TransactionDetails Component', () => {
   })
 
   it('displays organization balance correctly', async () => {
-    vi.mock('@/hooks/useOrganization', () => ({
-      useRegExtOrgs: vi.fn(() => ({
-        data: mockOrganizations,
-        isLoading: false
-      })),
-      useOrganizationBalance: vi.fn((orgId) => ({
-        data: mockBalance,
-        isLoading: false
-      }))
-    }))
-
     render(<WrapperComponent transactionId={null} isEditable={true} />)
 
     // Open the organization dropdown
