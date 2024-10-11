@@ -1,7 +1,7 @@
 services:
   db:
     container_name: db
-    restart: no
+    restart: "no"
     image: postgres:14.2
     environment:
       POSTGRES_DB: lcfs
@@ -16,7 +16,7 @@ services:
 
   redis:
     container_name: redis
-    restart: no
+    restart: "no"
     image: bitnami/redis:6.2.5
     environment:
       REDIS_PASSWORD: development_only
@@ -39,7 +39,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    restart: no
+    restart: "no"
     command: "server --console-address :9001 --address :9000 /data"
     environment:
       - MINIO_ROOT_USER=s3_access_key
@@ -55,7 +55,7 @@ services:
 
   create_bucket:
     image: minio/mc
-    restart: no
+    restart: "no"
     container_name: minio_init
     entrypoint: >
       /bin/sh -c "
@@ -70,7 +70,7 @@ services:
 
   backend:
     container_name: backend
-    restart: no
+    restart: "no"
     build:
       context: ./backend
       dockerfile: 'Dockerfile'
@@ -104,7 +104,7 @@ services:
 
   frontend:
     container_name: frontend
-    restart: no
+    restart: "no"
     build:
       dockerfile: Dockerfile.dev
       context: ./frontend
