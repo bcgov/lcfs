@@ -20,13 +20,13 @@ export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress, isGove
               {t('report:serviceAddrLabel')}:
             </Typography>{' '}
             <Typography variant="body4">
-              {constructAddress(orgAddress)}
+              {orgAddress && constructAddress(orgAddress)}
             </Typography>
           </div>
           <div style={{ marginTop: '2rem' }}>
             <Typography variant="body4">{t('report:bcAddrLabel')}:</Typography>{' '}
             <Typography variant="body4">
-              {constructAddress(orgAttorneyAddress)}
+              {orgAttorneyAddress && constructAddress(orgAttorneyAddress)}
             </Typography>
           </div>
           {!isGovernmentUser && <Typography

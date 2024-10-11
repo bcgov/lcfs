@@ -1,7 +1,7 @@
 /* eslint-disable chai-friendly/no-unused-expressions */
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
+import { ReportsStatusRenderer, LinkRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 
 export const reportsColDefs = (t, bceidRole) => [
@@ -9,6 +9,10 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     valueGetter: ({ data }) => data.compliancePeriod?.description || ''
   },
   {
@@ -16,12 +20,20 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
     hide: bceidRole,
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     valueGetter: ({ data }) => data.organization?.name || ''
   },
   {
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     valueGetter: () => t('report:complianceReport')
   },
   {
@@ -30,6 +42,9 @@ export const reportsColDefs = (t, bceidRole) => [
     maxWidth: 300,
     valueGetter: ({ data }) => data.currentStatus?.status || '',
     cellRenderer: ReportsStatusRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     floatingFilterComponent: BCColumnSetFilter,
     suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
@@ -63,6 +78,10 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.lastUpdated'),
     flex: 1,
     valueGetter: ({ data }) => data.updateDate || '',
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     valueFormatter: timezoneFormatter
   }
 ]
