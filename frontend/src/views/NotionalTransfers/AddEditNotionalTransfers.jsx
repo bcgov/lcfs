@@ -174,29 +174,6 @@ export const AddEditNotionalTransfers = () => {
         }
       }
     }
-    if (action === 'duplicate') {
-      const newRowID = uuid()
-      const rowData = {
-        ...params.node.data,
-        id: newRowID,
-        notionalTransferId: null,
-        notionalTransfer: null,
-        validationStatus: 'error',
-        modified: true
-      }
-
-      params.api.applyTransaction({
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      })
-
-      setErrors({ [newRowID]: 'notionalTransfer' })
-
-      alertRef.current?.triggerAlert({
-        message: 'Error updating row: Fuel supply equipment Fields required',
-        severity: 'error'
-      })
-    }
   }
 
   useEffect(() => {

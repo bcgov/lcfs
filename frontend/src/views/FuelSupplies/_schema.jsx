@@ -16,7 +16,7 @@ import {
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,
   actions({
-    enableDuplicate: true,
+    enableDuplicate: false,
     enableDelete: true
   }),
   {
