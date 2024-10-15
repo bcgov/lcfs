@@ -84,6 +84,6 @@ class TransferUpdate(BaseSchema):
     recommendation: Optional[str] = None
 
 
-class TransferHistory(BaseSchema):
-    transfer_history_id: int
-    transfer_id: int
+# class TransferHistory(BaseSchema):
+#     transfer_history_id: int
+#     transfer_id: int

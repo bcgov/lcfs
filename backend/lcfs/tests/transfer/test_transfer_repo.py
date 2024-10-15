@@ -1,125 +1,163 @@
 import pytest
-from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.tests.transfer.transfer_payloads import (
-    transfer_orm_model,
-    transfer_orm_model_2,
-    transfer_orm_fields,
-)
+
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
-from sqlalchemy import select, and_
 
-
-@pytest.fixture
-def transfer_repo(dbsession):
-    return TransferRepository(db=dbsession)
-
-
-# REPOSITORY LAYER TESTS
-
-# Test retrieving all transfers
+from unittest.mock import MagicMock, AsyncMock
+from lcfs.web.api.transfer.schema import TransferSchema
+from datetime import date
+from lcfs.db.models.organization import Organization
+from lcfs.db.models.transfer import TransferStatus, TransferCategory
 
 
 @pytest.mark.anyio
-async def test_get_all_transfers(dbsession, transfer_repo):
-    dbsession.add(transfer_orm_model)
-    await dbsession.commit()
-    transfers = await transfer_repo.get_all_transfers()
-    assert len(transfers) == 4
+async def test_get_all_transfers_success(transfer_repo, mock_db):
+    expected_data = []
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = expected_data
 
+    mock_db.execute.return_value = mock_result
 
-# Test retrieving a transfer by ID
+    result = await transfer_repo.get_all_transfers()
 
-
-@pytest.mark.anyio
-async def test_get_transfer_by_id(dbsession, transfer_repo):
-    dbsession.add(transfer_orm_model_2)
-    await dbsession.commit()
-    new_transfer = await transfer_repo.get_transfer_by_id(
-        transfer_orm_model_2.transfer_id
-    )
-    assert new_transfer is not None
-    assert new_transfer.transfer_id == transfer_orm_model_2.transfer_id
+    mock_db.execute.assert_called_once()
+    mock_result.scalars.return_value.all.assert_called_once()
+    assert result == expected_data
 
 
 @pytest.mark.anyio
-async def test_create_transfer(dbsession, transfer_repo):
-    new_transfer = Transfer(**transfer_orm_fields)
-    dbsession.add(new_transfer)
-    await dbsession.commit()
-    added_transfer = await transfer_repo.get_transfer_by_id(new_transfer.transfer_id)
-    assert added_transfer is not None
-    assert added_transfer.transfer_id == new_transfer.transfer_id
+async def test_get_transfer_by_id_success(transfer_repo, mock_db):
+    transfer_id = 1
+    expected_data = Transfer(transfer_id=transfer_id)
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.first.return_value = expected_data
+
+    mock_db.execute.return_value = mock_result
+
+    result = await transfer_repo.get_transfer_by_id(transfer_id)
+
+    mock_db.execute.assert_called_once()
+    mock_result.scalars.return_value.first.assert_called_once()
+
+    assert result == expected_data
+    assert isinstance(result, Transfer)
+    assert result.transfer_id == transfer_id
 
 
 @pytest.mark.anyio
-async def test_update_transfer(dbsession, transfer_repo):
-    # Create and add a new transfer
-    new_transfer = Transfer(**transfer_orm_fields)
-    dbsession.add(new_transfer)
-    await dbsession.commit()
+async def test_create_transfer_success(transfer_repo):
+    transfer_id = 1
+    expected_data = Transfer(
+        transfer_id=transfer_id,
+        from_organization=Organization(
+            organization_id=1,
+            name="org1",
+        ),
+        to_organization=Organization(
+            organization_id=2,
+            name="org2",
+        ),
+        agreement_date=date.today(),
+        quantity=1,
+        price_per_unit=1,
+        current_status=TransferStatus(transfer_status_id=1, status="status"),
+    )
 
-    # Retrieve the added transfer
-    added_transfer = await transfer_repo.get_transfer_by_id(new_transfer.transfer_id)
+    result = await transfer_repo.create_transfer(expected_data)
 
-    # Check initial state (optional but recommended)
-    assert added_transfer is not None
-    # Assuming '2' is not the initial status
-    assert added_transfer.current_status_id != 2
-
-    # Update the transfer
-    added_transfer.current_status_id = 2
-    await dbsession.commit()
-
-    # Refresh object from database (if your ORM supports this)
-    await dbsession.refresh(added_transfer)
-
-    # Assert the updated state
-    assert added_transfer.current_status_id == 2
+    assert result == TransferSchema.from_orm(expected_data)
+    assert isinstance(result, TransferSchema)
+    assert result.transfer_id == transfer_id
 
 
 @pytest.mark.anyio
-async def test_add_update_transfer_history(dbsession, transfer_repo):
-    # Create and add a new transfer
-    new_transfer = Transfer(**transfer_orm_fields)
-    dbsession.add(new_transfer)
-    await dbsession.commit()
-    # Retrieve the added transfer
-    added_transfer = await transfer_repo.get_transfer_by_id(new_transfer.transfer_id)
+async def test_get_transfer_status_by_name_success(transfer_repo, mock_db):
+    status = "Draft"
+    mock_db.scalar.return_value = TransferStatus(status=status)
+    result = await transfer_repo.get_transfer_status_by_name(status)
 
-    # Create and add a new transfer history for above transfer
-    await transfer_repo.add_transfer_history(
-        transfer_id=added_transfer.transfer_id,
-        transfer_status_id=added_transfer.current_status_id,
-        user_profile_id=1,
-    )
-    await dbsession.refresh(added_transfer)
-    # Retrieve the added transfer history
-    added_history = await dbsession.scalar(
-        select(TransferHistory).where(
-            and_(
-                TransferHistory.transfer_id == added_transfer.transfer_id,
-                TransferHistory.transfer_status_id == added_transfer.current_status_id,
-            )
-        )
+    assert isinstance(result, TransferStatus)
+    assert result.status == status
+
+
+@pytest.mark.anyio
+async def test_get_transfer_category_by_name_success(transfer_repo, mock_db):
+    category = "A"
+    mock_db.scalar.return_value = TransferCategory(category=category)
+    result = await transfer_repo.get_transfer_category_by_name(category)
+
+    assert isinstance(result, TransferCategory)
+    assert result.category == category
+
+
+@pytest.mark.anyio
+async def test_update_transfer_success(transfer_repo):
+    transfer_id = 1
+    expected_data = Transfer(
+        transfer_id=transfer_id,
+        from_organization=Organization(
+            organization_id=1,
+            name="org1",
+        ),
+        to_organization=Organization(
+            organization_id=2,
+            name="org2",
+        ),
+        agreement_date=date.today(),
+        quantity=1,
+        price_per_unit=1,
+        current_status=TransferStatus(transfer_status_id=1, status="status"),
     )
 
-    # Check whether history record is added.
-    assert added_history is not None
-    # Update the transfer history
-    await transfer_repo.update_transfer_history(
-        transfer_id=added_transfer.transfer_id,
-        transfer_status_id=added_transfer.current_status_id,
-        user_profile_id=2,
+    result = await transfer_repo.update_transfer(expected_data)
+
+    assert result == TransferSchema.model_validate(expected_data)
+    assert result.transfer_id == transfer_id
+
+
+@pytest.mark.anyio
+async def test_add_transfer_history_success(transfer_repo):
+    transfer_id = 1
+    transfer_status_id = 1
+    user_profile_id = 1
+
+    result = await transfer_repo.add_transfer_history(
+        transfer_id, transfer_status_id, user_profile_id
     )
-    updated_history = await dbsession.scalar(
-        select(TransferHistory).where(
-            and_(
-                TransferHistory.transfer_id == added_transfer.transfer_id,
-                TransferHistory.transfer_status_id == added_transfer.current_status_id,
-            )
-        )
+
+    assert isinstance(result, TransferHistory)
+    assert result.transfer_id == transfer_id
+    assert result.transfer_status_id == transfer_status_id
+    assert result.user_profile_id == user_profile_id
+
+
+@pytest.mark.anyio
+async def test_update_transfer_history_success(transfer_repo, mock_db):
+    transfer_id = 1
+    transfer_status_id = 1
+    user_profile_id = 1
+    expected_data = TransferHistory(
+        transfer_id=transfer_id,
+        transfer_status_id=transfer_status_id,
+        user_profile_id=user_profile_id,
     )
-    # Check whether history record is updated.
-    assert updated_history is not None
-    assert updated_history.user_profile_id == 2
+
+    mock_db.scalar.return_value = expected_data
+
+    result = await transfer_repo.update_transfer_history(
+        transfer_id, transfer_status_id, user_profile_id
+    )
+
+    assert isinstance(result, TransferHistory)
+    assert result.transfer_id == transfer_id
+    assert result.transfer_status_id == transfer_status_id
+    assert result.user_profile_id == user_profile_id
+
+
+@pytest.mark.anyio
+async def test_refresh_transfer_success(transfer_repo, mock_db):
+    expected_data = Transfer(transfer_id=1)
+
+    result = await transfer_repo.refresh_transfer(expected_data)
+
+    assert result == expected_data
