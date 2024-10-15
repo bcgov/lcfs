@@ -6,7 +6,7 @@ from starlette import status
 
 @pytest.mark.anyio
 async def test_endpoint_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
     url = fastapi_app.url_path_for("get_current_user")
     response = await client.get(url)
@@ -17,9 +17,9 @@ async def test_endpoint_success(
 
 @pytest.mark.anyio
 async def test_endpoint_access_denied(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Analyst"])
+    set_mock_user(fastapi_app, ["Analyst"])
     url = fastapi_app.url_path_for("get_organizations")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)
@@ -28,9 +28,9 @@ async def test_endpoint_access_denied(
 
 @pytest.mark.anyio
 async def test_endpoint_access_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organizations")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)

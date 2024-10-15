@@ -59,11 +59,11 @@ async def test_get_transfer_success(
 async def test_government_update_transfer_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_transfer_services,
     mock_transfer_validation,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
 
     transfer_id = 1
     url = fastapi_app.url_path_for(
@@ -105,10 +105,10 @@ async def test_government_update_transfer_success(
 async def test_update_category_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_transfer_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
 
     transfer_id = 1
     url = fastapi_app.url_path_for("update_category", transfer_id=transfer_id)

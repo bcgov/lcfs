@@ -63,7 +63,7 @@ describe('TransactionView Component', () => {
       screen.getByText(/txn:administrativeAdjustment/i)
     ).toBeInTheDocument()
     expect(screen.getByText(/txn:complianceUnitsLabel/i)).toBeInTheDocument()
-    expect(screen.getByText(/1000/i)).toBeInTheDocument()
+    expect(screen.getByText(/1,000/i)).toBeInTheDocument()
     expect(screen.getByText(/txn:effectiveDateLabel/i)).toBeInTheDocument()
     expect(screen.getByText(/2023-05-01/i)).toBeInTheDocument()
     expect(screen.getByText(/txn:comments/i)).toBeInTheDocument()
