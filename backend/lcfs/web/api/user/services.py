@@ -247,7 +247,9 @@ class UserServices:
             )
         )
 
-    async def _has_access_to_user_activities(self, current_user, target_user_id) -> bool:
+    async def _has_access_to_user_activities(
+        self, current_user: UserProfile, target_user_id: int
+    ) -> bool:
         """
         Checks if the current user has access to the target user's activities.
         """
@@ -255,7 +257,7 @@ class UserServices:
         if not target_user:
             return False
 
-        current_user_roles = {role.role.name for role in current_user.user_roles}
+        current_user_roles = current_user.role_names
 
         # Administrator users can access any user's activities
         if RoleEnum.ADMINISTRATOR in current_user_roles:

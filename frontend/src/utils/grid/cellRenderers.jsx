@@ -33,35 +33,30 @@ export const LinkRenderer = (props) => {
 export const StatusRenderer = (props) => {
   const location = useLocation()
   return (
-    <Link
-      to={props.node && location.pathname + '/' + props.node.id}
-      style={{ color: '#000' }}
+    <BCBox
+      component={props.isView ? 'span' : 'div'}
+      mt={1}
+      sx={{ width: '100%', height: '100%' }}
     >
-      <BCBox
-        component={props.isView ? 'span' : 'div'}
-        mt={1}
-        sx={{ width: '100%', height: '100%' }}
-      >
-        <BCBadge
-          badgeContent={props.data.isActive ? 'Active' : 'Inactive'}
-          color={props.data.isActive ? 'success' : 'smoky'}
-          variant="gradient"
-          size="md"
-          sx={{
-            ...(!props.isView
-              ? { display: 'flex', justifyContent: 'center' }
-              : {}),
-            '& .MuiBadge-badge': {
-              minWidth: '120px',
-              fontWeight: 'regular',
-              textTransform: 'capitalize',
-              fontSize: '0.875rem',
-              padding: '0.4em 0.6em'
-            }
-          }}
-        />
-      </BCBox>
-    </Link>
+      <BCBadge
+        badgeContent={props.data.isActive ? 'Active' : 'Inactive'}
+        color={props.data.isActive ? 'success' : 'smoky'}
+        variant="gradient"
+        size="md"
+        sx={{
+          ...(!props.isView
+            ? { display: 'flex', justifyContent: 'center' }
+            : {}),
+          '& .MuiBadge-badge': {
+            minWidth: '120px',
+            fontWeight: 'regular',
+            textTransform: 'capitalize',
+            fontSize: '0.875rem',
+            padding: '0.4em 0.6em'
+          }
+        }}
+      />
+    </BCBox>
   )
 }
 

@@ -32,7 +32,7 @@ class TransactionRepository:
     async def get_transactions_paginated(
         self,
         offset: int,
-        limit: int,
+        limit: int | None = None,
         conditions: list = [],
         sort_orders: list = [],
         organization_id: int = None,

@@ -17,7 +17,7 @@ export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const allocationAgreementColDefs = (optionsData, errors) => [
   validation,
   actions({
-    enableDuplicate: true,
+    enableDuplicate: false,
     enableDelete: true
   }),
   {
@@ -287,8 +287,8 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
-    valueFormatter: params => {
-      return parseFloat(params.value).toFixed(2);
+    valueFormatter: (params) => {
+      return parseFloat(params.value).toFixed(2)
     },
     cellStyle: (params) => StandardCellErrors(params, errors),
     editable: false,

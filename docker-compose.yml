@@ -65,6 +65,8 @@ services:
       done;
       mc mb myminio/lcfs
       "
+    networks:
+      - shared_network
     depends_on:
       - minio
 
