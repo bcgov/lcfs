@@ -244,6 +244,7 @@ export const BCGridEditor = ({
 
 BCGridEditor.propTypes = {
   gridRef: PropTypes.shape({ current: PropTypes.instanceOf(AgGridReact) }),
+  alertRef: PropTypes.shape({ current: PropTypes.any }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,
   onRowEditingStopped: PropTypes.func,
