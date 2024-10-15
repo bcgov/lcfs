@@ -9,11 +9,11 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
-    cellRenderer: LinkRenderer,
-    cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
-    },
-    valueGetter: ({ data }) => data.compliancePeriod?.description || ''
+    suppressFloatingFilterButton: true,
+    valueGetter: ({ data }) => data.compliancePeriod?.description || '',
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     field: 'organization',
@@ -30,11 +30,18 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    cellRenderer: LinkRenderer,
-    cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
-    },
-    valueGetter: () => t('report:complianceReport')
+    valueGetter: () => t('report:complianceReport'),
+    filter: 'agTextColumnFilter', // Enable text filtering
+    suppressFloatingFilterButton: true,
+    filterParams: {
+      textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase();
+        const cleanValue = value.replace(/\s+/g, '').toLowerCase();
+        return cleanValue.includes(cleanFilterText);
+      },
+      buttons: ["clear"],
+    }
   },
   {
     field: 'status',
@@ -46,7 +53,6 @@ export const reportsColDefs = (t, bceidRole) => [
       url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
     },
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       // TODO: change this to api Query later
       apiQuery: () => ({
@@ -78,11 +84,14 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.lastUpdated'),
     flex: 1,
     valueGetter: ({ data }) => data.updateDate || '',
-    cellRenderer: LinkRenderer,
-    cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
-    },
-    valueFormatter: timezoneFormatter
+    valueFormatter: timezoneFormatter,
+    suppressFloatingFilterButton: true,
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      buttons: ["clear"],
+    }
   }
 ]
 

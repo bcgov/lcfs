@@ -17,6 +17,7 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import DataGridLoading from '@/components/DataGridLoading'
 import { BCPagination } from './components'
+import { useTranslation } from 'react-i18next' // Import useTranslation
 // Register the required AG Grid modules for row model and CSV export functionality
 ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
 
@@ -74,6 +75,8 @@ const BCDataGridServer = ({
   suppressPagination,
   ...others
 }) => {
+  const { t } = useTranslation(['report'])
+
   // State declarations
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(paginationPageSize)
@@ -179,6 +182,24 @@ const BCDataGridServer = ({
     setRowData([])
     setLoading(true)
     const filterModel = gridRef?.current?.api.getFilterModel()
+    // Use the currently loaded data for local filtering
+    let localFilteredData = [...rowData]
+
+    // Handle the 'type' filter locally
+    const typeFilter = filterModel['type']
+
+    if (typeFilter) {
+      const filterText = typeFilter.filter?.toLowerCase() || ''
+      localFilteredData = localFilteredData.filter((row) => {
+        const typeLiteral = t('report:complianceReport').toLowerCase()
+        return typeLiteral.includes(filterText)
+      })
+
+      // Remove 'type' from the filter model to prevent backend filtering
+      delete filterModel['type']
+    }
+
+    // Handle other filters (backend filters)
     const filterArr = [
       ...Object.entries(filterModel).map(([field, value]) => {
         // Check if the field is a date type and has an 'inRange' filter
@@ -196,12 +217,16 @@ const BCDataGridServer = ({
       ...defaultFilterModel
     ]
     setFilterModel(filterArr)
+
+    // Update the row data with the locally filtered data
+    setRowData(localFilteredData)
+
     // save the filter state in browser cache.
-    // localStorage.setItem(
-    //   `${gridKey}-filter`,
-    //   JSON.stringify(gridRef.current.api.getFilterModel())
-    // )
-  }, [])
+    localStorage.setItem(
+      `${gridKey}-filter`,
+      JSON.stringify(gridRef.current.api.getFilterModel())
+    )
+  }, [defaultFilterModel, gridRef, rowData, t])
 
   // Callback for grid sort changes.
   const onSortChanged = useCallback(() => {
@@ -226,6 +251,12 @@ const BCDataGridServer = ({
       JSON.stringify(gridRef.current.api.getColumnState())
     )
   }, [])
+
+  const handleResetFilter = (filterField) => {
+    const filterModel = gridRef.current.api.getFilterModel()
+    delete filterModel[filterField]
+    gridRef.current.api.setFilterModel(filterModel)
+  }
 
   // Memorized default ag-grid options
   // For more details please refer https://ag-grid.com/javascript-data-grid/grid-options/
