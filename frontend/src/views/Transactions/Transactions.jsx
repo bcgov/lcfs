@@ -173,7 +173,7 @@ export const Transactions = () => {
             {t('txn:title')}
           </BCTypography>
           <Box display={'flex'} gap={2} mb={2}>
-            {currentUser.organization?.orgStatus?.status ===
+            {currentUser?.organization?.orgStatus?.status ===
               ORGANIZATION_STATUSES.REGISTERED && (
               <Role roles={[roles.transfers]}>
                 <BCButton

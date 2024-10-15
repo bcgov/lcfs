@@ -258,7 +258,9 @@ class TransferServices:
     async def sign_and_send_from_supplier(self, transfer):
         """Create reserved transaction to reserve compliance units for sending organization."""
         user = self.request.user
-        has_signing_role = user_has_roles(user, ["SUPPLIER", "SIGNING_AUTHORITY"])
+        has_signing_role = user_has_roles(
+            user, [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
+        )
         if not has_signing_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
