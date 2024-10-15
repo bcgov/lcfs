@@ -3,7 +3,6 @@ import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
@@ -307,29 +306,6 @@ export const AddEditFuelSupplies = () => {
           })
         }
       }
-    }
-    if (action === 'duplicate') {
-      const newRowID = uuid()
-      const rowData = {
-        ...params.node.data,
-        id: newRowID,
-        fuelSupplyId: null,
-        fuelSupply: null,
-        validationStatus: 'error',
-        modified: true
-      }
-
-      params.api.applyTransaction({
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      })
-
-      setErrors({ [newRowID]: 'fuelSupply' })
-
-      alertRef.current?.triggerAlert({
-        message: 'Error updating row: Fuel supply Fields required',
-        severity: 'error'
-      })
     }
   }
 

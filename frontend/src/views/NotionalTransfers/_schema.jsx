@@ -14,7 +14,7 @@ import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 export const notionalTransferColDefs = (optionsData, errors) => [
   validation,
   actions({
-    enableDuplicate: true,
+    enableDuplicate: false,
     enableDelete: true
   }),
   {
@@ -145,5 +145,6 @@ export const defaultColDef = {
   filter: true,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  flex: 1
 }

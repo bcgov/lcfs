@@ -227,7 +227,7 @@ async def update_transfer(
     Endpoint to create a new transfer
     This endpoint creates a new transfer and returns the information of the created transfer.
     """
-    validate.update_transfer(organization_id, transfer_create)
+    await validate.update_transfer(organization_id, transfer_create)
     transfer_create.transfer_id = transfer_id
     return await transfer_service.update_transfer(transfer_create)
 

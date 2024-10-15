@@ -220,29 +220,6 @@ export const AddEditAllocationAgreements = () => {
         }
       }
     }
-    if (action === 'duplicate') {
-      const newRowID = uuid()
-      const rowData = {
-        ...params.node.data,
-        id: newRowID,
-        allocationAgreementId: null,
-        allocationAgreement: null,
-        validationStatus: 'error',
-        modified: true
-      }
-
-      params.api.applyTransaction({
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      })
-
-      setErrors({ [newRowID]: 'allocationAgreement' })
-
-      alertRef.current?.triggerAlert({
-        message: 'Error updating row: Allocation Agreement Fields required',
-        severity: 'error'
-      })
-    }
   }
 
   const handleNavigateBack = useCallback(() => {

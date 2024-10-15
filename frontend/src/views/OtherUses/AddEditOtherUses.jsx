@@ -38,18 +38,6 @@ export const AddEditOtherUses = () => {
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
   const navigate = useNavigate()
 
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('otherUses:noOtherUsesFound'),
-      autoSizeStrategy: {
-        type: 'fitCellContents',
-        defaultMinWidth: 50,
-        defaultMaxWidth: 600
-      }
-    }),
-    [t]
-  )
-
   useEffect(() => {
     if (location.state?.message) {
       alertRef.triggerAlert({
@@ -111,64 +99,6 @@ export const AddEditOtherUses = () => {
         } catch (error) {
           alertRef.current?.triggerAlert({
             message: `Error deleting row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
-    }
-    if (action === 'duplicate') {
-      try {
-        setErrors({})
-        const newRowID = uuid()
-
-        const rowData = {
-          ...params.data,
-          id: newRowID,
-          otherUsesId: null,
-          modified: true
-        }
-
-        let updatedData = cleanEmptyStringValues(rowData)
-
-        const { data: dupeData } = await saveRow(updatedData)
-
-        updatedData = {
-          ...updatedData,
-          otherUsesId: dupeData.otherUsesId,
-          validationStatus: 'success',
-          modified: false
-        }
-
-        await params.api.applyTransaction({
-          add: [updatedData],
-          addIndex: params.node?.rowIndex + 1
-        })
-
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
-        })
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`fuelCode:fuelCodeColLabels.${field}`)
-          )
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
             severity: 'error'
           })
         }
@@ -268,7 +198,12 @@ export const AddEditOtherUses = () => {
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}
-          gridOptions={gridOptions}
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50,
+            defaultMaxWidth: 600
+          }}
+          overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
           loading={optionsLoading || usesLoading}
           onAction={onAction}
           onCellEditingStopped={onCellEditingStopped}

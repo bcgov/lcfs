@@ -12,7 +12,7 @@ import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
 export const otherUsesColDefs = (optionsData, errors) => [
   validation,
   actions({
-    enableDuplicate: true,
+    enableDuplicate: false,
     enableDelete: true
   }),
   {
@@ -86,6 +86,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     field: 'expectedUse',
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
     cellEditor: AutocompleteEditor,
+    flex: 1,
     cellEditorParams: {
       options: optionsData.expectedUses.map((obj) => obj.name),
       multiple: false,
@@ -100,6 +101,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'rationale',
+    flex: 1,
     headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',

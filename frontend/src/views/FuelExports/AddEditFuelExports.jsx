@@ -213,30 +213,6 @@ export const AddEditFuelExports = () => {
         }
       }
     }
-    if (action === 'duplicate') {
-      const newRowID = uuid()
-      const rowData = {
-        ...params.node.data,
-        compliancePeriod,
-        id: newRowID,
-        fuelExportId: null,
-        fuelExport: null,
-        validationStatus: 'error',
-        modified: true
-      }
-
-      params.api.applyTransaction({
-        add: [rowData],
-        addIndex: params.node?.rowIndex + 1
-      })
-
-      setErrors({ [newRowID]: 'fuelExport' })
-
-      alertRef.current?.triggerAlert({
-        message: 'Error updating row: Fuel export Fields required',
-        severity: 'error'
-      })
-    }
   }
 
   const handleNavigateBack = useCallback(() => {

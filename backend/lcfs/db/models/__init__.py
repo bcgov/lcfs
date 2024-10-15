@@ -35,6 +35,7 @@ def load_all_models() -> None:
 from .admin_adjustment import *
 from .comment import *
 from .compliance import *
+from .document import *
 from .fuel import *
 from .initiative_agreement import *
 from .notification import *

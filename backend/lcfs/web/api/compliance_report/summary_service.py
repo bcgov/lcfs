@@ -423,8 +423,6 @@ class ComplianceReportSummaryService:
             )
 
             # only carry over line 6,8 if required quantities have not changed
-            print("Previous", previous_required_renewable_quantity)
-            print("Required", required_renewable_quantity)
             if not previous_required_renewable_quantity != required_renewable_quantity:
                 retained_renewables[category] = getattr(
                     summary_model, f"line_6_renewable_fuel_retained_{category}"

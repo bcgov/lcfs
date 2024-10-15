@@ -4,6 +4,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAg
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementCreateSchema,
     InitiativeAgreementSchema,
@@ -171,13 +172,15 @@ class InitiativeAgreementServices:
         """Create ledger transaction for approved initiative agreement"""
 
         user = self.request.user
-        has_director_role = user_has_roles(user, ["GOVERNMENT", "DIRECTOR"])
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
 
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         if initiative_agreement.transaction != None:
-            raise HTTPException(status_code=403, detail="Transaction already exists.")
+            raise HTTPException(status_code=422, detail="Transaction already exists.")
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(

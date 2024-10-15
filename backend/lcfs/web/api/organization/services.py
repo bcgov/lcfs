@@ -6,6 +6,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_
 
+from lcfs.utils.constants import id_prefix_to_transaction_type_map
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import service_handler
@@ -50,16 +51,14 @@ class OrganizationService:
         Returns:
             List[Transactions]: The list of transactions after applying the filters.
         """
-        prefix_map = {
-            "CT": "Transfer",
-            "AA": "AdminAdjustment",
-            "IA": "InitiativeAgreement",
-        }
 
         for filter in pagination.filters:
             if filter.field == "transaction_id":
                 filter_value = filter.filter.upper()
-                for prefix, transaction_type in prefix_map.items():
+                for (
+                    prefix,
+                    transaction_type,
+                ) in id_prefix_to_transaction_type_map.items():
                     if filter_value.startswith(prefix):
                         numeric_part = filter_value[len(prefix) :]
                         if numeric_part:

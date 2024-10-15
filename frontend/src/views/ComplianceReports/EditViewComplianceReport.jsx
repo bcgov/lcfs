@@ -1,22 +1,19 @@
-// react and npm library components
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // mui components
-import BCAlert from '@/components/BCAlert'
+import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
-import BCButton from '@/components/BCButton'
 import { Role } from '@/components/Role'
-import { Stack, Typography, Fab, Tooltip } from '@mui/material'
+import { Fab, Stack, Tooltip, Typography } from '@mui/material'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 // styles
 import colors from '@/themes/base/colors.js'
 // constants
-import { govRoles, roles } from '@/constants/roles'
+import { govRoles } from '@/constants/roles'
 // hooks
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -36,7 +33,6 @@ import UploadCard from './components/UploadCard'
 import { AssessmentCard } from './components/AssessmentCard'
 import { ImportantInfoCard } from './components/ImportantInfoCard'
 import { timezoneFormatter } from '@/utils/formatters'
-import SigningAuthorityDeclaration from './components/SigningAuthorityDeclaration'
 import { ReportHistoryCard } from './components/ReportHistoryCard'
 import InternalComments from '@/components/InternalComments'
 
@@ -49,8 +45,6 @@ export const EditViewComplianceReport = () => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
   const [internalComment, setInternalComment] = useState('')
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
@@ -112,13 +106,17 @@ export const EditViewComplianceReport = () => {
     {
       onSuccess: (response) => {
         setModalData(null)
-        setAlertMessage(t('report:savedSuccessText'))
-        setAlertSeverity('success')
+        alertRef.current?.triggerAlert({
+          message: t('report:savedSuccessText'),
+          severity: 'success'
+        })
       },
       onError: (error) => {
         setModalData(null)
-        setAlertMessage(error.message)
-        setAlertSeverity('error')
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
       }
     }
   )
@@ -151,30 +149,24 @@ export const EditViewComplianceReport = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
+      alertRef.current?.triggerAlert({ message: location.state.message, severity: location.state.severity || 'info' })
     }
     if (isError) {
-      setAlertMessage(error.message)
-      setAlertSeverity('error')
+      alertRef.current?.triggerAlert({ message: error.message, severity: 'error' })
     }
   }, [location.state, isError, error])
 
   if (isLoading || isReportLoading || isCurrentUserLoading) {
     return <Loading />
   }
+
   return (
     <>
-      {alertMessage && (
-        <BCAlert
-          ref={alertRef}
-          data-test="alert-box"
-          severity={alertSeverity}
-          delay={65000}
-        >
-          {alertMessage}
-        </BCAlert>
-      )}
+      <FloatingAlert
+        ref={alertRef}
+        data-test="alert-box"
+        delay={10000}
+      />
       <BCBox pl={2} pr={2}>
         <BCModal
           open={!!modalData}
@@ -202,7 +194,7 @@ export const EditViewComplianceReport = () => {
                   name={orgData?.name}
                   period={compliancePeriod}
                 />
-                <UploadCard />
+                <UploadCard reportID={complianceReportId} />
               </>
             ) : (
               <>
@@ -228,12 +220,17 @@ export const EditViewComplianceReport = () => {
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
                 compliancePeriodYear={compliancePeriod}
+                setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
+                buttonClusterConfig={buttonClusterConfig}
+                methods={methods}
               />
             </>
           )}
-          {!isGovernmentUser && <Introduction expanded={location.state?.newReport} />}
+          {!isGovernmentUser && (
+            <Introduction expanded={location.state?.newReport} />
+          )}
           {/* Internal Comments */}
-          {isGovernmentUser &&
+          {isGovernmentUser && (
             <BCBox mt={4}>
               <Typography variant="h6" color="primary">
                 {t(`report:internalComments`)}
@@ -247,42 +244,13 @@ export const EditViewComplianceReport = () => {
                   />
                 </Role>
               </BCBox>
-            </BCBox>}
-        </Stack>
-        {currentStatus === 'Draft' && (
-          <SigningAuthorityDeclaration
-            onChange={setIsSigningAuthorityDeclared}
-          />
-        )}
-        <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
-          {buttonClusterConfig[currentStatus]?.map(
-            (config) =>
-              config && (
-                <BCButton
-                  key={config.id}
-                  data-test={config.id}
-                  id={config.id}
-                  size="large"
-                  variant={config.variant}
-                  color={config.color}
-                  onClick={methods.handleSubmit(config.handler)}
-                  startIcon={
-                    config.startIcon && (
-                      <FontAwesomeIcon
-                        icon={config.startIcon}
-                        className="small-icon"
-                      />
-                    )
-                  }
-                  disabled={config.disabled}
-                >
-                  {config.label}
-                </BCButton>
-              )
+            </BCBox>
           )}
         </Stack>
         <Tooltip
-          title={isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')}
+          title={
+            isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')
+          }
           placement="left"
           arrow
         >

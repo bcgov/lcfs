@@ -7,7 +7,7 @@ import BCTypography from '@/components/BCTypography'
 
 function BCWidgetCard({
   color = 'nav',
-  title,
+  title = 'Title',
   content,
   style,
   disableHover = false

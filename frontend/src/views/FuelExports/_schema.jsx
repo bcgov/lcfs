@@ -40,7 +40,7 @@ const cellErrorStyle = (params, errors) => {
 export const fuelExportColDefs = (optionsData, errors) => [
   validation,
   actions({
-    enableDuplicate: true,
+    enableDuplicate: false,
     enableDelete: true
   }),
   {
