@@ -24,6 +24,9 @@ export const transactionsColDefs = (t) => [
       const transactionType = params.data.transactionType
       const prefix = prefixMap[transactionType] || ''
       return `${prefix}${params.data.transactionId}`
+    },
+    filterParams: {
+      buttons:["clear"],
     }
   },
   {
@@ -40,6 +43,7 @@ export const transactionsColDefs = (t) => [
         const cleanValue = value.replace(/\s+/g, '').toLowerCase();
         return cleanValue.includes(cleanFilterText);
       },
+      buttons:["clear"],
     },
     width: 222
   },
@@ -49,6 +53,9 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.organizationFrom'),
     minWidth: 300,
     width: 300,
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'toOrganization',
@@ -56,6 +63,9 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.organizationTo'),
     minWidth: 300,
     width:300,
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'quantity',
@@ -65,6 +75,9 @@ export const transactionsColDefs = (t) => [
     minWidth: 140,
     width: 140,
     filter: 'agNumberColumnFilter',
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'pricePerUnit',
@@ -76,7 +89,10 @@ export const transactionsColDefs = (t) => [
       const value = params.data?.pricePerUnit;
       return value !== null && value !== undefined ? value : null;
     },
-    filter: 'agNumberColumnFilter'
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'status',
@@ -85,7 +101,6 @@ export const transactionsColDefs = (t) => [
     cellRenderer: TransactionStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       apiOptionField: 'status',
       apiQuery: useTransactionStatuses,
@@ -118,7 +133,8 @@ export const transactionsColDefs = (t) => [
               return 0; // Dates are the same (ignoring time)
           }
       },
-      browserDatePicker: true // Uses the browser's date picker if available
+      browserDatePicker: true, // Uses the browser's date picker if available
+      buttons:["clear"],
   }
   }
 ]

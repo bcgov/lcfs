@@ -191,6 +191,18 @@ const globals = {
     padding: '0.1rem',
     width: '60px'
   },
+  '.ag-filter-apply-panel-button[data-ref="clearFilterButton"]': {
+    border: `1.2px solid ${grey[500]}`,
+    borderRadius: '0.3rem',
+    color: grey[600],
+    textTransform: 'none',
+    fontSize: pxToRem(14),
+    padding: '6px 12px',
+  },
+  '.ag-filter-apply-panel-button[data-ref="clearFilterButton"]:hover': {
+    color: grey[900],
+  },
+
   '.MuiPaper-elevation': {
     border: `1.2px solid ${grey[500]}`
   },

@@ -18,6 +18,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
     get_field_for_filter,
+    get_enum_value,
 )
 from lcfs.db.models.compliance import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport, ReportType
@@ -67,7 +68,7 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
-                filter_value = getattr(ComplianceReportStatusEnum, filter_value.replace(" ", "_")) if not isinstance(filter_value, list) else filter_value
+                filter_value = get_enum_value(ComplianceReportStatusEnum, filter_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
