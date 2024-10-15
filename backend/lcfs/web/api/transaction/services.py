@@ -175,7 +175,6 @@ class TransactionsService:
         # Prepare data for the spreadsheet
         data = []
         for result in results[0]:
-            print(result.transaction_type)
             data.append(
                 [
                     f"{transaction_type_to_id_prefix_map[result.transaction_type]}{result.transaction_id}",

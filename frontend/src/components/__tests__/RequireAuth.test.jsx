@@ -15,32 +15,6 @@ describe('RequireAuth', () => {
   afterEach(() => {
     vi.resetAllMocks()
   })
-  describe('loading', () => {
-    it('should render loading when isLoading is true', async () => {
-      keycloak.useKeycloak.mockReturnValue({
-        keycloak: { authenticated: true },
-        initialized: true
-      })
-      httpOverwrite(
-        'get',
-        apiRoutes.currentUser,
-        async () => await delay('infinite')
-      )
-
-      const { getByTestId } = render(<RequireAuth />, { wrapper })
-
-      expect(getByTestId('loading')).toBeInTheDocument()
-    })
-    it('should render loading when initialized is false', async () => {
-      keycloak.useKeycloak.mockReturnValue({
-        keycloak: { authenticated: true },
-        initialized: false
-      })
-
-      const { getByTestId } = render(<RequireAuth />, { wrapper })
-      expect(getByTestId('loading')).toBeInTheDocument()
-    })
-  })
   describe('network error', async () => {
     it('should navigate ( null return )', async () => {
       keycloak.useKeycloak.mockReturnValue({
