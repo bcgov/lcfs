@@ -121,7 +121,6 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
     }
 
     if (file.size > BYTES_50) {
-      debugger
       setFiles([
         ...files,
         {
