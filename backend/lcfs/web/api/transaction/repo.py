@@ -137,6 +137,21 @@ class TransactionRepository:
         return transactions, total_count
 
     @repo_handler
+    async def get_transaction_by_id(self, transaction_id: int) -> Transaction:
+        """
+        Retrieves a transaction by its ID.
+
+        Args:
+            transaction_id (int): The ID of the transaction to retrieve.
+
+        Returns:
+            Transaction: The transaction view object.
+        """
+        query = select(Transaction).where(Transaction.transaction_id == transaction_id)
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    @repo_handler
     async def get_transaction_statuses(self) -> List[TransactionStatusView]:
         """
         Get all available statuses for transactions from the database.

@@ -5,9 +5,11 @@ import { useForm } from 'react-hook-form'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
+import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { Fab, Stack, Tooltip, Typography } from '@mui/material'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 // styles
@@ -32,9 +34,8 @@ import { OrgDetailsCard } from './components/OrgDetailsCard'
 import UploadCard from './components/UploadCard'
 import { AssessmentCard } from './components/AssessmentCard'
 import { ImportantInfoCard } from './components/ImportantInfoCard'
-import { timezoneFormatter } from '@/utils/formatters'
-import { ReportHistoryCard } from './components/ReportHistoryCard'
 import InternalComments from '@/components/InternalComments'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const iconStyle = {
   width: '2rem',
@@ -46,6 +47,7 @@ export const EditViewComplianceReport = () => {
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
   const [internalComment, setInternalComment] = useState('')
+  const [hasMet, setHasMet] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
@@ -180,14 +182,6 @@ export const EditViewComplianceReport = () => {
         </BCBox>
         <Stack direction="column" spacing={2} mt={2}>
           <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
-            {currentStatus === 'Assessed' && (
-              <AssessmentCard
-                orgName={orgData?.name}
-                assessedDate={timezoneFormatter({
-                  value: reportData?.data?.updateDate
-                })}
-              />
-            )}
             {currentStatus === 'Draft' ? (
               <>
                 <ActivityListCard
@@ -198,10 +192,11 @@ export const EditViewComplianceReport = () => {
               </>
             ) : (
               <>
-                <ReportHistoryCard
+                <AssessmentCard
+                  orgName={orgData?.name}
                   history={reportData?.data?.history}
                   isGovernmentUser={isGovernmentUser}
-                  currentStatus={currentStatus}
+                  hasMet={hasMet}
                 />
                 {!isGovernmentUser && <ImportantInfoCard />}
               </>
@@ -223,6 +218,8 @@ export const EditViewComplianceReport = () => {
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
                 buttonClusterConfig={buttonClusterConfig}
                 methods={methods}
+                setHasMet={setHasMet}
+                alertRef={alertRef}
               />
             </>
           )}
@@ -244,6 +241,33 @@ export const EditViewComplianceReport = () => {
                   />
                 </Role>
               </BCBox>
+              <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
+                {buttonClusterConfig[currentStatus]?.map(
+                  (config) =>
+                    config && (
+                      <BCButton
+                        key={config.id}
+                        data-test={config.id}
+                        id={config.id}
+                        size="large"
+                        variant={config.variant}
+                        color={config.color}
+                        onClick={methods.handleSubmit(config.handler)}
+                        startIcon={
+                          config.startIcon && (
+                            <FontAwesomeIcon
+                              icon={config.startIcon}
+                              className="small-icon"
+                            />
+                          )
+                        }
+                        disabled={config.disabled}
+                      >
+                        {config.label}
+                      </BCButton>
+                    )
+                )}
+              </Stack>
             </BCBox>
           )}
         </Stack>

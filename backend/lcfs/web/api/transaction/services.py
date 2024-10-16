@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 from math import ceil
+from lcfs.db.models.transaction.Transaction import Transaction
 from sqlalchemy import or_, and_, cast, String
 
 from .repo import TransactionRepository  # Adjust import path as needed
@@ -135,6 +136,11 @@ class TransactionsService:
                 total_pages=ceil(total_count / pagination.size),
             ),
         }
+
+    @service_handler
+    async def get_transaction_by_id(self, transaction_id: int) -> Transaction:
+        """handles fetching a single transaction"""
+        return await self.repo.get_transaction_by_id(transaction_id)
 
     @service_handler
     async def get_transaction_statuses(self) -> List[TransactionStatusSchema]:

@@ -38,7 +38,9 @@ export const COMPLIANCE_REPORT_STATUSES = {
   ASSESSED: 'Assessed',
   REASSESSED: 'Reassessed',
   RECOMMENDED_BY_ANALYST: 'Recommended by analyst',
-  RECOMMENDED_BY_MANAGER: 'Recommended by manager'
+  RECOMMENDED_BY_MANAGER: 'Recommended by manager',
+  RETURN_TO_ANALYST: 'Return to analyst',
+  RETURN_TO_MANAGER: 'Return to manager'
 }
 export function getAllOrganizationStatuses() {
   return Object.values(ORGANIZATION_STATUSES)

@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 from typing_extensions import deprecated
-from sqlalchemy import and_, cast, Date, func
+from sqlalchemy import String, and_, cast, Date, func
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
@@ -166,12 +166,12 @@ def apply_text_filter_conditions(field, filter_value, filter_option):
     text_filter_mapping = {
         "true": field.is_(True),
         "false": field.is_(False),
-        "contains": field.like(f"%{filter_value}%"),
+        "contains": cast(field, String).ilike(f"%{filter_value}%"),
         "notContains": field.notlike(f"%{filter_value}%"),
         "equals": field == filter_value,
         "notEqual": field != filter_value,
-        "startsWith": field.like(f"{filter_value}%"),
-        "endsWith": field.like(f"%{filter_value}%"),
+        "startsWith": field.ilike(f"{filter_value}%"),
+        "endsWith": field.ilike(f"%{filter_value}%"),
     }
 
     return text_filter_mapping.get(filter_option)
