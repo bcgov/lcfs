@@ -8,7 +8,7 @@ from lcfs.db.models.user.Role import RoleEnum
 async def test_create_admin_adjustment(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Analyst"])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
     url = fastapi_app.url_path_for("create_admin_adjustment")
     admin_adjustment_payload = {
         "transactionEffectiveDate": "2024-08-06",
@@ -27,7 +27,7 @@ async def test_create_admin_adjustment(
 async def test_get_admin_adjustment(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     admin_adjustment_id = 1  # This test assumes that there exists an admin adjustment with ID 1 in the test database.
     url = fastapi_app.url_path_for(
         "get_admin_adjustment", admin_adjustment_id=admin_adjustment_id
@@ -40,7 +40,7 @@ async def test_get_admin_adjustment(
 async def test_update_admin_adjustment(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Analyst", "Government"])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST, RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("update_admin_adjustment")
     admin_adjustment_update_payload = {
         "transactionEffectiveDate": "2024-08-06",
@@ -61,7 +61,7 @@ async def test_update_admin_adjustment(
 async def test_fail_update_processed_admin_adjustment(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Director", "Government"])
+    set_mock_user(fastapi_app, [RoleEnum.DIRECTOR, RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("update_admin_adjustment")
     admin_adjustment_update_payload = {
         "transactionEffectiveDate": "2024-08-06",
