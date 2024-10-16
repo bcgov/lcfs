@@ -137,7 +137,7 @@ const DirectorReviewCard = () => {
                   handleNavigation(
                     ROUTES.TRANSACTIONS,
                     'InitiativeAgreement',
-                    'Approved'
+                    'Recommended'
                   )
                 }
               >
@@ -148,7 +148,7 @@ const DirectorReviewCard = () => {
                     handleNavigation(
                       ROUTES.TRANSACTIONS,
                       'InitiativeAgreement',
-                      'Approved'
+                      'Recommended'
                     )
                 )}
               </ListItemButton>
