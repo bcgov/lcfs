@@ -3,6 +3,8 @@ from fastapi import FastAPI, Depends
 from httpx import AsyncClient
 from starlette import status
 
+from lcfs.db.models.user.Role import RoleEnum
+
 
 @pytest.mark.anyio
 async def test_endpoint_success(
@@ -19,7 +21,7 @@ async def test_endpoint_success(
 async def test_endpoint_access_denied(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user(fastapi_app, ["Analyst"])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
     url = fastapi_app.url_path_for("get_organizations")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)
@@ -30,7 +32,7 @@ async def test_endpoint_access_denied(
 async def test_endpoint_access_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("get_organizations")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)

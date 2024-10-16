@@ -144,7 +144,7 @@ def fastapi_app(
     dbsession: AsyncSession,
     fake_redis_pool: ConnectionPool,
     set_mock_user,  # Fixture for setting up mock authentication
-    user_roles: List[str] = ["Administrator"],  # Default role
+    user_roles: List[RoleEnum] = [RoleEnum.ADMINISTRATOR],  # Default role
 ) -> FastAPI:
     # Create the FastAPI application instance
     application = get_app()
@@ -198,7 +198,7 @@ class MockAuthenticationBackend(AuthenticationBackend):
             user_details (dict): A dictionary containing customizable user attributes (username, email, etc.).
         """
         # Convert list of role names (strings) to RoleEnum members
-        self.user_roles_enum = [RoleEnum[role.upper()] for role in user_roles]
+        self.user_roles_enum = user_roles
         self.role_count = 0
 
         # Use the provided user details
@@ -226,7 +226,9 @@ class MockAuthenticationBackend(AuthenticationBackend):
             is_active=self.is_active,
         )
 
-        organization = Organization(organization_id=self.organization_id, name=self.organization_name)
+        organization = Organization(
+            organization_id=self.organization_id, name=self.organization_name
+        )
         user.organization = organization
 
         # Create UserRole instances based on the RoleEnum members provided
@@ -240,9 +242,9 @@ class MockAuthenticationBackend(AuthenticationBackend):
         role = Role(
             role_id=self.role_count,
             name=role_enum,
-            description=f"Mocked role for {role_enum.value}",
-            is_government_role=role_enum.value
-            in ["Government", "Analyst", "Administrator"],
+            description=f"Mocked role for {role_enum}",
+            is_government_role=role_enum
+            in [RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.ADMINISTRATOR],
         )
         user_role = UserRole(
             user_role_id=self.role_count, user_profile=user_profile, role=role
@@ -253,13 +255,15 @@ class MockAuthenticationBackend(AuthenticationBackend):
 
 @pytest.fixture
 def set_mock_user():
-    def _set_mock_auth(application: FastAPI, roles: List[str], user_details: dict = None):
+    def _set_mock_auth(
+        application: FastAPI, roles: List[RoleEnum], user_details: dict = None
+    ):
         """
         Fixture to mock user authentication with customizable user details.
 
         Args:
             application (FastAPI): The FastAPI application instance.
-            roles (List[str]): The roles to be assigned to the user.
+            roles (List[RoleEnum]): The roles to be assigned to the user.
             user_details (dict): A dictionary containing customizable user attributes (username, email, etc.).
         """
         default_user_details = {
@@ -272,12 +276,12 @@ def set_mock_user():
             "first_name": "Test",
             "last_name": "User",
             "is_active": True,
-            "organization_name": "Test Organization"
+            "organization_name": "Test Organization",
         }
 
         # Merge default values with provided user details
         user_details = {**default_user_details, **(user_details or {})}
-        
+
         # Clear existing middleware
         application.user_middleware = []
 
@@ -290,7 +294,9 @@ def set_mock_user():
         )
 
         # Add the Mock Authentication Middleware
-        mock_auth_backend = MockAuthenticationBackend(user_roles=roles, user_details=user_details)
+        mock_auth_backend = MockAuthenticationBackend(
+            user_roles=roles, user_details=user_details
+        )
         application.add_middleware(AuthenticationMiddleware, backend=mock_auth_backend)
 
     return _set_mock_auth

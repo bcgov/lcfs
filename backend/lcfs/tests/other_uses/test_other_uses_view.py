@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from unittest.mock import MagicMock, AsyncMock
 
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
 
@@ -21,10 +22,10 @@ def mock_other_uses_validation():
 async def test_get_table_options(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_other_uses_service,
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_table_options")
 
     mock_other_uses_service.get_table_options.return_value = {
@@ -51,10 +52,10 @@ async def test_get_table_options(
 async def test_get_other_uses(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_other_uses_service,
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_other_uses")
     payload = {"compliance_report_id": 1}
 
@@ -72,10 +73,10 @@ async def test_get_other_uses(
 async def test_get_other_uses_paginated(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_other_uses_service,
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_other_uses_paginated")
     payload = {
         "complianceReportId": 1,
@@ -103,11 +104,11 @@ async def test_get_other_uses_paginated(
 async def test_save_other_uses_row_create(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_other_uses_service,
     mock_other_uses_validation,
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_other_uses_row")
     payload = {
         "compliance_report_id": 1,
@@ -145,11 +146,11 @@ async def test_save_other_uses_row_create(
 async def test_save_other_uses_row_update(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_other_uses_service,
     mock_other_uses_validation,
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_other_uses_row")
     payload = {
         "other_uses_id": 1,
@@ -188,12 +189,12 @@ async def test_save_other_uses_row_update(
 async def test_save_other_uses_row_delete(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_other_uses_service,
     mock_other_uses_validation,
 ):
-    set_mock_user_roles(fastapi_app, ["Supplier"])
-    
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
     url = fastapi_app.url_path_for("save_other_uses_row")
     payload = {
         "other_uses_id": 1,
