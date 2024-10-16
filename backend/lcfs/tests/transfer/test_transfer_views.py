@@ -1,66 +1,134 @@
 import pytest
-from httpx import AsyncClient, Response
-from fastapi import FastAPI, status
-from lcfs.tests.transfer.transfer_payloads import (
-    transfer_create_payload_2,
-    transfer_update_payload_2,
-    transfer_update_draft_payload,
-)
+from httpx import AsyncClient
+from fastapi import FastAPI
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.transfer.services import TransferServices
+from lcfs.web.api.transfer.validation import TransferValidation
+
+from datetime import date
 
 
 @pytest.mark.anyio
-async def test_get_all_transfers(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+async def test_get_all_transfers_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_transfer_services,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_all_transfers")
+
+    mock_transfer_services.get_all_transfers.return_value = []
+
+    fastapi_app.dependency_overrides[TransferServices] = lambda: mock_transfer_services
+
     response = await client.get(url)
-    assert response.status_code == status.HTTP_200_OK
+
+    assert response.status_code == 200
 
 
 @pytest.mark.anyio
-async def test_get_transfer(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+async def test_get_transfer_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    mock_transfer_services,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
-    # This test assumes that there exists a transfer with ID 1 in the test database.
     transfer_id = 1
     url = fastapi_app.url_path_for("get_transfer", transfer_id=transfer_id)
+
+    mock_transfer_services.get_transfer.return_value = {
+        "transfer_id": transfer_id,
+        "from_organization": {"organization_id": 1, "name": "org1"},
+        "to_organization": {"organization_id": 2, "name": "org2"},
+        "agreement_date": date.today(),
+        "quantity": 1,
+        "price_per_unit": 1,
+        "current_status": {"transfer_status_id": 1, "status": "status"},
+    }
+
+    fastapi_app.dependency_overrides[TransferServices] = lambda: mock_transfer_services
+
     response = await client.get(url)
-    assert response.status_code == status.HTTP_200_OK
 
+    assert response.status_code == 200
 
-# Deprecating as these endpoints are moved to /organization/{orgID}/transfers/
-# @pytest.mark.anyio
-# async def test_create_transfer(client: AsyncClient, fastapi_app: FastAPI, set_mock_user):
-#     set_mock_user(fastapi_app, ["Supplier"])
-#     url = fastapi_app.url_path_for("create_transfer")
-#     response = await client.post(url, json=transfer_create_payload_2.dict())
-#     assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
 
-
-# @pytest.mark.anyio
-# async def test_update_transfer_draft(client: AsyncClient, fastapi_app: FastAPI, set_mock_user):
-#     set_mock_user(fastapi_app, ["Supplier"])
-#     # This test assumes that there exists a transfer with ID 1 in the test database.
-#     transfer_id = 1
-#     url = fastapi_app.url_path_for(
-#         "update_transfer_draft", transfer_id=transfer_id)
-#     response = await client.put(url, json=transfer_update_draft_payload.dict())
-#     assert response.status_code == status.HTTP_200_OK
+    assert data["transferId"] == transfer_id
 
 
 @pytest.mark.anyio
-async def test_update_transfer(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+async def test_government_update_transfer_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_transfer_services,
+    mock_transfer_validation,
 ):
-    set_mock_user(fastapi_app, ["Government"])
-    # This test assumes that there exists a transfer with ID 1 in the test database.
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
     transfer_id = 1
-    url = fastapi_app.url_path_for("update_transfer", transfer_id=transfer_id)
-    payload = transfer_create_payload_2.dict()
-    payload["current_status"] = "Recommended"
-    payload["gov_comment"] = "Comments added by government analyst."
-    payload["agreement_date"] = payload["agreement_date"].isoformat()
+    url = fastapi_app.url_path_for(
+        "government_update_transfer", transfer_id=transfer_id
+    )
+
+    mock_transfer_validation.government_update_transfer.return_value = None
+    mock_transfer_services.update_transfer.return_value = {
+        "transfer_id": transfer_id,
+        "from_organization": {"organization_id": 1, "name": "org1"},
+        "to_organization": {"organization_id": 2, "name": "org2"},
+        "agreement_date": date.today(),
+        "quantity": 1,
+        "price_per_unit": 1,
+        "current_status": {"transfer_status_id": 1, "status": "status"},
+    }
+
+    fastapi_app.dependency_overrides[TransferServices] = lambda: mock_transfer_services
+    fastapi_app.dependency_overrides[TransferValidation] = (
+        lambda: mock_transfer_validation
+    )
+
+    payload = {
+        "transfer_id": transfer_id,
+        "from_organization_id": 1,
+        "to_organization_id": 2,
+    }
+
     response = await client.put(url, json=payload)
-    assert response.status_code == status.HTTP_200_OK
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["transferId"] == transfer_id
+
+
+@pytest.mark.anyio
+async def test_update_category_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_transfer_services,
+):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+    transfer_id = 1
+    url = fastapi_app.url_path_for("update_category", transfer_id=transfer_id)
+
+    mock_transfer_services.update_category.return_value = {
+        "transfer_id": transfer_id,
+        "from_organization": {"organization_id": 1, "name": "org1"},
+        "to_organization": {"organization_id": 2, "name": "org2"},
+        "agreement_date": date.today(),
+        "quantity": 1,
+        "price_per_unit": 1,
+        "current_status": {"transfer_status_id": 1, "status": "status"},
+    }
+
+    fastapi_app.dependency_overrides[TransferServices] = lambda: mock_transfer_services
+
+    response = await client.put(url)
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["transferId"] == transfer_id
