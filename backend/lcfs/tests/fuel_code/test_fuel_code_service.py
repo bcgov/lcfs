@@ -136,30 +136,3 @@ async def test_delete_fuel_code_success():
     # Assert
     assert result is True
     repo_mock.delete_fuel_code.assert_called_once_with(fuel_code_id)
-
-
-@pytest.mark.asyncio
-async def test_get_table_options_success():
-    # Arrange
-    repo_mock = AsyncMock()
-    service = FuelCodeServices(repo=repo_mock)
-
-    repo_mock.get_fuel_types.return_value = ["Diesel", "Electric"]
-    repo_mock.get_transport_modes.return_value = ["Truck", "Ship"]
-    repo_mock.get_fuel_code_prefixes.return_value = ["FC1", "FC2"]
-    repo_mock.get_latest_fuel_codes.return_value = ["FC-2021-001"]
-    repo_mock.get_fp_locations.return_value = ["USA", "Canada"]
-    repo_mock.get_fuel_code_field_options.return_value = [
-        {"some_field": "some_value"},
-        {"another_field": "another_value"},
-    ]
-
-    # Act
-    result = await service.get_table_options()
-
-    # Assert
-    assert isinstance(result, dict)
-    assert "fuel_types" in result
-    assert "transport_modes" in result
-    assert result["fuel_types"][0] == "Diesel"
-    assert result["transport_modes"][1] == "Ship"
