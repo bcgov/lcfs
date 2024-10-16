@@ -93,19 +93,19 @@ class ComplianceReportUpdateService:
         """Handle actions when a report is set to Draft status."""
         # Implement logic for Draft status
         user = self.request.user
-        has_director_role = user_has_roles(
-            user, ["SUPPLIER"]
+        has_supplier_role = user_has_roles(
+            user, [RoleEnum.SUPPLIER]
         )
-        if not has_director_role:
+        if not has_supplier_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_submitted_status(self, report: ComplianceReport):
         """Handle actions when a report is submitted."""
         user = self.request.user
-        has_director_role = user_has_roles(
-            user, ["SUPPLIER", "SIGNING_AUTHORITY"]
+        has_supplier_roles = user_has_roles(
+            user, [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
         )
-        if not has_director_role:
+        if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
         # Fetch the existing summary from the database, if any
         existing_summary = await self.repo.get_summary_by_report_id(
@@ -193,27 +193,27 @@ class ComplianceReportUpdateService:
         """Handle actions when a report is Recommended by analyst."""
         # Implement logic for Recommended by analyst status
         user = self.request.user
-        has_director_role = user_has_roles(
-            user, ["GOVERNMENT", "ANALYST"]
+        has_analyst_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
         )
-        if not has_director_role:
+        if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_recommended_by_manager_status(self, report: ComplianceReport):
         """Handle actions when a report is Recommended by manager."""
         # Implement logic for Recommended by manager status
         user = self.request.user
-        has_director_role = user_has_roles(
-            user, ["GOVERNMENT", "COMPLIANCE_MANAGER"]
+        has_compliance_manager_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
         )
-        if not has_director_role:
+        if not has_compliance_manager_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def handle_assessed_status(self, report: ComplianceReport):
         """Handle actions when a report is Assessed."""
         user = self.request.user
         has_director_role = user_has_roles(
-            user, ["GOVERNMENT", "DIRECTOR"]
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
         )
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
