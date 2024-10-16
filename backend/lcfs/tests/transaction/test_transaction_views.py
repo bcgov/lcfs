@@ -39,9 +39,9 @@ async def test_export_transactions_by_org(
 
 @pytest.mark.anyio
 async def test_get_transactions_paginated(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_transactions_paginated")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)

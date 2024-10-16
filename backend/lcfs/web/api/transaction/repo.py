@@ -2,20 +2,18 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Any
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from sqlalchemy.future import select
-from fastapi import Depends
+from typing import List, Optional
 
+from fastapi import Depends
 from sqlalchemy import select, update, func, desc, asc, and_, case, or_
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.web.core.decorators import repo_handler
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
-from lcfs.db.models.transaction.TransactionView import TransactionView
 from lcfs.db.models.transaction.TransactionStatusView import TransactionStatusView
+from lcfs.db.models.transaction.TransactionView import TransactionView
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
+from lcfs.web.core.decorators import repo_handler
 
 
 class EntityType(Enum):
@@ -32,10 +30,10 @@ class TransactionRepository:
     async def get_transactions_paginated(
         self,
         offset: int,
-        limit: int | None = None,
+        limit: Optional[int] = None,
         conditions: list = [],
         sort_orders: list = [],
-        organization_id: int = None,
+        organization_id: Optional[int] = None,
     ):
         """
         Fetches paginated, filtered, and sorted transactions.

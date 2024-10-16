@@ -14,9 +14,9 @@ from lcfs.web.api.organizations.schema import (
 
 @pytest.mark.anyio
 async def test_export_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("export_organizations")
     response = await client.get(url)
 
@@ -26,9 +26,9 @@ async def test_export_success(
 
 @pytest.mark.anyio
 async def test_export_unauthorized_access(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Analyst"])
+    set_mock_user(fastapi_app, ["Analyst"])
     url = fastapi_app.url_path_for("export_organizations")
     response = await client.get(url)
 
@@ -37,9 +37,9 @@ async def test_export_unauthorized_access(
 
 @pytest.mark.anyio
 async def test_get_organization_by_id_idir_user(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization", organization_id=1)
     response = await client.get(url)
 
@@ -48,9 +48,9 @@ async def test_get_organization_by_id_idir_user(
 
 @pytest.mark.anyio
 async def test_get_organization_not_found(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization", organization_id=100)
     response = await client.get(url)
 
@@ -59,9 +59,9 @@ async def test_get_organization_not_found(
 
 @pytest.mark.anyio
 async def test_get_organization_by_id_bceid_user(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_organization", organization_id=1)
     response = await client.get(url)
 
@@ -70,9 +70,9 @@ async def test_get_organization_by_id_bceid_user(
 
 @pytest.mark.anyio
 async def test_create_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("create_organization")
     payload = {
         "name": "Test Organizationa",
@@ -108,9 +108,9 @@ async def test_create_organization_success(
 
 @pytest.mark.anyio
 async def test_update_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("update_organization", organization_id=1)
     payload = {
         "name": "Test Organizationa",
@@ -146,9 +146,9 @@ async def test_update_organization_success(
 
 @pytest.mark.anyio
 async def test_update_organization_failure(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("update_organization", organization_id=100)
     payload = {
         "name": "Test Organizationa",
@@ -184,9 +184,9 @@ async def test_update_organization_failure(
 
 @pytest.mark.anyio
 async def test_get_organizations_list(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organizations")
     response = await client.post(
         url, json={"page": 1, "size": 5, "sortOrders": [], "filters": []}
@@ -202,9 +202,9 @@ async def test_get_organizations_list(
 
 @pytest.mark.anyio
 async def test_get_organization_statuses_list(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization_statuses")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -212,9 +212,9 @@ async def test_get_organization_statuses_list(
 
 @pytest.mark.anyio
 async def test_get_organization_types_list(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization_types")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -222,9 +222,9 @@ async def test_get_organization_types_list(
 
 @pytest.mark.anyio
 async def test_get_organization_names(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_organization_names")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -236,9 +236,9 @@ async def test_get_organization_names(
 
 @pytest.mark.anyio
 async def test_get_externally_registered_organizations(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_externally_registered_organizations")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -251,9 +251,9 @@ async def test_get_externally_registered_organizations(
 
 @pytest.mark.anyio
 async def test_get_balances(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     organization_id = 1  # Assuming this organization exists
     url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
     response = await client.get(url)
@@ -267,9 +267,9 @@ async def test_get_balances(
 
 @pytest.mark.anyio
 async def test_get_current_balances(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("get_balances")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -281,9 +281,9 @@ async def test_get_current_balances(
 
 @pytest.mark.anyio
 async def test_create_organization_unauthorized(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     url = fastapi_app.url_path_for("create_organization")
     payload = {
         "name": "Test Organization",
@@ -316,9 +316,9 @@ async def test_create_organization_unauthorized(
 
 @pytest.mark.anyio
 async def test_get_balances_unauthorized(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, ["Supplier"])
     organization_id = 1
     url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
     response = await client.get(url)

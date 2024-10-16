@@ -7,6 +7,7 @@ import { LabelBox } from './LabelBox'
 import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
+import { numberFormatter } from '@/utils/formatters'
 
 // Define common inline styles
 const inlineLabelStyle = { display: 'inline', marginRight: 6 }
@@ -41,7 +42,7 @@ export const TransactionView = ({ transaction }) => {
                 {t('txn:complianceUnitsLabel')}
               </BCTypography>
               <BCTypography variant="body2" style={{ display: 'inline' }}>
-                {transaction.complianceUnits}
+                {numberFormatter(transaction.complianceUnits)}
               </BCTypography>
             </Grid>
             <Grid item xs={12}>

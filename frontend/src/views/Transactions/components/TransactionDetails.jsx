@@ -14,7 +14,7 @@ import {
   Grid,
   InputLabel
 } from '@mui/material'
-import { dateFormatter } from '@/utils/formatters'
+import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
@@ -228,13 +228,30 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                     }}
                   ></BCTypography>
                 </InputLabel>
-                <TextField
-                  data-test="compliance-units"
-                  {...register('complianceUnits')}
-                  type="text"
-                  disabled={!isEditable}
-                  error={!!errors.complianceUnits}
-                  helperText={errors.complianceUnits?.message}
+                <Controller
+                  name="complianceUnits"
+                  control={control}
+                  render={({ field: { onChange, value, ...fieldProps } }) => {
+                    // Format the value with commas for display
+                    const formattedValue = numberFormatter(value || '')
+                    return (
+                      <TextField
+                        {...fieldProps}
+                        data-test="compliance-units"
+                        type="text"
+                        disabled={!isEditable}
+                        error={!!errors.complianceUnits}
+                        helperText={errors.complianceUnits?.message}
+                        value={formattedValue}
+                        onChange={(e) => {
+                          // Remove all non-digit characters
+                          const numericValue = e.target.value.replace(/\D/g, '')
+                          // Update the form state with the raw number
+                          onChange(numericValue)
+                        }}
+                      />
+                    )
+                  }}
                 />
               </BCBox>
             </Grid>

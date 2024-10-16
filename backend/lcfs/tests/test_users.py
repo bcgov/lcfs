@@ -11,9 +11,9 @@ from lcfs.web.api.user.schema import UsersSchema
 
 @pytest.mark.anyio
 async def test_export_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("export_users")
     response = await client.get(url)
 
@@ -46,9 +46,9 @@ async def test_export_success(
 
 @pytest.mark.anyio
 async def test_export_unauthorized_access(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Analyst"])
+    set_mock_user(fastapi_app, ["Analyst"])
     url = fastapi_app.url_path_for("export_users")
     response = await client.get(url)
 
@@ -57,9 +57,9 @@ async def test_export_unauthorized_access(
 
 @pytest.mark.anyio
 async def test_get_users_with_pagination(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_users")
     request_data = {"page": 1, "size": 5, "sortOrders": [], "filters": []}
     response = await client.post(url, json=request_data)
@@ -74,9 +74,9 @@ async def test_get_users_with_pagination(
 
 @pytest.mark.anyio
 async def test_get_users_with_sort_order(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_users")
     request_data = {
         "page": 1,
@@ -97,9 +97,9 @@ async def test_get_users_with_sort_order(
 
 @pytest.mark.anyio
 async def test_get_users_with_filter(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_users")
     request_data = {
         "page": 1,
@@ -128,9 +128,9 @@ async def test_get_users_with_filter(
 
 @pytest.mark.anyio
 async def test_get_user_by_id(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, ["Government"])
     url = fastapi_app.url_path_for("get_user_by_id", user_id=1)
     response = await client.get(url)
 
@@ -142,10 +142,10 @@ async def test_get_user_by_id(
 
 @pytest.mark.anyio
 async def test_create_user_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
     # Setup mock roles for authorization
-    set_mock_user_roles(fastapi_app, ["Administrator"])
+    set_mock_user(fastapi_app, ["Administrator"])
 
     # Define the URL for the create user endpoint
     url = fastapi_app.url_path_for("create_user")

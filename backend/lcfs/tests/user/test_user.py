@@ -15,11 +15,11 @@ from lcfs.web.api.user.schema import UserActivitiesResponseSchema
 async def test_get_user_activities_as_administrator(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     add_models,
 ):
     # Mock the current user as an ADMINISTRATOR
-    set_mock_user_roles(fastapi_app, ["ADMINISTRATOR"])
+    set_mock_user(fastapi_app, ["ADMINISTRATOR"])
 
     # Assuming user with user_profile_id=7 exists in the database
     target_user_id = 7 # LCFS 1
@@ -104,11 +104,11 @@ async def test_get_user_activities_as_administrator(
 async def test_get_user_activities_as_manage_users_same_org(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     add_models,
 ):
     # Mock the current user as a user with MANAGE_USERS
-    set_mock_user_roles(fastapi_app, ["MANAGE_USERS"])
+    set_mock_user(fastapi_app, ["MANAGE_USERS"])
 
     # Assuming target user with user_profile_id=3 exists and is in organization_id=1
     target_user_id = 1
@@ -159,10 +159,10 @@ async def test_get_user_activities_as_manage_users_same_org(
 async def test_get_user_activities_permission_denied(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
 ):
     # Mock the current user as a user with MANAGE_USERS role in organization_id=1
-    set_mock_user_roles(fastapi_app, ["MANAGE_USERS"])
+    set_mock_user(fastapi_app, ["MANAGE_USERS"])
 
     # Assuming target user with user_profile_id=8 exists and is in organization_id=2
     target_user_id = 8
@@ -185,11 +185,11 @@ async def test_get_user_activities_permission_denied(
 async def test_get_all_user_activities_as_administrator(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     add_models,
 ):
     # Mock the current user as an ADMINISTRATOR
-    set_mock_user_roles(fastapi_app, ["ADMINISTRATOR"])
+    set_mock_user(fastapi_app, ["ADMINISTRATOR"])
 
     # Create activity history records for multiple users
     transfer = Transfer(
@@ -254,10 +254,10 @@ async def test_get_all_user_activities_as_administrator(
 async def test_get_all_user_activities_permission_denied(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
 ):
     # Mock the current user as a user without ADMINISTRATOR role
-    set_mock_user_roles(fastapi_app, ["ANALYST"])
+    set_mock_user(fastapi_app, ["ANALYST"])
 
     # Prepare request data
     pagination = {
@@ -277,10 +277,10 @@ async def test_get_all_user_activities_permission_denied(
 async def test_get_user_activities_user_not_found(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
 ):
     # Mock the current user as an ADMINISTRATOR
-    set_mock_user_roles(fastapi_app, ["ADMINISTRATOR"])
+    set_mock_user(fastapi_app, ["ADMINISTRATOR"])
 
     # Non-existent user_id
     non_existent_user_id = 9999
