@@ -165,7 +165,7 @@ jobs:
           cd ../lcfs-redis-pr
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1
           cd ../lcfs-frontend
-          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rollouttriggered="$(date +%s)"
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rollouttriggered="A$(date +%s)E"
           sleep 60s
           cd ../lcfs-backend
-          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rollouttriggered="$(date +%s)"
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rollouttriggered="A$(date +%s)E"
