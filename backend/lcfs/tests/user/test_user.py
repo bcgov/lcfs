@@ -9,6 +9,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAg
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import InitiativeAgreementHistory
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.user.schema import UserActivitiesResponseSchema
 
 @pytest.mark.anyio
@@ -19,7 +20,7 @@ async def test_get_user_activities_as_administrator(
     add_models,
 ):
     # Mock the current user as an ADMINISTRATOR
-    set_mock_user(fastapi_app, ["ADMINISTRATOR"])
+    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
 
     # Assuming user with user_profile_id=7 exists in the database
     target_user_id = 7 # LCFS 1
@@ -108,7 +109,7 @@ async def test_get_user_activities_as_manage_users_same_org(
     add_models,
 ):
     # Mock the current user as a user with MANAGE_USERS
-    set_mock_user(fastapi_app, ["MANAGE_USERS"])
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS])
 
     # Assuming target user with user_profile_id=3 exists and is in organization_id=1
     target_user_id = 1
@@ -162,7 +163,7 @@ async def test_get_user_activities_permission_denied(
     set_mock_user,
 ):
     # Mock the current user as a user with MANAGE_USERS role in organization_id=1
-    set_mock_user(fastapi_app, ["MANAGE_USERS"])
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS])
 
     # Assuming target user with user_profile_id=8 exists and is in organization_id=2
     target_user_id = 8
@@ -189,7 +190,7 @@ async def test_get_all_user_activities_as_administrator(
     add_models,
 ):
     # Mock the current user as an ADMINISTRATOR
-    set_mock_user(fastapi_app, ["ADMINISTRATOR"])
+    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
 
     # Create activity history records for multiple users
     transfer = Transfer(
@@ -257,7 +258,7 @@ async def test_get_all_user_activities_permission_denied(
     set_mock_user,
 ):
     # Mock the current user as a user without ADMINISTRATOR role
-    set_mock_user(fastapi_app, ["ANALYST"])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
     # Prepare request data
     pagination = {
@@ -280,7 +281,7 @@ async def test_get_user_activities_user_not_found(
     set_mock_user,
 ):
     # Mock the current user as an ADMINISTRATOR
-    set_mock_user(fastapi_app, ["ADMINISTRATOR"])
+    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
 
     # Non-existent user_id
     non_existent_user_id = 9999

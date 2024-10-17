@@ -3,6 +3,7 @@ from fastapi import FastAPI, status
 from httpx import AsyncClient
 from unittest.mock import MagicMock, Mock, AsyncMock
 
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
@@ -52,7 +53,7 @@ async def test_get_fs_table_options(
     set_mock_user,
     mock_fuel_supply_service,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_fs_table_options")
     params = {"compliancePeriod": "2023"}
 
@@ -83,7 +84,7 @@ async def test_get_fuel_supply_list(
     set_mock_user,
     mock_fuel_supply_service,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_fuel_supply")
     payload = {
         "compliance_report_id": 1,
@@ -122,7 +123,7 @@ async def test_save_fuel_supply_row_create(
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,
@@ -176,7 +177,7 @@ async def test_save_fuel_supply_row_update(
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     print("URL ------------------", url)
 
@@ -233,7 +234,7 @@ async def test_save_fuel_supply_row_delete(
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,
@@ -275,7 +276,7 @@ async def test_save_fuel_supply_row_duplicate(
     mock_fuel_supply_service,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,

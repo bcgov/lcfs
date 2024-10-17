@@ -17,10 +17,10 @@ from lcfs.web.api.compliance_report.services import ComplianceReportServices
 async def test_get_org_users_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_organization_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     mock_organization_services.get_organization_users_list.return_value = {
         "pagination": {"total": 0, "page": 1, "size": 5, "totalPages": 1},
@@ -53,10 +53,10 @@ async def test_get_org_users_success(
 async def test_get_user_by_id_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_user_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     user_id = 1
     organization_id = 1
@@ -89,10 +89,10 @@ async def test_get_user_by_id_success(
 async def test_create_user_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_user_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("create_user", organization_id=1)
 
@@ -121,10 +121,10 @@ async def test_create_user_success(
 async def test_get_transactions_paginated_for_org_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_organization_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     mock_organization_services.get_transactions_paginated.return_value = {
         "transactions": [],
@@ -150,10 +150,10 @@ async def test_get_transactions_paginated_for_org_success(
 async def test_export_transactions_for_org_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_transactions_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     mock_transactions_services.export_transactions.return_value = {"streaming": True}
 
@@ -176,11 +176,11 @@ async def test_export_transactions_for_org_success(
 async def test_create_transfer_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_transfer_services,
     mock_organization_validation,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     organization_id = 1
     url = fastapi_app.url_path_for("create_transfer", organization_id=organization_id)
@@ -215,11 +215,11 @@ async def test_create_transfer_success(
 async def test_update_transfer_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_transfer_services,
     mock_organization_validation,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("update_transfer", organization_id=1, transfer_id=1)
 
@@ -258,11 +258,11 @@ async def test_update_transfer_success(
 async def test_create_compliance_report_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_compliance_report_services,
     mock_organization_validation,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     organization_id = 1
     url = fastapi_app.url_path_for(
@@ -302,10 +302,10 @@ async def test_create_compliance_report_success(
 async def test_get_compliance_reports_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_compliance_report_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("get_compliance_reports", organization_id=1)
 
@@ -332,10 +332,10 @@ async def test_get_compliance_reports_success(
 async def test_get_all_org_reported_years_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_compliance_report_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("get_all_org_reported_years", organization_id=1)
 
@@ -356,10 +356,10 @@ async def test_get_all_org_reported_years_success(
 async def test_get_compliance_report_by_id_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_compliance_report_services,
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for(
         "get_compliance_report_by_id",

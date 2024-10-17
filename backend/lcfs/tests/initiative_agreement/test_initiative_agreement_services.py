@@ -1,16 +1,16 @@
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
 
-from lcfs.db.models import Organization, UserRole
+from lcfs.db.models import Organization
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
     InitiativeAgreementStatus,
 )
-from lcfs.db.models.user.Role import RoleEnum, Role
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementCreateSchema,
     InitiativeAgreementSchema,
@@ -50,14 +50,10 @@ def mock_internal_comment_service():
 
 
 @pytest.fixture
-def mock_request():
+def mock_request(mock_user_profile):
+    mock_user_profile.role_names = [RoleEnum.DIRECTOR]
     request = MagicMock()
-    user_role_1 = Mock(name="ROLES", spec=UserRole)
-    user_role_2 = Mock(name="ROLES", spec=UserRole)
-    user_role_1.role.name.name = RoleEnum.GOVERNMENT
-    user_role_2.role.name.name = RoleEnum.DIRECTOR
-    request.user.user_profile_id = 1
-    request.user.user_roles = [user_role_1, user_role_2]
+    request.user = mock_user_profile
     return request
 
 
@@ -171,6 +167,8 @@ async def test_director_approve_initiative_agreement(
 async def test_non_director_approve_initiative_agreement(
     service, mock_repo, mock_org_service, mock_request
 ):
+    service.request.user.role_names = [RoleEnum.SUPPLIER]
+
     mock_agreement = InitiativeAgreement(
         initiative_agreement_id=1,
         compliance_units=150,
