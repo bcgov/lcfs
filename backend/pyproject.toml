@@ -43,7 +43,6 @@ black = "^24.4.2"
 boto3 = "^1.35.26"
 
 [tool.poetry.dev-dependencies]
-faker = "^21.0.0"
 pytest = "^7.2.1"
 flake8 = "~4.0.1"
 mypy = "^1.1.1"
