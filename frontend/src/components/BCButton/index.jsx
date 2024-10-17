@@ -1,9 +1,13 @@
 import PropTypes from 'prop-types'
 import { forwardRef } from 'react'
 import BCButtonRoot from './BCButtonRoot'
+import { CircularProgress } from '@mui/material'
 
 const BCButton = forwardRef(
-  ({ color, variant, size, circular, iconOnly, children, ...rest }, ref) => {
+  (
+    { color, variant, size, circular, iconOnly, isLoading, children, ...rest },
+    ref
+  ) => {
     return (
       <BCButtonRoot
         {...rest}
@@ -13,7 +17,7 @@ const BCButton = forwardRef(
         size={size}
         ownerState={{ color, variant, size, circular, iconOnly }}
       >
-        {children}
+        {isLoading ? <CircularProgress size={22} color="white" /> : children}
       </BCButtonRoot>
     )
   }
@@ -43,10 +47,12 @@ BCButton.propTypes = {
     'warning',
     'error',
     'light',
-    'dark'
+    'dark',
+    'smoky'
   ]),
   circular: PropTypes.bool,
   iconOnly: PropTypes.bool,
+  isLoading: PropTypes.bool,
   children: PropTypes.node.isRequired
 }
 

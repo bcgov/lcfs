@@ -12,29 +12,50 @@ import Icon from '@mui/material/Icon'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 
-function DefaultNavbarLink({ icon, name, route, light }) {
+function DefaultNavbarLink({
+  icon,
+  name,
+  route,
+  light,
+  onClick,
+  isMobileView
+}) {
   const [hover, setHover] = useState(false)
   return (
     <BCBox
       component={NavLink}
       className="NavLink"
-      activeClassName="active"
       to={route}
       mx={1}
-      p={1}
+      mt={-0.1}
+      mb={isMobileView ? 0.2 : -1}
+      mr={isMobileView ? 2 : 1}
+      py={1}
+      px={2}
       display="flex"
       alignItems="center"
-      sx={({ transitions }) => ({
+      sx={({ transitions, palette }) => ({
         cursor: 'pointer',
         userSelect: 'none',
-        minHeight: '2.5rem',
-        paddingBottom: '14px',
+        minHeight: '2.7rem',
+        paddingBottom: isMobileView ? '10px' : '15px',
         '&:hover': {
-          backgroundColor: hover ? 'rgba(0, 0, 0, 0.3)' : 'transparent'
+          borderBottom: isMobileView ? '0' : '6px solid #38598a',
+          backgroundColor: hover
+            ? isMobileView
+              ? 'rgba(0, 0, 0, 0.1)'
+              : 'rgba(0, 0, 0, 0.2)'
+            : 'transparent',
+          paddingBottom: isMobileView ? '10px' : '9px'
         },
         '&.active': {
-          borderBottom: '3px solid #fcc219',
-          backgroundColor: 'rgba(0, 0, 0, 0.3)'
+          borderBottom: isMobileView ? '0' : '3px solid #fcc219',
+          borderLeft: isMobileView ? '3px solid #fcc219' : '0',
+          backgroundColor: isMobileView
+            ? 'rgba(0, 0, 0, 0.2)'
+            : 'rgba(0, 0, 0, 0.3)',
+          paddingBottom: isMobileView ? '11px' : '12px',
+          paddingLeft: isMobileView ? '13px' : 2
         },
         transform: 'translateX(0)',
         transition: transitions.create('transform', {
@@ -44,6 +65,7 @@ function DefaultNavbarLink({ icon, name, route, light }) {
       })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onClick={onClick}
     >
       {icon && (
         <Icon
@@ -60,16 +82,15 @@ function DefaultNavbarLink({ icon, name, route, light }) {
         variant="body2"
         fontWeight="light"
         color={light ? 'primary' : 'white'}
-        textTransform="capitalize"
         sx={{
           width: '100%',
           lineHeight: 0,
           '&:hover': {
-            textDecoration: 'underline'
+            textDecoration: 'none'
           }
         }}
       >
-        &nbsp;{name}
+        {name}
       </BCTypography>
     </BCBox>
   )
@@ -80,7 +101,8 @@ DefaultNavbarLink.propTypes = {
   icon: PropTypes.string,
   name: PropTypes.string.isRequired,
   route: PropTypes.string.isRequired,
-  light: PropTypes.bool
+  light: PropTypes.bool,
+  onClick: PropTypes.func
 }
 
 export default DefaultNavbarLink
