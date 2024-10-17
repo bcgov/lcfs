@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, Boolean, Float, Enum
+from sqlalchemy import Column, Integer, Text, Boolean, Float, Enum, Numeric
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
@@ -39,22 +39,7 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         nullable=True,
     )
     default_carbon_intensity = Column(
-        Float(10, 2),
-        nullable=True,
-        comment="Carbon intensities: default & prescribed (gCO2e/MJ)",
-    )
-    provision_1_id = Column(
-        Integer,
-        ForeignKey("provision_of_the_act.provision_of_the_act_id"),
-        nullable=True,
-    )
-    provision_2_id = Column(
-        Integer,
-        ForeignKey("provision_of_the_act.provision_of_the_act_id"),
-        nullable=True,
-    )
-    default_carbon_intensity = Column(
-        Float(10, 2),
+        Numeric(10, 2),
         nullable=True,
         comment="Carbon intensities: default & prescribed (gCO2e/MJ)",
     )
@@ -70,7 +55,9 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
 
     # Relationships
     fuel_codes = relationship("FuelCode", back_populates="fuel_code_type")
-    energy_density = relationship("EnergyDensity", back_populates="fuel_type")
+    energy_density = relationship(
+        "EnergyDensity", back_populates="fuel_type", uselist=False
+    )  # One energy density per fuel type
     energy_effectiveness_ratio = relationship(
         "EnergyEffectivenessRatio", back_populates="fuel_type"
     )

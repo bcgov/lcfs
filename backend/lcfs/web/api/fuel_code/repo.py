@@ -56,11 +56,9 @@ class FuelCodeRepository:
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = or_(
-            FuelCode.effective_date == None,
-            FuelCode.effective_date <= current_date
+            FuelCode.effective_date == None, FuelCode.effective_date <= current_date
         ) & or_(
-            FuelCode.expiration_date == None,
-            FuelCode.expiration_date > current_date
+            FuelCode.expiration_date == None, FuelCode.expiration_date > current_date
         )
 
         # Build the query with filtered fuel_codes
@@ -123,6 +121,21 @@ class FuelCodeRepository:
         return fuel_type
 
     @repo_handler
+    async def get_fuel_type_by_id(self, fuel_type_id: int) -> FuelType:
+        """Get fuel type by ID"""
+        result = await self.db.get_one(
+            FuelType,
+            fuel_type_id,
+            options=[
+                joinedload(FuelType.energy_density),
+                joinedload(FuelType.energy_effectiveness_ratio),
+            ],
+        )
+        if not result:
+            raise ValueError(f"Fuel type with ID '{fuel_type_id}' not found")
+        return result
+
+    @repo_handler
     async def get_fuel_categories(self) -> List[FuelCategory]:
         """Get all fuel category options"""
         return (await self.db.execute(select(FuelCategory))).scalars().all()
@@ -181,6 +194,16 @@ class FuelCodeRepository:
             .scalars()
             .all()
         )
+
+    @repo_handler
+    async def get_energy_density(self, fuel_type_id) -> EnergyDensity:
+        """Get the energy density for the specified fuel_type_id"""
+
+        stmt = select(EnergyDensity).where(EnergyDensity.fuel_type_id == fuel_type_id)
+        result = await self.db.execute(stmt)
+        energy_density = result.scalars().first()
+
+        return energy_density
 
     @repo_handler
     async def get_energy_effectiveness_ratios(self) -> List[EnergyEffectivenessRatio]:
@@ -662,3 +685,19 @@ class FuelCodeRepository:
             )
         )
         return result.scalar_one_or_none()
+
+
+    @repo_handler
+    async def get_energy_effectiveness_ratio(
+        self, fuel_type_id: int, fuel_category_id: int, end_use_type_id: int
+    ) -> EnergyEffectivenessRatio:
+
+        stmt = select(EnergyEffectivenessRatio).where(
+            EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
+            EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
+            EnergyEffectivenessRatio.end_use_type_id == end_use_type_id,
+        )
+        result = await self.db.execute(stmt)
+        energy_density = result.scalars().first()
+
+        return energy_density
