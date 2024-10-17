@@ -92,7 +92,19 @@ class OrganizationService:
             else:
                 # Handle other filters as before
                 field = get_field_for_filter(TransactionView, filter.field)
-                filter_value = filter.filter
+                # Check if the filter is of type "date"
+                if filter.filter_type == "date":
+                    if filter.type == "inRange":
+                        filter_value = [filter.date_from, filter.date_to]
+                    else:
+                        filter_value = filter.date_from
+                else:
+                    # For non-date filters, use the standard filter value
+                    filter_value = filter.filter
+
+                if field.description == 'transaction_type':
+                    filter_value = filter_value.replace(" ", "").lower()
+
                 filter_option = filter.type
                 filter_type = filter.filter_type
                 conditions.append(
