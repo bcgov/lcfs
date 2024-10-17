@@ -52,11 +52,11 @@ jobs:
             echo "VERSION=$version" >> $GITHUB_OUTPUT
           fi
 
-  build-frontend:
+  build:
     if: >
       (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch)
-    name: Build LCFS Frontend
+    name: Build LCFS
     runs-on: ubuntu-latest
     needs: [get-version]
     timeout-minutes: 60
@@ -91,33 +91,6 @@ jobs:
           oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} --wait=true
           sleep 2s
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
-          
-  build-backend:
-    if: >
-      (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
-      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch)
-    name: Build LCFS Backend
-    runs-on: ubuntu-latest
-    needs: [get-version]
-    timeout-minutes: 60
-
-    env:
-      VERSION: ${{ needs.get-version.outputs.output1 }}
-
-    steps:
-
-      - name: Check out repository
-        uses: actions/checkout@v4.1.1
-        with: 
-          ref: ${{ github.event.pull_request.head.ref }} 
-
-      - name: Log in to Openshift
-        uses: redhat-actions/oc-login@v1.3
-        with:
-          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
-          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
-          insecure_skip_tls_verify: true
-          namespace: ${{ env.TOOLS_NAMESPACE }}
 
       - name: Build LCFS Backend
         run: |
@@ -139,7 +112,7 @@ jobs:
     name: Deploy LCFS
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [get-version, build-frontend, build-backend]
+    needs: [get-version, build]
 
     env:
       VERSION: ${{ needs.get-version.outputs.output1 }}
