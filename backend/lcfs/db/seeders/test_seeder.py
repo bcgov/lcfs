@@ -13,6 +13,14 @@ from lcfs.db.seeders.test.test_user_profile_seeder import seed_test_user_profile
 from lcfs.db.seeders.test.test_user_role_seeder import seed_test_user_roles
 from lcfs.db.seeders.test.test_transfer_seeder import seed_test_transfers
 from lcfs.db.seeders.test.test_transaction_seeder import seed_test_transactions
+from lcfs.db.seeders.dev.fuel_code_seeder import seed_fuel_codes
+from lcfs.db.seeders.dev.finished_fuel_transfer_mode_seeder import (
+    seed_finished_fuel_transfer_modes,
+)
+from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import (
+    seed_feedstock_fuel_transfer_modes,
+)
+from lcfs.db.seeders.dev.expected_use_types_seeder import seed_expected_use_types
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +56,10 @@ async def seed_test(session: AsyncSession):
     await seed_test_transactions(session)
     await seed_test_admin_adjustments(session)
     # await seed_test_transfers(session)
+    await seed_fuel_codes(session)
+    await seed_finished_fuel_transfer_modes(session)
+    await seed_feedstock_fuel_transfer_modes(session)
+    await seed_expected_use_types(session)
 
     # Update sequences after all seeders have run
     await update_sequences(session)
