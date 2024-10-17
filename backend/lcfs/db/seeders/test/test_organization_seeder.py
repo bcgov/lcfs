@@ -1,7 +1,6 @@
 import logging
 from sqlalchemy import select, text
 from lcfs.db.models.organization.Organization import Organization
-from faker import Faker
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +12,23 @@ async def seed_test_organizations(session):
     Args:
         session: The database session for committing the new records.
     """
-    fake = Faker()
 
     organizations_to_seed = [
         {
-            "name": fake.company(),
-            "operating_name": fake.company(),
+            "name": "GreenLeaf Dynamics",
+            "operating_name": "GreenLeaf Dynamics",
             "organization_status_id": 2,
             "organization_type_id": 1,
         },
         {
-            "name": fake.company(),
-            "operating_name": fake.company(),
+            "name": "PureEarth Ventures",
+            "operating_name": "PureEarth Ventures",
             "organization_status_id": 2,
             "organization_type_id": 1,
         },
         {
-            "name": fake.company(),
-            "operating_name": fake.company(),
+            "name": "TerraNova Industries",
+            "operating_name": "TerraNova Industries",
             "organization_status_id": 2,
             "organization_type_id": 1,
         },
