@@ -1,7 +1,5 @@
-import { Box, Collapse, IconButton, TextField } from '@mui/material'
+import { Box, Collapse, IconButton, TextField, Typography } from '@mui/material'
 import { useState } from 'react'
-
-// MUI Icons
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useFormContext } from 'react-hook-form'
@@ -12,7 +10,10 @@ export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
   const { t } = useTranslation(['transfer'])
   const [isExpanded, setIsExpanded] = useState(true)
 
-  const { register } = useFormContext()
+  const {
+    register,
+    formState: { errors }
+  } = useFormContext()
 
   const handleToggle = () => {
     setIsExpanded(!isExpanded)
@@ -54,6 +55,8 @@ export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
               fullWidth
               rows={4}
               variant="outlined"
+              error={!!errors[commentField]}
+              helperText={errors[commentField]?.message}
             />
           </Collapse>
         </LabelBox>
