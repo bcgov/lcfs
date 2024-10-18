@@ -337,8 +337,7 @@ class UserRepository:
             role_enum for role_enum in RoleEnum if role_enum.value.lower() in roles
         ]
         # Create a set for faster membership checks
-        existing_roles_set = set([user_role.role.name for user_role in user.user_roles])
-
+        existing_roles_set = set(user.user_roles)
 
         # Update the user object with the new data
         user.email = updated_user_profile.email
