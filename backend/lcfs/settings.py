@@ -46,18 +46,32 @@ class Settings(BaseSettings):
     db_user: str = "lcfs"
     db_pass: str = "development_only"
     db_base: str = "lcfs"
+    db_test: str = "lcfs_test"
     db_echo: bool = False
 
     # Variables for Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
+    redis_db: str = "lcfs"
     redis_user: Optional[str] = None
-    redis_pass: Optional[str] = None
+    redis_pass: Optional[str] = "development_only"
     redis_base: Optional[int] = None
 
-    # Variables for Keycloak 
-    well_known_endpoint: str = "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
-    keycloak_audience: str = "tfrs-on-gold-4308"
+    # Variables for Keycloak
+    well_known_endpoint: str = (
+        "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
+    )
+    keycloak_audience: str = "low-carbon-fuel-standard-5147"
+
+    # Variables for S3
+    s3_endpoint: str = "http://minio:9000"
+    s3_bucket: str = "lcfs"
+    s3_access_key: str = "s3_access_key"
+    s3_secret_key: str = "development_only"
+
+    clamav_enabled: bool = False
+    clamav_host: str = "clamav"
+    clamav_port: int = 3310
 
     @property
     def db_url(self) -> URL:
@@ -73,6 +87,22 @@ class Settings(BaseSettings):
             user=self.db_user,
             password=self.db_pass,
             path=f"/{self.db_base}",
+        )
+
+    @property
+    def db_test_url(self) -> URL:
+        """
+        Assemble database URL from settings.
+
+        :return: database URL.
+        """
+        return URL.build(
+            scheme="postgresql+asyncpg",
+            host=self.db_host,
+            port=self.db_port,
+            user=self.db_user,
+            password=self.db_pass,
+            path=f"/{self.db_test}",
         )
 
     @property
