@@ -147,6 +147,7 @@ jobs:
                 yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i eval '(.env[] | select(.name == "S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
       
       - name: Helm Deployment 
         shell: bash {0}
@@ -155,6 +156,8 @@ jobs:
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 15.5.17
           cd ../lcfs-redis-pr
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1
+          cd ../lcfs-minio-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-minio-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/minio --version 14.8.0
           cd ../lcfs-frontend
           # refresh the pod annotation everytime in order to force the rollout
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rolloutTriggered="A$(date +%s)E"
