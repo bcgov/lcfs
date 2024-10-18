@@ -9,6 +9,10 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     suppressFloatingFilterButton: true,
     valueGetter: ({ data }) => data.compliancePeriod?.description || '',
     filterParams: {

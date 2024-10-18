@@ -52,7 +52,7 @@ export const transactionsColDefs = (t) => [
     field: 'fromOrganization',
     headerName: t('txn:txnColLabels.organizationFrom'),
     minWidth: 300,
-    width: 300,
+    flex: 2,
     filterParams: {
       buttons:["clear"],
     }
@@ -62,7 +62,7 @@ export const transactionsColDefs = (t) => [
     field: 'toOrganization',
     headerName: t('txn:txnColLabels.organizationTo'),
     minWidth: 300,
-    width:300,
+    flex: 2,
     filterParams: {
       buttons:["clear"],
     }
@@ -123,7 +123,7 @@ export const transactionsColDefs = (t) => [
       defaultOption: 'inRange',
       comparator: (filterDate, cellValue) => {
           const cellDate = new Date(cellValue).setHours(0, 0, 0, 0);
-          const filterDateOnly = filterDate.setHours(0, 0, 0, 0);
+          const filterDateOnly = new Date(filterDate).setHours(0, 0, 0, 0);
 
           if (cellDate < filterDateOnly) {
               return -1; // Cell date is before the filter date
