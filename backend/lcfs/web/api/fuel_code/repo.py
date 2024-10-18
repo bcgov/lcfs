@@ -107,7 +107,24 @@ class FuelCodeRepository:
                     }
                     for fc in fuel_type.fuel_codes
                 ],
+                "provision_of_the_act": [],
             }
+
+            if fuel_type.provision_1:
+                formatted_fuel_type["provision_of_the_act"].append(
+                    {
+                        "provision_of_the_act_id": fuel_type.provision_1_id,
+                        "name": fuel_type.provision_1.name,
+                    }
+                )
+
+            if fuel_type.provision_2:
+                formatted_fuel_type["provision_of_the_act"].append(
+                    {
+                        "provision_of_the_act_id": fuel_type.provision_2_id,
+                        "name": fuel_type.provision_2.name,
+                    }
+                )
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
