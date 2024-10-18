@@ -2,7 +2,7 @@ import {
   numberFormatter,
   currencyFormatter,
   dateFormatter,
-  spacesFormatter
+  spacesFormatter,
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
@@ -24,6 +24,9 @@ export const transactionsColDefs = (t) => [
       const transactionType = params.data.transactionType
       const prefix = prefixMap[transactionType] || ''
       return `${prefix}${params.data.transactionId}`
+    },
+    filterParams: {
+      buttons:["clear"],
     }
   },
   {
@@ -31,6 +34,17 @@ export const transactionsColDefs = (t) => [
     field: 'transactionType',
     headerName: t('txn:txnColLabels.type'),
     valueFormatter: spacesFormatter,
+    filter: true, // Enable filtering
+    filterParams: {
+      textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        // Remove spaces and convert both to lowercase for comparison
+        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase();
+        const cleanValue = value.replace(/\s+/g, '').toLowerCase();
+        return cleanValue.includes(cleanFilterText);
+      },
+      buttons:["clear"],
+    },
     width: 222
   },
   {
@@ -38,14 +52,20 @@ export const transactionsColDefs = (t) => [
     field: 'fromOrganization',
     headerName: t('txn:txnColLabels.organizationFrom'),
     minWidth: 300,
-    flex: 2
+    flex: 2,
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'toOrganization',
     field: 'toOrganization',
     headerName: t('txn:txnColLabels.organizationTo'),
     minWidth: 300,
-    flex: 2
+    flex: 2,
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'quantity',
@@ -54,7 +74,10 @@ export const transactionsColDefs = (t) => [
     valueFormatter: numberFormatter,
     minWidth: 140,
     width: 140,
-    type: 'rightAligned'
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'pricePerUnit',
@@ -62,8 +85,14 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.pricePerUnit'),
     valueFormatter: currencyFormatter,
     width: 190,
-    type: 'rightAligned',
-    valueGetter: (params) => params.data.pricePerUnit || '-'
+    valueGetter: (params) => {
+      const value = params.data?.pricePerUnit;
+      return value !== null && value !== undefined ? value : null;
+    },
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     colId: 'status',
@@ -72,7 +101,6 @@ export const transactionsColDefs = (t) => [
     cellRenderer: TransactionStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       apiOptionField: 'status',
       apiQuery: useTransactionStatuses,
@@ -88,7 +116,26 @@ export const transactionsColDefs = (t) => [
     field: 'updateDate',
     headerName: t('txn:txnColLabels.updateDate'),
     valueFormatter: dateFormatter,
-    width: 190
+    width: 190,
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['inRange', 'equals', 'lessThan', 'greaterThan'],
+      defaultOption: 'inRange',
+      comparator: (filterDate, cellValue) => {
+          const cellDate = new Date(cellValue).setHours(0, 0, 0, 0);
+          const filterDateOnly = new Date(filterDate).setHours(0, 0, 0, 0);
+
+          if (cellDate < filterDateOnly) {
+              return -1; // Cell date is before the filter date
+          } else if (cellDate > filterDateOnly) {
+              return 1; // Cell date is after the filter date
+          } else {
+              return 0; // Dates are the same (ignoring time)
+          }
+      },
+      browserDatePicker: true, // Uses the browser's date picker if available
+      buttons:["clear"],
+  }
   }
 ]
 
