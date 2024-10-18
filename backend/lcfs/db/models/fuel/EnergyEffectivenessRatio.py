@@ -29,7 +29,7 @@ class EnergyEffectivenessRatio(BaseModel, Auditable, DisplayOrder, EffectiveDate
         comment="End use type",
     )
     ratio = Column(
-        Float(3, 2), nullable=False, comment="Energy effectiveness ratio constant"
+        Float(3, False, 2), nullable=False, comment="Energy effectiveness ratio constant"
     )
 
     fuel_category = relationship(

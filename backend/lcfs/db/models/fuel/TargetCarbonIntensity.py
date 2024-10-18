@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey
+from sqlalchemy import Column, Integer, Float, ForeignKey, Numeric
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 from sqlalchemy.orm import relationship
 
@@ -23,7 +23,7 @@ class TargetCarbonIntensity(BaseModel, Auditable, EffectiveDates):
         comment="Fuel category ID",
     )
     target_carbon_intensity = Column(
-        Float, nullable=False, comment="Target Carbon Intensity (gCO2e/MJ)"
+        Numeric(10, 2), nullable=False, comment="Target Carbon Intensity (gCO2e/MJ)"
     )
     reduction_target_percentage = Column(
         Float, nullable=False, comment="Reduction target percentage"
