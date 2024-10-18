@@ -233,9 +233,12 @@ class AllocationAgreementServices:
             )
 
         if (
-            existing_allocation_agreement.fuel_code.fuel_code
+            existing_allocation_agreement.fuel_code is None
+            or allocation_agreement_data.fuel_code is None
+            or existing_allocation_agreement.fuel_code.fuel_code
             != allocation_agreement_data.fuel_code
         ):
+
             existing_allocation_agreement.fuel_code = (
                 await self.fuel_repo.get_fuel_code_by_name(
                     allocation_agreement_data.fuel_code
@@ -276,7 +279,11 @@ class AllocationAgreementServices:
             fuel_type=updated_allocation_agreement.fuel_type.fuel_type,
             fuel_category=updated_allocation_agreement.fuel_category.category,
             provision_of_the_act=updated_allocation_agreement.provision_of_the_act.name,
-            fuel_code=updated_allocation_agreement.fuel_code.fuel_code,
+            fuel_code=(
+                updated_allocation_agreement.fuel_code.fuel_code
+                if updated_allocation_agreement.fuel_code
+                else None
+            ),
         )
 
     @service_handler
