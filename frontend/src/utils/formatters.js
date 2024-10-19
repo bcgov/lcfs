@@ -32,13 +32,20 @@ export const numberFormatter = (params, useParentheses = false) => {
 }
 
 export const currencyFormatter = (params) => {
-  if (params.value != null && !isNaN(params.value)) {
-      return params.value.toLocaleString('en-CA', {
-          style: 'currency',
-          currency: 'CAD'
-      });
+  if (params.value !== null && !isNaN(params.value)) {
+    return params.value.toLocaleString('en-CA', {
+      style: 'currency',
+      currency: 'CAD'
+    });
+  } else if (params.value === null){
+    return params.value
+  } else if (params !== null) {
+    return params.toLocaleString('en-CA', {
+      style: 'currency',
+      currency: 'CAD'
+    });
   }
-  return ''; // Return an empty string for null or undefined values.
+  return params.value
 };
 
 export const decimalFormatter = (params) => {
