@@ -32,21 +32,15 @@ export const numberFormatter = (params, useParentheses = false) => {
 }
 
 export const currencyFormatter = (params) => {
-  if (params.value !== null && !isNaN(params.value)) {
-    return params.value.toLocaleString('en-CA', {
+  const cellValue = Object.hasOwn(params, 'value') ? params.value : params
+  if (cellValue !== null && !isNaN(cellValue)) {
+    return cellValue.toLocaleString('en-CA', {
       style: 'currency',
       currency: 'CAD'
-    });
-  } else if (params.value === null){
-    return params.value
-  } else if (params !== null) {
-    return params.toLocaleString('en-CA', {
-      style: 'currency',
-      currency: 'CAD'
-    });
+    })
   }
-  return params.value
-};
+  return cellValue
+}
 
 export const decimalFormatter = (params) => {
   if (params.value != null) {
