@@ -22,7 +22,7 @@ async def test_get_table_options_success(
         "latestFuelCodes": ["FC-2021-001", "FC-2021-002"],
         "facilityNameplateCapacityUnits": ["kW", "MW"],
     }
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = "/api/fuel-codes/table-options"
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.get_table_options"
@@ -47,7 +47,7 @@ async def test_get_table_options_forbidden(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])  # Incorrect role
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])  # Incorrect role
     url = "/api/fuel-codes/table-options"
     response = await client.get(url)
 
@@ -64,7 +64,7 @@ async def test_search_table_options_success(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_code"
     ) as mock_search_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_search_fuel_code.return_value = {"fuel_codes": ["AB001"]}
 
@@ -86,7 +86,7 @@ async def test_search_table_options_invalid_params(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = url = "/api/fuel-codes/search"
     params = {"invalidParam": "invalid"}
     response = await client.get(url, params=params)
@@ -105,7 +105,7 @@ async def test_get_fuel_codes_success(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_codes"
     ) as mock_get_fuel_codes:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_get_fuel_codes.return_value = {
             "fuel_codes": [
@@ -154,7 +154,7 @@ async def test_get_fuel_code_success(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_code"
     ) as mock_get_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_fuel_code = {
             "fuel_code_id": 1,
@@ -190,7 +190,7 @@ async def test_get_fuel_code_not_found(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_code"
     ) as mock_get_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_get_fuel_code.side_effect = DataNotFoundException("Fuel code not found")
         url = "/api/fuel-codes/9999"
@@ -207,7 +207,7 @@ async def test_update_fuel_code_success(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.update_fuel_code"
     ) as mock_update_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
         updated_fuel_code = FuelCodeCreateSchema(
             fuel_code_id=1,
             status="Draft",
@@ -262,7 +262,7 @@ async def test_delete_fuel_code_success(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.delete_fuel_code"
     ) as mock_delete_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_delete_fuel_code.return_value = {
             "message": "Fuel code deleted successfully"
@@ -285,7 +285,7 @@ async def test_delete_fuel_code_not_found(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.delete_fuel_code"
     ) as mock_delete_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_delete_fuel_code.side_effect = DataNotFoundException("Fuel code not found")
 

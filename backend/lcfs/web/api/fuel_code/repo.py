@@ -1,9 +1,10 @@
+from datetime import date
 from logging import getLogger
 from typing import List, Dict, Any
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import and_, select, func, text, update, distinct
+from sqlalchemy import and_, or_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
@@ -14,7 +15,7 @@ from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
-from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.web.api.base import PaginationRequestSchema
@@ -47,17 +48,30 @@ class FuelCodeRepository:
     @repo_handler
     async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
+        # Define the filtering conditions for fuel codes
+        current_date = date.today()
+        fuel_code_filters = or_(
+            FuelCode.effective_date == None,
+            FuelCode.effective_date <= current_date
+        ) & or_(
+            FuelCode.expiration_date == None,
+            FuelCode.expiration_date > current_date
+        )
+
+        # Build the query with filtered fuel_codes
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
+            .outerjoin(FuelType.fuel_codes)
+            .where(fuel_code_filters)
             .options(
                 contains_eager(FuelType.fuel_instances).contains_eager(
                     FuelInstance.fuel_category
                 ),
+                contains_eager(FuelType.fuel_codes),
                 joinedload(FuelType.provision_1),
                 joinedload(FuelType.provision_2),
-                joinedload(FuelType.fuel_codes),
             )
         )
 
@@ -254,10 +268,11 @@ class FuelCodeRepository:
 
     @repo_handler
     async def delete_fuel_code(self, fuel_code_id: int):
+        delete_status = await self.get_fuel_status_by_status(FuelCodeStatusEnum.Deleted)
         await self.db.execute(
             update(FuelCode)
             .where(FuelCode.fuel_code_id == fuel_code_id)
-            .values(fuel_status_id=3)
+            .values(fuel_status_id=delete_status.fuel_code_status_id)
         )
 
     @repo_handler
@@ -322,7 +337,7 @@ class FuelCodeRepository:
                 and_(
                     FuelCode.fuel_suffix.like(fuel_code + "%"),
                     func.lower(FuelCodePrefix.prefix) == func.lower(prefix),
-                    FuelCode.fuel_status_id != 3,
+                    FuelCode.fuel_code_status.status != FuelCodeStatusEnum.Deleted,
                 )
             )
             .order_by(FuelCode.fuel_suffix)
@@ -352,7 +367,7 @@ class FuelCodeRepository:
             .where(
                 and_(
                     FuelCode.fuel_suffix == fuel_suffix, FuelCodePrefix.prefix == prefix,
-                    FuelCode.fuel_status_id != 3
+                    FuelCode.fuel_code_status.status != FuelCodeStatusEnum.Deleted
                 )
             )
         )
@@ -392,7 +407,7 @@ class FuelCodeRepository:
                 and_(
                     FuelCode.fuel_suffix == suffix,
                     func.lower(FuelCodePrefix.prefix) == func.lower(prefix),
-                    FuelCode.fuel_status_id != 3
+                    FuelCode.fuel_code_status.status != FuelCodeStatusEnum.Deleted
                 )
             )
         )
@@ -500,7 +515,7 @@ class FuelCodeRepository:
                 joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_1),
                 joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_2),
             )
-            .filter(FuelCode.fuel_status_id != 3)
+            .filter(FuelCode.fuel_code_status.status != FuelCodeStatusEnum.Deleted)
         )
 
         result = await self.db.execute(query)
@@ -562,7 +577,7 @@ class FuelCodeRepository:
             )
             .where(
                 and_(func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix) == fuel_code,
-                FuelCode.fuel_status_id != 3)
+                FuelCode.fuel_code_status.status != FuelCodeStatusEnum.Deleted)
             )
         )
         return result.scalar_one_or_none()
