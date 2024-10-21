@@ -19,21 +19,21 @@ class LCFS_Constants:
     USERS_EXPORT_SHEETNAME = "BCeID Users"
     USERS_EXPORT_FILENAME = "BC-LCFS-BCeID-Users"
     FROM_ORG_TRANSFER_STATUSES = [
-        TransferStatusEnum.Draft.value,
-        TransferStatusEnum.Sent.value,
-        TransferStatusEnum.Rescinded.value,
-        TransferStatusEnum.Deleted.value,
+        TransferStatusEnum.Draft,
+        TransferStatusEnum.Sent,
+        TransferStatusEnum.Rescinded,
+        TransferStatusEnum.Deleted,
     ]
     TO_ORG_TRANSFER_STATUSES = [
-        TransferStatusEnum.Submitted.value,
-        TransferStatusEnum.Declined.value,
-        TransferStatusEnum.Rescinded.value,
+        TransferStatusEnum.Submitted,
+        TransferStatusEnum.Declined,
+        TransferStatusEnum.Rescinded,
     ]
     GOV_TRANSFER_STATUSES = [
-        TransferStatusEnum.Submitted.value,  # To handle the save comment feature
-        TransferStatusEnum.Recommended.value,
-        TransferStatusEnum.Refused.value,
-        TransferStatusEnum.Recorded.value,
+        TransferStatusEnum.Submitted,  # To handle the save comment feature
+        TransferStatusEnum.Recommended,
+        TransferStatusEnum.Refused,
+        TransferStatusEnum.Recorded,
     ]
 
     # Export transactions

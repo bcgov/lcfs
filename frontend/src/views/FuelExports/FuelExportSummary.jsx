@@ -114,7 +114,7 @@ export const FuelExportSummary = ({ data }) => {
   )
 
   const getRowId = (params) => {
-    return params.data.fuelExportId
+    return params.data.fuelExportId.toString()
   }
 
   return (

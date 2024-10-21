@@ -128,7 +128,7 @@ export const AllocationAgreementSummary = ({ data }) => {
   )
 
   const getRowId = (params) => {
-    return params.data.allocationAgreementId
+    return params.data.allocationAgreementId.toString()
   }
 
   const handleGridKey = () => {

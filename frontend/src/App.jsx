@@ -33,6 +33,8 @@ import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
 import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
 import { logout } from '@/utils/keycloak.js'
+import { REPORTS_COMPARE } from '@/constants/routes/routes'
+import { CompareReports } from '@/views/CompareReports/CompareReports'
 
 const router = createBrowserRouter([
   {
@@ -186,6 +188,11 @@ const router = createBrowserRouter([
         path: ROUTES.REPORTS,
         element: <ComplianceReports />,
         handle: { title: 'Compliance reporting' }
+      },
+      {
+        path: ROUTES.REPORTS_COMPARE,
+        element: <CompareReports />,
+        handle: { title: 'Compare reports' }
       },
       {
         path: ROUTES.REPORTS_VIEW,

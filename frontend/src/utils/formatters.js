@@ -4,7 +4,7 @@ import { ROLES_BADGE_SIZE } from '@/constants/common'
  * Formats a number with commas and specified decimal places.
  * Optionally uses parentheses instead of a minus sign for negative numbers.
  *
- * @param {Object|number|string} params - The input parameter which can be an object with a `value` property, a number, or a string.
+ * @param {Object|number|string|null} params - The input parameter which can be an object with a `value` property, a number, or a string.
  * @param {number|string} [params.value] - The value to be formatted, if params is an object.
  * @param {boolean} [useParentheses=false] - Whether to use parentheses for negative numbers.
  * @returns {string} - The formatted number as a string, or the original value if it cannot be parsed as a number.
@@ -31,10 +31,21 @@ export const numberFormatter = (params, useParentheses = false) => {
   return formattedValue
 }
 
+/**
+ * Formats a number as currency in CAD.
+ *
+ * @param {Object|number|string|null} params - The input parameter which can be an object with a `value` property, a number, or a string.
+ * @returns {string} - The formatted currency string, or the original value if it cannot be parsed as a number.
+ */
 export const currencyFormatter = (params) => {
-  const cellValue = Object.hasOwn(params, 'value') ? params.value : params
-  if (cellValue !== null && !isNaN(cellValue)) {
-    return cellValue.toLocaleString('en-CA', {
+  const cellValue =
+    params && Object.hasOwn(params, 'value') ? params.value : params
+
+  if (
+    cellValue !== null &&
+    (typeof cellValue === 'number' || !isNaN(Number(cellValue)))
+  ) {
+    return Number(cellValue).toLocaleString('en-CA', {
       style: 'currency',
       currency: 'CAD'
     })
@@ -42,15 +53,25 @@ export const currencyFormatter = (params) => {
   return cellValue
 }
 
+/**
+ * Formats a number to two decimal places.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @returns {string} - The formatted number with two decimal places, or the original value if it is null.
+ */
 export const decimalFormatter = (params) => {
-  if (params.value != null) {
-    return params.value.toLocaleString('en', { minimumFractionDigits: 2 }) // round to 2 decimal places
-  } else if (params !== null) {
-    return params.toLocaleString('en', { minimumFractionDigits: 2 })
+  if (params.value !== null) {
+    return params.value.toLocaleString('en', { minimumFractionDigits: 2 })
   }
   return params.value
 }
 
+/**
+ * Formats a date to YYYY-MM-DD format.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @returns {string} - The formatted date string, or an empty string if the value is null.
+ */
 export const dateFormatter = (params) => {
   const value = params.value || params
   if (value != null) {
@@ -61,12 +82,17 @@ export const dateFormatter = (params) => {
   return ''
 }
 
+/**
+ * Formats a phone number to (123) 456-7890 format.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @returns {string} - The formatted phone number, or an empty string if the value is null or invalid.
+ */
 export const phoneNumberFormatter = (params) => {
   const phoneNumber = params?.value?.toString().replace(/\D/g, '') || ''
   if (!phoneNumber) {
     return ''
   }
-  // Format the phone number as (123) 456-7890
   return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(
     3,
     6
@@ -77,6 +103,12 @@ function camelToSnakeCase(str) {
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
 }
 
+/**
+ * Converts camelCase keys of an object to snake_case.
+ *
+ * @param {Object} obj - The object whose keys need to be converted.
+ * @returns {Object} - A new object with keys in snake_case.
+ */
 export function convertObjectKeys(obj) {
   if (typeof obj !== 'object' || obj === null) {
     return obj
@@ -91,39 +123,65 @@ export function convertObjectKeys(obj) {
   }, {})
 }
 
+/**
+ * Calculates the total value by multiplying quantity and price per unit.
+ *
+ * @param {number|string} quantity - The quantity of items.
+ * @param {number|string} pricePerUnit - The price per unit.
+ * @returns {number} - The total value, or 0 if inputs are not valid numbers.
+ */
 export const calculateTotalValue = (quantity, pricePerUnit) => {
   const quantityNum = parseFloat(quantity)
   const priceNum = parseFloat(pricePerUnit)
   return !isNaN(quantityNum) && !isNaN(priceNum) ? quantityNum * priceNum : 0
 }
 
+/**
+ * Checks if a string represents a numeric value.
+ *
+ * @param {string} str - The string to check.
+ * @returns {boolean} - True if the string is numeric, false otherwise.
+ */
 export function isNumeric(str) {
-  if (typeof str !== 'string') return false // We only process strings!
+  if (typeof str !== 'string') return false
   return !isNaN(str) && !isNaN(parseFloat(str))
 }
 
-export function calculateRowHeight(actualWidth, roles) {
+/**
+ * Calculates the row height based on the width and roles.
+ *
+ * @param {number} elementWidth - The actual width available.
+ * @param {Array} roles - An array of role objects with a `name` property.
+ * @returns {number} - The calculated total height required for the rows.
+ */
+export function calculateRowHeight(elementWidth, roles) {
   const rowHeight = 42 // height of single row
-  let summedWidth = 70 // width including padding and margins
+
+  let currentRowWidth = 0
   let numRows = 1
   roles.forEach((role) => {
-    if (summedWidth + parseInt(ROLES_BADGE_SIZE[role.name]) > actualWidth) {
+    if (
+      currentRowWidth !== 0 &&
+      currentRowWidth + ROLES_BADGE_SIZE[role.name] > elementWidth
+    ) {
       numRows++
-      summedWidth = parseInt(ROLES_BADGE_SIZE[role.name]) + 70
+      currentRowWidth = ROLES_BADGE_SIZE[role.name]
     } else {
-      summedWidth += parseInt(ROLES_BADGE_SIZE[role.name])
+      currentRowWidth += ROLES_BADGE_SIZE[role.name]
     }
   })
 
-  // Calculate the total height required
-  const totalHeight = numRows * rowHeight
-
-  return totalHeight
+  return numRows * rowHeight
 }
 
+/**
+ * Formats a date and time according to the Vancouver timezone.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @returns {string} - The formatted date and time string.
+ */
 export const timezoneFormatter = ({ value }) => {
   const date = new Date(value)
-  // Format the date and time parts
   const options = {
     year: 'numeric',
     month: '2-digit',
@@ -139,6 +197,12 @@ export const timezoneFormatter = ({ value }) => {
   return formattedDate.replace(',', '').replaceAll('.', '')
 }
 
+/**
+ * Inserts spaces before capital letters in a string.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @returns {string} - The formatted string with spaces, or the original value if it is null.
+ */
 export const spacesFormatter = (params) => {
   if (params.value != null) {
     return params.value.replace(/([A-Z])/g, ' $1').trim()
@@ -146,6 +210,12 @@ export const spacesFormatter = (params) => {
   return params.value
 }
 
+/**
+ * Removes entries with empty string values from an object.
+ *
+ * @param {Object} obj - The object to clean.
+ * @returns {Object} - A new object without empty string values.
+ */
 export const cleanEmptyStringValues = (obj) =>
   Object.entries(obj)
     .filter(([, value]) => value !== null && value !== '')
@@ -154,6 +224,12 @@ export const cleanEmptyStringValues = (obj) =>
       return acc
     }, {})
 
+/**
+ * Formats a number with commas.
+ *
+ * @param {Object} params - The input parameter which should have a `value` property.
+ * @returns {string} - The formatted number with commas.
+ */
 export const formatNumberWithCommas = ({ value }) => {
   if (!value) return 0
   const [integerPart, decimalPart] = value.toString().split('.')
@@ -167,12 +243,18 @@ export const formatNumberWithCommas = ({ value }) => {
   return number
 }
 
+/**
+ * Removes commas from a formatted number string.
+ *
+ * @param {string} value - The formatted number string.
+ * @returns {number} - The number without commas, or undefined if the input is invalid.
+ */
 export const formatNumberWithoutCommas = (value) => {
   const [integerPart, decimalPart] = value.split('.')
 
   let number = integerPart.replaceAll(',', '')
 
-  const regex = /^\d*\.?\d*$/
+  const regex = /^\d*.?\d*$/
   if (!regex.test(number)) return
 
   if (decimalPart !== undefined) {
@@ -183,6 +265,12 @@ export const formatNumberWithoutCommas = (value) => {
   return Number(number)
 }
 
+/**
+ * Checks if an array or an array within an object is empty.
+ *
+ * @param {Array|Object} data - The data to check.
+ * @returns {boolean|null} - True if the array is empty, false if not, or null if the input is not an array or object.
+ */
 export const isArrayEmpty = (data) => {
   if (Array.isArray(data)) {
     return data.length === 0
