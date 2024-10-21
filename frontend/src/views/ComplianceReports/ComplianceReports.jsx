@@ -39,7 +39,7 @@ export const ComplianceReports = () => {
     }),
     [t]
   )
-  const getRowId = useCallback((params) => params.data.complianceReportId, [])
+  const getRowId = useCallback((params) => params.data.complianceReportId.toString(), [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(
     ({ data }) => {

@@ -14,6 +14,24 @@ export const useCompliancePeriod = (options) => {
   })
 }
 
+export const useListComplianceReports = (orgID, options) => {
+  const client = useApiService()
+  const path = apiRoutes.getOrgComplianceReports.replace(':orgID', orgID)
+  return useQuery({
+    enabled: !!orgID,
+    queryKey: ['compliance-reports', orgID],
+    queryFn: () =>
+      orgID &&
+      client.post(path, {
+        page: 0,
+        size: 20,
+        sort_orders: [],
+        filters: []
+      }),
+    ...options
+  })
+}
+
 export const useCreateComplianceReport = (orgID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
@@ -35,6 +53,7 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
         .replace(':reportID', reportID)
     : apiRoutes.getComplianceReport.replace(':reportID', reportID)
   return useQuery({
+    enabled: !!orgID,
     queryKey: ['compliance-report', reportID],
     queryFn: () => client.get(path),
     ...options
@@ -48,6 +67,7 @@ export const useGetComplianceReportSummary = (reportID, options) => {
     reportID
   )
   return useQuery({
+    enabled: !!reportID,
     queryKey: ['compliance-report-summary', reportID],
     queryFn: async () => {
       return (await client.get(path)).data

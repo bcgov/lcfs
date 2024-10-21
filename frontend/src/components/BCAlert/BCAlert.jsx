@@ -110,7 +110,7 @@ export const BCAlert = forwardRef(
             )}
             {canDismiss && (
               <CloseIcon
-                onClick={mount && handleAlertStatus}
+                onClick={mount ? handleAlertStatus : undefined}
                 sx={{ cursor: 'pointer' }}
               />
             )}

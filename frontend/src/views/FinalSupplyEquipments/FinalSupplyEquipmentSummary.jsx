@@ -143,7 +143,7 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
   )
 
   const getRowId = (params) => {
-    return params.data.finalSupplyEquipmentId
+    return params.data.finalSupplyEquipmentId.toString()
   }
 
   const handleGridKey = () => {

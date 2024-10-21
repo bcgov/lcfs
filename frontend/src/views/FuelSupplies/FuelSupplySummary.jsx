@@ -112,7 +112,7 @@ export const FuelSupplySummary = ({ data }) => {
   )
 
   const getRowId = (params) => {
-    return params.data.fuelSupplyId
+    return params.data.fuelSupplyId.toString()
   }
 
   const handleGridKey = () => {

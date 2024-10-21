@@ -14,6 +14,7 @@ from lcfs.web.api.compliance_report.constants import (
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
+    FORMATS,
 )
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
@@ -82,7 +83,7 @@ class ComplianceReportSummaryService:
                 if not existing_element:
                     existing_element = ComplianceReportSummaryRowSchema(
                         line=str(line),
-                        format=None,
+                        format=FORMATS.NUMBER,
                         description=(
                             RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)][
                                 "description"
@@ -126,7 +127,7 @@ class ComplianceReportSummaryService:
                 summary.low_carbon_fuel_target_summary.append(
                     ComplianceReportSummaryRowSchema(
                         line=str(line),
-                        format=None,
+                        format=FORMATS.NUMBER,
                         description=(
                             LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)][
                                 "description"
@@ -160,7 +161,7 @@ class ComplianceReportSummaryService:
                 if not existing_element:
                     existing_element = ComplianceReportSummaryRowSchema(
                         line=str(line),
-                        format="currency",
+                        format=FORMATS.CURRENCY,
                         description=(
                             NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[str(line)][
                                 "description"
@@ -538,7 +539,9 @@ class ComplianceReportSummaryService:
                 total_value=values.get("gasoline", 0)
                 + values.get("diesel", 0)
                 + values.get("jet_fuel", 0),
-                format="currency" if (str(line) == "11") else None,
+                format=(
+                    FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER
+                ),
             )
             for line, values in summary_lines.items()
         ]
@@ -627,7 +630,9 @@ class ComplianceReportSummaryService:
                 ),
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=values.get("value", 0),
-                format="currency" if (str(line) == "21") else None,
+                format=(
+                    FORMATS.CURRENCY if (str(line) == "21") else FORMATS.NUMBER
+                ),
             )
             for line, values in low_carbon_summary_lines.items()
         ]
@@ -663,7 +668,7 @@ class ComplianceReportSummaryService:
                 diesel=values.get("diesel", 0),
                 jet_fuel=values.get("jet_fuel", 0),
                 total_value=values.get("total_value", 0),
-                format="currency",
+                format=FORMATS.CURRENCY,
             )
             for line, values in non_compliance_summary_lines.items()
         ]
