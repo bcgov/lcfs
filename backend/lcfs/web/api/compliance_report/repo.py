@@ -67,16 +67,9 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
-                # Normalize the status value by making it lowercase and replacing spaces with underscores
-                normalized_value = filter_value.replace(" ", "_").lower()
-
-                # Match enum values without case-sensitivity
-                matching_enum_value = None
-                for enum_val in ComplianceReportStatusEnum:
-                    if enum_val.name.lower() == normalized_value:
-                        matching_enum_value = enum_val
-                        break
-                filter_value = matching_enum_value
+                normalized_value = filter_value.lower()
+                enum_value_map = {enum_val.value.lower(): enum_val for enum_val in ComplianceReportStatusEnum}
+                filter_value = enum_value_map.get(normalized_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
