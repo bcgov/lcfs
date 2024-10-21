@@ -59,7 +59,7 @@ async def test_create_transfer_success(transfer_repo):
         ),
         agreement_date=date.today(),
         quantity=1,
-        price_per_unit=1,
+        price_per_unit=1.99,
         current_status=TransferStatus(transfer_status_id=1, status="status"),
     )
 
@@ -105,7 +105,7 @@ async def test_update_transfer_success(transfer_repo):
         ),
         agreement_date=date.today(),
         quantity=1,
-        price_per_unit=1,
+        price_per_unit=2.75,
         current_status=TransferStatus(transfer_status_id=1, status="status"),
     )
 
