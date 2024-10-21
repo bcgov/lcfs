@@ -1,6 +1,7 @@
 from typing import Any, List, Optional
+from enum import Enum
 from typing_extensions import deprecated
-from sqlalchemy import String, and_, cast, Date, func
+from sqlalchemy import and_, cast, Date, func, String
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
@@ -153,6 +154,14 @@ def get_field_for_filter(model, field):
             detail=f"Failed to apply filter conditions",
         )
 
+def get_enum_value(enum_class, filter_value):
+    # Normalize both the filter value and enum names to lowercase
+    normalized_filter_value = filter_value.strip().replace(" ", "_").lower()
+    for enum_member in enum_class:
+        if enum_member.name.lower() == normalized_filter_value:
+            return enum_member
+    raise AttributeError(f"{filter_value} not found in {enum_class}")
+
 
 def apply_text_filter_conditions(field, filter_value, filter_option):
     """
@@ -163,15 +172,23 @@ def apply_text_filter_conditions(field, filter_value, filter_option):
        filter_value: The value to filter by
        filter_option: The filtering operation (equals, contains, etc)
     """
+    # Apply text filtering with case and space insensitivity
+    lower_no_space_field = func.lower(func.replace(cast(field, String), " ", ""))
+    lower_no_space_filter_value = (
+        filter_value.name.replace(" ", "").lower()
+        if isinstance(filter_value, Enum)
+        else str(filter_value).replace(" ", "").lower()
+    )
+
     text_filter_mapping = {
         "true": field.is_(True),
         "false": field.is_(False),
-        "contains": cast(field, String).ilike(f"%{filter_value}%"),
-        "notContains": field.notlike(f"%{filter_value}%"),
-        "equals": field == filter_value,
-        "notEqual": field != filter_value,
-        "startsWith": field.ilike(f"{filter_value}%"),
-        "endsWith": field.ilike(f"%{filter_value}%"),
+        "contains": lower_no_space_field.like(f"%{lower_no_space_filter_value}%"),
+        "notContains": lower_no_space_field.notlike(f"%{lower_no_space_filter_value}%"),
+        "equals": lower_no_space_field == lower_no_space_filter_value,
+        "notEqual": lower_no_space_field != lower_no_space_filter_value,
+        "startsWith": lower_no_space_field.like(f"{lower_no_space_filter_value}%"),
+        "endsWith": lower_no_space_field.like(f"%{lower_no_space_filter_value}"),
     }
 
     return text_filter_mapping.get(filter_option)

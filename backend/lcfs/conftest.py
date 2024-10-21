@@ -1,18 +1,16 @@
+import logging
+import subprocess
+import warnings
 from typing import Any, AsyncGenerator, List, Callable
 
 import pytest
-import warnings
-import subprocess
-import logging
 from fakeredis import FakeServer, aioredis
+from fakeredis.aioredis import FakeConnection
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-from starlette.authentication import SimpleUser, AuthCredentials, AuthenticationBackend
-from starlette.middleware.authentication import AuthenticationMiddleware
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
 from httpx import AsyncClient
-from fakeredis.aioredis import FakeConnection
 from redis.asyncio import ConnectionPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -20,20 +18,20 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from starlette.authentication import AuthCredentials, AuthenticationBackend
+from starlette.middleware.authentication import AuthenticationMiddleware
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.user.Role import Role
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.UserRole import UserRole
+from lcfs.db.seeders.seed_database import seed_database
 from lcfs.db.utils import create_test_database, drop_test_database
 from lcfs.services.redis.dependency import get_redis_pool
 from lcfs.settings import settings
 from lcfs.web.application import get_app
-from lcfs.db.seeders.seed_database import seed_database
-from lcfs.db.models.user.Role import RoleEnum
-from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.db.models.user.UserRole import UserRole
-from lcfs.db.models.user.Role import Role
-from lcfs.db.models.organization.Organization import Organization
-
-logging.getLogger("faker").setLevel(logging.INFO)
 
 
 @pytest.fixture(scope="session")

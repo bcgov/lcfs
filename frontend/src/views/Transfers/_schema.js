@@ -22,5 +22,11 @@ export const AddEditTransferSchema = Yup.object({
       'maxDigitsAfterDecimal',
       'Price must have 2 or fewer decimal places',
       (number) => /^\d+(\.\d{1,2})?$/.test(number)
-    )
+    ),
+  fromOrgComment: Yup.string()
+    .max(1000, 'Comment must be 1000 characters or fewer'),
+  toOrgComment: Yup.string()
+    .max(1000, 'Comment must be 1000 characters or fewer'),
+  govComment: Yup.string()
+    .max(1500, 'Comment must be 1500 characters or fewer'),
 })
