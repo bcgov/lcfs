@@ -1,11 +1,11 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
-import OrgTransactionDetails, {
+import { OrgTransactionDetails } from '@/views/Transactions/components'
+import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
-} from '@/views/Transactions/components/OrgTransactionDetails'
-import { numberFormatter, dateFormatter } from '@/utils/formatters'
+} from '@/views/Transactions/constants'
 
 // Mock translations using the useTranslation hook
 vi.mock('react-i18next', () => ({
