@@ -1,4 +1,5 @@
 from fastapi import HTTPException
+from lcfs.db.models.user.Role import RoleEnum
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -48,7 +49,7 @@ async def test_update_compliance_report_status_change(
     )
 
     # Set up mocks
-    mock_repo.get_compliance_report.return_value = mock_report
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
     mock_repo.get_compliance_report_status_by_desc.return_value = new_status
     compliance_report_update_service.handle_status_change = AsyncMock()
     mock_repo.update_compliance_report.return_value = mock_report
@@ -60,7 +61,7 @@ async def test_update_compliance_report_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report.assert_called_once_with(report_id)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, is_model=True)
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
         report_data.status
     )
@@ -92,7 +93,7 @@ async def test_update_compliance_report_no_status_change(
     )
 
     # Set up mocks
-    mock_repo.get_compliance_report.return_value = mock_report
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
     mock_repo.get_compliance_report_status_by_desc.return_value = (
         mock_report.current_status
     )
@@ -108,7 +109,7 @@ async def test_update_compliance_report_no_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report.assert_called_once_with(report_id)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, is_model=True)
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
         report_data.status
     )
@@ -131,7 +132,7 @@ async def test_update_compliance_report_not_found(
     )
 
     # Set up mocks
-    mock_repo.get_compliance_report.return_value = None
+    mock_repo.get_compliance_report_by_id.return_value = None
 
     # Call the method and check for exception
     with pytest.raises(DataNotFoundException):
@@ -139,7 +140,7 @@ async def test_update_compliance_report_not_found(
             report_id, report_data
         )
 
-    mock_repo.get_compliance_report.assert_called_once_with(report_id)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, is_model=True)
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_insufficient_permissions(
@@ -235,7 +236,7 @@ async def test_handle_submitted_status_with_existing_summary(
     # Assertions
     mock_user_has_roles.assert_called_once_with(
         compliance_report_update_service.request.user, 
-        ["SUPPLIER", "SIGNING_AUTHORITY"]
+        [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
     )
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(

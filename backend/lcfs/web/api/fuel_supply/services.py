@@ -24,7 +24,6 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 
@@ -36,11 +35,9 @@ class FuelSupplyServices:
         self,
         request: Request = None,
         repo: FuelSupplyRepository = Depends(),
-        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.request = request
         self.repo = repo
-        self.compliance_report_repo = compliance_report_repo
 
     def fuel_type_row_mapper(self, compliance_period, fuel_types, row):
         column_names = row._fields

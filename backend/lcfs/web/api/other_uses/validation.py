@@ -1,8 +1,7 @@
 from typing import List
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 from starlette import status
 
-from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.other_uses.schema import (
     OtherUsesCreateSchema,
 )
@@ -12,9 +11,7 @@ class OtherUsesValidation:
     def __init__(
         self,
         request: Request = None,
-        org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
     ):
-        self.org_repo = org_repo
         self.request = request
 
     async def validate_compliance_report_id(

@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, AsyncMock
 import pytest
 from fastapi import Request
 
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
@@ -12,17 +11,16 @@ from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
 @pytest.fixture
 def fuel_supply_validation():
     mock_fs_repo = MagicMock(spec=FuelSupplyRepository)
-    mock_report_repo = MagicMock(spec=ComplianceReportRepository)
     request = MagicMock(spec=Request)
     validation = FuelSupplyValidation(
-        request=request, fs_repo=mock_fs_repo, report_repo=mock_report_repo
+        request=request, fs_repo=mock_fs_repo
     )
-    return validation, mock_fs_repo, mock_report_repo
+    return validation, mock_fs_repo
 
 
 @pytest.mark.anyio
 async def test_check_duplicate(fuel_supply_validation):
-    validation, mock_fs_repo, _ = fuel_supply_validation
+    validation, mock_fs_repo = fuel_supply_validation
     fuel_supply_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
         fuel_type_id=1,

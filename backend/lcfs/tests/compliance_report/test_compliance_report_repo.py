@@ -486,7 +486,7 @@ async def test_get_compliance_report_success(
 ):
 
     report = await compliance_report_repo.get_compliance_report_by_id(
-        compliance_report_id=compliance_reports[0].compliance_report_id, is_model=True
+        report_id=compliance_reports[0].compliance_report_id, is_model=True
     )
     assert isinstance(report, ComplianceReport)
     assert report.compliance_report_id == compliance_reports[0].compliance_report_id
@@ -496,7 +496,7 @@ async def test_get_compliance_report_success(
 async def test_get_compliance_report_not_found(compliance_report_repo):
 
     report = await compliance_report_repo.get_compliance_report_by_id(
-        compliance_report_id=1000, is_model=True
+        report_id=1000, is_model=True
     )
 
     assert report == None
