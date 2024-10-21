@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAdminAdjustment } from '@/hooks/useAdminAdjustment'
 import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import Loading from '@/components/Loading'
-import BCAlert from '@/components/BCAlert'
+import { FloatingAlert } from '@/components/BCAlert'
+import BCTypography from '@/components/BCTypography'
 
 // Constants for transaction types
 export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
@@ -18,6 +19,7 @@ export const ViewOrgTransaction = () => {
     'initiativeagreement',
     'transaction'
   ])
+  const alertRef = useRef()
 
   // Get transaction ID from URL parameters
   const { transactionId } = useParams()
@@ -47,7 +49,8 @@ export const ViewOrgTransaction = () => {
   const {
     data: transactionData,
     isLoading: isTransactionDataLoading,
-    isError: isLoadingError
+    isError: isLoadingError,
+    error
   } = transactionDataHook(transactionId, {
     enabled: !!transactionId && !!transactionType,
     retry: false,
@@ -56,6 +59,12 @@ export const ViewOrgTransaction = () => {
     keepPreviousData: false
   })
 
+  useEffect(() => {
+    if (isLoadingError) {
+      alertRef.current?.triggerAlert({ message: error.response?.data?.detail || error.message, severity: 'error' })
+    }
+  }, [isLoadingError, error])
+
   // Memoized function to render transaction details based on data fetch status and type
   const renderTransactionDetails = useMemo(() => {
     if (isTransactionDataLoading) {
@@ -63,11 +72,13 @@ export const ViewOrgTransaction = () => {
     }
 
     if (isLoadingError) {
-      return (
-        <BCAlert severity="error" dismissible={true}>
-          {t(`${transactionType}:actionMsgs.errorRetrieval`)}
-        </BCAlert>
-      )
+      return <>
+        <FloatingAlert
+          ref={alertRef}
+          data-test="alert-box"
+          delay={10000}
+        /><BCTypography color="error">{t(`${transactionType}:actionMsgs.errorRetrieval`)}</BCTypography>
+      </>
     }
 
     if (!transactionData) {
