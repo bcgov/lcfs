@@ -78,6 +78,11 @@ class OrganizationValidation:
     async def create_compliance_report(
         self, organization_id, report_data: ComplianceReportCreateSchema
     ):
+        if self.request.user.organization.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Validation for authorization failed.",
+            )
         # Before creating ensure that there isn't any existing report for the given compliance period.
         period = await self.report_repo.get_compliance_period(
             report_data.compliance_period

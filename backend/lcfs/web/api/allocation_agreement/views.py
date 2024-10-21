@@ -17,6 +17,7 @@ from fastapi import (
 from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
@@ -24,15 +25,12 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementSchema,
     AllocationAgreementListSchema,
-    #     AllocationAgreementTableOptionsSchema,
-    ComplianceReportRequestSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
-    #     AllocationAgreementListSchema,
     AllocationAgreementAllSchema,
     OrganizationDetailsSchema,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
 from lcfs.web.api.allocation_agreement.validation import AllocationAgreementValidation
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -66,8 +64,10 @@ async def get_allocation_agreements(
     request_data: ComplianceReportRequestSchema = Body(...),
     response: Response = None,
     service: AllocationAgreementServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of allocation agreements for a compliance report"""
+    await report_validate.validate_organization_access(request_data.compliance_report_id)
     return await service.get_allocation_agreements(request_data.compliance_report_id)
 
 
@@ -81,6 +81,7 @@ async def get_allocation_agreements_paginated(
     request: Request,
     request_data: PaginatedAllocationAgreementRequestSchema = Body(...),
     service: AllocationAgreementServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> AllocationAgreementListSchema:
     pagination = PaginationRequestSchema(
         page=request_data.page,
@@ -89,6 +90,7 @@ async def get_allocation_agreements_paginated(
         filters=request_data.filters,
     )
     compliance_report_id = request_data.compliance_report_id
+    await report_validate.validate_organization_access(compliance_report_id)
     return await service.get_allocation_agreements_paginated(
         pagination, compliance_report_id
     )
@@ -106,13 +108,14 @@ async def save_allocation_agreements_row(
     request: Request,
     request_data: AllocationAgreementCreateSchema = Body(...),
     service: AllocationAgreementServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
     validate: AllocationAgreementValidation = Depends(),
 ):
     """Endpoint to save a single allocation agreements row"""
     compliance_report_id = request_data.compliance_report_id
     allocation_agreement_id: Optional[int] = request_data.allocation_agreement_id
 
-    await validate.validate_organization_access(compliance_report_id)
+    await report_validate.validate_organization_access(compliance_report_id)
 
     if request_data.deleted:
         # Delete existing Allocation agreement

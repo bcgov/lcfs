@@ -735,7 +735,7 @@ class ComplianceReportSummaryService:
             original_report_id = report.original_report_id
         else:
             original_report_id = report_id
-            report = await self.repo.get_compliance_report(report_id)
+            report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
             if not report:
                 raise ValueError("Compliance report not found")
 
@@ -783,7 +783,7 @@ class ComplianceReportSummaryService:
             original_report_id = report.original_report_id
         else:
             original_report_id = report_id
-            report = await self.repo.get_compliance_report(report_id)
+            report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
             if not report:
                 raise ValueError("Compliance report not found")
 
