@@ -1,5 +1,4 @@
-import enum
-from sqlalchemy import Column, Integer, Float, ForeignKey, Enum, String
+from sqlalchemy import Column, Integer, ForeignKey, Enum, String, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 from lcfs.db.base import BaseModel, Auditable
@@ -58,16 +57,26 @@ class FuelSupply(BaseModel, Auditable):
     compliance_units = Column(
         Integer, nullable=True, comment="Compliance units for the fuel supply"
     )
-    target_ci = Column(Float, nullable=True, comment="Target CI for the fuel supply")
-    ci_of_fuel = Column(Float, nullable=True, comment="CI of fuel for the fuel supply")
+    target_ci = Column(
+        Numeric(10, 2), nullable=True, comment="Target CI for the fuel supply"
+    )
+    ci_of_fuel = Column(
+        Numeric(10, 2), nullable=True, comment="CI of fuel for the fuel supply"
+    )
     energy_density = Column(
-        Float, nullable=True, comment="Energy density of the fuel supplied"
+        Numeric(10, 2), nullable=True, comment="Energy density of the fuel supplied"
     )
     eer = Column(
-        Float, nullable=True, comment="Energy effectiveness ratio of the fuel supplied"
+        Numeric(10, 2),
+        nullable=True,
+        comment="Energy effectiveness ratio of the fuel supplied",
     )
-    energy = Column(Float, nullable=True, comment="Energy content of the fuel supplied")
-    fuel_type_other = Column(String(1000), nullable=True, comment="Other fuel type is one provided")
+    energy = Column(
+        Integer, nullable=True, comment="Energy content of the fuel supplied"
+    )
+    fuel_type_other = Column(
+        String(1000), nullable=True, comment="Other fuel type is one provided"
+    )
 
     # relational columns
     fuel_category_id = Column(

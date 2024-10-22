@@ -371,23 +371,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    valueGetter: (params) => {
-      if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-          ?.fuelCodeCarbonIntensity
-      } else {
-        return (
-          (optionsData &&
-            optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            )?.defaultCarbonIntensity) ||
-          0
-        )
-      }
-    }
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'energyDensity',
