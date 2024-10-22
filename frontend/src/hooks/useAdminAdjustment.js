@@ -1,6 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { ADMIN_ADJUSTMENT } from '@/views/Transactions/AddEditViewTransaction'
+import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useAdminAdjustment = (adminAdjustmentID, options) => {

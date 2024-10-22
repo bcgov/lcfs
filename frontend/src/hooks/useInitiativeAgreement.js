@@ -1,6 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { INITIATIVE_AGREEMENT } from '@/views/Transactions/AddEditViewTransaction'
+import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useInitiativeAgreement = (initiativeAgreementID, options) => {
