@@ -58,9 +58,7 @@ class ComplianceReportSummaryService:
         summary = ComplianceReportSummarySchema(
             summary_id=summary_obj.summary_id,
             compliance_report_id=summary_obj.compliance_report_id,
-            version=summary_obj.version,
             is_locked=summary_obj.is_locked,
-            supplemental_report_id=summary_obj.supplemental_report_id,
             quarter=summary_obj.quarter,
             total_non_compliance_penalty_payable=summary_obj.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=[],
@@ -367,9 +365,7 @@ class ComplianceReportSummaryService:
         summary = ComplianceReportSummarySchema(
             summary_id=summary_model.summary_id,
             compliance_report_id=compliance_report.compliance_report_id,
-            version=summary_model.version,
             is_locked=summary_model.is_locked,
-            supplemental_report_id=summary_model.supplemental_report_id,
             quarter=summary_model.quarter,
             total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=renewable_fuel_target_summary,
@@ -725,28 +721,17 @@ class ComplianceReportSummaryService:
         return int(compliance_units_sum)
 
     @service_handler
-    async def get_effective_fuel_supplies(
-        self, report_id: int, is_supplemental: bool = False
-    ):
-        if is_supplemental:
-            report = await self.repo.get_supplemental_report(report_id)
-            if not report:
-                raise ValueError("Supplemental report not found")
-            original_report_id = report.original_report_id
-        else:
-            original_report_id = report_id
-            report = await self.repo.get_compliance_report(report_id)
-            if not report:
-                raise ValueError("Compliance report not found")
+    async def get_effective_fuel_supplies(self, report_id: int):
+        report = await self.repo.get_compliance_report(report_id)
+        if not report:
+            raise ValueError("Compliance report not found")
 
         # Get all supplemental reports in order
-        supplemental_reports = await self.repo.get_supplemental_reports(
-            original_report_id
-        )
+        supplemental_reports = report.supplemental_reports
 
         # Start with the original report's fuel supplies
         original_supplies = await self.fuel_supply_repo.get_fuel_supplies(
-            original_report_id
+            report.original_report_id
         )
 
         effective_supplies = {
@@ -754,9 +739,9 @@ class ComplianceReportSummaryService:
         }
 
         # Apply changes from each supplemental report up to the desired version
-        for supp_report in supplemental_reports:
+        for report in supplemental_reports:
             supp_supplies = await self.fuel_supply_repo.get_fuel_supplies(
-                supp_report.supplemental_report_id, is_supplemental=True
+                report.compliance_report_id
             )
 
             for supply in supp_supplies:
@@ -767,34 +752,22 @@ class ComplianceReportSummaryService:
                 else:  # CREATE
                     effective_supplies[supply.fuel_supply_id] = supply
 
-            if is_supplemental and supp_report.supplemental_report_id == report_id:
-                break
-
         return list(effective_supplies.values())
 
     @service_handler
     async def get_effective_fuel_exports(
         self, report_id: int, is_supplemental: bool = False
     ):
-        if is_supplemental:
-            report = await self.repo.get_supplemental_report(report_id)
-            if not report:
-                raise ValueError("Supplemental report not found")
-            original_report_id = report.original_report_id
-        else:
-            original_report_id = report_id
-            report = await self.repo.get_compliance_report(report_id)
-            if not report:
-                raise ValueError("Compliance report not found")
+        report = await self.repo.get_compliance_report(report_id)
+        if not report:
+            raise ValueError("Compliance report not found")
 
         # Get all supplemental reports in order
-        supplemental_reports = await self.repo.get_supplemental_reports(
-            original_report_id
-        )
+        supplemental_reports = report.supplemental_reports
 
         # Start with the original report's fuel exports
         original_exports = await self.fuel_export_repo.get_fuel_exports(
-            original_report_id
+            report.original_report_id
         )
 
         effective_exports = {
@@ -802,9 +775,9 @@ class ComplianceReportSummaryService:
         }
 
         # Apply changes from each supplemental report up to the desired version
-        for supp_report in supplemental_reports:
+        for report in supplemental_reports:
             supp_supplies = await self.fuel_export_repo.get_fuel_exports(
-                supp_report.supplemental_report_id, is_supplemental=True
+                report.compliance_report_id
             )
 
             for export in supp_supplies:
@@ -814,9 +787,6 @@ class ComplianceReportSummaryService:
                     effective_exports[export.previous_fuel_export_id] = export
                 else:  # CREATE
                     effective_exports[export.fuel_export_id] = export
-
-            if is_supplemental and supp_report.supplemental_report_id == report_id:
-                break
 
         return list(effective_exports.values())
 

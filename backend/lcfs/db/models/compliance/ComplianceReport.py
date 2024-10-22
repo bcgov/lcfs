@@ -4,9 +4,14 @@ from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 
 
-class ReportType(enum.Enum):
+class ReportingFrequency(enum.Enum):
     ANNUAL = "Annual"
     QUARTERLY = "Quarterly"
+
+
+class SupplementalInitiatorType(enum.Enum):
+    SUPPLIER_INITIATED_SUPPLEMENTAL = "Supplier Initiated"
+    GOVERNMENT_INITIATED_REASSESSMENT = "Government Initiated"
 
 
 class Quarter(enum.Enum):
@@ -28,6 +33,7 @@ class QuantityUnitsEnum(enum.Enum):
     Kilowatt_hour = "kWh"
     Cubic_metres = "m3"
 
+
 # Association table for
 compliance_report_document_association = Table(
     "compliance_report_document_association",
@@ -35,9 +41,7 @@ compliance_report_document_association = Table(
     Column(
         "compliance_report_id",
         Integer,
-        ForeignKey(
-            "compliance_report.compliance_report_id", ondelete="CASCADE"
-        ),
+        ForeignKey("compliance_report.compliance_report_id", ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
@@ -47,6 +51,7 @@ compliance_report_document_association = Table(
         primary_key=True,
     ),
 )
+
 
 class ComplianceReport(BaseModel, Auditable):
     __tablename__ = "compliance_report"
@@ -85,7 +90,34 @@ class ComplianceReport(BaseModel, Auditable):
         comment="Identifier for the transaction",
     )
 
-    report_type = Column(Enum(ReportType), nullable=False, default=ReportType.ANNUAL)
+    # Supplemental Reporting Fields
+    original_report_id = Column(
+        Integer,
+        ForeignKey("compliance_report.compliance_report_id"),
+        nullable=False,
+        comment="Foreign key to the original compliance report",
+    )
+    previous_report_id = Column(
+        Integer,
+        ForeignKey("compliance_report.compliance_report_id"),
+        nullable=True,
+        comment="Foreign key to the previous compliance report",
+    )
+    chain_index = Column(
+        Integer,
+        nullable=False,
+        default=1,
+        comment="Position of the report in the chain of related reports",
+    )
+    supplemental_initiator = Column(
+        Enum(SupplementalInitiatorType),
+        nullable=True,
+        comment="Whether supplier or gov initiated the supplemental.",
+    )
+
+    reporting_frequency = Column(
+        Enum(ReportingFrequency), nullable=False, default=ReportingFrequency.ANNUAL
+    )
     nickname = Column(
         String, nullable=True, comment="Nickname for the compliance report"
     )
@@ -102,11 +134,6 @@ class ComplianceReport(BaseModel, Auditable):
     transaction = relationship("Transaction")
 
     # Tracking relationships
-    supplemental_reports = relationship(
-        "SupplementalReport",
-        back_populates="original_report",
-        order_by="SupplementalReport.version",
-    )
     summary = relationship(
         "ComplianceReportSummary", back_populates="compliance_report", uselist=False
     )
@@ -135,6 +162,28 @@ class ComplianceReport(BaseModel, Auditable):
         "Document",
         secondary=compliance_report_document_association,
         back_populates="compliance_reports",
+    )
+
+    # Original Report: Always the first in the chain
+    original_report = relationship(
+        "ComplianceReport",
+        remote_side=[compliance_report_id],
+        back_populates="supplemental_reports",
+        foreign_keys=[original_report_id],
+    )
+    # Previous Report: Points to the immediate previous report
+    previous_report = relationship(
+        "ComplianceReport",
+        remote_side=[compliance_report_id],
+        foreign_keys=[previous_report_id],
+    )
+    # Supplemental Reports: All reports after the original
+    supplemental_reports = relationship(
+        "ComplianceReport",
+        back_populates="original_report",
+        foreign_keys=[original_report_id],
+        primaryjoin="ComplianceReport.original_report_id == ComplianceReport.compliance_report_id",
+        order_by="ComplianceReport.chain_index",
     )
 
     def __repr__(self):

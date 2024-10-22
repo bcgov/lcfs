@@ -3,7 +3,7 @@ from datetime import datetime
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReport,
-    SupplementalReport,
+    ComplianceReport,
     ComplianceReportStatus,
     ComplianceReportHistory,
     ComplianceReportSummary,
@@ -156,14 +156,14 @@ async def compliance_reports(
             compliance_report_id=998,
             compliance_period_id=compliance_periods[0].compliance_period_id,
             organization_id=organizations[0].organization_id,
-            report_type="ANNUAL",
+            reporting_frequency="ANNUAL",
             current_status_id=compliance_report_statuses[0].compliance_report_status_id,
         ),
         ComplianceReport(
             compliance_report_id=999,
             compliance_period_id=compliance_periods[1].compliance_period_id,
             organization_id=organizations[1].organization_id,
-            report_type="ANNUAL",
+            reporting_frequency="ANNUAL",
             current_status_id=compliance_report_statuses[1].compliance_report_status_id,
         ),
     ]
@@ -199,41 +199,41 @@ async def supplemental_reports(
     compliance_periods,
 ):
     reports = [
-        SupplementalReport(
-            supplemental_report_id=996,
+        ComplianceReport(
+            compliance_report_id=996,
             original_report_id=compliance_reports[0].compliance_report_id,
             compliance_period_id=compliance_periods[0].compliance_period_id,
             organization_id=organizations[0].organization_id,
             current_status_id=compliance_report_statuses[0].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            chain_index=999,
+            reporting_frequency="SUPPLEMENTAL",
         ),
-        SupplementalReport(
-            supplemental_report_id=997,
+        ComplianceReport(
+            compliance_report_id=997,
             original_report_id=compliance_reports[0].compliance_report_id,
             compliance_period_id=compliance_periods[0].compliance_period_id,
             organization_id=organizations[0].organization_id,
             current_status_id=compliance_report_statuses[1].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            chain_index=999,
+            reporting_frequency="SUPPLEMENTAL",
         ),
-        SupplementalReport(
-            supplemental_report_id=998,
+        ComplianceReport(
+            compliance_report_id=998,
             original_report_id=compliance_reports[1].compliance_report_id,
             compliance_period_id=compliance_periods[1].compliance_period_id,
             organization_id=organizations[1].organization_id,
             current_status_id=compliance_report_statuses[0].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            chain_index=999,
+            reporting_frequency="SUPPLEMENTAL",
         ),
-        SupplementalReport(
-            supplemental_report_id=999,
+        ComplianceReport(
+            compliance_report_id=999,
             original_report_id=compliance_reports[1].compliance_report_id,
             compliance_period_id=compliance_periods[1].compliance_period_id,
             organization_id=organizations[1].organization_id,
             current_status_id=compliance_report_statuses[1].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            chain_index=999,
+            reporting_frequency="SUPPLEMENTAL",
         ),
     ]
     dbsession.add_all(reports)
@@ -251,22 +251,18 @@ async def compliance_report_summaries(
         ComplianceReportSummary(
             summary_id=996,
             compliance_report_id=compliance_reports[0].compliance_report_id,
-            version=999,
         ),
         ComplianceReportSummary(
             summary_id=997,
             compliance_report_id=compliance_reports[1].compliance_report_id,
-            version=999,
         ),
         ComplianceReportSummary(
             summary_id=998,
-            supplemental_report_id=supplemental_reports[0].supplemental_report_id,
-            version=999,
+            compliance_report_id=supplemental_reports[0].compliance_report_id,
         ),
         ComplianceReportSummary(
             summary_id=999,
-            supplemental_report_id=supplemental_reports[1].supplemental_report_id,
-            version=999,
+            compliance_report_id=supplemental_reports[1].compliance_report_id,
         ),
     ]
 
@@ -506,20 +502,18 @@ async def test_get_compliance_report_not_found(compliance_report_repo):
 async def test_get_supplemental_report_success(
     compliance_report_repo, supplemental_reports
 ):
-    report = await compliance_report_repo.get_supplemental_report(
-        supplemental_report_id=supplemental_reports[0].supplemental_report_id
+    report = await compliance_report_repo.get_compliance_report(
+        compliance_report_id=supplemental_reports[0].compliance_report_id
     )
 
-    assert isinstance(report, SupplementalReport)
-    assert (
-        report.supplemental_report_id == supplemental_reports[0].supplemental_report_id
-    )
+    assert isinstance(report, ComplianceReport)
+    assert report.compliance_report_id == supplemental_reports[0].compliance_report_id
 
 
 @pytest.mark.anyio
 async def test_get_supplemental_report_not_found(compliance_report_repo):
     report = await compliance_report_repo.get_supplemental_report(
-        supplemental_report_id=1000
+        compliance_report_id=1000
     )
 
     assert report == None
@@ -529,17 +523,17 @@ async def test_get_supplemental_report_not_found(compliance_report_repo):
 async def test_get_supplemental_reports_success(
     compliance_report_repo, supplemental_reports
 ):
-    reports = await compliance_report_repo.get_supplemental_reports(
+    reports = await compliance_report_repo.get_compliance_reports(
         original_report_id=supplemental_reports[0].original_report_id
     )
 
     assert len(reports) == 2
-    assert isinstance(reports[0], SupplementalReport)
+    assert isinstance(reports[0], ComplianceReport)
 
 
 @pytest.mark.anyio
 async def test_get_supplemental_reports_not_found(compliance_report_repo):
-    reports = await compliance_report_repo.get_supplemental_reports(
+    reports = await compliance_report_repo.get_compliance_reports(
         original_report_id=1000
     )
 
@@ -881,14 +875,14 @@ async def test_get_summary_by_report_id_success_is_supplemental(
 ):
 
     summary = await compliance_report_repo.get_summary_by_report_id(
-        report_id=compliance_report_summaries[0].supplemental_report_id,
+        report_id=compliance_report_summaries[0].compliance_report_id,
         is_supplemental=True,
     )
 
     assert isinstance(summary, ComplianceReportSummary)
     assert (
-        summary.supplemental_report_id
-        == compliance_report_summaries[0].supplemental_report_id
+        summary.compliance_report_id
+        == compliance_report_summaries[0].compliance_report_id
     )
 
 

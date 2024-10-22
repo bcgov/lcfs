@@ -256,9 +256,7 @@ class FuelSupplyRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_fuel_supplies(
-        self, report_id: int, is_supplemental: bool = False
-    ) -> List[FuelSupply]:
+    async def get_fuel_supplies(self, report_id: int) -> List[FuelSupply]:
         """
         Retrieve the list of fuel supplies for a given report (compliance or supplemental).
         """
@@ -271,10 +269,7 @@ class FuelSupplyRepository:
             joinedload(FuelSupply.end_use_type),
         )
 
-        if is_supplemental:
-            query = query.where(FuelSupply.supplemental_report_id == report_id)
-        else:
-            query = query.where(FuelSupply.compliance_report_id == report_id)
+        query = query.where(FuelSupply.compliance_report_id == report_id)
 
         result = await self.db.execute(query)
         return result.scalars().all()

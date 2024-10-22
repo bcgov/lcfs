@@ -27,12 +27,6 @@ class FuelExport(BaseModel, Auditable):
         nullable=False,
         comment="Foreign key to the compliance report",
     )
-    supplemental_report_id = Column(
-        Integer,
-        ForeignKey("supplemental_report.supplemental_report_id"),
-        nullable=True,
-        comment="Foreign key to the supplemental report",
-    )
     previous_fuel_export_id = Column(
         Integer,
         ForeignKey("fuel_export.fuel_export_id"),
@@ -107,9 +101,6 @@ class FuelExport(BaseModel, Auditable):
     )
 
     compliance_report = relationship("ComplianceReport", back_populates="fuel_exports")
-    supplemental_report = relationship(
-        "SupplementalReport", back_populates="fuel_exports"
-    )
     previous_fuel_export = relationship("FuelExport", remote_side=[fuel_export_id])
 
     fuel_category = relationship("FuelCategory")

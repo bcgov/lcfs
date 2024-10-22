@@ -1,5 +1,6 @@
 from typing import Optional, List, Union
 from datetime import datetime, date
+from enum import Enum
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
@@ -13,6 +14,11 @@ Update - attributes that can be updated - used at PUT requests
 InDB - attributes present on any resource coming out of the database
 Public - attributes present on public facing resources being returned from GET, POST, and PUT requests
 """
+
+
+class SupplementalInitiatorType(str, Enum):
+    SUPPLIER_INITIATED_SUPPLEMENTAL = "Supplier Initiated"
+    GOVERNMENT_INITIATED_REASSESSMENT = "Government Initiated"
 
 
 class CompliancePeriodSchema(BaseSchema):
@@ -44,14 +50,17 @@ class ComplianceReportStatusSchema(BaseSchema):
 class SnapshotSchema(BaseSchema):
     pass
 
+
 class ComplianceReportOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
+
 
 class ComplianceReportUserSchema(BaseSchema):
     first_name: str
     last_name: str
     organization: Optional[ComplianceReportOrganizationSchema] = None
+
 
 class ComplianceReportHistorySchema(BaseSchema):
     compliance_report_history_id: int
@@ -114,6 +123,10 @@ class FinalSupplyEquipmentSchema(BaseSchema):
 
 class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
+    original_report_id: int
+    previous_report_id: Optional[int]
+    chain_index: int
+    supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
     compliance_period: CompliancePeriodSchema
     organization_id: int
@@ -158,7 +171,6 @@ class ComplianceReportSummarySchema(BaseSchema):
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: Optional[int] = None
     compliance_report_id: Optional[int] = None
-    supplemental_report_id: Optional[int] = None
     version: Optional[int] = None
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None

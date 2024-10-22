@@ -28,6 +28,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.supplemental_service import (
+    SupplementalReportService,
+)
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
@@ -139,3 +142,20 @@ async def update_compliance_report(
     """Update an existing compliance report."""
     # TODO role validation for different status updates need to be added here
     return await update_service.update_compliance_report(report_id, report_data)
+
+
+@router.post(
+    "/{report_id}/supplemental",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def create_supplemental_report(
+    request: Request,
+    report_id: int,
+    service: SupplementalReportService = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Create a supplemental compliance report.
+    """
+    return await service.create_supplemental_report(report_id)

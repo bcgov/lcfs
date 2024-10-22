@@ -21,8 +21,10 @@ from lcfs.web.api.base import (
     get_enum_value,
 )
 from lcfs.db.models.compliance import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport, ReportType
-from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    ReportingFrequency,
+)
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -72,8 +74,12 @@ class ComplianceReportRepository:
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReport, "report_type")
-                filter_value = ReportType.ANNUAL.value if filter_value.lower().startswith("c") else ReportType.QUARTERLY.value
+                field = get_field_for_filter(ComplianceReport, "reporting_frequency")
+                filter_value = (
+                    ReportingFrequency.ANNUAL.value
+                    if filter_value.lower().startswith("c")
+                    else ReportingFrequency.QUARTERLY.value
+                )
             elif filter.field == "compliance_period":
                 field = get_field_for_filter(CompliancePeriod, "description")
             else:
@@ -161,37 +167,11 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.user_profile
                 ),
-                joinedload(ComplianceReport.transaction)
+                joinedload(ComplianceReport.transaction),
+                joinedload(ComplianceReport.supplemental_reports),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-
-    @repo_handler
-    async def get_supplemental_report(
-        self, supplemental_report_id: int
-    ) -> Optional[SupplementalReport]:
-        """
-        Identify and retrieve the supplemental report by id.
-        """
-        return await self.db.scalar(
-            select(SupplementalReport).where(
-                SupplementalReport.supplemental_report_id == supplemental_report_id
-            )
-        )
-
-    @repo_handler
-    async def get_supplemental_reports(
-        self, original_report_id: int
-    ) -> List[SupplementalReport]:
-        """
-        Identify and retrieve the supplemental reports by the original report id.
-        """
-        result = await self.db.execute(
-            select(SupplementalReport)
-            .where(SupplementalReport.original_report_id == original_report_id)
-            .order_by(SupplementalReport.create_date.asc())
-        )
-        return result.scalars().all()
 
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
@@ -309,14 +289,13 @@ class ComplianceReportRepository:
                 and_(
                     ComplianceReportHistory.compliance_report_id
                     == report.compliance_report_id,
-                    ComplianceReportHistory.status_id
-                    == report.current_status_id,
+                    ComplianceReportHistory.status_id == report.current_status_id,
                 )
             )
             .order_by(ComplianceReportHistory.create_date.desc())
         )
         return history.scalar_one_or_none()
-    
+
     @repo_handler
     async def add_compliance_report_history(self, report: ComplianceReport, user):
         """
@@ -622,25 +601,16 @@ class ComplianceReportRepository:
             elif row.line == "":  # Total row
                 summary_obj.total_non_compliance_penalty_payable = row.total_value
 
-        summary_obj.version += 1
-
         self.db.add(summary_obj)
         await self.db.flush()
         await self.db.refresh(summary_obj)
         return summary_obj
 
     @repo_handler
-    async def get_summary_by_report_id(
-        self, report_id: int, is_supplemental: bool = False
-    ) -> ComplianceReportSummary:
-        if is_supplemental:
-            query = select(ComplianceReportSummary).where(
-                ComplianceReportSummary.supplemental_report_id == report_id
-            )
-        else:
-            query = select(ComplianceReportSummary).where(
-                ComplianceReportSummary.compliance_report_id == report_id
-            )
+    async def get_summary_by_report_id(self, report_id: int) -> ComplianceReportSummary:
+        query = select(ComplianceReportSummary).where(
+            ComplianceReportSummary.compliance_report_id == report_id
+        )
 
         result = await self.db.execute(query)
         return result.scalars().first()
@@ -824,3 +794,14 @@ class ComplianceReportRepository:
             .scalars()
             .all()
         )
+
+    async def get_last_report_in_supplemental_chain(
+        self, original_report_id: int
+    ) -> Optional[ComplianceReport]:
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .where(ComplianceReport.original_report_id == original_report_id)
+            .order_by(ComplianceReport.chain_index.desc())
+            .limit(1)
+        )
+        return result.scalars().first()

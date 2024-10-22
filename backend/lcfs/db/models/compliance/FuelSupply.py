@@ -28,12 +28,6 @@ class FuelSupply(BaseModel, Auditable):
         nullable=False,
         comment="Foreign key to the compliance report",
     )
-    supplemental_report_id = Column(
-        Integer,
-        ForeignKey("supplemental_report.supplemental_report_id"),
-        nullable=True,
-        comment="Foreign key to the supplemental report",
-    )
     previous_fuel_supply_id = Column(
         Integer,
         ForeignKey("fuel_supply.fuel_supply_id"),
@@ -67,7 +61,9 @@ class FuelSupply(BaseModel, Auditable):
         Float, nullable=True, comment="Energy effectiveness ratio of the fuel supplied"
     )
     energy = Column(Float, nullable=True, comment="Energy content of the fuel supplied")
-    fuel_type_other = Column(String(1000), nullable=True, comment="Other fuel type is one provided")
+    fuel_type_other = Column(
+        String(1000), nullable=True, comment="Other fuel type is one provided"
+    )
 
     # relational columns
     fuel_category_id = Column(
@@ -108,9 +104,6 @@ class FuelSupply(BaseModel, Auditable):
     )
 
     compliance_report = relationship("ComplianceReport", back_populates="fuel_supplies")
-    supplemental_report = relationship(
-        "SupplementalReport", back_populates="fuel_supplies"
-    )
     previous_fuel_supply = relationship("FuelSupply", remote_side=[fuel_supply_id])
 
     fuel_category = relationship("FuelCategory")

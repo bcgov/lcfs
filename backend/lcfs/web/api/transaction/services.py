@@ -1,6 +1,6 @@
 import io
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Union
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
 from math import ceil
@@ -93,7 +93,7 @@ class TransactionsService:
     @service_handler
     async def get_transactions_paginated(
         self, pagination: PaginationRequestSchema = {}, organization_id: int = None
-    ) -> dict[str, list[TransactionViewSchema] | PaginationResponseSchema]:
+    ) -> Dict[str, Union[List[TransactionViewSchema], PaginationResponseSchema]]:
         """
         Fetch transactions with filters, sorting, and pagination.
         """

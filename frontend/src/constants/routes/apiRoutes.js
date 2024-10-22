@@ -39,6 +39,7 @@ export const apiRoutes = {
   updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  createSupplementalReport: '/reports/:reportID/supplemental',
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',
