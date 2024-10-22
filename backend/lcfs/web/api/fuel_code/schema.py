@@ -1,7 +1,7 @@
 from typing import Optional, List, Union
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
-from pydantic import Field, field_validator, root_validator
+from pydantic import Field, ValidationError, field_validator, model_validator
 from enum import Enum
 
 
@@ -225,7 +225,7 @@ class TableOptionsSchema(BaseSchema):
     fuel_types: List[FuelTypeSchema]
     transport_modes: List[TransportModeSchema]
     fuel_code_prefixes: List[FuelCodePrefixSchema]
-    latest_fuel_codes: List[FuelCodeSchema]
+    latest_fuel_codes: Optional[List[FuelCodeSchema]]
     field_options: FieldOptions
     fp_locations: List[FPLocationsSchema]
     facility_nameplate_capacity_units: List[FuelTypeQuantityUnitsEnumSchema]
@@ -244,7 +244,7 @@ class FuelCodeCreateSchema(BaseSchema):
     id: Optional[str] = None
     fuel_code_id: Optional[int] = None
     status: Optional[str] = None
-    prefix: Optional[str] = None
+    prefix: str
     prefix_id: Optional[int] = None
     fuel_suffix: str
     carbon_intensity: float
@@ -267,8 +267,10 @@ class FuelCodeCreateSchema(BaseSchema):
     fuel_production_facility_country: str
 
     facility_nameplate_capacity: Optional[int] = None
-    facility_nameplate_capacity_unit: Optional[FuelTypeQuantityUnitsEnumSchema] = None
-    feedstock_transport_mode: Optional[List[str]] = None
+    facility_nameplate_capacity_unit: Optional[
+        Union[FuelTypeQuantityUnitsEnumSchema, str]
+    ] = None
+    feedstock_fuel_transport_mode: Optional[List[str]] = None
     finished_fuel_transport_mode: Optional[List[str]] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
@@ -282,21 +284,20 @@ class FuelCodeCreateSchema(BaseSchema):
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
     def check_capacity_and_unit(cls, values):
-        facility_nameplate_capacity = values.get("facilityNameplateCapacity")
-        facility_nameplate_capacity_unit = values.get("facilityNameplateCapacityUnit")
+        facility_nameplate_capacity = values.get("facility_nameplate_capacity")
+        facility_nameplate_capacity_unit = values.get("facility_nameplate_capacity_unit")
 
         if facility_nameplate_capacity is None:
-            values["facilityNameplateCapacityUnit"] = None
+            values["facility_nameplate_capacity_unit"] = None
         elif (
             facility_nameplate_capacity is not None
             and facility_nameplate_capacity_unit is None
         ):
-            raise ValueError(
+            raise ValidationError(
                 "facility_nameplate_capacity_unit must be provided when facility_nameplate_capacity is not None"
             )
-
         return values
 
 
