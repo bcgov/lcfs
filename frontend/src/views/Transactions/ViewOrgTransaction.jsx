@@ -6,10 +6,10 @@ import { useInitiativeAgreement } from '@/hooks/useInitiativeAgreement'
 import { OrgTransactionDetails } from '@/views/Transactions/components'
 import Loading from '@/components/Loading'
 import BCAlert from '@/components/BCAlert'
-
-// Constants for transaction types
-export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
-export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '@/views/Transactions/constants'
 
 export const ViewOrgTransaction = () => {
   const { t } = useTranslation([
