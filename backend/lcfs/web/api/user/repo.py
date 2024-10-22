@@ -122,19 +122,19 @@ class UserRepository:
                     ]
                     # Add new role
                     user.user_roles = roles_to_keep
-                    user.user_roles.append(await self.find_user_role(new_role.name))
+                    user.user_roles.append(await self.find_user_role(new_role))
             elif (
                 new_role == RoleEnum.ADMINISTRATOR
                 and RoleEnum.ADMINISTRATOR not in existing_roles_set
             ):
                 # Add administrator role
-                user.user_roles.append(await self.find_user_role(new_role.name))
+                user.user_roles.append(await self.find_user_role(new_role))
             elif (
                 new_role == RoleEnum.GOVERNMENT
                 and RoleEnum.GOVERNMENT not in existing_roles_set
             ):
                 # Add government role
-                user.user_roles.append(await self.find_user_role(new_role.name))
+                user.user_roles.append(await self.find_user_role(new_role))
 
         if (
             RoleEnum.ADMINISTRATOR not in new_roles
@@ -161,13 +161,13 @@ class UserRepository:
                 ]
                 # Add read_only role
                 user.user_roles = roles_to_keep
-                user.user_roles.append(await self.find_user_role(new_role.name))
+                user.user_roles.append(await self.find_user_role(new_role))
             elif (
                 new_role == RoleEnum.SUPPLIER
                 and RoleEnum.SUPPLIER not in existing_roles_set
             ):
                 # Add supplier role
-                user.user_roles.append(await self.find_user_role(new_role.name))
+                user.user_roles.append(await self.find_user_role(new_role))
             elif new_role in {
                 RoleEnum.COMPLIANCE_REPORTING,
                 RoleEnum.MANAGE_USERS,
@@ -176,7 +176,7 @@ class UserRepository:
             }:
                 if new_role not in existing_roles_set:
                     # Add missing role
-                    user.user_roles.append(await self.find_user_role(new_role.name))
+                    user.user_roles.append(await self.find_user_role(new_role))
         user_roles_to_keep = [user_role for user_role in user.user_roles]
         for user_role in user.user_roles:
             if (
@@ -337,7 +337,7 @@ class UserRepository:
             role_enum for role_enum in RoleEnum if role_enum.value.lower() in roles
         ]
         # Create a set for faster membership checks
-        existing_roles_set = set(user.user_roles)
+        existing_roles_set = set(user.role_names)
 
         # Update the user object with the new data
         user.email = updated_user_profile.email
