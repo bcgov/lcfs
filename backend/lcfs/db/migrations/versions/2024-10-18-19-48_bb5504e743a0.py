@@ -1,7 +1,7 @@
 """Update 'price_per_unit' column from Integer to Numeric(10, 2).
 
 Revision ID: bb5504e743a0
-Revises: 4f25f8811872
+Revises: a731a32947dc
 Create Date: 2024-10-18 19:48:34.877657
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "bb5504e743a0"
-down_revision = "4f25f8811872"
+down_revision = "a731a32947dc"
 branch_labels = None
 depends_on = None
 
