@@ -26,7 +26,7 @@ async def test_get_compliance_periods_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_all_compliance_periods"
     ) as mock_get_all_compliance_periods:
         set_mock_user(
-            fastapi_app, [RoleEnum.GOVERNMENT.value]
+            fastapi_app, [RoleEnum.GOVERNMENT]
         )  # Set a valid role
 
         # Mock response data
@@ -84,7 +84,7 @@ async def test_get_compliance_periods_not_found(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_all_compliance_periods"
     ) as mock_get_all_compliance_periods:
         set_mock_user(
-            fastapi_app, [RoleEnum.GOVERNMENT.value]
+            fastapi_app, [RoleEnum.GOVERNMENT]
         )  # Set a valid role
 
         # Simulate an empty list response indicating no compliance periods found
@@ -110,7 +110,7 @@ async def test_get_compliance_reports_success(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_reports_paginated"
     ) as mock_get_compliance_reports_paginated:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_get_compliance_reports_paginated.return_value = (
             compliance_report_list_schema
@@ -149,7 +149,7 @@ async def test_get_compliance_reports_forbidden(
     pagination_request_schema,
 ):
     # Set a role that does not have access
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST.value])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
     url = fastapi_app.url_path_for("get_compliance_reports")
 
@@ -166,7 +166,7 @@ async def test_get_compliance_reports_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     url = fastapi_app.url_path_for("get_compliance_reports")
 
@@ -198,7 +198,7 @@ async def test_get_compliance_reports_not_found(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_reports_paginated"
     ) as mock_get_compliance_reports_paginated:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         # Simulate DataNotFoundException for no reports found
         mock_get_compliance_reports_paginated.side_effect = DataNotFoundException(
@@ -225,7 +225,7 @@ async def test_get_compliance_report_by_id_success(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
     ) as mock_get_compliance_report_by_id:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
 
@@ -248,7 +248,7 @@ async def test_get_compliance_report_by_id_forbidden(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     set_mock_user(
-        fastapi_app, [RoleEnum.ANALYST.value]
+        fastapi_app, [RoleEnum.ANALYST]
     )  # User with the wrong role
 
     url = fastapi_app.url_path_for("get_compliance_report_by_id", report_id=1)
@@ -264,7 +264,7 @@ async def test_get_compliance_report_by_id_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     url = fastapi_app.url_path_for("get_compliance_report_by_id", report_id="invalid")
 
@@ -282,7 +282,7 @@ async def test_get_compliance_report_by_id_not_found(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
     ) as mock_get_compliance_report_by_id:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         # Simulate DataNotFoundException for a non-existent report
         mock_get_compliance_report_by_id.side_effect = DataNotFoundException(
@@ -307,7 +307,7 @@ async def test_get_compliance_report_summary_success(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.calculate_compliance_report_summary"
     ) as mock_calculate_compliance_report_summary:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         mock_compliance_report_summary = compliance_report_summary_schema()
 
         mock_calculate_compliance_report_summary.return_value = (
@@ -334,7 +334,7 @@ async def test_get_compliance_report_summary_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     # Assuming 'abc' is an invalid report_id
     url = fastapi_app.url_path_for("get_compliance_report_summary", report_id="abc")
@@ -353,7 +353,7 @@ async def test_get_compliance_report_summary_not_found(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.calculate_compliance_report_summary"
     ) as mock_calculate_compliance_report_summary:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         # Simulate DataNotFoundException for a non-existent report
         mock_calculate_compliance_report_summary.side_effect = DataNotFoundException(
@@ -380,7 +380,7 @@ async def test_update_compliance_report_summary_success(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.update_compliance_report_summary"
     ) as mock_update_compliance_report_summary:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         mock_compliance_report_summary = compliance_report_summary_schema()
 
@@ -414,7 +414,7 @@ async def test_update_compliance_report_summary_forbidden(
     set_mock_user,
 ):
     set_mock_user(
-        fastapi_app, [RoleEnum.GOVERNMENT.value]
+        fastapi_app, [RoleEnum.GOVERNMENT]
     )  # User with the wrong role
 
     url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
@@ -431,7 +431,7 @@ async def test_update_compliance_report_summary_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
     payload = {"invalidField": "invalidValue"}  # Invalid payload structure
@@ -451,7 +451,7 @@ async def test_update_compliance_report_summary_not_found(
     with patch(
         "lcfs.web.api.compliance_report.summary_service.ComplianceReportSummaryService.update_compliance_report_summary"
     ) as mock_update_compliance_report_summary:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         # Simulate DataNotFoundException for a non-existent summary
         mock_update_compliance_report_summary.side_effect = DataNotFoundException(
@@ -477,7 +477,7 @@ async def test_update_compliance_report_success(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
 
@@ -509,7 +509,7 @@ async def test_update_compliance_report_forbidden(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST.value])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
     url = fastapi_app.url_path_for("update_compliance_report", report_id=1)
 
@@ -529,7 +529,7 @@ async def test_update_compliance_report_not_found(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         # Simulate that the report does not exist by raising an exception
         mock_update_compliance_report.side_effect = DataNotFoundException(
@@ -554,7 +554,7 @@ async def test_update_compliance_report_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT.value])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     url = fastapi_app.url_path_for("update_compliance_report", report_id=1)
     payload = {"invalidField": "invalidValue"}  # Invalid payload structure
@@ -562,3 +562,180 @@ async def test_update_compliance_report_invalid_payload(
     response = await client.put(url, json=payload)
 
     assert response.status_code == 422  # Unprocessable Entity (Validation Error)
+
+@pytest.mark.anyio
+async def test_update_compliance_report_draft_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Draft", "supplementalNote": "Drafting a new report"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+@pytest.mark.anyio
+async def test_update_compliance_report_submitted_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Submitted", "supplementalNote": "Submitting the report"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_recommended_by_analyst_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Recommended by analyst", "supplementalNote": "Analyst recommendation"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_recommended_by_manager_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Recommended by manager", "supplementalNote": "Manager recommendation"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )
+
+@pytest.mark.anyio
+async def test_update_compliance_report_assessed_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user_roles,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report:
+        set_mock_user_roles(fastapi_app, [RoleEnum.GOVERNMENT.value])
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_update_compliance_report.return_value = mock_compliance_report
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {"status": "Assessed", "supplementalNote": "Report has been assessed"}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+
+        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+
+        assert response.json() == expected_response
+
+        mock_update_compliance_report.assert_called_once_with(
+            1, ComplianceReportUpdateSchema(**payload)
+        )

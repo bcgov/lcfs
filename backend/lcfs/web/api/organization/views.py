@@ -263,7 +263,7 @@ async def get_compliance_reports(
 ) -> ComplianceReportListSchema:
     organization_id = request.user.organization.organization_id
     return await report_service.get_compliance_reports_paginated(
-        pagination, organization_id
+        pagination, organization_id, bceid_user = True
     )
 
 
@@ -302,4 +302,4 @@ async def get_compliance_report_by_id(
     Endpoint to get information of a user by ID
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
-    return await report_service.get_compliance_report_by_id(report_id)
+    return await report_service.get_compliance_report_by_id(report_id, bceid_user=True)

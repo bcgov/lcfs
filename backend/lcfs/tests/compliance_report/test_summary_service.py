@@ -448,9 +448,10 @@ async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
         0, mock_compliance_report_summary
     )
 
-    assert len(result) == 2
+    assert len(result) == 3
     assert result[0].total_value == 6000
     assert result[1].total_value == 0
+    assert result[2].total_value == 6000
 
 
 @pytest.mark.anyio
@@ -467,9 +468,10 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
         -2, mock_compliance_report_summary
     )
 
-    assert len(result) == 2
+    assert len(result) == 3
     assert result[0].total_value == 6000
     assert result[1].total_value == 1200
+    assert result[2].total_value == 7200
 
 
 @pytest.mark.anyio
@@ -504,9 +506,10 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
 
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    assert result[10].gasoline > 0  # Penalty should be applied due to no renewables
-    assert result[10].diesel > 0
-    assert result[10].jet_fuel > 0
+    assert result[10].gasoline == 15.0  # Penalty should be applied due to no renewables
+    assert result[10].diesel == 36.0
+    assert result[10].jet_fuel == 45.0
+    assert result[10].total_value == 96.0
 
 
 @pytest.mark.anyio

@@ -23,7 +23,7 @@ from lcfs.web.api.fuel_export.schema import (
 # get_fuel_export_table_options
 @pytest.mark.anyio
 async def test_get_fuel_export_table_options_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_export_options"
@@ -33,7 +33,7 @@ async def test_get_fuel_export_table_options_success(
 
         mock_get_fuel_export_options.return_value = mock_fuel_export_options
 
-        set_mock_user_roles(fastapi_app, [RoleEnum.ANALYST.value])
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_export_table_options")
 
@@ -49,9 +49,9 @@ async def test_get_fuel_export_table_options_success(
 # get_fuel_exports
 @pytest.mark.anyio
 async def test_get_fuel_exports_invalid_payload(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user_roles(fastapi_app, [RoleEnum.ANALYST.value])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
     url = fastapi_app.url_path_for("get_fuel_exports")
 
@@ -67,7 +67,7 @@ async def test_get_fuel_exports_invalid_payload(
 
 @pytest.mark.anyio
 async def test_get_fuel_exports_paginated_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_exports_paginated"
@@ -77,7 +77,7 @@ async def test_get_fuel_exports_paginated_success(
             fuel_exports=[]
         )
 
-        set_mock_user_roles(fastapi_app, [RoleEnum.ANALYST.value])
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_exports")
 
@@ -95,7 +95,7 @@ async def test_get_fuel_exports_paginated_success(
 
 @pytest.mark.anyio
 async def test_get_fuel_exports_list_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_export_list"
@@ -103,7 +103,7 @@ async def test_get_fuel_exports_list_success(
 
         mock_get_fuel_export_list.return_value = FuelExportsSchema(fuel_exports=[])
 
-        set_mock_user_roles(fastapi_app, [RoleEnum.ANALYST.value])
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_exports")
 
@@ -120,10 +120,10 @@ async def test_get_fuel_exports_list_success(
 # save_fuel_export_row
 @pytest.mark.anyio
 async def test_save_fuel_export_row_forbidden(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
 
-    set_mock_user_roles(fastapi_app, [RoleEnum.ANALYST.value])
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
     url = fastapi_app.url_path_for("save_fuel_export_row")
 
@@ -165,7 +165,7 @@ async def test_save_fuel_export_row_invalid_payload(
 
 @pytest.mark.anyio
 async def test_save_fuel_export_row_delete_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.delete_fuel_export"
@@ -173,7 +173,7 @@ async def test_save_fuel_export_row_delete_success(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
 
-        set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         mock_validate_organization_access.return_value = None
         mock_delete_fuel_export.return_value = None
@@ -210,7 +210,7 @@ async def test_save_fuel_export_row_delete_success(
 
 @pytest.mark.anyio
 async def test_save_fuel_export_row_update_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.update_fuel_export"
@@ -218,7 +218,7 @@ async def test_save_fuel_export_row_update_success(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
 
-        set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         mock_fuel_exports = FuelExportSchema(
             compliance_report_id=1,
@@ -274,7 +274,7 @@ async def test_save_fuel_export_row_update_success(
 
 @pytest.mark.anyio
 async def test_save_fuel_export_row_create_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user_roles
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.create_fuel_export"
@@ -282,7 +282,7 @@ async def test_save_fuel_export_row_create_success(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
 
-        set_mock_user_roles(fastapi_app, [RoleEnum.SUPPLIER.value])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         mock_fuel_exports = FuelExportSchema(
             compliance_report_id=1,

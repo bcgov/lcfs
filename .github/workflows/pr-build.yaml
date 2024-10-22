@@ -71,15 +71,6 @@ jobs:
         with: 
           ref: ${{ github.event.pull_request.head.ref }} 
 
-      - name: verify ref
-        run: |
-          pwd
-          ls -la
-          echo ${{ env.PR_NUMBER }}
-          echo ${{ env.GIT_URL }}
-          echo ${{ env.GIT_REF }}
-          echo ${{ env.VERSION }}
-
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
         with:
@@ -87,6 +78,19 @@ jobs:
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
           namespace: ${{ env.TOOLS_NAMESPACE }}
+
+      - name: Build LCFS Frontend
+        run: |
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 2s
+          for build in $(oc -n ${{ env.TOOLS_NAMESPACE }} get builds -l buildconfig=lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}'); do
+            oc -n ${{ env.TOOLS_NAMESPACE }} cancel-build $build --wait=true
+          done
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} --wait=true
+          sleep 2s
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
 
       - name: Build LCFS Backend
         run: |
@@ -101,19 +105,6 @@ jobs:
           sleep 2s
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
 
-      - name: Build LCFS Frontend
-        run: |
-          cd openshift/templates
-          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
-          sleep 2s
-          for build in $(oc -n ${{ env.TOOLS_NAMESPACE }} get builds -l buildconfig=lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}'); do
-            oc -n ${{ env.TOOLS_NAMESPACE }} cancel-build $build --wait=true
-          done
-          sleep 2s
-          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} --wait=true
-          sleep 2s
-          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
-          
   deploy:
     if: >
       (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
@@ -156,7 +147,9 @@ jobs:
                 yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
                 yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-      
+                yq -i eval '(.env[] | select(.name == "S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+                yq -i eval '(.env[] | select(.name == "S3_KEY") | .valueFrom.secretKeyRef.name) = "lcfs-minio-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+
       - name: Helm Deployment 
         shell: bash {0}
         run: |
@@ -164,8 +157,11 @@ jobs:
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 15.5.17
           cd ../lcfs-redis-pr
           helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1
+          cd ../lcfs-minio-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-minio-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/minio --version 14.8.0
           cd ../lcfs-frontend
-          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} .
+          # refresh the pod annotation everytime in order to force the rollout
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rolloutTriggered="A$(date +%s)E"
           sleep 60s
           cd ../lcfs-backend
-          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} .
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rolloutTriggered="A$(date +%s)E"

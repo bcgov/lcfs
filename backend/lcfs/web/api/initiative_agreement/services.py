@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
@@ -21,6 +22,8 @@ from lcfs.web.api.internal_comment.schema import (
     AudienceScopeEnum,
     EntityTypeEnum,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class InitiativeAgreementServices:
@@ -172,11 +175,12 @@ class InitiativeAgreementServices:
         """Create ledger transaction for approved initiative agreement"""
 
         user = self.request.user
-        has_director_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
-        )
+        has_director_role = user_has_roles(user, [RoleEnum.DIRECTOR])
 
         if not has_director_role:
+            logger.error(
+                f"Non-Director tried to approve Agreement: {initiative_agreement.initiative_agreement_id}"
+            )
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         if initiative_agreement.transaction != None:

@@ -9,7 +9,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAg
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum, AudienceScopeEnum
+
 
 @pytest.mark.anyio
 async def test_create_internal_comment_with_transfer(
@@ -21,7 +23,7 @@ async def test_create_internal_comment_with_transfer(
     """
     Test creating an internal comment associated with a Transfer entity.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     transfer = Transfer(
         transfer_id=1,
@@ -46,8 +48,8 @@ async def test_create_internal_comment_with_transfer(
     }
 
     with patch(
-        'lcfs.web.api.internal_comment.repo.UserRepository.get_full_name',
-        new_callable=AsyncMock
+        "lcfs.web.api.internal_comment.repo.UserRepository.get_full_name",
+        new_callable=AsyncMock,
     ) as mock_get_full_name:
         mock_get_full_name.return_value = "Mocked Full Name"
 
@@ -60,6 +62,7 @@ async def test_create_internal_comment_with_transfer(
         assert data["createUser"] == "mockuser"
         assert data["fullName"] == "Mocked Full Name"
 
+
 @pytest.mark.anyio
 async def test_create_internal_comment_with_initiative_agreement(
     client: AsyncClient,
@@ -70,7 +73,7 @@ async def test_create_internal_comment_with_initiative_agreement(
     """
     Test creating an internal comment associated with an Initiative Agreement entity.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     initiative_agreement = InitiativeAgreement(
         initiative_agreement_id=1,
@@ -90,8 +93,8 @@ async def test_create_internal_comment_with_initiative_agreement(
     }
 
     with patch(
-        'lcfs.web.api.internal_comment.repo.UserRepository.get_full_name',
-        new_callable=AsyncMock
+        "lcfs.web.api.internal_comment.repo.UserRepository.get_full_name",
+        new_callable=AsyncMock,
     ) as mock_get_full_name:
         mock_get_full_name.return_value = "Mocked Full Name"
 
@@ -104,6 +107,7 @@ async def test_create_internal_comment_with_initiative_agreement(
         assert data["createUser"] == "mockuser"
         assert data["fullName"] == "Mocked Full Name"
 
+
 @pytest.mark.anyio
 async def test_create_internal_comment_with_admin_adjustment(
     client: AsyncClient,
@@ -114,7 +118,7 @@ async def test_create_internal_comment_with_admin_adjustment(
     """
     Test creating an internal comment associated with an Admin Adjustment entity.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     admin_adjustment = AdminAdjustment(
         admin_adjustment_id=100,
@@ -134,8 +138,8 @@ async def test_create_internal_comment_with_admin_adjustment(
     }
 
     with patch(
-        'lcfs.web.api.internal_comment.repo.UserRepository.get_full_name',
-        new_callable=AsyncMock
+        "lcfs.web.api.internal_comment.repo.UserRepository.get_full_name",
+        new_callable=AsyncMock,
     ) as mock_get_full_name:
         mock_get_full_name.return_value = "Mocked Full Name"
 
@@ -148,6 +152,7 @@ async def test_create_internal_comment_with_admin_adjustment(
         assert data["createUser"] == "mockuser"
         assert data["fullName"] == "Mocked Full Name"
 
+
 @pytest.mark.anyio
 async def test_create_internal_comment_invalid_entity_type(
     client: AsyncClient,
@@ -157,7 +162,7 @@ async def test_create_internal_comment_invalid_entity_type(
     """
     Test creating an internal comment with an invalid entity type.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     payload = {
         "entity_type": "InvalidType",
@@ -168,9 +173,12 @@ async def test_create_internal_comment_invalid_entity_type(
 
     url = fastapi_app.url_path_for("create_comment")
     response = await client.post(url, json=payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY  # Pydantic validation error
+    assert (
+        response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    )  # Pydantic validation error
     data = response.json()
     assert "details" in data
+
 
 @pytest.mark.anyio
 async def test_create_internal_comment_missing_fields(
@@ -181,7 +189,7 @@ async def test_create_internal_comment_missing_fields(
     """
     Test creating an internal comment with missing required fields.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     payload = {
         # Missing 'entity_type', 'entity_id', 'comment', 'audience_scope'
@@ -193,6 +201,7 @@ async def test_create_internal_comment_missing_fields(
     data = response.json()
     assert "details" in data
 
+
 @pytest.mark.anyio
 async def test_create_internal_comment_invalid_audience_scope(
     client: AsyncClient,
@@ -203,7 +212,7 @@ async def test_create_internal_comment_invalid_audience_scope(
     """
     Test creating an internal comment with an invalid audience scope.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     transfer = Transfer(
         transfer_id=2,
@@ -233,6 +242,7 @@ async def test_create_internal_comment_invalid_audience_scope(
     data = response.json()
     assert "details" in data
 
+
 @pytest.mark.anyio
 async def test_get_internal_comments_no_comments(
     client: AsyncClient,
@@ -243,7 +253,7 @@ async def test_get_internal_comments_no_comments(
     """
     Test retrieving internal comments when none exist for the entity.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     transfer = Transfer(
         transfer_id=3,
@@ -262,12 +272,15 @@ async def test_get_internal_comments_no_comments(
 
     entity_type = EntityTypeEnum.TRANSFER.value
     entity_id = transfer.transfer_id
-    url = fastapi_app.url_path_for("get_comments", entity_type=entity_type, entity_id=entity_id)
+    url = fastapi_app.url_path_for(
+        "get_comments", entity_type=entity_type, entity_id=entity_id
+    )
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
     assert len(data) == 0  # No comments
+
 
 @pytest.mark.anyio
 async def test_create_internal_comment_without_government_role(
@@ -278,7 +291,7 @@ async def test_create_internal_comment_without_government_role(
     """
     Test that a user without the GOVERNMENT role cannot create an internal comment.
     """
-    set_mock_user(fastapi_app, ["SUPPLIER"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     payload = {
         "entity_type": EntityTypeEnum.TRANSFER.value,
@@ -291,6 +304,7 @@ async def test_create_internal_comment_without_government_role(
     response = await client.post(url, json=payload)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+
 @pytest.mark.anyio
 async def test_get_internal_comments_multiple_comments(
     client: AsyncClient,
@@ -302,11 +316,7 @@ async def test_get_internal_comments_multiple_comments(
     Test retrieving multiple internal comments for an entity.
     """
     set_mock_user(
-        fastapi_app,
-        ["GOVERNMENT"],
-        user_details={
-            "username": "IDIRUSER"
-        }
+        fastapi_app, [RoleEnum.GOVERNMENT], user_details={"username": "IDIRUSER"}
     )
 
     transfer = Transfer(
@@ -330,7 +340,7 @@ async def test_get_internal_comments_multiple_comments(
             internal_comment_id=i,
             comment=f"Comment {i}",
             audience_scope=AudienceScopeEnum.ANALYST.value,
-            create_user="IDIRUSER"
+            create_user="IDIRUSER",
         )
         await add_models([internal_comment])
         association = TransferInternalComment(
@@ -342,7 +352,9 @@ async def test_get_internal_comments_multiple_comments(
 
     entity_type = EntityTypeEnum.TRANSFER.value
     entity_id = transfer.transfer_id
-    url = fastapi_app.url_path_for("get_comments", entity_type=entity_type, entity_id=entity_id)
+    url = fastapi_app.url_path_for(
+        "get_comments", entity_type=entity_type, entity_id=entity_id
+    )
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
@@ -353,6 +365,7 @@ async def test_get_internal_comments_multiple_comments(
 
     for i in range(3):
         assert data[i]["comment"] == f"Comment {2 - i}"
+
 
 @pytest.mark.anyio
 async def test_update_internal_comment_success(
@@ -366,10 +379,8 @@ async def test_update_internal_comment_success(
     """
     set_mock_user(
         fastapi_app,
-        ["GOVERNMENT"],
-        user_details={
-            "keycloak_username": "IDIRUSER"
-        }
+        [RoleEnum.GOVERNMENT],
+        user_details={"keycloak_username": "IDIRUSER"},
     )
 
     # Create a transfer and an internal comment
@@ -392,7 +403,7 @@ async def test_update_internal_comment_success(
         internal_comment_id=1,
         comment="Original Comment",
         audience_scope=AudienceScopeEnum.ANALYST.value,
-        create_user="IDIRUSER"
+        create_user="IDIRUSER",
     )
     await add_models([internal_comment])
 
@@ -404,55 +415,49 @@ async def test_update_internal_comment_success(
     await add_models([association])
 
     # Prepare payload for the update
-    update_payload = {
-        "comment": "Updated Comment"
-    }
+    update_payload = {"comment": "Updated Comment"}
 
-    url = fastapi_app.url_path_for("update_comment", internal_comment_id=internal_comment.internal_comment_id)
+    url = fastapi_app.url_path_for(
+        "update_comment", internal_comment_id=internal_comment.internal_comment_id
+    )
     response = await client.put(url, json=update_payload)
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    
+
     assert data["comment"] == "Updated Comment"
     assert data["createUser"] == "IDIRUSER"
 
+
 @pytest.mark.anyio
 async def test_update_internal_comment_unauthorized(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """
     Test trying to update an internal comment the user is not authorized to update.
     """
-    set_mock_user(fastapi_app, ["SUPPLIER"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     # Prepare payload for the update attempt
-    update_payload = {
-        "comment": "Updated Comment"
-    }
+    update_payload = {"comment": "Updated Comment"}
 
     url = fastapi_app.url_path_for("update_comment", internal_comment_id=1)
     response = await client.put(url, json=update_payload)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+
 @pytest.mark.anyio
 async def test_update_internal_comment_nonexistent(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     """
     Test trying to update an internal comment that does not exist.
     """
-    set_mock_user(fastapi_app, ["GOVERNMENT"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     # Prepare payload for the update attempt
-    update_payload = {
-        "comment": "Updated Comment"
-    }
+    update_payload = {"comment": "Updated Comment"}
 
     # Try to update a comment that does not exist (e.g., internal_comment_id=999)
     url = fastapi_app.url_path_for("update_comment", internal_comment_id=999)

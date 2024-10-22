@@ -1,4 +1,6 @@
 import pytest
+
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel, SortOrder
 
 
@@ -32,26 +34,23 @@ def pagination_request_schema():
 
 
 @pytest.fixture
-def mock_user_profile():
-    def _create_mock_user_profile(
-        role="GOVERNMENT",
-        organization_id=1,
-        email="john.doe@example.com",
-        user_profile_id=1,
-    ):
-        class MockUserProfile:
-            def __init__(self):
-                self.user_profile_id = user_profile_id
-                self.first_name = "John"
-                self.last_name = "Doe"
-                self.keycloak_username = "johndoe"
-                self.organization_id = organization_id
-                self.email = email
-                self.role_names = [role]
+def mock_user_profile(
+    role=RoleEnum.GOVERNMENT,
+    organization_id=1,
+    email="john.doe@example.com",
+    user_profile_id=1,
+):
+    class MockUserProfile:
+        def __init__(self):
+            self.user_profile_id = user_profile_id
+            self.first_name = "John"
+            self.last_name = "Doe"
+            self.keycloak_username = "johndoe"
+            self.organization_id = organization_id
+            self.email = email
+            self.role_names = [role]
 
-            def get_role_names(self):
-                return self.role_names
+        def role_names(self):
+            return self.role_names
 
-        return MockUserProfile()
-
-    return _create_mock_user_profile
+    return MockUserProfile()

@@ -17,9 +17,8 @@
   "orgDetails": "Organization details",
   "supportingDocs": "Supporting documents",
   "assessment": "Assessment",
-  "assessmentLn1": "{{name}} <strong>has met</strong> renewable fuel targets set under section 9 of the <i>Low Carbon Fuels Act.</i>",
-  "assessmentLn2": "{{name}} <strong>has met</strong> the low carbon fuel targets set under section 12 of the <i>Low Carbon Fuels Act.</i>",
-  "assessmentLn3": "<strong>Assessed on {{assessedDate}}</strong> by the director under the <i>Low Carbon Fuels Act.</i>",
+  "assessmentLn1": "{{name}} <strong>{{hasMet}}</strong> renewable fuel targets set under section 9 of the <i>Low Carbon Fuels Act.</i>",
+  "assessmentLn2": "{{name}} <strong>{{hasMet}}</strong> the low carbon fuel targets set under section 12 of the <i>Low Carbon Fuels Act.</i>",
   "impInfoTitle": "Important information",
   "impInfo": "If you become aware that this report is incomplete or inaccurate, you must submit a supplemental report within 30 days.",
   "createSupplementalRptBtn": "Create supplemental report",
@@ -35,17 +34,20 @@
   },
   "actionBtns": {
     "saveDraftBtn": "Save draft report",
-    "deleteDraftBtn": "Delete draft report",
     "submitReportBtn": "Submit report",
-    "recommendReportAnalystBtn": "Recommend report (Analyst)",
-    "recommendReportManagerBtn": "Recommend report (Manager)",
-    "assessReportBtn": "Assess report",
+    "returnToAnalyst": "Return to analyst",
+    "returnToManager": "Return to compliance manager",
+    "recommendReportAnalystBtn": "Recommend to compliance manager",
+    "recommendReportManagerBtn": "Recommend to director",
+    "assessReportBtn": "Issue assessment",
     "reAssessReportBtn": "Re-assess report"
   },
   "savedSuccessText": "Compliance report successfully saved",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
   "deleteConfirmText": "Are you sure you want to delete this compliance report?",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
+  "returnToAnalystConfirmText": "Are you sure you want to return this compliance report back to analyst?",
+  "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
   "assessConfirmText": "Are you sure you want to assess this compliance report?",
   "uploadLabel": "Upload supporting documents for your report.",
   "introduction": "Introduction",
@@ -78,11 +80,12 @@
   "saveReturn": "Save & return to report",
   "reportHistory": "Report history",
   "complianceReportHistory": {
-    "SubmittedTitle": "Signing authority declaration",
+    "Draft": "Draft {{createDate}} by {{firstName}} {{lastName}}.",
     "Submitted": "Signed and submitted {{createDate}} by {{firstName}} {{lastName}}.",
-    "Recommended_by_analyst": "Recommended by analyst",
-    "Recommended_by_manager": "Recommended by manager",
-    "Assessed": "Assessed",
+    "Recommended by analyst": "Recommended {{createDate}} by {{firstName}} {{lastName}}.",
+    "Recommended by manager": "Recommended {{createDate}} by {{firstName}} {{lastName}}.",
+    "Assessed": "Assessed {{createDate}} by {{firstName}} {{lastName}}.",
+    "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "ReAssessed": "Re-assessed"
   },
   "internalComments": "Internal comments",
@@ -95,5 +98,6 @@
     "line": "Line",
     "value": "Value",
     "totalValue": "Total Value"
-  }
+  },
+  "summaryLoadingMsg": "Loading compliance report summary..."
 }

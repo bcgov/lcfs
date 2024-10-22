@@ -4,12 +4,14 @@ from httpx import AsyncClient
 from fastapi import FastAPI, status
 from pathlib import Path
 
+from lcfs.db.models.user.Role import RoleEnum
+
 
 @pytest.mark.anyio
 async def test_save_fuel_codes(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     try:
         with open(Path(__file__).parent / "fuel_code_payload.json") as f_data:
             payload = json.load(f_data)
@@ -25,7 +27,7 @@ async def test_save_fuel_codes(
 async def test_save_fuel_codes_forbidden(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Supplier"])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     try:
         with open(Path(__file__).parent / "fuel_code_payload.json") as f_data:
             payload = json.load(f_data)
@@ -41,7 +43,7 @@ async def test_save_fuel_codes_forbidden(
 async def test_get_energy_densities(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("get_energy_densities")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -51,7 +53,7 @@ async def test_get_energy_densities(
 async def test_get_energy_effectiveness_ratios(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("get_energy_effectiveness_ratios")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -61,7 +63,7 @@ async def test_get_energy_effectiveness_ratios(
 async def test_get_use_of_a_carbon_intensities(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("get_use_of_a_carbon_intensities")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
@@ -71,7 +73,7 @@ async def test_get_use_of_a_carbon_intensities(
 async def test_get_fuel_codes(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     try:
         with open(Path(__file__).parent / "fuel_code_payload.json") as f_data:
             payload = json.load(f_data)

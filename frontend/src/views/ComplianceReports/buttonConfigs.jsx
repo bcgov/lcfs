@@ -1,13 +1,11 @@
 // complianceReportButtonConfigs.js
 
 import {
-  faFloppyDisk,
   faPencil,
   faTrash
 } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import colors from '@/themes/base/colors'
 
 const outlineBase = {
   variant: 'outlined',
@@ -44,33 +42,13 @@ export const containedButton = (label, startIcon) => ({
 
 export const buttonClusterConfigFn = ({
   hasRoles,
-  currentUser,
   t,
   setModalData,
   updateComplianceReport,
-  reportData,
   isGovernmentUser,
   isSigningAuthorityDeclared
 }) => {
   const reportButtons = {
-    deleteDraft: {
-      ...redOutlinedButton(t('report:actionBtns.deleteDraftBtn'), faTrash),
-      id: 'delete-draft-btn',
-      handler: (formData) => {
-        setModalData({
-          primaryButtonAction: () =>
-            updateComplianceReport({
-              ...formData,
-              status: COMPLIANCE_REPORT_STATUSES.DELETED
-            }),
-          primaryButtonText: t('report:actionBtns.deleteDraftBtn'),
-          primaryButtonColor: 'error',
-          secondaryButtonText: t('cancelBtn'),
-          title: t('confirmation'),
-          content: t('report:deleteConfirmText')
-        })
-      }
-    },
     submitReport: {
       ...containedButton(t('report:actionBtns.submitReportBtn'), faPencil),
       disabled:
@@ -91,10 +69,7 @@ export const buttonClusterConfigFn = ({
       }
     },
     recommendByAnalyst: {
-      ...containedButton(
-        t('report:actionBtns.recommendReportAnalystBtn'),
-        faPencil
-      ),
+      ...containedButton(t('report:actionBtns.recommendReportAnalystBtn')),
       id: 'recommend-report-analyst-btn',
       handler: (formData) => {
         setModalData({
@@ -111,10 +86,7 @@ export const buttonClusterConfigFn = ({
       }
     },
     recommendByManager: {
-      ...containedButton(
-        t('report:actionBtns.recommendReportManagerBtn'),
-        faPencil
-      ),
+      ...containedButton(t('report:actionBtns.recommendReportManagerBtn')),
       id: 'recommend-report-manager-btn',
       handler: (formData) => {
         setModalData({
@@ -126,12 +98,48 @@ export const buttonClusterConfigFn = ({
           primaryButtonText: t('report:actionBtns.recommendReportManagerBtn'),
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
-          content: t('report:recommendManagerConfirmText')
+          content: t('report:recommendConfirmText')
+        })
+      }
+    },
+    returnToAnalyst: {
+      ...outlinedButton(t('report:actionBtns.returnToAnalyst')),
+      id: 'return-report-manager-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.RETURN_TO_ANALYST
+            }),
+          primaryButtonText: t('report:actionBtns.returnToAnalyst'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:returnToAnalystConfirmText')
+        })
+      }
+    },
+    returnToManager: {
+      ...outlinedButton(
+        t('report:actionBtns.returnToManager')
+      ),
+      id: 'return-report-manager-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.RETURN_TO_MANAGER
+            }),
+          primaryButtonText: t('report:actionBtns.returnToManager'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:returnToManagerConfirmText')
         })
       }
     },
     assessReport: {
-      ...containedButton(t('report:actionBtns.assessReportBtn'), faPencil),
+      ...containedButton(t('report:actionBtns.assessReportBtn')),
       id: 'assess-report-btn',
       handler: (formData) => {
         setModalData({
@@ -148,7 +156,7 @@ export const buttonClusterConfigFn = ({
       }
     },
     reAssessReport: {
-      ...containedButton(t('report:actionBtns.reAssessReportBtn'), faPencil),
+      ...containedButton(t('report:actionBtns.reAssessReportBtn')),
       id: 're-assess-report-btn',
       handler: (formData) => {
         setModalData({
@@ -168,7 +176,6 @@ export const buttonClusterConfigFn = ({
 
   const buttons = {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
-      reportButtons.deleteDraft,
       reportButtons.submitReport
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
@@ -178,12 +185,12 @@ export const buttonClusterConfigFn = ({
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
       ...(isGovernmentUser && hasRoles('Compliance Manager')
-        ? [reportButtons.recommendByManager]
+        ? [reportButtons.recommendByManager, reportButtons.returnToAnalyst]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: [
       ...(isGovernmentUser && hasRoles('Director')
-        ? [reportButtons.assessReport]
+        ? [reportButtons.assessReport, reportButtons.returnToManager]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.ASSESSED]: [

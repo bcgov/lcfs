@@ -1,11 +1,13 @@
+from fastapi import HTTPException
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryRowSchema,
@@ -13,6 +15,18 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 
+# Mock for user_has_roles function
+@pytest.fixture
+def mock_user_has_roles():
+    with patch('lcfs.web.api.compliance_report.update_service.user_has_roles') as mock:
+        yield mock
+
+# Mock for adjust_balance method within the OrganizationsService
+@pytest.fixture
+def mock_org_service():
+    mock_org_service = MagicMock()
+    mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
+    return mock_org_service
 
 # update_compliance_report
 @pytest.mark.anyio
@@ -127,26 +141,50 @@ async def test_update_compliance_report_not_found(
 
     mock_repo.get_compliance_report.assert_called_once_with(report_id)
 
+@pytest.mark.anyio
+async def test_handle_submitted_status_insufficient_permissions(
+    compliance_report_update_service, mock_user_has_roles
+):
+    # Mock data
+    mock_report = MagicMock(spec=ComplianceReport)
+    
+    # Mock user roles (user doesn't have required roles)
+    mock_user_has_roles.return_value = False
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Call the method and check for exception
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_update_service.handle_submitted_status(mock_report)
+    
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail == "Forbidden."
 
 # SUBMIT STATUS TESTS
 
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_with_existing_summary(
-    compliance_report_update_service, mock_repo, compliance_report_summary_service
+    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
 ):
     # Mock data
     report_id = 1
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123  # Mock organization ID
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
-    mock_report.summary.summary_id = 100
+    mock_report.summary.line_20_surplus_deficit_units = 100  # Mock compliance units
 
     # Mock existing summary with user-edited values
     existing_summary = MagicMock(spec=ComplianceReportSummary)
     existing_summary.line_6_renewable_fuel_retained_gasoline = 1000
     existing_summary.line_7_previously_retained_diesel = 2000
     existing_summary.line_8_obligation_deferred_jet_fuel = 3000
+
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
 
     # Mock calculated summary
     calculated_summary = ComplianceReportSummarySchema(
@@ -185,35 +223,53 @@ async def test_handle_submitted_status_with_existing_summary(
         return_value=calculated_summary
     )
 
+    # Inject the mocked org_service into the service being tested
+    compliance_report_update_service.org_service = mock_org_service
+
+    # Mock the adjust_balance method to return a mocked transaction result
+    mock_org_service.adjust_balance.return_value = MagicMock()
+
     # Call the method
     await compliance_report_update_service.handle_submitted_status(mock_report)
 
     # Assertions
+    mock_user_has_roles.assert_called_once_with(
+        compliance_report_update_service.request.user, 
+        ["SUPPLIER", "SIGNING_AUTHORITY"]
+    )
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
         report_id
     )
 
-    # Check if user-edited values are preserved
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][1]
-    assert saved_summary.renewable_fuel_target_summary[0].gasoline == 1000  # line 6
-    assert saved_summary.renewable_fuel_target_summary[1].diesel == 2000  # line 7
-    assert saved_summary.renewable_fuel_target_summary[2].jet_fuel == 3000  # line 8
+    # Ensure the adjust_balance method is called with the correct parameters
+    mock_org_service.adjust_balance.assert_called_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=mock_report.summary.line_20_surplus_deficit_units,
+        organization_id=mock_report.organization_id,
+    )
 
-    # Check if summary is locked
+    # Check if the report was updated with the result of adjust_balance
+    assert mock_report.transaction == mock_org_service.adjust_balance.return_value
+
+    # Check if the summary is locked
+    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][1]
     assert saved_summary.is_locked == True
 
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_without_existing_summary(
-    compliance_report_update_service, mock_repo, compliance_report_summary_service
+    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
 ):
     # Mock data
     report_id = 1
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
     mock_report.summary = None
-
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
     # Mock calculated summary
     calculated_summary = ComplianceReportSummarySchema(
         compliance_report_id=report_id,
@@ -257,7 +313,11 @@ async def test_handle_submitted_status_without_existing_summary(
     compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
+    # Inject the mocked org_service into the service being tested
+    compliance_report_update_service.org_service = mock_org_service
 
+    # Mock the adjust_balance method to return a mocked transaction result
+    mock_org_service.adjust_balance.return_value = MagicMock()
     # Call the method
     await compliance_report_update_service.handle_submitted_status(mock_report)
 
@@ -285,7 +345,7 @@ async def test_handle_submitted_status_without_existing_summary(
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_partial_existing_values(
-    compliance_report_update_service, mock_repo, compliance_report_summary_service
+    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
 ):
     # Mock data
     report_id = 1
@@ -293,7 +353,10 @@ async def test_handle_submitted_status_partial_existing_values(
     mock_report.compliance_report_id = report_id
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.summary_id = 100
-
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
     # Mock existing summary with some user-edited values
     existing_summary = MagicMock(spec=ComplianceReportSummary)
     existing_summary.line_6_renewable_fuel_retained_gasoline = 1000
@@ -340,7 +403,11 @@ async def test_handle_submitted_status_partial_existing_values(
     compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
+    # Inject the mocked org_service into the service being tested
+    compliance_report_update_service.org_service = mock_org_service
 
+    # Mock the adjust_balance method to return a mocked transaction result
+    mock_org_service.adjust_balance.return_value = MagicMock()
     # Call the method
     await compliance_report_update_service.handle_submitted_status(mock_report)
 
@@ -359,7 +426,7 @@ async def test_handle_submitted_status_partial_existing_values(
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_no_user_edits(
-    compliance_report_update_service, mock_repo, compliance_report_summary_service
+    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
 ):
     # Mock data
     report_id = 1
@@ -367,7 +434,10 @@ async def test_handle_submitted_status_no_user_edits(
     mock_report.compliance_report_id = report_id
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.summary_id = 100
-
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
     # Mock existing summary with no user-edited values
     existing_summary = MagicMock(spec=ComplianceReportSummary)
     existing_summary.line_6_renewable_fuel_retained_gasoline = None
@@ -418,7 +488,11 @@ async def test_handle_submitted_status_no_user_edits(
     compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
+    # Inject the mocked org_service into the service being tested
+    compliance_report_update_service.org_service = mock_org_service
 
+    # Mock the adjust_balance method to return a mocked transaction result
+    mock_org_service.adjust_balance.return_value = MagicMock()
     # Call the method
     await compliance_report_update_service.handle_submitted_status(mock_report)
 

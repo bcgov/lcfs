@@ -535,6 +535,9 @@ class ComplianceReportSummaryService:
                 gasoline=values.get("gasoline", 0),
                 diesel=values.get("diesel", 0),
                 jet_fuel=values.get("jet_fuel", 0),
+                total_value=values.get("gasoline", 0)
+                + values.get("diesel", 0)
+                + values.get("jet_fuel", 0),
                 format="currency" if (str(line) == "11") else None,
             )
             for line, values in summary_lines.items()
@@ -640,9 +643,11 @@ class ComplianceReportSummaryService:
             (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
         )
         line_11 = next(row for row in renewable_fuel_target_summary if row.line == "11")
+
         non_compliance_summary_lines = {
             "11": {"total_value": line_11.total_value},
             "21": {"total_value": non_compliance_penalty_payable},
+            "": {"total_value": non_compliance_penalty_payable + line_11.total_value},
         }
 
         non_compliance_penalty_summary = [

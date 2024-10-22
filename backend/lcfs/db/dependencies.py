@@ -9,6 +9,9 @@ from redis import asyncio as aioredis
 
 from lcfs.settings import settings
 
+if settings.environment == "dev":
+    import lcfs.utils.query_analyzer
+
 db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(db_url, future=True)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARN)

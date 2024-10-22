@@ -5,6 +5,7 @@ from fastapi import FastAPI, status
 from httpx import AsyncClient
 from unittest.mock import MagicMock
 
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.initiative_agreement.schema import (
     InitiativeAgreementCreateSchema,
     InitiativeAgreementSchema,
@@ -33,10 +34,10 @@ def mock_initiative_agreement_validation():
 async def test_get_initiative_agreement(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_initiative_agreement_services,
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     initiative_agreement_id = 1
 
     # Mock the service method
@@ -71,11 +72,11 @@ async def test_get_initiative_agreement(
 async def test_create_initiative_agreement(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_initiative_agreement_services,
     mock_initiative_agreement_validation,
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("create_initiative_agreement")
     initiative_agreement_payload = InitiativeAgreementCreateSchema(
         compliance_units=150,
@@ -114,11 +115,11 @@ async def test_create_initiative_agreement(
 async def test_update_initiative_agreement(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user_roles,
+    set_mock_user,
     mock_initiative_agreement_services,
     mock_initiative_agreement_validation,
 ):
-    set_mock_user_roles(fastapi_app, ["Government"])
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     initiative_agreement_id = 1
     url = fastapi_app.url_path_for("update_initiative_agreement")
     initiative_agreement_update_payload = InitiativeAgreementUpdateSchema(

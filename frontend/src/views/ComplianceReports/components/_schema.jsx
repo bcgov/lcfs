@@ -1,7 +1,7 @@
 /* eslint-disable chai-friendly/no-unused-expressions */
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
+import { ReportsStatusRenderer, LinkRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 
 export const reportsColDefs = (t, bceidRole) => [
@@ -9,20 +9,43 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
-    valueGetter: ({ data }) => data.compliancePeriod?.description || ''
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
+    suppressFloatingFilterButton: true,
+    valueGetter: ({ data }) => data.compliancePeriod?.description || '',
+    filterParams: {
+      buttons:["clear"],
+    }
   },
   {
     field: 'organization',
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
     hide: bceidRole,
+    cellRenderer: LinkRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     valueGetter: ({ data }) => data.organization?.name || ''
   },
   {
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: () => t('report:complianceReport')
+    valueGetter: () => t('report:complianceReport'),
+    filter: 'agTextColumnFilter', // Enable text filtering
+    suppressFloatingFilterButton: true,
+    filterParams: {
+      textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase();
+        const cleanValue = value.replace(/\s+/g, '').toLowerCase();
+        return cleanValue.includes(cleanFilterText);
+      },
+      buttons: ["clear"],
+    }
   },
   {
     field: 'status',
@@ -30,8 +53,10 @@ export const reportsColDefs = (t, bceidRole) => [
     maxWidth: 300,
     valueGetter: ({ data }) => data.currentStatus?.status || '',
     cellRenderer: ReportsStatusRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+    },
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       // TODO: change this to api Query later
       apiQuery: () => ({
@@ -63,7 +88,14 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.lastUpdated'),
     flex: 1,
     valueGetter: ({ data }) => data.updateDate || '',
-    valueFormatter: timezoneFormatter
+    valueFormatter: timezoneFormatter,
+    suppressFloatingFilterButton: true,
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      buttons: ["clear"],
+    }
   }
 ]
 

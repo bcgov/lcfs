@@ -62,11 +62,9 @@ export const AddEditViewTransfer = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [steps, setSteps] = useState(['Draft', 'Sent', 'Submitted', 'Recorded'])
-  const [refreshBalanceTrigger, setRefreshBalanceTrigger] = useState(false)
-  // Fetch current user details
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: toOrgData } = useRegExtOrgs()
-  const isGovernmentUser = currentUser.isGovernmentUser
+  const isGovernmentUser = !!currentUser?.isGovernmentUser
   const currentUserOrgId = currentUser?.organization?.organizationId
   const alertRef = useRef()
 
@@ -111,11 +109,6 @@ export const AddEditViewTransfer = () => {
   const { refetch } = useCurrentOrgBalance({
     enabled: false // Initially, do not automatically run the query
   })
-  // useEffect to listen for changes to refreshBalanceTrigger
-  useEffect(() => {
-    // When refreshBalanceTrigger changes, call refetch to refresh org balance
-    refetch()
-  }, [refreshBalanceTrigger, refetch])
 
   /**
    * Fetches and populates the form with existing transfer data for editing.
@@ -209,9 +202,6 @@ export const AddEditViewTransfer = () => {
         )
         setAlertSeverity('success')
       } else {
-        // Refresh the org balance before we redirect to the transactions page
-        // this way the balance in the header will be correct
-        setRefreshBalanceTrigger((prev) => !prev)
         // Navigate to the transactions list view
         navigate(TRANSACTIONS + `/?hid=transfer-${response.data.transferId}`, {
           state: {
@@ -222,7 +212,7 @@ export const AddEditViewTransfer = () => {
           }
         })
       }
-      alertRef.current.triggerAlert()
+      alertRef.current?.triggerAlert()
     },
     onError: (_error, _variables) => {
       setModalData(null)

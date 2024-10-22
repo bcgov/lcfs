@@ -18,9 +18,10 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
     get_field_for_filter,
+    get_enum_value,
 )
 from lcfs.db.models.compliance import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport, ReportType
 from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
@@ -73,7 +74,8 @@ class ComplianceReportRepository:
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
-                pass
+                field = get_field_for_filter(ComplianceReport, "report_type")
+                filter_value = ReportType.ANNUAL.value if filter_value.lower().startswith("c") else ReportType.QUARTERLY.value
             elif filter.field == "compliance_period":
                 field = get_field_for_filter(CompliancePeriod, "description")
             else:
@@ -161,6 +163,7 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.user_profile
                 ),
+                joinedload(ComplianceReport.transaction)
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
@@ -301,15 +304,38 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @repo_handler
+    async def get_compliance_report_history(self, report: ComplianceReport):
+        history = await self.db.execute(
+            select(ComplianceReportHistory)
+            .where(
+                and_(
+                    ComplianceReportHistory.compliance_report_id
+                    == report.compliance_report_id,
+                    ComplianceReportHistory.status_id
+                    == report.current_status_id,
+                )
+            )
+            .order_by(ComplianceReportHistory.create_date.desc())
+        )
+        return history.scalar_one_or_none()
+    
+    @repo_handler
     async def add_compliance_report_history(self, report: ComplianceReport, user):
         """
         Add a new compliance report history record to the database
         """
-        history = ComplianceReportHistory(
-            compliance_report_id=report.compliance_report_id,
-            status_id=report.current_status_id,
-            user_profile_id=user.user_profile_id,
-        )
+        history = await self.get_compliance_report_history(report)
+        if history:
+            history.update_date = datetime.now()
+            history.create_date = datetime.now()
+            history.status_id = report.current_status_id
+            history.user_profile_id = user.user_profile_id
+        else:
+            history = ComplianceReportHistory(
+                compliance_report_id=report.compliance_report_id,
+                status_id=report.current_status_id,
+                user_profile_id=user.user_profile_id,
+            )
         self.db.add(history)
         await self.db.flush()
         return history

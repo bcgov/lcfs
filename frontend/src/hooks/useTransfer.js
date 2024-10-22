@@ -34,6 +34,7 @@ export const useCreateUpdateTransfer = (orgId, transferId, options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['transfer', transferId])
+      queryClient.invalidateQueries(['current-org-balance'])
     }
   })
 }

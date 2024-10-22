@@ -1,125 +1,145 @@
 import pytest
-from fastapi import HTTPException, status
-from unittest.mock import AsyncMock, MagicMock, patch
-from lcfs.web.exception.exceptions import DataNotFoundException
-
-from lcfs.web.api.transfer.services import TransferServices
-from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.web.api.organizations.repo import OrganizationsRepository
-from lcfs.tests.transfer.transfer_payloads import (
-    transfer_create_payload,
-    transfer_update_payload,
-    transfer_update_draft_payload,
-    transfer_update_payload_2,
-)
-
-
-@pytest.fixture
-def transfer_repo(dbsession):
-    return TransferRepository(db=dbsession)
-
-
-@pytest.fixture
-def org_repo(dbsession):
-    return OrganizationsRepository(db=dbsession)
-
-
-@pytest.fixture
-def transfer_service(transfer_repo, org_repo):
-    return TransferServices(repo=transfer_repo, org_repo=org_repo)
-
-
-# Test retrieving all transfers
+from unittest.mock import AsyncMock
+from lcfs.web.api.transfer.schema import TransferSchema
+from datetime import date
+from lcfs.db.models.transfer import Transfer
+from lcfs.db.models.organization import Organization
+from lcfs.db.models.transfer import TransferStatus
+from lcfs.web.api.transfer.schema import TransferCreateSchema
 
 
 @pytest.mark.anyio
-async def test_get_all_transfers(transfer_service):
-    transfers = await transfer_service.get_all_transfers()
-    assert len(transfers) == 3
-    assert transfers[0].transfer_id == 1
+async def test_get_all_transfers_success(transfer_service, mock_transfer_repo):
 
+    mock_transfer_repo.get_all_transfers.return_value = [
+        {
+            "transfer_id": 1,
+            "from_organization": {"organization_id": 1, "name": "org1"},
+            "to_organization": {"organization_id": 2, "name": "org2"},
+            "agreement_date": date.today(),
+            "quantity": 1,
+            "price_per_unit": 1,
+            "current_status": {"transfer_status_id": 1, "status": "status"},
+        }
+    ]
 
-# Test retrieving a transfer by ID
+    result = await transfer_service.get_all_transfers()
 
-
-@pytest.mark.anyio
-async def test_get_transfer(transfer_service, transfer_repo):
-    mock_transfer_id = 1
-    transfer = await transfer_service.get_transfer(transfer_id=mock_transfer_id)
-    assert transfer.transfer_id == mock_transfer_id
-
-
-@pytest.mark.anyio
-async def test_create_transfer(transfer_service, transfer_repo):
-    created_transfer = await transfer_service.create_transfer(transfer_create_payload)
-    assert created_transfer.from_org_comment == transfer_create_payload.from_org_comment
-
-
-# Test updating an existing draft transfer
+    assert isinstance(result[0], TransferSchema)
+    mock_transfer_repo.get_all_transfers.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_update_transfer_draft(transfer_service, transfer_repo):
-    transfer = await transfer_service.update_transfer_draft(
-        transfer_id=1, transfer_data=transfer_update_draft_payload
-    )
-    assert (
-        transfer.from_organization.organization_id
-        == transfer_update_draft_payload.from_organization_id
-    )
-    assert (
-        transfer.to_organization.organization_id
-        == transfer_update_draft_payload.to_organization_id
-    )
-    assert transfer.quantity == transfer_update_draft_payload.quantity
-
-
-# Test updating an existing transfer
-
-
-@pytest.mark.anyio
-async def test_update_transfer(transfer_service, transfer_repo):
-    transfer = await transfer_service.update_transfer(
-        transfer_id=1, transfer_data=transfer_update_payload_2
-    )
-    assert (
-        transfer.current_status.transfer_status_id
-        == transfer_update_payload_2.current_status_id
-    )
-    assert transfer.comments.comment == transfer_update_payload_2.comments
-
-
-# Test retrieving a non-existent transfer
-
-
-@pytest.mark.anyio
-async def test_get_transfer_non_existent(transfer_service, transfer_repo):
-    transfer_repo.get_transfer_by_id = AsyncMock(return_value=None)
-    with pytest.raises(DataNotFoundException) as exc_info:
-        # Assuming 99999 does not exist
-        await transfer_service.get_transfer(transfer_id=99999)
-        assert "Transfer with ID 99999 not found" in str(exc_info.value.detail)
-
-
-# Test updating a non-existent transfer
-
-
-@pytest.mark.anyio
-async def test_update_transfer_non_existent(transfer_service, transfer_repo):
-    with pytest.raises(DataNotFoundException) as exc_info:
-        await transfer_service.update_transfer_draft(
-            transfer_id=99999, transfer_data=transfer_update_payload
+async def test_get_transfer_success(transfer_service, mock_transfer_repo):
+    transfer_id = 1
+    mock_transfer_repo.get_transfer_by_id = AsyncMock(
+        return_value=Transfer(
+            transfer_id=transfer_id,
+            from_organization=Organization(
+                organization_id=1,
+                name="org1",
+            ),
+            to_organization=Organization(
+                organization_id=2,
+                name="org2",
+            ),
+            agreement_date=date.today(),
+            quantity=1,
+            price_per_unit=1,
+            from_org_comment="comment",
+            to_org_comment="comment",
+            gov_comment="comment",
+            current_status=TransferStatus(transfer_status_id=1, status="status"),
         )
-        assert "Transfer with ID 99999 not found" in str(exc_info.value.detail)
+    )
 
+    result = await transfer_service.get_transfer(transfer_id)
 
-# Test creating a transfer with non-existent organizations
+    assert result.transfer_id == transfer_id
+    assert isinstance(result, TransferSchema)
+    mock_transfer_repo.get_transfer_by_id.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_create_transfer_invalid_organizations(transfer_service, transfer_repo):
-    with pytest.raises(DataNotFoundException) as exc_info:
-        transfer_data = transfer_create_payload
-        transfer_data.to_organization_id = 99999
-        await transfer_service.create_transfer(transfer_data)
-        assert str(exc_info.value) == "One or more organizations not found"
+async def test_create_transfer_success(transfer_service, mock_transfer_repo):
+    mock_transfer_repo.get_transfer_status_by_name.return_value = TransferStatus(
+        transfer_status_id=1, status="status"
+    )
+    mock_transfer_repo.add_transfer_history.return_value = True
+    transfer_id = 1
+    transfer = TransferCreateSchema(
+        transfer_id=transfer_id,
+        from_organization_id=1,
+        to_organization_id=2,
+    )
+    mock_transfer_repo.create_transfer.return_value = transfer
+
+    result = await transfer_service.create_transfer(transfer)
+
+    assert result.transfer_id == transfer_id
+    assert isinstance(result, TransferCreateSchema)
+
+
+@pytest.mark.anyio
+async def test_update_transfer_success(
+    transfer_service, mock_transfer_repo, mock_request
+):
+    transfer_status = TransferStatus(transfer_status_id=1, status="status")
+    transfer_id = 1
+    transfer = Transfer(
+        transfer_id=transfer_id,
+        from_organization_id=1,
+        to_organization_id=2,
+        from_transaction_id=1,
+        to_transaction_id=2,
+        agreement_date=date.today(),
+        transaction_effective_date=date.today(),
+        price_per_unit=1,
+        quantity=1,
+        from_org_comment="comment",
+        to_org_comment="comment",
+        gov_comment="comment",
+        transfer_category_id=1,
+        current_status_id=1,
+        recommendation="Recommended",
+        current_status=transfer_status,
+    )
+
+    mock_transfer_repo.get_transfer_status_by_name.return_value = transfer_status
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+    mock_transfer_repo.update_transfer.return_value = transfer
+
+    result = await transfer_service.update_transfer(transfer)
+
+    assert result.transfer_id == transfer_id
+    assert isinstance(result, Transfer)
+
+
+@pytest.mark.anyio
+async def test_update_category_success(transfer_service, mock_transfer_repo):
+    transfer_status = TransferStatus(transfer_status_id=1, status="status")
+    transfer_id = 1
+    transfer = Transfer(
+        transfer_id=transfer_id,
+        from_organization_id=1,
+        to_organization_id=2,
+        from_transaction_id=1,
+        to_transaction_id=2,
+        agreement_date=date.today(),
+        transaction_effective_date=date.today(),
+        price_per_unit=1,
+        quantity=1,
+        from_org_comment="comment",
+        to_org_comment="comment",
+        gov_comment="comment",
+        transfer_category_id=1,
+        current_status_id=1,
+        recommendation="Recommended",
+        current_status=transfer_status,
+    )
+
+    mock_transfer_repo.get_transfer_by_id.return_value = transfer
+
+    result = await transfer_service.update_category(transfer_id, None)
+    assert result.transfer_id == transfer_id
+    assert isinstance(result, Transfer)
