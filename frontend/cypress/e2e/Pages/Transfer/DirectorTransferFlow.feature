@@ -17,7 +17,7 @@ Feature: Director Transfer Flow
 
     Examples:
       | units | orgId | pricePerUnit | agreementDate | comment      |
-      |   100 |     2 |        40.00 |    2024-04-06 | test comment |
+      |   100 |     2 |        40.99 |    2024-04-06 | test comment |
 
   @transfer
   Scenario: Director Refuses transfer
@@ -33,4 +33,4 @@ Feature: Director Transfer Flow
 
     Examples:
       | units | orgId | pricePerUnit | agreementDate | comment      |
-      |   100 |     2 |        40.00 |    2024-04-06 | test comment |
+      |   100 |     2 |        40.99 |    2024-04-06 | test comment |

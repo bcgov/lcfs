@@ -15,7 +15,7 @@ Feature: Create transfer functionality with "Signing authority" role
 
       Examples: 
         | units | orgId | pricePerUnit | agreementDate | comment      |
-        |   100 |     2 |        40.00 |    2024-04-06 | test comment |
+        |   100 |     2 |        40.99 |    2024-04-06 | test comment |
 
     @transfer
     Scenario: sign and send the transfer
@@ -25,4 +25,4 @@ Feature: Create transfer functionality with "Signing authority" role
 
       Examples: 
         | units | orgId | pricePerUnit | agreementDate | comment      |
-        |   150 |     2 |        80.00 |    2024-04-06 | test comment |
+        |   150 |     2 |        80.99 |    2024-04-06 | test comment |
