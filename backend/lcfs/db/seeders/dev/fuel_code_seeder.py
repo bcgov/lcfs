@@ -51,7 +51,7 @@ def create_fuel_entry(
 async def seed_fuel_codes(session):
     fuel_codes_to_seed = [
         create_fuel_entry(
-            fuel_code_id=7,
+            fuel_code_id=1,
             fuel_suffix="102.5",
             company="Neste Oil Singapore",
             carbon_intensity=37.21,
@@ -60,7 +60,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=5,
         ),
         create_fuel_entry(
-            fuel_code_id=8,
+            fuel_code_id=2,
             fuel_suffix="124.4",
             company="Ag Processing Inc.",
             carbon_intensity=3.62,
@@ -69,7 +69,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
-            fuel_code_id=9,
+            fuel_code_id=3,
             fuel_suffix="125.4",
             company="Archer Daniels Midland",
             carbon_intensity=-2.14,
@@ -78,7 +78,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
-            fuel_code_id=10,
+            fuel_code_id=4,
             fuel_suffix="138.5",
             company="ADM Agri-Industries Company",
             carbon_intensity=4.26,
@@ -87,7 +87,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
-            fuel_code_id=11,
+            fuel_code_id=5,
             fuel_suffix="143.4",
             company="Green Plains Otter Tail LLC",
             carbon_intensity=44.06,
@@ -96,7 +96,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=4,
         ),
         create_fuel_entry(
-            fuel_code_id=12,
+            fuel_code_id=6,
             fuel_suffix="251.2",
             company="Incobrasa Industries, Ltd.",
             carbon_intensity=0.35,
@@ -105,7 +105,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
-            fuel_code_id=13,
+            fuel_code_id=7,
             fuel_suffix="266.2",
             company="FortisBC Energy Inc.",
             carbon_intensity=20.41,
@@ -114,7 +114,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=2,
         ),
         create_fuel_entry(
-            fuel_code_id=14,
+            fuel_code_id=8,
             fuel_suffix="274.2",
             company="Paseo Cargill Energy",
             carbon_intensity=-15.03,
@@ -123,7 +123,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
-            fuel_code_id=15,
+            fuel_code_id=9,
             fuel_suffix="286.2",
             company="Bonanza Bioenergy",
             carbon_intensity=35.17,
@@ -132,7 +132,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=4,
         ),
         create_fuel_entry(
-            fuel_code_id=16,
+            fuel_code_id=10,
             fuel_suffix="316.1",
             company="FortisBC Energy Inc.",
             carbon_intensity=65.34,
@@ -141,7 +141,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=7,
         ),
         create_fuel_entry(
-            fuel_code_id=17,
+            fuel_code_id=11,
             fuel_suffix="317.2",
             company="REG Geismar, LLC",
             carbon_intensity=17.36,
@@ -150,7 +150,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=5,
         ),
         create_fuel_entry(
-            fuel_code_id=18,
+            fuel_code_id=12,
             fuel_suffix="339.1",
             company="HTEC Hydrogen Technology & Energy Corp",
             carbon_intensity=21.45,
@@ -159,7 +159,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=6,
         ),
         create_fuel_entry(
-            fuel_code_id=19,
+            fuel_code_id=13,
             fuel_suffix="353.2",
             company="Seaspan Ferries Corp",
             carbon_intensity=67.18,
@@ -168,7 +168,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=7,
         ),
         create_fuel_entry(
-            fuel_code_id=20,
+            fuel_code_id=14,
             fuel_suffix="357.2",
             company="Superior Propane",
             carbon_intensity=71.21,
@@ -177,7 +177,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=13,
         ),
         create_fuel_entry(
-            fuel_code_id=21,
+            fuel_code_id=15,
             fuel_suffix="362.1",
             company="ADM Agri-Industries Company",
             carbon_intensity=-1.00,
@@ -186,7 +186,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
-            fuel_code_id=22,
+            fuel_code_id=16,
             fuel_suffix="405.1",
             company="Diamond Green Diesel LLC",
             carbon_intensity=20.37,
@@ -195,7 +195,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=15,
         ),
         create_fuel_entry(
-            fuel_code_id=23,
+            fuel_code_id=17,
             fuel_suffix="423.1",
             company="Tidewater Renewables Ltd.",
             carbon_intensity=15.47,

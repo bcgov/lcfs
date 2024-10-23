@@ -147,7 +147,6 @@ class FuelExportSchema(BaseSchema):
     fuel_code: Optional[FuelCodeResponseSchema] = None
     provision_of_the_act_id: Optional[int] = None
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    custom_fuel_id: Optional[int] = None
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
 
@@ -181,7 +180,6 @@ class FuelExportCreateSchema(BaseSchema):
     energy_density: Optional[float] = 0
     eer: Optional[float] = 0
     energy: Optional[float] = 0
-    custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
     @validator("quantity")

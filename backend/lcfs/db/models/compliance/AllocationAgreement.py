@@ -36,6 +36,9 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
         nullable=False,
         comment="Units of the fuel quantity. Auto-selected, locked field.",
     )
+    fuel_type_other = Column(
+        String(1000), nullable=True, comment="Other fuel type if one provided"
+    )
 
     allocation_transaction_type_id = Column(
         Integer,
@@ -48,12 +51,6 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
         ForeignKey("fuel_type.fuel_type_id"),
         nullable=False,
         comment="Foreign key to the fuel type",
-    )
-    custom_fuel_type_id = Column(
-        Integer,
-        ForeignKey("custom_fuel_type.custom_fuel_type_id"),
-        nullable=True,
-        comment="Foreign key to the custom fuel type",
     )
     fuel_category_id = Column(
         Integer,
@@ -82,7 +79,6 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
 
     allocation_transaction_type = relationship("AllocationTransactionType")
     fuel_type = relationship("FuelType")
-    custom_fuel_type = relationship("CustomFuelType")
     fuel_category = relationship("FuelCategory")
     provision_of_the_act = relationship("ProvisionOfTheAct")
     fuel_code = relationship("FuelCode")

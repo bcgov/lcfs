@@ -69,6 +69,8 @@ export const AddEditFuelSupplies = () => {
           ...item,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
+          fuelTypeOther:
+            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
           provisionOfTheAct: item.provisionOfTheAct?.name,
           fuelCode: item.fuelCode?.fuelCode,
           endUse: item.endUse?.type || 'Any',
@@ -95,6 +97,8 @@ export const AddEditFuelSupplies = () => {
         ...item,
         fuelCategory: item.fuelCategory?.category,
         fuelType: item.fuelType?.fuelType,
+        fuelTypeOther:
+          item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
         endUse: item.endUse?.type || 'Any',
@@ -117,10 +121,12 @@ export const AddEditFuelSupplies = () => {
           const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
             (item) => item.fuelCategory
           )
-          params.node.setDataValue(
-            'fuelCategory',
-            fuelCategoryOptions[0] ?? null
-          )
+          if (selectedFuelType.fuelType !== 'Other') {
+            params.node.setDataValue(
+              'fuelCategory',
+              fuelCategoryOptions[0] ?? null
+            )
+          }
           const fuelCodeOptions = selectedFuelType.fuelCodes.map(
             (code) => code.fuelCode
           )
@@ -348,7 +354,7 @@ export const AddEditFuelSupplies = () => {
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
-            stopEditingWhenCellsLoseFocus
+            // stopEditingWhenCellsLoseFocus
             saveButtonProps={{
               enabled: true,
               text: t('report:saveReturn'),

@@ -156,7 +156,6 @@ async def test_update_fuel_export_success(fuel_export_repo, mock_db):
             "fuel_category",
             "fuel_type",
             "provision_of_the_act",
-            "custom_fuel_type",
             "end_use_type",
         ],
     )
@@ -196,7 +195,6 @@ async def test_create_fuel_export_success(fuel_export_repo, mock_db):
             "fuel_category",
             "fuel_type",
             "provision_of_the_act",
-            "custom_fuel_type",
             "end_use_type",
         ],
     )

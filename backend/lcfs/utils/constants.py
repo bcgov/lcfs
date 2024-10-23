@@ -81,3 +81,5 @@ id_prefix_to_transaction_type_map = {
     "AA": "AdminAdjustment",
     "IA": "InitiativeAgreement",
 }
+
+default_ci = {"Gasoline": 93.67, "Diesel": 100.21, "Jet fuel": 88.83}

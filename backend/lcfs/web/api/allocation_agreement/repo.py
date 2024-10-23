@@ -68,7 +68,6 @@ class AllocationAgreementRepository:
             .options(
                 joinedload(AllocationAgreement.allocation_transaction_type),
                 joinedload(AllocationAgreement.fuel_type),
-                joinedload(AllocationAgreement.custom_fuel_type),
                 joinedload(AllocationAgreement.fuel_category),
                 joinedload(AllocationAgreement.provision_of_the_act),
                 joinedload(AllocationAgreement.fuel_code),
@@ -118,7 +117,6 @@ class AllocationAgreementRepository:
             .options(
                 joinedload(AllocationAgreement.allocation_transaction_type),
                 joinedload(AllocationAgreement.fuel_type),
-                joinedload(AllocationAgreement.custom_fuel_type),
                 joinedload(AllocationAgreement.fuel_category),
                 joinedload(AllocationAgreement.provision_of_the_act),
                 joinedload(AllocationAgreement.fuel_code),
@@ -151,7 +149,6 @@ class AllocationAgreementRepository:
             .options(
                 joinedload(AllocationAgreement.allocation_transaction_type),
                 joinedload(AllocationAgreement.fuel_type),
-                joinedload(AllocationAgreement.custom_fuel_type),
                 joinedload(AllocationAgreement.fuel_category),
                 joinedload(AllocationAgreement.provision_of_the_act),
                 joinedload(AllocationAgreement.fuel_code),

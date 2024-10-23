@@ -107,6 +107,19 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'fuelTypeOther',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
+    cellEditor: AutocompleteEditor,
+    cellEditorParams: {
+      onDynamicUpdate: (val, params) => {
+        console.log(params)
+        return params.api.stopEditing()
+      },
+      options: optionsData?.fuelTypeOthers?.sort(),
+      noLabel: true,
+      freeSolo: true,
+      multiple: false,
+      disableCloseOnSelect: false,
+      openOnFocus: true
+    },
     cellStyle: (params) => {
       const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle = /other/i.test(params.data.fuelType)
@@ -379,6 +392,21 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
           ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
           ?.fuelCodeCarbonIntensity
       } else {
+        if (optionsData) {
+          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+            const categories = optionsData?.fuelTypes?.find(
+              (obj) => params.data.fuelType === obj.fuelType
+            ).fuelCategories
+            const defaultCI = categories.find(
+              (cat) => cat.fuelCategory === params.data.fuelCategory
+            ).defaultAndPrescribedCi
+
+            return defaultCI
+          } else {
+            return 0
+          }
+        }
+
         return (
           (optionsData &&
             optionsData?.fuelTypes?.find(
@@ -407,7 +435,9 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     },
     valueGetter: (params) => {
       if (/other/i.test(params.data.fuelType)) {
-        return params.data?.energyDensity + ' MJ/' + params.data?.units || 0
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : 0
       } else {
         const ed = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
