@@ -28,9 +28,6 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
-from lcfs.web.api.compliance_report.supplemental_service import (
-    SupplementalReportService,
-)
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
@@ -153,7 +150,7 @@ async def update_compliance_report(
 async def create_supplemental_report(
     request: Request,
     report_id: int,
-    service: SupplementalReportService = Depends(),
+    service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a supplemental compliance report.

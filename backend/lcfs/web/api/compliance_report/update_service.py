@@ -93,9 +93,7 @@ class ComplianceReportUpdateService:
         """Handle actions when a report is set to Draft status."""
         # Implement logic for Draft status
         user = self.request.user
-        has_supplier_role = user_has_roles(
-            user, [RoleEnum.SUPPLIER]
-        )
+        has_supplier_role = user_has_roles(user, [RoleEnum.SUPPLIER])
         if not has_supplier_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
@@ -193,9 +191,7 @@ class ComplianceReportUpdateService:
         """Handle actions when a report is Recommended by analyst."""
         # Implement logic for Recommended by analyst status
         user = self.request.user
-        has_analyst_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]
-        )
+        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 

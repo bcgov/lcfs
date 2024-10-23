@@ -528,19 +528,40 @@ class ComplianceReportRepository:
         self, report: ComplianceReport
     ) -> ComplianceReportBaseSchema:
         """Persists the changes made to the ComplianceReport object to the database."""
-        await self.db.flush()
-        await self.db.refresh(
-            report,
-            [
-                "compliance_period",
-                "organization",
-                "current_status",
-                "summary",
-                "history",
-                "update_date",
-            ],
-        )
-        return ComplianceReportBaseSchema.model_validate(report)
+        try:
+            await self.db.flush()
+
+            # Reload the report with all necessary relationships
+            refreshed_report = await self.db.scalar(
+                select(ComplianceReport)
+                .options(
+                    joinedload(ComplianceReport.compliance_period),
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.summary),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.status
+                    ),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.user_profile
+                    ),
+                )
+                .where(
+                    ComplianceReport.compliance_report_id == report.compliance_report_id
+                )
+            )
+
+            if not refreshed_report:
+                raise ValueError(
+                    f"Could not reload report {report.compliance_report_id}"
+                )
+
+            return ComplianceReportBaseSchema.model_validate(refreshed_report)
+
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Error updating compliance report: {e}")
+            raise
 
     @repo_handler
     async def add_compliance_report_summary(
@@ -795,7 +816,7 @@ class ComplianceReportRepository:
             .all()
         )
 
-    async def get_last_report_in_supplemental_chain(
+    async def get_last_report_in_chain(
         self, original_report_id: int
     ) -> Optional[ComplianceReport]:
         result = await self.db.execute(

@@ -1,6 +1,14 @@
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Enum,
+    Table,
+    ForeignKey,
+)
+from sqlalchemy.orm import relationship, backref
 from lcfs.db.base import BaseModel, Auditable
 
 
@@ -10,8 +18,8 @@ class ReportingFrequency(enum.Enum):
 
 
 class SupplementalInitiatorType(enum.Enum):
-    SUPPLIER_INITIATED_SUPPLEMENTAL = "Supplier Initiated"
-    GOVERNMENT_INITIATED_REASSESSMENT = "Government Initiated"
+    SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
+    GOVERNMENT_REASSESSMENT = "Government Reassessment"
 
 
 class Quarter(enum.Enum):
@@ -94,7 +102,7 @@ class ComplianceReport(BaseModel, Auditable):
     original_report_id = Column(
         Integer,
         ForeignKey("compliance_report.compliance_report_id"),
-        nullable=False,
+        nullable=True,
         comment="Foreign key to the original compliance report",
     )
     previous_report_id = Column(
@@ -106,7 +114,8 @@ class ComplianceReport(BaseModel, Auditable):
     chain_index = Column(
         Integer,
         nullable=False,
-        default=1,
+        default=0,
+        server_default="0",  # Added server_default for database-level default
         comment="Position of the report in the chain of related reports",
     )
     supplemental_initiator = Column(
@@ -164,26 +173,26 @@ class ComplianceReport(BaseModel, Auditable):
         back_populates="compliance_reports",
     )
 
-    # Original Report: Always the first in the chain
-    original_report = relationship(
-        "ComplianceReport",
-        remote_side=[compliance_report_id],
-        back_populates="supplemental_reports",
-        foreign_keys=[original_report_id],
-    )
     # Previous Report: Points to the immediate previous report
     previous_report = relationship(
         "ComplianceReport",
-        remote_side=[compliance_report_id],
         foreign_keys=[previous_report_id],
+        remote_side=[compliance_report_id],
+        backref=backref("next_report", uselist=False, remote_side=[previous_report_id]),
+        post_update=True,
     )
+
     # Supplemental Reports: All reports after the original
     supplemental_reports = relationship(
         "ComplianceReport",
-        back_populates="original_report",
         foreign_keys=[original_report_id],
-        primaryjoin="ComplianceReport.original_report_id == ComplianceReport.compliance_report_id",
+        backref=backref(
+            "original_report",
+            remote_side=[compliance_report_id],
+        ),
+        lazy="select",  # Use select loading
         order_by="ComplianceReport.chain_index",
+        post_update=True,
     )
 
     def __repr__(self):

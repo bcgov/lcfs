@@ -61,7 +61,6 @@ def upgrade() -> None:
         ["admin_adjustment_history_id"],
     )
 
-    # Step 1: Add the `original_report_id` column as nullable
     op.add_column(
         "compliance_report",
         sa.Column(
@@ -71,37 +70,29 @@ def upgrade() -> None:
             comment="Foreign key to the original compliance report",
         ),
     )
-    # Step 2: Add the `chain_index` column as nullable
+
+    # Step 1: Add the chain_index column as nullable initially
     op.add_column(
         "compliance_report",
         sa.Column(
             "chain_index",
             sa.Integer(),
             nullable=True,
+            server_default="0",  # Set database-level default
             comment="Position of the report in the chain of related reports",
         ),
     )
 
-    # Step 3: Set the `original_report_id` to the `compliance_report_id` for all existing records
-    # and set `chain_index` to 1 for all existing records
-    op.execute(
-        """
-        UPDATE compliance_report
-        SET original_report_id = compliance_report_id, chain_index = 1
-    """
-    )
+    # Step 2: Update any existing records to have chain_index = 0 if they're null
+    op.execute("UPDATE compliance_report SET chain_index = 0 WHERE chain_index IS NULL")
 
-    # Step 4: Alter the `original_report_id` column to set it as NOT NULL
+    # Step 3: Alter the chain_index column to set it as NOT NULL
     op.alter_column(
         "compliance_report",
-        "original_report_id",
+        "chain_index",
         existing_type=sa.Integer(),
         nullable=False,
-    )
-
-    # Step 5: Alter the `chain_index` column to set it as NOT NULL
-    op.alter_column(
-        "compliance_report", "chain_index", existing_type=sa.Integer(), nullable=False
+        server_default="0",  # Maintain the default value
     )
 
     op.add_column(
@@ -409,7 +400,7 @@ def downgrade() -> None:
             "original_report_id",
             sa.INTEGER(),
             autoincrement=False,
-            nullable=False,
+            nullable=True,
             comment="Foreign key to the original compliance report",
         ),
         sa.Column(

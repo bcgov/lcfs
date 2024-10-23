@@ -123,7 +123,7 @@ class FinalSupplyEquipmentSchema(BaseSchema):
 
 class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
-    original_report_id: int
+    original_report_id: Optional[int]
     previous_report_id: Optional[int]
     chain_index: int
     supplemental_initiator: Optional[SupplementalInitiatorType]
