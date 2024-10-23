@@ -56,7 +56,7 @@ export const apiRoutes = {
   fuelExportOptions: '/fuel-exports/table-options?',
   getAllFuelExports: '/fuel-exports/list-all',
   saveFuelExports: '/fuel-exports/save',
-  directorReviewCounts: '/dashboard/director-review-counts/',
+  directorReviewCounts: '/dashboard/director-review-counts',
   TransactionCounts: '/dashboard/transaction-counts',
   OrgTransactionCounts: '/dashboard/org-transaction-counts',
   getAllAllocationAgreements: '/allocation-agreement/list-all',
