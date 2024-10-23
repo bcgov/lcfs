@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Float, Integer, String
+from sqlalchemy import Column, Integer, String, Numeric
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, EffectiveDates, DisplayOrder
 from sqlalchemy import ForeignKey
@@ -35,7 +35,7 @@ class CustomFuelType(BaseModel, EffectiveDates, DisplayOrder):
     )
     unit = Column(String, nullable=False, comment="Units of fuel quantity")
     energy_density = Column(
-        Float(10, 2), nullable=False, comment="Energy density of the fuel"
+        Numeric(10, 2), nullable=False, comment="Energy density of the fuel"
     )
 
     description = Column(
@@ -45,7 +45,7 @@ class CustomFuelType(BaseModel, EffectiveDates, DisplayOrder):
     fuel_supplies = relationship("FuelSupply", back_populates="custom_fuel_type")
     fuel_exports = relationship("FuelExport", back_populates="custom_fuel_type")
     fuel_category = relationship("FuelCategory")
-    provisoin_of_the_act = relationship("ProvisionOfTheAct")
+    provision_of_the_act = relationship("ProvisionOfTheAct")
     fuel_code = relationship("FuelCode")
 
     def __repr__(self):

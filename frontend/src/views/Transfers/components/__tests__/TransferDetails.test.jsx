@@ -71,7 +71,7 @@ describe('TransferDetails Component', () => {
     expect(priceInput).toBeInTheDocument()
   })
 
-  test('calculates total value correctly', async () => {
+  test('calculates total value correctly with cents', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -82,23 +82,25 @@ describe('TransferDetails Component', () => {
     const priceInput = screen.getByTestId('price-per-unit')
     const totalValueDisplay = screen.getByTestId('transfer-total-value')
 
-    // Simulate entering values
+    // Simulate entering values with cents
     fireEvent.change(quantityInput, { target: { value: '10' } })
-    fireEvent.change(priceInput, { target: { value: '5' } })
+    fireEvent.change(priceInput, { target: { value: '5.25' } })
 
     // Wait for state updates
     await waitFor(() => {
-      const expectedTotalValue = calculateTotalValue(10, 5)
+      const expectedTotalValue = calculateTotalValue(10, 5.25)
       expect(totalValueDisplay).toHaveTextContent(
         `${expectedTotalValue.toLocaleString('en-CA', {
           style: 'currency',
           currency: 'CAD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
         })} CAD.`
       )
     })
   })
 
-  test('updates total value when inputs change', async () => {
+  test('updates total value when inputs change with cents', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -109,20 +111,20 @@ describe('TransferDetails Component', () => {
     const priceInput = screen.getByTestId('price-per-unit')
     const totalValueDisplay = screen.getByTestId('transfer-total-value')
 
-    // Initial values
+    // Initial values with cents
     fireEvent.change(quantityInput, { target: { value: '5' } })
-    fireEvent.change(priceInput, { target: { value: '2' } })
+    fireEvent.change(priceInput, { target: { value: '2.50' } })
 
     await waitFor(() => {
-      expect(totalValueDisplay).toHaveTextContent('$10.00 CAD.')
+      expect(totalValueDisplay).toHaveTextContent('$12.50 CAD.')
     })
 
-    // Update values
+    // Update values with cents
     fireEvent.change(quantityInput, { target: { value: '8' } })
-    fireEvent.change(priceInput, { target: { value: '3' } })
+    fireEvent.change(priceInput, { target: { value: '3.75' } })
 
     await waitFor(() => {
-      expect(totalValueDisplay).toHaveTextContent('$24.00 CAD.')
+      expect(totalValueDisplay).toHaveTextContent('$30.00 CAD.')
     })
   })
 

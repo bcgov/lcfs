@@ -45,7 +45,7 @@ async def test_get_transfer_success(transfer_service, mock_transfer_repo):
             ),
             agreement_date=date.today(),
             quantity=1,
-            price_per_unit=1,
+            price_per_unit=5.75,
             from_org_comment="comment",
             to_org_comment="comment",
             gov_comment="comment",
@@ -71,6 +71,7 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
         transfer_id=transfer_id,
         from_organization_id=1,
         to_organization_id=2,
+        price_per_unit=5.75,
     )
     mock_transfer_repo.create_transfer.return_value = transfer
 
@@ -94,7 +95,7 @@ async def test_update_transfer_success(
         to_transaction_id=2,
         agreement_date=date.today(),
         transaction_effective_date=date.today(),
-        price_per_unit=1,
+        price_per_unit=7.99,
         quantity=1,
         from_org_comment="comment",
         to_org_comment="comment",

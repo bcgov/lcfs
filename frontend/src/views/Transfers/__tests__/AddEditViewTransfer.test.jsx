@@ -23,6 +23,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AddEditViewTransfer } from '../AddEditViewTransfer'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
+import { useRegExtOrgs } from '@/hooks/useOrganizations'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -86,6 +87,10 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('@/hooks/useTransfer')
 
+vi.mock('@/hooks/useOrganizations', () => ({
+  useRegExtOrgs: vi.fn()
+}))
+
 const renderComponent = (handleMode = 'edit') => {
   const queryClient = new QueryClient()
   queryClient.getQueryState = vi.fn().mockReturnValue({
@@ -118,6 +123,12 @@ describe('AddEditViewTransfer Component Tests', () => {
     vi.mocked(useTransferHooks.useUpdateCategory).mockReturnValue({
       mutate: vi.fn(),
       isPending: false
+    })
+    useRegExtOrgs.mockReturnValue({
+      data: [
+        { organizationId: 1, name: 'Org One' },
+        { organizationId: 2, name: 'Org Two' }
+      ]
     })
   })
   it('renders loading when transfer data is loading', async () => {
@@ -161,18 +172,67 @@ describe('AddEditViewTransfer Component Tests', () => {
     const loading = screen.getByTestId('loading')
     expect(loading).toBeInTheDocument()
   })
-  describe('When in add mode', async () => {
+  it('handles decimal pricePerUnit values correctly', async () => {
+    useMatches.mockReturnValue([{ handle: { mode: 'edit' } }])
+    useParams.mockReturnValue({
+      transferId: 1
+    })
+    useTransfer.mockReturnValue({
+      data: {
+        currentStatus: { status: TRANSFER_STATUSES.DRAFT },
+        comments: [{ name: 'john doe' }],
+        fromOrganization: { name: 'from Org', organizationId: 1 },
+        toOrganization: { name: 'to Org', organizationId: 2 },
+        pricePerUnit: 5.75,
+        quantity: 10,
+        transferHistory: []
+      },
+      isFetched: true,
+      isLoadingError: false
+    })
+    useLocation.mockReturnValue({
+      state: null
+    })
+
+    renderComponent()
+
+    const totalValueDisplay = await screen.findByTestId('transfer-total-value')
+
+    await waitFor(() => {
+      expect(totalValueDisplay).toHaveTextContent('$57.50 CAD.')
+    })
+  })
+
+  describe('When in add mode', () => {
     beforeEach(() => {
       useMatches.mockReturnValue([{ handle: { mode: 'add' } }])
       useTransfer.mockReturnValue({
-        data: {
-          currentStatus: { status: '' },
-          comments: [{ name: 'john doe' }]
-        }
+        data: null,
+        isLoading: false,
+        isFetched: true,
+        isLoadingError: false
       })
 
       useLocation.mockReturnValue({
         state: null
+      })
+    })
+
+    it('renders the correct total value with decimal pricePerUnit', async () => {
+      renderComponent()
+
+      const quantityInput = await screen.findByTestId('quantity')
+      const priceInput = await screen.findByTestId('price-per-unit')
+      const totalValueDisplay = await screen.findByTestId('transfer-total-value')
+
+      // Simulate entering values
+      await userEvent.clear(quantityInput)
+      await userEvent.type(quantityInput, '5')
+      await userEvent.clear(priceInput)
+      await userEvent.type(priceInput, '3.99')
+
+      await waitFor(() => {
+        expect(totalValueDisplay).toHaveTextContent('$19.95 CAD.')
       })
     })
 
@@ -207,7 +267,7 @@ describe('AddEditViewTransfer Component Tests', () => {
       expect(buttonClusterBackButton).toBeInTheDocument()
       expect(buttonClusterSaveButton).toBeInTheDocument()
       expect(buttonClusterSignButton).toBeInTheDocument()
-    })
+  })
     it('doesnt render the signing if user does not have permissions', async () => {
       useCurrentUser.mockReturnValue({
         data: {

@@ -40,7 +40,7 @@ async def test_get_transfer_success(
         "to_organization": {"organization_id": 2, "name": "org2"},
         "agreement_date": date.today(),
         "quantity": 1,
-        "price_per_unit": 1,
+        "price_per_unit": 6.85,
         "current_status": {"transfer_status_id": 1, "status": "status"},
     }
 
@@ -53,6 +53,7 @@ async def test_get_transfer_success(
     data = response.json()
 
     assert data["transferId"] == transfer_id
+    assert data["pricePerUnit"] == 6.85
 
 
 @pytest.mark.anyio
@@ -77,7 +78,7 @@ async def test_government_update_transfer_success(
         "to_organization": {"organization_id": 2, "name": "org2"},
         "agreement_date": date.today(),
         "quantity": 1,
-        "price_per_unit": 1,
+        "price_per_unit": 7.25,
         "current_status": {"transfer_status_id": 1, "status": "status"},
     }
 
@@ -90,6 +91,7 @@ async def test_government_update_transfer_success(
         "transfer_id": transfer_id,
         "from_organization_id": 1,
         "to_organization_id": 2,
+        "price_per_unit": 7.25,
     }
 
     response = await client.put(url, json=payload)
@@ -99,6 +101,7 @@ async def test_government_update_transfer_success(
     data = response.json()
 
     assert data["transferId"] == transfer_id
+    assert data["pricePerUnit"] == 7.25
 
 
 @pytest.mark.anyio

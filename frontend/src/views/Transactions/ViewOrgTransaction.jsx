@@ -7,10 +7,10 @@ import { OrgTransactionDetails } from '@/views/Transactions/components'
 import Loading from '@/components/Loading'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
-
-// Constants for transaction types
-export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
-export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '@/views/Transactions/constants'
 
 export const ViewOrgTransaction = () => {
   const { t } = useTranslation([
