@@ -25,17 +25,28 @@ import BCButton from '@/components/BCButton'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import Loading from '@/components/Loading'
 
-const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear, setIsSigningAuthorityDeclared, buttonClusterConfig, methods, setHasMet, alertRef }) => {
+const ComplianceReportSummary = ({
+  reportID,
+  currentStatus,
+  compliancePeriodYear,
+  setIsSigningAuthorityDeclared,
+  buttonClusterConfig,
+  methods,
+  setHasMet,
+  alertRef
+}) => {
   const [summaryData, setSummaryData] = useState(null)
   const { t } = useTranslation(['report'])
 
-  const { data, isLoading, isError } =
-    useGetComplianceReportSummary(reportID)
+  const { data, isLoading, isError } = useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary(data?.complianceReportId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
-        setHasMet(response.data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 || response.data?.nonCompliancePenaltySummary[1].totalValue <= 0)
+        setHasMet(
+          response.data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
+            response.data?.nonCompliancePenaltySummary[1].totalValue <= 0
+        )
       },
       onError: (error) => {
         alertRef.current?.triggerAlert({
@@ -47,7 +58,10 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
   useEffect(() => {
     if (data) {
       setSummaryData(data)
-      setHasMet(data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 || data?.nonCompliancePenaltySummary[1].totalValue <= 0)
+      setHasMet(
+        data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
+          data?.nonCompliancePenaltySummary[1].totalValue <= 0
+      )
     }
   }, [data, setHasMet])
 
@@ -89,11 +103,11 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
             columns={
               summaryData
                 ? renewableFuelColumns(
-                  t,
-                  summaryData?.renewableFuelTargetSummary,
-                  currentStatus === 'Draft',
-                  compliancePeriodYear
-                )
+                    t,
+                    summaryData?.renewableFuelTargetSummary,
+                    currentStatus === 'Draft',
+                    compliancePeriodYear
+                  )
                 : []
             }
             data={summaryData?.renewableFuelTargetSummary}

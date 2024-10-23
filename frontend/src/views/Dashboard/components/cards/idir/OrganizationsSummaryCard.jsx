@@ -17,6 +17,29 @@ const OrganizationsSummaryCard = () => {
     reservedBalance: 0
   })
 
+  useEffect(() => {
+    if (!isLoading) {
+      const formattedOrgs = organizations.map((org) => ({
+        name: org.name,
+        totalBalance: org.totalBalance,
+        reservedBalance: Math.abs(org.reservedBalance)
+      }))
+
+      setFormattedOrgs(formattedOrgs)
+      setAllOrgSelected()
+    }
+  }, [organizations, isLoading])
+
+  const onSelectOrganization = (event) => {
+    const orgName = event.target.value
+    if (orgName === t('txn:allOrganizations')) {
+      setAllOrgSelected()
+    } else {
+      const selectedOrg = formattedOrgs.find((org) => org.name === orgName)
+      setSelectedOrganization(selectedOrg)
+    }
+  }
+
   const setAllOrgSelected = () => {
     const totalBalance = organizations.reduce((total, org) => {
       return total + org.totalBalance
@@ -30,29 +53,6 @@ const OrganizationsSummaryCard = () => {
       totalBalance,
       reservedBalance
     })
-  }
-
-  useEffect(() => {
-    if (!isLoading) {
-      const formattedOrgs = organizations.map((org) => ({
-        name: org.name,
-        totalBalance: org.totalBalance,
-        reservedBalance: Math.abs(org.reservedBalance)
-      }))
-
-      setFormattedOrgs(formattedOrgs)
-      setAllOrgSelected()
-    }
-  }, [organizations, isLoading, t])
-
-  const onSelectOrganization = (event) => {
-    const orgName = event.target.value
-    if (orgName === t('txn:allOrganizations')) {
-      setAllOrgSelected()
-    } else {
-      const selectedOrg = formattedOrgs.find((org) => org.name === orgName)
-      setSelectedOrganization(selectedOrg)
-    }
   }
 
   return (

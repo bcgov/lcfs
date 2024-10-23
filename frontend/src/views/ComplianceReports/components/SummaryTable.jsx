@@ -27,6 +27,11 @@ const SummaryTable = ({
   const [data, setData] = useState(initialData)
   const [editingCell, setEditingCell] = useState(null)
 
+  const rowFormatters = {
+    number: numberFormatter,
+    currency: currencyFormatter
+  }
+
   useEffect(() => {
     setData(initialData)
   }, [initialData])
@@ -103,7 +108,7 @@ const SummaryTable = ({
             {columns.map((column, index) => (
               <TableCell
                 key={column.id}
-                align='center'
+                align="center"
                 sx={{
                   fontWeight: 'bold',
                   backgroundColor: '#f0f0f0',
@@ -195,11 +200,12 @@ const SummaryTable = ({
                         display: 'block'
                       }}
                     >
-                      {row?.format &&
-                      (row[column.id] || row[column.id] === 0) &&
-                      row.format === 'currency'
-                        ? currencyFormatter(row[column.id])
-                        : numberFormatter(row[column.id], useParenthesis)}
+                      {row.format
+                        ? rowFormatters[row.format](
+                            row[column.id],
+                            useParenthesis
+                          )
+                        : row[column.id]}
                     </span>
                   )}
                 </TableCell>
