@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     s3_bucket: str = "lcfs"
     s3_access_key: str = "s3_access_key"
     s3_secret_key: str = "development_only"
+    s3_docs_path: str = "lcfs-docs"
 
     clamav_enabled: bool = False
     clamav_host: str = "clamav"

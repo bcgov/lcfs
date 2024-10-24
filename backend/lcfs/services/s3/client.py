@@ -46,7 +46,7 @@ class DocumentService:
     @repo_handler
     async def upload_file(self, file, parent_id: str, parent_type="compliance_report"):
         file_id = uuid.uuid4()
-        file_key = f"{parent_type}/{parent_id}/{file_id}"
+        file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
 
         # Scan file size
         file_size = os.fstat(file.file.fileno()).st_size
