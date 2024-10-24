@@ -30,11 +30,6 @@ class NotionalTransferSchema(NotionalTransferCreateSchema):
     pass
 
 
-class ComplianceReportRequestSchema(BaseSchema):
-    compliance_report_id: int
-    # pagination: PaginationResponseSchema
-
-
 class PaginatedNotionalTransferRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
     filters: List[FilterModel]

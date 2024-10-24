@@ -82,10 +82,6 @@ class AllocationAgreementAllSchema(BaseSchema):
     pagination: Optional[PaginationResponseSchema] = {}
 
 
-class ComplianceReportRequestSchema(BaseSchema):
-    compliance_report_id: int
-
-
 class AllocationAgreementListSchema(BaseSchema):
     allocation_agreements: List[AllocationAgreementSchema]
     pagination: PaginationResponseSchema
