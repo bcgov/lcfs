@@ -1,10 +1,10 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from lcfs.web.api.base import BaseSchema
 
 
-class RedisValueDTO(BaseModel):
+class RedisValueDTO(BaseSchema):
     """DTO for redis values."""
 
     key: str
-    value: Optional[str]  # noqa: WPS110
+    value: Optional[str] = None  # noqa: WPS110

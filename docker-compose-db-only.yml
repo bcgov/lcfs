@@ -1,0 +1,17 @@
+version: '3.2'
+
+services:
+  db:
+    restart: 'no'
+    image: postgres:14.2
+    environment:
+      POSTGRES_DB: lcfs
+      POSTGRES_USER: lcfs
+      POSTGRES_PASSWORD: development_only
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

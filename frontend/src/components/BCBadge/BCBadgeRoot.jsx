@@ -1,6 +1,7 @@
 // @mui material components
 import Badge from '@mui/material/Badge'
 import { styled } from '@mui/material/styles'
+import shadows from '@mui/material/styles/shadows'
 
 const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
   const { palette, typography, borders, functions } = theme
@@ -15,7 +16,7 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
     children
   } = ownerState
 
-  const { white, dark, gradients, badgeColors } = palette
+  const { white, dark, gradients, badgeColors, transparent } = palette
   const { size: fontSize, fontWeightBold } = typography
   const { borderRadius, borderWidth } = borders
   const { pxToRem, linearGradient } = functions
@@ -93,10 +94,19 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
     }
   }
 
+  const outlinedStyles = (colorProp) => {
+    return {
+      backgroundValue: transparent.main,
+      color: 'inherit',
+      border: `${borderWidth[2]} solid ${badgeColors[colorProp].background}`,
+      borderRadius: borderRadius.md,
+      boxShadow: shadows.sm
+    }
+  }
   // styles for the badge with no children and container={false}
   const standAloneStyles = () => ({
     position: 'static',
-    marginLeft: pxToRem(8),
+    // marginLeft: pxToRem(8),
     transform: 'none',
     fontSize: pxToRem(9)
   })
@@ -113,7 +123,7 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
       padding: paddings[size] || paddings.xs,
       fontSize: fontSizeValue,
       fontWeight: fontWeightBold,
-      textTransform: 'uppercase',
+      textTransform: 'none',
       lineHeight: 1,
       textAlign: 'center',
       whiteSpace: 'nowrap',
@@ -123,6 +133,7 @@ const BCBadgeRoot = styled(Badge)(({ theme, ownerState }) => {
       ...(indicator && indicatorStyles(size)),
       ...(variant === 'gradient' && gradientStyles(color)),
       ...(variant === 'contained' && containedStyles(color)),
+      ...(variant === 'outlined' && outlinedStyles(color)),
       ...(!children && !container && standAloneStyles(color)),
       ...(container && containerStyles(color))
     }

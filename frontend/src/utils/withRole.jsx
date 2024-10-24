@@ -1,17 +1,25 @@
-import useUserStore from '../store/useUserStore'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { Navigate } from 'react-router-dom'
 
-export const withRole = (WrappedComponent, allowedRoles) => {
+export const withRole = (WrappedComponent, allowedRoles, redirect) => {
   const WithRole = (props) => {
-    const user = useUserStore((state) => state.user)
-    const userRoles = user?.user_roles?.map((role) => role.name) || []
+    const { data: currentUser } = useCurrentUser()
+    const userRoles = currentUser?.roles?.map((role) => role.name) || []
 
     const isAuthorized = allowedRoles.some((role) => userRoles.includes(role))
 
-    if (!user) {
+    if (!currentUser) {
       return <div>Loading...</div>
     }
 
-    return isAuthorized ? <WrappedComponent {...props} /> : <></>
+    if (!isAuthorized && redirect) {
+      return <Navigate to={redirect} />
+    }
+    if (!isAuthorized && !redirect) {
+      return null
+    }
+
+    return <WrappedComponent {...props} />
   }
 
   // Display name for the wrapped component

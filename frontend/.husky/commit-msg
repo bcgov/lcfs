@@ -3,7 +3,7 @@
 
 # Regex pattern to validate commit message
 # For example, for Conventional Commits
-COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|chore)\: .{1,}'
+COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|chore|WIP)\: .{1,}'
 
 # Check if the commit message matches the regex
 if ! grep -qE "$COMMIT_REGEX" "$1"; then

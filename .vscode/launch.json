@@ -5,25 +5,47 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "FastAPI - LCFS",
-      "type": "python",
+      "name": "LCFS - pytests",
+      "type": "debugpy",
       "request": "launch",
       "cwd": "${workspaceFolder}/backend",
       "module": "poetry",
-      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "python": "${workspaceFolder}/backend/venv/bin/python3",
       "args": [
         "run",
-        "python",
-        "-m",
-        "uvicorn",
+        "pytest",
+        "-v",
+        "lcfs/tests/"
+      ]
+    },
+    {
+      "name": "LCFS Seeders",
+      "type": "debugpy",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend",
+      "program": "${workspaceFolder}/backend/lcfs/db/seeders/seed_database.py",
+      "python": "${workspaceFolder}/backend/venv/bin/python3",
+      "args": [
+        "dev"
+      ]
+    },
+    {
+      "name": "FastAPI - LCFS",
+      "type": "debugpy",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/venv/bin/python3",
+      "args": [
         "lcfs.web.application:get_app",
         "--port",
-        "8000"
+        "8000",
+        "--reload"
       ]
     },
     {
       "name": "LCFS FastAPI: Remote Attach",
-      "type": "python",
+      "type": "debugpy",
       "request": "attach",
       "connect": {
         "host": "localhost",
