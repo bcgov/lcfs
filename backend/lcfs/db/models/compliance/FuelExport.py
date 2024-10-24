@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Date, Integer, Float, ForeignKey, Enum
+from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
+
 from lcfs.db.base import BaseModel, Auditable
 from lcfs.db.models.compliance.ComplianceReport import (
     ChangeType,
@@ -52,15 +53,27 @@ class FuelExport(BaseModel, Auditable):
     compliance_units = Column(
         Integer, nullable=True, comment="Compliance units for the fuel supply"
     )
-    target_ci = Column(Float, nullable=True, comment="CI limit for the fuel supply")
-    ci_of_fuel = Column(Float, nullable=True, comment="CI of fuel for the fuel supply")
+    target_ci = Column(
+        Numeric(10, 2), nullable=True, comment="CI limit for the fuel supply"
+    )
+    ci_of_fuel = Column(
+        Numeric(10, 2), nullable=True, comment="CI of fuel for the fuel supply"
+    )
     energy_density = Column(
-        Float, nullable=True, comment="Energy density of the fuel supplied"
+        Numeric(10, 2),
+        nullable=True,
+        comment="Energy density of the fuel supplied",
     )
     eer = Column(
-        Float, nullable=True, comment="Energy effectiveness ratio of the fuel supplied"
+        Numeric(10, 2),
+        nullable=True,
+        comment="Energy effectiveness ratio of the fuel supplied",
     )
-    energy = Column(Float, nullable=True, comment="Energy content of the fuel supplied")
+    energy = Column(
+        Numeric(10, 2),
+        nullable=True,
+        comment="Energy content of the fuel supplied",
+    )
 
     # relational columns
     fuel_category_id = Column(

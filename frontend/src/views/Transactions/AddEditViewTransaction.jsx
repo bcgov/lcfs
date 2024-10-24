@@ -49,9 +49,10 @@ import { buttonClusterConfigFn } from './buttonConfigs'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { useTransactionMutation } from './transactionMutation'
 import InternalComments from '@/components/InternalComments'
-
-export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
-export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '@/views/Transactions/constants'
 
 export const AddEditViewTransaction = () => {
   const queryClient = useQueryClient()

@@ -3,7 +3,7 @@ Other Uses endpoints
 """
 
 from logging import getLogger
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from fastapi import (
     APIRouter,
@@ -13,9 +13,9 @@ from fastapi import (
     Response,
     Depends,
 )
-from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.schema import (
@@ -23,13 +23,12 @@ from lcfs.web.api.other_uses.schema import (
     OtherUsesSchema,
     OtherUsesListSchema,
     OtherUsesTableOptionsSchema,
-    ComplianceReportRequestSchema,
     DeleteOtherUsesResponseSchema,
     PaginatedOtherUsesRequestSchema,
     OtherUsesListSchema,
     OtherUsesAllSchema,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -62,8 +61,10 @@ async def get_other_uses(
     request_data: ComplianceReportRequestSchema = Body(...),
     response: Response = None,
     service: OtherUsesServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of other uses for a compliance report"""
+    await report_validate.validate_organization_access(request_data.compliance_report_id)
     return await service.get_other_uses(request_data.compliance_report_id)
 
 
@@ -77,6 +78,7 @@ async def get_other_uses_paginated(
     request: Request,
     request_data: PaginatedOtherUsesRequestSchema = Body(...),
     service: OtherUsesServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> OtherUsesListSchema:
     pagination = PaginationRequestSchema(
         page=request_data.page,
@@ -84,6 +86,7 @@ async def get_other_uses_paginated(
         sort_orders=request_data.sort_orders,
         filters=request_data.filters,
     )
+    await report_validate.validate_organization_access(request_data.compliance_report_id)
     compliance_report_id = request_data.compliance_report_id
     return await service.get_other_uses_paginated(pagination, compliance_report_id)
 
@@ -99,12 +102,13 @@ async def save_other_uses_row(
     request_data: OtherUsesCreateSchema = Body(...),
     service: OtherUsesServices = Depends(),
     validate: OtherUsesValidation = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to save a single other uses row"""
     compliance_report_id = request_data.compliance_report_id
     other_uses_id: Optional[int] = request_data.other_uses_id
 
-    await validate.validate_organization_access(compliance_report_id)
+    await report_validate.validate_organization_access(compliance_report_id)
 
     if request_data.deleted:
         # Delete existing other use

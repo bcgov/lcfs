@@ -2,9 +2,9 @@ import { Stack, IconButton } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import Loading from '@/components/Loading'
 import BCTypography from '@/components/BCTypography'
-import BCAlert from '@/components/BCAlert'
+import { FloatingAlert, BCAlert2 } from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -20,6 +20,7 @@ import { Role } from '@/components/Role'
 export const ViewUser = () => {
   const { t } = useTranslation(['common', 'admin'])
   const gridRef = useRef()
+  const alertRef = useRef()
   const gridOptions = {
     overlayNoRowsTemplate: t('admin:activitiesNotFound'),
     suppressHeaderMenuButton: false,
@@ -29,14 +30,14 @@ export const ViewUser = () => {
   const { userID, orgID } = useParams()
   const { data: currentUser, hasRoles } = useCurrentUser()
   const navigate = useNavigate()
-  const { data, isLoading, isLoadingError } = hasRoles(roles.supplier)
+  const { data, isLoading, isLoadingError, isError, error } = hasRoles(roles.supplier)
     ? // eslint-disable-next-line react-hooks/rules-of-hooks
-      useOrganizationUser(
-        orgID || currentUser?.organization.organizationId,
-        userID
-      )
+    useOrganizationUser(
+      orgID || currentUser?.organization.organizationId,
+      userID
+    )
     : // eslint-disable-next-line react-hooks/rules-of-hooks
-      useUser(parseInt(userID))
+    useUser(parseInt(userID))
 
   const handleEditClick = () => {
     if (hasRoles(roles.supplier)) {
@@ -60,7 +61,7 @@ export const ViewUser = () => {
 
   const handleRowClicked = useCallback((params) => {
     const { transactionType, transactionId } = params.data;
-  
+
     let route;
     switch (transactionType) {
       case 'Transfer':
@@ -76,14 +77,26 @@ export const ViewUser = () => {
     navigate(route);
   }, [navigate]);
 
+  useEffect(() => {
+    if (isError) {
+      alertRef.current?.triggerAlert({ message: error.response?.data?.detail || error.message, severity: 'error' })
+    }
+  }, [isError, error])
+
+  if (isError) {
+    return <>
+      <BCAlert2 ref={alertRef}
+        data-test="alert-box"
+        delay={10000} />
+    </>
+  }
+
   if (isLoading) return <Loading />
 
   return (
     <div>
       {isLoadingError ? (
-        <BCAlert data-test="alert-box" severity="error">
-          {t('admin:errMsg')}
-        </BCAlert>
+        <FloatingAlert ref={alertRef} data-test="alert-box" />
       ) : (
         <>
           <BCTypography variant="h5" color="primary" mb={1}>

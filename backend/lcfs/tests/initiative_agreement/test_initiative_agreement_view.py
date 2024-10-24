@@ -13,6 +13,7 @@ from lcfs.web.api.initiative_agreement.schema import (
 )
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -37,35 +38,42 @@ async def test_get_initiative_agreement(
     set_mock_user,
     mock_initiative_agreement_services,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-    initiative_agreement_id = 1
+    with patch(
+        "lcfs.web.api.initiative_agreement.services.InitiativeAgreementServices",
+        mock_initiative_agreement_services,
+    ):
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        initiative_agreement_id = 1
 
-    # Mock the service method
-    mock_initiative_agreement_services.get_initiative_agreement.return_value = (
-        InitiativeAgreementSchema(
-            initiative_agreement_id=initiative_agreement_id,
-            to_organization={"name": "name"},
-            create_date=datetime.datetime.today().date().isoformat(),
-            compliance_units=150,
-            current_status={"initiative_agreement_status_id": 1, "status": "Updated"},
-            to_organization_id=3,
-            gov_comment="Updated initiative agreement.",
-            history=[],
+        # Mock the service method
+        mock_initiative_agreement_services.get_initiative_agreement.return_value = (
+            InitiativeAgreementSchema(
+                initiative_agreement_id=initiative_agreement_id,
+                to_organization={"name": "name", "organizationId": 3},
+                create_date=datetime.datetime.today().date().isoformat(),
+                compliance_units=150,
+                current_status={
+                    "initiative_agreement_status_id": 1,
+                    "status": "Updated",
+                },
+                to_organization_id=3,
+                gov_comment="Updated initiative agreement.",
+                history=[],
+            )
         )
-    )
 
-    # Use dependency override
-    fastapi_app.dependency_overrides[InitiativeAgreementServices] = (
-        lambda: mock_initiative_agreement_services
-    )
+        # Use dependency override
+        fastapi_app.dependency_overrides[InitiativeAgreementServices] = (
+            lambda: mock_initiative_agreement_services
+        )
 
-    url = fastapi_app.url_path_for(
-        "get_initiative_agreement", initiative_agreement_id=initiative_agreement_id
-    )
-    response = await client.get(url)
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["initiativeAgreementId"] == initiative_agreement_id
+        url = fastapi_app.url_path_for(
+            "get_initiative_agreement", initiative_agreement_id=initiative_agreement_id
+        )
+        response = await client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["initiativeAgreementId"] == initiative_agreement_id
 
 
 @pytest.mark.anyio
@@ -88,7 +96,7 @@ async def test_create_initiative_agreement(
     mock_initiative_agreement_services.create_initiative_agreement.return_value = (
         InitiativeAgreementSchema(
             initiative_agreement_id=1,
-            to_organization={"name": "name"},
+            to_organization={"name": "name", "organizationId": 3},
             create_date=datetime.datetime.today().date().isoformat(),
             compliance_units=150,
             current_status={"initiative_agreement_status_id": 1, "status": "Updated"},
@@ -133,7 +141,7 @@ async def test_update_initiative_agreement(
     mock_initiative_agreement_services.update_initiative_agreement.return_value = (
         InitiativeAgreementSchema(
             initiative_agreement_id=initiative_agreement_id,
-            to_organization={"name": "name"},
+            to_organization={"name": "name", "organizationId": 3},
             create_date=datetime.datetime.today().date().isoformat(),
             compliance_units=150,
             current_status={"initiative_agreement_status_id": 1, "status": "Updated"},

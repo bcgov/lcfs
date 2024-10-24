@@ -8,7 +8,7 @@ on:
       - backend/**
 
 env:
-  GIT_URL: https://github.com/bcgov/lcfs.git 
+  GIT_URL: https://github.com/bcgov/lcfs.git
   TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
   PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -16,20 +16,19 @@ env:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true  
+  cancel-in-progress: true
 
 jobs:
-
   get-version:
     if: >
       (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch)
     name: Retrieve version
     runs-on: ubuntu-latest
-  
+
     outputs:
       output1: ${{ steps.get-version.outputs.VERSION }}
-    
+
     steps:
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
@@ -65,11 +64,10 @@ jobs:
       VERSION: ${{ needs.get-version.outputs.output1 }}
 
     steps:
-
       - name: Check out repository
         uses: actions/checkout@v4.1.1
-        with: 
-          ref: ${{ github.event.pull_request.head.ref }} 
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
@@ -118,7 +116,6 @@ jobs:
       VERSION: ${{ needs.get-version.outputs.output1 }}
 
     steps:
-      
       - name: Checkout Manifest repository
         uses: actions/checkout@v4.1.1
         with:
@@ -133,24 +130,24 @@ jobs:
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
           namespace: ${{ env.TOOLS_NAMESPACE }}
-      
+
       - name: Update values-dev-pr.yaml for frentend and backend
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: |
-                yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-                yq -i '.route.host = "lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-                yq -i '.volumes[0].configMap.name = "lcfs-frontend-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-                yq -i '.apiBase = "https://lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/api"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-                yq -i '.keycloak.postLogoutUrl = "https://lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
-                yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i eval '(.env[] | select(.name == "S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
-                yq -i eval '(.env[] | select(.name == "S3_KEY") | .valueFrom.secretKeyRef.name) = "lcfs-minio-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+          cmd: |
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.route.host = "lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.volumes[0].configMap.name = "lcfs-frontend-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.apiBase = "https://lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/api"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.keycloak.postLogoutUrl = "https://lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_S3_SECRET_KEY") | .valueFrom.secretKeyRef.name) = "lcfs-minio-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
 
-      - name: Helm Deployment 
+      - name: Helm Deployment
         shell: bash {0}
         run: |
           cd lcfs/charts/lcfs-postgres-pr

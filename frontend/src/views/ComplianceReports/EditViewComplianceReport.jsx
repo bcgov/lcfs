@@ -35,7 +35,6 @@ import UploadCard from './components/UploadCard'
 import { AssessmentCard } from './components/AssessmentCard'
 import { ImportantInfoCard } from './components/ImportantInfoCard'
 import InternalComments from '@/components/InternalComments'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const iconStyle = {
   width: '2rem',
@@ -158,7 +157,7 @@ export const EditViewComplianceReport = () => {
     }
     if (isError) {
       alertRef.current?.triggerAlert({
-        message: error.message,
+        message: error.response?.data?.detail || error.message,
         severity: 'error'
       })
     }
@@ -166,6 +165,15 @@ export const EditViewComplianceReport = () => {
 
   if (isLoading || isReportLoading || isCurrentUserLoading) {
     return <Loading />
+  }
+
+  if (isError) {
+    return (
+      <>
+        <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
+        <Typography color="error">{t('report:errorRetrieving')}</Typography>
+      </>
+    )
   }
 
   return (

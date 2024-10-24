@@ -57,9 +57,11 @@ async def get_final_supply_equipments(
     request_data: CommonPaginatedReportRequestSchema = Body(...),
     response: Response = None,
     service: FinalSupplyEquipmentServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> FinalSupplyEquipmentsSchema:
     """Endpoint to get list of final supply equipments for a compliance report"""
     compliance_report_id = request_data.compliance_report_id
+    await report_validate.validate_organization_access(compliance_report_id)
     if hasattr(request_data, "page") and request_data.page is not None:
         # handle pagination.
         pagination = PaginationRequestSchema(

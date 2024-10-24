@@ -1,12 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
+import { TRANSACTIONS } from '@/constants/routes/routes'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
-} from './AddEditViewTransaction'
-import { TRANSACTIONS } from '@/constants/routes/routes'
-import { useQueryClient } from '@tanstack/react-query'
+} from '@/views/Transactions/constants'
 
 export const useTransactionMutation = (
   t,

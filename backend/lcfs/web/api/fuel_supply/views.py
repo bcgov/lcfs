@@ -53,9 +53,11 @@ async def get_fuel_supply(
     request_data: CommonPaginatedReportRequestSchema = Body(...),
     response: Response = None,
     service: FuelSupplyServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> FuelSuppliesSchema:
     """Endpoint to get list of fuel supplied list for a compliance report"""
     compliance_report_id = request_data.compliance_report_id
+    await report_validate.validate_organization_access(compliance_report_id)
     if hasattr(request_data, "page") and request_data.page is not None:
         # handle pagination.
         pagination = PaginationRequestSchema(

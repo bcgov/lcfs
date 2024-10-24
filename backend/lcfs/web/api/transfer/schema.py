@@ -48,7 +48,7 @@ class TransferSchema(BaseSchema):
     to_organization: TransferOrganizationSchema
     agreement_date: date
     quantity: int
-    price_per_unit: int
+    price_per_unit: float
     comments: Optional[List[TransferCommentSchema]] = None
     from_org_comment: Optional[str] = None
     to_org_comment: Optional[str] = None
@@ -68,7 +68,7 @@ class TransferCreateSchema(BaseSchema):
     to_transaction_id: Optional[int] = None
     agreement_date: Optional[date] = None
     quantity: Optional[int] = None
-    price_per_unit: Optional[int] = None
+    price_per_unit: Optional[float] = None
     from_org_comment: Optional[str] = None
     to_org_comment: Optional[str] = None
     gov_comment: Optional[str] = None

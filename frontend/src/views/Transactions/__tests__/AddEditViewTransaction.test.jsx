@@ -3,11 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
-import {
-  AddEditViewTransaction,
-  ADMIN_ADJUSTMENT,
-  INITIATIVE_AGREEMENT
-} from '../AddEditViewTransaction'
+import { AddEditViewTransaction } from '../AddEditViewTransaction'
 import { useTranslation } from 'react-i18next'
 import {
   MemoryRouter,
@@ -27,6 +23,10 @@ import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
+import {
+  ADMIN_ADJUSTMENT,
+  INITIATIVE_AGREEMENT
+} from '@/views/Transactions/constants'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({

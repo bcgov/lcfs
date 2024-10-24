@@ -22,7 +22,7 @@ import Loading from '@/components/Loading'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
-} from '../AddEditViewTransaction'
+} from '@/views/Transactions/constants'
 
 export const TransactionDetails = ({ transactionId, isEditable }) => {
   const { t } = useTranslation(['txn'])

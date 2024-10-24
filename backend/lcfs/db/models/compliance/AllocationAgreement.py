@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
+
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 
 
@@ -27,7 +28,9 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     transaction_partner_phone = Column(
         String, nullable=False, comment="Transaction Partner phone number"
     )
-    ci_of_fuel = Column(Float, nullable=False, comment="The Carbon intesity of fuel")
+    ci_of_fuel = Column(
+        Numeric(10, 2), nullable=False, comment="The Carbon intesity of fuel"
+    )
     quantity = Column(
         Integer, nullable=False, comment="Quantity of fuel involved in the transaction"
     )

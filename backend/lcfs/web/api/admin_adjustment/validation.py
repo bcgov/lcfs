@@ -1,4 +1,6 @@
 from fastapi import Depends, HTTPException, Request
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.role.schema import user_has_roles
 from starlette import status
 
 from lcfs.web.api.admin_adjustment.schema import (
@@ -40,4 +42,28 @@ class AdminAdjustmentValidation:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Editing a processed admin adjustment is not allowed.",
+            )
+
+    async def validate_organization_access(self, admin_adjustment_id: int):
+        admin_adjustment = await self.service.get_admin_adjustment(admin_adjustment_id)
+        if not admin_adjustment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Transaction not found.",
+            )
+
+        organization_id = admin_adjustment.to_organization.organization_id
+        user_organization_id = (
+            self.request.user.organization.organization_id
+            if self.request.user.organization
+            else None
+        )
+
+        if (
+            not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+            and organization_id != user_organization_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this transaction.",
             )

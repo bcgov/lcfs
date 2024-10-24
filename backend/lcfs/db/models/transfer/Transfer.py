@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean, Enum, String
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, String, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy import UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -29,7 +29,10 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     to_transaction_id = Column(Integer, ForeignKey("transaction.transaction_id"))
     agreement_date = Column(DateTime, comment="Agreement date of the transfer")
     transaction_effective_date = Column(DateTime, comment="transaction effective date")
-    price_per_unit = Column(Integer, comment="Price per unit")
+    price_per_unit = Column(
+        Numeric(10, 2),
+        comment="Price per unit with two decimal places",
+    )
     quantity = Column(Integer, comment="Quantity of units")
     # compliance_period = Column(Integer, )
     from_org_comment = Column(

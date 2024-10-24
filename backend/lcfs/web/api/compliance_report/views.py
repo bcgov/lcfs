@@ -82,7 +82,9 @@ async def get_compliance_report_by_id(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportBaseSchema:
+    await validate.validate_organization_access(report_id)
     return await service.get_compliance_report_by_id(report_id)
 
 
@@ -96,10 +98,12 @@ async def get_compliance_report_summary(
     request: Request,
     report_id: int,
     summary_service: ComplianceReportSummaryService = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportSummarySchema:
     """
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
+    await validate.validate_organization_access(report_id)
     return await summary_service.calculate_compliance_report_summary(report_id)
 
 
@@ -114,14 +118,15 @@ async def update_compliance_report_summary(
     report_id: int,
     summary_data: ComplianceReportSummarySchema,
     summary_service: ComplianceReportSummaryService = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportSummarySchema:
     """
     Autosave compliance report summary details for a specific summary by ID.
     """
+    await validate.validate_organization_access(report_id)
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
     )
-
 
 @view_handler(["*"])
 @router.put(
@@ -135,9 +140,10 @@ async def update_compliance_report(
     report_id: int,
     report_data: ComplianceReportUpdateSchema,
     update_service: ComplianceReportUpdateService = Depends(),
+    validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportBaseSchema:
     """Update an existing compliance report."""
-    # TODO role validation for different status updates need to be added here
+    await validate.validate_organization_access(report_id)
     return await update_service.update_compliance_report(report_id, report_data)
 
 
