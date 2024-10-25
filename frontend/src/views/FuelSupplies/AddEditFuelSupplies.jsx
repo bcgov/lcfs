@@ -14,6 +14,7 @@ import {
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
+import { DEFAULT_CI_FUEL } from '@/constants/common'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -225,7 +226,9 @@ export const AddEditFuelSupplies = () => {
       })
 
       let updatedData = params.node.data
-
+      if (updatedData.fuelType === 'Other') {
+        updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
+      }
       try {
         setErrors({})
         await saveRow(updatedData)
@@ -354,7 +357,7 @@ export const AddEditFuelSupplies = () => {
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
-            // stopEditingWhenCellsLoseFocus
+            stopEditingWhenCellsLoseFocus
             saveButtonProps={{
               enabled: true,
               text: t('report:saveReturn'),

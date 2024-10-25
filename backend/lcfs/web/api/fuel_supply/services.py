@@ -53,7 +53,7 @@ class FuelSupplyServices:
             fuel_category=row_data["category"],
             default_and_prescribed_ci=(
                 round(row_data["default_carbon_intensity"], 2)
-                if row_data.get("default_carbon_intensity") is not None
+                if row_data["fuel_type"] != "Other"
                 else default_ci.get(row_data["category"])
             ),
         )
@@ -204,8 +204,8 @@ class FuelSupplyServices:
                 fossil_derived=row_data["fossil_derived"],
                 default_carbon_intensity=(
                     round(row_data["default_carbon_intensity"], 2)
-                    if row_data.get("default_carbon_intensity") is not None
-                    else None
+                    if row_data["fuel_type"] != "Other"
+                    else default_ci.get(row_data["category"])
                 ),
                 unit=row_data["unit"].value,
                 energy_density=(
@@ -231,9 +231,7 @@ class FuelSupplyServices:
         for row in fs_options["fuel_types"]:
             self.fuel_type_row_mapper(compliance_period, fuel_types, row)
 
-        return FuelTypeOptionsResponse(
-            fuel_types=fuel_types, fuel_type_others=fs_options["fuel_type_others"]
-        )
+        return FuelTypeOptionsResponse(fuel_types=fuel_types)
 
     @service_handler
     async def get_fuel_supply_list(
@@ -332,10 +330,6 @@ class FuelSupplyServices:
         )
         fuel_supply.units = QuantityUnitsEnum(fs_data.units)
         created_supply = await self.repo.create_fuel_supply(fuel_supply)
-        if fuel_supply.fuel_type.fuel_type == "Other":
-            fuel_supply.fuel_type.default_carbon_intensity = default_ci.get(
-                fuel_supply.fuel_category.category
-            )
 
         # Calculate compliance units
         compliance_units = self.calculate_compliance_units_for_supply(created_supply)

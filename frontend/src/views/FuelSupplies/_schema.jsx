@@ -1,6 +1,7 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
+  AsyncSuggestionEditor,
   AutocompleteEditor,
   NumberEditor,
   RequiredHeader
@@ -8,10 +9,8 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import {
-  StandardCellErrors,
-  StandardCellWarningAndErrors
-} from '@/utils/grid/errorRenderers'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import { apiRoutes } from '@/constants/routes'
 
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,
@@ -107,19 +106,21 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'fuelTypeOther',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
-    cellEditor: AutocompleteEditor,
-    cellEditorParams: {
-      onDynamicUpdate: (val, params) => {
-        console.log(params)
-        return params.api.stopEditing()
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-type-others',
+      queryFn: async ({ queryKey, client }) => {
+        const path = apiRoutes.getFuelTypeOthers
+
+        const response = await client.get(path)
+
+        params.node.data.apiDataCache = response.data
+        return response.data
       },
-      options: optionsData?.fuelTypeOthers?.sort(),
-      noLabel: true,
-      freeSolo: true,
-      multiple: false,
-      disableCloseOnSelect: false,
-      openOnFocus: true
-    },
+      title: 'transactionPartner',
+      api: params.api,
+      minWords: 1
+    }),
     cellStyle: (params) => {
       const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle = /other/i.test(params.data.fuelType)
@@ -127,7 +128,13 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
-    editable: (params) => /other/i.test(params.data.fuelType)
+    valueSetter: (params) => {
+      const { newValue: selectedFuelTypeOther, data } = params
+      data.fuelTypeOther = selectedFuelTypeOther
+      return true
+    },
+    editable: (params) => /other/i.test(params.data.fuelType),
+    minWidth: 250
   },
   {
     field: 'fuelCategory',
@@ -402,11 +409,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
             ).defaultAndPrescribedCi
 
             return defaultCI
-          } else {
-            return 0
           }
         }
-
         return (
           (optionsData &&
             optionsData?.fuelTypes?.find(

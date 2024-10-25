@@ -73,7 +73,11 @@ class ComplianceReportRepository:
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
                 field = get_field_for_filter(ComplianceReport, "report_type")
-                filter_value = ReportType.ANNUAL.value if filter_value.lower().startswith("c") else ReportType.QUARTERLY.value
+                filter_value = (
+                    ReportType.ANNUAL.value
+                    if filter_value.lower().startswith("c")
+                    else ReportType.QUARTERLY.value
+                )
             elif filter.field == "compliance_period":
                 field = get_field_for_filter(CompliancePeriod, "description")
             else:
@@ -161,7 +165,7 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.user_profile
                 ),
-                joinedload(ComplianceReport.transaction)
+                joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
@@ -309,14 +313,13 @@ class ComplianceReportRepository:
                 and_(
                     ComplianceReportHistory.compliance_report_id
                     == report.compliance_report_id,
-                    ComplianceReportHistory.status_id
-                    == report.current_status_id,
+                    ComplianceReportHistory.status_id == report.current_status_id,
                 )
             )
             .order_by(ComplianceReportHistory.create_date.desc())
         )
         return history.scalar_one_or_none()
-    
+
     @repo_handler
     async def add_compliance_report_history(self, report: ComplianceReport, user):
         """

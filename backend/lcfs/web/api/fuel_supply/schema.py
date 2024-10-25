@@ -91,7 +91,6 @@ class FuelTypeOptionsSchema(BaseSchema):
 
 class FuelTypeOptionsResponse(BaseSchema):
     fuel_types: List[FuelTypeOptionsSchema]
-    fuel_type_others: List[str]
 
 
 class FuelTypeSchema(BaseSchema):

@@ -67,4 +67,5 @@ export const apiRoutes = {
   organizationSearch: '/organizations/search?',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
+  getFuelTypeOthers: '/fuel-type/others/list'
 }

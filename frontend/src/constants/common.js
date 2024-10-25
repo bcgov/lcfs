@@ -49,3 +49,9 @@ export const SUMMARY = {
   LINE_21: 20,
   LINE_22: 21
 }
+
+export const DEFAULT_CI_FUEL = {
+  Gasoline: 93.67,
+  Diesel: 100.21,
+  'Jet fuel': 88.83
+}

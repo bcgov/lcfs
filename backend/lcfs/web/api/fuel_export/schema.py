@@ -132,6 +132,7 @@ class FuelExportSchema(BaseSchema):
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_type: FuelTypeSchema
+    fuel_type_other: Optional[str] = None
     quantity: int = Field(..., gt=0)
     units: str
     export_date: date
@@ -161,6 +162,7 @@ class FuelExportCreateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
     compliance_period: Optional[str] = None
+    fuel_type_other: Optional[str] = None
     fuel_type: Union[str, FuelTypeSchema]
     fuel_type_id: int
     fuel_category: Union[str, FuelCategoryResponseSchema]

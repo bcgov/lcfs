@@ -18,6 +18,7 @@ class AllocationTransactionTypeSchema(BaseSchema):
 class FuelCategorySchema(BaseSchema):
     fuel_category_id: int
     category: str
+    default_and_prescribed_ci: Optional[float] = None
 
 
 class FuelCodeSchema(BaseSchema):
@@ -44,7 +45,6 @@ class ProvisionOfTheActSchema(BaseSchema):
 class AllocationAgreementTableOptionsSchema(BaseSchema):
     allocation_transaction_types: List[AllocationTransactionTypeSchema]
     fuel_types: List[FuelTypeSchema]
-    fuel_categories: List[FuelCategorySchema]
     provisions_of_the_act: List[ProvisionOfTheActSchema]
     fuel_codes: List[FuelCodeSchema]
     units_of_measure: List[str]
@@ -58,6 +58,7 @@ class AllocationAgreementCreateSchema(BaseSchema):
     transaction_partner_email: str
     transaction_partner_phone: str
     fuel_type: str
+    fuel_type_other: Optional[str] = None
     ci_of_fuel: float
     quantity: int
     units: str

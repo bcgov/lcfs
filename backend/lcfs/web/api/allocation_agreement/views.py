@@ -24,7 +24,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementSchema,
     AllocationAgreementListSchema,
-    #     AllocationAgreementTableOptionsSchema,
+    AllocationAgreementTableOptionsSchema,
     ComplianceReportRequestSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
@@ -43,7 +43,7 @@ get_async_db = dependencies.get_async_db_session
 
 @router.get(
     "/table-options",
-    # response_model=AllocationAgreementTableOptionsSchema,
+    response_model=AllocationAgreementTableOptionsSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])

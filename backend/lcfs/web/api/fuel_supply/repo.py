@@ -2,7 +2,7 @@ from logging import getLogger
 from typing import List
 
 from fastapi import Depends
-from sqlalchemy import and_, delete, or_, select, exists
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -166,17 +166,8 @@ class FuelSupplyRepository:
 
         fuel_type_results = (await self.db.execute(query)).all()
 
-        fuel_type_other_query = select(FuelSupply.fuel_type_other).where(
-            FuelSupply.fuel_type_other.isnot(None)
-        )
-
-        fuel_type_other_results = (
-            (await self.db.execute(fuel_type_other_query)).unique().scalars().all()
-        )
-
         return {
             "fuel_types": fuel_type_results,
-            "fuel_type_others": fuel_type_other_results,
         }
 
     @repo_handler

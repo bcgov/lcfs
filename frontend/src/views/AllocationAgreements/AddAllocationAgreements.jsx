@@ -18,6 +18,7 @@ import {
 } from '@/hooks/useAllocationAgreement'
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
+import { DEFAULT_CI_FUEL } from '@/constants/common'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
@@ -70,17 +71,15 @@ export const AddEditAllocationAgreements = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      setRowData([...(data || { id: uuid() })])
+      setRowData([...(data.allocationAgreements || { id: uuid() })])
       params.api.sizeColumnsToFit()
     },
     [data]
   )
 
   useEffect(() => {
-    if (optionsData?.fuelCategories?.length > 0) {
-      const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors)
-      setColumnDefs(updatedColumnDefs)
-    }
+    const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors)
+    setColumnDefs(updatedColumnDefs)
   }, [errors, optionsData])
 
   useEffect(() => {
@@ -151,6 +150,10 @@ export const AddEditAllocationAgreements = () => {
           acc[key] = value
           return acc
         }, {})
+
+      if (updatedData.fuelType === 'Other') {
+        updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
+      }
 
       try {
         setErrors({})
