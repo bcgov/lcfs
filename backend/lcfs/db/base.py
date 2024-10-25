@@ -113,7 +113,7 @@ class Versioning(Base):
     version = Column(
         Integer,
         nullable=False,
-        default=1,
+        default=0,
         comment="Version number of the record",
     )
     user_type = Column(

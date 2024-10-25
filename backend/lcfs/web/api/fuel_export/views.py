@@ -15,7 +15,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_export.schema import (
     DeleteFuelExportResponseSchema,
     FuelExportsSchema,
-    FuelExportCreateSchema,
+    FuelExportCreateUpdateSchema,
     FuelTypeOptionsResponse,
     CommonPaginatedReportRequestSchema,
     FuelExportSchema,
@@ -83,7 +83,7 @@ async def get_fuel_exports(
 @view_handler([RoleEnum.SUPPLIER])
 async def save_fuel_export_row(
     request: Request,
-    request_data: FuelExportCreateSchema = Body(...),
+    request_data: FuelExportCreateUpdateSchema = Body(...),
     action_service: FuelExportActionService = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelExportValidation = Depends(),

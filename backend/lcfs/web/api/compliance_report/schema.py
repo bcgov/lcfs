@@ -17,8 +17,8 @@ Public - attributes present on public facing resources being returned from GET, 
 
 
 class SupplementalInitiatorType(str, Enum):
-    SUPPLIER_INITIATED_SUPPLEMENTAL = "Supplier Initiated"
-    GOVERNMENT_INITIATED_REASSESSMENT = "Government Initiated"
+    SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
+    GOVERNMENT_REASSESSMENT = "Government Reassessment"
 
 
 class CompliancePeriodSchema(BaseSchema):

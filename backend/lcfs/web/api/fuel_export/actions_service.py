@@ -1,5 +1,3 @@
-# File: fuel_export_actions.py
-
 import uuid
 from logging import getLogger
 from typing import Optional
@@ -8,11 +6,11 @@ from fastapi import Depends, HTTPException
 
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.web.api.fuel_export.actions_repo import FuelExportActionsRepo
 from lcfs.web.api.fuel_export.schema import (
     DeleteFuelExportResponseSchema,
     FuelExportCreateUpdateSchema,
-    FuelExportResponseSchema,
+    FuelExportSchema,
 )
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
@@ -21,13 +19,13 @@ logger = getLogger(__name__)
 
 
 class FuelExportActionService:
-    def __init__(self, repo: FuelExportRepository = Depends()) -> None:
+    def __init__(self, repo: FuelExportActionsRepo = Depends()) -> None:
         self.repo = repo
 
     @service_handler
     async def create_fuel_export(
         self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
-    ) -> FuelExportResponseSchema:
+    ) -> FuelExportSchema:
         """Create a new fuel export record"""
         new_group_uuid = str(uuid.uuid4())
 
@@ -45,7 +43,7 @@ class FuelExportActionService:
                 }
             ),
             group_uuid=new_group_uuid,
-            version=1,
+            version=0,
             user_type=user_type,
             action_type=ActionTypeEnum.CREATE,
         )
@@ -57,12 +55,12 @@ class FuelExportActionService:
         # Save new record
         created_export = await self.repo.create_fuel_export(fuel_export)
 
-        return FuelExportResponseSchema.model_validate(created_export)
+        return FuelExportSchema.model_validate(created_export)
 
     @service_handler
     async def update_fuel_export(
         self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
-    ) -> FuelExportResponseSchema:
+    ) -> FuelExportSchema:
         """Update an existing fuel export record or create a new version if necessary."""
         # Get the compliance report version
         report_version = await self.repo.get_report_version(
@@ -101,7 +99,7 @@ class FuelExportActionService:
 
             # Save updates
             updated_export = await self.repo.update_fuel_export(existing_fuel_export)
-            return FuelExportResponseSchema.model_validate(updated_export)
+            return FuelExportSchema.model_validate(updated_export)
         else:
             # Record does not exist for current version; create a new version
             # Fetch the latest record from previous versions
@@ -158,7 +156,7 @@ class FuelExportActionService:
 
             # Save the new version
             new_export = await self.repo.create_fuel_export(fuel_export)
-            return FuelExportResponseSchema.model_validate(new_export)
+            return FuelExportSchema.model_validate(new_export)
 
     @service_handler
     async def delete_fuel_export(

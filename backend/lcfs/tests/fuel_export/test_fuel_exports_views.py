@@ -8,7 +8,7 @@ from fastapi.encoders import jsonable_encoder
 
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
-    FuelExportCreateSchema,
+    FuelExportCreateUpdateSchema,
     FuelTypeOptionsResponse,
     CommonPaginatedReportRequestSchema,
     FuelCategoryResponseSchema,
@@ -185,7 +185,7 @@ async def test_save_fuel_export_row_delete_success(
         url = fastapi_app.url_path_for("save_fuel_export_row")
 
         payload = jsonable_encoder(
-            FuelExportCreateSchema(
+            FuelExportCreateUpdateSchema(
                 compliance_report_id=1,
                 fuel_type="",
                 fuel_type_id=1,
@@ -243,7 +243,7 @@ async def test_save_fuel_export_row_update_success(
         url = fastapi_app.url_path_for("save_fuel_export_row")
 
         payload = jsonable_encoder(
-            FuelExportCreateSchema(
+            FuelExportCreateUpdateSchema(
                 fuel_export_id=1,
                 compliance_report_id=1,
                 fuel_type=FuelTypeSchema(
@@ -307,7 +307,7 @@ async def test_save_fuel_export_row_create_success(
         url = fastapi_app.url_path_for("save_fuel_export_row")
 
         payload = jsonable_encoder(
-            FuelExportCreateSchema(
+            FuelExportCreateUpdateSchema(
                 compliance_report_id=1,
                 fuel_type=FuelTypeSchema(
                     fuel_type_id=1, fuel_type="", units="L", default_carbon_intensity=1

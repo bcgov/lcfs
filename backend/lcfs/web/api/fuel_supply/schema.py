@@ -148,11 +148,6 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
-    @field_validator("units")
-    def convert_units(cls, value):
-        """Convert shorthand like 'L' to full names like 'Litres'."""
-        return QuantityUnitsEnum.from_shorthand(value)
-
     class Config:
         use_enum_values = True
 

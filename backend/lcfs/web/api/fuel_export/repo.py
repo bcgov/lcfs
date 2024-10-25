@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 from lcfs.db.models.compliance import CompliancePeriod, FuelExport
 from lcfs.db.models.fuel import (
     EnergyDensity,
@@ -15,15 +15,17 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
+from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, or_, select, func
+from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import case
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload
 
 logger = getLogger("fuel_export_repo")
 
@@ -267,6 +269,64 @@ class FuelExportRepository:
         )
 
         query = query.where(FuelExport.compliance_report_id == report_id)
+
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    # TODO needs to be updated to match fuel supply
+    @repo_handler
+    async def get_effective_fuel_exports(
+        self,
+        compliance_report_group_uuid: str,
+        version: int,
+    ) -> List[FuelExport]:
+        """
+        Get the effective FuelExport records for a compliance report up to a specific version.
+        """
+
+        # Prioritize government edits over supplier edits
+        user_type_priority = case(
+            (FuelExport.user_type == UserTypeEnum.GOVERNMENT, 1),
+            (FuelExport.user_type == UserTypeEnum.SUPPLIER, 0),
+        )
+
+        # Subquery to get the max version and max role priority per group_uuid
+        subquery = (
+            select(
+                FuelExport.group_uuid,
+                func.max(FuelExport.version).label("max_version"),
+                func.max(user_type_priority).label("max_role_priority"),
+            )
+            .where(
+                FuelExport.version <= version,
+                FuelExport.action_type
+                != ActionTypeEnum.DELETE,  # Exclude deleted records
+            )
+            .group_by(FuelExport.group_uuid)
+            .subquery()
+        )
+
+        # Main query to get effective fuel exports
+        query = (
+            select(FuelExport)
+            .join(
+                subquery,
+                and_(
+                    FuelExport.group_uuid == subquery.c.group_uuid,
+                    FuelExport.version == subquery.c.max_version,
+                    user_type_priority == subquery.c.max_role_priority,
+                ),
+            )
+            .join(
+                ComplianceReport,
+                FuelExport.compliance_report_id
+                == ComplianceReport.compliance_report_id,
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid
+            )
+        )
 
         result = await self.db.execute(query)
         return result.scalars().all()

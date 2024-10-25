@@ -101,7 +101,7 @@ class ComplianceReport(BaseModel, Auditable):
     version = Column(
         Integer,
         nullable=False,
-        default=1,
+        default=0,
         comment="Version number of the compliance report",
     )
     supplemental_initiator = Column(

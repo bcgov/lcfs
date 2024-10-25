@@ -162,7 +162,7 @@ class FuelExportSchema(BaseSchema):
         return v
 
 
-class FuelExportCreateSchema(BaseSchema):
+class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
     group_uuid: Optional[str] = None

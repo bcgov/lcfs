@@ -63,7 +63,7 @@ class ComplianceReportServices:
             current_status_id=draft_status.compliance_report_status_id,
             reporting_frequency=ReportingFrequency.ANNUAL,
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
-            version=1,  # Start with version 1
+            version=0,  # Start with version 0
             nickname="Original Report",
             summary=ComplianceReportSummary(),  # Create an empty summary object
         )
@@ -108,7 +108,7 @@ class ComplianceReportServices:
         #     )
 
         # Get the group_uuid from the current report
-        group_uuid = current_report.group_uuid
+        group_uuid = current_report.compliance_report_group_uuid
 
         # Fetch the latest version number for the given group_uuid
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
@@ -128,10 +128,11 @@ class ComplianceReportServices:
             organization_id=current_report.organization_id,
             current_status_id=draft_status.compliance_report_status_id,
             reporting_frequency=current_report.reporting_frequency,
-            group_uuid=group_uuid,  # Use the same group_uuid
+            compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
             nickname=f"Supplemental report {new_version}",
+            summary=ComplianceReportSummary(),  # Create an empty summary object
         )
 
         # Add the new supplemental report
