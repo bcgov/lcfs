@@ -3,7 +3,7 @@ Notional Transfers endpoints
 """
 
 from logging import getLogger
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from fastapi import (
     APIRouter,
@@ -16,6 +16,7 @@ from fastapi import (
 from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.notional_transfer.schema import (
@@ -23,13 +24,12 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     NotionalTransfersSchema,
     NotionalTransferTableOptionsSchema,
-    ComplianceReportRequestSchema,
     DeleteNotionalTransferResponseSchema,
     PaginatedNotionalTransferRequestSchema,
     NotionalTransfersSchema,
     NotionalTransfersAllSchema,
 )
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -64,8 +64,10 @@ async def get_notional_transfers(
     request_data: ComplianceReportRequestSchema = Body(...),
     response: Response = None,
     service: NotionalTransferServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of notional transfers for a compliance report"""
+    await report_validate.validate_organization_access(request_data.compliance_report_id)
     return await service.get_notional_transfers(request_data.compliance_report_id)
 
 
@@ -79,12 +81,16 @@ async def get_notional_transfers_paginated(
     request: Request,
     request_data: PaginatedNotionalTransferRequestSchema = Body(...),
     service: NotionalTransferServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> NotionalTransfersSchema:
     pagination = PaginationRequestSchema(
         page=request_data.page,
         size=request_data.size,
         sort_orders=request_data.sort_orders,
         filters=request_data.filters,
+    )
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
     )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_notional_transfers_paginated(
@@ -98,7 +104,11 @@ async def get_notional_transfer(
     request: Request,
     notional_transfer_id: int,
     service: NotionalTransferServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> NotionalTransferSchema:
+    await report_validate.validate_organization_access(
+        notional_transfer_id=notional_transfer_id
+    )
     return await service.get_notional_transfer(notional_transfer_id)
 
 
@@ -113,12 +123,13 @@ async def save_notional_transfer_row(
     request_data: NotionalTransferCreateSchema = Body(...),
     service: NotionalTransferServices = Depends(),
     validate: NotionalTransferValidation = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to save a single notional transfer row"""
     compliance_report_id = request_data.compliance_report_id
     notional_transfer_id: Optional[int] = request_data.notional_transfer_id
 
-    await validate.validate_organization_access(compliance_report_id)
+    await report_validate.validate_organization_access(compliance_report_id)
 
     if request_data.deleted:
         # Delete existing notional transfer

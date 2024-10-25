@@ -91,10 +91,6 @@ class OtherUsesSchema(OtherUsesCreateSchema):
     pass
 
 
-class ComplianceReportRequestSchema(BaseSchema):
-    compliance_report_id: int
-
-
 class PaginatedOtherUsesRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
     filters: List[FilterModel]

@@ -29,7 +29,7 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
   const [summaryData, setSummaryData] = useState(null)
   const { t } = useTranslation(['report'])
 
-  const { data, isLoading, isError } =
+  const { data, isLoading, isError, error } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary(data?.complianceReportId, {
@@ -49,7 +49,10 @@ const ComplianceReportSummary = ({ reportID, currentStatus, compliancePeriodYear
       setSummaryData(data)
       setHasMet(data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 || data?.nonCompliancePenaltySummary[1].totalValue <= 0)
     }
-  }, [data, setHasMet])
+    if (isError) {
+      alertRef.current?.triggerAlert({ message: error?.response?.data?.detail || error.message, severity: 'error' })
+    }
+  }, [alertRef, data, error, isError, setHasMet])
 
   const handleCellEdit = useCallback(
     (data) => {

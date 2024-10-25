@@ -191,6 +191,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
           fuelType.fuelCategories?.[0]?.category ?? null
         params.data.units = fuelType?.units
         params.data.unrecognized = fuelType?.unrecognized
+        params.data.provisionOfTheAct = null;
       }
       return true
     },
@@ -261,8 +262,18 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
     cellEditor: 'agSelectCellEditor',
-    cellEditorParams: {
-      values: optionsData?.provisionsOfTheAct?.map((obj) => obj.name).sort()
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (type) => type.fuelType === params.data.fuelType
+      )
+
+      const provisionsOfTheAct = fuelType
+        ? fuelType.provisionOfTheAct.map((provision) => provision.name)
+        : []
+
+      return {
+        values: provisionsOfTheAct.sort()
+      }
     },
     cellRenderer: (params) =>
       params.value ||

@@ -2,14 +2,11 @@ from logging import getLogger
 from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
-from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
-from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
-from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
-from sqlalchemy import func, select, and_, asc, desc, case
+from sqlalchemy import func, select, and_, asc, desc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -68,7 +65,12 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
-                filter_value = get_enum_value(ComplianceReportStatusEnum, filter_value)
+                normalized_value = filter_value.lower()
+                enum_value_map = {
+                    enum_val.value.lower(): enum_val
+                    for enum_val in ComplianceReportStatusEnum
+                }
+                filter_value = enum_value_map.get(normalized_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
@@ -144,7 +146,7 @@ class ComplianceReportRepository:
         return result
 
     @repo_handler
-    async def get_compliance_report(
+    async def check_compliance_report(
         self, compliance_report_id: int
     ) -> Optional[ComplianceReport]:
         """
@@ -156,16 +158,6 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.fuel_supplies),
-                joinedload(ComplianceReport.other_uses),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-                joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
@@ -406,7 +398,7 @@ class ComplianceReportRepository:
                     ComplianceReport.organization_id == Organization.organization_id,
                 )
             elif order.field == "type":
-                continue
+                order.field = get_field_for_filter(ComplianceReport, "report_type")
             else:
                 order.field = get_field_for_filter(ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))

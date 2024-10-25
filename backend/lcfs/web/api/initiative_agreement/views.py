@@ -18,8 +18,10 @@ async def get_initiative_agreement(
     request: Request,
     initiative_agreement_id: int,
     service: InitiativeAgreementServices = Depends(),
+    validate: InitiativeAgreementValidation = Depends(),
 ):
     """Endpoint to fetch an initiative agreement by its ID."""
+    await validate.validate_organization_access(initiative_agreement_id)
     return await service.get_initiative_agreement(initiative_agreement_id)
 
 

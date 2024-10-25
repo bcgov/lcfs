@@ -134,6 +134,14 @@ export const AddEditAllocationAgreements = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      if (!params.data.provisionOfTheAct) {
+        alertRef.current?.triggerAlert({
+          message: 'Determining Carbon Intensity field is required.',
+          severity: 'error'
+        })
+        return
+      }
+
       params.node.updateData({
         ...params.node.data,
         validationStatus: 'pending'

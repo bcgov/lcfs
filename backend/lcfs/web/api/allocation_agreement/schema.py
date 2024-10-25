@@ -27,6 +27,10 @@ class FuelCodeSchema(BaseSchema):
     carbon_intensity: float
 
 
+class ProvisionOfTheActSchema(BaseSchema):
+    provision_of_the_act_id: int
+    name: str
+
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
@@ -35,6 +39,7 @@ class FuelTypeSchema(BaseSchema):
     unrecognized: bool
     fuel_categories: List[FuelCategorySchema]
     fuel_codes: Optional[List[FuelCodeSchema]] = []
+    provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = []
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -76,10 +81,6 @@ class AllocationAgreementSchema(AllocationAgreementCreateSchema):
 class AllocationAgreementAllSchema(BaseSchema):
     allocation_agreements: List[AllocationAgreementSchema]
     pagination: Optional[PaginationResponseSchema] = {}
-
-
-class ComplianceReportRequestSchema(BaseSchema):
-    compliance_report_id: int
 
 
 class AllocationAgreementListSchema(BaseSchema):

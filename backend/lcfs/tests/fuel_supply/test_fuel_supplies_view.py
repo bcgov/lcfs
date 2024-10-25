@@ -1,7 +1,7 @@
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
-from unittest.mock import MagicMock, Mock, AsyncMock
+from unittest.mock import MagicMock, Mock, AsyncMock, patch
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
@@ -84,34 +84,38 @@ async def test_get_fuel_supply_list(
     set_mock_user,
     mock_fuel_supply_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-    url = fastapi_app.url_path_for("get_fuel_supply")
-    payload = {
-        "compliance_report_id": 1,
-        "page": 1,
-        "size": 10,
-        "sort_orders": [],
-        "filters": [],
-    }
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        mock_validate_organization_access.return_value = True
+        url = fastapi_app.url_path_for("get_fuel_supply")
+        payload = {
+            "compliance_report_id": 1,
+            "page": 1,
+            "size": 10,
+            "sort_orders": [],
+            "filters": [],
+        }
 
-    # Mock the service method
-    mock_fuel_supply_service.get_fuel_supplies_paginated.return_value = {
-        "pagination": {"total": 0, "page": 1, "size": 5, "totalPages": 1},
-        "fuelSupplies": [],
-    }
+        # Mock the service method
+        mock_fuel_supply_service.get_fuel_supplies_paginated.return_value = {
+            "pagination": {"total": 0, "page": 1, "size": 5, "totalPages": 1},
+            "fuelSupplies": [],
+        }
 
-    # Use dependency override
-    fastapi_app.dependency_overrides[FuelSupplyServices] = (
-        lambda: mock_fuel_supply_service
-    )
+        # Use dependency override
+        fastapi_app.dependency_overrides[FuelSupplyServices] = (
+            lambda: mock_fuel_supply_service
+        )
 
-    response = await client.post(url, json=payload)
+        response = await client.post(url, json=payload)
 
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert "pagination" in data
-    assert "fuelSupplies" in data
-    assert isinstance(data["fuelSupplies"], list)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "pagination" in data
+        assert "fuelSupplies" in data
+        assert isinstance(data["fuelSupplies"], list)
 
 
 @pytest.mark.anyio

@@ -1,9 +1,11 @@
 from fastapi import Depends, HTTPException, Request
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.role.schema import user_has_roles
 from starlette import status
 
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 
-from lcfs.web.api.transfer.schema import TransferCreateSchema
+from lcfs.web.api.transfer.schema import TransferCreateSchema, TransferSchema
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 
 from lcfs.utils.constants import LCFS_Constants
@@ -41,3 +43,18 @@ class TransferValidation:
                     detail="Validation for authorization failed.",
                 )
             # TODO: Ensure the logged in user has the necessary permissions and roles.
+
+    async def get_transfer(self, transfer: TransferSchema):
+        if not transfer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Transfer not found."
+            )
+        org_id = self.request.user.organization.organization_id
+        if not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]) and not (
+            transfer.from_organization.organization_id == org_id
+            or transfer.to_organization.organization_id == org_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Validation for authorization failed.",
+            )
