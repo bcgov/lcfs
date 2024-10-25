@@ -52,13 +52,14 @@ export const decimalFormatter = (params) => {
 }
 
 export const dateFormatter = (params) => {
-  if (params.value != null) {
-      // Format to only include the date part (YYYY-MM-DD)
-      const date = new Date(params.value);
-      return date.toISOString().split('T')[0];
+  const value = params.value || params
+  if (value != null) {
+    // Format to only include the date part (YYYY-MM-DD)
+    const date = new Date(value)
+    return date.toISOString().split('T')[0]
   }
-  return '';
-};
+  return ''
+}
 
 export const phoneNumberFormatter = (params) => {
   const phoneNumber = params?.value?.toString().replace(/\D/g, '') || ''

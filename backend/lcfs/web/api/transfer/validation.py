@@ -49,7 +49,10 @@ class TransferValidation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Transfer not found."
             )
-        org_id = self.request.user.organization.organization_id
+        org_id = None
+        if self.request.user.organization:
+            org_id = self.request.user.organization.organization_id
+
         if not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]) and not (
             transfer.from_organization.organization_id == org_id
             or transfer.to_organization.organization_id == org_id
