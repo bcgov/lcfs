@@ -129,6 +129,10 @@ class FuelCodeResponseSchema(BaseSchema):
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_type: FuelTypeSchema
@@ -161,6 +165,10 @@ class FuelExportSchema(BaseSchema):
 class FuelExportCreateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type: Union[str, FuelTypeSchema]
     fuel_type_id: int

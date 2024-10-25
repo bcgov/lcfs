@@ -1,9 +1,14 @@
 from logging import getLogger
 import math
+import uuid
 from typing import List
 from fastapi import Depends, Request
 
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    SupplementalInitiatorType,
+    ReportingFrequency,
+)
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.user import UserProfile
@@ -40,31 +45,36 @@ class ComplianceReportServices:
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
         period = await self.repo.get_compliance_period(report_data.compliance_period)
+        if not period:
+            raise DataNotFoundException("Compliance period not found.")
+
         draft_status = await self.repo.get_compliance_report_status_by_desc(
             report_data.status
         )
+        if not draft_status:
+            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+
+        # Generate a new group_uuid for the new report series
+        group_uuid = str(uuid.uuid4())
+
         report = ComplianceReport(
-            compliance_period=period,
+            compliance_period_id=period.compliance_period_id,
             organization_id=organization_id,
-            current_status=draft_status,
-            summary=ComplianceReportSummary(),  # Create an empty summary object
-            original_report_id=None,
-            previous_report_id=None,
-            chain_index=0,
+            current_status_id=draft_status.compliance_report_status_id,
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
+            version=1,  # Start with version 1
             nickname="Original Report",
+            summary=ComplianceReportSummary(),  # Create an empty summary object
         )
 
-        # Update original_report_id to compliance_report_id
-        report.original_report_id = report.compliance_report_id
-        report = await self.repo.update_compliance_report(report)
-
         # Add the new compliance report
-        await self.repo.add_compliance_report(report)
+        report = await self.repo.add_compliance_report(report)
 
         # Create the history record
         await self.repo.add_compliance_report_history(report, self.request.user)
 
-        return report
+        return ComplianceReportBaseSchema.model_validate(report)
 
     @service_handler
     async def create_supplemental_report(
@@ -72,51 +82,40 @@ class ComplianceReportServices:
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
-        The report_id can be any report in the chain (original or supplemental).
-        Supplementals only allowed if the status of the current report is 'Assessed'.
+        The report_id can be any report in the series (original or supplemental).
+        Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
 
         user: UserProfile = self.request.user
 
-        # Fetch the report corresponding to the given report_id
+        # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
         )
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        # Validate that the status of the current report is 'Assessed'
-        # if current_report.current_status.status != ComplianceReportStatusEnum.Assessed:
-        #     raise ServiceException(
-        #         "A supplemental report can only be created if the current report's status is 'Assessed'."
-        #     )
-
-        # Determine the original_report_id
-        original_report_id = (
-            current_report.original_report_id or current_report.compliance_report_id
-        )
-
-        # Fetch the original report
-        original_report = await self.repo.get_compliance_report_by_id(
-            original_report_id, is_model=True
-        )
-        if not original_report:
-            raise DataNotFoundException("Original compliance report not found.")
-
-        # Validate that the user is allowed to create a supplemental report
-        if user.organization_id != original_report.organization_id:
+        # Validate that the user has permission to create a supplemental report
+        if user.organization_id != current_report.organization_id:
             raise ServiceException(
                 "You do not have permission to create a supplemental report for this organization."
             )
 
-        # Get the last report in the chain
-        last_report_in_chain = await self.repo.get_last_report_in_chain(
-            original_report_id
-        )
-        chain_index = (
-            last_report_in_chain.chain_index + 1 if last_report_in_chain else 1
-        )
-        previous_report_id = last_report_in_chain.compliance_report_id
+        # Validate that the status of the current report is 'Assessed'
+        # if current_report.current_status.status != ComplianceReportStatusEnum.ASSESSED:
+        #     raise ServiceException(
+        #         "A supplemental report can only be created if the current report's status is 'Assessed'."
+        #     )
+
+        # Get the group_uuid from the current report
+        group_uuid = current_report.group_uuid
+
+        # Fetch the latest version number for the given group_uuid
+        latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
+        if not latest_report:
+            raise DataNotFoundException("Latest compliance report not found.")
+
+        new_version = latest_report.version + 1
 
         # Get the 'Draft' status
         draft_status = await self.repo.get_compliance_report_status_by_desc("Draft")
@@ -125,16 +124,14 @@ class ComplianceReportServices:
 
         # Create the new supplemental compliance report
         new_report = ComplianceReport(
-            compliance_period_id=original_report.compliance_period_id,
-            organization_id=original_report.organization_id,
+            compliance_period_id=current_report.compliance_period_id,
+            organization_id=current_report.organization_id,
             current_status_id=draft_status.compliance_report_status_id,
-            reporting_frequency=original_report.reporting_frequency,
-            # Supplemental fields
-            original_report_id=original_report_id,
-            previous_report_id=previous_report_id,
-            chain_index=chain_index,
-            nickname=f"Supplemental Report {chain_index}",
-            summary=ComplianceReportSummary(),  # Create an empty summary object
+            reporting_frequency=current_report.reporting_frequency,
+            group_uuid=group_uuid,  # Use the same group_uuid
+            version=new_version,  # Increment the version
+            supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
+            nickname=f"Supplemental report {new_version}",
         )
 
         # Add the new supplemental report

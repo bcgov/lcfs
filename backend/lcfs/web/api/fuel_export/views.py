@@ -7,6 +7,7 @@ from fastapi import (
     Request,
     Response,
     Depends,
+    HTTPException,
 )
 from lcfs.db import dependencies
 
@@ -20,6 +21,9 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
 )
 from lcfs.web.api.fuel_export.services import FuelExportServices
+from lcfs.web.api.fuel_export.actions_service import (
+    FuelExportActionService,
+)
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
@@ -80,25 +84,32 @@ async def get_fuel_exports(
 async def save_fuel_export_row(
     request: Request,
     request_data: FuelExportCreateSchema = Body(...),
-    fs_service: FuelExportServices = Depends(),
+    action_service: FuelExportActionService = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelExportValidation = Depends(),
 ):
     """Endpoint to save single fuel export row"""
     compliance_report_id = request_data.compliance_report_id
-    fs_id: Optional[int] = request_data.fuel_export_id
-
     await report_validate.validate_organization_access(compliance_report_id)
 
-    if request_data.deleted:
-        # Delete existing fuel export row
-        await fs_service.delete_fuel_export(fs_id)
-        return DeleteFuelExportResponseSchema(
-            success=True, message="fuel export row deleted successfully"
+    # Determine user type for record creation
+    current_user_type = request.user.user_type
+    if not current_user_type:
+        raise HTTPException(
+            status_code=403, detail="User does not have the required role."
         )
-    elif fs_id:
-        # Update existing fuel export row
-        return await fs_service.update_fuel_export(request_data)
+
+    if request_data.deleted:
+        # Use action service to handle delete logic
+        return await action_service.delete_fuel_export(request_data, current_user_type)
     else:
-        # Create new fuel export row
-        return await fs_service.create_fuel_export(request_data)
+        if request_data.fuel_export_id:
+            # Use action service to handle update logic
+            return await action_service.update_fuel_export(
+                request_data, current_user_type
+            )
+        else:
+            # Use action service to handle create logic
+            return await action_service.create_fuel_export(
+                request_data, current_user_type
+            )

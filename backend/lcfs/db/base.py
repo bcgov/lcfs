@@ -1,5 +1,18 @@
+import uuid
+import enum
 from sqlalchemy.ext.declarative import AbstractConcreteBase
-from sqlalchemy import String, Column, Integer, Date, text, TIMESTAMP, func, Boolean, MetaData
+from sqlalchemy import (
+    String,
+    Column,
+    Integer,
+    Date,
+    text,
+    TIMESTAMP,
+    func,
+    Boolean,
+    MetaData,
+    Enum,
+)
 from sqlalchemy.orm import declarative_base
 
 # Define naming conventions for all constraints
@@ -8,7 +21,7 @@ naming_convention = {
     "uq": "uq_%(table_name)s_%(column_0_name)s",  # Unique constraint
     "ck": "ck_%(table_name)s_%(constraint_name)s",  # Check constraint
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",  # Foreign key
-    "pk": "pk_%(table_name)s"  # Primary key
+    "pk": "pk_%(table_name)s",  # Primary key
 }
 
 # Apply this naming convention to the MetaData object
@@ -74,4 +87,43 @@ class EffectiveDates(Base):
     )
     expiration_date = Column(
         Date, nullable=True, comment="The calendar date the value is no longer valid."
+    )
+
+
+class UserTypeEnum(enum.Enum):
+    SUPPLIER = "SUPPLIER"
+    GOVERNMENT = "GOVERNMENT"
+
+
+class ActionTypeEnum(enum.Enum):
+    CREATE = "CREATE"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+
+
+class Versioning(Base):
+    __abstract__ = True
+
+    group_uuid = Column(
+        String(36),
+        nullable=False,
+        default=lambda: str(uuid.uuid4()),
+        comment="UUID that groups all versions of a record series",
+    )
+    version = Column(
+        Integer,
+        nullable=False,
+        default=1,
+        comment="Version number of the record",
+    )
+    user_type = Column(
+        Enum(UserTypeEnum),
+        nullable=False,
+        comment="Indicates whether the record was created/modified by a supplier or government user",
+    )
+    action_type = Column(
+        Enum(ActionTypeEnum),
+        nullable=False,
+        server_default=text("'CREATE'"),
+        comment="Action type for this record",
     )

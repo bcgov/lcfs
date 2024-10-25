@@ -2,15 +2,14 @@ from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 
-from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.base import BaseModel, Auditable, Versioning
 from lcfs.db.models.compliance.ComplianceReport import (
-    ChangeType,
     Quarter,
     QuantityUnitsEnum,
 )
 
 
-class FuelExport(BaseModel, Auditable):
+class FuelExport(BaseModel, Auditable, Versioning):
     __tablename__ = "fuel_export"
     __table_args__ = {
         "comment": "Records the supply of fuel for compliance purposes, including changes in supplemental reports"
@@ -27,18 +26,6 @@ class FuelExport(BaseModel, Auditable):
         ForeignKey("compliance_report.compliance_report_id"),
         nullable=False,
         comment="Foreign key to the compliance report",
-    )
-    previous_fuel_export_id = Column(
-        Integer,
-        ForeignKey("fuel_export.fuel_export_id"),
-        nullable=True,
-        comment="Foreign key to the previous fuel supply record",
-    )
-    change_type = Column(
-        Enum(ChangeType),
-        nullable=False,
-        server_default=text("'CREATE'"),
-        comment="Action type for this record",
     )
 
     # data columns
@@ -114,8 +101,6 @@ class FuelExport(BaseModel, Auditable):
     )
 
     compliance_report = relationship("ComplianceReport", back_populates="fuel_exports")
-    previous_fuel_export = relationship("FuelExport", remote_side=[fuel_export_id])
-
     fuel_category = relationship("FuelCategory")
     fuel_code = relationship("FuelCode")
     fuel_type = relationship("FuelType")

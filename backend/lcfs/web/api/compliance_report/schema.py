@@ -123,9 +123,8 @@ class FinalSupplyEquipmentSchema(BaseSchema):
 
 class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
-    original_report_id: Optional[int]
-    previous_report_id: Optional[int]
-    chain_index: int
+    compliance_report_group_uuid: Optional[str]
+    version: Optional[int]
     supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
     compliance_period: CompliancePeriodSchema

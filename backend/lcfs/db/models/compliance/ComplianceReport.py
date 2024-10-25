@@ -1,3 +1,4 @@
+import uuid
 import enum
 from sqlalchemy import (
     Column,
@@ -29,12 +30,6 @@ class Quarter(enum.Enum):
     Q4 = "Q4"
 
 
-class ChangeType(enum.Enum):
-    CREATE = "CREATE"
-    UPDATE = "UPDATE"
-    DELETE = "DELETE"
-
-
 class QuantityUnitsEnum(enum.Enum):
     Litres = "L"
     Kilograms = "kg"
@@ -64,14 +59,14 @@ compliance_report_document_association = Table(
 class ComplianceReport(BaseModel, Auditable):
     __tablename__ = "compliance_report"
     __table_args__ = {
-        "comment": "Main tracking table for all the sub-tables associated with a supplier's annual compliance report"
+        "comment": "Main tracking table for all the sub-tables associated with a supplier's compliance report"
     }
 
     compliance_report_id = Column(
         Integer,
         primary_key=True,
         autoincrement=True,
-        comment="Unique identifier for the compliance report",
+        comment="Unique identifier for the compliance report version",
     )
     compliance_period_id = Column(
         Integer,
@@ -97,41 +92,38 @@ class ComplianceReport(BaseModel, Auditable):
         nullable=True,
         comment="Identifier for the transaction",
     )
-
-    # Supplemental Reporting Fields
-    original_report_id = Column(
-        Integer,
-        ForeignKey("compliance_report.compliance_report_id"),
-        nullable=True,
-        comment="Foreign key to the original compliance report",
+    compliance_report_group_uuid = Column(
+        String(36),
+        nullable=False,
+        default=lambda: str(uuid.uuid4()),
+        comment="UUID that groups all versions of a compliance report",
     )
-    previous_report_id = Column(
-        Integer,
-        ForeignKey("compliance_report.compliance_report_id"),
-        nullable=True,
-        comment="Foreign key to the previous compliance report",
-    )
-    chain_index = Column(
+    version = Column(
         Integer,
         nullable=False,
-        default=0,
-        server_default="0",  # Added server_default for database-level default
-        comment="Position of the report in the chain of related reports",
+        default=1,
+        comment="Version number of the compliance report",
     )
     supplemental_initiator = Column(
         Enum(SupplementalInitiatorType),
         nullable=True,
-        comment="Whether supplier or gov initiated the supplemental.",
+        comment="Indicates whether supplier or government initiated the supplemental",
     )
-
     reporting_frequency = Column(
-        Enum(ReportingFrequency), nullable=False, default=ReportingFrequency.ANNUAL
+        Enum(ReportingFrequency),
+        nullable=False,
+        default=ReportingFrequency.ANNUAL,
+        comment="Reporting frequency",
     )
     nickname = Column(
-        String, nullable=True, comment="Nickname for the compliance report"
+        String,
+        nullable=True,
+        comment="Nickname for the compliance report",
     )
     supplemental_note = Column(
-        String, nullable=True, comment="Supplemental note for the compliance report"
+        String,
+        nullable=True,
+        comment="Supplemental note for the compliance report",
     )
 
     # Relationships
@@ -149,6 +141,14 @@ class ComplianceReport(BaseModel, Auditable):
     history = relationship(
         "ComplianceReportHistory", back_populates="compliance_report"
     )
+    compliance_report_internal_comments = relationship(
+        "ComplianceReportInternalComment", back_populates="compliance_report"
+    )
+    documents = relationship(
+        "Document",
+        secondary=compliance_report_document_association,
+        back_populates="compliance_reports",
+    )
 
     # Schedule relationships
     notional_transfers = relationship(
@@ -163,37 +163,6 @@ class ComplianceReport(BaseModel, Auditable):
     final_supply_equipment = relationship(
         "FinalSupplyEquipment", back_populates="compliance_report"
     )
-    compliance_report_internal_comments = relationship(
-        "ComplianceReportInternalComment", back_populates="compliance_report"
-    )
-
-    documents = relationship(
-        "Document",
-        secondary=compliance_report_document_association,
-        back_populates="compliance_reports",
-    )
-
-    # Previous Report: Points to the immediate previous report
-    previous_report = relationship(
-        "ComplianceReport",
-        foreign_keys=[previous_report_id],
-        remote_side=[compliance_report_id],
-        backref=backref("next_report", uselist=False, remote_side=[previous_report_id]),
-        post_update=True,
-    )
-
-    # Supplemental Reports: All reports after the original
-    supplemental_reports = relationship(
-        "ComplianceReport",
-        foreign_keys=[original_report_id],
-        backref=backref(
-            "original_report",
-            remote_side=[compliance_report_id],
-        ),
-        lazy="select",  # Use select loading
-        order_by="ComplianceReport.chain_index",
-        post_update=True,
-    )
 
     def __repr__(self):
-        return f"<ComplianceReport(id={self.compliance_report_id}, nickname={self.nickname})>"
+        return f"<ComplianceReport(id={self.compliance_report_id}, version={self.version})>"

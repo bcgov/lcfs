@@ -170,7 +170,6 @@ class ComplianceReportRepository:
                     ComplianceReportHistory.user_profile
                 ),
                 joinedload(ComplianceReport.transaction),
-                joinedload(ComplianceReport.supplemental_reports),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
@@ -433,75 +432,6 @@ class ComplianceReportRepository:
             return result
         else:
             return ComplianceReportBaseSchema.model_validate(result)
-
-    # @repo_handler
-    # async def get_intended_use_types(self) -> List[EndUseType]:
-    #     """
-    #     Retrieve a list of intended use types from the database
-    #     """
-    #     return (
-    #         (
-    #             await self.db.execute(
-    #                 select(EndUseType).where(EndUseType.intended_use == True)
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
-
-    # @repo_handler
-    # async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
-    #     """
-    #     Retrieve intended use type by name from the database
-    #     """
-    #     result = await self.db.scalar(
-    #         select(EndUseType).where(EndUseType.name == intended_use)
-    #     )
-    #     return result
-
-    # @repo_handler
-    # async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
-    #     """
-    #     Retrieve a list of levels of equipment from the database
-    #     """
-    #     return (await self.db.execute(select(LevelOfEquipment))).scalars().all()
-
-    # @repo_handler
-    # async def get_levels_of_equipment_by_name(self, name: str) -> LevelOfEquipment:
-    #     """
-    #     Get the levels of equipment by name
-    #     """
-    #     return (
-    #         (
-    #             await self.db.execute(
-    #                 select(LevelOfEquipment).where(LevelOfEquipment.name == name)
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
-
-    # @repo_handler
-    # async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
-    #     """
-    #     Retrieve a list of levels of equipment from the database
-    #     """
-    #     return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
-
-    # @repo_handler
-    # async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
-    #     """
-    #     Get the levels of equipment by name
-    #     """
-    #     return (
-    #         (
-    #             await self.db.execute(
-    #                 select(FuelMeasurementType).where(FuelMeasurementType.type == type)
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
 
     @repo_handler
     async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
@@ -818,13 +748,30 @@ class ComplianceReportRepository:
             .all()
         )
 
-    async def get_last_report_in_chain(
-        self, original_report_id: int
+    @repo_handler
+    async def get_latest_report_by_group_uuid(
+        self, group_uuid: str
     ) -> Optional[ComplianceReport]:
+        """
+        Retrieve the latest compliance report for a given group_uuid.
+        This returns the report with the highest version number within the group.
+        """
         result = await self.db.execute(
             select(ComplianceReport)
-            .where(ComplianceReport.original_report_id == original_report_id)
-            .order_by(ComplianceReport.chain_index.desc())
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+            )
+            .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+            .order_by(ComplianceReport.version.desc())
             .limit(1)
         )
         return result.scalars().first()

@@ -12,6 +12,17 @@ class QuantityUnitsEnum(enum.Enum):
     Kilowatt_hour = "kWh"
     Cubic_metres = "m3"
 
+    @classmethod
+    def from_shorthand(cls, value: str):
+        """Converts shorthand values like 'L' into full names like 'Litres'."""
+        shorthand_map = {
+            "L": "Litres",
+            "kg": "Kilograms",
+            "kWh": "Kilowatt_hour",
+            "m3": "Cubic_metres",
+        }
+        return shorthand_map.get(value, value)
+
 
 class FuelType(BaseModel, Auditable, DisplayOrder):
 

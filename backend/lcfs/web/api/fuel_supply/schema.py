@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -7,6 +7,7 @@ from lcfs.web.api.base import (
     SortOrder,
 )
 from pydantic import Field, field_validator
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 
 
 class FuelTypeQuantityUnitsEnumSchema(str, Enum):
@@ -129,6 +130,8 @@ class FuelCodeResponseSchema(BaseSchema):
 class FuelSupplyCreateUpdateSchema(BaseSchema):
     compliance_report_id: int
     fuel_supply_id: Optional[int] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
     fuel_type_id: int
     fuel_category_id: int
     end_use_id: Optional[int] = None
@@ -145,10 +148,22 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
+    @field_validator("units")
+    def convert_units(cls, value):
+        """Convert shorthand like 'L' to full names like 'Litres'."""
+        return QuantityUnitsEnum.from_shorthand(value)
+
+    class Config:
+        use_enum_values = True
+
 
 class FuelSupplyResponseSchema(BaseSchema):
     fuel_supply_id: int
     compliance_report_id: int
+    group_uuid: str
+    version: int
+    user_type: str
+    action_type: str
     fuel_type_id: int
     fuel_type: FuelTypeSchema
     quantity: int
