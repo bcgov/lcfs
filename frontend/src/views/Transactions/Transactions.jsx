@@ -22,6 +22,7 @@ import {
 } from '@/constants/statuses'
 import { roles, govRoles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
+import Loading from '@/components/Loading'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -118,7 +119,6 @@ export const Transactions = () => {
         selectedOrgId
       )
     }
-    return apiRoutes.transactions
   }, [selectedOrgId, currentUser, hasRoles])
 
   // Determine the appropriate export API endpoint
@@ -157,6 +157,10 @@ export const Transactions = () => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
+
+  if (!currentUser) {
+    return <Loading />
+  }
 
   return (
     <>

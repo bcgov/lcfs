@@ -1,3 +1,4 @@
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
@@ -74,7 +75,7 @@ class TransferCreateSchema(BaseSchema):
     gov_comment: Optional[str] = None
     transfer_category_id: Optional[int] = None
     current_status_id: Optional[int] = None
-    current_status: Optional[str] = None
+    current_status: Optional[TransferStatusEnum] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
 
 

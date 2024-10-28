@@ -136,10 +136,7 @@ class TransferRepository:
     ) -> TransferStatus:
         """Fetch a single transfer status by transfer status name from the database"""
         return await self.db.scalar(
-            select(TransferStatus).where(
-                TransferStatus.status
-                == getattr(TransferStatusEnum, transfer_status_name)
-            )
+            select(TransferStatus).where(TransferStatus.status == transfer_status_name)
         )
 
     @repo_handler
