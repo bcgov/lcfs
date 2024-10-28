@@ -68,7 +68,8 @@ async def seed_dev(session: AsyncSession):
     # Update sequences after all seeders have run
     await update_sequences(session)
 
-    await seed_admin_adjustment_history(session)
+    # TODO not working with incorrect foreign keys, needs debugging
+    # await seed_admin_adjustment_history(session)
 
     logger.info("Dev database seeding completed successfully.")
 
