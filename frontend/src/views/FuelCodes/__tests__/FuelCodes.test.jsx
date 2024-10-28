@@ -1,19 +1,14 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  render,
-  screen,
   cleanup,
   fireEvent,
+  render,
+  screen,
   waitFor
 } from '@testing-library/react'
-import { BrowserRouter as Router } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FuelCodes } from '@/views/FuelCodes'
-// Import utilities directly, if getByDataTest is a custom utility, ensure it's correctly imported
-import { getByDataTest } from '@/tests/utils/testHelpers'
-import { ThemeProvider } from '@mui/material'
-import theme from '@/themes'
 import { roles } from '@/constants/roles.js'
+import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -66,40 +61,27 @@ vi.mock('@/services/useApiService', () => {
   }
 })
 
-const WrapperComponent = () => {
-  const queryClient = new QueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <Router>
-          <FuelCodes />
-        </Router>
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
-}
-
 describe('FuelCodes Component Tests', () => {
   afterEach(() => {
     cleanup()
     vi.resetAllMocks() // Reset mocks to their initial state after each test
   })
 
-  test('renders title correctly', () => {
-    render(WrapperComponent())
+  it('renders title correctly', () => {
+    render(<FuelCodes />, { wrapper })
     const title = screen.getByTestId('title')
     expect(title).toBeInTheDocument()
     expect(title.textContent).toBe('Fuel codes')
   })
 
-  test('clicking new fuel code button redirects to add page', () => {
-    const { getByTestId } = render(WrapperComponent())
-    const newFuelCodeBtn = getByTestId('new-fuel-code-btn')
+  it('clicking new fuel code button redirects to add page', () => {
+    render(<FuelCodes />, { wrapper })
+    const newFuelCodeBtn = screen.getByTestId('new-fuel-code-btn')
     fireEvent.click(newFuelCodeBtn)
     expect(window.location.pathname).toBe('/fuel-codes/add-fuel-code')
   })
 
-  test('displays alert message on download failure', async () => {
+  it('displays alert message on download failure', async () => {
     // Mocking API service to simulate download failure
     const mockApiService = {
       download: vi.fn().mockRejectedValue(new Error('Download failed'))
@@ -108,12 +90,12 @@ describe('FuelCodes Component Tests', () => {
       useApiService: () => mockApiService
     }))
 
-    const { getByTestId } = render(WrapperComponent())
-    const downloadBtn = getByTestId('fuel-code-download-btn')
+    render(<FuelCodes />, { wrapper })
+    const downloadBtn = screen.getByTestId('fuel-code-download-btn')
     fireEvent.click(downloadBtn)
 
     await waitFor(() => {
-      const alertBox = getByTestId('alert-box')
+      const alertBox = screen.getByTestId('alert-box')
       expect(alertBox.textContent).toContain(
         'Failed to download fuel code information'
       )
@@ -122,11 +104,11 @@ describe('FuelCodes Component Tests', () => {
 
   describe('Download fuel codes information', () => {
     beforeEach(() => {
-      render(WrapperComponent())
+      render(<FuelCodes />, { wrapper })
     })
 
     it('initially shows the download fuel codes button with correct text and enabled', () => {
-      const downloadButton = getByDataTest('fuel-code-download-btn')
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
       expect(downloadButton).toBeInTheDocument()
       expect(downloadButton).toBeEnabled()
     })
@@ -139,7 +121,7 @@ describe('FuelCodes Component Tests', () => {
         useApiService: () => mockApiService
       }))
 
-      const downloadButton = getByDataTest('fuel-code-download-btn')
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
       fireEvent.click(downloadButton)
 
       // First, ensure the button text changes to the downloading state
@@ -160,9 +142,9 @@ describe('FuelCodes Component Tests', () => {
       }))
 
       cleanup()
-      render(WrapperComponent())
+      render(<FuelCodes />, { wrapper })
 
-      const downloadButton = getByDataTest('fuel-code-download-btn')
+      const downloadButton = screen.getByTestId('fuel-code-download-btn')
       fireEvent.click(downloadButton)
 
       await waitFor(() => {
