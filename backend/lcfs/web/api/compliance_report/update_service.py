@@ -218,17 +218,7 @@ class ComplianceReportUpdateService:
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
         # Update the transaction to assessed
-        if report.transaction == None:
-            # TODO: this is a temporary fix for existing records in dev. this code wont' be executed in prod, 
-            # as the transaction would have already been created during report submission.
-            report.transaction = await self.org_service.adjust_balance(
-                transaction_action=TransactionActionEnum.Adjustment,
-                compliance_units=report.summary.line_20_surplus_deficit_units,
-                organization_id=report.organization_id,
-            )
-        else:
-            # Confirm the transaction.
-            report.transaction.transaction_action = TransactionActionEnum.Adjustment
+        report.transaction.transaction_action = TransactionActionEnum.Adjustment
         await self.repo.update_compliance_report(report)
 
     async def handle_reassessed_status(self, report: ComplianceReport):
