@@ -79,6 +79,8 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 raise HTTPException(status_code=500, detail="Internal Server Error")
             except HTTPException as e:
                 logger.error(str(e))
+                if e.status_code == 403:
+                    raise HTTPException(status_code=404, detail="Not Found")
                 raise
             except DataNotFoundException:
                 raise HTTPException(status_code=404, detail="Not Found")
