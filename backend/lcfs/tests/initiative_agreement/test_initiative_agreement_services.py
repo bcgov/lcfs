@@ -73,7 +73,7 @@ async def test_get_initiative_agreement(service, mock_repo):
         initiative_agreement_id=1,
         compliance_units=150,
         to_organization_id=3,
-        to_organization=Organization(name="name"),
+        to_organization=Organization(name="name", organization_id=3),
         current_status=InitiativeAgreementStatus(
             status="Status", initiative_agreement_status_id=1
         ),
@@ -116,7 +116,7 @@ async def test_update_initiative_agreement(service, mock_repo, mock_request):
         initiative_agreement_id=1,
         compliance_units=150,
         to_organization_id=3,
-        to_organization=Organization(name="name"),
+        to_organization=Organization(name="name", organization_id=3),
         current_status=InitiativeAgreementStatus(
             status="Status", initiative_agreement_status_id=1
         ),
@@ -150,7 +150,7 @@ async def test_director_approve_initiative_agreement(
         initiative_agreement_id=1,
         compliance_units=150,
         to_organization_id=3,
-        to_organization=Organization(name="name"),
+        to_organization=Organization(name="name", organization_id=3),
         current_status=InitiativeAgreementStatus(
             status="Status", initiative_agreement_status_id=1
         ),
@@ -173,7 +173,7 @@ async def test_non_director_approve_initiative_agreement(
         initiative_agreement_id=1,
         compliance_units=150,
         to_organization_id=3,
-        to_organization=Organization(name="name"),
+        to_organization=Organization(name="name", organization_id=3),
         current_status=InitiativeAgreementStatus(
             status="Status", initiative_agreement_status_id=1
         ),

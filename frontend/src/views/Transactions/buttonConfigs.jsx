@@ -1,11 +1,8 @@
 import colors from '@/themes/base/colors'
 import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import {
-  ADMIN_ADJUSTMENT,
-  INITIATIVE_AGREEMENT
-} from './AddEditViewTransaction'
 import { roles } from '@/constants/roles'
+import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 
 const outlineBase = {
   variant: 'outlined',

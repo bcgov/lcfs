@@ -8,6 +8,7 @@ from lcfs.db.models.compliance.FuelSupply import (
     QuantityUnitsEnum,
 )
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
     EnergyDensitySchema,
@@ -24,7 +25,6 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 
@@ -36,11 +36,11 @@ class FuelSupplyServices:
         self,
         request: Request = None,
         repo: FuelSupplyRepository = Depends(),
-        compliance_report_repo: ComplianceReportRepository = Depends(),
+        fuel_repo: FuelCodeRepository = Depends(),
     ) -> None:
         self.request = request
         self.repo = repo
-        self.compliance_report_repo = compliance_report_repo
+        self.fuel_repo = fuel_repo
 
     def fuel_type_row_mapper(self, compliance_period, fuel_types, row):
         column_names = row._fields
@@ -283,12 +283,57 @@ class FuelSupplyServices:
                 "end_use",
                 "fuel_code",
                 "units",
+                "compliance_units",
+                "target_ci",
+                "ci_of_fuel",
+                "energy_density",
+                "eer",
+                "energy",
                 "deleted",
             }
         )
+
+        # Re-calculate Energy Fields
+        did_change_fuel = fs_data.fuel_type_id != fuel_supply.fuel_type_id
+        if did_change_fuel:
+            new_fuel = await self.fuel_repo.get_fuel_type_by_id(fs_data.fuel_type_id)
+            if new_fuel.unrecognized:
+                fuel_supply.ci_of_fuel = None
+                fuel_supply.energy_density = None
+                fuel_supply.eer = None
+                fuel_supply.energy = 0
+            else:
+                fuel_supply.ci_of_fuel = new_fuel.default_carbon_intensity
+
         for field, value in update_data.items():
             setattr(fuel_supply, field, value)
         fuel_supply.units = QuantityUnitsEnum(fs_data.units)
+
+        if (
+            fuel_supply.fuel_type_id
+            and fuel_supply.fuel_category_id
+            and fuel_supply.end_use_id
+        ):
+            energy_effectiveness = await self.fuel_repo.get_energy_effectiveness_ratio(
+                fuel_supply.fuel_type_id,
+                fuel_supply.fuel_category_id,
+                fuel_supply.end_use_id,
+            )
+            fuel_supply.eer = energy_effectiveness.ratio
+
+        #Copy CI if using a custom fuel code
+        if fuel_supply.fuel_code_id:
+            fuel_code = await self.fuel_repo.get_fuel_code(fuel_code_id=fuel_supply.fuel_type_id)
+            fuel_supply.ci_of_fuel = fuel_code.carbon_intensity
+
+        energy_density = await self.fuel_repo.get_energy_density(
+            fuel_supply.fuel_type_id
+        )
+        fuel_supply.energy_density = energy_density.density
+
+        # Recalculate energy
+        if fuel_supply.energy_density:
+            fuel_supply.energy = int(fuel_supply.energy_density * fuel_supply.quantity)
 
         # Recalculate compliance units
         compliance_units = self.calculate_compliance_units_for_supply(fuel_supply)

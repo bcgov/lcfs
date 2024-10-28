@@ -71,12 +71,14 @@ async def test_get_fuel_exports_paginated_success(
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_exports_paginated"
-    ) as mock_get_fuel_exports_paginated:
+    ) as mock_get_fuel_exports_paginated, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
 
         mock_get_fuel_exports_paginated.return_value = FuelExportsSchema(
             fuel_exports=[]
         )
-
+        mock_validate_organization_access.return_value = True
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_exports")
@@ -99,10 +101,12 @@ async def test_get_fuel_exports_list_success(
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_export_list"
-    ) as mock_get_fuel_export_list:
+    ) as mock_get_fuel_export_list, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access:
 
         mock_get_fuel_export_list.return_value = FuelExportsSchema(fuel_exports=[])
-
+        mock_validate_organization_access.return_value = True
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_exports")

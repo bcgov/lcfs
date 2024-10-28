@@ -10,6 +10,7 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import StreamingResponse
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from starlette import status
 from typing import List
 
@@ -297,9 +298,11 @@ async def get_compliance_report_by_id(
     response: Response = None,
     report_id: int = None,
     report_service: ComplianceReportServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Endpoint to get information of a user by ID
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
+    await report_validate.validate_organization_access(report_id)
     return await report_service.get_compliance_report_by_id(report_id, bceid_user=True)

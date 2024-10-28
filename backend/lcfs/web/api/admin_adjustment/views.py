@@ -20,8 +20,10 @@ async def get_admin_adjustment(
     request: Request,
     admin_adjustment_id: int,
     service: AdminAdjustmentServices = Depends(),
+    validate: AdminAdjustmentValidation = Depends(),
 ):
     """Endpoint to fetch an admin adjustment by its ID."""
+    await validate.validate_organization_access(admin_adjustment_id)
     return await service.get_admin_adjustment(admin_adjustment_id)
 
 

@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
+from lcfs.db.models.fuel import EnergyEffectivenessRatio
 from sqlalchemy import and_, or_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
@@ -51,11 +52,9 @@ class FuelCodeRepository:
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = or_(
-            FuelCode.effective_date == None,
-            FuelCode.effective_date <= current_date
+            FuelCode.effective_date == None, FuelCode.effective_date <= current_date
         ) & or_(
-            FuelCode.expiration_date == None,
-            FuelCode.expiration_date > current_date
+            FuelCode.expiration_date == None, FuelCode.expiration_date > current_date
         )
 
         # Build the query with filtered fuel_codes
@@ -102,7 +101,24 @@ class FuelCodeRepository:
                     }
                     for fc in fuel_type.fuel_codes
                 ],
+                "provision_of_the_act": [],
             }
+
+            if fuel_type.provision_1:
+                formatted_fuel_type["provision_of_the_act"].append(
+                    {
+                        "provision_of_the_act_id": fuel_type.provision_1_id,
+                        "name": fuel_type.provision_1.name,
+                    }
+                )
+
+            if fuel_type.provision_2:
+                formatted_fuel_type["provision_of_the_act"].append(
+                    {
+                        "provision_of_the_act_id": fuel_type.provision_2_id,
+                        "name": fuel_type.provision_2.name,
+                    }
+                )
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
@@ -116,6 +132,21 @@ class FuelCodeRepository:
         if not fuel_type:
             raise ValueError(f"Fuel type '{fuel_type_name}' not found")
         return fuel_type
+
+    @repo_handler
+    async def get_fuel_type_by_id(self, fuel_type_id: int) -> FuelType:
+        """Get fuel type by ID"""
+        result = await self.db.get_one(
+            FuelType,
+            fuel_type_id,
+            options=[
+                joinedload(FuelType.energy_density),
+                joinedload(FuelType.energy_effectiveness_ratio),
+            ],
+        )
+        if not result:
+            raise ValueError(f"Fuel type with ID '{fuel_type_id}' not found")
+        return result
 
     @repo_handler
     async def get_fuel_categories(self) -> List[FuelCategory]:
@@ -163,6 +194,82 @@ class FuelCodeRepository:
         return (
             await self.db.execute(select(FuelCodeStatus).filter_by(status=status))
         ).scalar()
+
+    @repo_handler
+    async def get_energy_densities(self) -> List[EnergyDensity]:
+        """Get all energy densities"""
+        return (
+            (
+                await self.db.execute(
+                    select(EnergyDensity).options(
+                        joinedload(EnergyDensity.fuel_type),
+                        joinedload(EnergyDensity.uom),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_energy_density(self, fuel_type_id) -> EnergyDensity:
+        """Get the energy density for the specified fuel_type_id"""
+
+        stmt = select(EnergyDensity).where(EnergyDensity.fuel_type_id == fuel_type_id)
+        result = await self.db.execute(stmt)
+        energy_density = result.scalars().first()
+
+        return energy_density
+
+    @repo_handler
+    async def get_energy_effectiveness_ratios(self) -> List[EnergyEffectivenessRatio]:
+        """Get all energy effectiveness ratios"""
+        return (
+            (
+                await self.db.execute(
+                    select(EnergyEffectivenessRatio).options(
+                        joinedload(EnergyEffectivenessRatio.fuel_category),
+                        joinedload(EnergyEffectivenessRatio.fuel_type),
+                        joinedload(EnergyEffectivenessRatio.end_use_type),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_use_of_a_carbon_intensities(self) -> List[AdditionalCarbonIntensity]:
+        """Get all use of a carbon intensities (UCI)"""
+        return (
+            (
+                await self.db.execute(
+                    select(AdditionalCarbonIntensity).options(
+                        joinedload(AdditionalCarbonIntensity.end_use_type),
+                        joinedload(AdditionalCarbonIntensity.fuel_type),
+                        joinedload(AdditionalCarbonIntensity.uom),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_units_of_measure(self) -> List[UnitOfMeasure]:
+        """Get all unit of measure options"""
+        return (await self.db.execute(select(UnitOfMeasure))).scalars().all()
+
+    @repo_handler
+    async def get_expected_use_types(self) -> List[ExpectedUseType]:
+        """Get all expected use options"""
+        return (await self.db.execute(select(ExpectedUseType))).scalars().all()
+
+    @repo_handler
+    async def get_expected_use_type_by_name(self, name: str) -> ExpectedUseType:
+        """Get a expected use by its name"""
+        result = await self.db.execute(select(ExpectedUseType).filter_by(name=name))
+        return result.scalar_one_or_none()
 
     @repo_handler
     async def get_fuel_codes_paginated(
@@ -592,3 +699,19 @@ class FuelCodeRepository:
             )
         )
         return result.scalar_one_or_none()
+
+
+    @repo_handler
+    async def get_energy_effectiveness_ratio(
+        self, fuel_type_id: int, fuel_category_id: int, end_use_type_id: int
+    ) -> EnergyEffectivenessRatio:
+
+        stmt = select(EnergyEffectivenessRatio).where(
+            EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
+            EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
+            EnergyEffectivenessRatio.end_use_type_id == end_use_type_id,
+        )
+        result = await self.db.execute(stmt)
+        energy_density = result.scalars().first()
+
+        return energy_density

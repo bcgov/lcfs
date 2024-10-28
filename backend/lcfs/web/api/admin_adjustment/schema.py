@@ -20,6 +20,7 @@ class HistoryUserSchema(BaseSchema):
 
 
 class OrganizationSchema(BaseSchema):
+    organization_id: int
     name: str
 
     class Config:

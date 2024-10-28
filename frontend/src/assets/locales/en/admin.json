@@ -23,6 +23,7 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "errorRetrieving": "Error retrieving the record",
   "roleColLabels": {
     "role": "Role",
     "roleOf": "Role conferred to",

@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, Request, status, Body
-from typing import List, Optional, Annotated
+from typing import List, Annotated
 
 from lcfs.web.api.transfer.validation import TransferValidation
 from lcfs.db import dependencies
 from lcfs.web.api.transfer.schema import (
     TransferCreateSchema,
     TransferSchema,
-    TransferCategorySchema,
 )
 from lcfs.web.api.transfer.services import TransferServices
 from lcfs.web.core.decorators import view_handler
@@ -26,10 +25,13 @@ async def get_all_transfers(request: Request, service: TransferServices = Depend
 @router.get("/{transfer_id}", response_model=TransferSchema)
 @view_handler(["*"])
 async def get_transfer(
-    request: Request, transfer_id: int, service: TransferServices = Depends()
+    request: Request, transfer_id: int, service: TransferServices = Depends(),
+    validate: TransferValidation = Depends(),
 ):
     """Endpoint to fetch a transfer by its ID."""
-    return await service.get_transfer(transfer_id)
+    response = await service.get_transfer(transfer_id)
+    await validate.get_transfer(response)
+    return response
 
 
 @router.put(

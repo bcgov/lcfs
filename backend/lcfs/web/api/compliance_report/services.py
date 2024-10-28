@@ -113,8 +113,9 @@ class ComplianceReportServices:
         report = await self.repo.get_compliance_report_by_id(report_id)
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
-        report = self._mask_report_status_for_history(report, bceid_user)
-        return report
+        validated_report = ComplianceReportBaseSchema.model_validate(report)
+        masked_report = self._mask_report_status_for_history(validated_report, bceid_user)
+        return masked_report
     
     def _mask_report_status_for_history(self, report: ComplianceReportBaseSchema, bceid_user: bool = False) -> ComplianceReportBaseSchema:
         recommended_statuses = {

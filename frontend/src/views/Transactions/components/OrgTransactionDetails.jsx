@@ -1,12 +1,9 @@
 import React from 'react'
-import { Grid, Box, Typography } from '@mui/material'
+import { Box, Grid, Typography } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { numberFormatter, dateFormatter } from '@/utils/formatters'
+import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-
-// Constants for transaction types
-export const ADMIN_ADJUSTMENT = 'administrativeAdjustment'
-export const INITIATIVE_AGREEMENT = 'initiativeAgreement'
+import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 
 export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   const { t } = useTranslation([

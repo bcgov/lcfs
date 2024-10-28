@@ -8,7 +8,7 @@ from fastapi import Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.web.api.role.schema import RoleSchema
+from lcfs.web.api.role.schema import RoleSchema, user_has_roles
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.web.core.decorators import service_handler
@@ -141,6 +141,13 @@ class UserServices:
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
+        if user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]):
+            pass
+        elif not user.organization or self.request.user.organization.organization_id != user.organization.organization_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to view this user's information.",
+            )
         return UserBaseSchema.model_validate(user)
 
     @service_handler

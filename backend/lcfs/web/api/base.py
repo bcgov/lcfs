@@ -21,6 +21,8 @@ class BaseSchema(BaseModel):
         from_attributes=True,
     )
 
+class ComplianceReportRequestSchema(BaseSchema):
+    compliance_report_id: int
 
 def row_to_dict(row, schema):
     d = {}
@@ -153,6 +155,7 @@ def get_field_for_filter(model, field):
             status_code=500,
             detail=f"Failed to apply filter conditions",
         )
+
 
 def get_enum_value(enum_class, filter_value):
     # Normalize both the filter value and enum names to lowercase
@@ -340,7 +343,11 @@ async def lcfs_cache_key_builder(
     prefix = FastAPICache.get_prefix()
     request_key = ""
     for key, value in kwargs.items():
-        if "object at" not in str(value):
+        if key == "args":
+            for v in value:
+                if "object at" not in str(v):
+                    request_key += f"{key}:{v}"
+        elif "object at" not in str(value):
             request_key += f"{key}:{value}"
     # Build the cache key
     cache_key = f"{prefix}:{namespace}:{func.__name__}:{request_key}"

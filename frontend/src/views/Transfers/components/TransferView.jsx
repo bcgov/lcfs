@@ -11,8 +11,10 @@ import { decimalFormatter } from '@/utils/formatters'
 import { Typography } from '@mui/material'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
-import { CommentList, Comments, TransferDetailsCard } from '.'
 import TransferHistory from './TransferHistory'
+import { TransferDetailsCard } from '@/views/Transfers/components/TransferDetailsCard'
+import { Comments } from '@/views/Transactions/components'
+import { CommentList } from '@/views/Transfers/components/CommentList'
 
 export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float
+from sqlalchemy import Column, Integer, Numeric
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey
@@ -17,7 +17,7 @@ class AdditionalCarbonIntensity(BaseModel, Auditable, DisplayOrder):
         Integer, ForeignKey("end_use_type.end_use_type_id"), nullable=True
     )
     uom_id = Column(Integer, ForeignKey("unit_of_measure.uom_id"), nullable=False)
-    intensity = Column(Float(10, 2), nullable=False)
+    intensity = Column(Numeric(10, 2), nullable=False)
 
     fuel_type = relationship("FuelType", back_populates="additional_carbon_intensity")
     end_use_type = relationship(
