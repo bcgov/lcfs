@@ -219,6 +219,7 @@ class ComplianceReportUpdateService:
             raise HTTPException(status_code=403, detail="Forbidden.")
         # Update the transaction to assessed
         report.transaction.transaction_action = TransactionActionEnum.Adjustment
+        report.transaction.update_user = str(user.user_profile_id)
         await self.repo.update_compliance_report(report)
 
     async def handle_reassessed_status(self, report: ComplianceReport):
