@@ -201,7 +201,7 @@ class FuelCodeServices:
         return fc
 
     @service_handler
-    async def create_fuel_code(self, fuel_code: FuelCodeCreateSchema) -> FuelCode:
+    async def create_fuel_code(self, fuel_code: FuelCodeCreateSchema) -> FuelCodeSchema:
         """
         Create a new fuel code.
         """
@@ -211,8 +211,9 @@ class FuelCodeServices:
         )
         fuel_code.fuel_suffix = fuel_suffix_value
         fuel_code_model = await self.convert_to_model(fuel_code)
-        fuel_code_model.fuel_status_id = 1  # set to draft by default
-        return await self.repo.create_fuel_code(fuel_code_model)
+        fuel_code_model = await self.repo.create_fuel_code(fuel_code_model)
+        result = FuelCodeSchema.model_validate(fuel_code_model)
+        return result
 
     @service_handler
     async def get_fuel_code(self, fuel_code_id: int):

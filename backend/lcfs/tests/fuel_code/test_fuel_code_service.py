@@ -53,7 +53,7 @@ async def test_create_fuel_code_success():
     repo_mock = AsyncMock()
     service = FuelCodeServices(repo=repo_mock)
 
-    mock_fuel_code_data = FuelCodeCreateSchema(
+    input_data = FuelCodeCreateSchema(
         fuel_code_id=1,
         status="Draft",
         prefix="ABC",
@@ -70,11 +70,32 @@ async def test_create_fuel_code_success():
         fuel_production_facility_country="Canada",
         fuel_production_facility_province_state="BC",
     )
+    mock_fuel_code_data = FuelCodeSchema(
+        fuel_code_id=1,
+        status="Draft",
+        prefix="ABC",
+        prefix_id=1001,
+        fuel_suffix="001",
+        carbon_intensity=20.5,
+        company="XYZ Corp",
+        fuel="Diesel",
+        fuel_type_id=1,
+        application_date="2023-10-01",
+        edrms="EDRMS-123",
+        feedstock="Corn oil",
+        feedstock_location="Canada",
+        fuel_production_facility_city="Victoria",
+        fuel_production_facility_country="Canada",
+        fuel_production_facility_province_state="BC",
+        last_updated="2023-10-01",
+        feedstock_fuel_transport_modes=[],
+        finished_fuel_transport_modes=[]
+    )
 
     repo_mock.create_fuel_code.return_value = mock_fuel_code_data
 
     # Act
-    result = await service.create_fuel_code(mock_fuel_code_data)
+    result = await service.create_fuel_code(input_data)
 
     # Assert
     assert result.fuel_code_id == 1

@@ -255,7 +255,7 @@ const AddFuelCodeBase = () => {
         feedstock: clonedFuelCodeData.feedstock,
         feedstockLocation: clonedFuelCodeData.feedstockLocation,
         feedstockMisc: clonedFuelCodeData.feedstockMisc,
-        feedstockTransportMode:
+        feedstockFuelTransportMode:
           clonedFuelCodeData.feedstockFuelTransportModes?.map(
             (mode) => mode.feedstockFuelTransportMode.transportMode
           ),

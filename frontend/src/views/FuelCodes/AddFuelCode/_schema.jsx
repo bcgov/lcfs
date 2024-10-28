@@ -72,7 +72,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
         params.data.fuel = undefined
         params.data.feedstock = undefined
         params.data.feedstockLocation = undefined
-        params.data.feedstockTransportMode = []
+        params.data.feedstockFuelTransportMode = []
         params.data.finishedFuelTransportMode = []
         params.data.formerCompany = undefined
         params.data.contactName = undefined
@@ -474,10 +474,10 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     minWidth: 300
   },
   {
-    field: 'feedstockTransportMode',
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
+    field: 'feedstockFuelTransportMode',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: createCellRenderer('feedstockTransportMode', (params) =>
+    cellRenderer: createCellRenderer('feedstockFuelTransportMode', (params) =>
       params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
       ) : (
