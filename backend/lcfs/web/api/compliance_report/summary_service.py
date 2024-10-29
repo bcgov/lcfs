@@ -535,9 +535,7 @@ class ComplianceReportSummaryService:
                 total_value=values.get("gasoline", 0)
                 + values.get("diesel", 0)
                 + values.get("jet_fuel", 0),
-                format=(
-                    FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER
-                ),
+                format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
             )
             for line, values in summary_lines.items()
         ]
@@ -626,9 +624,7 @@ class ComplianceReportSummaryService:
                 ),
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=values.get("value", 0),
-                format=(
-                    FORMATS.CURRENCY if (str(line) == "21") else FORMATS.NUMBER
-                ),
+                format=(FORMATS.CURRENCY if (str(line) == "21") else FORMATS.NUMBER),
             )
             for line, values in low_carbon_summary_lines.items()
         ]
@@ -683,10 +679,6 @@ class ComplianceReportSummaryService:
             report.compliance_report_group_uuid, report.version
         )
 
-        print("FUEL SUPPLY RECORDS")
-        print(fuel_supply_records)
-        for record in fuel_supply_records:
-            print(vars(record))
         # Initialize compliance units sum
         compliance_units_sum = 0
 

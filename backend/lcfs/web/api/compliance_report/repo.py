@@ -323,22 +323,43 @@ class ComplianceReportRepository:
         self, pagination: PaginationRequestSchema, organization_id: int = None
     ):
         """
-        Retrieve a paginated list of compliance reports from the database
-        Supports pagination and sorting.
+        Retrieve a paginated list of the latest compliance reports from each compliance_report_group_uuid.
+        Supports pagination, filtering, and sorting.
         """
-        # Build the base query statement
+        # Base query conditions
         conditions = []
         if organization_id:
             conditions.append(ComplianceReport.organization_id == organization_id)
 
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_filters(pagination, conditions)
-        # Apply pagination and sorting parameters
+
+        # Pagination and offset setup
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
+        # Build the main query
+        subquery = (
+            select(
+                ComplianceReport.compliance_report_group_uuid,
+                func.max(ComplianceReport.version).label("latest_version"),
+            )
+            .where(and_(*conditions))
+            .group_by(ComplianceReport.compliance_report_group_uuid)
+            .subquery()
+        )
+
+        # Join the main ComplianceReport table with the subquery to get the latest version per group
         query = (
             select(ComplianceReport)
+            .join(
+                subquery,
+                and_(
+                    ComplianceReport.compliance_report_group_uuid
+                    == subquery.c.compliance_report_group_uuid,
+                    ComplianceReport.version == subquery.c.latest_version,
+                ),
+            )
             .options(
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
@@ -351,17 +372,11 @@ class ComplianceReportRepository:
                     ComplianceReportHistory.user_profile
                 ),
             )
-            .join(
-                ComplianceReportStatus,
-                ComplianceReport.current_status_id
-                == ComplianceReportStatus.compliance_report_status_id,
-            )
-            .where(and_(*conditions))
         )
-        # Apply sorts
+
+        # Apply sorting from pagination
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
-            # Add the sorting condition to the query
             if order.field == "status":
                 order.field = get_field_for_filter(ComplianceReportStatus, "status")
                 query = query.join(
@@ -382,23 +397,24 @@ class ComplianceReportRepository:
                     Organization,
                     ComplianceReport.organization_id == Organization.organization_id,
                 )
-            elif order.field == "type":
-                order.field = get_field_for_filter(ComplianceReport, "report_type")
             else:
                 order.field = get_field_for_filter(ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))
 
-        query_result = (await self.db.execute(query)).unique().scalars().all()
-        total_count = len(query_result)
-        reports = (
+        # Execute query with offset and limit for pagination
+        query_result = (
             (await self.db.execute(query.offset(offset).limit(limit)))
             .unique()
             .scalars()
             .all()
         )
-        return [
-            ComplianceReportBaseSchema.model_validate(report) for report in reports
-        ], total_count
+        total_count = len(query_result)
+
+        # Transform results into Pydantic schemas
+        reports = [
+            ComplianceReportBaseSchema.model_validate(report) for report in query_result
+        ]
+        return reports, total_count
 
     @repo_handler
     async def get_compliance_report_by_id(self, report_id: int, is_model: bool = False):
@@ -420,7 +436,7 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.history).joinedload(
                             ComplianceReportHistory.user_profile
                         ),
-                        joinedload(ComplianceReport.transaction)
+                        joinedload(ComplianceReport.transaction),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )

@@ -11,12 +11,13 @@ export const reportsColDefs = (t, bceidRole) => [
     width: 210,
     cellRenderer: LinkRenderer,
     cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+      url: ({ data }) =>
+        `${data.compliancePeriod?.description}/${data.complianceReportId}`
     },
     suppressFloatingFilterButton: true,
     valueGetter: ({ data }) => data.compliancePeriod?.description || '',
     filterParams: {
-      buttons:["clear"],
+      buttons: ['clear']
     }
   },
   {
@@ -26,7 +27,8 @@ export const reportsColDefs = (t, bceidRole) => [
     hide: bceidRole,
     cellRenderer: LinkRenderer,
     cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+      url: ({ data }) =>
+        `${data.compliancePeriod?.description}/${data.complianceReportId}`
     },
     valueGetter: ({ data }) => data.organization?.name || ''
   },
@@ -34,17 +36,21 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: () => t('report:complianceReport'),
+    valueGetter: ({ data }) => {
+      const typeLabel = t('report:complianceReport')
+      const nickname = data.nickname ? ` - ${data.nickname}` : ''
+      return `${typeLabel}${nickname}`
+    },
     filter: 'agTextColumnFilter', // Enable text filtering
     suppressFloatingFilterButton: true,
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
       textCustomComparator: (filter, value, filterText) => {
-        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase();
-        const cleanValue = value.replace(/\s+/g, '').toLowerCase();
-        return cleanValue.includes(cleanFilterText);
+        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase()
+        const cleanValue = value.replace(/\s+/g, '').toLowerCase()
+        return cleanValue.includes(cleanFilterText)
       },
-      buttons: ["clear"],
+      buttons: ['clear']
     }
   },
   {
@@ -54,7 +60,8 @@ export const reportsColDefs = (t, bceidRole) => [
     valueGetter: ({ data }) => data.currentStatus?.status || '',
     cellRenderer: ReportsStatusRenderer,
     cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod?.description}/${data.complianceReportId}`,
+      url: ({ data }) =>
+        `${data.compliancePeriod?.description}/${data.complianceReportId}`
     },
     floatingFilterComponent: BCColumnSetFilter,
     floatingFilterComponentParams: {
@@ -94,12 +101,17 @@ export const reportsColDefs = (t, bceidRole) => [
     filterParams: {
       filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
       suppressAndOrCondition: true,
-      buttons: ["clear"],
+      buttons: ['clear']
     }
   }
 ]
 
-export const renewableFuelColumns = (t, data, editable, compliancePeriodYear) => {
+export const renewableFuelColumns = (
+  t,
+  data,
+  editable,
+  compliancePeriodYear
+) => {
   /**
    * Editable Lines Logic:
    *
@@ -184,7 +196,6 @@ export const renewableFuelColumns = (t, data, editable, compliancePeriodYear) =>
   )
     jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
 
-
   // Line 8
   if (parseInt(compliancePeriodYear) >= 2028) {
     if (data[SUMMARY.LINE_2].jetFuel < data[SUMMARY.LINE_4].jetFuel) {
@@ -207,8 +218,16 @@ export const renewableFuelColumns = (t, data, editable, compliancePeriodYear) =>
 
   if (parseInt(compliancePeriodYear) === 2024) {
     // by default enable in editing mode for compliance period 2024
-    gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
-    dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    gasolineEditableCells = [
+      ...gasolineEditableCells,
+      SUMMARY.LINE_7,
+      SUMMARY.LINE_9
+    ]
+    dieselEditableCells = [
+      ...dieselEditableCells,
+      SUMMARY.LINE_7,
+      SUMMARY.LINE_9
+    ]
   }
   if (parseInt(compliancePeriodYear) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
@@ -216,7 +235,13 @@ export const renewableFuelColumns = (t, data, editable, compliancePeriodYear) =>
   }
 
   return [
-    { id: 'line', label: t('report:summaryLabels.line'), align: 'center', width: '100px', bold: true },
+    {
+      id: 'line',
+      label: t('report:summaryLabels.line'),
+      align: 'center',
+      width: '100px',
+      bold: true
+    },
     {
       id: 'description',
       label: t('report:renewableFuelTargetSummary'),
@@ -262,13 +287,24 @@ export const renewableFuelColumns = (t, data, editable, compliancePeriodYear) =>
 }
 
 export const lowCarbonColumns = (t) => [
-  { id: 'line', label: t('report:summaryLabels.line'), align: 'center', width: '100px', bold: true },
+  {
+    id: 'line',
+    label: t('report:summaryLabels.line'),
+    align: 'center',
+    width: '100px',
+    bold: true
+  },
   {
     id: 'description',
     label: t('report:lowCarbonFuelTargetSummary'),
     maxWidth: '300px'
   },
-  { id: 'value', label: t('report:summaryLabels.value'), align: 'center', width: '150px' }
+  {
+    id: 'value',
+    label: t('report:summaryLabels.value'),
+    align: 'center',
+    width: '150px'
+  }
 ]
 
 export const nonComplianceColumns = (t) => [
@@ -277,7 +313,12 @@ export const nonComplianceColumns = (t) => [
     label: t('report:nonCompliancePenaltySummary'),
     maxWidth: '300px'
   },
-  { id: 'totalValue', label: t('report:summaryLabels.totalValue'), align: 'center', width: '150px' }
+  {
+    id: 'totalValue',
+    label: t('report:summaryLabels.totalValue'),
+    align: 'center',
+    width: '150px'
+  }
 ]
 
 export const defaultSortModel = [

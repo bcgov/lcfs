@@ -311,12 +311,53 @@ class FuelSupplyRepository:
             FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
             FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
             FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
+            FuelSupply.group_uuid != fuel_supply.group_uuid,
             # Do not count the row of a duplicate of itself
             and_(
                 FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
                 if fuel_supply.fuel_supply_id is not None
                 else True  # If fuel_supply_id is None, don't add this condition
             ),
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_fuel_supply_version_by_user(
+        self, group_uuid: str, version: int, user_type: UserTypeEnum
+    ) -> Optional[FuelSupply]:
+        """
+        Retrieve a specific FuelSupply record by group UUID, version, and user_type.
+        This method explicitly requires user_type to avoid ambiguity.
+        """
+        query = select(FuelSupply).where(
+            FuelSupply.group_uuid == group_uuid,
+            FuelSupply.version == version,
+            FuelSupply.user_type == user_type,
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_latest_fuel_supply_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[FuelSupply]:
+        """
+        Retrieve the latest FuelSupply record for a given group UUID.
+        Government records are prioritized over supplier records by ordering first by `user_type`
+        (with GOVERNMENT records coming first) and then by `version` in descending order.
+        """
+        query = (
+            select(FuelSupply)
+            .where(FuelSupply.group_uuid == group_uuid)
+            .order_by(
+                # FuelSupply.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
+                # thus bringing GOVERNMENT records to the top in the ordered results.
+                FuelSupply.user_type == UserTypeEnum.SUPPLIER,
+                FuelSupply.version.desc(),
+            )
         )
 
         result = await self.db.execute(query)

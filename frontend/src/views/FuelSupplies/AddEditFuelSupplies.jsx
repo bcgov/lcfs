@@ -67,6 +67,7 @@ export const AddEditFuelSupplies = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelSupplies.map((item) => ({
           ...item,
+          complianceReportId, // This takes current reportId, important for versioning
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
           provisionOfTheAct: item.provisionOfTheAct?.name,
@@ -79,7 +80,7 @@ export const AddEditFuelSupplies = () => {
         setRowData([{ id: uuid() }])
       }
     },
-    [data]
+    [data, complianceReportId]
   )
 
   useEffect(() => {
@@ -93,6 +94,7 @@ export const AddEditFuelSupplies = () => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
       const updatedRowData = data.fuelSupplies.map((item) => ({
         ...item,
+        complianceReportId, // This takes current reportId, important for versioning
         fuelCategory: item.fuelCategory?.category,
         fuelType: item.fuelType?.fuelType,
         provisionOfTheAct: item.provisionOfTheAct?.name,
@@ -104,7 +106,7 @@ export const AddEditFuelSupplies = () => {
     } else {
       setRowData([{ id: uuid() }])
     }
-  }, [data, fuelSuppliesLoading])
+  }, [data, fuelSuppliesLoading, complianceReportId])
 
   const onCellValueChanged = useCallback(
     async (params) => {
