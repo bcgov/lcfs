@@ -169,6 +169,7 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     version: Optional[int] = None
     user_type: Optional[str] = None
     action_type: Optional[str] = None
+    compliance_period: Optional[str] = None
     fuel_type: Union[str, FuelTypeSchema]
     fuel_type_id: int
     fuel_category: Union[str, FuelCategoryResponseSchema]

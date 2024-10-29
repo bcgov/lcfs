@@ -19,8 +19,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     enableDuplicate: false,
     enableDelete: true
   }),
+  // TODO Temporary column to show version types, change this logic in later ticket
   {
-    // TODO Temporary column to show version types, change this logic in later ticket
     field: 'actionType',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.actionType'),
     minWidth: 125,

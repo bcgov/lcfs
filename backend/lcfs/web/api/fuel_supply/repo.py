@@ -172,23 +172,21 @@ class FuelSupplyRepository:
     @repo_handler
     async def get_fuel_supply_list(self, compliance_report_id: int) -> List[FuelSupply]:
         """
-        Retrieve the list of effective fuel supplied information for a given compliance report.
+        Retrieve the list of effective fuel supplies for a given compliance report.
         """
-        # Retrieve the compliance report group UUID and version
-        compliance_report = await self.db.execute(
-            select(
-                ComplianceReport.compliance_report_group_uuid, ComplianceReport.version
-            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
+        # Retrieve the compliance report's group UUID
+        report_group_query = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
         )
-        compliance_report_data = compliance_report.first()
-        if not compliance_report_data:
+        group_uuid = report_group_query.scalar()
+        if not group_uuid:
             return []
 
-        compliance_report_group_uuid, version = compliance_report_data
-
-        # Use the effective fuel supplies query
+        # Retrieve effective fuel supplies using the group UUID
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report_group_uuid, version=version
+            compliance_report_group_uuid=group_uuid
         )
 
         return effective_fuel_supplies
@@ -198,26 +196,24 @@ class FuelSupplyRepository:
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> List[FuelSupply]:
         """
-        Retrieve a paginated list of effective fuel supplied information for a given compliance report.
+        Retrieve a paginated list of effective fuel supplies for a given compliance report.
         """
-        # Retrieve the compliance report group UUID and version
-        compliance_report = await self.db.execute(
-            select(
-                ComplianceReport.compliance_report_group_uuid, ComplianceReport.version
-            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
+        # Retrieve the compliance report's group UUID
+        report_group_query = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
         )
-        compliance_report_data = compliance_report.first()
-        if not compliance_report_data:
+        group_uuid = report_group_query.scalar()
+        if not group_uuid:
             return [], 0
 
-        compliance_report_group_uuid, version = compliance_report_data
-
-        # Get the effective fuel supplies and apply pagination
+        # Retrieve effective fuel supplies using the group UUID
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report_group_uuid, version=version
+            compliance_report_group_uuid=group_uuid
         )
 
-        # Apply pagination manually
+        # Manually apply pagination
         total_count = len(effective_fuel_supplies)
         offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
@@ -365,7 +361,7 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_effective_fuel_supplies(
-        self, compliance_report_group_uuid: str, version: int
+        self, compliance_report_group_uuid: str
     ) -> List[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
@@ -383,7 +379,7 @@ class FuelSupplyRepository:
             .subquery()
         )
 
-        # Step 2: Subquery to identify group_uuids that have any DELETE action
+        # Step 2: Subquery to identify record group_uuids that have any DELETE action
         delete_group_subq = (
             select(FuelSupply.group_uuid)
             .where(
@@ -410,7 +406,6 @@ class FuelSupplyRepository:
             )
             .where(
                 FuelSupply.compliance_report_id.in_(compliance_reports_subq),
-                FuelSupply.version <= version,
                 FuelSupply.action_type
                 != ActionTypeEnum.DELETE,  # Exclude deleted records
                 ~FuelSupply.group_uuid.in_(

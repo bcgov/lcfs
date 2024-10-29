@@ -23,6 +23,7 @@ from lcfs.web.api.fuel_export.schema import (
     UnitOfMeasureSchema,
 )
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
@@ -265,6 +266,8 @@ class FuelExportServices:
         self, fs_data: FuelExportSchema
     ) -> FuelExportSchema:
         """Validate and update the compliance units"""
+
+        fs_data.units = QuantityUnitsEnum(fs_data.units)
 
         # Fetch fuel export options based on the compliance period
         fuel_export_options = await self.get_fuel_export_options(

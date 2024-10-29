@@ -20,7 +20,12 @@ logger = getLogger(__name__)
 # Constants defining which fields to exclude during model operations
 FUEL_EXPORT_EXCLUDE_FIELDS = {
     "id",
-    "fuel_export_id",
+    "fuel_type",
+    "fuel_category",
+    "compliance_period",
+    "provision_of_the_act",
+    "end_use",
+    "fuel_code",
     "deleted",
     "group_uuid",
     "user_type",
@@ -101,7 +106,9 @@ class FuelExportActionService:
 
         if existing_export:
             # Update existing record
-            for field, value in fe_data.model_dump(exclude={"id", "deleted"}).items():
+            for field, value in fe_data.model_dump(
+                exclude=FUEL_EXPORT_EXCLUDE_FIELDS
+            ).items():
                 setattr(existing_export, field, value)
 
             updated_export = await self.repo.update_fuel_export(existing_export)

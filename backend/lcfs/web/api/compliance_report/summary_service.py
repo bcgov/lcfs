@@ -309,10 +309,10 @@ class ComplianceReportSummaryService:
 
         # Fetch fuel quantities
         fossil_quantities = await self.repo.calculate_fuel_quantities(
-            report_id, fossil_derived=True
+            compliance_report, fossil_derived=True
         )
         renewable_quantities = await self.repo.calculate_fuel_quantities(
-            report_id, fossil_derived=False
+            compliance_report, fossil_derived=False
         )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
@@ -676,7 +676,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.version
+            report.compliance_report_group_uuid
         )
 
         # Initialize compliance units sum
@@ -706,7 +706,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel export records
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            report.compliance_report_group_uuid, report.version
+            report.compliance_report_group_uuid
         )
 
         # Initialize compliance units sum
