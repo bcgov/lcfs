@@ -12,7 +12,9 @@ from lcfs.db.seeders.dev.organization_attorney_address_seeder import (
 from lcfs.db.seeders.dev.organization_seeder import seed_organizations
 from lcfs.db.seeders.dev.transaction_seeder import seed_transactions
 from lcfs.db.seeders.dev.admin_adjustment_seeder import seed_admin_adjustments
-from lcfs.db.seeders.dev.admin_adjustment_history_seeder import seed_admin_adjustment_history
+from lcfs.db.seeders.dev.admin_adjustment_history_seeder import (
+    seed_admin_adjustment_history,
+)
 from lcfs.db.seeders.dev.fuel_code_seeder import seed_fuel_codes
 from lcfs.db.seeders.dev.finished_fuel_transfer_mode_seeder import (
     seed_finished_fuel_transfer_modes,
@@ -58,7 +60,6 @@ async def seed_dev(session: AsyncSession):
     await seed_user_profiles(session)
     await seed_user_roles(session)
     await seed_admin_adjustments(session)
-    await seed_admin_adjustment_history(session)
     await seed_fuel_codes(session)
     await seed_finished_fuel_transfer_modes(session)
     await seed_feedstock_fuel_transfer_modes(session)
@@ -66,6 +67,9 @@ async def seed_dev(session: AsyncSession):
 
     # Update sequences after all seeders have run
     await update_sequences(session)
+
+    # TODO not working with incorrect foreign keys, needs debugging
+    # await seed_admin_adjustment_history(session)
 
     logger.info("Dev database seeding completed successfully.")
 

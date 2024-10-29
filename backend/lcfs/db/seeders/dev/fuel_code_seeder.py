@@ -184,6 +184,30 @@ async def seed_fuel_codes(session):
             expiration_date=(2025, 6, 30),
             fuel_type_id=5,
         ),
+        create_fuel_entry(
+            fuel_suffix="568.0",
+            company="Montana Renewables LLC",
+            carbon_intensity=40.37,
+            effective_date=(2024, 3, 1),
+            expiration_date=(2025, 2, 28),
+            fuel_type_id=11,
+        ),
+        create_fuel_entry(
+            fuel_suffix="595.0",
+            company="Parkland Refining (BC)",
+            carbon_intensity=-9.52,
+            effective_date=(2024, 1, 1),
+            expiration_date=(2025, 6, 30),
+            fuel_type_id=14,
+        ),
+        create_fuel_entry(
+            fuel_suffix="999.0",
+            company="Wayne Enterprises Inc.",
+            carbon_intensity=20.30,
+            effective_date=(2024, 1, 1),
+            expiration_date=(2025, 6, 30),
+            fuel_type_id=3,
+        ),
     ]
 
     try:

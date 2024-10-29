@@ -133,8 +133,8 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 290
   },
   {
-    field: 'feedstockTransportMode',
-    headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
+    field: 'feedstockFuelTransportMode',
+    headerName: t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
     minWidth: 335,
     valueGetter: (params) =>
       params.data.feedstockFuelTransportModes.map(
@@ -650,8 +650,8 @@ export const addEditSchema = {
       editable: isDraftOrNew
     },
     {
-      field: 'feedstockTransportMode',
-      headerName: t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
+      field: 'feedstockFuelTransportMode',
+      headerName: t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
       cellEditor: 'autocompleteEditor',
       cellRenderer: (params) =>
         params.value ? (
