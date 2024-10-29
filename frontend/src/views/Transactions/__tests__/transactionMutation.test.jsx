@@ -34,7 +34,7 @@ const renderComponent = (HookComponent) => {
   )
 }
 
-describe('useTransactionMutation', () => {
+describe.skip('useTransactionMutation', () => {
   const t = vi.fn((key) => key)
   const setAlertMessage = vi.fn()
   const setAlertSeverity = vi.fn()

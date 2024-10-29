@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { TransferGraphic } from '../TransferGraphic'
 import { FormProvider, useForm, useFormContext } from 'react-hook-form'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useTransfer } from '@/hooks/useTransfer'
@@ -54,7 +54,7 @@ describe('TransferGraphic Component', () => {
     })
   })
 
-  test('renders correctly with organization name from useTransfer hook', () => {
+  it('renders correctly with organization name from useTransfer hook', () => {
     render(
       <MockFormProvider>
         <TransferGraphic />
@@ -64,7 +64,7 @@ describe('TransferGraphic Component', () => {
     expect(screen.getByText('Org A')).toBeInTheDocument()
   })
 
-  test('displays the correct icon based on quantity and total value', () => {
+  it('displays the correct icon based on quantity and total value', () => {
     render(
       <MockFormProvider>
         <TransferGraphic />
@@ -129,7 +129,7 @@ describe('TransferGraphic Component', () => {
     expect(screen.getByTestId('TrendingFlatIcon')).toBeInTheDocument()
   })
 
-  test('displays formatted number of credits and total value correctly', () => {
+  it('displays formatted number of credits and total value correctly', () => {
     // Set values for quantity and pricePerUnit
     useFormContext.mockReturnValue({
       watch: (fieldName) => {

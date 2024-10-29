@@ -60,10 +60,13 @@ export const currencyFormatter = (params) => {
  * @returns {string} - The formatted number with two decimal places, or the original value if it is null.
  */
 export const decimalFormatter = (params) => {
-  if (params.value !== null) {
-    return params.value.toLocaleString('en', { minimumFractionDigits: 2 })
+  const cellValue =
+    params && Object.hasOwn(params, 'value') ? params.value : params
+
+  if (cellValue !== null) {
+    return cellValue.toLocaleString('en', { minimumFractionDigits: 2 })
   }
-  return params.value
+  return cellValue
 }
 
 /**
@@ -73,10 +76,12 @@ export const decimalFormatter = (params) => {
  * @returns {string} - The formatted date string, or an empty string if the value is null.
  */
 export const dateFormatter = (params) => {
-  const value = params.value || params
-  if (value != null) {
+  const cellValue =
+    params && Object.hasOwn(params, 'value') ? params.value : params
+
+  if (cellValue != null) {
     // Format to only include the date part (YYYY-MM-DD)
-    const date = new Date(value)
+    const date = new Date(cellValue)
     return date.toISOString().split('T')[0]
   }
   return ''

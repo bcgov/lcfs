@@ -1,28 +1,33 @@
 import React from 'react'
 import { render, screen, cleanup } from '@testing-library/react'
 import TransferHistory from '../TransferHistory'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTransfer } from '@/hooks/useTransfer'
 import { wrapper } from '@/tests/utils/wrapper'
-import { TRANSFER_STATUSES, TRANSFER_RECOMMENDATION } from '@/constants/statuses'
+import {
+  TRANSFER_STATUSES,
+  TRANSFER_RECOMMENDATION
+} from '@/constants/statuses'
 import dayjs from 'dayjs'
 
 vi.mock('@/hooks/useTransfer')
 
 vi.mock('react-router-dom', () => ({
-  useParams: () => ({ transferId: '1' }),
+  useParams: () => ({ transferId: '1' })
 }))
 
 vi.mock('react-i18next', () => {
   const translations = {
     'transfer:transferHistory.Submitted': 'Signed and submitted',
-    'transfer:transferHistory.RecommendedRecord': 'Recommended recording transfer',
-    'transfer:transferHistory.RecommendedRefuse': 'Recommended refusing transfer'
+    'transfer:transferHistory.RecommendedRecord':
+      'Recommended recording transfer',
+    'transfer:transferHistory.RecommendedRefuse':
+      'Recommended refusing transfer'
   }
   return {
     useTranslation: () => ({
-      t: (key) => translations[key] || 'Status not found',
-    }),
+      t: (key) => translations[key] || 'Status not found'
+    })
   }
 })
 
@@ -34,8 +39,8 @@ describe('TransferHistory Component', () => {
       userProfile: {
         firstName: 'John',
         lastName: 'Doe',
-        organization: { name: 'Org A' },
-      },
+        organization: { name: 'Org A' }
+      }
     },
     {
       transferStatus: { transferStatusId: 2, status: 'Recommended' },
@@ -43,9 +48,9 @@ describe('TransferHistory Component', () => {
       userProfile: {
         firstName: 'Jane',
         lastName: 'Smith',
-        organization: { name: 'Org B' },
-      },
-    },
+        organization: { name: 'Org B' }
+      }
+    }
   ]
 
   // Before each test, set up mocks and fix the Date object
@@ -56,8 +61,8 @@ describe('TransferHistory Component', () => {
         currentStatus: { status: TRANSFER_STATUSES.SUBMITTED },
         recommendation: 'Record',
         agreementDate: '2023-01-01',
-        transferCategory: { category: 'A' },
-      },
+        transferCategory: { category: 'A' }
+      }
     })
 
     // Mock Date to return a fixed time
@@ -69,6 +74,7 @@ describe('TransferHistory Component', () => {
         }
         return mockDate
       }
+
       static now() {
         return mockDate.getTime()
       }
@@ -81,21 +87,39 @@ describe('TransferHistory Component', () => {
     cleanup()
   })
 
-  test('renders transfer history correctly', () => {
+  it('renders transfer history correctly', () => {
     render(<TransferHistory transferHistory={transferHistory} />, { wrapper })
 
-    expect(screen.getByText(/Date of written agreement reached between the two organizations/)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Date of written agreement reached between the two organizations/
+      )
+    ).toBeInTheDocument()
 
     transferHistory.forEach((item) => {
-      expect(screen.getByText(`${item.userProfile.firstName} ${item.userProfile.lastName}`)).toBeInTheDocument()
-      expect(screen.getByText(item.userProfile.organization.name)).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          `${item.userProfile.firstName} ${item.userProfile.lastName}`
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(item.userProfile.organization.name)
+      ).toBeInTheDocument()
     })
   })
 
-  test('renders correct status labels for different statuses and recommendations', () => {
+  it('renders correct status labels for different statuses and recommendations', () => {
     const statuses = [
-      { status: TRANSFER_STATUSES.RECOMMENDED, recommendation: TRANSFER_RECOMMENDATION.RECORD, expectedLabel: 'Recommended recording transfer' },
-      { status: TRANSFER_STATUSES.RECOMMENDED, recommendation: TRANSFER_RECOMMENDATION.REFUSE, expectedLabel: 'Recommended refusing transfer' },
+      {
+        status: TRANSFER_STATUSES.RECOMMENDED,
+        recommendation: TRANSFER_RECOMMENDATION.RECORD,
+        expectedLabel: 'Recommended recording transfer'
+      },
+      {
+        status: TRANSFER_STATUSES.RECOMMENDED,
+        recommendation: TRANSFER_RECOMMENDATION.REFUSE,
+        expectedLabel: 'Recommended refusing transfer'
+      }
     ]
 
     statuses.forEach(({ status, recommendation, expectedLabel }) => {
@@ -104,8 +128,8 @@ describe('TransferHistory Component', () => {
           currentStatus: { status },
           recommendation,
           agreementDate: '2023-01-01',
-          transferCategory: { category: 'A' },
-        },
+          transferCategory: { category: 'A' }
+        }
       })
 
       render(<TransferHistory transferHistory={transferHistory} />, { wrapper })
@@ -115,24 +139,28 @@ describe('TransferHistory Component', () => {
     })
   })
 
-  test('handles empty transferHistory gracefully', () => {
+  it('handles empty transferHistory gracefully', () => {
     render(<TransferHistory transferHistory={[]} />, { wrapper })
 
     const listItems = screen.queryAllByRole('listitem')
     expect(listItems).toHaveLength(1) // Only the agreement date item
   })
 
-  test('handles undefined transferHistory gracefully', () => {
+  it('handles undefined transferHistory gracefully', () => {
     render(<TransferHistory />, { wrapper })
 
     const listItems = screen.queryAllByRole('listitem')
     expect(listItems).toHaveLength(1) // Only the agreement date item
   })
 
-  test('formats dates correctly with multiple occurrences', () => {
+  it('formats dates correctly with multiple occurrences', () => {
     render(<TransferHistory transferHistory={transferHistory} />, { wrapper })
     // Use getAllByText to handle multiple elements with the same date
-    const formattedDate = dayjs(transferHistory[0].createDate).format('MMMM D, YYYY')
-    expect(screen.getAllByText(new RegExp(formattedDate)).length).toBeGreaterThanOrEqual(1)
+    const formattedDate = dayjs(transferHistory[0].createDate).format(
+      'MMMM D, YYYY'
+    )
+    expect(
+      screen.getAllByText(new RegExp(formattedDate)).length
+    ).toBeGreaterThanOrEqual(1)
   })
 })

@@ -9,7 +9,7 @@ from lcfs.web.api.fuel_code.schema import (
 )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_get_fuel_codes_success():
     # Arrange
     repo_mock = AsyncMock()
@@ -47,7 +47,7 @@ async def test_get_fuel_codes_success():
     repo_mock.get_fuel_codes_paginated.assert_called_once_with(pagination)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_create_fuel_code_success():
     # Arrange
     repo_mock = AsyncMock()
@@ -103,7 +103,7 @@ async def test_create_fuel_code_success():
     repo_mock.create_fuel_code.assert_called_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_update_fuel_code_success():
     repo_mock = AsyncMock()
     service = FuelCodeServices(repo=repo_mock)
@@ -142,7 +142,7 @@ async def test_update_fuel_code_success():
     repo_mock.update_fuel_code.assert_called_once_with(mock_fuel_code)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_delete_fuel_code_success():
     # Arrange
     repo_mock = AsyncMock()

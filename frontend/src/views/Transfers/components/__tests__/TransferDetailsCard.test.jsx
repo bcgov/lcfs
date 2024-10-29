@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { TransferDetailsCard } from '../TransferDetailsCard'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { decimalFormatter } from '@/utils/formatters'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -62,7 +62,7 @@ describe('TransferDetailsCard Component', () => {
     useMediaQuery.mockReturnValue(false) // Set to false for desktop tests
   })
 
-  test('renders correctly with provided props', () => {
+  it('renders correctly with provided props', () => {
     render(
       <TransferDetailsCard
         fromOrgId={1}
@@ -80,7 +80,7 @@ describe('TransferDetailsCard Component', () => {
     expect(screen.getByText('Org B')).toBeInTheDocument()
   })
 
-  test('calculates and displays total value correctly', () => {
+  it('calculates and displays total value correctly', () => {
     render(
       <TransferDetailsCard
         fromOrgId={1}
@@ -100,7 +100,7 @@ describe('TransferDetailsCard Component', () => {
     ).toBeInTheDocument()
   })
 
-  test('renders icons correctly based on screen size', () => {
+  it('renders icons correctly based on screen size', () => {
     // Test for desktop view
     render(
       <TransferDetailsCard
@@ -135,7 +135,7 @@ describe('TransferDetailsCard Component', () => {
     expect(screen.getByTestId('SwapVertIcon')).toBeInTheDocument()
   })
 
-  test('handles zero and negative quantities and prices', () => {
+  it('handles zero and negative quantities and prices', () => {
     render(
       <TransferDetailsCard
         fromOrgId={1}
@@ -153,7 +153,7 @@ describe('TransferDetailsCard Component', () => {
     expect(screen.getByText('0 transfer:complianceUnits')).toBeInTheDocument()
   })
 
-  test('formats large numbers correctly', () => {
+  it('formats large numbers correctly', () => {
     render(
       <TransferDetailsCard
         fromOrgId={1}

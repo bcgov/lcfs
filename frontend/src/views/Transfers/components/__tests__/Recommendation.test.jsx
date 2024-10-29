@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Recommendation } from '../Recommendation'
 import { useForm, FormProvider } from 'react-hook-form'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTransfer } from '@/hooks/useTransfer'
 import { wrapper } from '@/tests/utils/wrapper'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
@@ -32,7 +32,7 @@ describe('Recommendation Component', () => {
     })
   })
 
-  test('renders correctly with title', () => {
+  it('renders correctly with title', () => {
     render(
       <MockFormProvider>
         <Recommendation />
@@ -42,7 +42,7 @@ describe('Recommendation Component', () => {
     expect(screen.getByText('transfer:analystRecommend')).toBeInTheDocument()
   })
 
-  test('displays radio buttons when status is SUBMITTED', () => {
+  it('displays radio buttons when status is SUBMITTED', () => {
     render(
       <MockFormProvider>
         <Recommendation />
@@ -57,7 +57,7 @@ describe('Recommendation Component', () => {
     ).toBeInTheDocument()
   })
 
-  test('displays recommendation message when status is not SUBMITTED', () => {
+  it('displays recommendation message when status is not SUBMITTED', () => {
     useTransfer.mockReturnValue({
       data: {
         currentStatus: { status: TRANSFER_STATUSES.RECOMMENDED },
@@ -76,7 +76,7 @@ describe('Recommendation Component', () => {
     expect(screen.getByText('approve')).toBeInTheDocument()
   })
 
-  test('allows selecting radio buttons', () => {
+  it('allows selecting radio buttons', () => {
     render(
       <MockFormProvider>
         <Recommendation />
