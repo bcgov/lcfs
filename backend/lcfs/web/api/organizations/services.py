@@ -195,7 +195,9 @@ class OrganizationsService:
                 if hasattr(org_attorney_address, key):
                     setattr(org_attorney_address, key, value)
 
-        return organization
+        updated_organization = await self.repo.update_organization(organization)
+        return updated_organization
+
 
     @service_handler
     async def get_organization(self, organization_id: int):

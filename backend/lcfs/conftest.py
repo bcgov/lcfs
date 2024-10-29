@@ -100,7 +100,9 @@ async def dbsession(
         try:
             yield session
         finally:
-            await session.rollback()
+            # Rolling back the session here prevents data persistence,
+            # which causes issues for tests that depend on others.
+            # await session.rollback()
             await session.close()
 
 

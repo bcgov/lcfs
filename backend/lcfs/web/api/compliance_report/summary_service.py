@@ -408,9 +408,9 @@ class ComplianceReportSummaryService:
         }
 
         # line 6
-        retained_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
+        retained_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
         # line 8
-        deferred_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
+        deferred_renewables = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
             required_renewable_quantity = eligible_renewable_fuel_required.get(category)

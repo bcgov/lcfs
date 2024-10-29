@@ -19,70 +19,70 @@ class ComplianceReportSummary(BaseModel, Auditable):
     is_locked = Column(Boolean, default=False)
 
     # Renewable fuel target summary
-    line_1_fossil_derived_base_fuel_gasoline = Column(Float, nullable=False, default=0)
-    line_1_fossil_derived_base_fuel_diesel = Column(Float, nullable=False, default=0)
-    line_1_fossil_derived_base_fuel_jet_fuel = Column(Float, nullable=False, default=0)
+    line_1_fossil_derived_base_fuel_gasoline = Column(Integer, nullable=False, default=0)
+    line_1_fossil_derived_base_fuel_diesel = Column(Integer, nullable=False, default=0)
+    line_1_fossil_derived_base_fuel_jet_fuel = Column(Integer, nullable=False, default=0)
 
     line_2_eligible_renewable_fuel_supplied_gasoline = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
     line_2_eligible_renewable_fuel_supplied_diesel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
     line_2_eligible_renewable_fuel_supplied_jet_fuel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
 
     line_3_total_tracked_fuel_supplied_gasoline = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
-    line_3_total_tracked_fuel_supplied_diesel = Column(Float, nullable=False, default=0)
+    line_3_total_tracked_fuel_supplied_diesel = Column(Integer, nullable=False, default=0)
     line_3_total_tracked_fuel_supplied_jet_fuel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
 
     line_4_eligible_renewable_fuel_required_gasoline = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
     line_4_eligible_renewable_fuel_required_diesel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
     line_4_eligible_renewable_fuel_required_jet_fuel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
 
     line_5_net_notionally_transferred_gasoline = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
-    line_5_net_notionally_transferred_diesel = Column(Float, nullable=False, default=0)
+    line_5_net_notionally_transferred_diesel = Column(Integer, nullable=False, default=0)
     line_5_net_notionally_transferred_jet_fuel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
 
-    line_6_renewable_fuel_retained_gasoline = Column(Float, nullable=False, default=0)
-    line_6_renewable_fuel_retained_diesel = Column(Float, nullable=False, default=0)
-    line_6_renewable_fuel_retained_jet_fuel = Column(Float, nullable=False, default=0)
+    line_6_renewable_fuel_retained_gasoline = Column(Integer, nullable=False, default=0)
+    line_6_renewable_fuel_retained_diesel = Column(Integer, nullable=False, default=0)
+    line_6_renewable_fuel_retained_jet_fuel = Column(Integer, nullable=False, default=0)
 
-    line_7_previously_retained_gasoline = Column(Float, nullable=False, default=0)
-    line_7_previously_retained_diesel = Column(Float, nullable=False, default=0)
-    line_7_previously_retained_jet_fuel = Column(Float, nullable=False, default=0)
+    line_7_previously_retained_gasoline = Column(Integer, nullable=False, default=0)
+    line_7_previously_retained_diesel = Column(Integer, nullable=False, default=0)
+    line_7_previously_retained_jet_fuel = Column(Integer, nullable=False, default=0)
 
-    line_8_obligation_deferred_gasoline = Column(Float, nullable=False, default=0)
-    line_8_obligation_deferred_diesel = Column(Float, nullable=False, default=0)
-    line_8_obligation_deferred_jet_fuel = Column(Float, nullable=False, default=0)
+    line_8_obligation_deferred_gasoline = Column(Integer, nullable=False, default=0)
+    line_8_obligation_deferred_diesel = Column(Integer, nullable=False, default=0)
+    line_8_obligation_deferred_jet_fuel = Column(Integer, nullable=False, default=0)
 
-    line_9_obligation_added_gasoline = Column(Float, nullable=False, default=0)
-    line_9_obligation_added_diesel = Column(Float, nullable=False, default=0)
-    line_9_obligation_added_jet_fuel = Column(Float, nullable=False, default=0)
+    line_9_obligation_added_gasoline = Column(Integer, nullable=False, default=0)
+    line_9_obligation_added_diesel = Column(Integer, nullable=False, default=0)
+    line_9_obligation_added_jet_fuel = Column(Integer, nullable=False, default=0)
 
     line_10_net_renewable_fuel_supplied_gasoline = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
     line_10_net_renewable_fuel_supplied_diesel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
     line_10_net_renewable_fuel_supplied_jet_fuel = Column(
-        Float, nullable=False, default=0
+        Integer, nullable=False, default=0
     )
 
     line_11_non_compliance_penalty_gasoline = Column(Float, nullable=True, default=0)
