@@ -143,7 +143,8 @@ async def delete_fuel_code(
 
 @router.post(
     "/save",
-    response_model=Union[FuelCodeSchema, DeleteFuelCodeResponseSchema]
+    response_model=Union[FuelCodeSchema, DeleteFuelCodeResponseSchema],
+    status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def save_fuel_code_row(

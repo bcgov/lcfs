@@ -45,7 +45,6 @@ typing-extensions = "^4.12.2"
 pytest-asyncio = "^0.24.0"
 
 [tool.poetry.dev-dependencies]
-faker = "^21.0.0"
 pytest = "^8.3.3"
 flake8 = "~4.0.1"
 mypy = "^1.1.1"
