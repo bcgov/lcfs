@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TransferDetails } from '../TransferDetails'
 import { useForm, FormProvider } from 'react-hook-form'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { calculateTotalValue } from '@/utils/formatters'
@@ -47,7 +47,7 @@ describe('TransferDetails Component', () => {
     })
   })
 
-  test('renders correctly with user organization name', () => {
+  it('renders correctly with user organization name', () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -57,7 +57,7 @@ describe('TransferDetails Component', () => {
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
   })
 
-  test('renders quantity and price per unit fields', () => {
+  it('renders quantity and price per unit fields', () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -71,7 +71,7 @@ describe('TransferDetails Component', () => {
     expect(priceInput).toBeInTheDocument()
   })
 
-  test('calculates total value correctly with cents', async () => {
+  it('calculates total value correctly with cents', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -100,7 +100,7 @@ describe('TransferDetails Component', () => {
     })
   })
 
-  test('updates total value when inputs change with cents', async () => {
+  it('updates total value when inputs change with cents', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -128,7 +128,7 @@ describe('TransferDetails Component', () => {
     })
   })
 
-  test('selects an organization from the dropdown', async () => {
+  it('selects an organization from the dropdown', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />

@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { Navbar } from '../Navbar'
-import { vi } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -50,12 +50,12 @@ describe('Navbar', () => {
     })
   })
 
-  test('renders correctly with the expected title', () => {
+  it('renders correctly with the expected title', () => {
     render(<Navbar />, { wrapper })
     expect(screen.getByTestId('bc-navbar')).toBeInTheDocument()
   })
 
-  test('displays the correct navigation menu items for government users', () => {
+  it('displays the correct navigation menu items for government users', () => {
     render(<Navbar />, { wrapper })
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe('Navbar', () => {
     expect(screen.getByText('Administration')).toBeInTheDocument()
   })
 
-  test('displays the correct navigation menu items for non-government users', () => {
+  it('displays the correct navigation menu items for non-government users', () => {
     mockUser.isGovernmentUser = false
     render(<Navbar />, { wrapper })
 
@@ -77,7 +77,7 @@ describe('Navbar', () => {
     expect(screen.getByText('Organization')).toBeInTheDocument()
   })
 
-  test('renders logout component', () => {
+  it('renders logout component', () => {
     render(<Navbar />, { wrapper })
     expect(screen.getByText('logout')).toBeInTheDocument() // Assuming Logout component has this text
   })

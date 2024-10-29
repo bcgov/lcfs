@@ -1,9 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import '@testing-library/jest-dom/extend-expect'
-import { vi } from 'vitest'
-import SupportingDocumentSummary from '@/components/SupportingDocumentSummary'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
+import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 
 // Mock API service
 vi.mock('@/services/useApiService', () => ({

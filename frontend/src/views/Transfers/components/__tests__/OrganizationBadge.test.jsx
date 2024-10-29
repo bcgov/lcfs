@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { OrganizationBadge } from '../OrganizationBadge'
-import { vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 import { wrapper } from '@/tests/utils/wrapper'
 
@@ -44,7 +44,7 @@ describe('OrganizationBadge Component', () => {
     })
   })
 
-  test('renders correctly with organization name', () => {
+  it('renders correctly with organization name', () => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -57,7 +57,7 @@ describe('OrganizationBadge Component', () => {
     expect(screen.getByText('Test Organization')).toBeInTheDocument()
   })
 
-  test('displays balance and registration status for government users with valid transfer status', () => {
+  it('displays balance and registration status for government users with valid transfer status', () => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -71,7 +71,7 @@ describe('OrganizationBadge Component', () => {
     expect(screen.getByText('Registered: Yes')).toBeInTheDocument()
   })
 
-  test('does not display balance and registration status for non-government users', () => {
+  it('does not display balance and registration status for non-government users', () => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -85,7 +85,7 @@ describe('OrganizationBadge Component', () => {
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  test('does not display balance and registration status for invalid transfer status', () => {
+  it('does not display balance and registration status for invalid transfer status', () => {
     render(
       <OrganizationBadge
         organizationId={1}
@@ -99,7 +99,7 @@ describe('OrganizationBadge Component', () => {
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  test('handles loading state correctly', () => {
+  it('handles loading state correctly', () => {
     useOrganizationBalance.mockReturnValue({
       data: null,
       isLoading: true,
@@ -120,7 +120,7 @@ describe('OrganizationBadge Component', () => {
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  test('handles error state gracefully', () => {
+  it('handles error state gracefully', () => {
     useOrganizationBalance.mockReturnValue({
       data: null,
       isLoading: false,
@@ -141,7 +141,7 @@ describe('OrganizationBadge Component', () => {
     expect(screen.queryByText('Registered:')).not.toBeInTheDocument()
   })
 
-  test('displays correct balance formatting', () => {
+  it('displays correct balance formatting', () => {
     useOrganizationBalance.mockReturnValue({
       data: {
         totalBalance: 1234567.89,

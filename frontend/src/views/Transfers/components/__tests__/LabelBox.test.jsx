@@ -2,9 +2,10 @@ import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { LabelBox } from '../LabelBox'
 import { wrapper } from '@/tests/utils/wrapper'
+import { describe, expect, it } from 'vitest'
 
 describe('LabelBox Component', () => {
-  test('renders correctly with label and description', () => {
+  it('renders correctly with label and description', () => {
     render(
       <LabelBox label="Test Label" description="Test Description">
         <div>Child Content</div>
@@ -16,7 +17,7 @@ describe('LabelBox Component', () => {
     expect(screen.getByText('Child Content')).toBeInTheDocument()
   })
 
-  test('renders children correctly', () => {
+  it('renders children correctly', () => {
     render(
       <LabelBox label="Test Label" description="Test Description">
         <div>Child Content</div>
@@ -26,7 +27,7 @@ describe('LabelBox Component', () => {
     expect(screen.getByText('Child Content')).toBeInTheDocument()
   })
 
-  test('does not render label or description when not provided', () => {
+  it('does not render label or description when not provided', () => {
     render(
       <LabelBox>
         <div>Child Content</div>

@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, Request
 from starlette import status
 
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transfer.schema import TransferCreateSchema
@@ -59,11 +60,15 @@ class OrganizationValidation:
         self, organization_id, transfer_create: TransferCreateSchema
     ):
         # Before updating, check for available balance
+        valid_status = (
+            transfer_create.current_status in LCFS_Constants.FROM_ORG_TRANSFER_STATUSES
+        )
+        print(transfer_create.current_status)
+        print(valid_status)
+
         await self.check_available_balance(organization_id, transfer_create.quantity)
         if (
-            transfer_create.from_organization_id == organization_id
-            and transfer_create.current_status
-            in LCFS_Constants.FROM_ORG_TRANSFER_STATUSES
+            transfer_create.from_organization_id == organization_id and valid_status
         ) or (  # status changes allowed for from-organization
             transfer_create.to_organization_id == organization_id
             and transfer_create.current_status

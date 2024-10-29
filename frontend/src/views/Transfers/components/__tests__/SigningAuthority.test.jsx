@@ -1,8 +1,8 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { SigningAuthority } from '../SigningAuthority'
-import { useForm, FormProvider } from 'react-hook-form'
-import { vi } from 'vitest'
+import { FormProvider, useForm } from 'react-hook-form'
+import { describe, expect, vi } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('react-i18next', () => ({
@@ -17,7 +17,7 @@ const MockFormProvider = ({ children }) => {
 }
 
 describe('SigningAuthority Component', () => {
-  test('renders correctly with title', () => {
+  it('renders correctly with title', () => {
     render(
       <MockFormProvider>
         <SigningAuthority />
@@ -27,7 +27,7 @@ describe('SigningAuthority Component', () => {
     expect(screen.getByText('transfer:saLabel')).toBeInTheDocument()
   })
 
-  test('renders checkbox and allows checking/unchecking', () => {
+  it('renders checkbox and allows checking/unchecking', () => {
     render(
       <MockFormProvider>
         <SigningAuthority />
@@ -49,7 +49,7 @@ describe('SigningAuthority Component', () => {
     expect(checkbox.checked).toEqual(false)
   })
 
-  test('checkbox has defaultChecked as false', () => {
+  it('checkbox has defaultChecked as false', () => {
     render(
       <MockFormProvider>
         <SigningAuthority />

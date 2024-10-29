@@ -170,10 +170,14 @@ describe('decimalFormatter', () => {
 })
 
 describe('dateFormatter', () => {
-  it('should format date strings to YYYY-MM-DD', () => {
+  it('should format params values to YYYY-MM-DD', () => {
     expect(dateFormatter({ value: '2023-10-05T14:48:00.000Z' })).toEqual(
       '2023-10-05'
     )
+  })
+
+  it('should format date strings to YYYY-MM-DD', () => {
+    expect(dateFormatter('2023-10-05T14:48:00.000Z')).toEqual('2023-10-05')
   })
 
   it('should return empty string if value is null', () => {

@@ -53,9 +53,10 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
         .replace(':reportID', reportID)
     : apiRoutes.getComplianceReport.replace(':reportID', reportID)
   return useQuery({
-    enabled: !!orgID,
     queryKey: ['compliance-report', reportID],
-    queryFn: () => client.get(path),
+    queryFn: async () => {
+      return (await client.get(path))
+    },
     ...options
   })
 }
