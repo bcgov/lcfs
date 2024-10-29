@@ -1,33 +1,20 @@
+import logging
 from typing import AsyncGenerator
+
 from fastapi import Request
+from redis import asyncio as aioredis
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from lcfs.db.base import Auditable
-import logging
 
-from redis import asyncio as aioredis
-
+from lcfs.db.base import current_user_var
 from lcfs.settings import settings
 
 if settings.environment == "dev":
-    import lcfs.utils.query_analyzer
+    pass
 
 db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(db_url, future=True)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARN)
-
-
-async def update_auditable_entries(session: AsyncSession, user_info):
-    """
-    Update Auditable entries in the session with user information.
-    """
-    username = getattr(user_info, "keycloak_username", "no_user")
-    # print("SESSION TEST", session.new, session.dirty)
-    for instance in session.new | session.dirty:
-        if isinstance(instance, Auditable):
-            if instance in session.new and not instance.create_user:
-                instance.create_user = username
-            instance.update_user = username
 
 
 async def get_async_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -38,11 +25,9 @@ async def get_async_db_session(request: Request) -> AsyncGenerator[AsyncSession,
     async with AsyncSession(async_engine) as session:
         async with session.begin():
             if request.user:
-                session.info["user"] = request.user
+                current_user_var.set(request.user)
             try:
                 yield session
-                # Update Auditable instances before committing
-                await update_auditable_entries(session, session.info.get("user", {}))
                 await session.flush()
                 await session.commit()
             except Exception as e:
