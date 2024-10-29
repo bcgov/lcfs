@@ -1,7 +1,7 @@
 """fuel type modifications
 
 Revision ID: 1b4d0dcf70a8
-Revises: 4f25f8811872
+Revises: bb5504e743a0
 Create Date: 2024-10-21 18:16:20.974946
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "1b4d0dcf70a8"
-down_revision = "4f25f8811872"
+down_revision = "bb5504e743a0"
 branch_labels = None
 depends_on = None
 

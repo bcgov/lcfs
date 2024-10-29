@@ -331,15 +331,21 @@ class FuelSupplyServices:
             )
             fuel_supply.eer = energy_effectiveness.ratio
 
-        #Copy CI if using a custom fuel code
+        # Copy CI if using a custom fuel code
         if fuel_supply.fuel_code_id:
-            fuel_code = await self.fuel_repo.get_fuel_code(fuel_code_id=fuel_supply.fuel_type_id)
+            fuel_code = await self.fuel_repo.get_fuel_code(
+                fuel_code_id=fuel_supply.fuel_type_id
+            )
             fuel_supply.ci_of_fuel = fuel_code.carbon_intensity
 
-        energy_density = await self.fuel_repo.get_energy_density(
-            fuel_supply.fuel_type_id
-        )
-        fuel_supply.energy_density = energy_density.density
+        if fuel_supply.fuel_type.fuel_type == "Other":
+            energy_density = fs_data.energy_density
+        else:
+            energy_density = (
+                await self.fuel_repo.get_energy_density(fuel_supply.fuel_type_id)
+            ).density
+
+        fuel_supply.energy_density = energy_density
 
         # Recalculate energy
         if fuel_supply.energy_density:

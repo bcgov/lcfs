@@ -945,6 +945,21 @@
       "fuel_instance_id": 24,
       "fuel_type_id": 18,
       "fuel_category_id": 3
+    },
+    {
+      "fuel_instance_id": 25,
+      "fuel_type_id": 19,
+      "fuel_category_id": 1
+    },
+    {
+      "fuel_instance_id": 26,
+      "fuel_type_id": 19,
+      "fuel_category_id": 2
+    },
+    {
+      "fuel_instance_id": 27,
+      "fuel_type_id": 19,
+      "fuel_category_id": 3
     }
   ],
   "levels_of_equipment": [
