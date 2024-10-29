@@ -12,23 +12,6 @@ export const useFuelCodeOptions = (params, options) => {
   })
 }
 
-export const useAddFuelCodes = (options) => {
-  const client = useApiService()
-  const queryClient = useQueryClient()
-  return useMutation({
-    ...options,
-    mutationFn: async ({ data }) => {
-      // Check if data is an array and isValid is true for all rows
-      if (!Array.isArray(data) || !data.every((item) => item.isValid)) {
-        throw new Error('All fuel codes must be validated before saving.')
-      }
-      await client.post(apiRoutes.addFuelCodes, data)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(['fuel-codes'])
-    }
-  })
-}
 
 export const useGetFuelCode = (fuelCodeID) => {
   const client = useApiService()

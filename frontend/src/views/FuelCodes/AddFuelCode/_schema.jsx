@@ -28,7 +28,7 @@ const createCellRenderer = (field, customRenderer = null) => {
     const content = customRenderer
       ? customRenderer(params)
       : params.value ||
-        (!params.value && <Typography variant="body4">Select</Typography>)
+      (!params.value && <Typography variant="body4">Select</Typography>)
     return <div style={{ color: hasError ? 'red' : 'inherit' }}>{content}</div>
   }
 
@@ -51,10 +51,15 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'prefix',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
-    cellEditor: 'agSelectCellEditor',
-    cellEditorParams: {
-      values: optionsData?.fuelCodePrefixes?.map((obj) => obj.prefix)
-    },
+    cellEditor: AutocompleteEditor,
+    cellEditorParams: (params) => ({
+      options: optionsData?.fuelCodePrefixes?.filter(obj => obj.prefix).map((obj) => obj.prefix),
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
+    }),
+    suppressKeyboardEvent,
     minWidth: 135,
     valueGetter: (params) => params.data.prefix || 'BCLCF',
     valueSetter: (params) => {
@@ -67,8 +72,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
         params.data.fuel = undefined
         params.data.feedstock = undefined
         params.data.feedstockLocation = undefined
-        params.data.feedstockTransportMode = undefined
-        params.data.finishedFuelTransportMode = undefined
+        params.data.feedstockFuelTransportMode = []
+        params.data.finishedFuelTransportMode = []
         params.data.formerCompany = undefined
         params.data.contactName = undefined
         params.data.contactEmail = undefined
@@ -97,7 +102,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
           '&distinctSearch=true&fuelCode=' +
           queryKey[1]
         const response = await client.get(path)
-        return response.data
+        return response.data?.fuelCodes || []
       },
       optionLabel: 'fuelCodes',
       title: 'fuelCode'
@@ -123,8 +128,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       precision: 2,
       showStepperButtons: false
     },
-    type: 'numericColumn',
-    cellRenderer: createCellRenderer('carbonIntensity')
+    type: 'leftAligned'
   },
   {
     field: 'edrms',
@@ -132,7 +136,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellRenderer: createCellRenderer('edrms')
   },
   {
     field: 'company',
@@ -270,7 +273,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteEditor,
     cellRenderer: createCellRenderer('fuel'),
     cellEditorParams: {
-      options: optionsData.fuelTypes
+      options: optionsData?.fuelTypes
         .filter((fuel) => !fuel.fossilDerived)
         .map((obj) => obj.fuelType),
       multiple: false,
@@ -451,7 +454,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    cellRenderer: createCellRenderer('facilityNameplateCapacity'),
     minWidth: 290
   },
   {
@@ -472,21 +474,22 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     minWidth: 300
   },
   {
-    field: 'feedstockTransportMode',
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockTransportMode'),
+    field: 'feedstockFuelTransportMode',
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
     cellEditor: AutocompleteEditor,
-    cellRenderer: createCellRenderer('feedstockTransportMode', (params) =>
-      params.value ? (
+    cellRenderer: createCellRenderer('feedstockFuelTransportMode', (params) =>
+      params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
       ) : (
         <Typography variant="body4">Select</Typography>
       )
     ),
     cellRendererParams: {
-      disableLink: true
+      disableLink: true,
+      marginTop: '0.7rem'
     },
     cellEditorParams: {
-      options: optionsData.transportModes.map((obj) => obj.transportMode),
+      options: optionsData?.transportModes.map((obj) => obj.transportMode),
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true
@@ -499,17 +502,18 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: AutocompleteEditor,
     cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) =>
-      params.value ? (
+      params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
       ) : (
         <Typography variant="body4">Select</Typography>
       )
     ),
     cellRendererParams: {
-      disableLink: true
+      disableLink: true,
+      marginTop: '0.7rem'
     },
     cellEditorParams: {
-      options: optionsData.transportModes.map((obj) => obj.transportMode),
+      options: optionsData?.transportModes.map((obj) => obj.transportMode),
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true
@@ -539,7 +543,6 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.notes'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellRenderer: createCellRenderer('notes'),
     minWidth: 600
   }
 ]
