@@ -11,6 +11,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportCreateUpdateSchema,
     FuelExportSchema,
 )
+from lcfs.web.api.fuel_export.services import FuelExportServices
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 
@@ -35,8 +36,13 @@ class FuelExportActionService:
     and populates calculated fields required for each record.
     """
 
-    def __init__(self, repo: FuelExportRepository = Depends()) -> None:
+    def __init__(
+        self,
+        repo: FuelExportRepository = Depends(),
+        fuel_export_services: FuelExportServices = Depends(),
+    ) -> None:
         self.repo = repo
+        self.fuel_export_services = fuel_export_services
 
     @service_handler
     async def create_fuel_export(
@@ -51,6 +57,13 @@ class FuelExportActionService:
 
         Returns the newly created fuel export record as a response schema.
         """
+        # Validate and calculate compliance units
+        fe_data = (
+            await self.fuel_export_services.validate_and_calculate_compliance_units(
+                fe_data
+            )
+        )
+
         new_group_uuid = str(uuid.uuid4())
         fuel_export = FuelExport(
             **fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS),
@@ -60,10 +73,6 @@ class FuelExportActionService:
             action_type=ActionTypeEnum.CREATE,
         )
 
-        # Calculate compliance units and save the record
-        fuel_export.compliance_units = self.calculate_compliance_units_for_export(
-            fuel_export
-        )
         created_export = await self.repo.create_fuel_export(fuel_export)
         return FuelExportSchema.model_validate(created_export)
 
@@ -79,6 +88,13 @@ class FuelExportActionService:
 
         Returns the updated or new version of the fuel export record.
         """
+        # Validate and calculate compliance units
+        fe_data = (
+            await self.fuel_export_services.validate_and_calculate_compliance_units(
+                fe_data
+            )
+        )
+
         existing_export = await self.repo.get_fuel_export_version_by_user(
             fe_data.group_uuid, fe_data.version, user_type
         )
@@ -88,9 +104,6 @@ class FuelExportActionService:
             for field, value in fe_data.model_dump(exclude={"id", "deleted"}).items():
                 setattr(existing_export, field, value)
 
-            existing_export.compliance_units = (
-                self.calculate_compliance_units_for_export(existing_export)
-            )
             updated_export = await self.repo.update_fuel_export(existing_export)
             return FuelExportSchema.model_validate(updated_export)
         else:
@@ -115,6 +128,7 @@ class FuelExportActionService:
                 success=True, message="Fuel export record already deleted."
             )
 
+        # Create a new version with action_type DELETE
         delete_export = FuelExport(
             compliance_report_id=fe_data.compliance_report_id,
             group_uuid=fe_data.group_uuid,
@@ -122,6 +136,13 @@ class FuelExportActionService:
             action_type=ActionTypeEnum.DELETE,
             user_type=user_type,
         )
+
+        # Copy over necessary fields from the latest version
+        if latest_export:
+            for field in latest_export.__table__.columns.keys():
+                if field not in FUEL_EXPORT_EXCLUDE_FIELDS:
+                    setattr(delete_export, field, getattr(latest_export, field))
+
         await self.repo.create_fuel_export(delete_export)
         return DeleteFuelExportResponseSchema(
             success=True, message="Fuel export record marked as deleted."
@@ -162,24 +183,6 @@ class FuelExportActionService:
         ).items():
             setattr(fuel_export, field, value)
 
-        # Calculate compliance units and save the new version
-        fuel_export.compliance_units = self.calculate_compliance_units_for_export(
-            fuel_export
-        )
+        # Save the new version
         new_export = await self.repo.create_fuel_export(fuel_export)
         return FuelExportSchema.model_validate(new_export)
-
-    def calculate_compliance_units_for_export(self, fuel_export: FuelExport) -> float:
-        """
-        Calculate the compliance units for a single fuel export record.
-        """
-        TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
-        EER = fuel_export.eer or 0  # Energy Efficiency Ratio
-        RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity
-        Q = fuel_export.quantity or 0  # Quantity of Fuel Exported
-        ED = fuel_export.energy_density or 0  # Energy Density
-
-        logger.debug(
-            f"Calculating compliance units: TCI={TCI}, EER={EER}, RCI={RCI}, Q={Q}, ED={ED}"
-        )
-        return calculate_compliance_units(TCI, EER, RCI, 0, Q, ED)
