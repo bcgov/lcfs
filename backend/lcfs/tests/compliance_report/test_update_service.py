@@ -148,7 +148,7 @@ async def test_handle_submitted_status_insufficient_permissions(
 ):
     # Mock data
     mock_report = MagicMock(spec=ComplianceReport)
-    
+
     # Mock user roles (user doesn't have required roles)
     mock_user_has_roles.return_value = False
     compliance_report_update_service.request = MagicMock()
@@ -157,7 +157,7 @@ async def test_handle_submitted_status_insufficient_permissions(
     # Call the method and check for exception
     with pytest.raises(HTTPException) as exc_info:
         await compliance_report_update_service.handle_submitted_status(mock_report)
-    
+
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Forbidden."
 
@@ -235,7 +235,7 @@ async def test_handle_submitted_status_with_existing_summary(
 
     # Assertions
     mock_user_has_roles.assert_called_once_with(
-        compliance_report_update_service.request.user, 
+        compliance_report_update_service.request.user,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
     )
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
@@ -254,7 +254,7 @@ async def test_handle_submitted_status_with_existing_summary(
     assert mock_report.transaction == mock_org_service.adjust_balance.return_value
 
     # Check if the summary is locked
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][1]
+    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert saved_summary.is_locked == True
 
 
@@ -413,7 +413,7 @@ async def test_handle_submitted_status_partial_existing_values(
     await compliance_report_update_service.handle_submitted_status(mock_report)
 
     # Assertions
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][1]
+    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert (
         saved_summary.renewable_fuel_target_summary[0].gasoline == 1000
     )  # Preserved user-edited value
@@ -498,7 +498,7 @@ async def test_handle_submitted_status_no_user_edits(
     await compliance_report_update_service.handle_submitted_status(mock_report)
 
     # Assertions
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][1]
+    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert (
         saved_summary.renewable_fuel_target_summary[0].gasoline == 100
     )  # Used calculated value
