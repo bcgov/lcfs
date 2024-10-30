@@ -790,7 +790,7 @@ async def test_save_compliance_report_summary_success(
     )
 
     result = await compliance_report_repo.save_compliance_report_summary(
-        report_id=compliance_reports[0].compliance_report_id, summary=summary_schema
+        summary=summary_schema
     )
 
     assert isinstance(result, ComplianceReportSummary)
@@ -810,7 +810,7 @@ async def test_save_compliance_report_summary_exception(
 
     with pytest.raises(DatabaseException):
         await compliance_report_repo.save_compliance_report_summary(
-            report_id=1000, summary=summary_schema
+            summary=summary_schema
         )
 
 

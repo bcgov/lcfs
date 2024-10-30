@@ -168,7 +168,7 @@ class ComplianceReportUpdateService:
         if report.summary:
             # Update existing summary
             report.summary = await self.repo.save_compliance_report_summary(
-                report.compliance_report_id, calculated_summary
+                calculated_summary
             )
         else:
             # Create new summary if it doesn't exist

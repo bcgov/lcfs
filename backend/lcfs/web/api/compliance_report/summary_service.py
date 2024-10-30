@@ -224,7 +224,7 @@ class ComplianceReportSummaryService:
         Autosave compliance report summary details for a specific summary by ID.
         """
 
-        await self.repo.save_compliance_report_summary(report_id, summary_data)
+        await self.repo.save_compliance_report_summary(summary_data)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
@@ -322,7 +322,7 @@ class ComplianceReportSummaryService:
             previous_obligation,
             notional_transfers_sums,
             compliance_period=compliance_period_start.year,
-            summary_model=summary_model,
+            prev_summary=compliance_report.summary,
         )
         low_carbon_fuel_target_summary, non_compliance_penalty_payable_units = (
             await self.calculate_low_carbon_fuel_target_summary(
@@ -336,31 +336,30 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_payable_units, renewable_fuel_target_summary
         )
 
-        prev_summary = self.convert_summary_to_dict(summary_model)
+        existing_summary = self.convert_summary_to_dict(summary_model)
 
         summary = self.map_to_schema(
             compliance_report,
+            renewable_fuel_target_summary,
             low_carbon_fuel_target_summary,
             non_compliance_penalty_summary,
-            renewable_fuel_target_summary,
             summary_model,
         )
 
-        # FIXME: Fix this, equality is always false
-        # The two summaries (one from DB, one calculated) do not currently match
-        if prev_summary != summary:
+        # Only save if summary has changed
+        if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
             logger.debug("Report has changed, updating summary")
-            await self.repo.save_compliance_report_summary(report_id, summary)
+            await self.repo.save_compliance_report_summary(summary)
             return summary
 
-        return prev_summary
+        return existing_summary
 
     def map_to_schema(
         self,
         compliance_report,
+        renewable_fuel_target_summary,
         low_carbon_fuel_target_summary,
         non_compliance_penalty_summary,
-        renewable_fuel_target_summary,
         summary_model,
     ):
         summary = ComplianceReportSummarySchema(
@@ -383,7 +382,7 @@ class ComplianceReportSummaryService:
         previous_obligation: dict,
         notional_transfers_sums: dict,
         compliance_period: int,
-        summary_model: ComplianceReportSummary,
+        prev_summary: ComplianceReportSummary,
     ) -> List[ComplianceReportSummaryRowSchema]:
         # line 3
         tracked_totals = {
@@ -416,17 +415,20 @@ class ComplianceReportSummaryService:
         for category in ["gasoline", "diesel", "jet_fuel"]:
             required_renewable_quantity = eligible_renewable_fuel_required.get(category)
             previous_required_renewable_quantity = getattr(
-                summary_model, f"line_4_eligible_renewable_fuel_required_{category}"
+                prev_summary, f"line_4_eligible_renewable_fuel_required_{category}"
             )
 
             # only carry over line 6,8 if required quantities have not changed
-            if not previous_required_renewable_quantity != required_renewable_quantity:
+            if previous_required_renewable_quantity == required_renewable_quantity:
+                print(f"QUANTITIES MATCH {category}")
                 retained_renewables[category] = getattr(
-                    summary_model, f"line_6_renewable_fuel_retained_{category}"
+                    prev_summary, f"line_6_renewable_fuel_retained_{category}"
                 )
                 deferred_renewables[category] = getattr(
-                    summary_model, f"line_8_obligation_deferred_{category}"
+                    prev_summary, f"line_8_obligation_deferred_{category}"
                 )
+            else:
+                print(f"QUANTITY CHANGED {category}")
 
         # line 10
         net_renewable_supplied = {
