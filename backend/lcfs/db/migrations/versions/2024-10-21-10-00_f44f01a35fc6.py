@@ -22,12 +22,6 @@ def upgrade() -> None:
     op.create_table(
         "audit_log",
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column(
-            "user_profile_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to user_profile",
-        ),
         sa.Column("table_name", sa.Text(), nullable=False),
         sa.Column("operation", sa.Text(), nullable=False),
         sa.Column("row_id", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
@@ -61,11 +55,6 @@ def upgrade() -> None:
             comment="The user who last updated this record in the database.",
         ),
 
-        sa.ForeignKeyConstraint(
-            ["user_profile_id"],
-            ["user_profile.user_profile_id"],
-            name=op.f("fk_audit_log_user_profile_id_user_profile"),
-        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_audit_log")),
     )
     op.create_index(

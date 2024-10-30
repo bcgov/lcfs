@@ -59,8 +59,8 @@ def upgrade():
         END IF;
 
         -- Insert the audit log entry
-        INSERT INTO audit_log (user_profile_id, table_name, operation, row_id, delta, old_values, new_values)
-        VALUES (current_setting('app.user_id', true)::INTEGER, v_table_name, v_operation, v_row_id, v_delta, v_old_values, v_new_values);
+        INSERT INTO audit_log (table_name, operation, row_id, delta, old_values, new_values)
+        VALUES (v_table_name, v_operation, v_row_id, v_delta, v_old_values, v_new_values);
 
         RETURN NULL;
     END;

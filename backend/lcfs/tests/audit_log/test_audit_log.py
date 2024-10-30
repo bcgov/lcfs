@@ -2,13 +2,16 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette import status
+from lcfs.conftest import set_mock_user
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.tests.test_organization import create_organization, update_organization
 
 
 @pytest.mark.anyio
 async def test_insert_audit_log(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
         "name": "Test Organizationa",
         "operatingName": "Test Operating name",
@@ -38,13 +41,14 @@ async def test_insert_audit_log(
     }
 
 
-    response = await create_organization(client, fastapi_app, set_mock_user, payload)
+    response = await create_organization(client, fastapi_app, payload)
     assert response.status_code == status.HTTP_201_CREATED
 
     response_data = response.json()
     organization_id = response_data["organizationId"]
 
     # Fetch audit logs for the created organization
+    mock_user_role([RoleEnum.ADMINISTRATOR])
     audit_url = fastapi_app.url_path_for("get_audit_log")
     audit_response = await client.get(audit_url, params={"table_name": "organization", "operation": "INSERT"})
     audit_log = audit_response.json()
@@ -68,9 +72,12 @@ async def test_insert_audit_log(
         raise AssertionError("Expected INSERT operation in audit logs for the new organization creation.")
 
 @pytest.mark.anyio
-async def test_update_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+async def test_update_audit_log(
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
+    # Set mock user role for organization creation
+    mock_user_role([RoleEnum.GOVERNMENT])
+
     payload = {
         "name": "Test Organization",
         "operatingName": "Test Operating name",
@@ -99,16 +106,18 @@ async def test_update_organization_success(
         },
     }
 
-    response = await update_organization(client, fastapi_app, set_mock_user, 1, payload)
+    response = await update_organization(client, fastapi_app, 1, payload)
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
+
+    # Set mock user role to ADMINISTRATOR for accessing audit logs
+    mock_user_role([RoleEnum.ADMINISTRATOR])
 
     # Fetch audit logs for the updated organization
     audit_url = fastapi_app.url_path_for("get_audit_log")
     audit_response = await client.get(audit_url, params={"table_name": "organization", "operation": "UPDATE"})
     audit_log = audit_response.json()
 
-    # Assert that the audit log entry was created and contains correct data
     assert audit_response.status_code == status.HTTP_200_OK
     assert (
         audit_log["row_id"] == response_data["organizationId"] and

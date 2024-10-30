@@ -324,12 +324,9 @@ async def test_get_balances_unauthorized(
 async def create_organization(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user,
-    payload: dict,
-    role: RoleEnum = RoleEnum.GOVERNMENT,
+    payload: dict
 ) -> object:
     """Helper function to create an organization and return the response."""
-    set_mock_user(fastapi_app, [role])
     url = fastapi_app.url_path_for("create_organization")
     response = await client.post(url, json=payload)
     return response
@@ -338,13 +335,10 @@ async def create_organization(
 async def update_organization(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    set_mock_user,
     organization_id: int,
-    payload: dict,
-    role: RoleEnum = RoleEnum.GOVERNMENT,
+    payload: dict
 ) -> object:
     """Helper function to update an organization and return the response."""
-    set_mock_user(fastapi_app, [role])
     url = fastapi_app.url_path_for("update_organization", organization_id=organization_id)
     response = await client.put(url, json=payload)
     return response

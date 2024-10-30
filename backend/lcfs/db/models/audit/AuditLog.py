@@ -21,14 +21,6 @@ class AuditLog(BaseModel, Auditable):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
 
-    # Foreign key to user_profile
-    user_profile_id = Column(
-        Integer,
-        ForeignKey("user_profile.user_profile_id"),
-        nullable=True,
-        comment="Foreign key to user_profile",
-    )
-
     table_name = Column(Text, nullable=False)
     operation = Column(Text, nullable=False)
 
@@ -37,7 +29,3 @@ class AuditLog(BaseModel, Auditable):
     old_values = Column(JSONB, nullable=True)
     new_values = Column(JSONB, nullable=True)
     delta = Column(JSONB, nullable=True)
-
-    # Relationship with UserProfile model
-    user_profile = relationship("UserProfile", backref="audit_logs")
-
