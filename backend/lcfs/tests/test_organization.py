@@ -4,6 +4,7 @@ from httpx import AsyncClient
 from starlette import status
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.audit_log.conftest import mock_user_role
 from lcfs.web.api.organizations.schema import (
     OrganizationBalanceResponseSchema,
     OrganizationListSchema,
@@ -71,8 +72,10 @@ async def test_get_organization_by_id_bceid_user(
 
 @pytest.mark.anyio
 async def test_create_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
+    # Set mock user role for organization creation
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
         "name": "Test Organizationa",
         "operatingName": "Test Operating name",
@@ -101,7 +104,7 @@ async def test_create_organization_success(
         },
     }
 
-    response = await create_organization(client, fastapi_app, set_mock_user, payload)
+    response = await create_organization(client, fastapi_app, payload)
 
     assert response.status_code == status.HTTP_201_CREATED
 
@@ -109,8 +112,10 @@ async def test_create_organization_success(
 
 @pytest.mark.anyio
 async def test_update_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
+    # Set mock user role for organization update.
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
         "name": "Test Organization",
         "operatingName": "Test Operating name",
@@ -139,15 +144,17 @@ async def test_update_organization_success(
         },
     }
 
-    response = await update_organization(client, fastapi_app, set_mock_user, 1, payload)
+    response = await update_organization(client, fastapi_app, 1, payload)
 
     assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.anyio
 async def test_update_organization_failure(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
+    # Set mock user role for organization update
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
         "name": "Test Organizationa",
         "operatingName": "Test Operating name",
@@ -175,7 +182,7 @@ async def test_update_organization_failure(
             "postalcodeZipcode": "V8W 2C3",
         },
     }
-    response = await update_organization(client, fastapi_app, set_mock_user, 100, payload)
+    response = await update_organization(client, fastapi_app, 100, payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -281,6 +288,8 @@ async def test_get_current_balances(
 async def test_create_organization_unauthorized(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    url = fastapi_app.url_path_for("create_organization")
     payload = {
         "name": "Test Organization",
         "operatingName": "Test Operating name",
@@ -306,7 +315,7 @@ async def test_create_organization_unauthorized(
             "postalcodeZipcode": "67890",
         },
     }
-    response = await create_organization(client, fastapi_app, set_mock_user, payload, role=RoleEnum.SUPPLIER)
+    response = await client.post(url, json=payload)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -324,9 +333,11 @@ async def test_get_balances_unauthorized(
 async def create_organization(
     client: AsyncClient,
     fastapi_app: FastAPI,
-    payload: dict
+    payload: dict,
+    #role: RoleEnum = RoleEnum.GOVERNMENT
 ) -> object:
     """Helper function to create an organization and return the response."""
+    #mock_user_role([role])
     url = fastapi_app.url_path_for("create_organization")
     response = await client.post(url, json=payload)
     return response

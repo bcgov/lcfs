@@ -27,10 +27,13 @@ class MockUser(BaseUser):
 
 @pytest.fixture
 def mock_user_role(fastapi_app: FastAPI):
-    auth_backend = MockAuthBackend()  # Initialize the backend instance
-    fastapi_app.add_middleware(AuthenticationMiddleware, backend=auth_backend)  # Add middleware once
+    auth_backend = MockAuthBackend()  # Create a single instance of MockAuthBackend
+
+    # Add middleware only if it hasn't been added already
+    if not any(isinstance(middleware, AuthenticationMiddleware) for middleware in fastapi_app.user_middleware):
+        fastapi_app.add_middleware(AuthenticationMiddleware, backend=auth_backend)
 
     def set_roles(roles):
-        auth_backend.roles = roles  # Update roles directly on the existing backend
+        auth_backend.roles = roles  # Persist roles across requests
 
-    yield set_roles  # Provide the function to the tests for role setting
+    yield set_roles  # Yield the role-setting function for use in tests
