@@ -2,7 +2,7 @@
 Notional Transfers endpoints
 """
 
-from logging import getLogger
+import structlog
 from typing import Optional, Union
 
 from fastapi import (
@@ -34,7 +34,7 @@ from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("notional_transfer_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 

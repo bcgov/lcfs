@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -19,7 +19,7 @@ from lcfs.db.models.transfer.TransferCategory import (
 )
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 
-logger = getLogger("transfer_repo")
+logger = structlog.get_logger(__name__)
 
 
 class TransferRepository:

@@ -1,10 +1,10 @@
-import logging
+import structlog
 from datetime import datetime
 from sqlalchemy import select, and_, text
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.organization.Organization import Organization
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_test_transfers(session):
@@ -53,8 +53,14 @@ async def seed_test_transfers(session):
         )
 
         if not from_org_exists or not to_org_exists:
+            context = {
+                'transfer_data': transfer_data,
+                'from_org_exists': from_org_exists,
+                'to_org_exists': to_org_exists,
+            }
             logger.error(
-                f"Referenced organizations for transfer {transfer_data} do not exist."
+                "Referenced organizations for transfer do not exist.",
+                **context,
             )
             continue
 
@@ -85,7 +91,15 @@ async def seed_test_transfers(session):
                 pass
 
         except Exception as e:
-            logger.error(f"Error occurred while seeding transfers: {e}")
+            context = {
+                "function": "seed_test_transfers",
+            }
+            logger.error(
+                "Error occurred while seeding transfers",
+                error=str(e),
+                exc_info=e,
+                **context,
+            )
             raise
 
     # Refresh the materialized view to include the new/updated transfers

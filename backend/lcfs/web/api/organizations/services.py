@@ -2,7 +2,7 @@ import io
 import random
 import math
 from datetime import datetime
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends, Request
@@ -43,7 +43,7 @@ from .schema import (
 )
 
 
-logger = getLogger("organizations_service")
+logger = structlog.get_logger(__name__)
 
 
 class OrganizationsService:

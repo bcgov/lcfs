@@ -1,5 +1,5 @@
 import math
-from logging import getLogger
+import structlog
 from typing import List
 from fastapi import Depends
 from datetime import datetime
@@ -18,7 +18,7 @@ from lcfs.web.api.notional_transfer.schema import (
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 
-logger = getLogger("notional_transfer_services")
+logger = structlog.get_logger(__name__)
 
 
 class NotionalTransferServices:

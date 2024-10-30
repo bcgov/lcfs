@@ -1,11 +1,11 @@
-import logging
+import structlog
 from sqlalchemy import select
 from datetime import datetime
 from lcfs.db.models.compliance.AllocationTransactionType import (
     AllocationTransactionType,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_allocation_transaction_types(session):
@@ -45,5 +45,13 @@ async def seed_allocation_transaction_types(session):
 
         logger.info("Successfully seeded allocation transaction types.")
     except Exception as e:
-        logger.error("Error occurred while seeding allocation transaction types: %s", e)
+        context = {
+            "function": "seed_allocation_transaction_types",
+        }
+        logger.error(
+            "Error occurred while seeding allocation transaction types",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

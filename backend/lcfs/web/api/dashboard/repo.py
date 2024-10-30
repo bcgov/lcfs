@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from fastapi import Depends
 from sqlalchemy import select, func, union_all, join, literal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ from lcfs.db.models.compliance.OrgComplianceReportCountView import (
     OrgComplianceReportCountView,
 )
 
-logger = getLogger("dashboard_repo")
+logger = structlog.get_logger(__name__)
 
 
 class DashboardRepository:

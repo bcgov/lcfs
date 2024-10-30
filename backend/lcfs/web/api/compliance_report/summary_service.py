@@ -350,7 +350,6 @@ class ComplianceReportSummaryService:
         # FIXME: Fix this, equality is always false
         # The two summaries (one from DB, one calculated) do not currently match
         if prev_summary != summary:
-            logger.debug("Report has changed, updating summary")
             await self.repo.save_compliance_report_summary(report_id, summary)
             return summary
 

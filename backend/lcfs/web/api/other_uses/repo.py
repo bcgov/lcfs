@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -16,7 +16,7 @@ from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
 
-logger = getLogger("other_uses_repo")
+logger = structlog.get_logger(__name__)
 
 
 class OtherUsesRepository:

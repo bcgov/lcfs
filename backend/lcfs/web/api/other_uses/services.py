@@ -1,5 +1,5 @@
 import math
-from logging import getLogger
+import structlog
 from typing import List
 from fastapi import Depends
 from datetime import datetime
@@ -21,7 +21,7 @@ from lcfs.web.api.other_uses.schema import (
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 
-logger = getLogger("other_uses_services")
+logger = structlog.get_logger(__name__)
 
 
 class OtherUsesServices:

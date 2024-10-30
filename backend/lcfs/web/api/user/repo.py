@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -28,7 +28,7 @@ from lcfs.web.api.base import (
     get_field_for_filter,
 )
 
-logger = getLogger("user_repo")
+logger = structlog.get_logger(__name__)
 
 
 class UserRepository:
@@ -360,7 +360,7 @@ class UserRepository:
     @repo_handler
     async def delete_user(self, user: UserProfile) -> None:
         await self.db.delete(user)
-        logger.info(f"Deleted user with id: {user.user_profile_id}")
+        logger.info("Deleted user", user_profile_id=user.user_profile_id)
         return None
 
     @repo_handler

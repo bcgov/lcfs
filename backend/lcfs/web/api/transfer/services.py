@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional
 from fastapi import Depends, Request, HTTPException
 from datetime import datetime
@@ -32,7 +32,7 @@ from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 
-logger = getLogger("transfer_service")
+logger = structlog.get_logger(__name__)
 
 
 class TransferServices:

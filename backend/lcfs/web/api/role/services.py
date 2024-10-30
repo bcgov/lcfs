@@ -1,5 +1,5 @@
 from typing import List
-from logging import getLogger
+import structlog
 from fastapi import Depends
 
 from lcfs.web.api.role.repo import RoleRepository
@@ -7,7 +7,7 @@ from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-logger = getLogger("role_services")
+logger = structlog.get_logger(__name__)
 
 
 class RoleServices:

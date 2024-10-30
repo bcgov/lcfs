@@ -1,5 +1,5 @@
 import asyncio
-from logging import getLogger
+import structlog
 import math
 from typing import List
 from fastapi import Depends
@@ -28,7 +28,7 @@ from lcfs.web.api.fuel_code.schema import (
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-logger = getLogger("fuel_code_services")
+logger = structlog.get_logger(__name__)
 
 
 class FuelCodeServices:
@@ -195,7 +195,10 @@ class FuelCodeServices:
         """
         Saves the list of fuel codes.
         """
-        logger.info(f"Saving {len(fuel_codes)} fuel code(s)")
+        logger.info(
+            "Saving fuel codes",
+            fuel_code_count=len(fuel_codes),
+        )
         fuel_code_models = []
         for fuel_code in fuel_codes:
             fuel_code_models.append(await self.convert_to_model(fuel_code))

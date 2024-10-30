@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 import math
 from typing import List
 from fastapi import Depends, Request
@@ -17,7 +17,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class ComplianceReportServices:

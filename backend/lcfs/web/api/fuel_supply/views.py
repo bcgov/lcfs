@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import Optional, Union
 
 from fastapi import (
@@ -28,7 +28,7 @@ from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
-logger = getLogger("fuel_supply_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 

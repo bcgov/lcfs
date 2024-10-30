@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -29,7 +29,7 @@ from .schema import (
 )
 
 
-logger = getLogger("organizations_repo")
+logger = structlog.get_logger(__name__)
 
 
 class OrganizationsRepository:

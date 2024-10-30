@@ -1,9 +1,9 @@
-import logging
+import structlog
 import socket
 
 from lcfs.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class VirusScanException(Exception):
@@ -43,7 +43,10 @@ class ClamAVService:
 
             # Check the response for virus detection
             if "FOUND" in result:
-                logger.error(f"Virus detected: {result}")
+                logger.error(
+                    "Virus detected",
+                    result=result,
+                )
                 raise VirusScanException(f"Virus detected: {result}")
 
         return result

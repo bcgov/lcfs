@@ -2,7 +2,7 @@
 Fuel codes endpoints
 """
 
-from logging import getLogger
+import structlog
 from typing import List, Union, Optional
 
 from fastapi import (
@@ -35,7 +35,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("fuel_code_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 
@@ -85,20 +85,24 @@ async def search_table_options_strings(
 ):
     """Endpoint to search fuel codes based on a query string"""
     if fuel_code:
-        logger.info(f"Searching for fuel code: {fuel_code} with prfix: {prefix}")
+        logger.info("Searching fuel code", fuel_code=fuel_code, prefix=prefix)
         return await service.search_fuel_code(fuel_code, prefix, distinct_search)
     elif company:
-        logger.info(f"Searching for company: {company} with prefix: {prefix}")
+        logger.info("Searching company", company=company, prefix=prefix)
         if contact_email and contact_name and company:
             logger.info(
-                f"Searching for contact email: {contact_email} under the company: {company}"
+                "Searching contact email under company",
+                contact_email=contact_email,
+                company=company,
             )
             return await service.search_contact_email(
                 company, contact_name, contact_email
             )
         elif contact_name and company:
             logger.info(
-                f"Searching for contact name: {contact_name} under the company: {company}"
+                "Searching contact name under company",
+                contact_name=contact_name,
+                company=company,
             )
             return await service.search_contact_name(company, contact_name)
         return await service.search_company(company)

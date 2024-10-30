@@ -1,5 +1,5 @@
 import math
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends, Request
@@ -24,7 +24,7 @@ from lcfs.web.api.transaction.schema import TransactionViewSchema
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.user.schema import UsersSchema
 
-logger = getLogger("organization_services")
+logger = structlog.get_logger(__name__)
 
 
 class OrganizationService:

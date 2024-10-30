@@ -8,10 +8,10 @@ from fastapi_cache import FastAPICache
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
-from logging import getLogger
+import structlog
 import re
 
-logger = getLogger("base")
+logger = structlog.get_logger(__name__)
 
 
 class BaseSchema(BaseModel):
@@ -120,7 +120,7 @@ def validate_pagination(pagination: PaginationRequestSchema):
         pagination (PaginationRequestSchema): The pagination object to validate.
     """
     logger.info("Validating pagination")
-    logger.debug(f"Pagination: {pagination}")
+    logger.debug("Pagination details", pagination=pagination)
 
     if not pagination.page or pagination.page < 1:
         pagination.page = 1
@@ -150,7 +150,13 @@ def get_field_for_filter(model, field):
                 return field
         return model[field]
     except Exception as e:
-        logger.error(f"Not able to get the required field: {e}")
+        logger.error(
+            "Not able to get the required field",
+            error=str(e),
+            field=field,
+            model=model,
+            exc_info=e,
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Failed to apply filter conditions",
@@ -304,7 +310,15 @@ def apply_filter_conditions(field, filter_value, filter_option, filter_type):
                 detail=f"Invalid filter type: {filter_type}",
             )
     except Exception as e:
-        logger.error(f"Failed to apply filter conditions: {e}")
+        logger.error(
+            "Failed to apply filter conditions",
+            error=str(e),
+            filter_type=filter_type,
+            filter_option=filter_option,
+            filter_value=filter_value,
+            field=field,
+            exc_info=e,
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Failed to apply filter conditions",
@@ -351,7 +365,7 @@ async def lcfs_cache_key_builder(
             request_key += f"{key}:{value}"
     # Build the cache key
     cache_key = f"{prefix}:{namespace}:{func.__name__}:{request_key}"
-    logger.info(f"Cache key: {cache_key}")
+    logger.info("Cache key generated", cache_key=cache_key)
 
     # Return the cache key
     return cache_key

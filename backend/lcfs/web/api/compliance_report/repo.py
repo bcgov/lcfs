@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
@@ -38,7 +38,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAg
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 
-logger = getLogger("compliance_reports_repo")
+logger = structlog.get_logger(__name__)
 
 
 class ComplianceReportRepository:

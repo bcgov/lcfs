@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -21,7 +21,7 @@ from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
 
-logger = getLogger("allocation_agreement_repo")
+logger = structlog.get_logger(__name__)
 
 
 class AllocationAgreementRepository:

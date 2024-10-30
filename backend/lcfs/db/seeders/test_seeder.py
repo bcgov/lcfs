@@ -1,4 +1,4 @@
-import logging
+import structlog
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -14,7 +14,7 @@ from lcfs.db.seeders.test.test_user_role_seeder import seed_test_user_roles
 from lcfs.db.seeders.test.test_transfer_seeder import seed_test_transfers
 from lcfs.db.seeders.test.test_transaction_seeder import seed_test_transactions
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def update_sequences(session: AsyncSession):

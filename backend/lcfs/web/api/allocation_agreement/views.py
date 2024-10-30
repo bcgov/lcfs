@@ -2,7 +2,7 @@
 allocation agreements endpoints
 """
 
-from logging import getLogger
+import structlog
 from typing import List, Optional, Union
 
 from fastapi import (
@@ -35,7 +35,7 @@ from lcfs.web.api.allocation_agreement.validation import AllocationAgreementVali
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("allocation_agreement_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 

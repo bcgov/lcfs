@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from lcfs.db.models.user.Role import RoleEnum
 from fastapi import APIRouter, Depends, Request
 from lcfs.web.core.decorators import view_handler
@@ -12,7 +12,7 @@ from lcfs.web.api.dashboard.schema import (
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("dashboard_view")
+logger = structlog.get_logger(__name__)
 
 
 @router.get("/director-review-counts", response_model=DirectorReviewCountsSchema)

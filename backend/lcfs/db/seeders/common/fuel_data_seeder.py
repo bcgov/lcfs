@@ -1,4 +1,4 @@
-import logging
+import structlog
 import json
 from pathlib import Path
 from sqlalchemy import select
@@ -19,7 +19,7 @@ from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
 from lcfs.db.models.compliance import FuelMeasurementType, LevelOfEquipment
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 UNITS_MAPPING = {
     "L": QuantityUnitsEnum.Litres,
@@ -101,5 +101,13 @@ async def seed_static_fuel_data(session):
             f_data.close()
 
     except Exception as e:
-        logger.error("Error occurred while seeding static fuel data: %s", e)
+        context = {
+            "function": "seed_static_fuel_data",
+        }
+        logger.error(
+            "Error occurred while seeding static fuel data",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

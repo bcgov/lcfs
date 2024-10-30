@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_expected_use_types(session):
@@ -30,5 +30,13 @@ async def seed_expected_use_types(session):
                 session.add(expected_use_type)
 
     except Exception as e:
-        logger.error("Error occurred while seeding expected use types: %s", e)
+        context = {
+            "function": "seed_expected_use_types",
+        }
+        logger.error(
+            "Error occurred while seeding expected use types",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

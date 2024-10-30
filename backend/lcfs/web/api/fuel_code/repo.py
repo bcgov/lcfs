@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from datetime import date
 from typing import List, Dict, Any
 from fastapi import Depends
@@ -27,7 +27,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
 
-logger = getLogger("fuel_code_repo")
+logger = structlog.get_logger(__name__)
 
 
 class FuelCodeRepository:

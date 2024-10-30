@@ -1,4 +1,4 @@
-import logging
+import structlog
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -23,7 +23,7 @@ from lcfs.db.seeders.common.allocation_agreement_seeder import (
     seed_allocation_transaction_types,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def update_sequences(session):

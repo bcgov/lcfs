@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.user.Role import Role, RoleEnum
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_roles(session):
@@ -104,5 +104,13 @@ async def seed_roles(session):
                 session.add(role)
 
     except Exception as e:
-        logger.error("Error occurred while seeding roles: %s", e)
+        context = {
+            "function": "seed_roles",
+        }
+        logger.error(
+            "Error occurred while seeding roles",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

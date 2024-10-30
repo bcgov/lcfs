@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 from lcfs.db.models.compliance import CompliancePeriod, FuelExport
 from lcfs.db.models.fuel import (
@@ -25,7 +25,7 @@ from lcfs.db.dependencies import get_async_db_session
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-logger = getLogger("fuel_export_repo")
+logger = structlog.get_logger(__name__)
 
 
 class FuelExportRepository:
