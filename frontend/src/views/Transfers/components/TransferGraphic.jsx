@@ -22,7 +22,7 @@ export const TransferGraphic = () => {
     enabled: !!transferId
   })
 
-  const quantity = parseInt(watch('quantity'))
+  const quantity = parseInt(watch('quantity'), 10)
   const creditsFrom = transferId
     ? transferData?.fromOrganization.name
     : currentUser?.organization?.name
@@ -31,9 +31,9 @@ export const TransferGraphic = () => {
       (org) => parseInt(org.organizationId) === watch('toOrganizationId')
     )?.name || ''
 
-  const pricePerUnit = watch('pricePerUnit')
+  const pricePerUnit = parseFloat(watch('pricePerUnit'))
   const totalValue =
-    quantity && pricePerUnit ? parseInt(quantity * pricePerUnit) : 0
+    quantity && pricePerUnit ? quantity * pricePerUnit : 0
 
   const isNumberOfCreditsValid = (number) => !isNaN(number) && number > 0
   const isTotalValueValid = (value) => typeof value === 'number' && value > 0
