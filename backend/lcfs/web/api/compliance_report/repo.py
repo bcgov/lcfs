@@ -66,13 +66,20 @@ class ComplianceReportRepository:
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
                 normalized_value = filter_value.lower()
-                enum_value_map = {enum_val.value.lower(): enum_val for enum_val in ComplianceReportStatusEnum}
+                enum_value_map = {
+                    enum_val.value.lower(): enum_val
+                    for enum_val in ComplianceReportStatusEnum
+                }
                 filter_value = enum_value_map.get(normalized_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
                 field = get_field_for_filter(ComplianceReport, "report_type")
-                filter_value = ReportType.ANNUAL.value if filter_value.lower().startswith("c") else ReportType.QUARTERLY.value
+                filter_value = (
+                    ReportType.ANNUAL.value
+                    if filter_value.lower().startswith("c")
+                    else ReportType.QUARTERLY.value
+                )
             elif filter.field == "compliance_period":
                 field = get_field_for_filter(CompliancePeriod, "description")
             else:
@@ -428,7 +435,7 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.history).joinedload(
                             ComplianceReportHistory.user_profile
                         ),
-                        joinedload(ComplianceReport.transaction)
+                        joinedload(ComplianceReport.transaction),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -566,31 +573,30 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, report_id: int, summary: ComplianceReportSummarySchema
+        self, summary: ComplianceReportSummarySchema
     ):
         """
         Save the compliance report summary to the database.
 
-        :param report_id: The ID of the compliance report
         :param summary: The generated summary data
         """
-        existing_summary = await self.get_summary_by_report_id(report_id)
+        existing_summary = await self.get_summary_by_report_id(
+            summary.compliance_report_id
+        )
 
         if existing_summary:
             summary_obj = existing_summary
         else:
-            raise ValueError(f"No summary found with report ID {report_id}")
+            raise ValueError(
+                f"No summary found with report ID {summary.compliance_report_id}"
+            )
 
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                setattr(
-                    summary_obj,
-                    column_name,
-                    int(getattr(row, fuel_type) or getattr(summary_obj, column_name)),
-                )
+                setattr(summary_obj, column_name, int(getattr(row, fuel_type)))
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:
@@ -598,7 +604,7 @@ class ComplianceReportRepository:
             setattr(
                 summary_obj,
                 column_name,
-                int(row.value or getattr(summary_obj, column_name)),
+                int(row.value),
             )
 
         # Update non-compliance penalty summary
