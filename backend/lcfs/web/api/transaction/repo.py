@@ -5,7 +5,7 @@ from enum import Enum
 from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import select, update, func, desc, asc, and_, case, or_
+from sqlalchemy import select, update, func, desc, asc, and_, case, or_, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
@@ -264,7 +264,7 @@ class TransactionRepository:
 
     @repo_handler
     async def calculate_available_balance_for_period(
-        self, organization_id: int, period: int
+        self, organization_id: int, compliance_period: int
     ):
         """
         Calculate the available balance for a specific organization available to a specific compliance period.
@@ -277,7 +277,7 @@ class TransactionRepository:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
         """
         compliance_period_end = datetime.strptime(
-            f"{str(period + 1)}-03-31", "%Y-%m-%d"
+            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
         )
         async with self.db.begin_nested():
             # Calculate the sum of all transactions up to the specified date
@@ -447,3 +447,20 @@ class TransactionRepository:
 
         # Directly fetching string representations of the statuses
         return [status[0] for status in result.fetchall()]
+
+    @repo_handler
+    async def get_transaction_start_year(self):
+        """
+        Returns the year of the oldest transaction in the system
+
+        Returns:
+            oldest_year (int): the year of the oldest transaction in the system
+        """
+
+        oldest_year = await self.db.scalar(
+            select(extract("year", Transaction.create_date).label("year"))
+            .order_by(Transaction.create_date.asc())
+            .limit(1)
+        )
+
+        return oldest_year

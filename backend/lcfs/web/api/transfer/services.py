@@ -223,7 +223,7 @@ class TransferServices:
             )
         # Update transfer history and handle status-specific actions if the status has changed
         if status_has_changed:
-            print(
+            logger.debug(
                 f"Status change: \
                   {transfer.current_status.status} -> {new_status.status}"
             )

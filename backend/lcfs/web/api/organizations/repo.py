@@ -23,8 +23,6 @@ from .schema import (
     OrganizationSchema,
     OrganizationStatusSchema,
     OrganizationTypeSchema,
-    OrganizationCreateSchema,
-    OrganizationCreateResponseSchema,
     OrganizationResponseSchema,
 )
 

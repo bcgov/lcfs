@@ -1,5 +1,4 @@
 import io
-import random
 import math
 from datetime import datetime
 from logging import getLogger
@@ -8,8 +7,20 @@ from typing import List
 from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
 
-from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
+from lcfs.db.models.organization.OrganizationAttorneyAddress import (
+    OrganizationAttorneyAddress,
+)
+from lcfs.db.models.organization.OrganizationStatus import (
+    OrganizationStatus,
+    OrgStatusEnum,
+)
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.services.tfrs.redis_balance import (
+    RedisBalanceService,
+)
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -17,22 +28,10 @@ from lcfs.web.api.base import (
     get_field_for_filter,
     validate_pagination,
 )
-
-from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
-
-from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
-from lcfs.db.models.organization.OrganizationStatus import (
-    OrganizationStatus,
-    OrgStatusEnum,
-)
-from lcfs.db.models.organization.OrganizationAttorneyAddress import (
-    OrganizationAttorneyAddress,
-)
-from lcfs.db.models.organization.Organization import Organization
-from lcfs.db.models.transaction.Transaction import TransactionActionEnum
-
-from .repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.core.decorators import service_handler
+from lcfs.web.exception.exceptions import DataNotFoundException
+from .repo import OrganizationsRepository
 from .schema import (
     OrganizationTypeSchema,
     OrganizationSchema,
@@ -41,7 +40,6 @@ from .schema import (
     OrganizationSummaryResponseSchema,
     OrganizationDetailsSchema,
 )
-
 
 logger = getLogger("organizations_service")
 
@@ -52,10 +50,12 @@ class OrganizationsService:
         request: Request = None,
         repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
+        redis_balance_service: RedisBalanceService = Depends(RedisBalanceService),
     ) -> None:
         self.request = (request,)
         self.repo = repo
         self.transaction_repo = transaction_repo
+        self.redis_balance_service = redis_balance_service
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -438,6 +438,11 @@ class OrganizationsService:
         new_transaction = await self.transaction_repo.create_transaction(
             transaction_action, compliance_units, organization_id
         )
+
+        await self.redis_balance_service.populate_organization_redis_balance(
+            organization_id
+        )
+
         return new_transaction
 
     @service_handler
