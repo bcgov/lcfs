@@ -18,7 +18,7 @@ from lcfs.db.models.fuel import (
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, or_, select, func
+from sqlalchemy import and_, or_, select, func, delete
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.sql import case
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -234,7 +234,7 @@ class FuelExportRepository:
         """
         Update an existing fuel supply row in the database.
         """
-        updated_fuel_export = await self.db.merge(fuel_export)
+        updated_fuel_export = self.db.merge(fuel_export)
         await self.db.flush()
         await self.db.refresh(
             fuel_export,
@@ -321,51 +321,45 @@ class FuelExportRepository:
         Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
         Excludes groups with any DELETE action and selects the highest version and priority.
         """
-        # Step 1: Subquery to get all compliance_report_ids in the specified group
-        compliance_reports_subq = (
-            select(ComplianceReport.compliance_report_id)
-            .where(
-                ComplianceReport.compliance_report_group_uuid
-                == compliance_report_group_uuid
-            )
-            .subquery()
+        # Step 1: Select to get all compliance_report_ids in the specified group
+        compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid
         )
 
-        # Step 2: Subquery to identify group_uuids that have any DELETE action
-        delete_group_subq = (
+        # Step 2: Select to identify group_uuids that have any DELETE action
+        delete_group_select = (
             select(FuelExport.group_uuid)
             .where(
-                FuelExport.compliance_report_id.in_(compliance_reports_subq),
+                FuelExport.compliance_report_id.in_(compliance_reports_select),
                 FuelExport.action_type == ActionTypeEnum.DELETE,
             )
             .distinct()
-            .subquery()
         )
 
-        # Step 3: Subquery to find the max version and priority per group_uuid, excluding DELETE groups
+        # Step 3: Select to find the max version and priority per group_uuid, excluding DELETE groups
         user_type_priority = case(
             (FuelExport.user_type == UserTypeEnum.GOVERNMENT, 1),
             (FuelExport.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
 
-        valid_fuel_exports_subq = (
+        valid_fuel_exports_select = (
             select(
                 FuelExport.group_uuid,
                 func.max(FuelExport.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
             .where(
-                FuelExport.compliance_report_id.in_(compliance_reports_subq),
-                FuelExport.action_type
-                != ActionTypeEnum.DELETE,  # Exclude DELETE actions
-                ~FuelExport.group_uuid.in_(
-                    delete_group_subq
-                ),  # Exclude groups with DELETE actions
+                FuelExport.compliance_report_id.in_(compliance_reports_select),
+                FuelExport.action_type != ActionTypeEnum.DELETE,
+                ~FuelExport.group_uuid.in_(delete_group_select),
             )
             .group_by(FuelExport.group_uuid)
-            .subquery()
         )
+
+        # Now create a subquery for use in the JOIN
+        valid_fuel_exports_subq = valid_fuel_exports_select.subquery()
 
         # Step 4: Main query to retrieve effective FuelExport records
         query = (

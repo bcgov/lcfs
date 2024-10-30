@@ -120,6 +120,10 @@ describe('EditViewComplianceReport', () => {
           }
         },
         isLoading: false
+      },
+      createSupplementalReport: {
+        mutate: vi.fn(),
+        isLoading: false
       }
     }
 
@@ -139,6 +143,9 @@ describe('EditViewComplianceReport', () => {
     vi.mocked(
       useComplianceReportsHook.useUpdateComplianceReport
     ).mockReturnValue({ mutate: vi.fn() })
+    vi.mocked(
+      useComplianceReportsHook.useCreateSupplementalReport
+    ).mockReturnValue(mocks.createSupplementalReport)
   }
 
   beforeEach(() => {
@@ -149,9 +156,7 @@ describe('EditViewComplianceReport', () => {
   it('renders the component', async () => {
     render(<EditViewComplianceReport />, { wrapper })
     await waitFor(() => {
-      expect(
-        screen.getByText('2023 report:complianceReport')
-      ).toBeInTheDocument()
+      expect(screen.getByText(/2023.*complianceReport/i)).toBeInTheDocument()
     })
   })
 
@@ -439,5 +444,40 @@ describe('EditViewComplianceReport', () => {
       fireEvent.scroll(window, { target: { pageYOffset: 0 } })
       expect(screen.getByLabelText('scroll to top')).toBeInTheDocument()
     })
+  })
+
+  it('calls createSupplementalReport when the button is clicked', async () => {
+    const mockMutate = vi.fn()
+    setupMocks({
+      complianceReport: {
+        data: {
+          data: {
+            complianceReportId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+          }
+        }
+      },
+      createSupplementalReport: {
+        mutate: mockMutate,
+        isLoading: false
+      },
+      currentUser: {
+        data: { isGovernmentUser: false },
+        hasRoles: () => false
+      }
+    })
+
+    render(<EditViewComplianceReport />, { wrapper })
+    await waitFor(() => {
+      expect(screen.getByText('report:impInfoTitle')).toBeInTheDocument()
+    })
+
+    const createSupplementalButton = screen.getByText(
+      'report:createSupplementalRptBtn'
+    )
+
+    fireEvent.click(createSupplementalButton)
+
+    expect(mockMutate).toHaveBeenCalled()
   })
 })

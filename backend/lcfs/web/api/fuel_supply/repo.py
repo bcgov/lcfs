@@ -370,24 +370,19 @@ class FuelSupplyRepository:
             - From the remaining groups, select the record with the highest version and highest priority.
         """
         # Step 1: Subquery to get all compliance_report_ids in the specified group
-        compliance_reports_subq = (
-            select(ComplianceReport.compliance_report_id)
-            .where(
-                ComplianceReport.compliance_report_group_uuid
-                == compliance_report_group_uuid
-            )
-            .subquery()
+        compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid
         )
 
         # Step 2: Subquery to identify record group_uuids that have any DELETE action
-        delete_group_subq = (
+        delete_group_select = (
             select(FuelSupply.group_uuid)
             .where(
-                FuelSupply.compliance_report_id.in_(compliance_reports_subq),
+                FuelSupply.compliance_report_id.in_(compliance_reports_select),
                 FuelSupply.action_type == ActionTypeEnum.DELETE,
             )
             .distinct()
-            .subquery()
         )
 
         # Step 3: Subquery to find the maximum version and priority per group_uuid,
@@ -398,23 +393,21 @@ class FuelSupplyRepository:
             else_=0,
         )
 
-        valid_fuel_supplies_subq = (
+        valid_fuel_supplies_select = (
             select(
                 FuelSupply.group_uuid,
                 func.max(FuelSupply.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
             .where(
-                FuelSupply.compliance_report_id.in_(compliance_reports_subq),
-                FuelSupply.action_type
-                != ActionTypeEnum.DELETE,  # Exclude deleted records
-                ~FuelSupply.group_uuid.in_(
-                    delete_group_subq
-                ),  # Exclude groups with any DELETE
+                FuelSupply.compliance_report_id.in_(compliance_reports_select),
+                FuelSupply.action_type != ActionTypeEnum.DELETE,
+                ~FuelSupply.group_uuid.in_(delete_group_select),
             )
             .group_by(FuelSupply.group_uuid)
-            .subquery()
         )
+        # Now create a subquery for use in the JOIN
+        valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
 
         # Step 4: Main query to retrieve FuelSupply records with necessary eager relationships
         query = (
