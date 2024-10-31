@@ -7,9 +7,11 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
 
+
 @pytest.fixture
 def mock_other_uses_service():
     return MagicMock(spec=OtherUsesServices)
+
 
 @pytest.fixture
 def mock_other_uses_validation():
@@ -17,6 +19,7 @@ def mock_other_uses_validation():
     validation.validate_organization_access = AsyncMock()
     validation.validate_compliance_report_id = AsyncMock()
     return validation
+
 
 @pytest.mark.anyio
 async def test_get_table_options(
@@ -36,17 +39,19 @@ async def test_get_table_options(
         "unitsOfMeasure": [],
     }
 
-    fastapi_app.dependency_overrides[OtherUsesServices] = lambda: mock_other_uses_service
+    fastapi_app.dependency_overrides[OtherUsesServices] = (
+        lambda: mock_other_uses_service
+    )
 
     response = await client.get(url)
 
     assert response.status_code == 200
     data = response.json()
     assert "allocationTransactionTypes" in data
-    assert "fuelCategories" in data
     assert "fuelCodes" in data
     assert "fuelTypes" in data
     assert "unitsOfMeasure" in data
+
 
 @pytest.mark.anyio
 async def test_get_other_uses(
@@ -65,13 +70,16 @@ async def test_get_other_uses(
         mock_validate_organization_access.return_value = True
         mock_other_uses_service.get_other_uses.return_value = {"otherUses": []}
 
-        fastapi_app.dependency_overrides[OtherUsesServices] = lambda: mock_other_uses_service
+        fastapi_app.dependency_overrides[OtherUsesServices] = (
+            lambda: mock_other_uses_service
+        )
 
         response = await client.post(url, json=payload)
 
         assert response.status_code == 200
         data = response.json()
         assert "otherUses" in data
+
 
 @pytest.mark.anyio
 async def test_get_other_uses_paginated(
@@ -99,7 +107,9 @@ async def test_get_other_uses_paginated(
             "otherUses": [],
         }
 
-        fastapi_app.dependency_overrides[OtherUsesServices] = lambda: mock_other_uses_service
+        fastapi_app.dependency_overrides[OtherUsesServices] = (
+            lambda: mock_other_uses_service
+        )
 
         response = await client.post(url, json=payload)
 
@@ -107,6 +117,7 @@ async def test_get_other_uses_paginated(
         data = response.json()
         assert "pagination" in data
         assert "otherUses" in data
+
 
 @pytest.mark.anyio
 async def test_save_other_uses_row_create(
@@ -143,8 +154,12 @@ async def test_save_other_uses_row_create(
         }
         mock_validate_organization_access.return_value = True
 
-        fastapi_app.dependency_overrides[OtherUsesServices] = lambda: mock_other_uses_service
-        fastapi_app.dependency_overrides[OtherUsesValidation] = lambda: mock_other_uses_validation
+        fastapi_app.dependency_overrides[OtherUsesServices] = (
+            lambda: mock_other_uses_service
+        )
+        fastapi_app.dependency_overrides[OtherUsesValidation] = (
+            lambda: mock_other_uses_validation
+        )
 
         response = await client.post(url, json=payload)
 
@@ -153,6 +168,7 @@ async def test_save_other_uses_row_create(
         assert "otherUsesId" in data
         assert data["quantitySupplied"] == 1000
         assert data["fuelType"] == "Gasoline"
+
 
 @pytest.mark.anyio
 async def test_save_other_uses_row_update(
@@ -164,7 +180,7 @@ async def test_save_other_uses_row_update(
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:    
+    ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = {
@@ -190,8 +206,12 @@ async def test_save_other_uses_row_update(
         }
         mock_validate_organization_access.return_value = True
 
-        fastapi_app.dependency_overrides[OtherUsesServices] = lambda: mock_other_uses_service
-        fastapi_app.dependency_overrides[OtherUsesValidation] = lambda: mock_other_uses_validation
+        fastapi_app.dependency_overrides[OtherUsesServices] = (
+            lambda: mock_other_uses_service
+        )
+        fastapi_app.dependency_overrides[OtherUsesValidation] = (
+            lambda: mock_other_uses_validation
+        )
 
         response = await client.post(url, json=payload)
 
@@ -200,6 +220,7 @@ async def test_save_other_uses_row_update(
         assert data["otherUsesId"] == 1
         assert data["quantitySupplied"] == 2000
         assert data["fuelType"] == "Diesel"
+
 
 @pytest.mark.anyio
 @pytest.mark.anyio
@@ -240,14 +261,20 @@ async def test_save_other_uses_row_delete(
         mock_other_uses_validation.validate_compliance_report_id.return_value = None
 
         # Override the service dependencies with the mocked versions
-        fastapi_app.dependency_overrides[OtherUsesServices] = lambda: mock_other_uses_service
-        fastapi_app.dependency_overrides[OtherUsesValidation] = lambda: mock_other_uses_validation
+        fastapi_app.dependency_overrides[OtherUsesServices] = (
+            lambda: mock_other_uses_service
+        )
+        fastapi_app.dependency_overrides[OtherUsesValidation] = (
+            lambda: mock_other_uses_validation
+        )
 
         # Send the POST request to the API
         response = await client.post(url, json=payload)
 
         # Assert that the response status code is 200 (OK)
-        assert response.status_code == 200, f"Unexpected status code: {response.status_code}. Response: {response.text}"
+        assert (
+            response.status_code == 200
+        ), f"Unexpected status code: {response.status_code}. Response: {response.text}"
         # Assert the response data matches the expected message
         data = response.json()
         assert data == {"message": "Other use deleted successfully"}

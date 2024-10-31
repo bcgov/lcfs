@@ -55,14 +55,8 @@ def fuel_supply_service():
 # Asynchronous test for get_fuel_supply_options
 @pytest.mark.anyio
 async def test_get_fuel_supply_options(fuel_supply_service):
-    service, mock_repo, mock_fuel_code_repo = (
-        fuel_supply_service
-    )
-    mock_repo.get_fuel_supply_table_options = AsyncMock(
-        return_value=[
-            # Mocked data structure as expected from the database
-        ]
-    )
+    service, mock_repo, mock_fuel_code_repo = fuel_supply_service
+    mock_repo.get_fuel_supply_table_options = AsyncMock(return_value={"fuel_types": []})
     compliance_period = "2023"
 
     response = await service.get_fuel_supply_options(compliance_period)
@@ -90,9 +84,7 @@ async def test_get_fuel_supply_list(fuel_supply_service):
 
 @pytest.mark.anyio
 async def test_update_fuel_supply_not_found(fuel_supply_service):
-    service, mock_repo, mock_fuel_code_repo = (
-        fuel_supply_service
-    )
+    service, mock_repo, mock_fuel_code_repo = fuel_supply_service
     mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=None)
     fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
@@ -112,9 +104,7 @@ async def test_update_fuel_supply_not_found(fuel_supply_service):
 
 @pytest.mark.anyio
 async def test_update_fuel_supply_success(fuel_supply_service):
-    service, mock_repo, mock_fuel_code_repo = (
-        fuel_supply_service
-    )
+    service, mock_repo, mock_fuel_code_repo = fuel_supply_service
     existing_fuel_supply = FuelSupply(
         fuel_supply_id=1,
         compliance_report_id=1,
@@ -172,9 +162,7 @@ async def test_update_fuel_supply_success(fuel_supply_service):
 # Asynchronous test for create_fuel_supply
 @pytest.mark.anyio
 async def test_create_fuel_supply(fuel_supply_service):
-    service, mock_repo, mock_fuel_code_repo = (
-        fuel_supply_service
-    )
+    service, mock_repo, mock_fuel_code_repo = fuel_supply_service
     fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
         fuel_type_id=1,
@@ -206,9 +194,7 @@ async def test_create_fuel_supply(fuel_supply_service):
 
 @pytest.mark.anyio
 async def test_delete_fuel_supply(fuel_supply_service):
-    service, mock_repo, mock_fuel_code_repo = (
-        fuel_supply_service
-    )
+    service, mock_repo, mock_fuel_code_repo = fuel_supply_service
     fuel_supply_id = 1
     mock_repo.delete_fuel_supply = AsyncMock(return_value="Deleted")
 
