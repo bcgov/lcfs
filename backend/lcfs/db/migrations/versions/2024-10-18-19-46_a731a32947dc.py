@@ -128,6 +128,9 @@ def upgrade() -> None:
         existing_comment="Energy effectiveness ratio of the fuel supplied",
         existing_nullable=True,
     )
+
+    # First, round the values in the energy column
+    op.execute("UPDATE fuel_supply SET energy = ROUND(energy)")
     op.alter_column(
         "fuel_supply",
         "energy",
