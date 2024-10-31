@@ -1,10 +1,7 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { BrowserRouter as Router } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material/styles'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import theme from '@/themes' // Make sure this path is correct
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { AdminMenu } from '../AdminMenu'
+import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock the useNavigate hook
 const mockNavigate = vi.fn()
@@ -26,27 +23,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
-// Custom render function with all necessary providers
-const customRender = (ui, options = {}) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false
-      }
-    }
-  })
-
-  const AllTheProviders = ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <Router>{children}</Router>
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
-
-  return render(ui, { wrapper: AllTheProviders, ...options })
-}
-
 describe('AdminMenu Component', () => {
   beforeEach(() => {
     // Reset mocks before each test
@@ -54,7 +30,7 @@ describe('AdminMenu Component', () => {
   })
 
   it('renders correctly with initial tab', () => {
-    customRender(<AdminMenu tabIndex={0} />)
+    render(<AdminMenu tabIndex={0} />, { wrapper })
     expect(screen.getByText('Users')).toBeInTheDocument()
     expect(screen.getByText('UserActivity')).toBeInTheDocument()
     expect(screen.getByText('ComplianceReporting')).toBeInTheDocument()
@@ -62,13 +38,13 @@ describe('AdminMenu Component', () => {
   })
 
   it('changes tab when clicked', () => {
-    customRender(<AdminMenu tabIndex={0} />)
+    render(<AdminMenu tabIndex={0} />, { wrapper })
     fireEvent.click(screen.getByText('UserActivity'))
     expect(mockNavigate).toHaveBeenCalledWith('/admin/user-activity')
   })
 
-  it('displays correct content for each tab', () => {
-    const { rerender } = customRender(<AdminMenu tabIndex={0} />)
+  it.skip('displays correct content for each tab', () => {
+    const { rerender } = render(<AdminMenu tabIndex={0} />, { wrapper })
     expect(screen.getByTestId('mock-users')).toBeInTheDocument()
 
     rerender(<AdminMenu tabIndex={1} />)

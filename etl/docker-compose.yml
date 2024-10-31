@@ -58,6 +58,7 @@ services:
       - ./jdbc_drivers/postgresql-42.7.3.jar:/opt/nifi/nifi-current/lib/postgresql-42.7.3.jar
       - ./nifi/conf:/opt/nifi/nifi-current/conf
       - ./nifi_scripts:/opt/nifi/nifi-current/nifi_scripts
+      - ./nifi_output:/opt/nifi/nifi-current/nifi_output
     networks:
       - shared_network
 # TFRS database loaded with TFRS data

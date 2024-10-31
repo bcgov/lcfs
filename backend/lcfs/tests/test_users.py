@@ -163,7 +163,7 @@ async def test_create_user_success(
         "last_name": "User",
         "is_active": True,
         "organization_id": None,
-        "roles": [RoleEnum.SUPPLIER],
+        "roles": [RoleEnum.SUPPLIER.value],
     }
 
     # Make the POST request to create a new user

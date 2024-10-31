@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { TransferSummary } from '../TransferSummary'
-import { vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('react-i18next', () => ({
@@ -30,7 +30,7 @@ describe('TransferSummary Component', () => {
     agreementDate: new Date('2023-01-01')
   }
 
-  test('renders correctly with provided transferData and formData', () => {
+  it('renders correctly with provided transferData and formData', () => {
     render(
       <TransferSummary transferData={transferData} formData={formData} />,
       {

@@ -1,3 +1,5 @@
+import enum
+
 RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
     "1": {
         "description": "Volume of fossil-derived base fuel supplied",
@@ -108,3 +110,8 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
 }
 
 PRESCRIBED_PENALTY_RATE = {"gasoline": 0.3, "diesel": 0.45, "jet_fuel": 0.5}
+
+
+class FORMATS(enum.Enum):
+    CURRENCY = "currency"
+    NUMBER = "number"
