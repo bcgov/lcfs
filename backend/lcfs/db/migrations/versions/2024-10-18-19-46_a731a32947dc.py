@@ -135,7 +135,7 @@ def upgrade() -> None:
         "fuel_supply",
         "energy",
         existing_type=sa.DOUBLE_PRECISION(precision=53),
-        type_=sa.Integer(),
+        type_=sa.BigInteger(),
         existing_comment="Energy content of the fuel supplied",
         existing_nullable=True,
     )

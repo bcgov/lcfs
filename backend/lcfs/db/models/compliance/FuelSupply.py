@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, ForeignKey, Enum, String, Numeric, Float
+from sqlalchemy import Column, Integer, ForeignKey, Enum, String, Numeric, BigInteger
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import text
 from lcfs.db.base import BaseModel, Auditable, Versioning
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 
@@ -34,7 +33,7 @@ class FuelSupply(BaseModel, Auditable, Versioning):
     ci_of_fuel = Column(Numeric(10, 2), nullable=True, comment="CI of the fuel")
     energy_density = Column(Numeric(10, 2), nullable=True, comment="Energy density")
     eer = Column(Numeric(10, 2), nullable=True, comment="Energy Effectiveness Ratio")
-    energy = Column(Integer, nullable=True, comment="Energy content")
+    energy = Column(BigInteger, nullable=True, comment="Energy content")
     fuel_type_other = Column(
         String(1000), nullable=True, comment="Other fuel type if one provided"
     )
