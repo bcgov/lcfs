@@ -24,6 +24,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     # ExpectedUseTypeSchema
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.utils.constants import default_ci
 
 logger = getLogger("allocation_agreement_services")
 
@@ -92,10 +93,22 @@ class AllocationAgreementServices:
         """
         table_options = await self.repo.get_table_options()
         fuel_types = [
-            FuelTypeSchema.model_validate(fuel_type)
+            {
+                **fuel_type,
+                "fuel_categories": [
+                    {
+                        **fuel_category,
+                        "default_and_prescribed_ci": (
+                            round(fuel_type["default_carbon_intensity"], 2)
+                            if fuel_type["fuel_type"] != "Other"
+                            else default_ci.get(fuel_category["category"], 0)
+                        ),  #
+                    }
+                    for fuel_category in fuel_type["fuel_categories"]
+                ],
+            }
             for fuel_type in table_options["fuel_types"]
         ]
-        # fuel_types.append({'fuel_type': "Other"}) # TODO handle custom fuel types after refactor
 
         return AllocationAgreementTableOptionsSchema(
             allocation_transaction_types=[
@@ -107,10 +120,6 @@ class AllocationAgreementServices:
                 ]
             ],
             fuel_types=fuel_types,
-            fuel_categories=[
-                FuelCategorySchema.model_validate(category)
-                for category in table_options["fuel_categories"]
-            ],
             provisions_of_the_act=[
                 ProvisionOfTheActSchema.model_validate(provision)
                 for provision in table_options["provisions_of_the_act"]
@@ -260,6 +269,9 @@ class AllocationAgreementServices:
         existing_allocation_agreement.ci_of_fuel = allocation_agreement_data.ci_of_fuel
         existing_allocation_agreement.quantity = allocation_agreement_data.quantity
         existing_allocation_agreement.units = allocation_agreement_data.units
+        existing_allocation_agreement.fuel_type_other = (
+            allocation_agreement_data.fuel_type_other
+        )
 
         updated_allocation_agreement = await self.repo.update_allocation_agreement(
             existing_allocation_agreement
@@ -277,6 +289,7 @@ class AllocationAgreementServices:
             compliance_report_id=updated_allocation_agreement.compliance_report_id,
             allocation_transaction_type=updated_allocation_agreement.allocation_transaction_type.type,
             fuel_type=updated_allocation_agreement.fuel_type.fuel_type,
+            fuel_type_other=updated_allocation_agreement.fuel_type_other,
             fuel_category=updated_allocation_agreement.fuel_category.category,
             provision_of_the_act=updated_allocation_agreement.provision_of_the_act.name,
             fuel_code=(
@@ -292,6 +305,7 @@ class AllocationAgreementServices:
     ) -> AllocationAgreementSchema:
         """Create a new Allocation agreement"""
         allocation_agreement = await self.convert_to_model(allocation_agreement_data)
+
         created_allocation_agreement = await self.repo.create_allocation_agreement(
             allocation_agreement
         )
@@ -324,6 +338,7 @@ class AllocationAgreementServices:
             compliance_report_id=created_allocation_agreement.compliance_report_id,
             allocation_transaction_type=allocation_transaction_type_value,
             fuel_type=fuel_type_value,
+            fuel_type_other=created_allocation_agreement.fuel_type_other,
             fuel_category=fuel_category_value,
             provision_of_the_act=provision_of_the_act_value,
             fuel_code=fuel_code_value,

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Enum, String, Numeric
+from sqlalchemy import Column, Integer, ForeignKey, Enum, String, Numeric, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 from lcfs.db.base import BaseModel, Auditable
@@ -77,6 +77,9 @@ class FuelSupply(BaseModel, Auditable):
     fuel_type_other = Column(
         String(1000), nullable=True, comment="Other fuel type is one provided"
     )
+    fuel_type_other = Column(
+        String(1000), nullable=True, comment="Other fuel type if one provided"
+    )
 
     # relational columns
     fuel_category_id = Column(
@@ -103,12 +106,6 @@ class FuelSupply(BaseModel, Auditable):
         nullable=False,
         comment="Foreign key to the provision of the act",
     )
-    custom_fuel_id = Column(
-        Integer,
-        ForeignKey("custom_fuel_type.custom_fuel_type_id"),
-        nullable=True,
-        comment="Foreign key to the custom fuel type",
-    )
     end_use_id = Column(
         Integer,
         ForeignKey("end_use_type.end_use_type_id"),
@@ -126,7 +123,6 @@ class FuelSupply(BaseModel, Auditable):
     fuel_code = relationship("FuelCode")
     fuel_type = relationship("FuelType")
     provision_of_the_act = relationship("ProvisionOfTheAct")
-    custom_fuel_type = relationship("CustomFuelType")
     end_use_type = relationship("EndUseType")
 
     def __repr__(self):

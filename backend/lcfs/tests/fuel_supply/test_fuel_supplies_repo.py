@@ -61,7 +61,6 @@ async def test_create_fuel_supply(fuel_supply_repo, mock_db_session):
             "fuel_type",
             "fuel_code",
             "provision_of_the_act",
-            "custom_fuel_type",
             "end_use_type",
         ],
     )

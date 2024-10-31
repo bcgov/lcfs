@@ -143,7 +143,7 @@ export const AddEditFuelExports = () => {
           acc[key] = value
           return acc
         }, {})
-
+      updatedData.compliancePeriod = compliancePeriod
       try {
         setErrors({})
         await saveRow(updatedData)

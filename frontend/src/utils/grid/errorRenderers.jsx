@@ -27,6 +27,7 @@ export const StandardCellErrors = (params, errors) => {
 export const StandardCellWarningAndErrors = (params, errors, warnings) => {
   let style = StandardCellErrors(params, errors)
   if (
+    warnings &&
     warnings[params.data.fuelSupplyId] &&
     warnings[params.data.fuelSupplyId].includes(params.colDef.field)
   ) {

@@ -2,7 +2,7 @@ from logging import getLogger
 from typing import List
 
 from fastapi import Depends
-from sqlalchemy import and_, delete, or_, select, exists
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -48,7 +48,6 @@ class FuelSupplyRepository:
                 joinedload(FuelType.energy_effectiveness_ratio),
             ),
             joinedload(FuelSupply.provision_of_the_act),
-            joinedload(FuelSupply.custom_fuel_type),
             joinedload(FuelSupply.end_use_type),
         )
 
@@ -165,8 +164,11 @@ class FuelSupplyRepository:
             )
         )
 
-        results = (await self.db.execute(query)).all()
-        return results
+        fuel_type_results = (await self.db.execute(query)).all()
+
+        return {
+            "fuel_types": fuel_type_results,
+        }
 
     @repo_handler
     async def get_fuel_supply_list(self, compliance_report_id: int) -> List[FuelSupply]:
@@ -221,7 +223,6 @@ class FuelSupplyRepository:
                 "fuel_type",
                 "fuel_code",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -241,7 +242,6 @@ class FuelSupplyRepository:
                 "fuel_type",
                 "fuel_code",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -267,7 +267,6 @@ class FuelSupplyRepository:
             joinedload(FuelSupply.fuel_category),
             joinedload(FuelSupply.fuel_type),
             joinedload(FuelSupply.provision_of_the_act),
-            joinedload(FuelSupply.custom_fuel_type),
             joinedload(FuelSupply.end_use_type),
         )
 

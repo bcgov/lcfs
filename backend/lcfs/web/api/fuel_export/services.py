@@ -32,6 +32,7 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
+from lcfs.utils.constants import default_ci
 
 logger = getLogger(__name__)
 
@@ -54,7 +55,11 @@ class FuelExportServices:
         fuel_category = FuelCategorySchema(
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
-            default_and_prescribed_ci=round(row_data["default_carbon_intensity"], 2),
+            default_and_prescribed_ci=(
+                round(row_data["default_carbon_intensity"], 2)
+                if row_data["fuel_type"] != "Other"
+                else default_ci.get(row_data["category"])
+            ),
         )
         provision = ProvisionOfTheActSchema(
             provision_of_the_act_id=row_data["provision_of_the_act_id"],
@@ -200,7 +205,11 @@ class FuelExportServices:
                 fuel_type_id=row_data["fuel_type_id"],
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
-                default_carbon_intensity=round(row_data["default_carbon_intensity"], 2),
+                default_carbon_intensity=(
+                    round(row_data["default_carbon_intensity"], 2)
+                    if row_data["fuel_type"] != "Other"
+                    else default_ci.get(row_data["category"])
+                ),
                 unit=row_data["unit"].value,
                 energy_density=(
                     energy_density if row_data["energy_density_id"] else None
@@ -218,7 +227,7 @@ class FuelExportServices:
     #     expire=3600 * 24,
     #     key_builder=lcfs_cache_key_builder,
     #     namespace="users",
-    # )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
+    # ) # seems to cause issues with fuel exports
     async def get_fuel_export_options(
         self, compliance_period: str
     ) -> FuelTypeOptionsResponse:
@@ -280,8 +289,8 @@ class FuelExportServices:
         fuel_type_data = next(
             (
                 obj
-                for obj in fuel_export_options["fuelTypes"]
-                if fs_data.fuel_type == obj["fuelType"]
+                for obj in fuel_export_options.fuel_types
+                if fs_data.fuel_type == obj.fuel_type
             ),
             None,
         )
@@ -291,16 +300,19 @@ class FuelExportServices:
             raise ValueError(
                 f"Fuel type {fs_data.fuel_type} not found in export options."
             )
-
         # Get energy density
-        energy_density = fuel_type_data.get("energyDensity", {}).get("energyDensity", 0)
+        energy_density = (
+            fuel_type_data.energy_density.energy_density
+            if fuel_type_data.fuel_type != "Other"
+            else fs_data.energy_density
+        )
 
         # Get target carbon intensity (TCI)
         target_ci = next(
             (
-                item["targetCarbonIntensity"]
-                for item in fuel_type_data.get("targetCarbonIntensities", [])
-                if item["fuelCategory"]["fuelCategory"] == fs_data.fuel_category
+                item.target_carbon_intensity
+                for item in fuel_type_data.target_carbon_intensities
+                if item.fuel_category.fuel_category == fs_data.fuel_category
             ),
             0,
         )
@@ -318,16 +330,16 @@ class FuelExportServices:
             )
         else:
             # Use default carbon intensity
-            effective_carbon_intensity = fuel_type_data.get("defaultCarbonIntensity", 0)
+            effective_carbon_intensity = fuel_type_data.default_carbon_intensity
 
         # Get Energy Effectiveness Ratio (EER)
         eer = next(
             (
-                item["energyEffectivenessRatio"]
-                for item in fuel_type_data.get("eerRatios", [])
-                if item["fuelCategory"]["fuelCategory"] == fs_data.fuel_category
+                item.energy_effectiveness_ratio
+                for item in fuel_type_data.eer_ratios
+                if item.fuel_category.fuel_category == fs_data.fuel_category
                 and (
-                    item.get("endUseType") is None
+                    item.end_use_type is None
                     or item["endUseType"]["type"] == fs_data.end_use
                 )
             ),
