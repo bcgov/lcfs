@@ -46,7 +46,6 @@ class FuelExportRepository:
                 joinedload(FuelType.energy_effectiveness_ratio),
             ),
             joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.custom_fuel_type),
             joinedload(FuelExport.end_use_type),
         )
 
@@ -219,7 +218,6 @@ class FuelExportRepository:
                 "fuel_category",
                 "fuel_type",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -238,7 +236,6 @@ class FuelExportRepository:
                 "fuel_category",
                 "fuel_type",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -264,7 +261,6 @@ class FuelExportRepository:
             joinedload(FuelExport.fuel_category),
             joinedload(FuelExport.fuel_type),
             joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.custom_fuel_type),
             joinedload(FuelExport.end_use_type),
         )
 

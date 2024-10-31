@@ -1,20 +1,19 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, fuelExportColDefs } from './_schema'
+import { ROUTES } from '@/constants/routes'
 import {
   useFuelExportOptions,
   useGetFuelExports,
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
-import { v4 as uuid } from 'uuid'
 import { isArrayEmpty } from '@/utils/formatters'
-import { ROUTES } from '@/constants/routes'
+import { Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
+import { defaultColDef, fuelExportColDefs } from './_schema'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -144,7 +143,7 @@ export const AddEditFuelExports = () => {
           acc[key] = value
           return acc
         }, {})
-
+      updatedData.compliancePeriod = compliancePeriod
       try {
         setErrors({})
         await saveRow(updatedData)
