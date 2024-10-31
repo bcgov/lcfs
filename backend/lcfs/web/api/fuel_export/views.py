@@ -43,7 +43,9 @@ async def get_fuel_export_table_options(
 
 
 @router.post(
-    "/list-all", response_model=FuelExportsSchema, status_code=status.HTTP_200_OK
+    "/list-all",
+    response_model=FuelExportsSchema,
+    status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
 async def get_fuel_exports(

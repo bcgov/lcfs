@@ -27,11 +27,11 @@ from lcfs.web.api import (
 )
 
 api_router = APIRouter()
-api_router.include_router(monitoring.router)
+api_router.include_router(monitoring.router, tags=["monitoring"])
 api_router.include_router(
     allocation_agreement.router,
     prefix="/allocation-agreement",
-    tags=["allocation-agreements"],
+    tags=["allocation_agreements"],
 )
 api_router.include_router(
     transaction.router, prefix="/transactions", tags=["transactions"]
@@ -54,9 +54,9 @@ api_router.include_router(
 api_router.include_router(
     internal_comment.router, prefix="/internal_comments", tags=["internal_comments"]
 )
-api_router.include_router(fuel_code.router, prefix="/fuel-codes", tags=["fuel-codes"])
+api_router.include_router(fuel_code.router, prefix="/fuel-codes", tags=["fuel_codes"])
 api_router.include_router(
-    fuel_export.router, prefix="/fuel-exports", tags=["fuel-exports"]
+    fuel_export.router, prefix="/fuel-exports", tags=["fuel_exports"]
 )
 api_router.include_router(
     admin_adjustment.router, prefix="/admin-adjustments", tags=["admin_adjustments"]

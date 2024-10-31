@@ -10,12 +10,20 @@ module.exports = {
     'plugin:storybook/recommended',
     'plugin:cypress/recommended',
     'plugin:chai-friendly/recommended',
-    'prettier'
+    'prettier',
+    'plugin:@typescript-eslint/recommended'
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
-  parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
-  settings: { react: { version: '18.2' } },
-  plugins: ['react-refresh', 'cypress'],
+  parser: '@typescript-eslint/parser',
+  // parserOptions: {
+  //   ecmaVersion: 2020,
+  //   sourceType: 'module',
+  //   ecmaFeatures: {
+  //     jsx: true
+  //   }
+  // },
+  settings: { react: { version: 'detect' } },
+  plugins: ['react-refresh', 'cypress', '@typescript-eslint'],
   rules: {
     'react-refresh/only-export-components': [
       'warn',

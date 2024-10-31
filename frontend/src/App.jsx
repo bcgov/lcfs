@@ -1,40 +1,39 @@
-import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
+import { logout } from '@/utils/keycloak.js'
+import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
+import { CompareReports } from '@/views/CompareReports/CompareReports'
+import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { ApiDocs } from './components/ApiDocs'
+import ContactUs from './components/ContactUs'
+import { Login } from './components/Login'
+import { NotFound } from './components/NotFound'
 import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
+import PublicLayout from './layouts/PublicLayout'
 import { AdminMenu } from './views/Admin/AdminMenu'
-import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
+import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
 import { ComplianceReports } from './views/ComplianceReports'
+import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComplianceReport'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
-import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
+import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
+import { AddFuelCode, FuelCodes, ViewFuelCode } from './views/FuelCodes'
+import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
+import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 import { Notifications, NotificationSettings } from './views/Notifications'
 import {
-  Organizations,
   AddEditOrg,
+  Organizations,
   ViewOrganization
 } from './views/Organizations'
+import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import {
-  Transactions,
   AddEditViewTransaction,
+  Transactions,
   ViewOrgTransaction
 } from './views/Transactions'
 import { AddEditViewTransfer } from './views/Transfers'
 import { AddEditUser } from './views/Users'
-import { ApiDocs } from './components/ApiDocs'
-import { Login } from './components/Login'
-import { NotFound } from './components/NotFound'
-import ContactUs from './components/ContactUs'
-import PublicLayout from './layouts/PublicLayout'
-import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComplianceReport'
-import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
-import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
-import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
-import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
-import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
-import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
-import { logout } from '@/utils/keycloak.js'
-import { REPORTS_COMPARE } from '@/constants/routes/routes'
-import { CompareReports } from '@/views/CompareReports/CompareReports'
 
 const router = createBrowserRouter([
   {

@@ -214,11 +214,11 @@ class FuelExportServices:
             fuel_types.append(fuel_type)
 
     @service_handler
-    @cache(
-        expire=3600 * 24,
-        key_builder=lcfs_cache_key_builder,
-        namespace="users",
-    )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
+    # @cache(
+    #     expire=3600 * 24,
+    #     key_builder=lcfs_cache_key_builder,
+    #     namespace="users",
+    # )  # Cache for 24 hours, already handled to clear cache if any new users are added or existing users are updated.
     async def get_fuel_export_options(
         self, compliance_period: str
     ) -> FuelTypeOptionsResponse:

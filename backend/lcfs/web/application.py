@@ -4,6 +4,8 @@ import logging
 import os
 import debugpy
 import colorlog
+import json
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import UJSONResponse
@@ -18,11 +20,14 @@ from starlette.authentication import (
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from lcfs.settings import settings
+from fastapi.routing import APIRoute
 
 from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
 from lcfs.web.exception.exception_handler import validation_exception_handler
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
+from lcfs.web.api.base import snake_to_camel
 
 # Create a colorized log formatter
 log_formatter = colorlog.ColoredFormatter(
@@ -113,6 +118,9 @@ def get_app() -> FastAPI:
     #     print("⏳ Waiting for debugger attach on port 5678...")
     #     debugpy.wait_for_client()
 
+    def custom_generate_unique_id(route):
+        return snake_to_camel(route.name)
+
     # Create the fastapi instance
     app = FastAPI(
         title="LCFS Backend API Development",
@@ -121,7 +129,21 @@ def get_app() -> FastAPI:
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
         default_response_class=UJSONResponse,
+        generate_unique_id_function=custom_generate_unique_id,
     )
+
+    if settings.environment == "dev":
+
+        @app.on_event("startup")
+        async def generate_openapi_schema():
+            openapi_schema = app.openapi()
+            path = Path(__file__).parent
+            openapi_file = path / "openapi.json"
+            print("===============", Path(__file__))
+            with open(openapi_file, "w") as f:
+                json.dump(openapi_schema, f, indent=2)
+
+            print(f"OpenAPI schema generated at {openapi_file}")
 
     # Set up CORS middleware options
     app.add_middleware(

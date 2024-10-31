@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
-import axios from 'axios'
-import { useKeycloak } from '@react-keycloak/web'
 import { CONFIG } from '@/constants/config'
+// import { Api } from '@/services/apiClient'
+import { client } from '@/services/apiClient/services.gen'
+import { useKeycloak } from '@react-keycloak/web'
+import axios from 'axios'
+import { useMemo } from 'react'
 
 export const useApiService = (opts = {}) => {
   const { keycloak } = useKeycloak()
