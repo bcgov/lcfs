@@ -102,10 +102,10 @@ class ComplianceReportServices:
             )
 
         # Validate that the status of the current report is 'Assessed'
-        # if current_report.current_status.status != ComplianceReportStatusEnum.ASSESSED:
-        #     raise ServiceException(
-        #         "A supplemental report can only be created if the current report's status is 'Assessed'."
-        #     )
+        if current_report.current_status.status != ComplianceReportStatusEnum.ASSESSED:
+            raise ServiceException(
+                "A supplemental report can only be created if the current report's status is 'Assessed'."
+            )
 
         # Get the group_uuid from the current report
         group_uuid = current_report.compliance_report_group_uuid

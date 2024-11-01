@@ -1,5 +1,3 @@
-// ImportantInfoCard.test.jsx
-
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -7,8 +5,7 @@ import { ImportantInfoCard } from '../ImportantInfoCard'
 import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ThemeProvider } from '@mui/material/styles'
-import theme from '@/themes' // Adjust this path based on your project structure
+import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock the necessary modules
 vi.mock('@/hooks/useComplianceReports')
@@ -44,17 +41,13 @@ describe('ImportantInfoCard', () => {
     })
   })
 
-  // Custom render function to include ThemeProvider
-  const customRender = (ui) => {
-    return render(<ThemeProvider theme={theme}>{ui}</ThemeProvider>)
-  }
-
   it('renders the component with expected text', () => {
-    customRender(
+    render(
       <ImportantInfoCard
         complianceReportId={complianceReportId}
         alertRef={alertRef}
-      />
+      />,
+      { wrapper }
     )
 
     expect(screen.getByText('report:impInfoTitle')).toBeInTheDocument()
@@ -65,11 +58,12 @@ describe('ImportantInfoCard', () => {
   })
 
   it('calls createSupplementalReport when button is clicked', () => {
-    customRender(
+    render(
       <ImportantInfoCard
         complianceReportId={complianceReportId}
         alertRef={alertRef}
-      />
+      />,
+      { wrapper }
     )
 
     const button = screen.getByText('report:createSupplementalRptBtn')
@@ -94,11 +88,12 @@ describe('ImportantInfoCard', () => {
       options.onSuccess(newReportData)
     })
 
-    customRender(
+    render(
       <ImportantInfoCard
         complianceReportId={complianceReportId}
         alertRef={alertRef}
-      />
+      />,
+      { wrapper }
     )
 
     const button = screen.getByText('report:createSupplementalRptBtn')
@@ -123,11 +118,12 @@ describe('ImportantInfoCard', () => {
       options.onError(error)
     })
 
-    customRender(
+    render(
       <ImportantInfoCard
         complianceReportId={complianceReportId}
         alertRef={alertRef}
-      />
+      />,
+      { wrapper }
     )
 
     const button = screen.getByText('report:createSupplementalRptBtn')
@@ -148,11 +144,12 @@ describe('ImportantInfoCard', () => {
       isLoading: true
     })
 
-    customRender(
+    render(
       <ImportantInfoCard
         complianceReportId={complianceReportId}
         alertRef={alertRef}
-      />
+      />,
+      { wrapper }
     )
 
     const button = screen.getByText('report:createSupplementalRptBtn')

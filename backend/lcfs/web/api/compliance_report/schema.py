@@ -21,6 +21,11 @@ class SupplementalInitiatorType(str, Enum):
     GOVERNMENT_REASSESSMENT = "Government Reassessment"
 
 
+class ReportingFrequency(str, Enum):
+    ANNUAL = "Annual"
+    QUARTERLY = "Quarterly"
+
+
 class CompliancePeriodSchema(BaseSchema):
     compliance_period_id: int
     description: str
@@ -137,6 +142,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     # transaction: Optional[TransactionBaseSchema] = None
     nickname: Optional[str] = None
     supplemental_note: Optional[str] = None
+    reporting_frequency: Optional[ReportingFrequency] = None
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
 
