@@ -36,6 +36,7 @@ export const BCGridEditor = ({
   onCellValueChanged,
   onAction,
   showAddRowsButton = true,
+  addMultiRow = false,
   saveButtonProps = {
     enabled: false
   },
@@ -125,8 +126,9 @@ export const BCGridEditor = ({
 
   const handleAddRows = (numRows) => {
     let newRows = []
-    if (props.onAddRows) { newRows = props.onAddRows(numRows) }
-    else {
+    if (props.onAddRows) {
+      newRows = props.onAddRows(numRows)
+    } else {
       newRows = Array(numRows)
         .fill()
         .map(() => ({ id: uuid() }))
@@ -172,9 +174,7 @@ export const BCGridEditor = ({
         onCellEditingStopped={handleOnCellEditingStopped}
         {...props}
       />
-      <BCBox 
-        sx={{ height: '40px', marginTop: '15px', width: '100%' }}
-      >
+      <BCBox sx={{ height: '40px', marginTop: '15px', width: '100%' }}>
         <BCAlert2 ref={alertRef} data-test="alert-box" />
       </BCBox>
       {showAddRowsButton && (
@@ -186,28 +186,34 @@ export const BCGridEditor = ({
             size="small"
             startIcon={<FontAwesomeIcon icon={faPlus} className="small-icon" />}
             endIcon={
-              <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
+              addMultiRow && (
+                <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
+              )
             }
-            onClick={handleAddRowsClick}
+            onClick={() =>
+              addMultiRow ? handleAddRowsClick : handleAddRows(1)
+            }
           >
             Add row
           </BCButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleAddRowsClose}
-            slotProps={{
-              paper: {
-                style: {
-                  width: buttonRef.current?.offsetWidth
+          {addMultiRow && (
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleAddRowsClose}
+              slotProps={{
+                paper: {
+                  style: {
+                    width: buttonRef.current?.offsetWidth
+                  }
                 }
-              }
-            }}
-          >
-            <MenuItem onClick={() => handleAddRows(1)}>1 row</MenuItem>
-            <MenuItem onClick={() => handleAddRows(5)}>5 rows</MenuItem>
-            <MenuItem onClick={() => handleAddRows(10)}>10 rows</MenuItem>
-          </Menu>
+              }}
+            >
+              <MenuItem onClick={() => handleAddRows(1)}>1 row</MenuItem>
+              <MenuItem onClick={() => handleAddRows(5)}>5 rows</MenuItem>
+              <MenuItem onClick={() => handleAddRows(10)}>10 rows</MenuItem>
+            </Menu>
+          )}
         </BCBox>
       )}
       {saveButtonProps.enabled && (
