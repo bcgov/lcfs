@@ -5,6 +5,7 @@ import { BCPagination } from '@/components/BCDataGrid/components'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import BCButton from '../BCButton'
 
 export const BCGridViewer = ({
   gridRef,
@@ -80,6 +81,26 @@ export const BCGridViewer = ({
     },
     [defaultSortModel, gridKey]
   )
+  const resetGrid = useCallback(() => {
+    localStorage.removeItem(`${gridKey}-filter`);
+    localStorage.removeItem(`${gridKey}-column`);
+    setPage(1);
+    setSize(paginationPageSize);
+    setSortModel(defaultSortModel);
+    setFilterModel(defaultFilterModel);
+
+    // Re-fetch the data by calling the query function
+    query(
+      {
+        page: 1,
+        size: paginationPageSize,
+        sortOrders: defaultSortModel,
+        filters: defaultFilterModel,
+        ...queryParams
+      },
+      { retry: false }
+    );
+  }, [gridKey, paginationPageSize, defaultSortModel, defaultFilterModel, query, queryParams]);
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.hideOverlay()
@@ -152,6 +173,12 @@ export const BCGridViewer = ({
         <BCAlert severity="error">
           {error.message}. Please contact your administrator.
         </BCAlert>
+        <BCButton onClick={resetGrid} variant="contained"
+          id='grid-reset-btn'
+          color='primary'
+          autoFocus>
+          Clear filter & sort
+        </BCButton>
       </div>
     </div>
   ) : (

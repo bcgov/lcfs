@@ -1,3 +1,11 @@
+import warnings
+# Suppress the PendingDeprecationWarning for multipart
+warnings.filterwarnings(
+    "ignore",
+    message="Please use `import python_multipart` instead.",
+    category=PendingDeprecationWarning
+)
+
 import logging
 import subprocess
 import warnings

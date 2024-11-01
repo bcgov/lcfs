@@ -50,6 +50,9 @@ ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
  * - Ability to clear the custom filter input boxes
  * - Ability to populate the custom filter inputs from the stored values that are retrieved from localStorage.
  */
+/**
+ * @deprecated
+ */
 const BCDataGridServer = ({
   gridOptions,
   gridKey,

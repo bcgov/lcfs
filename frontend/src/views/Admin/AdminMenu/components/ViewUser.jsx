@@ -139,21 +139,23 @@ export const ViewUser = () => {
               <strong>{t('admin:Title')}:</strong>&nbsp;{data.title}
             </BCTypography>
           </Stack>
-          <BCTypography variant="h5" color="primary" mb={1}>
-            {t('admin:UserActivity')}
-          </BCTypography>
-          <BCDataGridServer
-            gridRef={gridRef}
-            apiEndpoint={apiEndpoint}
-            apiData="activities"
-            columnDefs={userActivityColDefs}
-            gridKey={gridKey}
-            getRowId={getRowId}
-            gridOptions={gridOptions}
-            defaultSortModel={defaultSortModel}
-            enableCopyButton={false}
-            handleRowClicked={handleRowClicked}
-          />
+            <Role roles={[roles.administrator, roles.manage_users]}>
+              <BCTypography variant="h5" color="primary" mb={1}>
+                {t('admin:UserActivity')}
+              </BCTypography>
+              <BCDataGridServer
+                gridRef={gridRef}
+                apiEndpoint={apiEndpoint}
+                apiData="activities"
+                columnDefs={userActivityColDefs}
+                gridKey={gridKey}
+                getRowId={getRowId}
+                gridOptions={gridOptions}
+                defaultSortModel={defaultSortModel}
+                enableCopyButton={false}
+                handleRowClicked={handleRowClicked}
+              />
+            </Role>
         </>
       )}
     </div>
