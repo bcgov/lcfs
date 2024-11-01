@@ -53,10 +53,9 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
 
                 # Check if user has all the required roles
                 if not any(role in user_roles for role in required_roles):
-                    logger.error(
-                        f"User {user.keycloak_username} does not have the required roles: {required_roles}"
+                    raise HTTPException(
+                        status_code=403, detail="Insufficient permissions"
                     )
-                    raise HTTPException(status_code=500, detail="Internal Server Error")
 
                 orgId = kwargs.get("organization_id", None)
                 if (
@@ -64,10 +63,10 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                     and orgId
                     and int(orgId) != user.organization_id
                 ):
-                    logger.error(
-                        f"User {user.keycloak_username} does not have the required permissions for this organization"
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Insufficient permissions for this organization",
                     )
-                    raise HTTPException(status_code=500, detail="Internal Server Error")
 
             # run through the view function
             try:
