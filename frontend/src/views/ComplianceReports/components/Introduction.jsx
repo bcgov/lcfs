@@ -1,16 +1,26 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import {
   Accordion,
-  AccordionSummary,
   AccordionDetails,
+  AccordionSummary,
   Typography
 } from '@mui/material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { GlobalStyles } from '@mui/system'
 import { useTranslation } from 'react-i18next'
 
 export const Introduction = ({ expanded }) => {
   const { t } = useTranslation()
   return (
     <>
+      <GlobalStyles
+        styles={{
+          ul: {
+            paddingLeft: 16,
+            marginLeft: 16,
+            marginBottom: 16
+          }
+        }}
+      />
       <Accordion expanded={expanded}>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
