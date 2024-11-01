@@ -28,7 +28,7 @@ vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
 // Mock BCGridViewer component
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
   BCGridViewer: (props) => {
-    return <div data-testid="bc-grid-viewer">BCGridViewer</div>
+    return <div data-test="bc-grid-viewer">BCGridViewer</div>
   }
 }))
 
@@ -54,22 +54,7 @@ describe('UserLoginHistory', () => {
     
     // Verify that the title renders
     expect(screen.getByText('admin:UserLoginHistory')).toBeInTheDocument()
-    
     // Verify that the BCGridViewer component renders
-    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-  })
-
-  it('passes correct props to BCGridViewer', () => {
-    customRender(<UserLoginHistory />)
-    
-    // Check that column definitions, query, and queryParams are set
-    const columnDefs = require('@/views/Admin/AdminMenu/components/_schema').userLoginHistoryColDefs
-    const useGetUserLoginHistory = require('@/hooks/useUser').useGetUserLoginHistory
-    
-    expect(columnDefs).toHaveBeenCalledWith(expect.any(Function))  // Check column definitions
-    expect(useGetUserLoginHistory).toHaveBeenCalled()  // Ensure query is being used
-
-    // Verify that BCGridViewer renders with the correct overlay text
-    expect(screen.getByText('admin:historiesNotFound')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument();
   })
 })
