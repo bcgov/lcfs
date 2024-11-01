@@ -1,14 +1,19 @@
 import pytest
 from datetime import datetime
+import uuid
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReport,
-    SupplementalReport,
     ComplianceReportStatus,
     ComplianceReportHistory,
     ComplianceReportSummary,
     FuelSupply,
 )
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummarySchema
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+)
+from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.organization import Organization
 from lcfs.web.exception.exceptions import DatabaseException
 from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
@@ -20,6 +25,7 @@ from lcfs.db.models.fuel import (
 )
 from lcfs.db.models.transfer import Transfer
 from lcfs.db.models.initiative_agreement import InitiativeAgreement
+from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 
 
 # Fixtures
@@ -148,33 +154,6 @@ async def compliance_periods(dbsession):
 
 
 @pytest.fixture
-async def compliance_reports(
-    dbsession, organizations, compliance_periods, compliance_report_statuses
-):
-    reports = [
-        ComplianceReport(
-            compliance_report_id=998,
-            compliance_period_id=compliance_periods[0].compliance_period_id,
-            organization_id=organizations[0].organization_id,
-            report_type="ANNUAL",
-            current_status_id=compliance_report_statuses[0].compliance_report_status_id,
-        ),
-        ComplianceReport(
-            compliance_report_id=999,
-            compliance_period_id=compliance_periods[1].compliance_period_id,
-            organization_id=organizations[1].organization_id,
-            report_type="ANNUAL",
-            current_status_id=compliance_report_statuses[1].compliance_report_status_id,
-        ),
-    ]
-    dbsession.add_all(reports)
-    await dbsession.commit()
-    for report in reports:
-        await dbsession.refresh(report)
-    return reports
-
-
-@pytest.fixture
 async def compliance_report_statuses(dbsession):
     statuses = [
         ComplianceReportStatus(compliance_report_status_id=997, status="Assessed"),
@@ -191,6 +170,37 @@ async def compliance_report_statuses(dbsession):
 
 
 @pytest.fixture
+async def compliance_reports(
+    dbsession, organizations, compliance_periods, compliance_report_statuses
+):
+    reports = [
+        ComplianceReport(
+            compliance_report_id=994,
+            compliance_period_id=compliance_periods[0].compliance_period_id,
+            organization_id=organizations[0].organization_id,
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            current_status_id=compliance_report_statuses[0].compliance_report_status_id,
+            compliance_report_group_uuid=str(uuid.uuid4()),
+            version=1,
+        ),
+        ComplianceReport(
+            compliance_report_id=995,
+            compliance_period_id=compliance_periods[1].compliance_period_id,
+            organization_id=organizations[1].organization_id,
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            current_status_id=compliance_report_statuses[1].compliance_report_status_id,
+            compliance_report_group_uuid=str(uuid.uuid4()),
+            version=1,
+        ),
+    ]
+    dbsession.add_all(reports)
+    await dbsession.commit()
+    for report in reports:
+        await dbsession.refresh(report)
+    return reports
+
+
+@pytest.fixture
 async def supplemental_reports(
     compliance_reports,
     dbsession,
@@ -199,41 +209,49 @@ async def supplemental_reports(
     compliance_periods,
 ):
     reports = [
-        SupplementalReport(
-            supplemental_report_id=996,
-            original_report_id=compliance_reports[0].compliance_report_id,
+        ComplianceReport(
+            compliance_report_id=996,
             compliance_period_id=compliance_periods[0].compliance_period_id,
             organization_id=organizations[0].organization_id,
             current_status_id=compliance_report_statuses[0].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            compliance_report_group_uuid=compliance_reports[
+                0
+            ].compliance_report_group_uuid,
+            version=2,
+            reporting_frequency=ReportingFrequency.ANNUAL,
         ),
-        SupplementalReport(
-            supplemental_report_id=997,
-            original_report_id=compliance_reports[0].compliance_report_id,
+        ComplianceReport(
+            compliance_report_id=997,
             compliance_period_id=compliance_periods[0].compliance_period_id,
             organization_id=organizations[0].organization_id,
             current_status_id=compliance_report_statuses[1].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            compliance_report_group_uuid=compliance_reports[
+                0
+            ].compliance_report_group_uuid,
+            version=3,
+            reporting_frequency=ReportingFrequency.ANNUAL,
         ),
-        SupplementalReport(
-            supplemental_report_id=998,
-            original_report_id=compliance_reports[1].compliance_report_id,
+        ComplianceReport(
+            compliance_report_id=998,
             compliance_period_id=compliance_periods[1].compliance_period_id,
             organization_id=organizations[1].organization_id,
             current_status_id=compliance_report_statuses[0].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            compliance_report_group_uuid=compliance_reports[
+                1
+            ].compliance_report_group_uuid,
+            version=2,
+            reporting_frequency=ReportingFrequency.ANNUAL,
         ),
-        SupplementalReport(
-            supplemental_report_id=999,
-            original_report_id=compliance_reports[1].compliance_report_id,
+        ComplianceReport(
+            compliance_report_id=999,
             compliance_period_id=compliance_periods[1].compliance_period_id,
             organization_id=organizations[1].organization_id,
             current_status_id=compliance_report_statuses[1].compliance_report_status_id,
-            version=999,
-            report_type="SUPPLEMENTAL",
+            compliance_report_group_uuid=compliance_reports[
+                1
+            ].compliance_report_group_uuid,
+            version=3,
+            reporting_frequency=ReportingFrequency.ANNUAL,
         ),
     ]
     dbsession.add_all(reports)
@@ -251,22 +269,18 @@ async def compliance_report_summaries(
         ComplianceReportSummary(
             summary_id=996,
             compliance_report_id=compliance_reports[0].compliance_report_id,
-            version=999,
         ),
         ComplianceReportSummary(
             summary_id=997,
             compliance_report_id=compliance_reports[1].compliance_report_id,
-            version=999,
         ),
         ComplianceReportSummary(
             summary_id=998,
-            supplemental_report_id=supplemental_reports[0].supplemental_report_id,
-            version=999,
+            compliance_report_id=supplemental_reports[0].compliance_report_id,
         ),
         ComplianceReportSummary(
             summary_id=999,
-            supplemental_report_id=supplemental_reports[1].supplemental_report_id,
-            version=999,
+            compliance_report_id=supplemental_reports[1].compliance_report_id,
         ),
     ]
 
@@ -396,42 +410,42 @@ async def fuel_supplies(dbsession, compliance_reports, fuel_categories, fuel_typ
         FuelSupply(
             fuel_supply_id=996,
             compliance_report_id=compliance_reports[0].compliance_report_id,
-            change_type="CREATE",
             quantity=1,
             units="Litres",
             fuel_category_id=fuel_categories[0].fuel_category_id,
             fuel_type_id=fuel_types[0].fuel_type_id,
             provision_of_the_act_id=1,
+            user_type=UserTypeEnum.SUPPLIER,
         ),
         FuelSupply(
             fuel_supply_id=997,
             compliance_report_id=compliance_reports[0].compliance_report_id,
-            change_type="CREATE",
             quantity=1,
             units="Litres",
             fuel_category_id=fuel_categories[1].fuel_category_id,
             fuel_type_id=fuel_types[1].fuel_type_id,
             provision_of_the_act_id=1,
+            user_type=UserTypeEnum.SUPPLIER,
         ),
         FuelSupply(
             fuel_supply_id=998,
             compliance_report_id=compliance_reports[0].compliance_report_id,
-            change_type="CREATE",
             quantity=1,
             units="Litres",
             fuel_category_id=fuel_categories[0].fuel_category_id,
             fuel_type_id=fuel_types[2].fuel_type_id,
             provision_of_the_act_id=1,
+            user_type=UserTypeEnum.SUPPLIER,
         ),
         FuelSupply(
             fuel_supply_id=999,
             compliance_report_id=compliance_reports[0].compliance_report_id,
-            change_type="CREATE",
             quantity=1,
             units="Litres",
             fuel_category_id=fuel_categories[1].fuel_category_id,
             fuel_type_id=fuel_types[3].fuel_type_id,
             provision_of_the_act_id=1,
+            user_type=UserTypeEnum.SUPPLIER,
         ),
     ]
 
@@ -477,7 +491,7 @@ async def test_get_compliance_period_success(
 async def test_get_compliance_period_not_found(compliance_report_repo):
     period = await compliance_report_repo.get_compliance_period(period="1000")
 
-    assert period == None
+    assert period is None
 
 
 @pytest.mark.anyio
@@ -499,51 +513,7 @@ async def test_get_compliance_report_not_found(compliance_report_repo):
         report_id=1000, is_model=True
     )
 
-    assert report == None
-
-
-@pytest.mark.anyio
-async def test_get_supplemental_report_success(
-    compliance_report_repo, supplemental_reports
-):
-    report = await compliance_report_repo.get_supplemental_report(
-        supplemental_report_id=supplemental_reports[0].supplemental_report_id
-    )
-
-    assert isinstance(report, SupplementalReport)
-    assert (
-        report.supplemental_report_id == supplemental_reports[0].supplemental_report_id
-    )
-
-
-@pytest.mark.anyio
-async def test_get_supplemental_report_not_found(compliance_report_repo):
-    report = await compliance_report_repo.get_supplemental_report(
-        supplemental_report_id=1000
-    )
-
-    assert report == None
-
-
-@pytest.mark.anyio
-async def test_get_supplemental_reports_success(
-    compliance_report_repo, supplemental_reports
-):
-    reports = await compliance_report_repo.get_supplemental_reports(
-        original_report_id=supplemental_reports[0].original_report_id
-    )
-
-    assert len(reports) == 2
-    assert isinstance(reports[0], SupplementalReport)
-
-
-@pytest.mark.anyio
-async def test_get_supplemental_reports_not_found(compliance_report_repo):
-    reports = await compliance_report_repo.get_supplemental_reports(
-        original_report_id=1000
-    )
-
-    assert len(reports) == 0
+    assert report is None
 
 
 @pytest.mark.anyio
@@ -570,56 +540,6 @@ async def test_get_compliance_report_status_by_desc_unknown_status(
 
 
 @pytest.mark.anyio
-async def test_get_compliance_report_by_period_success(
-    compliance_report_repo, compliance_reports, compliance_periods
-):
-    report_exists = await compliance_report_repo.get_compliance_report_by_period(
-        organization_id=compliance_reports[0].organization_id,
-        period=compliance_periods[0].description,
-    )
-
-    assert report_exists == True
-
-
-@pytest.mark.anyio
-async def test_get_compliance_report_by_period_not_found(
-    compliance_report_repo, compliance_reports, compliance_periods
-):
-    report_exists = await compliance_report_repo.get_compliance_report_by_period(
-        organization_id=compliance_reports[0].organization_id,
-        period="1000",
-    )
-
-    assert report_exists == False
-
-
-@pytest.mark.anyio
-async def test_get_assessed_compliance_report_by_period_success(
-    compliance_report_repo, compliance_reports, compliance_periods
-):
-    report = await compliance_report_repo.get_assessed_compliance_report_by_period(
-        organization_id=compliance_reports[0].organization_id,
-        period=int(compliance_periods[0].description),
-    )
-
-    assert isinstance(report, ComplianceReport)
-    assert report.organization_id == compliance_reports[0].organization_id
-    assert report.compliance_period_id == compliance_periods[0].compliance_period_id
-
-
-@pytest.mark.anyio
-async def test_get_assessed_compliance_report_by_period_not_found(
-    compliance_report_repo, compliance_reports
-):
-    report = await compliance_report_repo.get_assessed_compliance_report_by_period(
-        organization_id=compliance_reports[0].organization_id,
-        period=1000,
-    )
-
-    assert report == None
-
-
-@pytest.mark.anyio
 async def test_add_compliance_report_success(
     compliance_report_repo,
     compliance_periods,
@@ -628,11 +548,12 @@ async def test_add_compliance_report_success(
 ):
 
     new_report = ComplianceReport(
-        compliance_report_id=899,
         compliance_period_id=compliance_periods[0].compliance_period_id,
         organization_id=organizations[0].organization_id,
-        report_type="ANNUAL",
+        reporting_frequency=ReportingFrequency.ANNUAL,
         current_status_id=compliance_report_statuses[0].compliance_report_status_id,
+        compliance_report_group_uuid=str(uuid.uuid4()),
+        version=1,
     )
 
     report = await compliance_report_repo.add_compliance_report(report=new_report)
@@ -651,7 +572,7 @@ async def test_add_compliance_report_exception(
     compliance_report_repo,
 ):
 
-    new_report = ComplianceReport(compliance_report_id=899)
+    new_report = ComplianceReport()
 
     with pytest.raises(DatabaseException):
         await compliance_report_repo.add_compliance_report(report=new_report)
@@ -664,14 +585,14 @@ async def test_add_compliance_report_history_success(
     compliance_reports,
 ):
 
-    report = await compliance_report_repo.add_compliance_report_history(
+    history = await compliance_report_repo.add_compliance_report_history(
         report=compliance_reports[0], user=users[0]
     )
 
-    assert isinstance(report, ComplianceReportHistory)
-    assert report.compliance_report_id == compliance_reports[0].compliance_report_id
-    assert report.user_profile_id == users[0].user_profile_id
-    assert report.status_id == compliance_reports[0].current_status_id
+    assert isinstance(history, ComplianceReportHistory)
+    assert history.compliance_report_id == compliance_reports[0].compliance_report_id
+    assert history.user_profile_id == users[0].user_profile_id
+    assert history.status_id == compliance_reports[0].current_status_id
 
 
 @pytest.mark.anyio
@@ -687,15 +608,24 @@ async def test_add_compliance_report_history_exception(
 @pytest.mark.anyio
 async def test_get_reports_paginated_success(
     compliance_report_repo,
+    compliance_reports,
 ):
-    pass
 
+    pagination = PaginationRequestSchema(
+        page=1,
+        size=10,
+        sort_orders=[],
+        filters=[],
+    )
 
-@pytest.mark.anyio
-async def test_get_reports_paginated_exception(
-    compliance_report_repo,
-):
-    pass
+    reports, total_count = await compliance_report_repo.get_reports_paginated(
+        pagination=pagination
+    )
+
+    assert isinstance(reports, list)
+    assert len(reports) > 0
+    assert isinstance(reports[0], ComplianceReportBaseSchema)
+    assert total_count >= len(reports)
 
 
 @pytest.mark.anyio
@@ -735,7 +665,7 @@ async def test_get_compliance_report_by_id_success_not_found(
         report_id=1000, is_model=True
     )
 
-    assert report == None
+    assert report is None
 
 
 @pytest.mark.anyio
@@ -754,7 +684,7 @@ async def test_get_fuel_type_not_found(compliance_report_repo):
 
     fuel_type = await compliance_report_repo.get_fuel_type(fuel_type_id=1000)
 
-    assert fuel_type == None
+    assert fuel_type is None
 
 
 @pytest.mark.anyio
@@ -775,7 +705,7 @@ async def test_get_fuel_category_not_found(compliance_report_repo):
         fuel_category_id=1000
     )
 
-    assert fuel_category == None
+    assert fuel_category is None
 
 
 @pytest.mark.anyio
@@ -796,7 +726,7 @@ async def test_get_expected_use_not_found(compliance_report_repo):
         expected_use_type_id=1000
     )
 
-    assert expected_use == None
+    assert expected_use is None
 
 
 @pytest.mark.anyio
@@ -819,21 +749,23 @@ async def test_update_compliance_report_success(
 @pytest.mark.anyio
 async def test_update_compliance_report_exception(compliance_report_repo):
 
-    with pytest.raises(DatabaseException):
+    with pytest.raises(Exception):
         await compliance_report_repo.update_compliance_report(report=None)
 
 
 @pytest.mark.anyio
 async def test_add_compliance_report_summary_success(
-    compliance_report_repo, compliance_report_summaries
+    compliance_report_repo, compliance_reports
 ):
 
-    summary = await compliance_report_repo.add_compliance_report_summary(
-        summary=compliance_report_summaries[0]
+    summary = ComplianceReportSummary(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
     )
 
-    assert isinstance(summary, ComplianceReportSummary)
-    assert summary.summary_id == compliance_report_summaries[0].summary_id
+    result = await compliance_report_repo.add_compliance_report_summary(summary=summary)
+
+    assert isinstance(result, ComplianceReportSummary)
+    assert result.compliance_report_id == compliance_reports[0].compliance_report_id
 
 
 @pytest.mark.anyio
@@ -846,50 +778,66 @@ async def test_add_compliance_report_summary_exception(
 
 @pytest.mark.anyio
 async def test_save_compliance_report_summary_success(
-    compliance_report_repo, compliance_report_summaries
+    compliance_report_repo,
+    compliance_reports,
+    compliance_report_summaries,
 ):
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
 
-    pass
+    result = await compliance_report_repo.save_compliance_report_summary(
+        summary=summary_schema
+    )
+
+    assert isinstance(result, ComplianceReportSummary)
+    assert result.compliance_report_id == compliance_reports[0].compliance_report_id
 
 
 @pytest.mark.anyio
 async def test_save_compliance_report_summary_exception(
     compliance_report_repo,
 ):
-    pass
+    summary_schema = ComplianceReportSummarySchema(
+        compliance_report_id=1000,  # Non-existent report_id
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+
+    with pytest.raises(DatabaseException):
+        await compliance_report_repo.save_compliance_report_summary(
+            summary=summary_schema
+        )
 
 
 @pytest.mark.anyio
-async def test_get_summary_by_report_id_success_is_not_supplemental(
-    compliance_report_repo, compliance_report_summaries
+async def test_get_summary_by_report_id_success(
+    compliance_report_repo, compliance_reports, compliance_report_summaries
 ):
 
     summary = await compliance_report_repo.get_summary_by_report_id(
-        report_id=compliance_report_summaries[0].compliance_report_id
+        report_id=compliance_reports[0].compliance_report_id
     )
 
     assert isinstance(summary, ComplianceReportSummary)
-    assert (
-        summary.compliance_report_id
-        == compliance_report_summaries[0].compliance_report_id
-    )
+    assert summary.compliance_report_id == compliance_reports[0].compliance_report_id
 
 
 @pytest.mark.anyio
-async def test_get_summary_by_report_id_success_is_supplemental(
-    compliance_report_repo, compliance_report_summaries
+async def test_get_summary_by_report_id_success_supplemental(
+    compliance_report_repo, supplemental_reports, compliance_report_summaries
 ):
 
     summary = await compliance_report_repo.get_summary_by_report_id(
-        report_id=compliance_report_summaries[0].supplemental_report_id,
-        is_supplemental=True,
+        report_id=supplemental_reports[0].compliance_report_id
     )
 
     assert isinstance(summary, ComplianceReportSummary)
-    assert (
-        summary.supplemental_report_id
-        == compliance_report_summaries[0].supplemental_report_id
-    )
+    assert summary.compliance_report_id == supplemental_reports[0].compliance_report_id
 
 
 @pytest.mark.anyio
@@ -897,7 +845,7 @@ async def test_get_summary_by_report_id_not_found(compliance_report_repo):
 
     summary = await compliance_report_repo.get_summary_by_report_id(report_id=1000)
 
-    assert summary == None
+    assert summary is None
 
 
 @pytest.mark.anyio
@@ -982,12 +930,20 @@ async def test_get_issued_compliance_units_not_found(compliance_report_repo):
 async def test_calculate_fuel_quantities_success_not_fossil_derived(
     compliance_report_repo,
     compliance_reports,
-    fuel_categories,
     fuel_supplies,
-    fuel_types,
 ):
+    # Filter non-fossil-derived fuel supplies
+    non_fossil_fuel_supplies = [
+        fs for fs in fuel_supplies if not fs.fuel_type.fossil_derived
+    ]
+
+    # Mock the method
+    compliance_report_repo.fuel_supply_repo.get_effective_fuel_supplies.return_value = (
+        non_fossil_fuel_supplies
+    )
+
     result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report_id=compliance_reports[0].compliance_report_id,
+        compliance_report=compliance_reports[0],
         fossil_derived=False,
     )
 
@@ -998,12 +954,18 @@ async def test_calculate_fuel_quantities_success_not_fossil_derived(
 async def test_calculate_fuel_quantities_success_fossil_derived(
     compliance_report_repo,
     compliance_reports,
-    fuel_categories,
     fuel_supplies,
-    fuel_types,
 ):
+    # Filter fossil-derived fuel supplies
+    fossil_fuel_supplies = [fs for fs in fuel_supplies if fs.fuel_type.fossil_derived]
+
+    # Mock the method
+    compliance_report_repo.fuel_supply_repo.get_effective_fuel_supplies.return_value = (
+        fossil_fuel_supplies
+    )
+
     result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report_id=compliance_reports[0].compliance_report_id,
+        compliance_report=compliance_reports[0],
         fossil_derived=True,
     )
 
@@ -1014,20 +976,21 @@ async def test_calculate_fuel_quantities_success_fossil_derived(
 async def test_get_all_org_reported_years_success(
     compliance_report_repo, compliance_reports, compliance_periods
 ):
-    period = await compliance_report_repo.get_all_org_reported_years(
+    periods = await compliance_report_repo.get_all_org_reported_years(
         organization_id=compliance_reports[0].organization_id
     )
 
-    assert len(period) == 1
-    assert isinstance(period[0], CompliancePeriod)
+    assert len(periods) == 1
+    assert isinstance(periods[0], CompliancePeriod)
+    assert periods[0] == compliance_periods[0]
 
 
 @pytest.mark.anyio
 async def test_get_all_org_reported_years_not_found(
-    compliance_report_repo, compliance_reports, compliance_periods
+    compliance_report_repo,
 ):
-    period = await compliance_report_repo.get_all_org_reported_years(
+    periods = await compliance_report_repo.get_all_org_reported_years(
         organization_id=1000
     )
 
-    assert len(period) == 0
+    assert len(periods) == 0

@@ -11,6 +11,7 @@
   "rows": "rows",
   "fuelSupplyColLabels": {
     "complianceReportId": "Compliance Report ID",
+    "actionType": "Action type",
     "fuelSupplyId": "Fuel supply ID",
     "fuelType": "Fuel type",
     "fuelTypeOther": "Fuel type other",

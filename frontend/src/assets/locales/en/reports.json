@@ -21,7 +21,9 @@
   "assessmentLn2": "{{name}} <strong>{{hasMet}}</strong> the low carbon fuel targets set under section 12 of the <i>Low Carbon Fuels Act.</i>",
   "impInfoTitle": "Important information",
   "impInfo": "If you become aware that this report is incomplete or inaccurate, you must submit a supplemental report within 30 days.",
+  "supplementalReport": "Supplemental Report",
   "createSupplementalRptBtn": "Create supplemental report",
+  "supplementalCreated": "Supplemental report created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, PNG, MSG, DOC, XLS) file(s) here or click to select the file(s) from your machine to upload.",
   "activityLinksList": "Click links to report activities",
   "activityLists": {

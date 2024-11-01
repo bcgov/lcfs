@@ -1,14 +1,15 @@
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, or_, select, case
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
+from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance import CompliancePeriod, FuelSupply
+from lcfs.db.models.compliance import CompliancePeriod, FuelSupply, ComplianceReport
 from lcfs.db.models.fuel import (
     EnergyDensity,
     EnergyEffectivenessRatio,
@@ -173,32 +174,54 @@ class FuelSupplyRepository:
     @repo_handler
     async def get_fuel_supply_list(self, compliance_report_id: int) -> List[FuelSupply]:
         """
-        Retrieve the list of fuel supplied information for a given compliance report.
+        Retrieve the list of effective fuel supplies for a given compliance report.
         """
-        query = self.query.where(
-            FuelSupply.compliance_report_id == compliance_report_id
-        ).order_by(FuelSupply.fuel_supply_id)
-        results = (await self.db.execute(query)).unique().scalars().all()
-        return results
+        # Retrieve the compliance report's group UUID
+        report_group_query = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+        group_uuid = report_group_query.scalar()
+        if not group_uuid:
+            return []
+
+        # Retrieve effective fuel supplies using the group UUID
+        effective_fuel_supplies = await self.get_effective_fuel_supplies(
+            compliance_report_group_uuid=group_uuid
+        )
+
+        return effective_fuel_supplies
 
     @repo_handler
     async def get_fuel_supplies_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> List[FuelSupply]:
+        """
+        Retrieve a paginated list of effective fuel supplies for a given compliance report.
+        """
+        # Retrieve the compliance report's group UUID
+        report_group_query = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+        group_uuid = report_group_query.scalar()
+        if not group_uuid:
+            return [], 0
+
+        # Retrieve effective fuel supplies using the group UUID
+        effective_fuel_supplies = await self.get_effective_fuel_supplies(
+            compliance_report_group_uuid=group_uuid
+        )
+
+        # Manually apply pagination
+        total_count = len(effective_fuel_supplies)
         offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        query = self.query.where(
-            FuelSupply.compliance_report_id == compliance_report_id
-        )
-        count_query = query.with_only_columns(
-            func.count(FuelSupply.fuel_supply_id)
-        ).order_by(None)
-        total_count = (await self.db.execute(count_query)).scalar_one()
-        result = await self.db.execute(
-            query.offset(offset).limit(limit).order_by(FuelSupply.create_date.desc())
-        )
-        fuel_supplies = result.unique().scalars().all()
-        return fuel_supplies, total_count
+        paginated_supplies = effective_fuel_supplies[offset : offset + limit]
+
+        return paginated_supplies, total_count
 
     @repo_handler
     async def get_fuel_supply_by_id(self, fuel_supply_id: int) -> FuelSupply:
@@ -256,9 +279,7 @@ class FuelSupplyRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_fuel_supplies(
-        self, report_id: int, is_supplemental: bool = False
-    ) -> List[FuelSupply]:
+    async def get_fuel_supplies(self, report_id: int) -> List[FuelSupply]:
         """
         Retrieve the list of fuel supplies for a given report (compliance or supplemental).
         """
@@ -270,10 +291,7 @@ class FuelSupplyRepository:
             joinedload(FuelSupply.end_use_type),
         )
 
-        if is_supplemental:
-            query = query.where(FuelSupply.supplemental_report_id == report_id)
-        else:
-            query = query.where(FuelSupply.compliance_report_id == report_id)
+        query = query.where(FuelSupply.compliance_report_id == report_id)
 
         result = await self.db.execute(query)
         return result.scalars().all()
@@ -288,6 +306,7 @@ class FuelSupplyRepository:
             FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
             FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
             FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
+            FuelSupply.group_uuid != fuel_supply.group_uuid,
             # Do not count the row of a duplicate of itself
             and_(
                 FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
@@ -298,3 +317,132 @@ class FuelSupplyRepository:
 
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_fuel_supply_version_by_user(
+        self, group_uuid: str, version: int, user_type: UserTypeEnum
+    ) -> Optional[FuelSupply]:
+        """
+        Retrieve a specific FuelSupply record by group UUID, version, and user_type.
+        This method explicitly requires user_type to avoid ambiguity.
+        """
+        query = select(FuelSupply).where(
+            FuelSupply.group_uuid == group_uuid,
+            FuelSupply.version == version,
+            FuelSupply.user_type == user_type,
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_latest_fuel_supply_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[FuelSupply]:
+        """
+        Retrieve the latest FuelSupply record for a given group UUID.
+        Government records are prioritized over supplier records by ordering first by `user_type`
+        (with GOVERNMENT records coming first) and then by `version` in descending order.
+        """
+        query = (
+            select(FuelSupply)
+            .where(FuelSupply.group_uuid == group_uuid)
+            .order_by(
+                # FuelSupply.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
+                # thus bringing GOVERNMENT records to the top in the ordered results.
+                FuelSupply.user_type == UserTypeEnum.SUPPLIER,
+                FuelSupply.version.desc(),
+            )
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_effective_fuel_supplies(
+        self, compliance_report_group_uuid: str
+    ) -> List[FuelSupply]:
+        """
+        Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
+        For each group_uuid:
+            - Exclude the entire group if any record in the group is marked as DELETE.
+            - From the remaining groups, select the record with the highest version and highest priority.
+        """
+        # Step 1: Subquery to get all compliance_report_ids in the specified group
+        compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid
+        )
+
+        # Step 2: Subquery to identify record group_uuids that have any DELETE action
+        delete_group_select = (
+            select(FuelSupply.group_uuid)
+            .where(
+                FuelSupply.compliance_report_id.in_(compliance_reports_select),
+                FuelSupply.action_type == ActionTypeEnum.DELETE,
+            )
+            .distinct()
+        )
+
+        # Step 3: Subquery to find the maximum version and priority per group_uuid,
+        # excluding groups with any DELETE action
+        user_type_priority = case(
+            (FuelSupply.user_type == UserTypeEnum.GOVERNMENT, 1),
+            (FuelSupply.user_type == UserTypeEnum.SUPPLIER, 0),
+            else_=0,
+        )
+
+        valid_fuel_supplies_select = (
+            select(
+                FuelSupply.group_uuid,
+                func.max(FuelSupply.version).label("max_version"),
+                func.max(user_type_priority).label("max_role_priority"),
+            )
+            .where(
+                FuelSupply.compliance_report_id.in_(compliance_reports_select),
+                FuelSupply.action_type != ActionTypeEnum.DELETE,
+                ~FuelSupply.group_uuid.in_(delete_group_select),
+            )
+            .group_by(FuelSupply.group_uuid)
+        )
+        # Now create a subquery for use in the JOIN
+        valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
+
+        # Step 4: Main query to retrieve FuelSupply records with necessary eager relationships
+        query = (
+            select(FuelSupply)
+            .options(
+                # Use joinedload for scalar relationships
+                joinedload(FuelSupply.fuel_code).options(
+                    joinedload(FuelCode.fuel_code_status),
+                    joinedload(FuelCode.fuel_code_prefix),
+                ),
+                joinedload(FuelSupply.fuel_category).options(
+                    joinedload(FuelCategory.target_carbon_intensities),
+                    joinedload(FuelCategory.energy_effectiveness_ratio),
+                ),
+                joinedload(FuelSupply.fuel_type).options(
+                    joinedload(FuelType.energy_density),
+                    joinedload(FuelType.additional_carbon_intensity),
+                    joinedload(FuelType.energy_effectiveness_ratio),
+                ),
+                joinedload(FuelSupply.provision_of_the_act),
+                selectinload(FuelSupply.end_use_type),
+            )
+            .join(
+                valid_fuel_supplies_subq,
+                and_(
+                    FuelSupply.group_uuid == valid_fuel_supplies_subq.c.group_uuid,
+                    FuelSupply.version == valid_fuel_supplies_subq.c.max_version,
+                    user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
+                ),
+            )
+        )
+
+        # Step 5: Execute the query and retrieve results using unique()
+        result = await self.db.execute(query)
+        fuel_supplies = result.unique().scalars().all()
+
+        logger.debug(f"Retrieved {len(fuel_supplies)} effective FuelSupply records.")
+
+        return fuel_supplies

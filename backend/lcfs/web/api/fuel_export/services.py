@@ -3,11 +3,6 @@ import math
 from fastapi import Depends, Request
 from fastapi_cache.decorator import cache
 
-from lcfs.db.models.compliance.FuelExport import (
-    FuelExport,
-    ChangeType,
-    QuantityUnitsEnum,
-)
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -28,6 +23,7 @@ from lcfs.web.api.fuel_export.schema import (
     UnitOfMeasureSchema,
 )
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
@@ -280,6 +276,8 @@ class FuelExportServices:
     ) -> FuelExportSchema:
         """Validate and update the compliance units"""
 
+        fs_data.units = QuantityUnitsEnum(fs_data.units)
+
         # Fetch fuel export options based on the compliance period
         fuel_export_options = await self.get_fuel_export_options(
             fs_data.compliance_period
@@ -382,149 +380,3 @@ class FuelExportServices:
         fs_data.compliance_units = compliance_units
 
         return fs_data
-
-    @service_handler
-    async def update_fuel_export(self, fs_data: FuelExportSchema) -> FuelExportSchema:
-        """Update an existing fuel supply record"""
-        fs_data = await self.validate_and_calculate_compliance_units(fs_data)
-        existing_fs = await self.repo.get_fuel_export_by_id(fs_data.fuel_export_id)
-        if not existing_fs:
-            raise ValueError("fuel supply record not found")
-
-        for key, value in fs_data.model_dump().items():
-            if (
-                key
-                not in [
-                    "fuel_export_id" "id",
-                    "compliance_period",
-                    "fuel_type",
-                    "fuel_category",
-                    "provision_of_the_act",
-                    "end_use",
-                    "fuel_code",
-                    "units",
-                    "deleted",
-                ]
-                and value is not None
-            ):
-                if key == "units":
-                    value = QuantityUnitsEnum(value)
-                setattr(existing_fs, key, value)
-
-        updated_transfer = await self.repo.update_fuel_export(existing_fs)
-        return FuelExportSchema.model_validate(updated_transfer)
-
-    @service_handler
-    async def create_fuel_export(self, fs_data: FuelExportSchema) -> FuelExportSchema:
-        """Create a new fuel supply record"""
-        fs_data = await self.validate_and_calculate_compliance_units(fs_data)
-        fuel_export = FuelExport(
-            **fs_data.model_dump(
-                exclude={
-                    "id",
-                    "fuel_type",
-                    "fuel_category",
-                    "compliance_period",
-                    "provision_of_the_act",
-                    "end_use",
-                    "fuel_code",
-                    "units",
-                    "deleted",
-                }
-            )
-        )
-        fuel_export.units = QuantityUnitsEnum(fs_data.units)
-        created_equipment = await self.repo.create_fuel_export(fuel_export)
-        return FuelExportSchema.model_validate(created_equipment)
-
-    @service_handler
-    async def delete_fuel_export(self, fuel_export_id: int) -> str:
-        """Delete a fuel supply record"""
-        return await self.repo.delete_fuel_export(fuel_export_id)
-
-    # TODO Left here for example for version tracking work
-    # @service_handler
-    # async def create_supplemental_fuel_export(
-    #     self, supplemental_report_id: int, data: dict
-    # ):
-    #     new_supply = FuelExport(
-    #         supplemental_report_id=supplemental_report_id,
-    #         change_type=ChangeType.CREATE,
-    #         **data,
-    #     )
-    #     return await self.repo.create_fuel_export(new_supply)
-
-    # @service_handler
-    # async def update_supplemental_fuel_export(
-    #     self, supplemental_report_id: int, original_fuel_export_id: int, data: dict
-    # ):
-    #     updated_supply = FuelExport(
-    #         supplemental_report_id=supplemental_report_id,
-    #         previous_fuel_export_id=original_fuel_export_id,
-    #         change_type=ChangeType.UPDATE,
-    #         **data,
-    #     )
-    #     return await self.repo.create_fuel_export(updated_supply)
-
-    # @service_handler
-    # async def delete_supplemental_fuel_export(
-    #     self, supplemental_report_id: int, original_fuel_export_id: int
-    # ):
-    #     delete_record = FuelExport(
-    #         supplemental_report_id=supplemental_report_id,
-    #         previous_fuel_export_id=original_fuel_export_id,
-    #         change_type=ChangeType.DELETE,
-    #         quantity=None,  # or any appropriate default value
-    #     )
-    #     return await self.repo.create_fuel_export(delete_record)
-
-    # @service_handler
-    # async def get_fuel_export_changes(
-    #     self, original_report_id: int, supplemental_report_id: int
-    # ):
-    #     original_exports = await self.get_effective_fuel_exports(original_report_id)
-    #     supplemental_exports = await self.get_effective_fuel_exports(
-    #         supplemental_report_id, is_supplemental=True
-    #     )
-
-    #     changes = []
-
-    #     # Check for updates and deletes
-    #     for original_supply in original_exports:
-    #         supplemental_supply = next(
-    #             (
-    #                 s
-    #                 for s in supplemental_exports
-    #                 if s.previous_fuel_export_id == original_supply.fuel_export_id
-    #             ),
-    #             None,
-    #         )
-    #         if not supplemental_supply:
-    #             changes.append(
-    #                 {
-    #                     "type": ChangeType.DELETE,
-    #                     "original": original_supply,
-    #                     "updated": None,
-    #                 }
-    #             )
-    #         elif original_supply != supplemental_supply:
-    #             changes.append(
-    #                 {
-    #                     "type": ChangeType.UPDATE,
-    #                     "original": original_supply,
-    #                     "updated": supplemental_supply,
-    #                 }
-    #             )
-
-    #     # Check for new records
-    #     for supplemental_supply in supplemental_exports:
-    #         if supplemental_supply.change_type == ChangeType.CREATE:
-    #             changes.append(
-    #                 {
-    #                     "type": ChangeType.CREATE,
-    #                     "original": None,
-    #                     "updated": supplemental_supply,
-    #                 }
-    #             )
-
-    #     return changes
