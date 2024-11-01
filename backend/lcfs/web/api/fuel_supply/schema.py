@@ -79,7 +79,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
-    default_carbon_intensity: float
+    default_carbon_intensity: Optional[float] = None
     unit: str
     unrecognized: bool
     energy_density: Optional[EnergyDensitySchema]
@@ -138,14 +138,13 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     provision_of_the_act_id: int
     quantity: int
     units: str
-
+    fuel_type_other: Optional[str] = None
     fuel_code_id: Optional[int] = None
     target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
     class Config:
@@ -175,9 +174,9 @@ class FuelSupplyResponseSchema(BaseSchema):
     fuel_code: Optional[FuelCodeResponseSchema] = None
     provision_of_the_act_id: Optional[int] = None
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    custom_fuel_id: Optional[int] = None
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
+    fuel_type_other: Optional[str] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

@@ -1,6 +1,7 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
+  AsyncSuggestionEditor,
   AutocompleteEditor,
   NumberEditor,
   RequiredHeader
@@ -8,10 +9,8 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import {
-  StandardCellErrors,
-  StandardCellWarningAndErrors
-} from '@/utils/grid/errorRenderers'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import { apiRoutes } from '@/constants/routes'
 
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,
@@ -159,6 +158,21 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'fuelTypeOther',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-type-others',
+      queryFn: async ({ queryKey, client }) => {
+        const path = apiRoutes.getFuelTypeOthers
+
+        const response = await client.get(path)
+
+        params.node.data.apiDataCache = response.data
+        return response.data
+      },
+      title: 'transactionPartner',
+      api: params.api,
+      minWords: 1
+    }),
     cellStyle: (params) => {
       const style = StandardCellWarningAndErrors(params, errors, warnings)
       const conditionalStyle = /other/i.test(params.data.fuelType)
@@ -166,7 +180,13 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
-    editable: (params) => /other/i.test(params.data.fuelType)
+    valueSetter: (params) => {
+      const { newValue: selectedFuelTypeOther, data } = params
+      data.fuelTypeOther = selectedFuelTypeOther
+      return true
+    },
+    editable: (params) => /other/i.test(params.data.fuelType),
+    minWidth: 250
   },
   {
     field: 'fuelCategory',
@@ -423,7 +443,35 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings),
+    valueGetter: (params) => {
+      if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
+        return optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
+          ?.fuelCodeCarbonIntensity
+      } else {
+        if (optionsData) {
+          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+            const categories = optionsData?.fuelTypes?.find(
+              (obj) => params.data.fuelType === obj.fuelType
+            ).fuelCategories
+            const defaultCI = categories.find(
+              (cat) => cat.fuelCategory === params.data.fuelCategory
+            ).defaultAndPrescribedCi
+
+            return defaultCI
+          }
+        }
+        return (
+          (optionsData &&
+            optionsData?.fuelTypes?.find(
+              (obj) => params.data.fuelType === obj.fuelType
+            )?.defaultCarbonIntensity) ||
+          0
+        )
+      }
+    }
   },
   {
     field: 'energyDensity',
@@ -443,7 +491,9 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     },
     valueGetter: (params) => {
       if (/other/i.test(params.data.fuelType)) {
-        return params.data?.energyDensity + ' MJ/' + params.data?.units || 0
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : 0
       } else {
         const ed = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType

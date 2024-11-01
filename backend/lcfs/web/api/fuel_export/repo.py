@@ -48,7 +48,6 @@ class FuelExportRepository:
                 joinedload(FuelType.energy_effectiveness_ratio),
             ),
             joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.custom_fuel_type),
             joinedload(FuelExport.end_use_type),
         )
 
@@ -242,7 +241,6 @@ class FuelExportRepository:
                 "fuel_category",
                 "fuel_type",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -261,7 +259,6 @@ class FuelExportRepository:
                 "fuel_category",
                 "fuel_type",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -282,10 +279,20 @@ class FuelExportRepository:
         """
         Retrieve a specific FuelExport record by group UUID, version, and user_type.
         """
-        query = select(FuelExport).where(
-            FuelExport.group_uuid == group_uuid,
-            FuelExport.version == version,
-            FuelExport.user_type == user_type,
+        query = (
+            select(FuelExport)
+            .where(
+                FuelExport.group_uuid == group_uuid,
+                FuelExport.version == version,
+                FuelExport.user_type == user_type,
+            )
+            .options(
+                joinedload(FuelExport.fuel_code),
+                joinedload(FuelExport.fuel_category),
+                joinedload(FuelExport.fuel_type),
+                joinedload(FuelExport.provision_of_the_act),
+                joinedload(FuelExport.end_use_type),
+            )
         )
 
         result = await self.db.execute(query)
@@ -370,7 +377,6 @@ class FuelExportRepository:
                 joinedload(FuelExport.fuel_category),
                 joinedload(FuelExport.fuel_type),
                 joinedload(FuelExport.provision_of_the_act),
-                selectinload(FuelExport.custom_fuel_type),
                 selectinload(FuelExport.end_use_type),
             )
             .join(

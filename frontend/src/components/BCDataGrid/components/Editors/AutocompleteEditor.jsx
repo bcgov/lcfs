@@ -29,7 +29,7 @@ export const AutocompleteEditor = (props) => {
     onBlur,
     onPaste,
     freeSolo = false,
-    autoSelect,
+    autoSelect = false,
     colDef
   } = props
 

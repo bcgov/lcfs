@@ -69,11 +69,7 @@ def fuel_supply_service():
 @pytest.mark.anyio
 async def test_get_fuel_supply_options(fuel_supply_service):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_service
-    mock_repo.get_fuel_supply_table_options = AsyncMock(
-        return_value=[
-            # Mocked data structure as expected from the database
-        ]
-    )
+    mock_repo.get_fuel_supply_table_options = AsyncMock(return_value={"fuel_types": []})
     compliance_period = "2023"
 
     response = await service.get_fuel_supply_options(compliance_period)
@@ -103,6 +99,7 @@ async def test_get_fuel_supply_list(fuel_supply_service):
 async def test_update_fuel_supply_not_found(fuel_supply_action_service):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
     mock_repo.get_fuel_supply_version_by_user = AsyncMock(return_value=None)
+
     fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
         fuel_type_id=1,

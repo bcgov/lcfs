@@ -22,6 +22,7 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
+from lcfs.utils.constants import default_ci
 
 logger = getLogger(__name__)
 
@@ -45,7 +46,11 @@ class FuelSupplyServices:
         fuel_category = FuelCategorySchema(
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
-            default_and_prescribed_ci=round(row_data["default_carbon_intensity"], 2),
+            default_and_prescribed_ci=(
+                round(row_data["default_carbon_intensity"], 2)
+                if row_data["fuel_type"] != "Other"
+                else default_ci.get(row_data["category"])
+            ),
         )
         provision = ProvisionOfTheActSchema(
             provision_of_the_act_id=row_data["provision_of_the_act_id"],
@@ -192,7 +197,11 @@ class FuelSupplyServices:
                 fuel_type_id=row_data["fuel_type_id"],
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
-                default_carbon_intensity=round(row_data["default_carbon_intensity"], 2),
+                default_carbon_intensity=(
+                    round(row_data["default_carbon_intensity"], 2)
+                    if row_data["fuel_type"] != "Other"
+                    else default_ci.get(row_data["category"])
+                ),
                 unit=row_data["unit"].value,
                 energy_density=(
                     energy_density if row_data["energy_density_id"] else None
@@ -214,8 +223,9 @@ class FuelSupplyServices:
         logger.info("Getting fuel supply table options")
         fs_options = await self.repo.get_fuel_supply_table_options(compliance_period)
         fuel_types = []
-        for row in fs_options:
+        for row in fs_options["fuel_types"]:
             self.fuel_type_row_mapper(compliance_period, fuel_types, row)
+
         return FuelTypeOptionsResponse(fuel_types=fuel_types)
 
     @service_handler

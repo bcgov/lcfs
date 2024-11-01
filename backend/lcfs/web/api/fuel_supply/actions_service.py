@@ -74,7 +74,11 @@ class FuelSupplyActionService:
             fuel_supply.ci_of_fuel = fuel_type.default_carbon_intensity
 
         # Set the Energy Effectiveness Ratio (EER) based on fuel type, category, and end-use
-        if fuel_supply.fuel_type_id and fuel_supply.fuel_category_id:
+        if (
+            fuel_supply.fuel_type_id
+            and fuel_supply.fuel_category_id
+            and fuel_supply.end_use_id
+        ):
             energy_effectiveness = await self.fuel_repo.get_energy_effectiveness_ratio(
                 fuel_supply.fuel_type_id,
                 fuel_supply.fuel_category_id,
@@ -87,11 +91,22 @@ class FuelSupplyActionService:
             fuel_code = await self.fuel_repo.get_fuel_code(fuel_supply.fuel_code_id)
             fuel_supply.ci_of_fuel = fuel_code.carbon_intensity
 
-        # Set energy density based on fuel type and calculate total energy
-        energy_density = await self.fuel_repo.get_energy_density(
-            fuel_supply.fuel_type_id
-        )
-        fuel_supply.energy_density = energy_density.density
+        # Determine energy density based on fuel type or custom value
+        if (
+            fuel_type.fuel_type
+            == "Other"  # TODO this should be an enum/constant lookup
+        ):
+            energy_density = (
+                fs_data.energy_density
+            )  # Use provided energy density for custom types
+        else:
+            energy_density = (
+                await self.fuel_repo.get_energy_density(fuel_supply.fuel_type_id)
+            ).density
+
+        fuel_supply.energy_density = energy_density
+
+        # Calculate total energy
         if fuel_supply.energy_density:
             fuel_supply.energy = int(fuel_supply.energy_density * fuel_supply.quantity)
 
@@ -99,6 +114,7 @@ class FuelSupplyActionService:
         fuel_supply.compliance_units = self.calculate_compliance_units_for_supply(
             fuel_supply
         )
+
         return fuel_supply
 
     async def _populate_and_save_fuel_supply(self, fuel_supply, fs_data):

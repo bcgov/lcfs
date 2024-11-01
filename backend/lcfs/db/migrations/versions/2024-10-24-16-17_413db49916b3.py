@@ -1,7 +1,7 @@
 """supplemental reports and versioning
 
 Revision ID: 413db49916b3
-Revises: bb5504e743a0
+Revises: 1b4d0dcf70a8
 Create Date: 2024-10-24 16:17:13.498002
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "413db49916b3"
-down_revision = "bb5504e743a0"
+down_revision = "1b4d0dcf70a8"
 branch_labels = None
 depends_on = None
 
@@ -288,7 +288,6 @@ def upgrade() -> None:
     op.drop_column("fuel_supply", "quarter")
     op.drop_column("fuel_supply", "previous_fuel_supply_id")
     op.drop_column("fuel_supply", "change_type")
-    op.drop_column("fuel_supply", "fuel_type_other")
     op.drop_column("fuel_supply", "supplemental_report_id")
     op.create_unique_constraint(
         op.f("uq_initiative_agreement_initiative_agreement_id"),
@@ -503,16 +502,6 @@ def downgrade() -> None:
             autoincrement=False,
             nullable=True,
             comment="Foreign key to the supplemental report",
-        ),
-    )
-    op.add_column(
-        "fuel_supply",
-        sa.Column(
-            "fuel_type_other",
-            sa.VARCHAR(length=1000),
-            autoincrement=False,
-            nullable=True,
-            comment="Other fuel type is one provided",
         ),
     )
     op.add_column(

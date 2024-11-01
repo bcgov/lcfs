@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, Numeric
+from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, String, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 
@@ -87,17 +87,14 @@ class FuelExport(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Foreign key to the provision of the act",
     )
-    custom_fuel_id = Column(
-        Integer,
-        ForeignKey("custom_fuel_type.custom_fuel_type_id"),
-        nullable=True,
-        comment="Foreign key to the custom fuel type",
-    )
     end_use_id = Column(
         Integer,
         ForeignKey("end_use_type.end_use_type_id"),
         nullable=True,
         comment="Foreign key to the end use type",
+    )
+    fuel_type_other = Column(
+        String(1000), nullable=True, comment="Other fuel type if one provided"
     )
 
     compliance_report = relationship("ComplianceReport", back_populates="fuel_exports")
@@ -105,7 +102,6 @@ class FuelExport(BaseModel, Auditable, Versioning):
     fuel_code = relationship("FuelCode")
     fuel_type = relationship("FuelType")
     provision_of_the_act = relationship("ProvisionOfTheAct")
-    custom_fuel_type = relationship("CustomFuelType")
     end_use_type = relationship("EndUseType")
 
     def __repr__(self):

@@ -136,6 +136,7 @@ class FuelExportSchema(BaseSchema):
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_type: FuelTypeSchema
+    fuel_type_other: Optional[str] = None
     quantity: int = Field(..., gt=0)
     units: str
     export_date: date
@@ -151,7 +152,6 @@ class FuelExportSchema(BaseSchema):
     fuel_code: Optional[FuelCodeResponseSchema] = None
     provision_of_the_act_id: Optional[int] = None
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    custom_fuel_id: Optional[int] = None
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
 
@@ -170,6 +170,7 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
+    fuel_type_other: Optional[str] = None
     fuel_type: Union[str, FuelTypeSchema]
     fuel_type_id: int
     fuel_category: Union[str, FuelCategoryResponseSchema]
@@ -189,7 +190,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     energy_density: Optional[float] = 0
     eer: Optional[float] = 0
     energy: Optional[float] = 0
-    custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
 
     @validator("quantity")

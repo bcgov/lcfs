@@ -10,7 +10,10 @@ import i18n from '@/i18n'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers'
+import {
+  StandardCellErrors,
+  StandardCellWarningAndErrors
+} from '@/utils/grid/errorRenderers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -199,16 +202,35 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
     ),
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-type-others',
+      queryFn: async ({ queryKey, client }) => {
+        const path = apiRoutes.getFuelTypeOthers
+
+        const response = await client.get(path)
+
+        params.node.data.apiDataCache = response.data
+        return response.data
+      },
+      title: 'transactionPartner',
+      api: params.api,
+      minWords: 1
+    }),
     cellStyle: (params) => {
-      const style = StandardCellErrors(params, errors)
-      const conditionalStyle =
-        params.data.fuelType === 'Other'
-          ? { backgroundColor: '#fff', borderColor: 'unset' }
-          : { backgroundColor: '#f2f2f2' }
+      const style = StandardCellWarningAndErrors(params, errors)
+      const conditionalStyle = /other/i.test(params.data.fuelType)
+        ? { backgroundColor: '#fff', borderColor: 'unset' }
+        : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
+    valueSetter: (params) => {
+      const { newValue: selectedFuelTypeOther, data } = params
+      data.fuelTypeOther = selectedFuelTypeOther
+      return true
+    },
     editable: (params) => params.data.fuelType === 'Other',
-    minWidth: 150
+    minWidth: 250
   },
   {
     field: 'fuelCategory',
@@ -312,6 +334,19 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
             ?.carbonIntensity || 0
         )
       } else {
+        if (optionsData) {
+          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+            const categories = optionsData?.fuelTypes?.find(
+              (obj) => params.data.fuelType === obj.fuelType
+            ).fuelCategories
+
+            const defaultCI = categories.find(
+              (cat) => cat.category === params.data.fuelCategory
+            ).defaultAndPrescribedCi
+
+            return defaultCI
+          }
+        }
         return (
           optionsData?.fuelTypes?.find(
             (obj) => params.data.fuelType === obj.fuelType
