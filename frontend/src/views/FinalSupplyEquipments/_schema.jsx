@@ -73,6 +73,20 @@ export const finalSupplyEquipmentColDefs = (
     }
   },
   {
+    field: 'kwhUsage',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
+    ),
+    minWidth: 220,
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    valueFormatter: (params) => {
+      const value = parseFloat(params.value);
+      return !isNaN(value) ? value.toFixed(2) : '';
+    },
+  },
+  {
     field: 'serialNbr',
     headerComponent: RequiredHeader,
     headerName: i18n.t(
@@ -112,6 +126,16 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
+    field: 'model',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
+    ),
+    minWidth: 220,
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    cellStyle: (params) => StandardCellErrors(params, errors)
+  },
+  {
     field: 'levelOfEquipment',
     headerComponent: RequiredHeader,
     headerName: i18n.t(
@@ -126,6 +150,26 @@ export const finalSupplyEquipmentColDefs = (
       disableCloseOnSelect: false,
       freeSolo: false,
       openOnFocus: true
+    },
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>)
+  },
+  {
+    field: 'ports',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
+    ),
+    minWidth: 220,
+    cellEditor: AutocompleteEditor,
+    cellEditorParams: {
+      options: optionsData?.ports || [],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true,
+      clearable: true
     },
     cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
@@ -174,6 +218,28 @@ export const finalSupplyEquipmentColDefs = (
       (!params.value && <Typography variant="body4">Select</Typography>),
     suppressKeyboardEvent,
     minWidth: 560
+  },
+  {
+    field: 'intendedUsers',
+    headerComponent: RequiredHeader,
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
+    ),
+    cellEditor: AutocompleteEditor,
+    cellEditorParams: {
+      options: optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
+      multiple: true,
+      disableCloseOnSelect: true,
+      openOnFocus: true
+    },
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellRenderer: (params) =>
+      (params.value && params.value !== '' && (
+        <CommonArrayRenderer disableLink {...params} />
+      )) ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    suppressKeyboardEvent,
+    minWidth: 315
   },
   {
     field: 'streetAddress',

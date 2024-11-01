@@ -84,7 +84,8 @@ async def get_final_supply_equipments(
     ],
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+
+@view_handler(["*"])
 async def save_final_supply_equipment_row(
     request: Request,
     request_data: FinalSupplyEquipmentCreateSchema = Body(...),
