@@ -102,7 +102,7 @@ async def dbsession(
         finally:
             # Rolling back the session here prevents data persistence,
             # which causes issues for tests that depend on others.
-            # await session.rollback()
+            await session.rollback()
             await session.close()
 
 
