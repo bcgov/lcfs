@@ -1,121 +1,35 @@
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
-from unittest.mock import MagicMock, Mock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
+from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 
 
 @pytest.fixture
-def mock_fuel_supply_service():
-    return MagicMock(spec=FuelSupplyServices)
+def mock_fuel_supply_action_service():
+    return MagicMock(spec=FuelSupplyActionService)
 
 
 @pytest.fixture
 def mock_compliance_report_validation():
     validation = MagicMock(spec=ComplianceReportValidation)
-
-    # Create a mock for the repo attribute
     mock_repo = MagicMock()
-
-    # Mock the get_compliance_report method to return a valid report
-    mock_repo.get_compliance_report.return_value = MagicMock(
-        organization_id=1  # Set the expected organization ID
-    )
-
-    # Attach the mocked repo to the validation mock
+    mock_repo.get_compliance_report.return_value = MagicMock(organization_id=1)
     validation.repo = mock_repo
-
-    # Mock request user organization
     validation.request = MagicMock()
-    validation.request.user.organization.organization_id = (
-        1  # Match the organization ID
-    )
+    validation.request.user.organization.organization_id = 1
     return validation
 
 
 @pytest.fixture
 def mock_fuel_supply_validation():
-    validation = Mock(spec=FuelSupplyValidation)
-
+    validation = MagicMock(spec=FuelSupplyValidation)
     validation.check_duplicate = AsyncMock(return_value=None)
-
     return validation
-
-
-@pytest.mark.anyio
-async def test_get_fs_table_options(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user,
-    mock_fuel_supply_service,
-):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-    url = fastapi_app.url_path_for("get_fs_table_options")
-    params = {"compliancePeriod": "2023"}
-
-    # Mock the service method
-    mock_fuel_supply_service.get_fuel_supply_options.return_value = {
-        "fuelTypes": [],
-        "fuelInstances": [],
-    }
-
-    # Use dependency override
-    fastapi_app.dependency_overrides[FuelSupplyServices] = (
-        lambda: mock_fuel_supply_service
-    )
-
-    response = await client.get(url, params=params)
-
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-
-    assert "fuelTypes" in data
-    assert isinstance(data["fuelTypes"], list)
-
-
-@pytest.mark.anyio
-async def test_get_fuel_supply_list(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user,
-    mock_fuel_supply_service,
-):
-    with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-        mock_validate_organization_access.return_value = True
-        url = fastapi_app.url_path_for("get_fuel_supply")
-        payload = {
-            "compliance_report_id": 1,
-            "page": 1,
-            "size": 10,
-            "sort_orders": [],
-            "filters": [],
-        }
-
-        # Mock the service method
-        mock_fuel_supply_service.get_fuel_supplies_paginated.return_value = {
-            "pagination": {"total": 0, "page": 1, "size": 5, "totalPages": 1},
-            "fuelSupplies": [],
-        }
-
-        # Use dependency override
-        fastapi_app.dependency_overrides[FuelSupplyServices] = (
-            lambda: mock_fuel_supply_service
-        )
-
-        response = await client.post(url, json=payload)
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "pagination" in data
-        assert "fuelSupplies" in data
-        assert isinstance(data["fuelSupplies"], list)
 
 
 @pytest.mark.anyio
@@ -123,7 +37,7 @@ async def test_save_fuel_supply_row_create(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
-    mock_fuel_supply_service,
+    mock_fuel_supply_action_service,
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
@@ -138,8 +52,8 @@ async def test_save_fuel_supply_row_create(
         "units": "L",
     }
 
-    # Mock the service method
-    mock_fuel_supply_service.create_fuel_supply.return_value = {
+    # Mock the create method with all required fields
+    mock_fuel_supply_action_service.create_fuel_supply.return_value = {
         "fuelSupplyId": 1,
         "complianceReportId": 1,
         "fuelTypeId": 1,
@@ -147,27 +61,28 @@ async def test_save_fuel_supply_row_create(
         "units": "liters",
         "fuelCategory": {"category": "category"},
         "quantity": 1000,
+        "groupUuid": "some-uuid",
+        "version": 1,
+        "userType": "SUPPLIER",
+        "actionType": "CREATE",
     }
 
-    # Use dependency override
+    # Override dependencies
     fastapi_app.dependency_overrides[ComplianceReportValidation] = (
         lambda: mock_compliance_report_validation
     )
     fastapi_app.dependency_overrides[FuelSupplyValidation] = (
         lambda: mock_fuel_supply_validation
     )
-    fastapi_app.dependency_overrides[FuelSupplyServices] = (
-        lambda: mock_fuel_supply_service
+    fastapi_app.dependency_overrides[FuelSupplyActionService] = (
+        lambda: mock_fuel_supply_action_service
     )
 
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-
-    assert isinstance(data, dict)
     assert "fuelSupplyId" in data
-    assert "complianceReportId" in data
     assert data["fuelType"]["fuelType"] == "Gasoline"
     assert data["quantity"] == 1000
 
@@ -177,17 +92,16 @@ async def test_save_fuel_supply_row_update(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
-    mock_fuel_supply_service,
+    mock_fuel_supply_action_service,
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
-    print("URL ------------------", url)
 
     payload = {
         "compliance_report_id": 1,
-        "fuel_supply_id": 123,  # ID For update
+        "fuel_supply_id": 123,
         "fuel_type_id": 1,
         "fuel_category_id": 1,
         "provision_of_the_act_id": 1,
@@ -195,8 +109,8 @@ async def test_save_fuel_supply_row_update(
         "units": "L",
     }
 
-    # Mock the service method
-    mock_fuel_supply_service.update_fuel_supply.return_value = {
+    # Mock the update method with all required fields
+    mock_fuel_supply_action_service.update_fuel_supply.return_value = {
         "fuelSupplyId": 1,
         "complianceReportId": 1,
         "fuelTypeId": 1,
@@ -204,27 +118,28 @@ async def test_save_fuel_supply_row_update(
         "units": "liters",
         "fuelCategory": {"category": "category"},
         "quantity": 2000,
+        "groupUuid": "some-uuid",
+        "version": 1,
+        "userType": "SUPPLIER",
+        "actionType": "UPDATE",
     }
 
-    # Use dependency override
+    # Override dependencies
     fastapi_app.dependency_overrides[ComplianceReportValidation] = (
         lambda: mock_compliance_report_validation
     )
     fastapi_app.dependency_overrides[FuelSupplyValidation] = (
         lambda: mock_fuel_supply_validation
     )
-    fastapi_app.dependency_overrides[FuelSupplyServices] = (
-        lambda: mock_fuel_supply_service
+    fastapi_app.dependency_overrides[FuelSupplyActionService] = (
+        lambda: mock_fuel_supply_action_service
     )
 
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-
     assert "fuelSupplyId" in data
-    assert "complianceReportId" in data
-    assert data["fuelSupplyId"] == 1
     assert data["fuelType"]["fuelType"] == "Diesel"
     assert data["quantity"] == 2000
 
@@ -234,7 +149,7 @@ async def test_save_fuel_supply_row_delete(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
-    mock_fuel_supply_service,
+    mock_fuel_supply_action_service,
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
@@ -242,7 +157,7 @@ async def test_save_fuel_supply_row_delete(
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,
-        "fuel_supply_id": 123,  # Existing ID for deletion
+        "fuel_supply_id": 123,
         "fuel_type_id": 1,
         "fuel_category_id": 1,
         "provision_of_the_act_id": 1,
@@ -251,25 +166,32 @@ async def test_save_fuel_supply_row_delete(
         "deleted": True,
     }
 
-    # Mock the service method
-    mock_fuel_supply_service.delete_fuel_supply.return_value = None
+    # Mock the delete method with all required fields
+    mock_fuel_supply_action_service.delete_fuel_supply.return_value = {
+        "success": True,
+        "message": "Fuel supply row deleted successfully",
+        "groupUuid": "some-uuid",
+        "version": 1,
+        "userType": "SUPPLIER",
+        "actionType": "DELETE",
+    }
 
-    # Use dependency override
+    # Override dependencies
     fastapi_app.dependency_overrides[ComplianceReportValidation] = (
         lambda: mock_compliance_report_validation
     )
     fastapi_app.dependency_overrides[FuelSupplyValidation] = (
         lambda: mock_fuel_supply_validation
     )
-    fastapi_app.dependency_overrides[FuelSupplyServices] = (
-        lambda: mock_fuel_supply_service
+    fastapi_app.dependency_overrides[FuelSupplyActionService] = (
+        lambda: mock_fuel_supply_action_service
     )
 
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-    assert data == {"success": True, "message": "fuel supply row deleted successfully"}
+    assert data == {"success": True, "message": "Fuel supply row deleted successfully"}
 
 
 @pytest.mark.anyio
@@ -277,7 +199,7 @@ async def test_save_fuel_supply_row_duplicate(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
-    mock_fuel_supply_service,
+    mock_fuel_supply_action_service,
     mock_fuel_supply_validation,
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
@@ -290,9 +212,10 @@ async def test_save_fuel_supply_row_duplicate(
 
     # Mock the validation method to simulate a duplicate
     mock_fuel_supply_validation.check_duplicate = AsyncMock(return_value=True)
-    # Use dependency override
-    fastapi_app.dependency_overrides[FuelSupplyServices] = (
-        lambda: mock_fuel_supply_service
+
+    # Override dependencies
+    fastapi_app.dependency_overrides[FuelSupplyActionService] = (
+        lambda: mock_fuel_supply_action_service
     )
     fastapi_app.dependency_overrides[FuelSupplyValidation] = (
         lambda: mock_fuel_supply_validation

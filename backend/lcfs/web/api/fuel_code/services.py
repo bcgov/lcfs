@@ -1,7 +1,6 @@
 import asyncio
 import structlog
 import math
-from typing import List
 from fastapi import Depends
 from datetime import datetime
 
@@ -14,9 +13,6 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.fuel_code.schema import (
-    AdditionalCarbonIntensitySchema,
-    EnergyDensitySchema,
-    EnergyEffectivenessRatioSchema,
     FuelCodeCreateSchema,
     FuelCodeSchema,
     FuelCodesSchema,
@@ -141,10 +137,11 @@ class FuelCodeServices:
         fuel_status = await self.repo.get_fuel_status_by_status(fuel_code.status)
         fuel_type = await self.repo.get_fuel_type_by_name(fuel_code.fuel)
         facility_nameplate_capacity_units_enum = (
-            QuantityUnitsEnum(fuel_code.facility_nameplate_capacity_unit).name
+            QuantityUnitsEnum(fuel_code.facility_nameplate_capacity_unit)
             if fuel_code.facility_nameplate_capacity_unit is not None
             else None
         )
+        transport_modes = await self.repo.get_transport_modes()
 
         fc = FuelCode(
             **fuel_code.model_dump(
@@ -154,7 +151,7 @@ class FuelCodeServices:
                     "prefix_id",
                     "fuel",
                     "fuel_type_id",
-                    "feedstock_transport_mode",
+                    "feedstock_fuel_transport_mode",
                     "finished_fuel_transport_mode",
                     "feedstock_fuel_transport_modes",
                     "finished_fuel_transport_modes",
@@ -173,40 +170,38 @@ class FuelCodeServices:
             facility_nameplate_capacity_unit=facility_nameplate_capacity_units_enum,
         )
 
-        fc.feedstock_fuel_transport_modes = [
-            FeedstockFuelTransportMode(
-                fuel_code_id=fc.fuel_code_id,
-                transport_mode_id=item.transport_mode_id,
+        fc.feedstock_fuel_transport_modes = []
+        fc.finished_fuel_transport_modes = []
+        for transport_mode in fuel_code.feedstock_fuel_transport_mode or []:
+            matching_transport_mode = next(
+                (tm for tm in transport_modes if tm.transport_mode == transport_mode),
+                None,
             )
-            for item in (fuel_code.feedstock_fuel_transport_modes or [])
-        ]
-        fc.finished_fuel_transport_modes = [
-            FinishedFuelTransportMode(
-                fuel_code_id=fc.fuel_code_id,
-                transport_mode_id=item.transport_mode_id,
+            if matching_transport_mode:
+                fc.feedstock_fuel_transport_modes.append(
+                    FeedstockFuelTransportMode(
+                        fuel_code_id=fc.fuel_code_id,
+                        transport_mode_id=matching_transport_mode.transport_mode_id,
+                    )
+                )
+
+        for transport_mode in fuel_code.finished_fuel_transport_mode or []:
+            matching_transport_mode = next(
+                (tm for tm in transport_modes if tm.transport_mode == transport_mode),
+                None,
             )
-            for item in (fuel_code.finished_fuel_transport_modes or [])
-        ]
+            if matching_transport_mode:
+                fc.finished_fuel_transport_modes.append(
+                    FinishedFuelTransportMode(
+                        fuel_code_id=fc.fuel_code_id,
+                        transport_mode_id=matching_transport_mode.transport_mode_id,
+                    )
+                )
 
         return fc
 
     @service_handler
-    async def save_fuel_codes(self, fuel_codes: List[FuelCodeCreateSchema]) -> str:
-        """
-        Saves the list of fuel codes.
-        """
-        logger.info(
-            "Saving fuel codes",
-            fuel_code_count=len(fuel_codes),
-        )
-        fuel_code_models = []
-        for fuel_code in fuel_codes:
-            fuel_code_models.append(await self.convert_to_model(fuel_code))
-        if len(fuel_code_models) > 0:
-            return await self.repo.save_fuel_codes(fuel_code_models)
-
-    @service_handler
-    async def create_fuel_code(self, fuel_code: FuelCodeCreateSchema) -> FuelCode:
+    async def create_fuel_code(self, fuel_code: FuelCodeCreateSchema) -> FuelCodeSchema:
         """
         Create a new fuel code.
         """
@@ -216,8 +211,9 @@ class FuelCodeServices:
         )
         fuel_code.fuel_suffix = fuel_suffix_value
         fuel_code_model = await self.convert_to_model(fuel_code)
-        fuel_code_model.fuel_status_id = 1  # set to draft by default
-        return await self.repo.create_fuel_code(fuel_code_model)
+        fuel_code_model = await self.repo.create_fuel_code(fuel_code_model)
+        result = FuelCodeSchema.model_validate(fuel_code_model)
+        return result
 
     @service_handler
     async def get_fuel_code(self, fuel_code_id: int):
@@ -293,41 +289,3 @@ class FuelCodeServices:
     @service_handler
     async def delete_fuel_code(self, fuel_code_id: int):
         return await self.repo.delete_fuel_code(fuel_code_id)
-
-    async def get_energy_densities(self) -> List[EnergyDensitySchema]:
-        """
-        Gets the list of energy densities.
-        """
-        energy_densities = await self.repo.get_energy_densities()
-        return [
-            EnergyDensitySchema.model_validate(energy_density)
-            for energy_density in energy_densities
-        ]
-
-    @service_handler
-    async def get_energy_effectiveness_ratios(
-        self,
-    ) -> List[EnergyEffectivenessRatioSchema]:
-        """
-        Gets the list of energy effectiveness ratios.
-        """
-        energy_effectiveness_ratios = await self.repo.get_energy_effectiveness_ratios()
-        return [
-            EnergyEffectivenessRatioSchema.model_validate(value)
-            for value in energy_effectiveness_ratios
-        ]
-
-    @service_handler
-    async def get_use_of_a_carbon_intensities(
-        self,
-    ) -> List[AdditionalCarbonIntensitySchema]:
-        """
-        Gets the list of addtional use of a carbon intensity (UCI).
-        """
-        additional_carbon_intensities = (
-            await self.repo.get_use_of_a_carbon_intensities()
-        )
-        return [
-            AdditionalCarbonIntensitySchema.model_validate(value)
-            for value in additional_carbon_intensities
-        ]

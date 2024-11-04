@@ -1,3 +1,5 @@
+import { roles } from '@/constants/roles'
+
 export const KEY_LEFT = 'ArrowLeft'
 export const KEY_UP = 'ArrowUp'
 export const KEY_RIGHT = 'ArrowRight'
@@ -12,17 +14,17 @@ export const KEY_PERIOD = '.'
 
 // badge sizes for various user roles:
 export const ROLES_BADGE_SIZE = {
-  Transfer: '78',
-  'Signing Authority': '140',
-  'Compliance Reporting': '172',
-  'Manage Users': '119',
-  'Read Only': '91',
-  Administrator: '115',
-  'Compliance Manager': '166',
-  Analyst: '71',
-  Director: '77',
-  Supplier: '0',
-  Government: '0'
+  [roles.transfers]: 78,
+  [roles.signing_authority]: 140,
+  [roles.compliance_reporting]: 172,
+  [roles.manage_users]: 119,
+  [roles.read_only]: 91,
+  [roles.administrator]: 115,
+  [roles.compliance_manager]: 166,
+  [roles.analyst]: 71,
+  [roles.director]: 77,
+  [roles.supplier]: 0,
+  [roles.government]: 0
 }
 
 export const SUMMARY = {
@@ -48,4 +50,10 @@ export const SUMMARY = {
   LINE_20: 19,
   LINE_21: 20,
   LINE_22: 21
+}
+
+export const DEFAULT_CI_FUEL = {
+  Gasoline: 93.67,
+  Diesel: 100.21,
+  'Jet fuel': 88.83
 }

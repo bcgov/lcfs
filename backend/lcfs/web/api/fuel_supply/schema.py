@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -7,6 +7,7 @@ from lcfs.web.api.base import (
     SortOrder,
 )
 from pydantic import Field, field_validator
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 
 
 class FuelTypeQuantityUnitsEnumSchema(str, Enum):
@@ -78,7 +79,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
-    default_carbon_intensity: float
+    default_carbon_intensity: Optional[float] = None
     unit: str
     unrecognized: bool
     energy_density: Optional[EnergyDensitySchema]
@@ -129,26 +130,34 @@ class FuelCodeResponseSchema(BaseSchema):
 class FuelSupplyCreateUpdateSchema(BaseSchema):
     compliance_report_id: int
     fuel_supply_id: Optional[int] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
     fuel_type_id: int
     fuel_category_id: int
     end_use_id: Optional[int] = None
     provision_of_the_act_id: int
     quantity: int
     units: str
-
+    fuel_type_other: Optional[str] = None
     fuel_code_id: Optional[int] = None
     target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    custom_fuel_id: Optional[int] = None
     deleted: Optional[bool] = None
+
+    class Config:
+        use_enum_values = True
 
 
 class FuelSupplyResponseSchema(BaseSchema):
     fuel_supply_id: int
     compliance_report_id: int
+    group_uuid: str
+    version: int
+    user_type: str
+    action_type: str
     fuel_type_id: int
     fuel_type: FuelTypeSchema
     quantity: int
@@ -165,9 +174,9 @@ class FuelSupplyResponseSchema(BaseSchema):
     fuel_code: Optional[FuelCodeResponseSchema] = None
     provision_of_the_act_id: Optional[int] = None
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    custom_fuel_id: Optional[int] = None
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
+    fuel_type_other: Optional[str] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

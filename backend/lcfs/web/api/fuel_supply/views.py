@@ -1,17 +1,9 @@
 import structlog
 from typing import Optional, Union
 
-from fastapi import (
-    APIRouter,
-    Body,
-    status,
-    Request,
-    Response,
-    Depends,
-)
+from fastapi import APIRouter, Body, Depends, Request, Response, status, HTTPException
 from starlette.responses import JSONResponse
 
-from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
@@ -25,11 +17,11 @@ from lcfs.web.api.fuel_supply.schema import (
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
+from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
-get_async_db = dependencies.get_async_db_session
 
 
 @router.get(
@@ -59,7 +51,7 @@ async def get_fuel_supply(
     compliance_report_id = request_data.compliance_report_id
     await report_validate.validate_organization_access(compliance_report_id)
     if hasattr(request_data, "page") and request_data.page is not None:
-        # handle pagination.
+        # Handle pagination.
         pagination = PaginationRequestSchema(
             page=request_data.page,
             size=request_data.size,
@@ -78,41 +70,44 @@ async def get_fuel_supply(
     response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def save_fuel_supply_row(
     request: Request,
     response: Response,
     request_data: FuelSupplyCreateUpdateSchema = Body(...),
-    fs_service: FuelSupplyServices = Depends(),
+    action_service: FuelSupplyActionService = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
     fs_validate: FuelSupplyValidation = Depends(),
 ):
     """Endpoint to save single fuel supply row"""
     compliance_report_id = request_data.compliance_report_id
-    fs_id: Optional[int] = request_data.fuel_supply_id
-
     await report_validate.validate_organization_access(compliance_report_id)
 
-    if request_data.deleted:
-        # Delete existing fuel supply row
-        await fs_service.delete_fuel_supply(fs_id)
-        return DeleteFuelSupplyResponseSchema(
-            success=True, message="fuel supply row deleted successfully"
+    # Determine user type for record creation
+    current_user_type = request.user.user_type
+    if not current_user_type:
+        raise HTTPException(
+            status_code=403, detail="User does not have the required role."
         )
-    elif fs_id:
-        duplicate_id = await fs_validate.check_duplicate(request_data)
-        if duplicate_id is not None:
-            duplicate_response = format_duplicate_error(duplicate_id)
-            return duplicate_response
-        # Update existing fuel supply row
-        return await fs_service.update_fuel_supply(request_data)
+
+    if request_data.deleted:
+        # Delete existing fuel supply row using actions service
+        return await action_service.delete_fuel_supply(request_data, current_user_type)
     else:
         duplicate_id = await fs_validate.check_duplicate(request_data)
         if duplicate_id is not None:
             duplicate_response = format_duplicate_error(duplicate_id)
             return duplicate_response
-        # Create new fuel supply row
-        return await fs_service.create_fuel_supply(request_data)
+        if request_data.fuel_supply_id:
+            # Update existing fuel supply row using actions service
+            return await action_service.update_fuel_supply(
+                request_data, current_user_type
+            )
+        else:
+            # Create new fuel supply row using actions service
+            return await action_service.create_fuel_supply(
+                request_data, current_user_type
+            )
 
 
 def format_duplicate_error(duplicate_id: int):

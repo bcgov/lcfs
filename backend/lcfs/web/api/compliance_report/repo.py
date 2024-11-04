@@ -18,8 +18,10 @@ from lcfs.web.api.base import (
     get_enum_value,
 )
 from lcfs.db.models.compliance import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport, ReportType
-from lcfs.db.models.compliance.SupplementalReport import SupplementalReport
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    ReportingFrequency,
+)
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -37,13 +39,19 @@ from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 
 logger = structlog.get_logger(__name__)
 
 
 class ComplianceReportRepository:
-    def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
+    def __init__(
+        self,
+        db: AsyncSession = Depends(get_async_db_session),
+        fuel_supply_repo: FuelSupplyRepository = Depends(),
+    ):
         self.db = db
+        self.fuel_supply_repo = fuel_supply_repo
 
     def apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
@@ -66,13 +74,20 @@ class ComplianceReportRepository:
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
                 normalized_value = filter_value.lower()
-                enum_value_map = {enum_val.value.lower(): enum_val for enum_val in ComplianceReportStatusEnum}
+                enum_value_map = {
+                    enum_val.value.lower(): enum_val
+                    for enum_val in ComplianceReportStatusEnum
+                }
                 filter_value = enum_value_map.get(normalized_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReport, "report_type")
-                filter_value = ReportType.ANNUAL.value if filter_value.lower().startswith("c") else ReportType.QUARTERLY.value
+                field = get_field_for_filter(ComplianceReport, "reporting_frequency")
+                filter_value = (
+                    ReportingFrequency.ANNUAL.value
+                    if filter_value.lower().startswith("c")
+                    else ReportingFrequency.QUARTERLY.value
+                )
             elif filter.field == "compliance_period":
                 field = get_field_for_filter(CompliancePeriod, "description")
             else:
@@ -151,36 +166,19 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.fuel_supplies),
+                joinedload(ComplianceReport.other_uses),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+                joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-
-    @repo_handler
-    async def get_supplemental_report(
-        self, supplemental_report_id: int
-    ) -> Optional[SupplementalReport]:
-        """
-        Identify and retrieve the supplemental report by id.
-        """
-        return await self.db.scalar(
-            select(SupplementalReport).where(
-                SupplementalReport.supplemental_report_id == supplemental_report_id
-            )
-        )
-
-    @repo_handler
-    async def get_supplemental_reports(
-        self, original_report_id: int
-    ) -> List[SupplementalReport]:
-        """
-        Identify and retrieve the supplemental reports by the original report id.
-        """
-        result = await self.db.execute(
-            select(SupplementalReport)
-            .where(SupplementalReport.original_report_id == original_report_id)
-            .order_by(SupplementalReport.create_date.asc())
-        )
-        return result.scalars().all()
 
     @repo_handler
     async def get_compliance_report_status_by_desc(self, status: str) -> int:
@@ -331,22 +329,43 @@ class ComplianceReportRepository:
         self, pagination: PaginationRequestSchema, organization_id: int = None
     ):
         """
-        Retrieve a paginated list of compliance reports from the database
-        Supports pagination and sorting.
+        Retrieve a paginated list of the latest compliance reports from each compliance_report_group_uuid.
+        Supports pagination, filtering, and sorting.
         """
-        # Build the base query statement
+        # Base query conditions
         conditions = []
         if organization_id:
             conditions.append(ComplianceReport.organization_id == organization_id)
 
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_filters(pagination, conditions)
-        # Apply pagination and sorting parameters
+
+        # Pagination and offset setup
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
+        # Build the main query
+        subquery = (
+            select(
+                ComplianceReport.compliance_report_group_uuid,
+                func.max(ComplianceReport.version).label("latest_version"),
+            )
+            .where(and_(*conditions))
+            .group_by(ComplianceReport.compliance_report_group_uuid)
+            .subquery()
+        )
+
+        # Join the main ComplianceReport table with the subquery to get the latest version per group
         query = (
             select(ComplianceReport)
+            .join(
+                subquery,
+                and_(
+                    ComplianceReport.compliance_report_group_uuid
+                    == subquery.c.compliance_report_group_uuid,
+                    ComplianceReport.version == subquery.c.latest_version,
+                ),
+            )
             .options(
                 joinedload(ComplianceReport.organization),
                 joinedload(ComplianceReport.compliance_period),
@@ -359,17 +378,11 @@ class ComplianceReportRepository:
                     ComplianceReportHistory.user_profile
                 ),
             )
-            .join(
-                ComplianceReportStatus,
-                ComplianceReport.current_status_id
-                == ComplianceReportStatus.compliance_report_status_id,
-            )
-            .where(and_(*conditions))
         )
-        # Apply sorts
+
+        # Apply sorting from pagination
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
-            # Add the sorting condition to the query
             if order.field == "status":
                 order.field = get_field_for_filter(ComplianceReportStatus, "status")
                 query = query.join(
@@ -390,23 +403,24 @@ class ComplianceReportRepository:
                     Organization,
                     ComplianceReport.organization_id == Organization.organization_id,
                 )
-            elif order.field == "type":
-                order.field = get_field_for_filter(ComplianceReport, "report_type")
             else:
                 order.field = get_field_for_filter(ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))
 
-        query_result = (await self.db.execute(query)).unique().scalars().all()
-        total_count = len(query_result)
-        reports = (
+        # Execute query with offset and limit for pagination
+        query_result = (
             (await self.db.execute(query.offset(offset).limit(limit)))
             .unique()
             .scalars()
             .all()
         )
-        return [
-            ComplianceReportBaseSchema.model_validate(report) for report in reports
-        ], total_count
+        total_count = len(query_result)
+
+        # Transform results into Pydantic schemas
+        reports = [
+            ComplianceReportBaseSchema.model_validate(report) for report in query_result
+        ]
+        return reports, total_count
 
     @repo_handler
     async def get_compliance_report_by_id(self, report_id: int, is_model: bool = False):
@@ -428,6 +442,7 @@ class ComplianceReportRepository:
                         joinedload(ComplianceReport.history).joinedload(
                             ComplianceReportHistory.user_profile
                         ),
+                        joinedload(ComplianceReport.transaction),
                     )
                     .where(ComplianceReport.compliance_report_id == report_id)
                 )
@@ -440,75 +455,6 @@ class ComplianceReportRepository:
             return result
         else:
             return ComplianceReportBaseSchema.model_validate(result)
-
-    # @repo_handler
-    # async def get_intended_use_types(self) -> List[EndUseType]:
-    #     """
-    #     Retrieve a list of intended use types from the database
-    #     """
-    #     return (
-    #         (
-    #             await self.db.execute(
-    #                 select(EndUseType).where(EndUseType.intended_use == True)
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
-
-    # @repo_handler
-    # async def get_intended_use_by_name(self, intended_use: str) -> EndUseType:
-    #     """
-    #     Retrieve intended use type by name from the database
-    #     """
-    #     result = await self.db.scalar(
-    #         select(EndUseType).where(EndUseType.name == intended_use)
-    #     )
-    #     return result
-
-    # @repo_handler
-    # async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
-    #     """
-    #     Retrieve a list of levels of equipment from the database
-    #     """
-    #     return (await self.db.execute(select(LevelOfEquipment))).scalars().all()
-
-    # @repo_handler
-    # async def get_levels_of_equipment_by_name(self, name: str) -> LevelOfEquipment:
-    #     """
-    #     Get the levels of equipment by name
-    #     """
-    #     return (
-    #         (
-    #             await self.db.execute(
-    #                 select(LevelOfEquipment).where(LevelOfEquipment.name == name)
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
-
-    # @repo_handler
-    # async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
-    #     """
-    #     Retrieve a list of levels of equipment from the database
-    #     """
-    #     return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
-
-    # @repo_handler
-    # async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
-    #     """
-    #     Get the levels of equipment by name
-    #     """
-    #     return (
-    #         (
-    #             await self.db.execute(
-    #                 select(FuelMeasurementType).where(FuelMeasurementType.type == type)
-    #             )
-    #         )
-    #         .scalars()
-    #         .all()
-    #     )
 
     @repo_handler
     async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
@@ -537,19 +483,40 @@ class ComplianceReportRepository:
         self, report: ComplianceReport
     ) -> ComplianceReportBaseSchema:
         """Persists the changes made to the ComplianceReport object to the database."""
-        await self.db.flush()
-        await self.db.refresh(
-            report,
-            [
-                "compliance_period",
-                "organization",
-                "current_status",
-                "summary",
-                "history",
-                "update_date",
-            ],
-        )
-        return ComplianceReportBaseSchema.model_validate(report)
+        try:
+            await self.db.flush()
+
+            # Reload the report with all necessary relationships
+            refreshed_report = await self.db.scalar(
+                select(ComplianceReport)
+                .options(
+                    joinedload(ComplianceReport.compliance_period),
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.summary),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.status
+                    ),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.user_profile
+                    ),
+                )
+                .where(
+                    ComplianceReport.compliance_report_id == report.compliance_report_id
+                )
+            )
+
+            if not refreshed_report:
+                raise ValueError(
+                    f"Could not reload report {report.compliance_report_id}"
+                )
+
+            return ComplianceReportBaseSchema.model_validate(refreshed_report)
+
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"Error updating compliance report: {e}")
+            raise
 
     @repo_handler
     async def add_compliance_report_summary(
@@ -565,31 +532,30 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, report_id: int, summary: ComplianceReportSummarySchema
+        self, summary: ComplianceReportSummarySchema
     ):
         """
         Save the compliance report summary to the database.
 
-        :param report_id: The ID of the compliance report
         :param summary: The generated summary data
         """
-        existing_summary = await self.get_summary_by_report_id(report_id)
+        existing_summary = await self.get_summary_by_report_id(
+            summary.compliance_report_id
+        )
 
         if existing_summary:
             summary_obj = existing_summary
         else:
-            raise ValueError(f"No summary found with report ID {report_id}")
+            raise ValueError(
+                f"No summary found with report ID {summary.compliance_report_id}"
+            )
 
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
                 column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                setattr(
-                    summary_obj,
-                    column_name,
-                    int(getattr(row, fuel_type) or getattr(summary_obj, column_name)),
-                )
+                setattr(summary_obj, column_name, int(getattr(row, fuel_type)))
 
         # Update low carbon fuel target summary
         for row in summary.low_carbon_fuel_target_summary:
@@ -597,7 +563,7 @@ class ComplianceReportRepository:
             setattr(
                 summary_obj,
                 column_name,
-                int(row.value or getattr(summary_obj, column_name)),
+                int(row.value),
             )
 
         # Update non-compliance penalty summary
@@ -610,25 +576,16 @@ class ComplianceReportRepository:
             elif row.line == "":  # Total row
                 summary_obj.total_non_compliance_penalty_payable = row.total_value
 
-        summary_obj.version += 1
-
         self.db.add(summary_obj)
         await self.db.flush()
         await self.db.refresh(summary_obj)
         return summary_obj
 
     @repo_handler
-    async def get_summary_by_report_id(
-        self, report_id: int, is_supplemental: bool = False
-    ) -> ComplianceReportSummary:
-        if is_supplemental:
-            query = select(ComplianceReportSummary).where(
-                ComplianceReportSummary.supplemental_report_id == report_id
-            )
-        else:
-            query = select(ComplianceReportSummary).where(
-                ComplianceReportSummary.compliance_report_id == report_id
-            )
+    async def get_summary_by_report_id(self, report_id: int) -> ComplianceReportSummary:
+        query = select(ComplianceReportSummary).where(
+            ComplianceReportSummary.compliance_report_id == report_id
+        )
 
         result = await self.db.execute(query)
         return result.scalars().first()
@@ -710,38 +667,31 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def calculate_fuel_quantities(
-        self, compliance_report_id: int, fossil_derived: bool
+        self, compliance_report: ComplianceReport, fossil_derived: bool
     ) -> Dict[str, float]:
+        """
+        Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
+        """
         fuel_quantities = defaultdict(float)
 
-        def aggregate_fuel_quantities(result):
-            for row in result:
-                fuel_category = row.category.lower().replace(" ", "_")
-                fuel_quantities[fuel_category] += row.quantity
-
-        # Aggregate fuel supply quantities
-        fuel_supply_query = (
-            select(
-                FuelCategory.category,
-                func.coalesce(func.sum(FuelSupply.quantity), 0).label("quantity"),
-            )
-            .select_from(FuelSupply)
-            .join(FuelType, FuelSupply.fuel_type_id == FuelType.fuel_type_id)
-            .join(
-                FuelCategory,
-                FuelSupply.fuel_category_id == FuelCategory.fuel_category_id,
-            )
-            .where(
-                FuelSupply.compliance_report_id == compliance_report_id,
-                FuelType.fossil_derived.is_(fossil_derived),
-                FuelType.other_uses_fossil_derived.is_(fossil_derived),
-            )
-            .group_by(FuelCategory.category)
+        # Get effective fuel supplies using the updated logic
+        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
+            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
         )
 
-        aggregate_fuel_quantities(await self.db.execute(fuel_supply_query))
+        # Filter fuel supplies based on fossil_derived flag
+        filtered_fuel_supplies = [
+            fs
+            for fs in effective_fuel_supplies
+            if fs.fuel_type.fossil_derived == fossil_derived
+        ]
 
-        # Aggregate other uses quantities
+        # Aggregate quantities from fuel supplies
+        for fs in filtered_fuel_supplies:
+            fuel_category = fs.fuel_category.category.lower().replace(" ", "_")
+            fuel_quantities[fuel_category] += fs.quantity
+
+        # Aggregate other uses quantities (OtherUses does NOT have versioning)
         other_uses_query = (
             select(
                 FuelCategory.category,
@@ -756,16 +706,20 @@ class ComplianceReportRepository:
                 OtherUses.fuel_category_id == FuelCategory.fuel_category_id,
             )
             .where(
-                OtherUses.compliance_report_id == compliance_report_id,
+                OtherUses.compliance_report_id
+                == compliance_report.compliance_report_id,
                 FuelType.fossil_derived.is_(fossil_derived),
                 FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
             .group_by(FuelCategory.category)
         )
 
-        aggregate_fuel_quantities(await self.db.execute(other_uses_query))
+        other_uses_result = await self.db.execute(other_uses_query)
+        for row in other_uses_result:
+            fuel_category = row.category.lower().replace(" ", "_")
+            fuel_quantities[fuel_category] += row.quantity
 
-        # Aggregate allocation agreement quantities for renewable fuels
+        # Aggregate allocation agreement quantities for renewable fuels (AllocationAgreement does NOT have versioning)
         if not fossil_derived:
             allocation_agreement_query = (
                 select(
@@ -784,13 +738,17 @@ class ComplianceReportRepository:
                     == FuelCategory.fuel_category_id,
                 )
                 .where(
-                    AllocationAgreement.compliance_report_id == compliance_report_id,
+                    AllocationAgreement.compliance_report_id
+                    == compliance_report.compliance_report_id,
                     FuelType.fossil_derived.is_(False),
                     FuelType.other_uses_fossil_derived.is_(False),
                 )
                 .group_by(FuelCategory.category)
             )
-            aggregate_fuel_quantities(await self.db.execute(allocation_agreement_query))
+            allocation_result = await self.db.execute(allocation_agreement_query)
+            for row in allocation_result:
+                fuel_category = row.category.lower().replace(" ", "_")
+                fuel_quantities[fuel_category] += row.quantity
 
         return dict(fuel_quantities)
 
@@ -812,3 +770,31 @@ class ComplianceReportRepository:
             .scalars()
             .all()
         )
+
+    @repo_handler
+    async def get_latest_report_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[ComplianceReport]:
+        """
+        Retrieve the latest compliance report for a given group_uuid.
+        This returns the report with the highest version number within the group.
+        """
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+            )
+            .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+            .order_by(ComplianceReport.version.desc())
+            .limit(1)
+        )
+        return result.scalars().first()

@@ -14,6 +14,7 @@ import {
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
+import { DEFAULT_CI_FUEL } from '@/constants/common'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -67,8 +68,11 @@ export const AddEditFuelSupplies = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelSupplies.map((item) => ({
           ...item,
+          complianceReportId, // This takes current reportId, important for versioning
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
+          fuelTypeOther:
+            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
           provisionOfTheAct: item.provisionOfTheAct?.name,
           fuelCode: item.fuelCode?.fuelCode,
           endUse: item.endUse?.type || 'Any',
@@ -79,7 +83,7 @@ export const AddEditFuelSupplies = () => {
         setRowData([{ id: uuid() }])
       }
     },
-    [data]
+    [data, complianceReportId]
   )
 
   useEffect(() => {
@@ -93,8 +97,11 @@ export const AddEditFuelSupplies = () => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
       const updatedRowData = data.fuelSupplies.map((item) => ({
         ...item,
+        complianceReportId, // This takes current reportId, important for versioning
         fuelCategory: item.fuelCategory?.category,
         fuelType: item.fuelType?.fuelType,
+        fuelTypeOther:
+          item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
         endUse: item.endUse?.type || 'Any',
@@ -104,7 +111,7 @@ export const AddEditFuelSupplies = () => {
     } else {
       setRowData([{ id: uuid() }])
     }
-  }, [data, fuelSuppliesLoading])
+  }, [data, fuelSuppliesLoading, complianceReportId])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -117,10 +124,12 @@ export const AddEditFuelSupplies = () => {
           const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
             (item) => item.fuelCategory
           )
-          params.node.setDataValue(
-            'fuelCategory',
-            fuelCategoryOptions[0] ?? null
-          )
+          if (selectedFuelType.fuelType !== 'Other') {
+            params.node.setDataValue(
+              'fuelCategory',
+              fuelCategoryOptions[0] ?? null
+            )
+          }
           const fuelCodeOptions = selectedFuelType.fuelCodes.map(
             (code) => code.fuelCode
           )
@@ -150,7 +159,9 @@ export const AddEditFuelSupplies = () => {
       })
 
       let updatedData = params.node.data
-
+      if (updatedData.fuelType === 'Other') {
+        updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
+      }
       try {
         setErrors({})
         await saveRow(updatedData)

@@ -20,9 +20,6 @@ from lcfs.db import dependencies
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.api.fuel_code.schema import (
-    AdditionalCarbonIntensitySchema,
-    EnergyDensitySchema,
-    EnergyEffectivenessRatioSchema,
     FuelCodeCreateSchema,
     FuelCodesSchema,
     FuelCodeSchema,
@@ -43,7 +40,6 @@ get_async_db = dependencies.get_async_db_session
     "/table-options", response_model=TableOptionsSchema, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.GOVERNMENT])
-@cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
     request: Request,
     service: FuelCodeServices = Depends(),
@@ -107,8 +103,7 @@ async def search_table_options_strings(
             return await service.search_contact_name(company, contact_name)
         return await service.search_company(company)
     else:
-        logger.info("Invalid search parameters")
-        return {"error": "Invalid search parameters"}
+        raise ValueError("Invalid parameters provided for search")
 
 
 @router.post("/list", response_model=FuelCodesSchema, status_code=status.HTTP_200_OK)
@@ -121,22 +116,6 @@ async def get_fuel_codes(
 ):
     """Endpoint to get list of fuel codes with pagination options"""
     return await service.get_fuel_codes(pagination)
-
-
-@router.post(
-    "/save-fuel-codes",
-    response_model=str,
-    status_code=status.HTTP_201_CREATED,
-)
-@view_handler([RoleEnum.GOVERNMENT])
-async def save_fuel_codes(
-    request: Request,
-    fuel_codes: List[FuelCodeCreateSchema] = Body(..., embed=False),
-    service: FuelCodeServices = Depends(),
-) -> str:
-    """Endpoint to save fuel codes"""
-    return await service.save_fuel_codes(fuel_codes)
-
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
 @view_handler(["*"])
@@ -165,49 +144,6 @@ async def delete_fuel_code(
     request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
-
-
-@router.get(
-    "/energy-densities",
-    response_model=List[EnergyDensitySchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(["*"])
-async def get_energy_densities(
-    request: Request,
-    service: FuelCodeServices = Depends(),
-):
-    """Endpoint to get energy densities"""
-    return await service.get_energy_densities()
-
-
-@router.get(
-    "/energy-effectiveness-ratios",
-    response_model=List[EnergyEffectivenessRatioSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(["*"])
-async def get_energy_effectiveness_ratios(
-    request: Request,
-    service: FuelCodeServices = Depends(),
-):
-    """Endpoint to get energy effectiveness ratios (EER)"""
-    return await service.get_energy_effectiveness_ratios()
-
-
-@router.get(
-    "/additional-carbon-intensities",
-    response_model=List[AdditionalCarbonIntensitySchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(["*"])
-async def get_use_of_a_carbon_intensities(
-    request: Request,
-    service: FuelCodeServices = Depends(),
-):
-    """Endpoint to get UCI's"""
-    return await service.get_use_of_a_carbon_intensities()
-
 
 @router.post(
     "/save",

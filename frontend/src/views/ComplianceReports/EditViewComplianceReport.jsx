@@ -150,10 +150,16 @@ export const EditViewComplianceReport = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      alertRef.current?.triggerAlert({ message: location.state.message, severity: location.state.severity || 'info' })
+      alertRef.current?.triggerAlert({
+        message: location.state.message,
+        severity: location.state.severity || 'info'
+      })
     }
     if (isError) {
-      alertRef.current?.triggerAlert({ message: error.response?.data?.detail || error.message, severity: 'error' })
+      alertRef.current?.triggerAlert({
+        message: error.response?.data?.detail || error.message,
+        severity: 'error'
+      })
     }
   }, [location.state, isError, error])
 
@@ -162,22 +168,17 @@ export const EditViewComplianceReport = () => {
   }
 
   if (isError) {
-    return <>
-      <FloatingAlert
-        ref={alertRef}
-        data-test="alert-box"
-        delay={10000}
-      /><Typography color="error">{t('report:errorRetrieving')}</Typography>
-    </>
+    return (
+      <>
+        <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
+        <Typography color="error">{t('report:errorRetrieving')}</Typography>
+      </>
+    )
   }
 
   return (
     <>
-      <FloatingAlert
-        ref={alertRef}
-        data-test="alert-box"
-        delay={10000}
-      />
+      <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
       <BCBox pl={2} pr={2}>
         <BCModal
           open={!!modalData}
@@ -186,7 +187,15 @@ export const EditViewComplianceReport = () => {
         />
         <BCBox pb={2}>
           <Typography variant="h5" color="primary">
-            {compliancePeriod + ' ' + t('report:complianceReport')}
+            {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
+            {reportData?.data?.nickname}
+          </Typography>
+          <Typography
+            variant="h6"
+            color="primary"
+            style={{ marginLeft: '0.25rem' }}
+          >
+            Status: {currentStatus}
           </Typography>
         </BCBox>
         <Stack direction="column" spacing={2} mt={2}>
@@ -207,7 +216,12 @@ export const EditViewComplianceReport = () => {
                   isGovernmentUser={isGovernmentUser}
                   hasMet={hasMet}
                 />
-                {!isGovernmentUser && <ImportantInfoCard />}
+                {!isGovernmentUser && (
+                  <ImportantInfoCard
+                    complianceReportId={complianceReportId}
+                    alertRef={alertRef}
+                  />
+                )}
               </>
             )}
             <OrgDetailsCard

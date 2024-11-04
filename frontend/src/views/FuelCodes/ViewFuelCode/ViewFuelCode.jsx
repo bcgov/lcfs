@@ -94,7 +94,7 @@ const ViewFuelCodeBase = () => {
         ...fuelCodeData,
         prefix: fuelCodeData.fuelCodePrefix.prefix,
         fuel: fuelCodeData.fuelCodeType.fuelType,
-        feedstockTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
+        feedstockFuelTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
           (mode) => mode.feedstockFuelTransportMode?.transportMode
         ),
         finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
@@ -198,7 +198,7 @@ const ViewFuelCodeBase = () => {
         (elm) => elm.fuelType === row.data.fuel
       ).fuelTypeId,
       feedstockFuelTransportModes: [
-        ...getTransportModeIds(row.data.feedstockTransportMode)
+        ...getTransportModeIds(row.data.feedstockFuelTransportMode)
       ],
       finishedFuelTransportModes: [
         ...getTransportModeIds(row.data.finishedFuelTransportMode)

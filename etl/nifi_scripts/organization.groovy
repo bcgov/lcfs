@@ -84,11 +84,26 @@ try {
     sourceConn = sourceDbcpService.getConnection()
     destinationConn = destinationDbcpService.getConnection()
 
-// Step 1: Insert new records from the source database
+    // Step 1: Insert new records from the source database
     // Prepare statements for fetching org_status_id and organization_type_id
     PreparedStatement statusStmt = destinationConn.prepareStatement(getStatusIdQuery)
     PreparedStatement typeStmt = destinationConn.prepareStatement(getTypeIdQuery)
     PreparedStatement checkDuplicateStmt = destinationConn.prepareStatement(checkDuplicateQuery)
+
+    // Prepare the SQL insert statements for organization_address and organization_attorney_address
+    def insertAddressSQL = """
+        INSERT INTO organization_address (
+            organization_address_id, name, street_address, address_other, city, province_state, "postalCode_zipCode", country, effective_status
+        ) VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, true)
+        RETURNING organization_address_id
+    """
+
+    def insertAttorneyAddressSQL = """
+        INSERT INTO organization_attorney_address (
+            organization_attorney_address_id, name, street_address, address_other, city, province_state, "postalCode_zipCode", country, effective_status
+        ) VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, true)
+        RETURNING organization_attorney_address_id
+    """
 
     // Execute the query on the source database
     PreparedStatement sourceStmt = sourceConn.prepareStatement(sourceQuery)

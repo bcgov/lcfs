@@ -1,5 +1,5 @@
 import structlog
-from typing import List
+from typing import List, Optional, Tuple
 from lcfs.db.models.compliance import CompliancePeriod, FuelExport
 from lcfs.db.models.fuel import (
     EnergyDensity,
@@ -15,15 +15,17 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
+from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, or_, select, func, delete
+from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.sql import case
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
-from sqlalchemy import func
-from sqlalchemy.orm import joinedload
 
 logger = structlog.get_logger(__name__)
 
@@ -46,7 +48,6 @@ class FuelExportRepository:
                 joinedload(FuelType.energy_effectiveness_ratio),
             ),
             joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.custom_fuel_type),
             joinedload(FuelExport.end_use_type),
         )
 
@@ -169,33 +170,54 @@ class FuelExportRepository:
     @repo_handler
     async def get_fuel_export_list(self, compliance_report_id: int) -> List[FuelExport]:
         """
-        Retrieve the list of fuel supplied information for a given compliance report.
+        Retrieve the list of effective fuel exports for a given compliance report.
         """
-        query = self.query.where(
-            FuelExport.compliance_report_id == compliance_report_id
-        ).order_by(FuelExport.fuel_export_id)
+        # Retrieve the compliance report's group UUID
+        report_group_query = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+        group_uuid = report_group_query.scalar()
+        if not group_uuid:
+            return []
 
-        results = (await self.db.execute(query)).unique().scalars().all()
-        return results
+        # Retrieve effective fuel exports using the group UUID
+        effective_fuel_exports = await self.get_effective_fuel_exports(
+            compliance_report_group_uuid=group_uuid
+        )
+
+        return effective_fuel_exports
 
     @repo_handler
     async def get_fuel_exports_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
-    ) -> List[FuelExport]:
+    ) -> Tuple[List[FuelExport], int]:
+        """
+        Retrieve a paginated list of effective fuel exports for a given compliance report.
+        """
+        # Retrieve the compliance report's group UUID
+        report_group_query = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+        group_uuid = report_group_query.scalar()
+        if not group_uuid:
+            return [], 0
+
+        # Retrieve effective fuel exports using the group UUID
+        effective_fuel_exports = await self.get_effective_fuel_exports(
+            compliance_report_group_uuid=group_uuid
+        )
+
+        # Manually apply pagination
+        total_count = len(effective_fuel_exports)
         offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        query = self.query.where(
-            FuelExport.compliance_report_id == compliance_report_id
-        )
-        count_query = query.with_only_columns(
-            func.count(FuelExport.fuel_export_id)
-        ).order_by(None)
-        total_count = (await self.db.execute(count_query)).scalar_one()
-        result = await self.db.execute(
-            query.offset(offset).limit(limit).order_by(FuelExport.create_date.desc())
-        )
-        fuel_exports = result.unique().scalars().all()
-        return fuel_exports, total_count
+        paginated_exports = effective_fuel_exports[offset : offset + limit]
+
+        return paginated_exports, total_count
 
     @repo_handler
     async def get_fuel_export_by_id(self, fuel_export_id: int) -> FuelExport:
@@ -211,7 +233,7 @@ class FuelExportRepository:
         """
         Update an existing fuel supply row in the database.
         """
-        updated_fuel_export = await self.db.merge(fuel_export)
+        updated_fuel_export = self.db.merge(fuel_export)
         await self.db.flush()
         await self.db.refresh(
             fuel_export,
@@ -219,7 +241,6 @@ class FuelExportRepository:
                 "fuel_category",
                 "fuel_type",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -238,7 +259,6 @@ class FuelExportRepository:
                 "fuel_category",
                 "fuel_type",
                 "provision_of_the_act",
-                "custom_fuel_type",
                 "end_use_type",
             ],
         )
@@ -253,25 +273,124 @@ class FuelExportRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_fuel_exports(
-        self, report_id: int, is_supplemental: bool = False
-    ) -> List[FuelExport]:
+    async def get_fuel_export_version_by_user(
+        self, group_uuid: str, version: int, user_type: UserTypeEnum
+    ) -> Optional[FuelExport]:
         """
-        Retrieve the list of fuel supplies for a given report (compliance or supplemental).
+        Retrieve a specific FuelExport record by group UUID, version, and user_type.
         """
-        query = select(FuelExport).options(
-            joinedload(FuelExport.fuel_code),
-            joinedload(FuelExport.fuel_category),
-            joinedload(FuelExport.fuel_type),
-            joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.custom_fuel_type),
-            joinedload(FuelExport.end_use_type),
+        query = (
+            select(FuelExport)
+            .where(
+                FuelExport.group_uuid == group_uuid,
+                FuelExport.version == version,
+                FuelExport.user_type == user_type,
+            )
+            .options(
+                joinedload(FuelExport.fuel_code),
+                joinedload(FuelExport.fuel_category),
+                joinedload(FuelExport.fuel_type),
+                joinedload(FuelExport.provision_of_the_act),
+                joinedload(FuelExport.end_use_type),
+            )
         )
 
-        if is_supplemental:
-            query = query.where(FuelExport.supplemental_report_id == report_id)
-        else:
-            query = query.where(FuelExport.compliance_report_id == report_id)
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_latest_fuel_export_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[FuelExport]:
+        """
+        Retrieve the latest FuelExport record for a given group UUID.
+        Government records are prioritized over supplier records.
+        """
+        query = (
+            select(FuelExport)
+            .where(FuelExport.group_uuid == group_uuid)
+            .order_by(
+                # FuelExport.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
+                # thus bringing GOVERNMENT records to the top in the ordered results.
+                FuelExport.user_type == UserTypeEnum.SUPPLIER,
+                FuelExport.version.desc(),
+            )
+        )
 
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_effective_fuel_exports(
+        self, compliance_report_group_uuid: str
+    ) -> List[FuelExport]:
+        """
+        Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
+        Excludes groups with any DELETE action and selects the highest version and priority.
+        """
+        # Step 1: Select to get all compliance_report_ids in the specified group
+        compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid
+        )
+
+        # Step 2: Select to identify group_uuids that have any DELETE action
+        delete_group_select = (
+            select(FuelExport.group_uuid)
+            .where(
+                FuelExport.compliance_report_id.in_(compliance_reports_select),
+                FuelExport.action_type == ActionTypeEnum.DELETE,
+            )
+            .distinct()
+        )
+
+        # Step 3: Select to find the max version and priority per group_uuid, excluding DELETE groups
+        user_type_priority = case(
+            (FuelExport.user_type == UserTypeEnum.GOVERNMENT, 1),
+            (FuelExport.user_type == UserTypeEnum.SUPPLIER, 0),
+            else_=0,
+        )
+
+        valid_fuel_exports_select = (
+            select(
+                FuelExport.group_uuid,
+                func.max(FuelExport.version).label("max_version"),
+                func.max(user_type_priority).label("max_role_priority"),
+            )
+            .where(
+                FuelExport.compliance_report_id.in_(compliance_reports_select),
+                FuelExport.action_type != ActionTypeEnum.DELETE,
+                ~FuelExport.group_uuid.in_(delete_group_select),
+            )
+            .group_by(FuelExport.group_uuid)
+        )
+
+        # Now create a subquery for use in the JOIN
+        valid_fuel_exports_subq = valid_fuel_exports_select.subquery()
+
+        # Step 4: Main query to retrieve effective FuelExport records
+        query = (
+            select(FuelExport)
+            .options(
+                # Load necessary related data
+                joinedload(FuelExport.fuel_code),
+                joinedload(FuelExport.fuel_category),
+                joinedload(FuelExport.fuel_type),
+                joinedload(FuelExport.provision_of_the_act),
+                selectinload(FuelExport.end_use_type),
+            )
+            .join(
+                valid_fuel_exports_subq,
+                and_(
+                    FuelExport.group_uuid == valid_fuel_exports_subq.c.group_uuid,
+                    FuelExport.version == valid_fuel_exports_subq.c.max_version,
+                    user_type_priority == valid_fuel_exports_subq.c.max_role_priority,
+                ),
+            )
+        )
+
+        result = await self.db.execute(query)
+        fuel_exports = result.unique().scalars().all()
+
+        logger.debug(f"Retrieved {len(fuel_exports)} effective FuelExport records.")
+        return fuel_exports

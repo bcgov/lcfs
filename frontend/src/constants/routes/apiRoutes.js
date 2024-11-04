@@ -19,7 +19,6 @@ export const apiRoutes = {
   getFuelCode: '/fuel-codes/:fuelCodeId',
   fuelCodeOptions: '/fuel-codes/table-options',
   fuelCodeSearch: '/fuel-codes/search?',
-  addFuelCodes: '/fuel-codes/save-fuel-codes',
   getFuelCodes: '/fuel-codes/list',
   updateFuelCode: '/fuel-codes/:fuelCodeId',
   saveFuelCode: '/fuel-codes/save',
@@ -39,6 +38,7 @@ export const apiRoutes = {
   updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  createSupplementalReport: '/reports/:reportID/supplemental',
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',
@@ -67,4 +67,5 @@ export const apiRoutes = {
   organizationSearch: '/organizations/search?',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
+  getFuelTypeOthers: '/fuel-type/others/list'
 }

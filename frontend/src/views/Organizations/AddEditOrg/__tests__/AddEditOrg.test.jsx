@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AddEditOrg } from '../AddEditOrg'
 import { useForm, FormProvider } from 'react-hook-form'
-import { vi } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
@@ -71,7 +71,7 @@ describe('AddEditOrg', () => {
     useApiService.mockReturnValue(apiSpy)
   })
 
-  test('renders correctly with provided organization data', () => {
+  it('renders correctly with provided organization data', () => {
     useOrganization.mockReturnValue({
       data: mockedOrg,
       isFetched: true
@@ -103,7 +103,7 @@ describe('AddEditOrg', () => {
     expect(screen.getAllByLabelText(/org:poLabel/i)[0]).toHaveValue('A1B2C3')
   })
 
-  test('renders required errors in the form correctly', async () => {
+  it('renders required errors in the form correctly', async () => {
     render(
       <MockFormProvider>
         <AddEditOrg />
@@ -133,7 +133,7 @@ describe('AddEditOrg', () => {
     })
   })
 
-  test('renders unique error messages for specific fields', async () => {
+  it('renders unique error messages for specific fields', async () => {
     useOrganization.mockReturnValue({
       data: {
         ...mockedOrg,
@@ -168,7 +168,7 @@ describe('AddEditOrg', () => {
     })
   })
 
-  test('submits form data correctly', async () => {
+  it('submits form data correctly', async () => {
     useOrganization.mockReturnValue({
       data: mockedOrg,
       isFetched: true

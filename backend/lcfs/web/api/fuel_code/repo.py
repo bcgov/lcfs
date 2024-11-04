@@ -1,12 +1,12 @@
 import structlog
 from datetime import date
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
 from sqlalchemy import and_, or_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
@@ -18,7 +18,7 @@ from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportM
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
-from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
@@ -56,9 +56,11 @@ class FuelCodeRepository:
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = or_(
-            FuelCode.effective_date == None, FuelCode.effective_date <= current_date
+            FuelCode.effective_date == None,
+            FuelCode.effective_date <= current_date
         ) & or_(
-            FuelCode.expiration_date == None, FuelCode.expiration_date > current_date
+            FuelCode.expiration_date == None,
+            FuelCode.expiration_date > current_date
         )
 
         # Build the query with filtered fuel_codes
@@ -184,13 +186,18 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_code_prefix_by_name(self, prefix_name: str) -> FuelCodePrefix:
         """Get fuel code prefix by name"""
-        result = await self.db.execute(
-            select(FuelCodePrefix).where(FuelCodePrefix.prefix == prefix_name)
+        query = (
+            select(FuelCodePrefix)
+            .options(selectinload(FuelCodePrefix.fuel_codes))
+            .where(FuelCodePrefix.prefix == prefix_name)
         )
-        return result.scalar_one_or_none()
+        result = await self.db.execute(query)
+        return result.unique().scalar_one_or_none()
 
     @repo_handler
-    async def get_fuel_status_by_status(self, status: str) -> FuelCodeStatus:
+    async def get_fuel_status_by_status(
+        self, status: Union[str, FuelCodeStatusEnum]
+    ) -> FuelCodeStatus:
         """Get fuel status by name"""
         return (
             await self.db.execute(select(FuelCodeStatus).filter_by(status=status))
@@ -320,19 +327,6 @@ class FuelCodeRepository:
         return fuel_codes, total_count
 
     @repo_handler
-    async def save_fuel_codes(self, fuel_codes: List[FuelCode]) -> str:
-        """
-        Saves fuel codes to the database.
-
-        Args:
-            fuel_codes (List[FuelCodeSchema]): A list of fuel codes to be saved.
-        """
-        self.db.add_all(fuel_codes)
-        await self.db.flush()
-
-        return "fuel codes added successfully"
-
-    @repo_handler
     async def create_fuel_code(self, fuel_code: FuelCode) -> FuelCode:
         """
         Saves a new fuel code to the database.
@@ -389,10 +383,11 @@ class FuelCodeRepository:
 
     @repo_handler
     async def delete_fuel_code(self, fuel_code_id: int):
+        delete_status = await self.get_fuel_status_by_status(FuelCodeStatusEnum.Deleted)
         await self.db.execute(
             update(FuelCode)
             .where(FuelCode.fuel_code_id == fuel_code_id)
-            .values(fuel_status_id=3)
+            .values(fuel_status_id=delete_status.fuel_code_status_id)
         )
 
     @repo_handler
@@ -457,6 +452,7 @@ class FuelCodeRepository:
                 and_(
                     FuelCode.fuel_suffix.like(fuel_code + "%"),
                     func.lower(FuelCodePrefix.prefix) == func.lower(prefix),
+                    FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
                 )
             )
             .order_by(FuelCode.fuel_suffix)
@@ -485,7 +481,9 @@ class FuelCodeRepository:
             )
             .where(
                 and_(
-                    FuelCode.fuel_suffix == fuel_suffix, FuelCodePrefix.prefix == prefix
+                    FuelCode.fuel_suffix == fuel_suffix,
+                    FuelCodePrefix.prefix == prefix,
+                    FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
                 )
             )
         )
@@ -517,10 +515,17 @@ class FuelCodeRepository:
     @repo_handler
     async def validate_fuel_code(self, suffix: str, prefix: str) -> str:
         # check if the fuel_code already exists
-        query = select(FuelCode).where(
-            and_(
-                FuelCode.fuel_suffix == suffix,
-                func.lower(FuelCodePrefix.prefix) == func.lower(prefix),
+        query = (
+            select(FuelCode)
+            .join(FuelCode.fuel_code_prefix)
+            .join(FuelCode.fuel_code_status)
+            .options(joinedload(FuelCode.fuel_code_prefix))
+            .where(
+                and_(
+                    FuelCode.fuel_suffix == suffix,
+                    func.lower(FuelCodePrefix.prefix) == func.lower(prefix),
+                    FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
+                )
             )
         )
         result = (await self.db.execute(query)).scalar_one_or_none()
@@ -627,6 +632,7 @@ class FuelCodeRepository:
                 joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_1),
                 joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_2),
             )
+            .filter(FuelCodeStatus.status != FuelCodeStatusEnum.Deleted)
         )
 
         result = await self.db.execute(query)
@@ -687,7 +693,11 @@ class FuelCodeRepository:
                 )
             )
             .where(
-                func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix) == fuel_code
+                and_(
+                    func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix)
+                    == fuel_code,
+                    FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
+                )
             )
         )
         return result.scalar_one_or_none()

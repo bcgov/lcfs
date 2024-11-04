@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
 
 from lcfs.web.exception.exceptions import ServiceException
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -45,15 +46,20 @@ async def test_create_compliance_report_success(
     compliance_report_base_schema,
     compliance_report_create_schema,
 ):
-
+    # Mock the compliance period
     mock_compliance_period = CompliancePeriod(
         compliance_period_id=1,
         description="2024",
     )
-
     mock_repo.get_compliance_period.return_value = mock_compliance_period
-    mock_repo.get_compliance_report_status_by_desc.return_value = 1
 
+    # Mock the compliance report status
+    mock_draft_status = ComplianceReportStatus(
+        compliance_report_status_id=1, status="Draft"
+    )
+    mock_repo.get_compliance_report_status_by_desc.return_value = mock_draft_status
+
+    # Mock the added compliance report
     mock_compliance_report = compliance_report_base_schema()
 
     mock_repo.add_compliance_report.return_value = mock_compliance_report
@@ -63,7 +69,13 @@ async def test_create_compliance_report_success(
     )
 
     assert result == mock_compliance_report
-    mock_repo.add_compliance_report_history.assert_called_once()
+    mock_repo.get_compliance_period.assert_called_once_with(
+        compliance_report_create_schema.compliance_period
+    )
+    mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
+        compliance_report_create_schema.status
+    )
+    mock_repo.add_compliance_report.assert_called_once()
 
 
 @pytest.mark.anyio

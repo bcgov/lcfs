@@ -117,7 +117,7 @@ const DirectorReviewCard = () => {
                 onClick={() =>
                   handleComplianceNavigation(
                     ROUTES.REPORTS,
-                    'Recommended_by_manager'
+                    'Recommended by manager'
                   )
                 }
               >
@@ -127,7 +127,7 @@ const DirectorReviewCard = () => {
                   () =>
                     handleComplianceNavigation(
                       ROUTES.REPORTS,
-                      'Recommended_by_manager'
+                      'Recommended by manager'
                     )
                 )}
               </ListItemButton>

@@ -68,7 +68,6 @@ class AllocationAgreementRepository:
             .options(
                 joinedload(AllocationAgreement.allocation_transaction_type),
                 joinedload(AllocationAgreement.fuel_type),
-                joinedload(AllocationAgreement.custom_fuel_type),
                 joinedload(AllocationAgreement.fuel_category),
                 joinedload(AllocationAgreement.provision_of_the_act),
                 joinedload(AllocationAgreement.fuel_code),
@@ -93,6 +92,7 @@ class AllocationAgreementRepository:
                 compliance_report_id=allocation_agreement.compliance_report_id,
                 allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
                 fuel_type=allocation_agreement.fuel_type.fuel_type,
+                fuel_type_other=allocation_agreement.fuel_type_other,
                 fuel_category=allocation_agreement.fuel_category.category,
                 provision_of_the_act=allocation_agreement.provision_of_the_act.name,
                 # Set fuel_code only if it exists
@@ -118,7 +118,6 @@ class AllocationAgreementRepository:
             .options(
                 joinedload(AllocationAgreement.allocation_transaction_type),
                 joinedload(AllocationAgreement.fuel_type),
-                joinedload(AllocationAgreement.custom_fuel_type),
                 joinedload(AllocationAgreement.fuel_category),
                 joinedload(AllocationAgreement.provision_of_the_act),
                 joinedload(AllocationAgreement.fuel_code),
@@ -151,7 +150,6 @@ class AllocationAgreementRepository:
             .options(
                 joinedload(AllocationAgreement.allocation_transaction_type),
                 joinedload(AllocationAgreement.fuel_type),
-                joinedload(AllocationAgreement.custom_fuel_type),
                 joinedload(AllocationAgreement.fuel_category),
                 joinedload(AllocationAgreement.provision_of_the_act),
                 joinedload(AllocationAgreement.fuel_code),

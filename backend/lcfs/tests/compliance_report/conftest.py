@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
@@ -102,6 +103,9 @@ def compliance_report_base_schema(
         supplemental_note: str = "Initial submission.",
         update_date: datetime = datetime(2024, 4, 1, 12, 0, 0),
         history: list = None,
+        compliance_report_group_uuid: str = None,
+        version: int = 0,
+        supplemental_initiator: str = None,
     ):
         # Assign default values from dependent fixtures if not overridden
         compliance_period_id = (
@@ -119,6 +123,8 @@ def compliance_report_base_schema(
         )
         current_status = current_status or compliance_report_status_schema
         history = history or [compliance_report_history_schema]
+        compliance_report_group_uuid = compliance_report_group_uuid or str(uuid.uuid4())
+        supplemental_initiator = supplemental_initiator
 
         return ComplianceReportBaseSchema(
             compliance_report_id=compliance_report_id,
@@ -134,6 +140,9 @@ def compliance_report_base_schema(
             supplemental_note=supplemental_note,
             update_date=update_date,
             history=history,
+            compliance_report_group_uuid=compliance_report_group_uuid,
+            version=version,
+            supplemental_initiator=supplemental_initiator,
         )
 
     return _create_compliance_report_base_schema
@@ -181,7 +190,6 @@ def compliance_report_summary_schema(
         non_compliance_penalty_summary=mock_non_compliance_penalty_summary,
         summary_id=summary_schema.summary_id,
         compliance_report_id=compliance_report_base_schema().compliance_report_id,
-        supplemental_report_id=None,
         version=1,
         is_locked=False,
         quarter=None,
@@ -193,7 +201,6 @@ def compliance_report_summary_schema(
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             summary_id=summary_id,
             compliance_report_id=compliance_report_id,
-            supplemental_report_id=supplemental_report_id,
             version=version,
             is_locked=is_locked,
             quarter=quarter,
@@ -234,7 +241,9 @@ def mock_trxn_repo():
 
 @pytest.fixture
 def mock_fuel_supply_repo():
-    return AsyncMock(spec=FuelSupplyRepository)
+    mock_repo = AsyncMock(spec=FuelSupplyRepository)
+    mock_repo.get_effective_fuel_supplies = AsyncMock(return_value=[])
+    return mock_repo
 
 
 @pytest.fixture
@@ -287,6 +296,13 @@ def mock_notional_transfer_service():
 
 @pytest.fixture
 def compliance_report_repo(dbsession):
-    repo = ComplianceReportRepository()
-    repo.db = dbsession
+    # Create a mock for fuel_supply_repo
+    fuel_supply_repo_mock = MagicMock()
+    fuel_supply_repo_mock.get_effective_fuel_supplies = AsyncMock()
+
+    # Create an instance of ComplianceReportRepository with the mock
+    repo = ComplianceReportRepository(
+        db=dbsession, fuel_supply_repo=fuel_supply_repo_mock
+    )
+
     return repo

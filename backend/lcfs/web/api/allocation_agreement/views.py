@@ -25,6 +25,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementSchema,
     AllocationAgreementListSchema,
+    AllocationAgreementTableOptionsSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
@@ -41,7 +42,7 @@ get_async_db = dependencies.get_async_db_session
 
 @router.get(
     "/table-options",
-    # response_model=AllocationAgreementTableOptionsSchema,
+    response_model=AllocationAgreementTableOptionsSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
@@ -67,7 +68,9 @@ async def get_allocation_agreements(
     report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of allocation agreements for a compliance report"""
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     return await service.get_allocation_agreements(request_data.compliance_report_id)
 
 
