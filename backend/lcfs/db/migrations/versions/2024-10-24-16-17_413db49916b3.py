@@ -39,7 +39,7 @@ def upgrade() -> None:
         ["admin_adjustment_history_id"],
     )
 
-    # Step 1: Add the column as nullable
+    # Step 1: Add the columns as nullable
     op.add_column(
         "compliance_report",
         sa.Column(
@@ -49,15 +49,34 @@ def upgrade() -> None:
             comment="UUID that groups all versions of a compliance report",
         ),
     )
+    op.add_column(
+        "fuel_export",
+        sa.Column(
+            "group_uuid",
+            sa.String(length=36),
+            nullable=True,
+            comment="UUID that groups all versions of a record series",
+        ),
+    )
+    op.add_column(
+        "fuel_supply",
+        sa.Column(
+            "group_uuid",
+            sa.String(length=36),
+            nullable=True,
+            comment="UUID that groups all versions of a record series",
+        ),
+    )
 
-    # Step 2: Update existing records with a generated UUID
+    # Step 2: Update existing records with generated UUIDs
     connection = op.get_bind()
+
+    # Update compliance_report table
     compliance_reports = connection.execute(
         sa.text(
             "SELECT compliance_report_id FROM compliance_report WHERE compliance_report_group_uuid IS NULL"
         )
     ).fetchall()
-
     for report in compliance_reports:
         report_id = report[0]
         connection.execute(
@@ -67,10 +86,48 @@ def upgrade() -> None:
             {"uuid": str(uuid.uuid4()), "report_id": report_id},
         )
 
-    # Step 3: Alter the column to be non-nullable
+    # Update fuel_export table
+    fuel_exports = connection.execute(
+        sa.text("SELECT fuel_export_id FROM fuel_export WHERE group_uuid IS NULL")
+    ).fetchall()
+    for export in fuel_exports:
+        export_id = export[0]
+        connection.execute(
+            sa.text(
+                "UPDATE fuel_export SET group_uuid = :uuid WHERE fuel_export_id = :export_id"
+            ),
+            {"uuid": str(uuid.uuid4()), "export_id": export_id},
+        )
+
+    # Update fuel_supply table
+    fuel_supplies = connection.execute(
+        sa.text("SELECT fuel_supply_id FROM fuel_supply WHERE group_uuid IS NULL")
+    ).fetchall()
+    for supply in fuel_supplies:
+        supply_id = supply[0]
+        connection.execute(
+            sa.text(
+                "UPDATE fuel_supply SET group_uuid = :uuid WHERE fuel_supply_id = :supply_id"
+            ),
+            {"uuid": str(uuid.uuid4()), "supply_id": supply_id},
+        )
+
+    # Step 3: Alter the columns to be non-nullable
     op.alter_column(
         "compliance_report",
         "compliance_report_group_uuid",
+        existing_type=sa.String(length=36),
+        nullable=False,
+    )
+    op.alter_column(
+        "fuel_export",
+        "group_uuid",
+        existing_type=sa.String(length=36),
+        nullable=False,
+    )
+    op.alter_column(
+        "fuel_supply",
+        "group_uuid",
         existing_type=sa.String(length=36),
         nullable=False,
     )
@@ -155,15 +212,6 @@ def upgrade() -> None:
     op.add_column(
         "fuel_export",
         sa.Column(
-            "group_uuid",
-            sa.String(length=36),
-            nullable=False,
-            comment="UUID that groups all versions of a record series",
-        ),
-    )
-    op.add_column(
-        "fuel_export",
-        sa.Column(
             "version",
             sa.Integer(),
             nullable=False,
@@ -206,15 +254,6 @@ def upgrade() -> None:
     op.drop_column("fuel_export", "supplemental_report_id")
     op.drop_column("fuel_export", "change_type")
     op.drop_column("fuel_export", "previous_fuel_export_id")
-    op.add_column(
-        "fuel_supply",
-        sa.Column(
-            "group_uuid",
-            sa.String(length=36),
-            nullable=False,
-            comment="UUID that groups all versions of a record series",
-        ),
-    )
     op.add_column(
         "fuel_supply",
         sa.Column(
