@@ -21,6 +21,7 @@ from starlette.responses import JSONResponse
 import uuid
 import contextvars
 
+from lcfs.settings import settings
 from lcfs.logging_config import setup_logging, correlation_id_var, audit_logger
 from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
@@ -110,7 +111,9 @@ def get_app() -> FastAPI:
     #     print("⏳ Waiting for debugger attach on port 5678...")
     #     debugpy.wait_for_client()
 
-    setup_logging(level=logging.DEBUG)
+    # Map the string log level to the logging module's integer constants
+    log_level = getattr(logging, settings.log_level.value.upper(), logging.DEBUG)
+    setup_logging(level=log_level)
 
     # Create the fastapi instance
     app = FastAPI(
