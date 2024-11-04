@@ -4,6 +4,7 @@ from httpx import AsyncClient
 from starlette import status
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.audit_log.conftest import mock_user_role
 from lcfs.web.api.organizations.schema import (
     OrganizationBalanceResponseSchema,
     OrganizationListSchema,
@@ -71,10 +72,10 @@ async def test_get_organization_by_id_bceid_user(
 
 @pytest.mark.anyio
 async def test_create_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-    url = fastapi_app.url_path_for("create_organization")
+    # Set mock user role for organization creation
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
         "name": "Test Organizationa",
         "operatingName": "Test Operating name",
@@ -102,22 +103,24 @@ async def test_create_organization_success(
             "postalcodeZipcode": "V8W 2C3",
         },
     }
-    response = await client.post(url, json=payload)
+
+    response = await create_organization(client, fastapi_app, payload)
 
     assert response.status_code == status.HTTP_201_CREATED
 
 
+
 @pytest.mark.anyio
 async def test_update_organization_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-    url = fastapi_app.url_path_for("update_organization", organization_id=1)
+    # Set mock user role for organization update.
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
-        "name": "Test Organizationa",
+        "name": "Test Organization",
         "operatingName": "Test Operating name",
-        "email": "test@gov.bc.ca",
-        "phone": "0000000000",
+        "email": "organization@gov.bc.ca",
+        "phone": "1111111111",
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
         "organizationTypeId": 1,
@@ -140,17 +143,18 @@ async def test_update_organization_success(
             "postalcodeZipcode": "V8W 2C3",
         },
     }
-    response = await client.put(url, json=payload)
+
+    response = await update_organization(client, fastapi_app, 1, payload)
 
     assert response.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.anyio
 async def test_update_organization_failure(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, mock_user_role
 ) -> None:
-    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-    url = fastapi_app.url_path_for("update_organization", organization_id=100)
+    # Set mock user role for organization update
+    mock_user_role([RoleEnum.GOVERNMENT])
     payload = {
         "name": "Test Organizationa",
         "operatingName": "Test Operating name",
@@ -178,7 +182,7 @@ async def test_update_organization_failure(
             "postalcodeZipcode": "V8W 2C3",
         },
     }
-    response = await client.put(url, json=payload)
+    response = await update_organization(client, fastapi_app, 100, payload)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -324,3 +328,28 @@ async def test_get_balances_unauthorized(
     url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
     response = await client.get(url)
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def create_organization(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    payload: dict,
+    #role: RoleEnum = RoleEnum.GOVERNMENT
+) -> object:
+    """Helper function to create an organization and return the response."""
+    #mock_user_role([role])
+    url = fastapi_app.url_path_for("create_organization")
+    response = await client.post(url, json=payload)
+    return response
+
+
+async def update_organization(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    organization_id: int,
+    payload: dict
+) -> object:
+    """Helper function to update an organization and return the response."""
+    url = fastapi_app.url_path_for("update_organization", organization_id=organization_id)
+    response = await client.put(url, json=payload)
+    return response
