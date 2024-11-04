@@ -27,6 +27,21 @@ services:
     networks:
       - shared_network
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: lcfs
+      RABBITMQ_DEFAULT_PASS: development_only
+      RABBITMQ_DEFAULT_VHOST: lcfs
+    volumes:
+      - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    ports:
+      - "15672:15672" # Management UI
+      - "5672:5672"   # RabbitMQ Port
+    networks:
+      - shared_network
+
   #  clamav:
   #    image: clamav/clamav:stable_base
   #    volumes:
@@ -100,7 +115,8 @@ services:
       - db
       - redis
       - create_bucket
-     # - clamav
+      - rabbitmq
+      # - clamav
     networks:
       - shared_network
 

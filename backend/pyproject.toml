@@ -43,6 +43,7 @@ black = "^24.4.2"
 boto3 = "^1.35.26"
 typing-extensions = "^4.12.2"
 python-multipart = "^0.0.16"
+aio-pika = "^9.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.3"

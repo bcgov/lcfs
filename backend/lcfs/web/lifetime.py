@@ -1,13 +1,12 @@
-import asyncio
 from typing import Awaitable, Callable
 
 from fastapi import FastAPI
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from redis import asyncio as aioredis
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
 from lcfs.services.tfrs.redis_balance import init_org_balance_cache
 from lcfs.settings import settings
@@ -63,7 +62,9 @@ def register_startup_event(
         FastAPICache.init(RedisBackend(redis), prefix="lcfs")
 
         await init_org_balance_cache()
-        pass  # noqa: WPS420
+
+        # Setup RabbitMQ Listeners
+        await start_consumers()
 
     return _startup
 
@@ -83,6 +84,6 @@ def register_shutdown_event(
         await app.state.db_engine.dispose()
 
         await shutdown_redis(app)
-        pass  # noqa: WPS420
+        await stop_consumers()
 
     return _shutdown

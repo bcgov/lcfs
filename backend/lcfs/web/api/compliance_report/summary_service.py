@@ -420,15 +420,12 @@ class ComplianceReportSummaryService:
 
             # only carry over line 6,8 if required quantities have not changed
             if previous_required_renewable_quantity == required_renewable_quantity:
-                print(f"QUANTITIES MATCH {category}")
                 retained_renewables[category] = getattr(
                     prev_summary, f"line_6_renewable_fuel_retained_{category}"
                 )
                 deferred_renewables[category] = getattr(
                     prev_summary, f"line_8_obligation_deferred_{category}"
                 )
-            else:
-                print(f"QUANTITY CHANGED {category}")
 
         # line 10
         net_renewable_supplied = {

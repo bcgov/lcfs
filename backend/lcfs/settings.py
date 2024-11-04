@@ -70,9 +70,18 @@ class Settings(BaseSettings):
     s3_secret_key: str = "development_only"
     s3_docs_path: str = "lcfs-docs"
 
+    # Variables for ClamAV
     clamav_enabled: bool = False
     clamav_host: str = "clamav"
     clamav_port: int = 3310
+
+    # Variables for RabbitMQ
+    rabbitmq_host: str = "rabbitmq"
+    rabbitmq_port: int = 5672
+    rabbitmq_pass: str = "development_only"
+    rabbitmq_user: str = "lcfs"
+    rabbitmq_vhost: str = "lcfs"
+    rabbitmq_transaction_queue: str = "transaction_queue"
 
     @property
     def db_url(self) -> URL:
