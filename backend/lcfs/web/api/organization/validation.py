@@ -63,8 +63,6 @@ class OrganizationValidation:
         valid_status = (
             transfer_create.current_status in LCFS_Constants.FROM_ORG_TRANSFER_STATUSES
         )
-        print(transfer_create.current_status)
-        print(valid_status)
 
         await self.check_available_balance(organization_id, transfer_create.quantity)
         if (
