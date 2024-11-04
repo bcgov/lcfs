@@ -22,6 +22,9 @@ import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-quartz.css'
 import { isEqual } from '@/utils/grid/eventHandlers'
 
+/**
+ * @deprecated
+ */
 const BCDataGridEditor = ({
   gridOptions,
   onGridReady,

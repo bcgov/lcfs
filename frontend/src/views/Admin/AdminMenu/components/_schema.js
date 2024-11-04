@@ -1,4 +1,4 @@
-import { phoneNumberFormatter, dateFormatter } from '@/utils/formatters'
+import { phoneNumberFormatter, dateFormatter, timezoneFormatter } from '@/utils/formatters'
 import {
   LinkRenderer,
   RoleRenderer,
@@ -156,6 +156,45 @@ export const userActivityColDefs = [
     valueFormatter: dateFormatter,
     filter: false,
   },
+]
+
+export const userLoginHistoryColDefs = (t) => [
+  {
+    field: 'userLoginHistoryId',
+    headerName: t('admin:userLoginHistoryColLabels.userLoginHistoryId'),
+    cellDataType: 'number'
+  },
+  {
+    field: 'keycloakEmail',
+    headerName: t('admin:userLoginHistoryColLabels.keycloakEmail'),
+    cellDataType: 'string'
+  },
+  {
+    field: 'keycloakUserId',
+    headerName: t('admin:userLoginHistoryColLabels.keycloakUserId'),
+    cellDataType: 'string'
+  },
+  {
+    field: 'externalUsername',
+    headerName: t('admin:userLoginHistoryColLabels.externalUsername'),
+    cellDataType: 'string'
+  },
+  {
+    field: 'isLoginSuccessful',
+    headerName: t('admin:userLoginHistoryColLabels.isLoginSuccessful'),
+    cellDataType: 'boolean'
+  },
+  {
+    field: 'loginErrorMessage',
+    headerName: t('admin:userLoginHistoryColLabels.loginErrorMessage'),
+    cellDataType: 'string'
+  },
+  {
+    field: 'createDate',
+    headerName: t('admin:userLoginHistoryColLabels.createDate'),
+    cellDataType: 'dateString',
+    valueFormatter: timezoneFormatter
+  }
 ]
 
 export const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
