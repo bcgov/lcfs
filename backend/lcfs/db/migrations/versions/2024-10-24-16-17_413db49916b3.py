@@ -137,6 +137,7 @@ def upgrade() -> None:
         sa.Column(
             "version",
             sa.Integer(),
+            server_default="0",
             nullable=False,
             comment="Version number of the compliance report",
         ),
@@ -214,6 +215,7 @@ def upgrade() -> None:
         sa.Column(
             "version",
             sa.Integer(),
+            server_default="0",
             nullable=False,
             comment="Version number of the record",
         ),
@@ -259,6 +261,7 @@ def upgrade() -> None:
         sa.Column(
             "version",
             sa.Integer(),
+            server_default="0",
             nullable=False,
             comment="Version number of the record",
         ),
