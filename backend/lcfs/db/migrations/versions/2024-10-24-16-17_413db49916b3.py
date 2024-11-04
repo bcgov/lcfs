@@ -9,6 +9,7 @@ Create Date: 2024-10-24 16:17:13.498002
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
+import uuid
 
 # revision identifiers, used by Alembic.
 revision = "413db49916b3"
@@ -37,15 +38,43 @@ def upgrade() -> None:
         "admin_adjustment_history",
         ["admin_adjustment_history_id"],
     )
+
+    # Step 1: Add the column as nullable
     op.add_column(
         "compliance_report",
         sa.Column(
             "compliance_report_group_uuid",
             sa.String(length=36),
-            nullable=False,
+            nullable=True,
             comment="UUID that groups all versions of a compliance report",
         ),
     )
+
+    # Step 2: Update existing records with a generated UUID
+    connection = op.get_bind()
+    compliance_reports = connection.execute(
+        sa.text(
+            "SELECT compliance_report_id FROM compliance_report WHERE compliance_report_group_uuid IS NULL"
+        )
+    ).fetchall()
+
+    for report in compliance_reports:
+        report_id = report[0]
+        connection.execute(
+            sa.text(
+                "UPDATE compliance_report SET compliance_report_group_uuid = :uuid WHERE compliance_report_id = :report_id"
+            ),
+            {"uuid": str(uuid.uuid4()), "report_id": report_id},
+        )
+
+    # Step 3: Alter the column to be non-nullable
+    op.alter_column(
+        "compliance_report",
+        "compliance_report_group_uuid",
+        existing_type=sa.String(length=36),
+        nullable=False,
+    )
+
     op.add_column(
         "compliance_report",
         sa.Column(
