@@ -60,6 +60,7 @@ export const finalSupplyEquipmentColDefs = (
       minDate: moment(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
       maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
     },
+    cellEditorPopup: true,
     valueGetter: (params) => {
       return [
         params.data.supplyFromDate || `${compliancePeriod}-01-01`,

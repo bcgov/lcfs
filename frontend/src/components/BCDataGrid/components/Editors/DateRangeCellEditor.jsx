@@ -46,7 +46,7 @@ export const DateRangeCellEditor = forwardRef(
             <TextField
               ref={ref}
               fullWidth
-              margin="0"
+              margin="none"
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -86,9 +86,11 @@ export const DateRangeCellEditor = forwardRef(
             open,
             anchorEl,
             onClose: handleClose,
+            disablePortal: true,
             slotProps: {
               paper: {
                 sx: {
+                  position: 'absolute',
                   borderRadius: '16px',
                   boxShadow: 'rgba(0, 0, 0, 0.21) 0px 0px 4px',
                   '.MuiButton-containedPrimary': {
