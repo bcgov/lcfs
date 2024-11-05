@@ -32,6 +32,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
+    UserLoginHistoryResponseSchema,
     UsersSchema,
     UserActivitiesResponseSchema,
 )
@@ -223,3 +224,17 @@ async def get_all_user_activities(
     """
     current_user = request.user
     return await service.get_all_user_activities(current_user, pagination)
+
+
+@router.post("/login-history", response_model=UserLoginHistoryResponseSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def get_all_user_login_history(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(...),
+    service: UserServices = Depends(),
+) -> UserLoginHistoryResponseSchema:
+    """
+    Get users login history.
+    """
+    current_user = request.user
+    return await service.get_all_user_login_history(current_user, pagination)

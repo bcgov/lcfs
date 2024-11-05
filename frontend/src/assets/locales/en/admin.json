@@ -2,6 +2,7 @@
   "OrgId": "Organization ID",
   "Users": "Users",
   "UserActivity": "User activity",
+  "UserLoginHistory": "User login history",
   "Roles": "Roles",
   "Role": "Role",
   "FuelCodes": "Fuel codes",
@@ -23,6 +24,16 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "userLoginHistoryColLabels": {
+    "userLoginHistoryId": "User login history ID",
+    "keycloakEmail": "Keycloak email",
+    "keycloakUserId": "Keycloak user ID",
+    "externalUsername": "External user name",
+    "isLoginSuccessful": "Is login successful",
+    "loginErrorMessage": "Login error message",
+    "createDate": "Login time"
+  },
+  "historiesNotFound": "No user login history found",
   "errorRetrieving": "Error retrieving the record",
   "roleColLabels": {
     "role": "Role",

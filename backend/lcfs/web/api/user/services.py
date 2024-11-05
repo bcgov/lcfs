@@ -23,6 +23,7 @@ from lcfs.db.models import UserProfile
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
+    UserLoginHistoryResponseSchema,
     UsersSchema,
     UserActivitySchema,
     UserActivitiesResponseSchema,
@@ -246,6 +247,32 @@ class UserServices:
 
         return UserActivitiesResponseSchema(
             activities=activities_schema,
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            )
+        )
+
+    @service_handler
+    async def get_all_user_login_history(
+        self, current_user, pagination: PaginationRequestSchema
+    ) -> UserLoginHistoryResponseSchema:
+        """
+        Retrieves login histories for all users (Administrator role only).
+        """
+        if not any(role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles):
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to view all user login histories.",
+            )
+
+        pagination = validate_pagination(pagination)
+        login_history, total_count = await self.repo.get_all_user_login_history_paginated(pagination)
+
+        return UserLoginHistoryResponseSchema(
+            histories=login_history,
             pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,

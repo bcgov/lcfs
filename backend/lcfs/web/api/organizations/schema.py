@@ -170,6 +170,7 @@ class OrganizationUpdateSchema(BaseSchema):
 
 
 class OrganizationResponseSchema(BaseSchema):
+    organization_id: int
     name: str
     operating_name: str
     email: Optional[str] = None

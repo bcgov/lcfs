@@ -1,7 +1,6 @@
 import uuid
 import enum
 from contextvars import ContextVar
-
 from sqlalchemy.ext.declarative import AbstractConcreteBase
 from sqlalchemy import (
     String,
@@ -30,7 +29,6 @@ naming_convention = {
 metadata = MetaData(naming_convention=naming_convention)
 
 Base = declarative_base(metadata=metadata)
-
 
 # Define a context variable to store the user
 current_user_var = ContextVar("current_user", default=None)

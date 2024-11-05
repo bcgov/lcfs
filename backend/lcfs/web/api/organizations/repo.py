@@ -18,13 +18,12 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
 )
 from lcfs.db.models.organization.OrganizationType import OrganizationType
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 from .schema import (
     OrganizationSchema,
     OrganizationStatusSchema,
     OrganizationTypeSchema,
-    OrganizationCreateSchema,
-    OrganizationCreateResponseSchema,
     OrganizationResponseSchema,
 )
 
@@ -64,7 +63,7 @@ class OrganizationsRepository:
         """
         Fetch a single organization by organization id from the database
         """
-        return await self.db.scalar(
+        query = (
             select(Organization)
             .options(
                 joinedload(Organization.org_status),
@@ -73,6 +72,20 @@ class OrganizationsRepository:
             )
             .where(Organization.organization_id == organization_id)
         )
+        return await self.db.scalar(query)
+
+
+    @repo_handler
+    async def update_organization(self, organization: Organization) -> Organization:
+        """
+        Update an existing organization in the database
+        """
+        organization = await self.db.merge(organization)
+        await self.db.flush()
+        await self.db.refresh(organization)
+
+        return OrganizationResponseSchema.model_validate(organization)
+
 
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:

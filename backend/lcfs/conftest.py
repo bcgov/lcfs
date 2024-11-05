@@ -1,4 +1,11 @@
 import structlog
+import warnings
+# Suppress the PendingDeprecationWarning for multipart
+warnings.filterwarnings(
+    "ignore",
+    message="Please use `import python_multipart` instead.",
+    category=PendingDeprecationWarning
+)
 import subprocess
 import warnings
 from typing import Any, AsyncGenerator, List, Callable
@@ -102,6 +109,8 @@ async def dbsession(
         try:
             yield session
         finally:
+            # Rolling back the session here prevents data persistence,
+            # which causes issues for tests that depend on others.
             await session.rollback()
             await session.close()
 
