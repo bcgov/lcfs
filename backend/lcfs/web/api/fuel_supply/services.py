@@ -1,5 +1,5 @@
+import structlog
 import math
-from logging import getLogger
 from fastapi import Depends, Request, HTTPException
 
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
@@ -24,7 +24,7 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 from lcfs.utils.constants import default_ci
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class FuelSupplyServices:
@@ -233,9 +233,7 @@ class FuelSupplyServices:
         self, compliance_report_id: int
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
-        logger.info(
-            "Getting fuel supply list for compliance report %s", compliance_report_id
-        )
+        logger.info("Getting fuel supply list for compliance report", compliance_report_id=compliance_report_id)
         fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id)
         fs_list = [
             FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
@@ -248,8 +246,10 @@ class FuelSupplyServices:
     ):
         """Get paginated fuel supply list for a compliance report"""
         logger.info(
-            "Getting paginated fuel supply list for compliance report %s",
-            compliance_report_id,
+            "Getting paginated fuel supply list",
+            compliance_report_id=compliance_report_id,
+            page=pagination.page,
+            size=pagination.size,
         )
         fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(
             pagination, compliance_report_id

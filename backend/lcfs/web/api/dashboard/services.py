@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from fastapi import Depends
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.dashboard.repo import DashboardRepository
@@ -9,7 +9,7 @@ from lcfs.web.api.dashboard.schema import (
     OrgComplianceReportCountsSchema,
 )
 
-logger = getLogger("dashboard_services")
+logger = structlog.get_logger(__name__)
 
 
 class DashboardServices:

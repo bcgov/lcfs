@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 import math
 import re
 from fastapi import Depends, Request
@@ -16,7 +16,7 @@ from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentReposit
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
 from lcfs.web.core.decorators import service_handler
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class FinalSupplyEquipmentServices:
@@ -77,7 +77,10 @@ class FinalSupplyEquipmentServices:
         """
         Get the list of FSEs for a given report.
         """
-        logger.info(f"Getting FSE list for report {compliance_report_id}")
+        logger.info(
+            "Getting FSE list for report",
+            compliance_report_id=compliance_report_id,
+        )
         fse_models = await self.repo.get_fse_list(compliance_report_id)
         fse_list = [
             FinalSupplyEquipmentSchema.model_validate(fse) for fse in fse_models
@@ -91,7 +94,12 @@ class FinalSupplyEquipmentServices:
         """
         Get the list of FSEs for a given report.
         """
-        logger.info(f"Getting FSE list paginated for report {compliance_report_id}")
+        logger.info(
+            "Getting paginated FSE list for report",
+            compliance_report_id=compliance_report_id,
+            page=pagination.page,
+            size=pagination.size,
+        )
         final_supply_equipments, total_count = await self.repo.get_fse_paginated(
             pagination, compliance_report_id
         )

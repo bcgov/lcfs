@@ -1,4 +1,4 @@
-import logging
+import structlog
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +7,7 @@ from lcfs.db.models.transfer.TransferCategory import (
     TransferCategoryEnum,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_transfer_categories(session: AsyncSession):
@@ -37,5 +37,13 @@ async def seed_transfer_categories(session: AsyncSession):
                 session.add(new_category)
 
     except Exception as e:
-        logger.error("Error occurred while seeding transfer categories: %s", e)
+        context = {
+            "function": "seed_transfer_categories",
+        }
+        logger.error(
+            "Error occurred while seeding transfer categories",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

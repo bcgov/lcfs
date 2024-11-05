@@ -1,10 +1,12 @@
 from io import BytesIO
-import logging
+import structlog
 import pandas as pd
 from openpyxl import styles
 from openpyxl.utils import get_column_letter
 import xlwt
 
+
+logger = structlog.get_logger(__name__)
 
 class SpreadsheetBuilder:
     """
@@ -65,7 +67,11 @@ class SpreadsheetBuilder:
             return output.getvalue()
 
         except Exception as e:
-            logging.error("Failed to build spreadsheet: %s", e)
+            logger.error(
+                "Failed to build spreadsheet",
+                error=str(e),
+                exc_info=e
+            )
             raise
 
     def _write_xlsx(self, output):

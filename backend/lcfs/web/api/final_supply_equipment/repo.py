@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Tuple
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
@@ -18,7 +18,7 @@ from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from sqlalchemy import func
 
-logger = getLogger("final_supply_equipment_repo")
+logger = structlog.get_logger(__name__)
 
 
 class FinalSupplyEquipmentRepository:

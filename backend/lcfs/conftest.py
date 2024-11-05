@@ -1,3 +1,4 @@
+import structlog
 import warnings
 # Suppress the PendingDeprecationWarning for multipart
 warnings.filterwarnings(
@@ -5,8 +6,6 @@ warnings.filterwarnings(
     message="Please use `import python_multipart` instead.",
     category=PendingDeprecationWarning
 )
-
-import logging
 import subprocess
 import warnings
 from typing import Any, AsyncGenerator, List, Callable
@@ -41,6 +40,8 @@ from lcfs.services.redis.dependency import get_redis_pool
 from lcfs.settings import settings
 from lcfs.web.application import get_app
 
+
+logger = structlog.get_logger(__name__)
 
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
@@ -328,7 +329,11 @@ async def add_models(dbsession):
             dbsession.add_all(models)
             await dbsession.flush()
         except Exception as e:
-            logging.error("Error adding models to the database: %s", e)
+            logger.error(
+                "Error adding models to the database",
+                error=str(e),
+                exc_info=e,
+            )
             await dbsession.rollback()
             raise
 
@@ -352,7 +357,11 @@ async def update_model(dbsession):
             dbsession.add(model)
             await dbsession.flush()
         except Exception as e:
-            logging.error("Error updating model in the database: %s", e)
+            logger.error(
+                "Error updating models to the database",
+                error=str(e),
+                exc_info=e,
+            )
             await dbsession.rollback()
             raise
 

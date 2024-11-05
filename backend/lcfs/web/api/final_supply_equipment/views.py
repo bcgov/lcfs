@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional, Union
 
 from fastapi import (
@@ -32,7 +32,7 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("fse_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 

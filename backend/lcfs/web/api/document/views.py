@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import APIRouter, Depends, Request, UploadFile
@@ -12,7 +12,7 @@ from lcfs.services.s3.schema import FileResponseSchema
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
-logger = getLogger("document_view")
+logger = structlog.get_logger(__name__)
 
 
 @router.get(

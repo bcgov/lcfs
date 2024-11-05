@@ -1,9 +1,9 @@
-import logging
+import structlog
 from sqlalchemy import select
 from datetime import datetime
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_compliance_periods(session):
@@ -178,5 +178,13 @@ async def seed_compliance_periods(session):
                 session.add(compliance_period)
 
     except Exception as e:
-        logger.error("Error occurred while seeding compliance periods: %s", e)
+        context = {
+            "function": "seed_compliance_periods",
+        }
+        logger.error(
+            "Error occurred while seeding compliance periods",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_transactions(session):
@@ -92,5 +92,13 @@ async def seed_transactions(session):
                 session.add(transaction)
 
     except Exception as e:
-        logger.error("Error occurred while seeding transactions: %s", e)
+        context = {
+            "function": "seed_transactions",
+        }
+        logger.error(
+            "Error occurred while seeding transactions",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

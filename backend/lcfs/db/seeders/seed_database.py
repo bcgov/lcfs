@@ -1,6 +1,6 @@
 import sys
 import asyncio
-import logging
+import structlog
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -11,7 +11,7 @@ from lcfs.db.seeders.prod_seeder import seed_prod
 from lcfs.db.seeders.test_seeder import seed_test
 from lcfs.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_database(environment):
@@ -37,7 +37,15 @@ async def seed_database(environment):
                 await session.commit()
 
             except Exception as e:
-                logger.error(f"An error occurred during seeding: {e}")
+                context = {
+                    "function": "seed_database",
+                }
+                logger.error(
+                    "An error occurred during seeding",
+                    error=str(e),
+                    exc_info=e,
+                    **context,
+                )
                 await session.rollback()  # Ensure to rollback in case of an error
                 raise
 

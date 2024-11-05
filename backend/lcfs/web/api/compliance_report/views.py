@@ -6,7 +6,7 @@ GET: /reports/fse-options - retrieve the options that assists the user in fillin
 GET: /reports/<report_id> - retrieve the compliance report by ID
 """
 
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import (
@@ -36,7 +36,7 @@ from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
-logger = getLogger("reports_view")
+logger = structlog.get_logger(__name__)
 
 
 @router.get(

@@ -1,7 +1,7 @@
 import io
 import math
 from datetime import datetime
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends, Request
@@ -41,8 +41,8 @@ from .schema import (
     OrganizationDetailsSchema,
 )
 
-logger = getLogger("organizations_service")
 
+logger = structlog.get_logger(__name__)
 
 class OrganizationsService:
     def __init__(

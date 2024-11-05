@@ -1,6 +1,5 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional
-
 from fastapi import Depends
 from sqlalchemy import and_, delete, or_, select, case
 from sqlalchemy import func
@@ -28,7 +27,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
 from lcfs.web.core.decorators import repo_handler
 
-logger = getLogger("fuel_supply_repo")
+logger = structlog.get_logger(__name__)
 
 
 class FuelSupplyRepository:

@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional, Tuple
 from lcfs.db.models.compliance import CompliancePeriod, FuelExport
 from lcfs.db.models.fuel import (
@@ -27,7 +27,7 @@ from fastapi import Depends
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 
-logger = getLogger("fuel_export_repo")
+logger = structlog.get_logger(__name__)
 
 
 class FuelExportRepository:

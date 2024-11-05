@@ -1,4 +1,3 @@
-import logging
 import os
 import uuid
 
@@ -19,7 +18,6 @@ from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.core.decorators import repo_handler
 
-logger = logging.getLogger(__name__)
 BUCKET_NAME = settings.s3_bucket
 
 MAX_FILE_SIZE_MB = 50

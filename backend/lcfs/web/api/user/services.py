@@ -1,7 +1,7 @@
 import io
 import math
 from datetime import datetime
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends, Request, HTTPException
@@ -33,7 +33,7 @@ from lcfs.web.api.user.repo import UserRepository
 from fastapi_cache import FastAPICache
 from lcfs.db.models.user.Role import RoleEnum
 
-logger = getLogger("user_service")
+logger = structlog.get_logger(__name__)
 
 
 class UserServices:

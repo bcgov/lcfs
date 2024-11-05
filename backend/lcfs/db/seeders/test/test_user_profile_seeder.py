@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.user.UserProfile import UserProfile
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_test_user_profiles(session):
@@ -111,5 +111,13 @@ async def seed_test_user_profiles(session):
                 session.add(user_profile)
 
     except Exception as e:
-        logger.error("Error occurred while seeding user profiles: %s", e)
+        context = {
+                "function": "seed_test_user_profiles",
+        }
+        logger.error(
+            "Error occurred while seeding user profiles",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

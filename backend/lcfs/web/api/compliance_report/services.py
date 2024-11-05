@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 import math
 import uuid
 from typing import List
@@ -23,7 +23,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class ComplianceReportServices:

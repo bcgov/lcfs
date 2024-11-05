@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import Optional, Union
 from fastapi import (
     APIRouter,
@@ -30,7 +30,7 @@ from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("fuel_export_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 

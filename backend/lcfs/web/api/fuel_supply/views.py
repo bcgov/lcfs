@@ -1,5 +1,5 @@
-from logging import getLogger
-from typing import Union, Optional
+import structlog
+from typing import Optional, Union
 
 from fastapi import APIRouter, Body, Depends, Request, Response, status, HTTPException
 from starlette.responses import JSONResponse
@@ -21,7 +21,7 @@ from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
-logger = getLogger("fuel_supply_view")
+logger = structlog.get_logger(__name__)
 
 
 @router.get(
