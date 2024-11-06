@@ -247,7 +247,7 @@ export const EditViewComplianceReport = () => {
             </>
           )}
           {!isGovernmentUser && (
-            <Introduction expanded={location.state?.newReport} />
+            <Introduction expanded={location.state?.newReport} compliancePeriod={compliancePeriod} />
           )}
           {/* Internal Comments */}
           {isGovernmentUser && (

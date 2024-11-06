@@ -8,8 +8,38 @@ import {
 import { GlobalStyles } from '@mui/system'
 import { useTranslation } from 'react-i18next'
 
-export const Introduction = ({ expanded }) => {
-  const { t } = useTranslation()
+// Reusable Section Component
+const Section = ({ header, content }) => (
+  <>
+    <Typography
+      variant="h6"
+      color="primary"
+      sx={{ marginY: '16px' }}
+      dangerouslySetInnerHTML={{ __html: header }}
+    ></Typography>
+    {content.map((paragraph, index) => (
+      <Typography
+        key={index}
+        variant="body4"
+        sx={{
+          '& p': {
+            marginBottom: '16px'
+          },
+          '& p:last-child': {
+            marginBottom: '8px'
+          }
+        }}
+        dangerouslySetInnerHTML={{ __html: paragraph }}
+      ></Typography>
+    ))}
+  </>
+)
+
+export const Introduction = ({ expanded, compliancePeriod }) => {
+  const { t } = useTranslation(['report'])
+  // Get sections from the translation file
+  const sections = t('report:sections', { returnObjects: true, complianceYear: compliancePeriod, nextYear: parseInt(compliancePeriod) + 1 })
+
   return (
     <>
       <GlobalStyles
@@ -33,55 +63,10 @@ export const Introduction = ({ expanded }) => {
           </Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <Typography
-            color="primary"
-            variant="h6"
-            sx={{ marginBottom: '16px' }}
-          >
-            {t('report:introH1')}
-          </Typography>
-          <Typography
-            variant="body4"
-            sx={{
-              '& p': {
-                marginBottom: '16px'
-              },
-              '& p:last-child': {
-                marginBottom: '0'
-              }
-            }}
-            dangerouslySetInnerHTML={{ __html: t('report:introH1Details') }}
-          ></Typography>
-          <Typography variant="h6" color="primary" sx={{ marginY: '16px' }}>
-            {t('report:introH2')}
-          </Typography>
-          <Typography
-            variant="body4"
-            sx={{
-              '& p': {
-                marginBottom: '16px'
-              },
-              '& p:last-child': {
-                marginBottom: '0'
-              }
-            }}
-            dangerouslySetInnerHTML={{ __html: t('report:introH2Details') }}
-          ></Typography>
-          <Typography variant="h6" color="primary" sx={{ marginY: '16px' }}>
-            {t('report:introH3')}
-          </Typography>
-          <Typography
-            variant="body4"
-            sx={{
-              '& p': {
-                marginBottom: '16px'
-              },
-              '& p:last-child': {
-                marginBottom: '0'
-              }
-            }}
-            dangerouslySetInnerHTML={{ __html: t('report:introH3Details') }}
-          ></Typography>
+          {/* Render each section using map */}
+          {sections.map((section, index) => (
+            <Section key={index} header={section.header} content={section.content} />
+          ))}
         </AccordionDetails>
       </Accordion>
       <Typography variant="h6" color="primary" sx={{ marginY: '16px' }}>
@@ -102,3 +87,5 @@ export const Introduction = ({ expanded }) => {
     </>
   )
 }
+
+Introduction.displayName = 'Introduction'
