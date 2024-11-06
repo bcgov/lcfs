@@ -119,6 +119,7 @@ export const Transactions = () => {
         selectedOrgId
       )
     }
+    return apiRoutes.transactions
   }, [selectedOrgId, currentUser, hasRoles])
 
   // Determine the appropriate export API endpoint
