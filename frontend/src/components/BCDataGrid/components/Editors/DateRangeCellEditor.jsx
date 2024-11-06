@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react'
+import { useState, forwardRef, useEffect, useRef } from 'react'
 import { InputAdornment, TextField, IconButton } from '@mui/material'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import { PickerModal } from 'mui-daterange-picker-plus'
@@ -11,6 +11,7 @@ export const DateRangeCellEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
     // State for the Modal
     const [anchorEl, setAnchorEl] = useState(null)
+    const containerRef = useRef(null)
 
     const handleClick = (event) => {
       setAnchorEl(event.currentTarget)
@@ -21,6 +22,22 @@ export const DateRangeCellEditor = forwardRef(
     }
 
     const open = Boolean(anchorEl)
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(event.target) &&
+          !(anchorEl && anchorEl.contains(event.target))
+        ) {
+          handleClose()
+        }
+      }
+
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }, [anchorEl])
 
     const handleSetDateRangeOnSubmit = (dateRange) => {
       handleClose() // close the modal
@@ -34,6 +51,7 @@ export const DateRangeCellEditor = forwardRef(
     const handleTextFieldChange = (event) => {
       onValueChange(event.target.value)
     }
+
     return (
       <>
         <InputMask
@@ -47,6 +65,7 @@ export const DateRangeCellEditor = forwardRef(
               ref={ref}
               fullWidth
               margin="0"
+              sx={{ width: '100%' }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -60,6 +79,8 @@ export const DateRangeCellEditor = forwardRef(
           )}
         </InputMask>
         <PickerModal
+          ref={containerRef}
+          className="ag-floating-top-viewport"
           initialDateRange={
             Array.isArray(value) && value[0]
               ? {
@@ -86,6 +107,7 @@ export const DateRangeCellEditor = forwardRef(
             open,
             anchorEl,
             onClose: handleClose,
+            disablePortal: true, // Renders modal within the DOM tree
             slotProps: {
               paper: {
                 sx: {

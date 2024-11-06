@@ -45,7 +45,7 @@ export const finalSupplyEquipmentColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFrom'
     ),
     headerComponent: RequiredHeader,
-    minWidth: 330,
+    minWidth: 300,
     cellRenderer: (params) => (
       <Typography variant="body4">
         {params.value[0]
@@ -60,6 +60,8 @@ export const finalSupplyEquipmentColDefs = (
       minDate: moment(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
       maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
     },
+    cellEditorPopup: true,
+    cellEditorPopupPosition: 'over',
     valueGetter: (params) => {
       return [
         params.data.supplyFromDate || `${compliancePeriod}-01-01`,
