@@ -27,7 +27,6 @@ async def init_org_balance_cache():
                 str(settings.redis_url), encoding="utf8", decode_responses=True
             )
 
-
             # Get the oldest transaction year
             oldest_year = await transaction_repo.get_transaction_start_year()
 
