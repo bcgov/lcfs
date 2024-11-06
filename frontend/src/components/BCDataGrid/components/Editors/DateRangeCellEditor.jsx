@@ -2,7 +2,7 @@ import { useState, forwardRef } from 'react'
 import { InputAdornment, TextField, IconButton } from '@mui/material'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import { PickerModal } from 'mui-daterange-picker-plus'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
 import ArrowCircleRightIcon from '@mui/icons-material/ArrowCircleRight'
 import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown'
 import InputMask from 'react-input-mask'
@@ -34,6 +34,28 @@ export const DateRangeCellEditor = forwardRef(
     const handleTextFieldChange = (event) => {
       onValueChange(event.target.value)
     }
+
+    const handleTextFieldBlur = (event) => {
+      const inputText = event.target.value
+
+      // Parse the date range from the input, expecting "YYYY-MM-DD to YYYY-MM-DD" format
+      const dateParts = inputText.split(' to ')
+      if (dateParts.length === 2) {
+        const startDate = parse(dateParts[0], 'yyyy-MM-dd', new Date())
+        const endDate = parse(dateParts[1], 'yyyy-MM-dd', new Date())
+
+        if (!isNaN(startDate) && !isNaN(endDate)) {
+          const formattedRange = [
+            format(startDate, 'yyyy-MM-dd'),
+            format(endDate, 'yyyy-MM-dd')
+          ]
+          onValueChange(formattedRange)
+        } else {
+          console.warn("Invalid date format entered in text field")
+        }
+      }
+    }
+
     return (
       <>
         <InputMask
@@ -41,6 +63,7 @@ export const DateRangeCellEditor = forwardRef(
           value={value}
           disabled={false}
           onChange={handleTextFieldChange}
+          onBlur={handleTextFieldBlur}
         >
           {() => (
             <TextField
@@ -90,7 +113,6 @@ export const DateRangeCellEditor = forwardRef(
             slotProps: {
               paper: {
                 sx: {
-                  position: 'absolute',
                   borderRadius: '16px',
                   boxShadow: 'rgba(0, 0, 0, 0.21) 0px 0px 4px',
                   '.MuiButton-containedPrimary': {

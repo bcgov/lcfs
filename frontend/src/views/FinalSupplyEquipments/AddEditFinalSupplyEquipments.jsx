@@ -278,8 +278,8 @@ export const AddEditFinalSupplyEquipments = () => {
             gridOptions={gridOptions}
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}
-            onAction={onAction}
             stopEditingWhenCellsLoseFocus
+            onAction={onAction}
             showAddRowsButton={true}
             saveButtonProps={{
               enabled: true,
