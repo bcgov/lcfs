@@ -81,6 +81,7 @@ export const AddEditFinalSupplyEquipments = () => {
             levelOfEquipment: item.levelOfEquipment.name,
             fuelMeasurementType: item.fuelMeasurementType.type,
             intendedUses: item.intendedUseTypes.map((i) => i.type),
+            intendedUsers: item.intendedUserTypes.map((i) => i.typeName),
             id: uuid()
           }))
         )
