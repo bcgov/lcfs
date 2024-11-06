@@ -64,7 +64,7 @@
       ]
     },
     {
-      "header": "Reporting Requirements",
+      "header": "Reporting requirements",
       "content": [
         "<p>Organizations that reportably supply fuel or have allocation agreements must submit an annual compliance report. Section 28 (4) (b) of the Low Carbon Fuels Act requires that compliance reports be submitted to the director in the form and manner required by the director. Pursuant to this section, all responsible parties must report using this form unless they claim an exemption (see below).</p>",
         "<p>The compliance report must be submitted by an individual authorized by the responsible party, and records evidencing each matter reported under the renewable and low carbon fuel requirements must be available for inspection upon request for six years after the compliance period to which they refer, per section 35 of the Low Carbon Fuels Act. Section 27 of the Low Carbon Fuels (General) Regulation requires a person to maintain these records in BC.</p>"
@@ -85,7 +85,7 @@
       ]
     },
     {
-      "header": "Reporting Timelines",
+      "header": "Reporting timelines",
       "content": [
         "<p>The <strong>{{complianceYear}}</strong> compliance period runs from January 1 to December 31, <strong>{{complianceYear}}</strong>. The compliance reports for <strong>{{complianceYear}}</strong> are due March 31, <strong>{{nextYear}}</strong>.</p>"
       ]
