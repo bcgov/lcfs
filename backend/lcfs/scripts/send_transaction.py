@@ -1,6 +1,27 @@
 import pika
 import json
 
+"""
+RabbitMQ Transaction Message Sender Script
+
+This script is designed to send messages to the Transaction queue
+It connects to a RabbitMQ instance with specified credentials,
+and sends a JSON message with 'tfrs_id`, `organization_id`, and `compliance_units_amount`.
+
+### Variables:
+- `rabbitmq_host`: Hostname of the RabbitMQ server (default: "localhost").
+- `rabbitmq_port`: Port for connecting to RabbitMQ (default: 5672).
+- `rabbitmq_user`: Username for RabbitMQ authentication.
+- `rabbitmq_pass`: Password for RabbitMQ authentication.
+- `rabbitmq_vhost`: Virtual host to connect to on RabbitMQ.
+- `rabbitmq_transaction_queue`: Name of the queue to send the message to.
+
+### Usage:
+1. Define the message parameters (`tfrs_id`, `organization_id`, `compliance_units_amount`).
+2. Execute the script with python
+3. The message is sent as a JSON object to the specified queue in RabbitMQ.
+"""
+
 # Variables for RabbitMQ
 rabbitmq_host: str = "localhost"
 rabbitmq_port: int = 5672
