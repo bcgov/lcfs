@@ -1,16 +1,16 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
-import { List, ListItemButton } from '@mui/material'
+import { List } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/constants/routes'
-import { REPORTS_ADD_FUEL_EXPORTS } from '@/constants/routes/routes.js'
+import { StyledListItem } from '@/components/StyledListItem'
 
 export const ActivityLinksList = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { compliancePeriod, complianceReportId } = useParams()
-  // reports activities
+
   const activityList = useMemo(() => {
     return [
       {
@@ -85,8 +85,8 @@ export const ActivityLinksList = () => {
   return (
     <List component="div" sx={{ maxWidth: '100%', listStyleType: 'disc' }}>
       {activityList.map((activity, index) => (
-        <ListItemButton
-          sx={{ display: 'list-item', padding: '0', marginLeft: '1.2rem' }}
+        <StyledListItem
+          sx={{ cursor: 'pointer' }}
           component="a"
           key={index}
           alignItems="flex-start"
@@ -102,7 +102,7 @@ export const ActivityLinksList = () => {
           >
             {activity.name}
           </BCTypography>
-        </ListItemButton>
+        </StyledListItem>
       ))}
     </List>
   )

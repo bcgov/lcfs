@@ -29,7 +29,7 @@ class ReportingFrequency(str, Enum):
 class PortsEnum(str, Enum):
     SINGLE = "Single port"
     DUAL = "Dual port"
-    
+
 class CompliancePeriodSchema(BaseSchema):
     compliance_period_id: int
     description: str
@@ -110,7 +110,7 @@ class FSEOptionsSchema(BaseSchema):
     intended_user_types: List[EndUserTypeSchema]
     fuel_measurement_types: List[FuelMeasurementTypeSchema]
     levels_of_equipment: List[LevelOfEquipmentSchema]
-    ports: ClassVar[List[str]] = [port.value for port in PortsEnum] 
+    ports: ClassVar[List[str]] = [port.value for port in PortsEnum]
 
 
 class FinalSupplyEquipmentSchema(BaseSchema):
@@ -155,6 +155,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     reporting_frequency: Optional[ReportingFrequency] = None
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
+    has_supplemental: bool
 
 
 class ComplianceReportCreateSchema(BaseSchema):

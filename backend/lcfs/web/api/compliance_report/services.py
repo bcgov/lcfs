@@ -102,7 +102,7 @@ class ComplianceReportServices:
             )
 
         # Validate that the status of the current report is 'Assessed'
-        if current_report.current_status.status != ComplianceReportStatusEnum.ASSESSED:
+        if current_report.current_status.status != ComplianceReportStatusEnum.Assessed:
             raise ServiceException(
                 "A supplemental report can only be created if the current report's status is 'Assessed'."
             )

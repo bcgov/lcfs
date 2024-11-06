@@ -76,10 +76,6 @@ vi.mock('../components/Introduction', () => ({
   Introduction: () => <div>Introduction</div>
 }))
 
-vi.mock('../../components/Documents/DocumentUploadDialog', () => ({
-  default: () => <div>Document Upload Dialog</div>
-}))
-
 describe('EditViewComplianceReport', () => {
   const setupMocks = (overrides = {}) => {
     const defaultMocks = {
@@ -160,36 +156,12 @@ describe('EditViewComplianceReport', () => {
     })
   })
 
-  it('displays organization information', async () => {
-    render(<EditViewComplianceReport />, { wrapper })
-    await waitFor(() => {
-      expect(screen.getByText('report:serviceAddrLabel:')).toBeInTheDocument()
-      expect(screen.getByText('report:bcAddrLabel:')).toBeInTheDocument()
-    })
-  })
-
   it('renders report components', async () => {
     render(<EditViewComplianceReport />, { wrapper })
     await waitFor(() => {
       expect(screen.getByText('Report Details')).toBeInTheDocument()
       expect(screen.getByText('Compliance Report Summary')).toBeInTheDocument()
       expect(screen.getByText('Introduction')).toBeInTheDocument()
-    })
-  })
-
-  it('renders DocumentUploadDialog for Draft status', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } }
-        }
-      }
-    })
-    render(<EditViewComplianceReport />, { wrapper })
-    await waitFor(() => {
-      expect(
-        screen.getByText('Upload supporting documents for your report.')
-      ).toBeInTheDocument()
     })
   })
 
@@ -413,23 +385,6 @@ describe('EditViewComplianceReport', () => {
     })
   })
 
-  it('displays ImportantInfoCard for non-government users when status is not Draft', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          data: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
-          }
-        }
-      },
-      currentUser: { data: { isGovernmentUser: false }, hasRoles: () => false }
-    })
-    render(<EditViewComplianceReport />, { wrapper })
-    await waitFor(() => {
-      expect(screen.getByText('report:impInfoTitle')).toBeInTheDocument()
-    })
-  })
-
   it('displays scroll-to-top button when scrolling down', async () => {
     render(<EditViewComplianceReport />, { wrapper })
     await waitFor(() => {
@@ -446,38 +401,4 @@ describe('EditViewComplianceReport', () => {
     })
   })
 
-  it('calls createSupplementalReport when the button is clicked', async () => {
-    const mockMutate = vi.fn()
-    setupMocks({
-      complianceReport: {
-        data: {
-          data: {
-            complianceReportId: '123',
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-          }
-        }
-      },
-      createSupplementalReport: {
-        mutate: mockMutate,
-        isLoading: false
-      },
-      currentUser: {
-        data: { isGovernmentUser: false },
-        hasRoles: () => false
-      }
-    })
-
-    render(<EditViewComplianceReport />, { wrapper })
-    await waitFor(() => {
-      expect(screen.getByText('report:impInfoTitle')).toBeInTheDocument()
-    })
-
-    const createSupplementalButton = screen.getByText(
-      'report:createSupplementalRptBtn'
-    )
-
-    fireEvent.click(createSupplementalButton)
-
-    expect(mockMutate).toHaveBeenCalled()
-  })
 })

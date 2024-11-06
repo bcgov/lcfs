@@ -1,8 +1,9 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
-import { vi } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -15,6 +16,12 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   )
 }))
 
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: vi.fn().mockReturnValue({
+    keycloak: { authenticated: true }
+  })
+}))
+
 // Mock useTranslation hook
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -22,6 +29,8 @@ vi.mock('react-i18next', () => ({
       switch (key) {
         case 'report:assessment':
           return 'Assessment'
+        case 'report:orgDetails':
+          return 'Organization Details'
         case 'report:assessmentLn1':
           return `${options.name} ${options.hasMet}`
         case 'report:assessmentLn2':
@@ -32,6 +41,10 @@ vi.mock('react-i18next', () => ({
           return `Assessed by ${options.firstName} ${options.lastName} on ${options.createDate}`
         case 'report:complianceReportHistory.Submitted':
           return `Signed and submitted by ${options.firstName} ${options.lastName} on ${options.createDate}`
+        case 'report:complianceReportHistory.Draft':
+          return `Signed and submitted by ${options.firstName} ${options.lastName} on ${options.createDate}`
+        case 'report:supplementalCreated':
+          return 'Supplemental report created successfully'
         default:
           return key
       }
@@ -53,18 +66,44 @@ describe('AssessmentCard', () => {
     }
   ]
 
+  const mockOrgData = {
+    name: 'Test Org',
+    orgAddress: '123 Test St, Test City, TC',
+    orgAttorneyAddress: '456 Attorney Ave, Legal City, LC'
+  }
+
   it('renders without crashing', async () => {
     render(
-      <AssessmentCard orgName="Test Org" hasMet={false} history={mockHistory} isGovernmentUser={false} />
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={false}
+        history={mockHistory}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
     )
     await waitFor(() => {
-      expect(screen.getByText('Assessment')).toBeInTheDocument()
+      expect(screen.getByText('Organization Details')).toBeInTheDocument()
     })
   })
 
   it('renders assessment lines with correct organization name and status', async () => {
     render(
-      <AssessmentCard orgName="Test Org" hasMet={true} history={mockHistory} isGovernmentUser={true} />
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={true}
+        history={mockHistory}
+        hasSupplemental={true}
+        isGovernmentUser={true}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
     )
     await waitFor(() => {
       const assessmentLines = screen.getAllByText('Test Org has met')
@@ -74,11 +113,54 @@ describe('AssessmentCard', () => {
 
   it('renders report history when history is available', async () => {
     render(
-      <AssessmentCard orgName="Test Org" hasMet={false} history={mockHistory} isGovernmentUser={false} />
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={false}
+        history={mockHistory}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
     )
     await waitFor(() => {
-      expect(screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')).toBeInTheDocument()
-      expect(screen.getByText('Signed and submitted by Jane Smith on 2024-09-19 5:00 pm PDT')).toBeInTheDocument()
+      expect(
+        screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Signed and submitted by Jane Smith on 2024-09-19 5:00 pm PDT'
+        )
+      ).toBeInTheDocument()
+    })
+  })
+  it('filters out DRAFT status from history except when hasSupplemental is true', async () => {
+    const historyWithDraft = [
+      ...mockHistory,
+      {
+        status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+        createDate: '2024-08-01',
+        userProfile: { firstName: 'Alice', lastName: 'Wong' }
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={false}
+        history={historyWithDraft}
+        hasSupplemental={true}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
+    )
+    await waitFor(() => {
+      expect(screen.getByText(/Alice Wong/)).toBeInTheDocument()
     })
   })
 
@@ -93,35 +175,69 @@ describe('AssessmentCard', () => {
     ]
 
     render(
-      <AssessmentCard orgName="Test Org" hasMet={false} history={historyWithDraft} isGovernmentUser={false} />
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={false}
+        history={historyWithDraft}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
     )
     await waitFor(() => {
       expect(screen.queryByText('Alice Wong')).not.toBeInTheDocument()
-      expect(screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')).toBeInTheDocument()
-      expect(screen.getByText('Signed and submitted by Jane Smith on 2024-09-19 5:00 pm PDT')).toBeInTheDocument()
+      expect(
+        screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Signed and submitted by Jane Smith on 2024-09-19 5:00 pm PDT'
+        )
+      ).toBeInTheDocument()
     })
   })
 
   it('changes status to "AssessedBy" when the user is not a government user', async () => {
     render(
-      <AssessmentCard orgName="Test Org" hasMet={true} history={mockHistory} isGovernmentUser={false} />
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={true}
+        history={mockHistory}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
     )
     await waitFor(() => {
-      expect(screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')).toBeInTheDocument()
+      expect(
+        screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')
+      ).toBeInTheDocument()
     })
   })
 
-  it('returns null if there is no history', async () => {
-    const { container } = render(
-      <AssessmentCard orgName="Test Org" hasMet={false} history={[]} isGovernmentUser={false} />
+  it('displays organization information', async () => {
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMet={true}
+        history={mockHistory}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+      />,
+      { wrapper }
     )
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it('returns null if history is not passed', async () => {
-    const { container } = render(
-      <AssessmentCard orgName="Test Org" hasMet={false} isGovernmentUser={false} />
-    )
-    expect(container).toBeEmptyDOMElement()
+    await waitFor(() => {
+      expect(screen.getByText(/report:serviceAddrLabel/)).toBeInTheDocument()
+      expect(screen.getByText(/report:bcAddrLabel/)).toBeInTheDocument()
+    })
   })
 })
