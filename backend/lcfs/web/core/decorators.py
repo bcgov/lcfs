@@ -20,9 +20,9 @@ from lcfs.web.exception.exceptions import (
 from lcfs.db.models.user.Role import RoleEnum
 
 # Context variables
-request_var = contextvars.ContextVar('request')
-user_var = contextvars.ContextVar('user')
-session_var = contextvars.ContextVar('session')
+request_var = contextvars.ContextVar("request")
+user_var = contextvars.ContextVar("user")
+session_var = contextvars.ContextVar("session")
 
 
 def extract_context():
@@ -33,17 +33,17 @@ def extract_context():
     user = user_var.get(None)
     session = session_var.get(None)
     return {
-        'local_vars': local_vars,
-        'request': {
-            'url': str(request.url) if request else None,
-            'method': request.method if request else None,
-            'headers': dict(request.headers) if request else None,
+        "local_vars": local_vars,
+        "request": {
+            "url": str(request.url) if request else None,
+            "method": request.method if request else None,
+            "headers": dict(request.headers) if request else None,
         },
-        'user': {
-            'id': user.user_profile_id if user else None,
-            'roles': user.role_names if user else [],
+        "user": {
+            "id": user.user_profile_id if user else None,
+            "roles": user.role_names if user else [],
         },
-        'session_state': repr(session) if session else 'No session',
+        "session_state": repr(session) if session else "No session",
     }
 
 
@@ -54,11 +54,7 @@ async def get_request_payload(request):
         try:
             request_payload = await request.json()
         except Exception:
-            # Handle the case where the request body is not JSON
-            request_payload = await request.body()
-            request_payload = (
-                request_payload.decode('utf-8') if request_payload else None
-            )
+            pass
     return request_payload
 
 
@@ -76,7 +72,7 @@ def get_source_info(func=None, e=None):
         frames = frames[::-1]
         # Skip frames from 'decorators.py'
         for frame in frames:
-            if 'decorators.py' not in frame.filename:
+            if "decorators.py" not in frame.filename:
                 file_path = frame.filename
                 function_name = frame.name
                 linenumber = frame.lineno
@@ -92,9 +88,9 @@ def get_source_info(func=None, e=None):
     else:
         return {}
     return {
-        'filename': filename,
-        'func_name': function_name,
-        'lineno': linenumber,
+        "filename": filename,
+        "func_name": function_name,
+        "lineno": linenumber,
     }
 
 
@@ -129,7 +125,9 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
             request_var.set(request)
             user = getattr(request, "user", None)
             user_var.set(user)
-            session = request.state.session if hasattr(request.state, 'session') else None
+            session = (
+                request.state.session if hasattr(request.state, "session") else None
+            )
             session_var.set(session)
 
             # check if user is authenticated
@@ -210,9 +208,11 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 )
             except Exception as e:
                 context = extract_context()
-                log_unhandled_exception(logger, e, context, 'view', func=func)
+                log_unhandled_exception(logger, e, context, "view", func=func)
                 # Raise HTTPException with original traceback
-                new_exception = HTTPException(status_code=500, detail="Internal Server Error")
+                new_exception = HTTPException(
+                    status_code=500, detail="Internal Server Error"
+                )
                 raise new_exception.with_traceback(e.__traceback__)
 
         return wrapper
@@ -235,7 +235,7 @@ def service_handler(func):
         # all other errors that occur in the service layer will log an error
         except Exception as e:
             context = extract_context()
-            log_unhandled_exception(logger, e, context, 'service', func=func)
+            log_unhandled_exception(logger, e, context, "service", func=func)
             # Raise ServiceException with original traceback
             new_exception = ServiceException()
             raise new_exception.with_traceback(e.__traceback__) from e
@@ -257,7 +257,7 @@ def repo_handler(func):
         # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
         except Exception as e:
             context = extract_context()
-            log_unhandled_exception(logger, e, context, 'repository', func=func)
+            log_unhandled_exception(logger, e, context, "repository", func=func)
             # Raise DatabaseException with original traceback
             new_exception = DatabaseException()
             raise new_exception.with_traceback(e.__traceback__) from e
