@@ -1,5 +1,7 @@
 import uuid
 import enum
+
+from pydantic import computed_field
 from sqlalchemy import (
     Column,
     Integer,
@@ -166,3 +168,8 @@ class ComplianceReport(BaseModel, Auditable):
 
     def __repr__(self):
         return f"<ComplianceReport(id={self.compliance_report_id}, version={self.version})>"
+
+    @computed_field
+    @property
+    def has_supplemental(self):
+        return self.version > 0

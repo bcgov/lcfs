@@ -3,9 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { ActivityLinksList } from './ActivityLinkList'
 import { Typography } from '@mui/material'
 import BCBox from '@/components/BCBox'
+import BCTypography from '@/components/BCTypography'
+import BCButton from '@/components/BCButton'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
+import { useState } from 'react'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import Box from '@mui/material/Box'
 
-export const ActivityListCard = ({ name, period }) => {
-  const { t } = useTranslation()
+export const ActivityListCard = ({ name, period, reportID }) => {
+  const { t } = useTranslation(['report'])
+
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <BCWidgetCard
@@ -30,10 +38,45 @@ export const ActivityListCard = ({ name, period }) => {
               __html: t('report:activityHdrLabel', { name, period })
             }}
           />
-          <Typography variant="body4" color="text" component="div">
-            {t('report:activityLinksList')}:
-          </Typography>
-          <ActivityLinksList />
+          <Box>
+            <Typography variant="body4" color="text" component="div">
+              {t('report:activityLinksList')}:
+            </Typography>
+            <ActivityLinksList />
+          </Box>
+          <Box>
+            <Typography
+              variant="body4"
+              color="text"
+              component="div"
+              sx={{ paddingBottom: '8px' }}
+            >
+              {t('report:uploadLabel')}
+            </Typography>
+            <Box>
+              <BCButton
+                sx={{ marginLeft: '24px' }}
+                data-test="submit-docs"
+                size="large"
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  setIsOpen(true)
+                }}
+                startIcon={<FileUploadIcon />}
+              >
+                {t('report:supportingDocs')}
+              </BCButton>
+            </Box>
+          </Box>
+          <DocumentUploadDialog
+            parentID={reportID}
+            parentType="compliance_report"
+            open={isOpen}
+            close={() => {
+              setIsOpen(false)
+            }}
+          />
         </BCBox>
       }
     />

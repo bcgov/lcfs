@@ -106,6 +106,7 @@ def compliance_report_base_schema(
         compliance_report_group_uuid: str = None,
         version: int = 0,
         supplemental_initiator: str = None,
+        has_supplemental: bool = False,
     ):
         # Assign default values from dependent fixtures if not overridden
         compliance_period_id = (
@@ -143,6 +144,7 @@ def compliance_report_base_schema(
             compliance_report_group_uuid=compliance_report_group_uuid,
             version=version,
             supplemental_initiator=supplemental_initiator,
+            has_supplemental=has_supplemental,
         )
 
     return _create_compliance_report_base_schema
