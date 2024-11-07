@@ -22,7 +22,7 @@ import uuid
 import contextvars
 
 from lcfs.settings import settings
-from lcfs.logging_config import setup_logging, correlation_id_var, audit_logger
+from lcfs.logging_config import setup_logging, correlation_id_var
 from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
 from lcfs.web.exception.exception_handler import validation_exception_handler
@@ -80,21 +80,24 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         # Call the authenticate method of the real backend
         return await real_backend.authenticate(request)
 
+
 # Middleware to handle correlation IDs
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        correlation_id = request.headers.get('X-Correlation-ID', str(uuid.uuid4()))
+        correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
         correlation_id_var.set(correlation_id)
         response = await call_next(request)
-        response.headers['X-Correlation-ID'] = correlation_id
+        response.headers["X-Correlation-ID"] = correlation_id
         return response
-    
+
+
 # Middleware to set context variables
 class ContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request.state.correlation_id = correlation_id_var.get()
         response = await call_next(request)
         return response
+
 
 def get_app() -> FastAPI:
     """
@@ -158,6 +161,7 @@ def get_app() -> FastAPI:
     app.include_router(router=api_router, prefix="/api")
 
     return app
+
 
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle uncaught exceptions."""

@@ -1,4 +1,3 @@
-import time
 import structlog
 import sys
 import traceback
@@ -159,20 +158,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
 
             # run through the view function
             try:
-                response = await func(request, *args, **kwargs)
-
-                request_payload = await get_request_payload(request)
-                source_info = get_source_info(func=func)
-
-                # Overwrite LogRecord attributes using 'source_info'
-                logger.info(
-                    "API call successful",
-                    user_id=user.user_profile_id if user else None,
-                    request_payload=request_payload,
-                    response_data=response,
-                    source_info=source_info,
-                )
-                return response
+                return await func(request, *args, **kwargs)
             except ValueError as e:
                 source_info = get_source_info(func=func)
                 logger.error(

@@ -8,22 +8,34 @@ from rich.text import Text
 from lcfs.settings import settings
 
 # Context variables for correlation ID
-correlation_id_var = contextvars.ContextVar('correlation_id', default=None)
+correlation_id_var = contextvars.ContextVar("correlation_id", default=None)
+
 
 def add_correlation_id(logger, method_name, event_dict):
     """Add correlation ID to event dict."""
     correlation_id = correlation_id_var.get()
     if correlation_id is not None:
-        event_dict['correlation_id'] = correlation_id
+        event_dict["correlation_id"] = correlation_id
     return event_dict
+
 
 def censor_sensitive_data_processor(_, __, event_dict):
     """Censor sensitive information in logs."""
-    sensitive_keys = {'password', 'token', 'secret_key', 'authorization', 'api_key'}
-    for key in sensitive_keys:
-        if key in event_dict:
-            event_dict[key] = '***'
-    return event_dict
+    sensitive_keys = {"password", "token", "secret_key", "authorization", "api_key"}
+
+    def censor(obj):
+        if isinstance(obj, dict):
+            return {
+                k: "***" if k.lower() in sensitive_keys else censor(v)
+                for k, v in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [censor(item) for item in obj]
+        else:
+            return obj
+
+    return censor(event_dict)
+
 
 def custom_console_renderer():
     def renderer(logger, name, event_dict):
@@ -42,12 +54,12 @@ def custom_console_renderer():
 
         # Customize log level colors
         level_style = {
-            'CRITICAL': 'bold bright_magenta',
-            'ERROR': 'bold bright_red',
-            'WARNING': 'bold bright_yellow',
-            'INFO': 'bold bright_green',
-            'DEBUG': 'bold bright_blue',
-        }.get(log_level, 'bold white')
+            "CRITICAL": "bold bright_magenta",
+            "ERROR": "bold bright_red",
+            "WARNING": "bold bright_yellow",
+            "INFO": "bold bright_green",
+            "DEBUG": "bold bright_blue",
+        }.get(log_level, "bold white")
 
         header.append(f"[{log_level}] ", style=level_style)
         header.append(f"{event}", style="bold")
@@ -68,6 +80,7 @@ def custom_console_renderer():
 
     return renderer
 
+
 def setup_logging(level=logging.INFO):
     """Set up structured logging configuration"""
     # Clear existing handlers and add a StreamHandler
@@ -77,12 +90,12 @@ def setup_logging(level=logging.INFO):
     handler.setLevel(level)
 
     # Use a formatter that doesn't interfere with color codes
-    handler.setFormatter(logging.Formatter('%(message)s', validate=False))
+    handler.setFormatter(logging.Formatter("%(message)s", validate=False))
     root_logger.addHandler(handler)
     root_logger.setLevel(level)
 
     # Choose renderer based on environment
-    if settings.environment.lower() == 'dev':
+    if settings.environment.lower() == "dev":
         renderer = custom_console_renderer()
     else:
         renderer = structlog.processors.JSONRenderer()
@@ -107,13 +120,3 @@ def setup_logging(level=logging.INFO):
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-
-# Initialize the audit logger
-audit_logger = structlog.get_logger('audit')
-
-def setup_audit_logging():
-    """Set up audit logger."""
-    audit_handler = logging.FileHandler('audit.log')
-    audit_handler.setFormatter(logging.Formatter('%(message)s'))
-    audit_logger.addHandler(audit_handler)
-    audit_logger.setLevel(logging.INFO)
