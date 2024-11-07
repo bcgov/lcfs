@@ -53,12 +53,62 @@
   "assessConfirmText": "Are you sure you want to assess this compliance report?",
   "uploadLabel": "Upload supporting documents for your report.",
   "introduction": "Introduction",
-  "introH1": "Welcome to the British Columbia Low Carbon Fuel Standard Portal",
-  "introH1Details": "<p>Compliance with the Low Carbon Fuels Act, the Low Carbon Fuels (General) Regulation and the Low Carbon Fuels (Technical) Regulation is the responsibility of the organization who reportably supplies type A or type B fuel.  An organization reportably supplies a type A fuel if the person manufactures or imports the fuel in British Columbia (BC).</p>  <p>An organization reportably supplies a type B fuel if:</p><ul><li>the fuel is supplied through final supply equipment in BC, and</li><li>the fuel displaces a base fuel for use in an applicable purpose.</li></ul><p>For electricity, an organization does not report fuel supply if the electricity supplied does not exceed 15,000 kWh in a compliance year and the organization is not responsible to report any other fuel.</p>",
-  "introH2": "Reporting requirements",
-  "introH2Details": "<p>Organizations that reportably supply fuel or have allocation agreements must submit an annual compliance report. Section 28 (4) (b) of the Low Carbon Fuels Act requires that compliance reports be submitted to the director in the form and manner required by the director. Pursuant to this section, all responsible parties must report using this form unless they claim an exemption (see below).</p><p>The compliance report must be submitted by an individual authorized by the responsible party, and records evidencing each matter reported under the renewable and low carbon fuel requirements must be available for inspection upon request for six years after the compliance period to which they refer per section 35 of the Low Carbon Fuels Act. Section 27 of the Low Carbon Fuels (General) Regulation requires a person to maintain these records in BC.</p>",
-  "introH3": "Penalties",
-  "introH3Details": "<p>Automatic penalties and discretionary penalties are two distinct enforcement mechanisms designed to ensure compliance with both the renewable fuel requirement and the low carbon fuel requirement. Automatic penalties are imposed when there is a clear failure to meet regulatory obligations. Discretionary penalties evaluate the specifics of a violation, considering factors like intent, efforts to comply, or mitigating circumstances.</p><p>For the jet fuel category, automatic penalties for non-compliance begin in the 2026 compliance year for the low carbon fuel requirement and in the 2028 compliance year for the renewable fuel requirement. However, even though automatic penalties will not be in-force until those dates, jet fuel suppliers are still required to report fuel supply, beginning in the 2024 compliance year.</p><p>Any administrative penalty must be made payable to the Minister of Finance. Payment of an automatic administrative penalty is due on March 31, following each compliance period. For more information, please contact the Low Carbon Fuels Branch via email at <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a></p>",
+  "sections": [
+    {
+      "header": "Welcome to the British Columbia Low Carbon Fuel Standard Portal",
+      "content": [
+        "<p>Compliance with the Low Carbon Fuels Act, the Low Carbon Fuels (General) Regulation, and the Low Carbon Fuels (Technical) Regulation is the responsibility of the organization that reportably supplies type A or type B fuel. An organization reportably supplies a type A fuel if the person manufactures or imports the fuel in British Columbia (BC).</p>",
+        "<p>An organization reportably supplies a type B fuel if:</p>",
+        "<ul><li>the fuel is supplied through final supply equipment in BC, and</li><li>the fuel displaces a base fuel for use in an applicable purpose.</li></ul>",
+        "<p>For electricity, an organization does not report fuel supply if the electricity supplied does not exceed 15,000 kWh in a compliance year, and the organization is not responsible to report any other fuel.</p>"
+      ]
+    },
+    {
+      "header": "Reporting requirements",
+      "content": [
+        "<p>Organizations that reportably supply fuel or have allocation agreements must submit an annual compliance report. Section 28 (4) (b) of the Low Carbon Fuels Act requires that compliance reports be submitted to the director in the form and manner required by the director. Pursuant to this section, all responsible parties must report using this form unless they claim an exemption (see below).</p>",
+        "<p>The compliance report must be submitted by an individual authorized by the responsible party, and records evidencing each matter reported under the renewable and low carbon fuel requirements must be available for inspection upon request for six years after the compliance period to which they refer, per section 35 of the Low Carbon Fuels Act. Section 27 of the Low Carbon Fuels (General) Regulation requires a person to maintain these records in BC.</p>"
+      ]
+    },
+    {
+      "header": "Penalties",
+      "content": [
+        "<p>Automatic penalties and discretionary penalties are two distinct enforcement mechanisms designed to ensure compliance with both the renewable fuel requirement and the low carbon fuel requirement. Automatic penalties are imposed when there is a clear failure to meet regulatory obligations. Discretionary penalties evaluate the specifics of a violation, considering factors like intent, efforts to comply, or mitigating circumstances.</p>",
+        "<p>For the jet fuel category, automatic penalties for non-compliance begin in the 2026 compliance year for the low carbon fuel requirement and in the 2028 compliance year for the renewable fuel requirement. However, even though automatic penalties will not be in force until those dates, jet fuel suppliers are still required to report fuel supply, beginning in the 2024 compliance year.</p>",
+        "<p>Any administrative penalty must be made payable to the Minister of Finance. Payment of an automatic administrative penalty is due on March 31, following each compliance period. For more information, please contact the Low Carbon Fuels Branch via email at <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a>.</p>"
+      ]
+    },
+    {
+      "header": "Exemption",
+      "content": [
+        "<p>To determine if an organization is eligible for an exemption, see the <i>Information Bulletin RLCF-005: Exemption Report</i>. To apply for an exemption, complete the Exemption Report Form, which can be found on our website at <a href='https://www.gov.bc.ca/lowcarbonfuels'>www.gov.bc.ca/lowcarbonfuels</a>. Exemption reports may be submitted via email to <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a>.</p>"
+      ]
+    },
+    {
+      "header": "Reporting timelines",
+      "content": [
+        "<p>The <strong>{{complianceYear}}</strong> compliance period runs from January 1 to December 31, <strong>{{complianceYear}}</strong>. The compliance reports for <strong>{{complianceYear}}</strong> are due March 31, <strong>{{nextYear}}</strong>.</p>"
+      ]
+    },
+    {
+      "header": "Export of supply",
+      "content": [
+        "<p>Any fuel reported as supplied but later transferred out of BC must be reported in a compliance report as a reportable export under section 8 of the Low Carbon Fuels Act.</p>"
+      ]
+    },
+    {
+      "header": "Audits of reports",
+      "content": [
+        "<p>Responsible parties must keep sufficient records to verify and evaluate any reports and information submitted to the director. Under section 34 of the Low Carbon Fuels Act, the director can require an organization that submits a report to have the report audited by a designated inspector to verify compliance with the legislation. Any inconsistencies noted during the audit are deemed contraventions under the Low Carbon Fuels Act and may be subject to penalty after substantiation.</p>"
+      ]
+    },
+    {
+      "header": "About this form",
+      "content": [
+        "<p>Due to administrative and legislative changes, the values and calculations presented in this report before submission are for informational purposes only and are subject to change without prior notice. The Declaration & Summary section of this Compliance Report consolidates information from the other schedules of this report. Please refer to the User Guide provided for navigation instructions. The Low Carbon Fuels Act, Low Carbon Fuels (General) Regulation, and Low Carbon Fuels (Technical) Regulation are available online at <a href='http://www.bclaws.ca'>http://www.bclaws.ca</a>.</p>"
+      ]
+    }
+  ],
   "questions": "Questions?",
   "contactForAddrChange": "If you need to change your address, please contact <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a>",
   "contact": "<p>Please contact <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a> with any questions you may have about this form.</p>",
