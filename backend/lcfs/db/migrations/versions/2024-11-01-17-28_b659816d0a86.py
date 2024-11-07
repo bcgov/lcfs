@@ -1,7 +1,7 @@
 """Add kwh_usage to final_supply_equipment
 
 Revision ID: b659816d0a86
-Revises: bb5504e743a0
+Revises: bf26425d2a14
 Create Date: 2024-11-01 17:28:20.854410
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "b659816d0a86"
-down_revision = "413db49916b3"
+down_revision = "bf26425d2a14"
 branch_labels = None
 depends_on = None
 
