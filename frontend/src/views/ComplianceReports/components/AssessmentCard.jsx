@@ -91,7 +91,7 @@ export const AssessmentCard = ({
         <>
           <Stack direction="column" spacing={0.5}>
             <Typography variant="h6" color="primary">
-              {orgData.name}
+              {orgData?.name}
             </Typography>
             <List sx={{ padding: 0 }}>
               <StyledListItem>

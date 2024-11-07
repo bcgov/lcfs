@@ -239,7 +239,7 @@ async def test_get_compliance_report_by_id_success(
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
         assert response.json() == expected_response
-        mock_get_compliance_report_by_id.assert_called_once_with(1)
+        mock_get_compliance_report_by_id.assert_called_once_with(1, False)
         mock_validate_organization_access.assert_called_once_with(1)
 
 
