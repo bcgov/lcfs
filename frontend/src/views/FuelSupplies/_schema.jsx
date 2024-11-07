@@ -153,7 +153,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       }
       return true
     },
-    tooltipValueGetter: (p) => 'Select the fuel type from the list'
+    tooltipValueGetter: () => 'Select the fuel type from the list'
   },
   {
     field: 'fuelTypeOther',
@@ -444,34 +444,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     editable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    valueGetter: (params) => {
-      if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-          ?.fuelCodeCarbonIntensity
-      } else {
-        if (optionsData) {
-          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
-            const categories = optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            ).fuelCategories
-            const defaultCI = categories.find(
-              (cat) => cat.fuelCategory === params.data.fuelCategory
-            ).defaultAndPrescribedCi
-
-            return defaultCI
-          }
-        }
-        return (
-          (optionsData &&
-            optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            )?.defaultCarbonIntensity) ||
-          0
-        )
-      }
-    }
   },
   {
     field: 'energyDensity',

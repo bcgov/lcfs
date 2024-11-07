@@ -80,6 +80,10 @@ class EndUseTypeSchema(BaseSchema):
     type: str
     sub_type: Optional[str] = None
 
+class EndUserTypeSchema(BaseSchema):
+    end_user_type_id: int
+    type_name: str
+
 
 class EnergyDensitySchema(BaseSchema):
     energy_density_id: int

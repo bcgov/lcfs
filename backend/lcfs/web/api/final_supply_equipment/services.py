@@ -13,7 +13,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
     LevelOfEquipmentSchema,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
-from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
+from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
@@ -29,9 +29,13 @@ class FinalSupplyEquipmentServices:
     @service_handler
     async def get_fse_options(self):
         """Fetches all FSE options concurrently."""
-        intended_use_types, levels_of_equipment, fuel_measurement_types = (
-            await self.repo.get_fse_options()
-        )
+        (
+            intended_use_types,
+            levels_of_equipment,
+            fuel_measurement_types,
+            intended_user_types,
+            ports
+        ) = await self.repo.get_fse_options()
 
         return {
             "intended_use_types": [
@@ -44,6 +48,10 @@ class FinalSupplyEquipmentServices:
                 FuelMeasurementTypeSchema.model_validate(f)
                 for f in fuel_measurement_types
             ],
+            "intended_user_types": [
+                EndUserTypeSchema.model_validate(u) for u in intended_user_types
+            ],
+            "ports": [port.value for port in ports],
         }
 
     async def convert_to_fse_model(self, fse: FinalSupplyEquipmentCreateSchema):
@@ -54,6 +62,7 @@ class FinalSupplyEquipmentServices:
                     "level_of_equipment",
                     "fuel_measurement_type",
                     "intended_uses",
+                    "intended_users",
                     "deleted",
                 }
             )
@@ -67,6 +76,10 @@ class FinalSupplyEquipmentServices:
         for intended_use in fse.intended_uses:
             fse_model.intended_use_types.append(
                 await self.repo.get_intended_use_by_name(intended_use)
+            )
+        for intended_user in fse.intended_users:
+            fse_model.intended_user_types.append(
+                await self.repo.get_intended_user_by_name(intended_user)
             )
         return fse_model
 
@@ -128,8 +141,10 @@ class FinalSupplyEquipmentServices:
         if not existing_fse:
             raise ValueError("final supply equipment not found")
 
+        existing_fse.kwh_usage = fse_data.kwh_usage
         existing_fse.serial_nbr = fse_data.serial_nbr
         existing_fse.manufacturer = fse_data.manufacturer
+        existing_fse.model = fse_data.model
         if existing_fse.fuel_measurement_type.type != fse_data.fuel_measurement_type:
             fuel_measurement_type = await self.repo.get_fuel_measurement_type_by_type(
                 fse_data.fuel_measurement_type
@@ -140,6 +155,7 @@ class FinalSupplyEquipmentServices:
                 fse_data.level_of_equipment
             )
             existing_fse.level_of_equipment = level_of_equipment
+        existing_fse.ports = fse_data.ports
         intended_use_types = []
         for intended_use in fse_data.intended_uses:
             if intended_use not in [
@@ -161,9 +177,29 @@ class FinalSupplyEquipmentServices:
                         None,
                     )
                 )
+        intended_user_types = []
+        for intended_user in fse_data.intended_users:
+            # Check if this intended use is already in the existing list
+            existing_user_type = next(
+                (
+                    existing_user
+                    for existing_user in existing_fse.intended_user_types
+                    if existing_user.type_name == intended_user
+                ),
+                None,
+            )
+
+            if existing_user_type:
+                intended_user_types.append(existing_user_type)
+            else:
+                # Otherwise, fetch the intended user type by name and add it to the list
+                new_user_type = await self.repo.get_intended_user_by_name(intended_user)
+                intended_user_types.append(new_user_type)
+
         existing_fse.supply_from_date = fse_data.supply_from_date
         existing_fse.supply_to_date = fse_data.supply_to_date
         existing_fse.intended_use_types = intended_use_types
+        existing_fse.intended_user_types = intended_user_types
         existing_fse.street_address = fse_data.street_address
         existing_fse.city = fse_data.city
         existing_fse.postal_code = fse_data.postal_code

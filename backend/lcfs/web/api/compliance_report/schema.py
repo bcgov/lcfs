@@ -1,7 +1,8 @@
-from typing import Optional, List, Union
+from enum import Enum
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
 from enum import Enum
-from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
+from lcfs.web.api.fuel_code.schema import EndUseTypeSchema,EndUserTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
@@ -25,7 +26,10 @@ class ReportingFrequency(str, Enum):
     ANNUAL = "Annual"
     QUARTERLY = "Quarterly"
 
-
+class PortsEnum(str, Enum):
+    SINGLE = "Single port"
+    DUAL = "Dual port"
+    
 class CompliancePeriodSchema(BaseSchema):
     compliance_period_id: int
     description: str
@@ -103,8 +107,10 @@ class LevelOfEquipmentSchema(BaseSchema):
 
 class FSEOptionsSchema(BaseSchema):
     intended_use_types: List[EndUseTypeSchema]
+    intended_user_types: List[EndUserTypeSchema]
     fuel_measurement_types: List[FuelMeasurementTypeSchema]
     levels_of_equipment: List[LevelOfEquipmentSchema]
+    ports: ClassVar[List[str]] = [port.value for port in PortsEnum] 
 
 
 class FinalSupplyEquipmentSchema(BaseSchema):
@@ -113,11 +119,15 @@ class FinalSupplyEquipmentSchema(BaseSchema):
     supply_from_date: date
     supply_to_date: date
     registration_nbr: str
+    kwh_usage: Optional[float] = None
     serial_nbr: str
     manufacturer: str
+    model: Optional[str] = None
     level_of_equipment: LevelOfEquipmentSchema
     fuel_measurement_type: FuelMeasurementTypeSchema
+    ports: Optional[PortsEnum] = None
     intended_use_types: List[EndUseTypeSchema]
+    intended_user_types: List[EndUserTypeSchema]
     street_address: str
     city: str
     postal_code: str

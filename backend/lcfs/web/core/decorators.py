@@ -40,7 +40,7 @@ def extract_context():
             'headers': dict(request.headers) if request else None,
         },
         'user': {
-            'id': user.id if user else None,
+            'id': user.user_profile_id if user else None,
             'roles': user.role_names if user else [],
         },
         'session_state': repr(session) if session else 'No session',

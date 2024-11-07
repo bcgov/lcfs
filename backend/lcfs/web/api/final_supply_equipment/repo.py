@@ -1,6 +1,6 @@
 import structlog
 from typing import List, Tuple
-from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.db.models.compliance import EndUserType, FinalSupplyEquipment
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
 )
@@ -8,9 +8,9 @@ from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
+from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema, PortsEnum
 from sqlalchemy import and_, delete, distinct, exists, select, update
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
 
@@ -28,7 +28,7 @@ class FinalSupplyEquipmentRepository:
     @repo_handler
     async def get_fse_options(
         self,
-    ) -> Tuple[List[EndUseType], List[LevelOfEquipment], List[FuelMeasurementType]]:
+    ) -> Tuple[List[EndUseType], List[LevelOfEquipment], List[FuelMeasurementType], List[PortsEnum]]:
         """
         Retrieve all FSE options in a single database transaction
         """
@@ -36,7 +36,15 @@ class FinalSupplyEquipmentRepository:
             intended_use_types = await self.get_intended_use_types()
             levels_of_equipment = await self.get_levels_of_equipment()
             fuel_measurement_types = await self.get_fuel_measurement_types()
-        return intended_use_types, levels_of_equipment, fuel_measurement_types
+            intended_user_types = await self.get_intended_user_types()
+        ports = list(PortsEnum)
+        return (
+            intended_use_types,
+            levels_of_equipment,
+            fuel_measurement_types,
+            intended_user_types,
+            ports
+        )
 
     async def get_intended_use_types(self) -> List[EndUseType]:
         """
@@ -64,6 +72,40 @@ class FinalSupplyEquipmentRepository:
                         and_(
                             EndUseType.type == intended_use,
                             EndUseType.intended_use == True,
+                        )
+                    )
+                )
+            )
+            .unique()
+            .scalar_one_or_none()
+        )
+
+    async def get_intended_user_types(self) -> List[EndUserType]:
+        """
+        Retrieve a list of intended user types from the database
+        """
+        return (
+            (
+                await self.db.execute(
+                    select(EndUserType).where(EndUserType.intended_use == True)
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+    @repo_handler
+    async def get_intended_user_by_name(self, intended_user: str) -> EndUseType:
+        """
+        Retrieve intended user type name from the database
+        """
+        return (
+            (
+                await self.db.execute(
+                    select(EndUserType).where(
+                        and_(
+                            EndUserType.type_name == intended_user,
+                            EndUserType.intended_use == True,
                         )
                     )
                 )
@@ -124,6 +166,7 @@ class FinalSupplyEquipmentRepository:
             .options(
                 joinedload(FinalSupplyEquipment.fuel_measurement_type),
                 joinedload(FinalSupplyEquipment.intended_use_types),
+                joinedload(FinalSupplyEquipment.intended_user_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
             )
             .where(FinalSupplyEquipment.compliance_report_id == report_id)
@@ -146,6 +189,7 @@ class FinalSupplyEquipmentRepository:
             .options(
                 joinedload(FinalSupplyEquipment.fuel_measurement_type),
                 joinedload(FinalSupplyEquipment.intended_use_types),
+                joinedload(FinalSupplyEquipment.intended_user_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
             )
             .where(*conditions)
@@ -174,6 +218,7 @@ class FinalSupplyEquipmentRepository:
             .options(
                 joinedload(FinalSupplyEquipment.fuel_measurement_type),
                 joinedload(FinalSupplyEquipment.intended_use_types),
+                joinedload(FinalSupplyEquipment.intended_user_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
             )
             .where(
@@ -194,7 +239,7 @@ class FinalSupplyEquipmentRepository:
         await self.db.flush()
         await self.db.refresh(
             final_supply_equipment,
-            ["fuel_measurement_type", "level_of_equipment", "intended_use_types"],
+            ["fuel_measurement_type", "level_of_equipment", "intended_use_types","intended_user_types"],
         )
         return updated_final_supply_equipment
 
@@ -295,9 +340,12 @@ class FinalSupplyEquipmentRepository:
             FinalSupplyEquipment.latitude == row.latitude,
             FinalSupplyEquipment.longitude == row.longitude,
         ]
-        
+
         if row.final_supply_equipment_id is not None:
-            conditions.append(FinalSupplyEquipment.final_supply_equipment_id != row.final_supply_equipment_id)
+            conditions.append(
+                FinalSupplyEquipment.final_supply_equipment_id
+                != row.final_supply_equipment_id
+            )
 
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
@@ -305,7 +353,9 @@ class FinalSupplyEquipmentRepository:
         return result.scalar()
 
     @repo_handler
-    async def check_overlap_of_fse_row(self, row: FinalSupplyEquipmentCreateSchema) -> bool:
+    async def check_overlap_of_fse_row(
+        self, row: FinalSupplyEquipmentCreateSchema
+    ) -> bool:
         """
         Check if there's an overlapping final supply equipment row in the database based on the provided data.
         Returns True if an overlap is found, False otherwise.
@@ -313,13 +363,16 @@ class FinalSupplyEquipmentRepository:
         conditions = [
             and_(
                 FinalSupplyEquipment.supply_from_date <= row.supply_to_date,
-                FinalSupplyEquipment.supply_to_date >= row.supply_from_date
+                FinalSupplyEquipment.supply_to_date >= row.supply_from_date,
             ),
             FinalSupplyEquipment.serial_nbr == row.serial_nbr,
         ]
-        
+
         if row.final_supply_equipment_id is not None:
-            conditions.append(FinalSupplyEquipment.final_supply_equipment_id != row.final_supply_equipment_id)
+            conditions.append(
+                FinalSupplyEquipment.final_supply_equipment_id
+                != row.final_supply_equipment_id
+            )
 
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
