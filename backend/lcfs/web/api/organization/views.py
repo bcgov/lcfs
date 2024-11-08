@@ -305,4 +305,4 @@ async def get_compliance_report_by_id(
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     await report_validate.validate_organization_access(report_id)
-    return await report_service.get_compliance_report_by_id(report_id, bceid_user=True)
+    return await report_service.get_compliance_report_by_id(report_id, apply_masking=True)

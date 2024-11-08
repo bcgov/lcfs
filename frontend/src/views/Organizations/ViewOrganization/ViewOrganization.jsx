@@ -42,7 +42,7 @@ export const ViewOrganization = () => {
     isLoading: isCurrentUserLoading,
     hasRoles
   } = useCurrentUser()
-  const { data: orgData, isLoading } = useOrganization(orgID)
+  const { data: orgData, isLoading } = useOrganization(orgID ?? currentUser?.organization?.organizationId)
 
   let orgBalance = {}
   if (hasRoles(roles.government)) {
@@ -146,7 +146,7 @@ export const ViewOrganization = () => {
         </BCAlert>
       )}
       <BCTypography variant="h5" color="primary" py={1}>
-        {orgData.name}{' '}
+        {orgData?.name}{' '}
         <Role roles={[roles.administrator]}>
           <IconButton
             aria-label="edit"
@@ -168,23 +168,23 @@ export const ViewOrganization = () => {
             <BCTypography variant="label">
               {t('org:legalNameLabel')}:
             </BCTypography>
-            <BCTypography variant="body4">{orgData.name}</BCTypography>
+            <BCTypography variant="body4">{orgData?.name}</BCTypography>
             <BCTypography variant="label">
               {t('org:operatingNameLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {orgData.operatingName || orgData.name}
+              {orgData?.operatingName || orgData?.name}
             </BCTypography>
             <BCTypography variant="label">
               {t('org:phoneNbrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {phoneNumberFormatter({ value: orgData.phone })}
+              {phoneNumberFormatter({ value: orgData?.phone })}
             </BCTypography>
             <BCTypography variant="label">
               {t('org:emailAddrLabel')}:
             </BCTypography>
-            <BCTypography variant="body4">{orgData.email}</BCTypography>
+            <BCTypography variant="body4">{orgData?.email}</BCTypography>
             <Role roles={[roles.government]}>
               <BCTypography variant="label">
                 {t('org:complianceUnitBalance')}:
@@ -206,15 +206,15 @@ export const ViewOrganization = () => {
               {t('org:serviceAddrLabel')}:
             </BCTypography>
             <BCTypography variant="body4">
-              {orgData && constructAddress(orgData.orgAddress)}
+              {orgData && constructAddress(orgData?.orgAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {orgData && constructAddress(orgData.orgAttorneyAddress)}
+              {orgData && constructAddress(orgData?.orgAttorneyAddress)}
             </BCTypography>
             <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
             <BCTypography variant="body4">
-              {orgData.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED
+              {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED
                 ? 'Yes — A registered organization is able to transfer compliance units.'
                 : 'No — An organization must be registered to transfer compliance units.'}
             </BCTypography>
