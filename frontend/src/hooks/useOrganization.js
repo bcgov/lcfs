@@ -9,7 +9,7 @@ export const useOrganization = (orgID, options) => {
   const id = orgID ?? currentUser?.organization?.organizationId
 
   return useQuery({
-    enabled: !!orgID,
+    enabled: !!id,
     queryKey: ['organization', id],
     queryFn: async () => (await client.get(`/organizations/${id}`)).data,
     ...options
@@ -50,9 +50,11 @@ export const useCurrentOrgBalance = (options) => {
 
 export const useGetOrgComplianceReportReportedYears = (orgID, options) => {
   const client = useApiService()
+  const { data: currentUser } = useCurrentUser()
+  const id = orgID ?? currentUser?.organization?.organizationId
   const path = apiRoutes.getOrgComplianceReportReportedYears.replace(
     ':orgID',
-    orgID
+    id
   )
 
   return useQuery({
