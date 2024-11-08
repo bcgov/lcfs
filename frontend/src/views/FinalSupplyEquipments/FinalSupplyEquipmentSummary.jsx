@@ -61,6 +61,11 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
         field: 'supplyToDate'
       },
       {
+        headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'),
+        field: 'kwhUsage',
+        valueFormatter: (params) => params.value ? params.value.toFixed(2) : '0.00'
+      },
+      {
         headerName: t(
           'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
         ),
@@ -80,10 +85,22 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
       },
       {
         headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
+        ),
+        field: 'model'
+      },
+      {
+        headerName: t(
           'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
         ),
         field: 'levelOfEquipment',
         valueGetter: (params) => params.data.levelOfEquipment.name
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
+        ),
+        field: 'ports',
       },
       {
         headerName: t(
@@ -99,6 +116,16 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
         field: 'intendedUses',
         valueGetter: (params) =>
           params.data.intendedUseTypes.map((use) => use.type).join(', '),
+        cellRenderer: CommonArrayRenderer,
+        cellRendererParams: { marginTop: '0.7em' }
+      },
+      {
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
+        ),
+        field: 'intendedUsers',
+        valueGetter: (params) =>
+          params.data.intendedUserTypes.map((use) => use.typeName).join(', '),
         cellRenderer: CommonArrayRenderer,
         cellRendererParams: { marginTop: '0.7em' }
       },
