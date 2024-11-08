@@ -1,9 +1,14 @@
+from unittest.mock import AsyncMock
+
 import pytest
 from datetime import date
+
+from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 from lcfs.db.models.user.Role import RoleEnum
 from httpx import AsyncClient
 from fastapi import FastAPI
 
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.organization.services import OrganizationService
 from lcfs.web.api.user.services import UserServices
 from lcfs.web.api.transaction.services import TransactionsService
@@ -254,7 +259,7 @@ async def test_update_transfer_success(
     assert data["transferId"] == 1
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_create_compliance_report_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -281,6 +286,10 @@ async def test_create_compliance_report_success(
         "current_status_id": 1,
         "current_status": {"compliance_report_status_id": 1, "status": "status"},
         "summary": {"summary_id": 1, "is_locked": False},
+        "compliance_report_group_uuid": "uuid",
+        "version": 0,
+        "supplemental_initiator": SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
+        "has_supplemental": False,
     }
 
     fastapi_app.dependency_overrides[OrganizationValidation] = (
@@ -352,21 +361,24 @@ async def test_get_all_org_reported_years_success(
     assert response.status_code == 200
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_compliance_report_by_id_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
     set_mock_user,
     mock_compliance_report_services,
 ):
+    # Mock user setup
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
+    # Define the URL for the endpoint
     url = fastapi_app.url_path_for(
         "get_compliance_report_by_id",
         organization_id=1,
         report_id=1,
     )
 
+    # Mock the compliance report service's method
     mock_compliance_report_services.get_compliance_report_by_id.return_value = {
         "compliance_report_id": 1,
         "compliance_period_id": 1,
@@ -376,12 +388,32 @@ async def test_get_compliance_report_by_id_success(
         "current_status_id": 1,
         "current_status": {"compliance_report_status_id": 1, "status": "status"},
         "summary": {"summary_id": 1, "is_locked": False},
+        "compliance_report_group_uuid": "uuid",
+        "version": 0,
+        "supplemental_initiator": SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
+        "has_supplemental": False,
     }
 
+    # Create a mock for the validation service
+    mock_compliance_report_validation = AsyncMock()
+    mock_compliance_report_validation.validate_organization_access.return_value = None
+
+    # Override dependencies in the FastAPI app
     fastapi_app.dependency_overrides[ComplianceReportServices] = (
         lambda: mock_compliance_report_services
     )
+    fastapi_app.dependency_overrides[ComplianceReportValidation] = (
+        lambda: mock_compliance_report_validation
+    )
 
+    # Make the request
     response = await client.get(url)
 
+    # Assertions
     assert response.status_code == 200
+    mock_compliance_report_services.get_compliance_report_by_id.assert_awaited_once_with(
+        1, bceid_user=True
+    )
+    mock_compliance_report_validation.validate_organization_access.assert_awaited_once_with(
+        1
+    )
