@@ -33,6 +33,7 @@ from lcfs.web.api.compliance_report.summary_service import (
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
@@ -85,7 +86,10 @@ async def get_compliance_report_by_id(
     validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportBaseSchema:
     await validate.validate_organization_access(report_id)
-    return await service.get_compliance_report_by_id(report_id)
+
+    mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
+
+    return await service.get_compliance_report_by_id(report_id, mask_statuses)
 
 
 @router.get(

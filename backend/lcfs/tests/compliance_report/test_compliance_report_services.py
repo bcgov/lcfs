@@ -1,13 +1,8 @@
 import pytest
-
 from unittest.mock import MagicMock, AsyncMock
-
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
-
-from lcfs.web.exception.exceptions import ServiceException
-from lcfs.web.exception.exceptions import DataNotFoundException
-
+from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
 # get_all_compliance_periods
 @pytest.mark.anyio
@@ -145,12 +140,19 @@ async def test_get_compliance_report_by_id_success(
 ):
     mock_compliance_report = compliance_report_base_schema()
 
+    compliance_report_service._mask_report_status_for_history = MagicMock(
+        return_value=mock_compliance_report
+    )
+
     mock_repo.get_compliance_report_by_id.return_value = mock_compliance_report
 
     result = await compliance_report_service.get_compliance_report_by_id(1)
 
     assert result == mock_compliance_report
     mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
+    compliance_report_service._mask_report_status_for_history.assert_called_once_with(
+        mock_compliance_report, False
+    )
 
 
 @pytest.mark.anyio

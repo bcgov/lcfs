@@ -201,27 +201,33 @@ class ComplianceReportServices:
 
     @service_handler
     async def get_compliance_report_by_id(
-        self, report_id: int, bceid_user: bool = False
+        self, report_id: int, apply_masking: bool = False
     ) -> ComplianceReportBaseSchema:
         """Fetches a specific compliance report by ID."""
         report = await self.repo.get_compliance_report_by_id(report_id)
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
         validated_report = ComplianceReportBaseSchema.model_validate(report)
-        masked_report = self._mask_report_status_for_history(
-            validated_report, bceid_user
+        masked_report = (
+            self._mask_report_status([validated_report])[0]
+            if apply_masking
+            else validated_report
         )
-        return masked_report
+        history_masked_report = self._mask_report_status_for_history(
+            masked_report, apply_masking
+        )
+
+        return history_masked_report
 
     def _mask_report_status_for_history(
-        self, report: ComplianceReportBaseSchema, bceid_user: bool = False
+        self, report: ComplianceReportBaseSchema, apply_masking: bool = False
     ) -> ComplianceReportBaseSchema:
         recommended_statuses = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
         }
         if (
-            bceid_user
+            apply_masking
             or report.current_status.status
             == ComplianceReportStatusEnum.Submitted.value
         ):
