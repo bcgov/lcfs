@@ -1,19 +1,22 @@
 import json
+
 import httpx
 import jwt
-from redis.asyncio import Redis
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
+from redis import ConnectionPool
+from redis.asyncio import Redis
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
-from sqlalchemy.future import select
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
 from starlette.authentication import AuthenticationBackend, AuthCredentials
-from lcfs.settings import Settings
+
+from lcfs.db.models.user.UserLoginHistory import UserLoginHistory
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
-from lcfs.db.models.user.UserLoginHistory import UserLoginHistory
 from lcfs.services.keycloak.dependencies import _parse_external_username
+from lcfs.settings import Settings
 
 
 class UserAuthentication(AuthenticationBackend):
@@ -21,8 +24,13 @@ class UserAuthentication(AuthenticationBackend):
     Class to handle authentication when calling the lcfs api
     """
 
-    def __init__(self, redis_pool: Redis, session: AsyncSession, settings: Settings):
-        self.async_session = session
+    def __init__(
+        self,
+        redis_pool: ConnectionPool,
+        session_factory: async_sessionmaker,
+        settings: Settings,
+    ):
+        self.session_factory = session_factory
         self.settings = settings
         self.redis_pool = redis_pool
         self.jwks = None
@@ -110,7 +118,7 @@ class UserAuthentication(AuthenticationBackend):
 
         if preferred_username:
             try:
-                async with self.async_session() as session:
+                async with self.session_factory() as session:
                     result = await session.execute(
                         select(UserProfile)
                         .options(
@@ -173,7 +181,7 @@ class UserAuthentication(AuthenticationBackend):
                 )
                 raise HTTPException(status_code=401, detail=error_text)
 
-            async with self.async_session() as session:
+            async with self.session_factory() as session:
                 user_result = await session.execute(user_query)
                 user = user_result.unique().scalar_one_or_none()
                 if user is None:
@@ -212,7 +220,7 @@ class UserAuthentication(AuthenticationBackend):
         # The merge method is used to merge the state of the given object into the current session
         # If the instance does not exist in the session, insert it.
         # If the instance already exists in the session, update it.
-        async with self.async_session() as session:
+        async with self.session_factory() as session:
             await session.merge(user_profile)
             await session.commit()
 
@@ -236,6 +244,6 @@ class UserAuthentication(AuthenticationBackend):
                 is_login_successful=success,
                 login_error_message=error,
             )
-            async with self.async_session() as session:
+            async with self.session_factory() as session:
                 session.add(login_history)
                 await session.commit()
