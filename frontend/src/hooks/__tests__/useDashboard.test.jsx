@@ -55,7 +55,7 @@ describe('useTransactionCounts', () => {
     vi.mocked(useApiService).mockReturnValue({ get: mockGet })
   })
 
-  it.skip('fetches the transaction counts successfully', async () => {
+  it('fetches the transaction counts successfully', async () => {
     mockGet.mockResolvedValueOnce({
       data: { transaction_counts: 20 }
     })

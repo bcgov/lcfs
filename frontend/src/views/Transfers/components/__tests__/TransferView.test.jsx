@@ -29,7 +29,7 @@ vi.mock('../CommentList', () => ({
   CommentList: () => <div>CommentList</div>
 }))
 
-vi.mock('../Comments', () => ({
+vi.mock('@/views/Transactions/components', () => ({
   Comments: () => <div>ExternalComments</div>
 }))
 
@@ -120,7 +120,7 @@ describe('TransferView Component', () => {
     expect(screen.queryByText('CommentList')).not.toBeInTheDocument()
   })
 
-  it.skip('renders Comments component based on transfer status and user role', () => {
+  it('renders Comments component based on transfer status and user role', () => {
     render(
       <MockFormProvider>
         <TransferView

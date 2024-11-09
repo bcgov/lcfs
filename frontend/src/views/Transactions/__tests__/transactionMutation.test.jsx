@@ -9,7 +9,7 @@ import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
-} from '../AddEditViewTransaction'
+} from '@/views/Transactions/constants'
 import { ROUTES } from '@/constants/routes'
 
 let navigate
@@ -34,7 +34,7 @@ const renderComponent = (HookComponent) => {
   )
 }
 
-describe.skip('useTransactionMutation', () => {
+describe('useTransactionMutation', () => {
   const t = vi.fn((key) => key)
   const setAlertMessage = vi.fn()
   const setAlertSeverity = vi.fn()

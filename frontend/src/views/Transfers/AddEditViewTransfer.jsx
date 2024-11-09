@@ -143,7 +143,7 @@ export const AddEditViewTransfer = () => {
           methods.getValues().signingAuthorityDeclaration ?? false
       })
     }
-    if (isLoadingError || queryState.status === 'error') {
+    if (isLoadingError || queryState?.status === 'error') {
       setAlertMessage(
         t('transfer:actionMsgs.errorRetrieval', {
           transferId
@@ -156,7 +156,7 @@ export const AddEditViewTransfer = () => {
     transferId,
     isLoadingError,
     transferData,
-    queryState.status,
+    queryState,
     methods,
     t
   ])
@@ -323,14 +323,14 @@ export const AddEditViewTransfer = () => {
   }, [editorMode, mode, t, transferId])
 
   // Conditional rendering for loading
-  if (transferId && (isTransferDataLoading || queryState.status === 'pending'))
+  if (transferId && (isTransferDataLoading || queryState?.status === 'pending'))
     return <Loading message={t('transfer:loadingText')} />
   if (isUpdatingTransfer)
     return <Loading message={t('transfer:processingText')} />
 
   if (
     (isLoadingError && editorMode !== 'add') ||
-    queryState.status === 'error'
+    queryState?.status === 'error'
   ) {
     return (
       <BCAlert

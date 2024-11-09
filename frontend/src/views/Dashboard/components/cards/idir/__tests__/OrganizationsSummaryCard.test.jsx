@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-describe.skip('OrganizationsSummaryCards', () => {
+describe('OrganizationsSummaryCards', () => {
   const mockOrganizations = [
     { name: 'Org A', totalBalance: 1000, reservedBalance: 200 },
     { name: 'Org B', totalBalance: 1500, reservedBalance: 300 }
