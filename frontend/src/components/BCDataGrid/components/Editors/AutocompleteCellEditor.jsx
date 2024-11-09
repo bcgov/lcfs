@@ -1,185 +1,208 @@
-/* eslint-disable react-refresh/only-export-components */
-import { useGridCellEditor } from 'ag-grid-react'
-import { memo, useEffect, useRef, useState, useCallback } from 'react'
+import React, {
+  forwardRef,
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle
+} from 'react'
+import PropTypes from 'prop-types'
 import {
   Autocomplete,
-  Box,
+  TextField,
   Checkbox,
+  Box,
   Chip,
-  Stack,
-  TextField
+  Stack
 } from '@mui/material'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
-import BCBox from '@/components/BCBox'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
 const checkedIcon = <CheckBoxIcon fontSize="medium" />
 
-// eslint-disable-next-line react/display-name
-export default memo(
-  ({ value, onValueChange, eventKey, cellStartedEdit, ...props }) => {
-    const limitTags = props.limitTags || 2
-    const [selectedValues, setSelectedValues] = useState(value || [])
-    const refInput = useRef(null)
+export const AutocompleteCellEditor = forwardRef((props, ref) => {
+  const {
+    value = '',
+    options = [],
+    limitTags = 2,
+    multiple = false,
+    disableCloseOnSelect = false,
+    openOnFocus = true,
+    freeSolo = false,
+    colDef,
+    api,
+    onValueChange,
+    onKeyDownCapture,
+    onBlur,
+    onPaste
+  } = props
 
-    const updateValue = useCallback(
-      (val) => {
-        setSelectedValues(val)
-        onValueChange(val)
-      },
-      [onValueChange]
-    )
+  const [selectedValues, setSelectedValues] = useState(value || [])
+  const inputRef = useRef()
 
-    useEffect(() => {
-      updateValue(eventKey)
-      if (cellStartedEdit && refInput) {
-        refInput?.current?.focus()
-        refInput?.current?.select()
+  useImperativeHandle(ref, () => ({
+    getValue: () => selectedValues,
+    isCancelBeforeStart: () => false,
+    isCancelAfterEnd: () => false,
+    afterGuiAttached: () => {
+      if (inputRef.current) {
+        inputRef.current.focus()
       }
-    }, [cellStartedEdit, eventKey, updateValue])
+    }
+  }))
 
-    // when we tab into this editor, we want to focus the contents
-    const focusIn = useCallback(() => {
-      refInput.current.focus()
-      refInput.current.select()
-      console.log('NumericCellEditor.focusIn()')
-    }, [])
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [])
 
-    // when we tab out of the editor, this gets called
-    const focusOut = useCallback(() => {
-      console.log('NumericCellEditor.focusOut()')
-    }, [])
+  const handleChange = (event, newValue) => {
+    setSelectedValues(newValue)
+  }
 
-    useGridCellEditor({
-      focusIn,
-      focusOut
-    })
+  const handleKeyDown = (event) => {
+    if (onKeyDownCapture) {
+      onKeyDownCapture(event)
+    } else if (event.key === 'Tab') {
+      onValueChange(selectedValues)
+      event.preventDefault()
+      api.stopEditing()
+    }
+  }
 
-    return (
-      <BCBox
-        component="div"
-        aria-label="Select options from the drop down"
-        data-testid="ag-grid-editor-select-options"
+  const handleBlur = (event) => {
+    setSelectedValues(event.target.value)
+    onValueChange(event.target.value)
+    if (onBlur) {
+      onBlur(event)
+    }
+    api.stopEditing()
+  }
+
+  return (
+    <Box
+      component="div"
+      aria-label="Select options from the drop down"
+      sx={{
+        '& .MuiAutocomplete-inputRoot': {
+          paddingBottom: '4px',
+          backgroundColor: '#fff'
+        }
+      }}
+    >
+      <Autocomplete
         sx={{
-          '& .MuiAutocomplete-inputRoot': {
-            paddingBottom: '8px',
-            backgroundColor: '#fff'
+          '.MuiOutlinedInput-root': {
+            padding: '2px 0px 2px 0px'
           }
         }}
-      >
-        <Autocomplete
-          sx={{
-            '.MuiOutlinedInput-root': {
-              padding: '2px 0px 2px 0px'
+        openOnFocus={openOnFocus}
+        value={selectedValues}
+        onInputChange={freeSolo ? handleChange : null}
+        onChange={handleChange}
+        multiple={multiple}
+        disableCloseOnSelect={disableCloseOnSelect}
+        limitTags={limitTags}
+        options={options}
+        onKeyDown={handleKeyDown}
+        onPaste={onPaste}
+        autoHighlight
+        size="medium"
+        freeSolo={freeSolo}
+        getOptionLabel={(option) =>
+          typeof option === 'string' ? option : option.label || ''
+        }
+        renderOption={({ key, ...propsIn }, option, { selected }) => {
+          const isOptionSelected =
+            Array.isArray(selectedValues) && selectedValues.includes(option)
+          return (
+            <Box
+              component="li"
+              key={key}
+              className={`${
+                selected || isOptionSelected ? 'selected' : ''
+              } ag-custom-component-popup`}
+              role="option"
+              sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
+              aria-label={`select ${
+                typeof option === 'string' ? option : option.label
+              }`}
+              data-testid={`select-${
+                typeof option === 'string' ? option : option.label
+              }`}
+              {...propsIn}
+              tabIndex={0}
+            >
+              {multiple && (
+                <Checkbox
+                  color="primary"
+                  role="presentation"
+                  sx={{ border: '2px solid primary' }}
+                  icon={icon}
+                  checkedIcon={checkedIcon}
+                  style={{ marginRight: 8 }}
+                  checked={selected || isOptionSelected}
+                  inputProps={{ 'aria-label': 'controlled' }}
+                  tabIndex={-1}
+                />
+              )}
+              {typeof option === 'string' ? option : option.label}
+            </Box>
+          )
+        }}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label={
+              colDef?.cellEditorParams?.noLabel
+                ? null
+                : colDef?.cellEditorParams?.label || 'Select'
             }
-          }}
-          openOnFocus={props.openOnFocus}
-          value={selectedValues}
-          onChange={(_, newValue) => updateValue(newValue)}
-          multiple={props.multiple}
-          disableCloseOnSelect={props.disableCloseOnSelect}
-          limitTags={limitTags}
-          id="bc-column-set-filter"
-          className="bc-column-set-filter ag-input-field ag-checkbox-input"
-          role="list-box"
-          options={props.options}
-          isOptionEqualToValue={(option, value) => option === value}
-          autoHighlight
-          size="medium"
-          freeSolo={props.freeSolo}
-          autoSelect={props.autoSelect}
-          getOptionLabel={(option) =>
-            typeof option === 'string' ? option : option.label || ''
-          }
-          renderOption={(propsIn, option, { selected }) => {
-            const isOptionSelected =
-              Array.isArray(selectedValues) && selectedValues.includes(option)
-            return (
-              <Box
-                component="li"
+            variant="outlined"
+            size="medium"
+            inputRef={inputRef}
+            onBlur={handleBlur}
+            inputProps={{
+              ...params.inputProps,
+              autoComplete: 'new-password' // disable autocomplete and autofill
+            }}
+          />
+        )}
+        renderTags={(value, getTagProps) => (
+          <Stack direction="row" spacing={1}>
+            {value.slice(0, limitTags).map((option, index) => (
+              <Chip
+                {...getTagProps({ index })}
                 key={typeof option === 'string' ? option : option.label}
-                className={`${
-                  selected || isOptionSelected ? 'selected' : ''
-                } ag-custom-component-popup`}
-                role="option"
-                sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
-                aria-label={`select ${
-                  typeof option === 'string' ? option : option.label
-                }`}
-                data-testid={`select-${
-                  typeof option === 'string' ? option : option.label
-                }`}
-                {...propsIn}
-                tabIndex={0}
-              >
-                {props.multiple && (
-                  <Checkbox
-                    color="primary"
-                    role="presentation"
-                    sx={{ border: '2px solid primary' }}
-                    icon={icon}
-                    checkedIcon={checkedIcon}
-                    style={{ marginRight: 8 }}
-                    checked={selected || isOptionSelected}
-                    inputProps={{ 'aria-label': 'controlled' }}
-                    tabIndex={-1}
-                  />
-                )}
-                {typeof option === 'string' ? option : option.label}
-              </Box>
-            )
-          }}
-          renderInput={(params) => (
-            <TextField
-              className="ag-input-field ag-checkbox-input"
-              role="presentation"
-              inputRef={refInput}
-              {...params}
-              label={
-                props.colDef?.cellEditorParams?.noLabel
-                  ? null
-                  : props.colDef?.cellEditorParams?.label || 'Select'
-              }
-              variant="outlined"
-              size="medium"
-              inputProps={{
-                ...params.inputProps,
-                autoComplete: 'new-password', // disable autocomplete and autofill
-                tabIndex: 0
-              }}
-            />
-          )}
-          renderTags={(value, getTagProps) => {
-            const numTags = value.length
+                label={typeof option === 'string' ? option : option.label}
+              />
+            ))}
+            {value.length > limitTags && (
+              <Chip label={`+${value.length - limitTags}`} size="small" />
+            )}
+          </Stack>
+        )}
+      />
+    </Box>
+  )
+})
 
-            return (
-              <Stack direction="row" spacing={1}>
-                {value
-                  .slice(0, limitTags)
-                  .map(
-                    (option, index) =>
-                      index < limitTags && (
-                        <Chip
-                          component="span"
-                          {...getTagProps({ index })}
-                          key={
-                            typeof option === 'string' ? option : option.label
-                          }
-                          label={
-                            typeof option === 'string' ? option : option.label
-                          }
-                        />
-                      )
-                  )}
-                {numTags > limitTags && (
-                  <Chip label={` +${numTags - limitTags}`} size="small" />
-                )}
-              </Stack>
-            )
-          }}
-        />
-      </BCBox>
-    )
-  }
-)
+AutocompleteCellEditor.propTypes = {
+  value: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  options: PropTypes.array.isRequired,
+  limitTags: PropTypes.number,
+  multiple: PropTypes.bool,
+  disableCloseOnSelect: PropTypes.bool,
+  openOnFocus: PropTypes.bool,
+  freeSolo: PropTypes.bool,
+  colDef: PropTypes.object,
+  api: PropTypes.object.isRequired,
+  column: PropTypes.object.isRequired,
+  node: PropTypes.object.isRequired,
+  onKeyDownCapture: PropTypes.func,
+  onBlur: PropTypes.func,
+  onPaste: PropTypes.func
+}
+
+AutocompleteCellEditor.displayName = 'AutocompleteEditor'

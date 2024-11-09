@@ -1,6 +1,6 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
@@ -22,7 +22,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'fuelType',
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     minWidth: '280',
     cellEditorParams: {
       options: optionsData.fuelTypes.map((obj) => obj.fuelType),
@@ -39,7 +39,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'fuelCategory',
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData.fuelCategories.map((obj) => obj.category),
       multiple: false,
@@ -68,7 +68,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'units',
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     minWidth: '155',
     cellEditorParams: {
       options: optionsData.unitsOfMeasure.map((obj) => obj),
@@ -85,7 +85,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'expectedUse',
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     flex: 1,
     cellEditorParams: {
       options: optionsData.expectedUses.map((obj) => obj.name),

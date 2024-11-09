@@ -1,7 +1,7 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   RequiredHeader,
   DateRangeCellEditor,
   TextCellEditor,
@@ -142,7 +142,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     minWidth: 430,
     cellEditorParams: {
@@ -163,7 +163,7 @@ export const finalSupplyEquipmentColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
     ),
     minWidth: 220,
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.ports || [],
       multiple: false,
@@ -183,7 +183,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     minWidth: 315,
     cellEditorParams: {
@@ -204,7 +204,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUseTypes.map((obj) => obj.type) || [],
       multiple: true,
@@ -226,7 +226,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
       multiple: true,
