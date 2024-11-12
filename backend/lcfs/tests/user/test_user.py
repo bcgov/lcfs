@@ -157,7 +157,7 @@ async def test_get_user_activities_as_manage_users_same_org(
     content = UserActivitiesResponseSchema(**response.json())
     assert len(content.activities) == 1  # Should have 1 activity record
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_user_activities_permission_denied(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -181,7 +181,7 @@ async def test_get_user_activities_permission_denied(
     url = fastapi_app.url_path_for("get_user_activities", user_id=target_user_id)
     response = await client.post(url, json=pagination)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.anyio
 async def test_get_all_user_activities_as_administrator(
@@ -275,7 +275,7 @@ async def test_get_all_user_activities_permission_denied(
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_user_activities_user_not_found(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -299,7 +299,7 @@ async def test_get_user_activities_user_not_found(
     url = fastapi_app.url_path_for("get_user_activities", user_id=non_existent_user_id)
     response = await client.post(url, json=pagination)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.anyio

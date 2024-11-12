@@ -140,16 +140,16 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 user_roles = user.role_names
 
                 # Check if user has all the required roles
-                if not any(role in user_roles for role in required_roles):
+                if not any(required_role in user_roles for required_role in required_roles):
                     raise HTTPException(
                         status_code=403, detail="Insufficient permissions"
                     )
 
-                orgId = kwargs.get("organization_id", None)
+                org_id = kwargs.get("organization_id", None)
                 if (
                     RoleEnum.SUPPLIER in user_roles
-                    and orgId
-                    and int(orgId) != user.organization_id
+                    and org_id
+                    and int(org_id) != user.organization_id
                 ):
                     raise HTTPException(
                         status_code=403,

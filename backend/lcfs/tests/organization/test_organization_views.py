@@ -412,7 +412,7 @@ async def test_get_compliance_report_by_id_success(
     # Assertions
     assert response.status_code == 200
     mock_compliance_report_services.get_compliance_report_by_id.assert_awaited_once_with(
-        1, bceid_user=True
+        1, apply_masking=True
     )
     mock_compliance_report_validation.validate_organization_access.assert_awaited_once_with(
         1

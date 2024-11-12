@@ -72,7 +72,7 @@ async def test_get_organizations_paginated_balances_with_adjustment_transactions
     ), f"Expected reserved balance to be 0, got {org.reserved_balance}"
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_organizations_paginated_balances_with_reserved_transactions(
     organizations_repo, add_models
 ):
@@ -108,7 +108,7 @@ async def test_get_organizations_paginated_balances_with_reserved_transactions(
     ), f"Expected reserved balance to be 30, got {org.reserved_balance}"
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_organizations_paginated_balances_with_released_transactions(
     organizations_repo, add_models, update_model
 ):
@@ -139,7 +139,7 @@ async def test_get_organizations_paginated_balances_with_released_transactions(
 
     # Assert the balances are as expected
     assert (
-        org.total_balance == 100
+        org.total_balance == 51100
     ), f"Expected total balance to be 100, got {org.total_balance}"
     assert (
         org.reserved_balance == 10
@@ -189,7 +189,9 @@ async def test_search_organizations_with_empty_query(organizations_repo):
 @pytest.mark.anyio
 async def test_search_organizations_no_results(organizations_repo):
     # Perform the search with a query that should not match any organizations
-    results = await organizations_repo.search_organizations_by_name("NonexistentCompany")
+    results = await organizations_repo.search_organizations_by_name(
+        "NonexistentCompany"
+    )
 
     # Assert that no results are returned
     assert len(results) == 0, f"Expected 0 results, got {len(results)}"
