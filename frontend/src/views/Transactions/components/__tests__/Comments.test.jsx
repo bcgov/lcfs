@@ -47,7 +47,7 @@ describe('Comments Component', () => {
     expect(screen.getByText('txn:commentsDescText')).toBeInTheDocument()
   })
 
-  it.skip('toggles collapse when clicking on the header', () => {
+  it('toggles collapse when clicking on the header', () => {
     renderComponent({ commentField, isEditable: true })
 
     const header = screen.getByText('txn:commentsDescText').closest('div')

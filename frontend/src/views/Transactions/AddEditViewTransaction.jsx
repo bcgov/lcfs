@@ -189,7 +189,7 @@ export const AddEditViewTransaction = () => {
     } else {
       queryClient.invalidateQueries([txnType, transactionId]) // Invalidate and refetch if data is not fetched
     }
-    if (isLoadingError || queryState.status === 'error') {
+    if (isLoadingError || queryState?.status === 'error') {
       setAlertMessage(
         t(`${txnType}:actionMsgs.errorRetrieval`, { transactionId })
       )
@@ -305,13 +305,13 @@ export const AddEditViewTransaction = () => {
   // Conditional rendering for loading
   if (
     transactionId &&
-    (isTransactionDataLoading || queryState.status === 'pending')
+    (isTransactionDataLoading || queryState?.status === 'pending')
   )
     return <Loading message={t('txn:loadingText')} />
   if (isUpdatingAdminAdjustment || isUpdatingInitiativeAgreement)
     return <Loading message={t('txn:processingText')} />
 
-  if (isLoadingError || queryState.status === 'error') {
+  if (isLoadingError || queryState?.status === 'error') {
     return (
       <BCAlert
         data-test="alert-box"
