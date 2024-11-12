@@ -370,9 +370,9 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       )
 
       params.data.fuelProductionFacilityProvinceState =
-        location.fuelProductionFacilityProvinceState
+        location?.fuelProductionFacilityProvinceState
       params.data.fuelProductionFacilityCountry =
-        location.fuelProductionFacilityCountry
+        location?.fuelProductionFacilityCountry
 
       return true
     }
@@ -412,7 +412,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
           location.fuelProductionFacilityProvinceState === params.newValue
       )
       params.data.fuelProductionFacilityCountry =
-        location.fuelProductionFacilityCountry
+        location?.fuelProductionFacilityCountry
 
       return true
     }

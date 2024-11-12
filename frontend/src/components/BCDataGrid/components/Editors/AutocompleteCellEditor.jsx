@@ -59,6 +59,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
 
   const handleChange = (event, newValue) => {
     setSelectedValues(newValue)
+    onValueChange(newValue)
   }
 
   const handleKeyDown = (event) => {
@@ -72,8 +73,6 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   }
 
   const handleBlur = (event) => {
-    setSelectedValues(event.target.value)
-    onValueChange(event.target.value)
     if (onBlur) {
       onBlur(event)
     }
