@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional
 
 from fastapi import APIRouter, Body, Depends, status, Request, Query
@@ -27,7 +27,7 @@ from .schema import (
 from lcfs.db.models.user.Role import RoleEnum
 
 
-logger = getLogger("organizations_service")
+logger = structlog.get_logger(__name__)
 router = APIRouter()
 get_async_db = dependencies.get_async_db_session
 

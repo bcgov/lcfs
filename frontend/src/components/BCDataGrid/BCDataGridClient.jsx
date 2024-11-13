@@ -17,6 +17,9 @@ import DataGridLoading from '@/components/DataGridLoading'
 // Register the required feature modules with the Grid
 ModuleRegistry.registerModules([ClientSideRowModelModule])
 
+/**
+ * @deprecated
+ */
 const BCDataGridClient = ({
   gridOptions,
   gridKey,

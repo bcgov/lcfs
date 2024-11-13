@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -11,7 +11,7 @@ from starlette.requests import Request
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db.models.user.Role import Role, RoleEnum
 
-logger = getLogger("role_repo")
+logger = structlog.get_logger(__name__)
 
 
 class RoleRepository:

@@ -1,11 +1,11 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
     OrgStatusEnum,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_organization_statuses(session):
@@ -52,5 +52,13 @@ async def seed_organization_statuses(session):
                 session.add(org_status)
 
     except Exception as e:
-        logger.error("Error occurred while seeding organization statuses: %s", e)
+        context = {
+            "function": "seed_organization_statuses",
+        }
+        logger.error(
+            "Error occurred while seeding organization statuses",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

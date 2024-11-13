@@ -1,5 +1,6 @@
+import uuid
+import enum
 from contextvars import ContextVar
-
 from sqlalchemy.ext.declarative import AbstractConcreteBase
 from sqlalchemy import (
     String,
@@ -11,6 +12,7 @@ from sqlalchemy import (
     func,
     Boolean,
     MetaData,
+    Enum,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -27,7 +29,6 @@ naming_convention = {
 metadata = MetaData(naming_convention=naming_convention)
 
 Base = declarative_base(metadata=metadata)
-
 
 # Define a context variable to store the user
 current_user_var = ContextVar("current_user", default=None)
@@ -101,4 +102,43 @@ class EffectiveDates(Base):
     )
     expiration_date = Column(
         Date, nullable=True, comment="The calendar date the value is no longer valid."
+    )
+
+
+class UserTypeEnum(enum.Enum):
+    SUPPLIER = "SUPPLIER"
+    GOVERNMENT = "GOVERNMENT"
+
+
+class ActionTypeEnum(enum.Enum):
+    CREATE = "CREATE"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+
+
+class Versioning(Base):
+    __abstract__ = True
+
+    group_uuid = Column(
+        String(36),
+        nullable=False,
+        default=lambda: str(uuid.uuid4()),
+        comment="UUID that groups all versions of a record series",
+    )
+    version = Column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="Version number of the record",
+    )
+    user_type = Column(
+        Enum(UserTypeEnum),
+        nullable=False,
+        comment="Indicates whether the record was created/modified by a supplier or government user",
+    )
+    action_type = Column(
+        Enum(ActionTypeEnum),
+        nullable=False,
+        server_default=text("'CREATE'"),
+        comment="Action type for this record",
     )

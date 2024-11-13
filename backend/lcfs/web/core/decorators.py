@@ -1,8 +1,12 @@
+import structlog
+import sys
+import traceback
 import inspect
 from functools import wraps
-from logging import getLogger
 from typing import List, Union, Literal
 import warnings
+import contextvars
+import os
 
 from fastapi import HTTPException, Request
 
@@ -14,13 +18,91 @@ from lcfs.web.exception.exceptions import (
 )
 from lcfs.db.models.user.Role import RoleEnum
 
+# Context variables
+request_var = contextvars.ContextVar("request")
+user_var = contextvars.ContextVar("user")
+session_var = contextvars.ContextVar("session")
 
-def custom_formatwarning(message, category, filename, lineno, line=None):
-    # Yellow text for the warning
-    return f"\033[93m{filename}:{lineno}: {category.__name__}: {message}\033[0m\n"
+
+def extract_context():
+    """Extract context for logging."""
+    frame = sys._getframe(3)
+    local_vars = {k: repr(v) for k, v in frame.f_locals.items()}
+    request = request_var.get(None)
+    user = user_var.get(None)
+    session = session_var.get(None)
+    return {
+        "local_vars": local_vars,
+        "request": {
+            "url": str(request.url) if request else None,
+            "method": request.method if request else None,
+            "headers": dict(request.headers) if request else None,
+        },
+        "user": {
+            "id": user.user_profile_id if user else None,
+            "roles": user.role_names if user else [],
+        },
+        "session_state": repr(session) if session else "No session",
+    }
 
 
-warnings.formatwarning = custom_formatwarning
+async def get_request_payload(request):
+    """Helper function to get the request payload."""
+    request_payload = None
+    if request.method in ("POST", "PUT", "PATCH"):
+        try:
+            request_payload = await request.json()
+        except Exception:
+            pass
+    return request_payload
+
+
+def get_source_info(func=None, e=None):
+    """Helper function to get source information for logging."""
+    if func:
+        full_path = inspect.getfile(func)
+        filename = os.path.join(*full_path.split(os.path.sep)[-2:])
+        linenumber = inspect.getsourcelines(func)[1]
+        function_name = func.__name__
+    elif e:
+        tb = e.__traceback__
+        frames = traceback.extract_tb(tb)
+        # Reverse frames to start from the deepest call
+        frames = frames[::-1]
+        # Skip frames from 'decorators.py'
+        for frame in frames:
+            if "decorators.py" not in frame.filename:
+                file_path = frame.filename
+                function_name = frame.name
+                linenumber = frame.lineno
+                break
+        else:
+            # If all frames are in 'decorators.py', use the last frame
+            frame = frames[-1]
+            file_path = frame.filename
+            function_name = frame.name
+            linenumber = frame.lineno
+        # Limit file path to last two components
+        filename = os.path.join(*file_path.split(os.path.sep)[-2:])
+    else:
+        return {}
+    return {
+        "filename": filename,
+        "func_name": function_name,
+        "lineno": linenumber,
+    }
+
+
+def log_unhandled_exception(logger, e, context, layer_name, func=None):
+    """Helper function to log unhandled exceptions with correct traceback."""
+    source_info = get_source_info(func=func, e=e)
+    logger.error(
+        f"Unhandled exception in {layer_name}",
+        error=str(e),
+        exc_info=e,
+        source_info=source_info,
+        **context,
+    )
 
 
 def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
@@ -38,8 +120,14 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
     def decorator(func):
         @wraps(func)
         async def wrapper(request: Request, *args, **kwargs):
-            logger = getLogger(func.__module__)
+            logger = structlog.get_logger(func.__module__)
+            request_var.set(request)
             user = getattr(request, "user", None)
+            user_var.set(user)
+            session = (
+                request.state.session if hasattr(request.state, "session") else None
+            )
+            session_var.set(session)
 
             # check if user is authenticated
             if not user:
@@ -52,16 +140,16 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 user_roles = user.role_names
 
                 # Check if user has all the required roles
-                if not any(role in user_roles for role in required_roles):
+                if not any(required_role in user_roles for required_role in required_roles):
                     raise HTTPException(
                         status_code=403, detail="Insufficient permissions"
                     )
 
-                orgId = kwargs.get("organization_id", None)
+                org_id = kwargs.get("organization_id", None)
                 if (
                     RoleEnum.SUPPLIER in user_roles
-                    and orgId
-                    and int(orgId) != user.organization_id
+                    and org_id
+                    and int(org_id) != user.organization_id
                 ):
                     raise HTTPException(
                         status_code=403,
@@ -72,13 +160,28 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
             try:
                 return await func(request, *args, **kwargs)
             except ValueError as e:
-                logger.error(str(e))
+                source_info = get_source_info(func=func)
+                logger.error(
+                    str(e),
+                    source_info=source_info,
+                    exc_info=e,
+                )
                 raise HTTPException(status_code=400, detail=str(e))
             except (DatabaseException, ServiceException) as e:
-                logger.error(str(e))
+                source_info = get_source_info(func=func)
+                logger.error(
+                    str(e),
+                    source_info=source_info,
+                    exc_info=e,
+                )
                 raise HTTPException(status_code=500, detail="Internal Server Error")
             except HTTPException as e:
-                logger.error(str(e))
+                source_info = get_source_info(func=func)
+                logger.error(
+                    str(e),
+                    source_info=source_info,
+                    exc_info=e,
+                )
                 if e.status_code == 403:
                     raise HTTPException(status_code=404, detail="Not Found")
                 raise
@@ -90,14 +193,13 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                     detail="Viruses detected in file, please upload another",
                 )
             except Exception as e:
-                file_path = inspect.getfile(func)
-                func_name = func.__name__
-                logger.error(
-                    f"""View error in {func_name} (file: {
-                             file_path}) - {e}""",
-                    exc_info=True,
+                context = extract_context()
+                log_unhandled_exception(logger, e, context, "view", func=func)
+                # Raise HTTPException with original traceback
+                new_exception = HTTPException(
+                    status_code=500, detail="Internal Server Error"
                 )
-                raise HTTPException(status_code=500, detail="Internal Server Error")
+                raise new_exception.with_traceback(e.__traceback__)
 
         return wrapper
 
@@ -109,7 +211,7 @@ def service_handler(func):
 
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        logger = getLogger(func.__module__)
+        logger = structlog.get_logger(func.__module__)
         try:
             return await func(*args, **kwargs)
 
@@ -118,14 +220,11 @@ def service_handler(func):
             raise
         # all other errors that occur in the service layer will log an error
         except Exception as e:
-            file_path = inspect.getfile(func)
-            func_name = func.__name__
-            logger.error(
-                f"""Service error in {func_name} (file: {
-                         file_path}) - {e}""",
-                exc_info=True,
-            )
-            raise ServiceException
+            context = extract_context()
+            log_unhandled_exception(logger, e, context, "service", func=func)
+            # Raise ServiceException with original traceback
+            new_exception = ServiceException()
+            raise new_exception.with_traceback(e.__traceback__) from e
 
     return wrapper
 
@@ -135,7 +234,7 @@ def repo_handler(func):
 
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        logger = getLogger(func.__module__)
+        logger = structlog.get_logger(func.__module__)
         try:
             return await func(*args, **kwargs)
         # raise the error to the service layer
@@ -143,13 +242,10 @@ def repo_handler(func):
             raise
         # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
         except Exception as e:
-            file_path = inspect.getfile(func)
-            func_name = func.__name__
-            logger.error(
-                f"""Repo error in {func_name} (file: {
-                         file_path}) - {e}""",
-                exc_info=True,
-            )
-            raise DatabaseException from e  # Preserve the original exception
+            context = extract_context()
+            log_unhandled_exception(logger, e, context, "repository", func=func)
+            # Raise DatabaseException with original traceback
+            new_exception = DatabaseException()
+            raise new_exception.with_traceback(e.__traceback__) from e
 
     return wrapper

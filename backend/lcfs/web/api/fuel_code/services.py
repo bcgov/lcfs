@@ -1,5 +1,5 @@
 import asyncio
-from logging import getLogger
+import structlog
 import math
 from fastapi import Depends
 from datetime import datetime
@@ -24,7 +24,7 @@ from lcfs.web.api.fuel_code.schema import (
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-logger = getLogger("fuel_code_services")
+logger = structlog.get_logger(__name__)
 
 
 class FuelCodeServices:

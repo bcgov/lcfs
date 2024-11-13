@@ -1,5 +1,5 @@
 import math
-from logging import getLogger
+import structlog
 from typing import List
 from fastapi import Depends
 from datetime import datetime
@@ -26,7 +26,7 @@ from lcfs.web.api.allocation_agreement.schema import (
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.utils.constants import default_ci
 
-logger = getLogger("allocation_agreement_services")
+logger = structlog.get_logger(__name__)
 
 
 class AllocationAgreementServices:

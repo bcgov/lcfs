@@ -1,11 +1,11 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
     InitiativeAgreementStatusEnum,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_initiative_agreement_statuses(session):
@@ -46,7 +46,13 @@ async def seed_initiative_agreement_statuses(session):
                 session.add(status)
 
     except Exception as e:
+        context = {
+            "function": "seed_initiative_agreement_statuses",
+        }
         logger.error(
-            "Error occurred while seeding initiative agreement statuses: %s", e
+            "Error occurred while seeding initiative agreement statuses",
+            error=str(e),
+            exc_info=e,
+            **context,
         )
         raise

@@ -1,11 +1,11 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import (
     AdminAdjustmentStatus,
     AdminAdjustmentStatusEnum,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_admin_adjustment_statuses(session):
@@ -46,5 +46,13 @@ async def seed_admin_adjustment_statuses(session):
                 session.add(status)
 
     except Exception as e:
-        logger.error("Error occurred while seeding admin adjustment statuses: %s", e)
+        context = {
+            "function": "seed_admin_adjustment_statuses",
+        }
+        logger.error(
+            "Error occurred while seeding admin adjustment statuses",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

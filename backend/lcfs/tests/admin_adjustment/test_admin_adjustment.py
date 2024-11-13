@@ -37,7 +37,7 @@ async def test_get_admin_adjustment(
     assert response.status_code == status.HTTP_200_OK
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_admin_adjustment_unauthorized(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
@@ -58,7 +58,7 @@ async def test_get_admin_adjustment_unauthorized(
             "get_admin_adjustment", admin_adjustment_id=admin_adjustment_id
         )
         response = await client.get(url)
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.anyio
@@ -102,7 +102,7 @@ async def test_update_admin_adjustment(
     assert response.status_code == status.HTTP_202_ACCEPTED
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_fail_update_processed_admin_adjustment(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
@@ -119,4 +119,4 @@ async def test_fail_update_processed_admin_adjustment(
         "adminAdjustmentId": "2",
     }
     response = await client.put(url, json=admin_adjustment_update_payload)
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND

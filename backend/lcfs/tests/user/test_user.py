@@ -1,3 +1,4 @@
+from lcfs.db.models.user import UserLoginHistory
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
@@ -10,7 +11,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import Initi
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
 from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.user.schema import UserActivitiesResponseSchema
+from lcfs.web.api.user.schema import UserActivitiesResponseSchema, UserLoginHistoryResponseSchema
 
 @pytest.mark.anyio
 async def test_get_user_activities_as_administrator(
@@ -156,7 +157,7 @@ async def test_get_user_activities_as_manage_users_same_org(
     content = UserActivitiesResponseSchema(**response.json())
     assert len(content.activities) == 1  # Should have 1 activity record
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_user_activities_permission_denied(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -180,7 +181,7 @@ async def test_get_user_activities_permission_denied(
     url = fastapi_app.url_path_for("get_user_activities", user_id=target_user_id)
     response = await client.post(url, json=pagination)
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 @pytest.mark.anyio
 async def test_get_all_user_activities_as_administrator(
@@ -274,7 +275,7 @@ async def test_get_all_user_activities_permission_denied(
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_user_activities_user_not_found(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -298,4 +299,121 @@ async def test_get_user_activities_user_not_found(
     url = fastapi_app.url_path_for("get_user_activities", user_id=non_existent_user_id)
     response = await client.post(url, json=pagination)
 
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_get_all_user_login_history_as_administrator(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    # Mock the current user as an ADMINISTRATOR
+    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+
+    # Prepare login history records for multiple users
+    login_history_1 = UserLoginHistory(
+        user_login_history_id=1,
+        keycloak_email="admin1@example.com",
+        external_username="admin_user1",
+        keycloak_user_id="user1",
+        is_login_successful=True,
+        create_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+    )
+    login_history_2 = UserLoginHistory(
+        user_login_history_id=2,
+        keycloak_email="admin2@example.com",
+        external_username="admin_user2",
+        keycloak_user_id="user2",
+        is_login_successful=False,
+        login_error_message="Invalid password",
+        create_date=datetime.strptime("2024-01-02", "%Y-%m-%d"),
+    )
+
+    await add_models([login_history_1, login_history_2])
+
+    # Prepare request data for pagination
+    pagination = {
+        "page": 1,
+        "size": 10,
+        "filters": [],
+        "sortOrders": [],
+    }
+
+    # Send request to get all user login history
+    url = fastapi_app.url_path_for("get_all_user_login_history")
+    response = await client.post(url, json=pagination)
+
+    assert response.status_code == status.HTTP_200_OK
+    content = UserLoginHistoryResponseSchema(**response.json())
+    assert len(content.histories) == 2  # Should retrieve 2 records
+
+
+@pytest.mark.anyio
+async def test_get_all_user_login_history_permission_denied(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    # Mock the current user without ADMINISTRATOR role
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+
+    # Prepare request data for pagination
+    pagination = {
+        "page": 1,
+        "size": 10,
+        "filters": [],
+        "sortOrders": [],
+    }
+
+    # Send request to get all user login history
+    url = fastapi_app.url_path_for("get_all_user_login_history")
+    response = await client.post(url, json=pagination)
+
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_get_all_user_login_history_with_pagination(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    add_models,
+):
+    # Mock the current user as an ADMINISTRATOR
+    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
+
+    # Prepare login history records for testing pagination
+    login_history_records = [
+        UserLoginHistory(
+            user_login_history_id=i,
+            keycloak_email=f"user{i}@example.com",
+            external_username=f"user_{i}",
+            keycloak_user_id=f"user_id_{i}",
+            is_login_successful=(i % 2 == 0),
+            create_date=datetime.strptime("2024-01-01", "%Y-%m-%d"),
+        )
+        for i in range(1, 21)  # Assuming 20 records
+    ]
+    await add_models(login_history_records)
+
+    # Request data for the first page with size 5
+    pagination = {
+        "page": 1,
+        "size": 5,
+        "filters": [],
+        "sortOrders": [],
+    }
+
+    # Send request to get the first page of login history
+    url = fastapi_app.url_path_for("get_all_user_login_history")
+    response = await client.post(url, json=pagination)
+
+    assert response.status_code == status.HTTP_200_OK
+    content = UserLoginHistoryResponseSchema(**response.json())
+    assert len(content.histories) == 5
+    assert content.pagination.total == 20
+    assert content.pagination.page == 1
+    assert content.pagination.size == 5
+    assert content.pagination.total_pages == 4

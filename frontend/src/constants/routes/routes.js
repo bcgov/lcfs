@@ -54,6 +54,7 @@ export const ADMIN_USERS_VIEW = `${ADMIN_USERS}/:userID`
 export const ADMIN_USERS_EDIT = `${ADMIN_USERS_VIEW}/edit-user`
 export const ADMIN_USERACTIVITY = `${ADMIN}/user-activity`
 export const ADMIN_COMPLIANCE_REPORTING = `${ADMIN}/compliance-reporting`
+export const ADMIN_USER_LOGIN_HISTORY = `${ADMIN}/user-login-history`
 
 export const FUELCODES = '/fuel-codes'
 export const FUELCODES_ADD = `${FUELCODES}/add-fuel-code`

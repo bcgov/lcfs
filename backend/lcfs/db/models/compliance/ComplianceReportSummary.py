@@ -7,25 +7,15 @@ from datetime import datetime
 
 class ComplianceReportSummary(BaseModel, Auditable):
     __tablename__ = "compliance_report_summary"
-    __table_args__ = (
-        CheckConstraint(
-            "(compliance_report_id IS NULL) != (supplemental_report_id IS NULL)",
-            name="check_one_report_id_not_null",
-        ),  # ensure one report id only
-        {
-            "comment": "Summary of all compliance calculations displaying the compliance units credits or debits over a compliance period"
-        },
-    )
+    __table_args__ = {
+        "comment": "Summary of all compliance calculations displaying the compliance units over a compliance period"
+    }
 
     summary_id = Column(Integer, primary_key=True, autoincrement=True)
     compliance_report_id = Column(
         Integer, ForeignKey("compliance_report.compliance_report_id"), nullable=True
     )
-    supplemental_report_id = Column(
-        Integer, ForeignKey("supplemental_report.supplemental_report_id"), nullable=True
-    )
     quarter = Column(Integer, nullable=True)  # Null for annual reports
-    version = Column(Integer, nullable=False, default=1)
     is_locked = Column(Boolean, default=False)
 
     # Renewable fuel target summary
@@ -121,7 +111,6 @@ class ComplianceReportSummary(BaseModel, Auditable):
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
     compliance_report = relationship("ComplianceReport", back_populates="summary")
-    supplemental_report = relationship("SupplementalReport", back_populates="summary")
 
     def lock_summary(self):
         if not self.is_locked:

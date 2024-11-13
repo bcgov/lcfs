@@ -1,6 +1,6 @@
 import BCBox from '@/components/BCBox'
 import {
-  ADMIN_COMPLIANCE_REPORTING,
+  ADMIN_USER_LOGIN_HISTORY,
   ADMIN_USERACTIVITY,
   ADMIN_USERS
 } from '@/constants/routes/routes'
@@ -11,8 +11,9 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Users } from './components/Users'
-import { UserActivity } from './components/UserActivity'
+import { Users, UserActivity, UserLoginHistory } from '.'
+import { Role } from '@/components/Role'
+import { roles } from '@/constants/roles'
 
 function a11yProps(index) {
   return {
@@ -28,8 +29,8 @@ export function AdminMenu({ tabIndex }) {
   const paths = useMemo(() => [
     ADMIN_USERS,
     ADMIN_USERACTIVITY,
-    ADMIN_COMPLIANCE_REPORTING
-  ])
+    ADMIN_USER_LOGIN_HISTORY
+  ], [])
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
@@ -65,18 +66,20 @@ export function AdminMenu({ tabIndex }) {
         >
           <Tab label={t('Users')} wrapped {...a11yProps(0)} />
           <Tab label={t('UserActivity')} {...a11yProps(1)} />
-          <Tab label={t('ComplianceReporting')} {...a11yProps(3)} />
+          <Tab label={t('UserLoginHistory')} {...a11yProps(2)} />
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>
         <Users />
       </AdminTabPanel>
-      <AdminTabPanel value={tabIndex} index={1} component="div" mx={-3}>
-        <UserActivity />
-      </AdminTabPanel>
-      <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
-        <>Compliance reporting</>
-      </AdminTabPanel>
+      <Role roles={[roles.administrator]}>
+        <AdminTabPanel value={tabIndex} index={1} component="div" mx={-3}>
+          <UserActivity />
+        </AdminTabPanel>
+        <AdminTabPanel value={tabIndex} index={2} component="div" mx={-3}>
+          <UserLoginHistory />
+        </AdminTabPanel>
+      </Role>
     </BCBox>
   )
 }

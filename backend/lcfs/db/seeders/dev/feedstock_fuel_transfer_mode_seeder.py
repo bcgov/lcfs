@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select, func
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_feedstock_fuel_transfer_modes(session):
@@ -74,7 +74,13 @@ async def seed_feedstock_fuel_transfer_modes(session):
                 session.add(feedstock_fuel_transfer_mode)
 
     except Exception as e:
+        context = {
+            "function": "seed_feedstock_fuel_transfer_modes",
+        }
         logger.error(
-            "Error occurred while seeding feedstock fuel transfer modes: %s", e
+            "Error occurred while seeding feedstock fuel transfer modes",
+            error=str(e),
+            exc_info=e,
+            **context,
         )
         raise

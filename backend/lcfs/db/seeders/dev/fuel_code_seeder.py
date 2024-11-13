@@ -1,10 +1,10 @@
-import logging
+import structlog
 from datetime import datetime
 
 from sqlalchemy import select, func
 from lcfs.db.models.fuel.FuelCode import FuelCode
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Base template for the common fields
 base_fuel_data = {
@@ -222,5 +222,13 @@ async def seed_fuel_codes(session):
                 session.add(fuel_code)
 
     except Exception as e:
-        logger.error("Error occurred while seeding fuel codes: %s", e)
+        context = {
+            "function": "seed_fuel_codes",
+        }
+        logger.error(
+            "Error occurred while seeding fuel codes",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

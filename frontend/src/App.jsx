@@ -224,9 +224,9 @@ const router = createBrowserRouter([
         handle: { title: 'User activity' }
       },
       {
-        path: ROUTES.ADMIN_COMPLIANCE_REPORTING,
-        element: <AdminMenu tabIndex={3} />,
-        handle: { title: 'Compliance reporting' }
+        path: ROUTES.ADMIN_USER_LOGIN_HISTORY,
+        element: <AdminMenu tabIndex={2} />,
+        handle: { title: 'User login history' }
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,

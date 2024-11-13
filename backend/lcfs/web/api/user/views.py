@@ -12,7 +12,7 @@ POST: /users/<user_id>/activity
 POST: /users/activities/all
 """
 
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import (
@@ -32,6 +32,7 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
+    UserLoginHistoryResponseSchema,
     UsersSchema,
     UserActivitiesResponseSchema,
 )
@@ -41,7 +42,7 @@ from lcfs.web.api.user.services import UserServices
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("user_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 
@@ -191,7 +192,11 @@ async def get_user_roles(
     return await service.get_user_roles(user_id)
 
 
-@router.post("/{user_id}/activity", response_model=UserActivitiesResponseSchema, status_code=status.HTTP_200_OK)
+@router.post(
+    "/{user_id}/activity",
+    response_model=UserActivitiesResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.ADMINISTRATOR, RoleEnum.MANAGE_USERS])
 async def get_user_activities(
     request: Request,
@@ -211,7 +216,11 @@ async def get_user_activities(
     return await service.get_user_activities(user_id, current_user, pagination)
 
 
-@router.post("/activities/all", response_model=UserActivitiesResponseSchema, status_code=status.HTTP_200_OK)
+@router.post(
+    "/activities/all",
+    response_model=UserActivitiesResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
 @view_handler([RoleEnum.ADMINISTRATOR])
 async def get_all_user_activities(
     request: Request,
@@ -223,3 +232,21 @@ async def get_all_user_activities(
     """
     current_user = request.user
     return await service.get_all_user_activities(current_user, pagination)
+
+
+@router.post(
+    "/login-history",
+    response_model=UserLoginHistoryResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def get_all_user_login_history(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(...),
+    service: UserServices = Depends(),
+) -> UserLoginHistoryResponseSchema:
+    """
+    Get users login history.
+    """
+    current_user = request.user
+    return await service.get_all_user_login_history(current_user, pagination)

@@ -146,6 +146,7 @@ jobs:
             yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_S3_SECRET_KEY") | .valueFrom.secretKeyRef.name) = "lcfs-minio-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_RABBITMQ_TRANSACTION_QUEUE") | .value) = "transaction_queue_${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
 
       - name: Helm Deployment
         shell: bash {0}

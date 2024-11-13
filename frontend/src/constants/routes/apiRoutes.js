@@ -38,6 +38,7 @@ export const apiRoutes = {
   updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
+  createSupplementalReport: '/reports/:reportID/supplemental',
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',
@@ -66,5 +67,6 @@ export const apiRoutes = {
   organizationSearch: '/organizations/search?',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
-  getFuelTypeOthers: '/fuel-type/others/list'
+  getFuelTypeOthers: '/fuel-type/others/list',
+  getUserLoginHistories: '/users/login-history',
 }

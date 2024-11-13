@@ -1,15 +1,11 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { ThemeProvider } from '@mui/material/styles'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import theme from '@/themes'
 import ComplianceReportSummary from '../ComplianceReportSummary'
 import {
   useGetComplianceReportSummary,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
-import { BrowserRouter as Router } from 'react-router-dom'
 import { SUMMARY } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { buttonClusterConfigFn } from '@/views/ComplianceReports/buttonConfigs'
@@ -76,7 +72,7 @@ describe('ComplianceReportSummary', () => {
     ).toBeInTheDocument()
   })
 
-  it.skip('renders error state', () => {
+  it('renders error state', () => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: true,
@@ -84,13 +80,18 @@ describe('ComplianceReportSummary', () => {
       data: null
     })
 
+    const alertRef = React.createRef()
+    alertRef.current = { triggerAlert: vi.fn() } // Mock the triggerAlert method
+
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
         setHasMet={mockSetHasMet}
+        alertRef={alertRef} // Pass the alertRef prop
       />,
       { wrapper }
     )
+
     expect(screen.getByText('Error retrieving the record')).toBeInTheDocument()
   })
 
@@ -121,7 +122,8 @@ describe('ComplianceReportSummary', () => {
           setModalData: vi.fn(),
           updateComplianceReport: vi.fn(),
           isGovernmentUser: true,
-          isSigningAuthorityDeclared: true
+          isSigningAuthorityDeclared: true,
+          label: 'Button'
         })}
       />,
       { wrapper }

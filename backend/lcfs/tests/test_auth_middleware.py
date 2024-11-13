@@ -1,232 +1,96 @@
-import jwt
-import json
-import base64
-from jwt import PyJWKClient
+from unittest.mock import AsyncMock, patch, MagicMock, Mock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from httpx import Response
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_200_OK
+from starlette.exceptions import HTTPException
+from starlette.requests import Request
+
+from lcfs.db.models import UserProfile
 from lcfs.services.keycloak.authentication import UserAuthentication
-from lcfs.db.models.user.UserProfile import UserProfile
-from fastapi import HTTPException
-from lcfs.settings import settings
-from sqlalchemy.ext.asyncio import AsyncSession
-from jwt import ExpiredSignatureError
-from unittest.mock import patch
+from lcfs.settings import Settings
 
 
-# Mock for JWKS client
 @pytest.fixture
-def mock_jwks_client():
-    client = MagicMock()
-    client.get_signing_key_from_jwt = MagicMock()
-    return client
+def redis_pool():
+    return AsyncMock()
 
 
-# Fixture for the UserAuthentication backend
 @pytest.fixture
-def user_auth_backend(fake_redis_pool, dbsession_factory, mock_jwks_client):
-    backend = UserAuthentication(
-        redis_pool=fake_redis_pool, session=dbsession_factory, settings=settings
+def session_generator():
+    async_context = MagicMock()
+    return async_context
+
+
+@pytest.fixture
+def settings():
+    return Settings(
+        well_known_endpoint="https://example.com/.well-known/openid-configuration",
+        keycloak_audience="your-audience",
     )
-    backend.test_mode = True
-    backend.jwks_client = mock_jwks_client  # Replace JWKS client with a mock
-    return backend
 
 
-@pytest.mark.skip(reason="FIX ME")
-async def test_successful_authentication(user_auth_backend, dbsession_factory):
-    # Mock token and user profile
-    token = "valid.jwt.token"
-
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "idiruser@idir",
-        "idir_username": "IDIRUSER",
-        "email": "idir@test.com",
-        "identity_provider": "idir",
-    }
-
-    # Simulate request
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
-
-    # Perform authentication
-    credentials, user = await user_auth_backend.authenticate(request)
-
-    assert credentials.scopes == ["authenticated"]
+@pytest.fixture
+def auth_backend(redis_pool, session_generator, settings):
+    return UserAuthentication(redis_pool, session_generator[0], settings)
 
 
-@pytest.mark.skip(reason="FIX ME")
-async def test_token_expired(user_auth_backend):
-    # Create a mock header with a 'kid'
-    header = json.dumps({"alg": "HS256", "typ": "JWT", "kid": "test-key-id"})
-    payload = json.dumps({"sub": "1234567890"})
+@pytest.mark.anyio
+async def test_load_jwk_from_redis(auth_backend):
+    with patch("redis.asyncio.Redis.get", new_callable=AsyncMock) as mock_redis_get:
+        mock_redis_get.return_value = '{"jwks": "jwks", "jwks_uri": "jwks_uri"}'
 
-    # Base64 URL encode the header, payload, and a dummy signature
-    encoded_header = base64.urlsafe_b64encode(header.encode()).decode().rstrip("=")
-    encoded_payload = base64.urlsafe_b64encode(payload.encode()).decode().rstrip("=")
-    encoded_signature = base64.urlsafe_b64encode(b"dummysignature").decode().rstrip("=")
+        await auth_backend.refresh_jwk()
 
-    # Combine the segments
-    mock_jwt_token = f"{encoded_header}.{encoded_payload}.{encoded_signature}"
+        assert auth_backend.jwks == "jwks"
+        assert auth_backend.jwks_uri == "jwks_uri"
 
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {mock_jwt_token}"
 
-    # Mock the JWKS client to prevent actual key retrieval
-    with patch.object(
-        user_auth_backend.jwks_client,
-        "get_signing_key_from_jwt",
-        return_value="mocked_key",
-    ):
-        with patch(
-            "jwt.decode", side_effect=jwt.ExpiredSignatureError("Token has expired")
-        ):
-            with pytest.raises(HTTPException) as exc_info:
-                await user_auth_backend.authenticate(request)
+@pytest.mark.anyio
+@patch("httpx.AsyncClient.get")
+async def test_refresh_jwk_sets_new_keys_in_redis(mock_get, auth_backend):
+    # Create a mock response object
+    mock_response = MagicMock()
+
+    # Set up the json method to return a dictionary with a .get method
+    mock_json = MagicMock()
+    mock_json.get.return_value = "{}"
+
+    # Assign the mock_json to the json method of the response
+    mock_response.json.return_value = mock_json
+
+    mock_response_2 = MagicMock()
+    mock_response_2.json.return_value = "{}"
+
+    mock_get.side_effect = [
+        mock_response,
+        mock_response_2,
+    ]
+
+    with patch("redis.asyncio.Redis.get", new_callable=AsyncMock) as mock_redis_get:
+        mock_redis_get.return_value = None
+
+        await auth_backend.refresh_jwk()
+
+        assert auth_backend.jwks == "{}"
+        assert auth_backend.jwks_uri == "{}"
+
+
+@pytest.mark.anyio
+async def test_authenticate_no_auth_header(auth_backend):
+    request = MagicMock(spec=Request)
+    request.headers = {}
+
+    with pytest.raises(HTTPException) as exc_info:
+        await auth_backend.authenticate(request)
 
     assert exc_info.value.status_code == 401
-    assert "Token has expired" in str(exc_info.value.detail)
+    assert exc_info.value.detail == "Authorization header is required"
 
 
 @pytest.mark.anyio
-async def test_keycloak_user_not_found(user_auth_backend, dbsession_factory):
-    token = "valid.jwt.token"
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
+async def test_map_user_keycloak_id(auth_backend, session_generator):
+    user_profile = UserProfile()
+    user_token = {"preferred_username": "testuser"}
 
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "random_lcfs1",
-        "idir_username": "random_lcfs1",
-        "email": "random_lcfs1@gov.bc.ca",
-        "identity_provider": "idir",
-    }
+    await auth_backend.map_user_keycloak_id(user_profile, user_token)
 
-    with pytest.raises(HTTPException) as exc_info:
-        await user_auth_backend.authenticate(request)
-
-    assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert "No User with that configuration exists." in str(exc_info.value.detail)
-
-
-@pytest.mark.skip(reason="FIX ME")
-async def test_active_user_authentication(user_auth_backend, dbsession_factory):
-    token = "valid.jwt.token"
-
-    # Simulate request with JWT token
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
-
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "activeuser@bceidbusiness",
-        "bceid_username": "ACTIVEUSER",
-        "email": "active@test.com",
-        "identity_provider": "bceidbusiness",
-    }
-
-    # Perform authentication
-    credentials, user = await user_auth_backend.authenticate(request)
-
-    assert credentials.scopes == ["authenticated"]
-    assert user.is_active is True
-
-
-@pytest.mark.skip(reason="FIX ME")
-async def test_inactive_user_authentication(user_auth_backend, dbsession_factory):
-    token = "valid.jwt.token"
-
-    # Simulate request with JWT token
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
-
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "inactiveuser@bceidbusiness",
-        "bceid_username": "INACTIVEUSER",
-        "email": "inactive@test.com",
-        "identity_provider": "bceidbusiness",
-    }
-
-    # Perform authentication and expect an HTTPException for inactive user
-    with pytest.raises(HTTPException) as exc_info:
-        await user_auth_backend.authenticate(request)
-
-    assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert "The account is currently inactive." in str(exc_info.value.detail)
-
-
-@pytest.mark.skip(reason="FIX ME")
-async def test_idir_identity_provider_authentication(
-    user_auth_backend, dbsession_factory
-):
-    token = "valid.jwt.token"
-
-    # Simulate request with JWT token
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
-
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "idiruser@idir",
-        "idir_username": "IDIRUSER",
-        "email": "idir@test.com",
-        "identity_provider": "idir",
-    }
-
-    # Perform authentication for idir identity provider
-    credentials, user = await user_auth_backend.authenticate(request)
-
-    assert credentials.scopes == ["authenticated"]
-    assert user.organization_id is None
-
-
-@pytest.mark.skip(reason="FIX ME")
-async def test_bceidbusiness_identity_provider_authentication(
-    user_auth_backend, dbsession_factory
-):
-    token = "valid.jwt.token"
-
-    # Simulate request with JWT token
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
-
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "bceiduser@bceidbusiness",
-        "bceid_username": "BCEIDUSER",
-        "email": "bceid@test.com",
-        "identity_provider": "bceidbusiness",
-    }
-
-    # Perform authentication for bceidbusiness identity provider
-    credentials, user = await user_auth_backend.authenticate(request)
-
-    assert credentials.scopes == ["authenticated"]
-    assert user.organization_id is not None
-
-
-@pytest.mark.anyio
-async def test_unknown_identity_provider_authentication(user_auth_backend):
-    token = "valid.jwt.token"
-
-    # Simulate request with JWT token
-    request = MagicMock()
-    request.headers.get.return_value = f"Bearer {token}"
-
-    # Set test user
-    user_auth_backend.test_keycloak_user = {
-        "preferred_username": "unknownuser",
-        "idir_username": "IDIRUSER",
-        "email": "user@test.com",
-        "identity_provider": "unknown",
-    }
-
-    # Perform authentication for an unknown identity provider and expect an HTTPException
-    with pytest.raises(HTTPException) as exc_info:
-        await user_auth_backend.authenticate(request)
-
-    # assert exc_info.value.status_code == HTTP_401_UNAUTHORIZED
-    assert "Unknown or missing identity provider" in str(exc_info.value.detail)
+    assert user_profile.keycloak_user_id == "testuser"

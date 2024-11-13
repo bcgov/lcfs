@@ -18,6 +18,11 @@ vi.mock('../AdminMenu/components/Users', () => ({
   Users: () => <div data-test="mock-users">Mocked Users Component</div>
 }))
 
+// Mock Role component
+vi.mock('@/components/Role', () => ({
+  Role: ({ roles, children }) => (roles.includes('administrator') ? children : null)
+}))
+
 // Mock the translation function
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
@@ -33,7 +38,7 @@ describe('AdminMenu Component', () => {
     render(<AdminMenu tabIndex={0} />, { wrapper })
     expect(screen.getByText('Users')).toBeInTheDocument()
     expect(screen.getByText('UserActivity')).toBeInTheDocument()
-    expect(screen.getByText('ComplianceReporting')).toBeInTheDocument()
+    expect(screen.getByText('UserLoginHistory')).toBeInTheDocument()
     expect(screen.getByTestId('mock-users')).toBeInTheDocument()
   })
 
@@ -41,16 +46,20 @@ describe('AdminMenu Component', () => {
     render(<AdminMenu tabIndex={0} />, { wrapper })
     fireEvent.click(screen.getByText('UserActivity'))
     expect(mockNavigate).toHaveBeenCalledWith('/admin/user-activity')
+    fireEvent.click(screen.getByText('UserLoginHistory'))
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/user-login-history')
   })
 
-  it.skip('displays correct content for each tab', () => {
+  it('displays correct content for each tab with administrator role', () => {
     const { rerender } = render(<AdminMenu tabIndex={0} />, { wrapper })
     expect(screen.getByTestId('mock-users')).toBeInTheDocument()
 
+    // Render UserActivity tab content
     rerender(<AdminMenu tabIndex={1} />)
-    expect(screen.getByText('User activity')).toBeInTheDocument()
+    expect(screen.getByText('UserActivity')).toBeInTheDocument()
 
-    rerender(<AdminMenu tabIndex={3} />)
-    expect(screen.getByText('Compliance reporting')).toBeInTheDocument()
+    // Render UserLoginHistory tab content
+    rerender(<AdminMenu tabIndex={2} />)
+    expect(screen.getByText('UserLoginHistory')).toBeInTheDocument()
   })
 })

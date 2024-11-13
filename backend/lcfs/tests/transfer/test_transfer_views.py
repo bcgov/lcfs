@@ -27,7 +27,7 @@ async def test_get_all_transfers_success(
     assert response.status_code == 200
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_get_transfer_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -57,7 +57,7 @@ async def test_get_transfer_success(
     assert data["pricePerUnit"] == 6.85
 
 
-@pytest.mark.skip(reason="FIX ME")
+@pytest.mark.anyio
 async def test_government_update_transfer_success(
     client: AsyncClient,
     fastapi_app: FastAPI,

@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.user.UserRole import UserRole
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_test_user_roles(session):
@@ -37,5 +37,13 @@ async def seed_test_user_roles(session):
                 session.add(user_role)
 
     except Exception as e:
-        logger.error("Error occurred while seeding user roles: %s", e)
+        context = {
+                "function": "seed_test_user_roles",
+        }
+        logger.error(
+            "Error occurred while seeding user roles",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

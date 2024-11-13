@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -19,7 +19,7 @@ from lcfs.db.models.comment.AdminAdjustmentInternalComment import AdminAdjustmen
 from lcfs.db.models.comment.ComplianceReportInternalComment import ComplianceReportInternalComment
 
 
-logger = getLogger("internal_comment_repo")
+logger = structlog.get_logger(__name__)
 
 
 class InternalCommentRepository:

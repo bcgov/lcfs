@@ -25,6 +25,7 @@ from lcfs.web.api import (
     allocation_agreement,
     document,
     fuel_type,
+    audit_log
 )
 
 api_router = APIRouter()
@@ -84,3 +85,4 @@ api_router.include_router(
 )
 api_router.include_router(document.router, prefix="/documents", tags=["documents"])
 api_router.include_router(fuel_type.router, prefix="/fuel-type", tags=["fuel_type"])
+api_router.include_router(audit_log.router, prefix="/audit_log", tags=["audit_log"])

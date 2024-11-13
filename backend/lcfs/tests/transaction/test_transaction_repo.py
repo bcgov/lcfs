@@ -59,8 +59,12 @@ async def test_calculate_available_balance(
     assert available_balance == 0
 
 
-@pytest.mark.skip(reason="FIX ME")
-async def test_create_transaction(dbsession, transaction_repo, mock_transactions):
+@pytest.mark.anyio
+async def test_create_transaction(dbsession, transaction_repo):
+    dbsession.add_all([test_org])
+    await dbsession.flush()
+
+
     new_transaction = await transaction_repo.create_transaction(
         TransactionActionEnum.Adjustment, 100, test_org_id
     )

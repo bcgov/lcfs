@@ -1,8 +1,8 @@
-import logging
+import structlog
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_prod(session: AsyncSession):

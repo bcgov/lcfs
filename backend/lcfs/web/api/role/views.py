@@ -3,7 +3,7 @@ Roles endpoints
 GET: /roles?government_roles_only=true
 """
 
-from logging import getLogger
+import structlog
 
 from fastapi import APIRouter, Request, status, FastAPI, Depends
 from typing import List
@@ -17,7 +17,7 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("role_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 app = FastAPI()
 
@@ -32,7 +32,7 @@ async def get_roles(
     response: Response = None,
 ) -> List[RoleSchema]:
     logger.info(
-        f"""Retrieving roles: government_roles_only : {
-                government_roles_only}"""
+        "Retrieving roles: government_roles_only",
+        government_roles_only=government_roles_only
     )
     return await service.get_roles(government_roles_only)

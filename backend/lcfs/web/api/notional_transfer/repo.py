@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
@@ -17,7 +17,7 @@ from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
 
-logger = getLogger("notional_transfer_repo")
+logger = structlog.get_logger(__name__)
 
 
 class NotionalTransferRepository:

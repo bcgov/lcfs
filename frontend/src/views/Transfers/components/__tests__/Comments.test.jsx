@@ -16,7 +16,7 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-describe.skip('Comments Component', () => {
+describe('Comments Component', () => {
   it('renders correctly when commentField is provided', () => {
     render(
       <MockFormProvider>

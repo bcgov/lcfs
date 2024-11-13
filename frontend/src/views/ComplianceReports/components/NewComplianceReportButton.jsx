@@ -17,7 +17,7 @@ export const NewComplianceReportButton = ({
   setIsButtonLoading
 }) => {
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
-  const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears(1)
+  const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
 
   const reportedPeriodIDs = reportedPeriods?.map(
     (period) => period.compliancePeriodId

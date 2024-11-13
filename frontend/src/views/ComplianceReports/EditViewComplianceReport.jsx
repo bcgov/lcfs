@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-// mui components
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
@@ -12,15 +11,11 @@ import { Fab, Stack, Tooltip, Typography } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-// styles
 import colors from '@/themes/base/colors.js'
-// constants
 import { govRoles } from '@/constants/roles'
-// hooks
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
-// internal components
 import { Introduction } from './components/Introduction'
 import {
   useGetComplianceReport,
@@ -30,11 +25,9 @@ import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
-import { OrgDetailsCard } from './components/OrgDetailsCard'
-import UploadCard from './components/UploadCard'
 import { AssessmentCard } from './components/AssessmentCard'
-import { ImportantInfoCard } from './components/ImportantInfoCard'
 import InternalComments from '@/components/InternalComments'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const iconStyle = {
   width: '2rem',
@@ -98,6 +91,7 @@ export const EditViewComplianceReport = () => {
     currentUser?.organization?.organizationId,
     complianceReportId
   )
+
   const currentStatus = reportData?.data?.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
     reportData?.data?.organizationId
@@ -150,10 +144,16 @@ export const EditViewComplianceReport = () => {
 
   useEffect(() => {
     if (location.state?.message) {
-      alertRef.current?.triggerAlert({ message: location.state.message, severity: location.state.severity || 'info' })
+      alertRef.current?.triggerAlert({
+        message: location.state.message,
+        severity: location.state.severity || 'info'
+      })
     }
     if (isError) {
-      alertRef.current?.triggerAlert({ message: error.response?.data?.detail || error.message, severity: 'error' })
+      alertRef.current?.triggerAlert({
+        message: error.response?.data?.detail || error.message,
+        severity: 'error'
+      })
     }
   }, [location.state, isError, error])
 
@@ -162,22 +162,17 @@ export const EditViewComplianceReport = () => {
   }
 
   if (isError) {
-    return <>
-      <FloatingAlert
-        ref={alertRef}
-        data-test="alert-box"
-        delay={10000}
-      /><Typography color="error">{t('report:errorRetrieving')}</Typography>
-    </>
+    return (
+      <>
+        <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
+        <Typography color="error">{t('report:errorRetrieving')}</Typography>
+      </>
+    )
   }
 
   return (
     <>
-      <FloatingAlert
-        ref={alertRef}
-        data-test="alert-box"
-        delay={10000}
-      />
+      <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
       <BCBox pl={2} pr={2}>
         <BCModal
           open={!!modalData}
@@ -186,35 +181,35 @@ export const EditViewComplianceReport = () => {
         />
         <BCBox pb={2}>
           <Typography variant="h5" color="primary">
-            {compliancePeriod + ' ' + t('report:complianceReport')}
+            {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
+            {reportData?.data?.nickname}
+          </Typography>
+          <Typography
+            variant="h6"
+            color="primary"
+            style={{ marginLeft: '0.25rem' }}
+          >
+            Status: {currentStatus}
           </Typography>
         </BCBox>
-        <Stack direction="column" spacing={2} mt={2}>
+        <Stack direction="column" mt={2}>
           <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
-            {currentStatus === 'Draft' ? (
-              <>
-                <ActivityListCard
-                  name={orgData?.name}
-                  period={compliancePeriod}
-                />
-                <UploadCard reportID={complianceReportId} />
-              </>
-            ) : (
-              <>
-                <AssessmentCard
-                  orgName={orgData?.name}
-                  history={reportData?.data?.history}
-                  isGovernmentUser={isGovernmentUser}
-                  hasMet={hasMet}
-                />
-                {!isGovernmentUser && <ImportantInfoCard />}
-              </>
+            {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
+              <ActivityListCard
+                name={orgData?.name}
+                period={compliancePeriod}
+                reportID={complianceReportId}
+              />
             )}
-            <OrgDetailsCard
-              orgName={orgData?.name}
-              orgAddress={orgData?.orgAddress}
-              orgAttorneyAddress={orgData?.orgAttorneyAddress}
+            <AssessmentCard
+              orgData={orgData}
+              history={reportData?.data?.history}
               isGovernmentUser={isGovernmentUser}
+              hasMet={hasMet}
+              currentStatus={currentStatus}
+              complianceReportId={complianceReportId}
+              alertRef={alertRef}
+              hasSupplemental={reportData?.data?.hasSupplemental}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -233,7 +228,7 @@ export const EditViewComplianceReport = () => {
             </>
           )}
           {!isGovernmentUser && (
-            <Introduction expanded={location.state?.newReport} />
+            <Introduction expanded={location.state?.newReport} compliancePeriod={compliancePeriod} />
           )}
           {/* Internal Comments */}
           {isGovernmentUser && (

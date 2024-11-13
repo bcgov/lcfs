@@ -1,6 +1,8 @@
-from typing import Optional, List, Union
+from enum import Enum
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
-from lcfs.web.api.fuel_code.schema import EndUseTypeSchema
+from enum import Enum
+from lcfs.web.api.fuel_code.schema import EndUseTypeSchema,EndUserTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
@@ -14,6 +16,19 @@ InDB - attributes present on any resource coming out of the database
 Public - attributes present on public facing resources being returned from GET, POST, and PUT requests
 """
 
+
+class SupplementalInitiatorType(str, Enum):
+    SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
+    GOVERNMENT_REASSESSMENT = "Government Reassessment"
+
+
+class ReportingFrequency(str, Enum):
+    ANNUAL = "Annual"
+    QUARTERLY = "Quarterly"
+
+class PortsEnum(str, Enum):
+    SINGLE = "Single port"
+    DUAL = "Dual port"
 
 class CompliancePeriodSchema(BaseSchema):
     compliance_period_id: int
@@ -44,14 +59,17 @@ class ComplianceReportStatusSchema(BaseSchema):
 class SnapshotSchema(BaseSchema):
     pass
 
+
 class ComplianceReportOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
+
 
 class ComplianceReportUserSchema(BaseSchema):
     first_name: str
     last_name: str
     organization: Optional[ComplianceReportOrganizationSchema] = None
+
 
 class ComplianceReportHistorySchema(BaseSchema):
     compliance_report_history_id: int
@@ -89,8 +107,10 @@ class LevelOfEquipmentSchema(BaseSchema):
 
 class FSEOptionsSchema(BaseSchema):
     intended_use_types: List[EndUseTypeSchema]
+    intended_user_types: List[EndUserTypeSchema]
     fuel_measurement_types: List[FuelMeasurementTypeSchema]
     levels_of_equipment: List[LevelOfEquipmentSchema]
+    ports: ClassVar[List[str]] = [port.value for port in PortsEnum]
 
 
 class FinalSupplyEquipmentSchema(BaseSchema):
@@ -99,11 +119,15 @@ class FinalSupplyEquipmentSchema(BaseSchema):
     supply_from_date: date
     supply_to_date: date
     registration_nbr: str
+    kwh_usage: Optional[float] = None
     serial_nbr: str
     manufacturer: str
+    model: Optional[str] = None
     level_of_equipment: LevelOfEquipmentSchema
     fuel_measurement_type: FuelMeasurementTypeSchema
+    ports: Optional[PortsEnum] = None
     intended_use_types: List[EndUseTypeSchema]
+    intended_user_types: List[EndUserTypeSchema]
     street_address: str
     city: str
     postal_code: str
@@ -114,6 +138,9 @@ class FinalSupplyEquipmentSchema(BaseSchema):
 
 class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
+    compliance_report_group_uuid: Optional[str]
+    version: Optional[int]
+    supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
     compliance_period: CompliancePeriodSchema
     organization_id: int
@@ -125,8 +152,10 @@ class ComplianceReportBaseSchema(BaseSchema):
     # transaction: Optional[TransactionBaseSchema] = None
     nickname: Optional[str] = None
     supplemental_note: Optional[str] = None
+    reporting_frequency: Optional[ReportingFrequency] = None
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
+    has_supplemental: bool
 
 
 class ComplianceReportCreateSchema(BaseSchema):
@@ -158,7 +187,6 @@ class ComplianceReportSummarySchema(BaseSchema):
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: Optional[int] = None
     compliance_report_id: Optional[int] = None
-    supplemental_report_id: Optional[int] = None
     version: Optional[int] = None
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None

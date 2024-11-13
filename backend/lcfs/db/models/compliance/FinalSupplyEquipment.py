@@ -1,5 +1,5 @@
 from lcfs.db.base import Auditable, BaseModel
-from sqlalchemy import Column, Date, Double, Integer, String, Table, Text
+from sqlalchemy import Column, Date, Double, Enum, Integer, String, Table, Text
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -19,6 +19,24 @@ final_supply_intended_use_association = Table(
         "end_use_type_id",
         Integer,
         ForeignKey("end_use_type.end_use_type_id"),
+        primary_key=True,
+    ),
+)
+
+# Association table for FinalSupplyEquipment and EndUserType
+final_supply_intended_user_association = Table(
+    "final_supply_intended_user_association",
+    BaseModel.metadata,
+    Column(
+        "final_supply_equipment_id",
+        Integer,
+        ForeignKey("final_supply_equipment.final_supply_equipment_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "end_user_type_id",
+        Integer,
+        ForeignKey("end_user_type.end_user_type_id"),
         primary_key=True,
     ),
 )
@@ -51,6 +69,11 @@ class FinalSupplyEquipment(BaseModel, Auditable):
     supply_to_date = Column(
         Date, nullable=False, comment="The date until which the equipment is supplied."
     )
+    kwh_usage = Column(
+        Double(precision=2),
+        nullable=True,
+        comment="Optional kWh usage with up to 2 decimal places.",
+    )
     registration_nbr = Column(
         String,
         index=True,
@@ -62,12 +85,22 @@ class FinalSupplyEquipment(BaseModel, Auditable):
     manufacturer = Column(
         String, nullable=False, comment="The manufacturer of the equipment."
     )
+    model = Column(
+        String,
+        nullable=True,
+        comment="Optional model of the equipment, following 'Make' field.",
+    )
     level_of_equipment_id = Column(
         Integer,
         ForeignKey("level_of_equipment.level_of_equipment_id"),
         nullable=False,
         comment="The foreign key referencing the level of equipment.",
         index=True,
+    )
+    ports = Column(
+        Enum("Single port", "Dual port", name="ports_enum"),
+        nullable=True,
+        comment="Port type with options 'Single port' and 'Dual port.'"
     )
     fuel_measurement_type_id = Column(
         Integer,
@@ -104,5 +137,10 @@ class FinalSupplyEquipment(BaseModel, Auditable):
     intended_use_types = relationship(
         "EndUseType",
         secondary=final_supply_intended_use_association,
+        back_populates="final_supply_equipments",
+    )
+    intended_user_types = relationship(
+        "EndUserType",
+        secondary=final_supply_intended_user_association,
         back_populates="final_supply_equipments",
     )

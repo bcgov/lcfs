@@ -12,7 +12,7 @@ from .FuelExport import FuelExport
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
-from .SupplementalReport import SupplementalReport
+from .EndUserType import EndUserType
 from . import listeners
 
 __all__ = [
@@ -23,7 +23,6 @@ __all__ = [
     "ComplianceReportHistory",
     "ComplianceReportStatus",
     "ComplianceReportSummary",
-    "SupplementalReport",
     "FinalSupplyEquipment",
     "FuelMeasurementType",
     "FuelSupply",
@@ -32,4 +31,5 @@ __all__ = [
     "NotionalTransfer",
     "OtherUses",
     "listeners",
+    "EndUserType",
 ]

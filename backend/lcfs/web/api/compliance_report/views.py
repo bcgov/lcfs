@@ -6,7 +6,7 @@ GET: /reports/fse-options - retrieve the options that assists the user in fillin
 GET: /reports/<report_id> - retrieve the compliance report by ID
 """
 
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import (
@@ -33,10 +33,11 @@ from lcfs.web.api.compliance_report.summary_service import (
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
-logger = getLogger("reports_view")
+logger = structlog.get_logger(__name__)
 
 
 @router.get(
@@ -85,7 +86,10 @@ async def get_compliance_report_by_id(
     validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportBaseSchema:
     await validate.validate_organization_access(report_id)
-    return await service.get_compliance_report_by_id(report_id)
+
+    mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
+
+    return await service.get_compliance_report_by_id(report_id, mask_statuses)
 
 
 @router.get(
@@ -145,3 +149,20 @@ async def update_compliance_report(
     """Update an existing compliance report."""
     await validate.validate_organization_access(report_id)
     return await update_service.update_compliance_report(report_id, report_data)
+
+
+@router.post(
+    "/{report_id}/supplemental",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def create_supplemental_report(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Create a supplemental compliance report.
+    """
+    return await service.create_supplemental_report(report_id)

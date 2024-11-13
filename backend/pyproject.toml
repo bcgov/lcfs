@@ -23,7 +23,6 @@ asyncpg = { version = "^0.27.0", extras = ["sa"] }
 redis = { version = "^4.4.2", extras = ["hiredis"] }
 httptools = "^0.5.0"
 prometheus-fastapi-instrumentator = "6.0.0"
-colorlog = "6.7.0"
 distlib = "^0.3.8"
 pydantic-settings = "^2.0.3"
 pyjwt = "^2.8.0"
@@ -42,7 +41,9 @@ bump-pydantic = "^0.8.0"
 black = "^24.4.2"
 boto3 = "^1.35.26"
 typing-extensions = "^4.12.2"
+structlog = "^24.4.0"
 python-multipart = "^0.0.16"
+aio-pika = "^9.4.3"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3.3"
@@ -57,6 +58,7 @@ pytest-cov = "^4.0.0"
 anyio = "^3.6.2"
 pytest-env = "^0.8.1"
 fakeredis = "^2.5.0"
+rich = "^13.9.4"
 
 [tool.isort]
 profile = "black"

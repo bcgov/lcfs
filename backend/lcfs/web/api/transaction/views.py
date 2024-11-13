@@ -1,5 +1,5 @@
 from typing import List
-from logging import getLogger
+import structlog
 from fastapi import APIRouter, Depends, status, Request, Body, Query
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
@@ -12,7 +12,7 @@ from lcfs.web.api.transaction.schema import (
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.db.models.user.Role import RoleEnum
 
-logger = getLogger("transaction")
+logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 

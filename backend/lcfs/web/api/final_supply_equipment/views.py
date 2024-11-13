@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List, Optional, Union
 
 from fastapi import (
@@ -32,7 +32,7 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
-logger = getLogger("fse_view")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
 
 
@@ -113,11 +113,14 @@ async def save_final_supply_equipment_row(
         # Create new final supply equipment row
         return await fse_service.create_final_supply_equipment(request_data)
 
+
 @router.get("/search", response_model=List[str], status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.SUPPLIER])
 async def search_table_options(
     request: Request,
-    manufacturer: Optional[str] = Query(None, alias="manufacturer", description="Manfacturer for filtering options"),
+    manufacturer: Optional[str] = Query(
+        None, alias="manufacturer", description="Manfacturer for filtering options"
+    ),
     service: FinalSupplyEquipmentServices = Depends(),
 ) -> List[str]:
     """Endpoint to search table options strings"""

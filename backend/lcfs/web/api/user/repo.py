@@ -1,8 +1,9 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends
 from fastapi_cache.decorator import cache
+from lcfs.db.models.user import UserLoginHistory
 from sqlalchemy import and_, select, asc, desc, union_all, literal_column, func, cast, String
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,16 +20,15 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import Initi
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus
 from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
-from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema
+from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserLoginHistorySchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     camel_to_snake,
-    lcfs_cache_key_builder,
     apply_filter_conditions,
     get_field_for_filter,
 )
 
-logger = getLogger("user_repo")
+logger = structlog.get_logger(__name__)
 
 
 class UserRepository:
@@ -360,7 +360,7 @@ class UserRepository:
     @repo_handler
     async def delete_user(self, user: UserProfile) -> None:
         await self.db.delete(user)
-        logger.info(f"Deleted user with id: {user.user_profile_id}")
+        logger.info("Deleted user", user_profile_id=user.user_profile_id)
         return None
 
     @repo_handler
@@ -538,3 +538,58 @@ class UserRepository:
         """
         combined_query, conditions = self._build_activity_queries()
         return await self._get_paginated_user_activities(combined_query, conditions, pagination)
+
+    def _apply_login_history_filters(self, query, pagination):
+        """
+        Applies filters and sorting orders to the login history query based on the pagination parameters.
+
+        Args:
+            query: The SQLAlchemy query for login history.
+            conditions: List of conditions to apply to the query.
+            pagination: PaginationRequestSchema for pagination and filtering.
+
+        Returns:
+            Tuple: The modified query and conditions.
+        """
+        conditions = []
+        if pagination.filters and len(pagination.filters) > 0:
+            for filter in pagination.filters:
+                filter_value = filter.filter
+                filter_option = filter.type
+                filter_type = filter.filter_type
+                if filter.field is not None:
+                    field = get_field_for_filter(UserLoginHistory, filter.field)
+                    if field is not None:
+                        condition = apply_filter_conditions(
+                            field, filter_value, filter_option, filter_type
+                        )
+                        if condition is not None:
+                            conditions.append(condition)
+                    
+        query = query.where(and_(*conditions))
+        # Apply ordering
+        order_by_clauses = []
+        if pagination.sort_orders and len(pagination.sort_orders) > 0:
+            for sort_order in pagination.sort_orders:
+                field = get_field_for_filter(UserLoginHistory, sort_order.field)
+                if field is not None:
+                    sort_order = asc(field) if sort_order.direction == 'asc' else desc(field)
+                    order_by_clauses.append(sort_order)
+        else:
+            # Default ordering by timestamp descending
+            order_by_clauses.append(desc(UserLoginHistory.create_date))
+        return query.order_by(*order_by_clauses)
+
+    
+    @repo_handler
+    async def get_all_user_login_history_paginated(self, pagination: PaginationRequestSchema) -> List[UserLoginHistorySchema]:
+        """
+        Fetches major activities for all users with pagination and filters,
+        excluding specified statuses.
+        """
+        query = self._apply_login_history_filters(select(UserLoginHistory), pagination)
+        total_count = len((await self.db.execute(query)).scalars().unique().all())
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        result = (await self.db.execute(query.offset(offset).limit(limit))).scalars().unique().all()
+        return [UserLoginHistorySchema.model_validate(history) for history in result], total_count

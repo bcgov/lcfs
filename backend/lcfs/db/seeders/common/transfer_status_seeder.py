@@ -1,8 +1,8 @@
-import logging
+import structlog
 from sqlalchemy import select
 from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def seed_transfer_statuses(session):
@@ -92,5 +92,13 @@ async def seed_transfer_statuses(session):
                 session.add(transfer_status)
 
     except Exception as e:
-        logger.error("Error occurred while seeding transfer statuses: %s", e)
+        context = {
+            "function": "seed_transfer_statuses",
+        }
+        logger.error(
+            "Error occurred while seeding transfer statuses",
+            error=str(e),
+            exc_info=e,
+            **context,
+        )
         raise

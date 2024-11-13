@@ -18,6 +18,58 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     enableDuplicate: false,
     enableDelete: true
   }),
+  // TODO Temporary column to show version types, change this logic in later ticket
+  {
+    field: 'actionType',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.actionType'),
+    minWidth: 125,
+    maxWidth: 150,
+    editable: false,
+    cellStyle: (params) => {
+      switch (params.data.actionType) {
+        case 'CREATE':
+          return {
+            backgroundColor: '#e0f7df',
+            color: '#388e3c',
+            fontWeight: 'bold'
+          }
+        case 'UPDATE':
+          return {
+            backgroundColor: '#fff8e1',
+            color: '#f57c00',
+            fontWeight: 'bold'
+          }
+        case 'DELETE':
+          return {
+            backgroundColor: '#ffebee',
+            color: '#d32f2f',
+            fontWeight: 'bold'
+          }
+        default:
+          return {}
+      }
+    },
+    cellRenderer: (params) => {
+      switch (params.data.actionType) {
+        case 'CREATE':
+          return 'Create'
+        case 'UPDATE':
+          return 'Edit'
+        case 'DELETE':
+          return 'Deleted'
+        default:
+          return ''
+      }
+    },
+    tooltipValueGetter: (params) => {
+      const actionMap = {
+        CREATE: 'This record was created.',
+        UPDATE: 'This record has been edited.',
+        DELETE: 'This record was deleted.'
+      }
+      return actionMap[params.data.actionType] || ''
+    }
+  },
   {
     field: 'id',
     cellEditor: 'agTextCellEditor',
@@ -101,7 +153,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       }
       return true
     },
-    tooltipValueGetter: (p) => 'Select the fuel type from the list'
+    tooltipValueGetter: () => 'Select the fuel type from the list'
   },
   {
     field: 'fuelTypeOther',
@@ -392,34 +444,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     editable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    valueGetter: (params) => {
-      if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-          ?.fuelCodeCarbonIntensity
-      } else {
-        if (optionsData) {
-          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
-            const categories = optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            ).fuelCategories
-            const defaultCI = categories.find(
-              (cat) => cat.fuelCategory === params.data.fuelCategory
-            ).defaultAndPrescribedCi
-
-            return defaultCI
-          }
-        }
-        return (
-          (optionsData &&
-            optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            )?.defaultCarbonIntensity) ||
-          0
-        )
-      }
-    }
   },
   {
     field: 'energyDensity',

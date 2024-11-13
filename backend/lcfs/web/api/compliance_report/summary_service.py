@@ -7,7 +7,7 @@ from typing import List, Tuple
 from fastapi import Depends
 from sqlalchemy import inspect
 
-from lcfs.db.models.compliance.ComplianceReport import ChangeType
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
@@ -59,9 +59,7 @@ class ComplianceReportSummaryService:
         summary = ComplianceReportSummarySchema(
             summary_id=summary_obj.summary_id,
             compliance_report_id=summary_obj.compliance_report_id,
-            version=summary_obj.version,
             is_locked=summary_obj.is_locked,
-            supplemental_report_id=summary_obj.supplemental_report_id,
             quarter=summary_obj.quarter,
             total_non_compliance_penalty_payable=summary_obj.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=[],
@@ -226,7 +224,7 @@ class ComplianceReportSummaryService:
         Autosave compliance report summary details for a specific summary by ID.
         """
 
-        await self.repo.save_compliance_report_summary(report_id, summary_data)
+        await self.repo.save_compliance_report_summary(summary_data)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
@@ -311,10 +309,10 @@ class ComplianceReportSummaryService:
 
         # Fetch fuel quantities
         fossil_quantities = await self.repo.calculate_fuel_quantities(
-            report_id, fossil_derived=True
+            compliance_report, fossil_derived=True
         )
         renewable_quantities = await self.repo.calculate_fuel_quantities(
-            report_id, fossil_derived=False
+            compliance_report, fossil_derived=False
         )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
@@ -331,7 +329,7 @@ class ComplianceReportSummaryService:
                 compliance_period_start,
                 compliance_period_end,
                 organization_id,
-                report_id,
+                compliance_report,
             )
         )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary(
@@ -348,7 +346,7 @@ class ComplianceReportSummaryService:
             summary_model,
         )
 
-        #Only save if summary has changed
+        # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
             logger.debug("Report has changed, updating summary")
             await self.repo.save_compliance_report_summary(summary)
@@ -367,9 +365,7 @@ class ComplianceReportSummaryService:
         summary = ComplianceReportSummarySchema(
             summary_id=summary_model.summary_id,
             compliance_report_id=compliance_report.compliance_report_id,
-            version=summary_model.version,
             is_locked=summary_model.is_locked,
-            supplemental_report_id=summary_model.supplemental_report_id,
             quarter=summary_model.quarter,
             total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=renewable_fuel_target_summary,
@@ -424,15 +420,12 @@ class ComplianceReportSummaryService:
 
             # only carry over line 6,8 if required quantities have not changed
             if previous_required_renewable_quantity == required_renewable_quantity:
-                print(f"QUANTITIES MATCH {category}")
                 retained_renewables[category] = getattr(
                     prev_summary, f"line_6_renewable_fuel_retained_{category}"
                 )
                 deferred_renewables[category] = getattr(
                     prev_summary, f"line_8_obligation_deferred_{category}"
                 )
-            else:
-                print(f"QUANTITY CHANGED {category}")
 
         # line 10
         net_renewable_supplied = {
@@ -553,7 +546,7 @@ class ComplianceReportSummaryService:
         compliance_period_start: datetime,
         compliance_period_end: datetime,
         organization_id: int,
-        report_id: int,
+        compliance_report: ComplianceReport,
     ) -> Tuple[List[ComplianceReportSummaryRowSchema], int]:
         compliance_units_transferred_out = (
             await self.repo.get_transferred_out_compliance_units(
@@ -573,10 +566,10 @@ class ComplianceReportSummaryService:
             organization_id, compliance_period_start.year
         )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
-            await self.calculate_fuel_supply_compliance_units(report_id)
+            await self.calculate_fuel_supply_compliance_units(compliance_report)
         )  # line 18 fuel supply compliance units total
         compliance_units_curr_issued_for_fuel_export = (
-            await self.calculate_fuel_export_compliance_units(report_id)
+            await self.calculate_fuel_export_compliance_units(compliance_report)
         )  # line 19
         compliance_unit_balance_change_from_assessment = (
             compliance_units_curr_issued_for_fuel_supply
@@ -674,12 +667,16 @@ class ComplianceReportSummaryService:
         return non_compliance_penalty_summary
 
     @service_handler
-    async def calculate_fuel_supply_compliance_units(self, report_id: int) -> int:
+    async def calculate_fuel_supply_compliance_units(
+        self, report: ComplianceReport
+    ) -> int:
         """
         Calculate the total compliance units for Line 18 based on effective fuel supplies.
         """
         # Fetch fuel supply records
-        fuel_supply_records = await self.get_effective_fuel_supplies(report_id)
+        fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
+            report.compliance_report_group_uuid
+        )
 
         # Initialize compliance units sum
         compliance_units_sum = 0
@@ -700,12 +697,16 @@ class ComplianceReportSummaryService:
         return int(compliance_units_sum)
 
     @service_handler
-    async def calculate_fuel_export_compliance_units(self, report_id: int) -> int:
+    async def calculate_fuel_export_compliance_units(
+        self, report: ComplianceReport
+    ) -> int:
         """
         Calculate the total compliance units for Line 19 based on effective fuel supplies.
         """
         # Fetch fuel export records
-        fuel_export_records = await self.get_effective_fuel_exports(report_id)
+        fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
+            report.compliance_report_group_uuid
+        )
 
         # Initialize compliance units sum
         compliance_units_sum = 0
@@ -726,106 +727,6 @@ class ComplianceReportSummaryService:
             compliance_units_sum += compliance_units
 
         return int(compliance_units_sum)
-
-    @service_handler
-    async def get_effective_fuel_supplies(
-        self, report_id: int, is_supplemental: bool = False
-    ):
-        if is_supplemental:
-            report = await self.repo.get_supplemental_report(report_id)
-            if not report:
-                raise ValueError("Supplemental report not found")
-            original_report_id = report.original_report_id
-        else:
-            original_report_id = report_id
-            report = await self.repo.get_compliance_report_by_id(
-                report_id, is_model=True
-            )
-            if not report:
-                raise ValueError("Compliance report not found")
-
-        # Get all supplemental reports in order
-        supplemental_reports = await self.repo.get_supplemental_reports(
-            original_report_id
-        )
-
-        # Start with the original report's fuel supplies
-        original_supplies = await self.fuel_supply_repo.get_fuel_supplies(
-            original_report_id
-        )
-
-        effective_supplies = {
-            supply.fuel_supply_id: supply for supply in original_supplies
-        }
-
-        # Apply changes from each supplemental report up to the desired version
-        for supp_report in supplemental_reports:
-            supp_supplies = await self.fuel_supply_repo.get_fuel_supplies(
-                supp_report.supplemental_report_id, is_supplemental=True
-            )
-
-            for supply in supp_supplies:
-                if supply.change_type == ChangeType.DELETE:
-                    effective_supplies.pop(supply.previous_fuel_supply_id, None)
-                elif supply.change_type == ChangeType.UPDATE:
-                    effective_supplies[supply.previous_fuel_supply_id] = supply
-                else:  # CREATE
-                    effective_supplies[supply.fuel_supply_id] = supply
-
-            if is_supplemental and supp_report.supplemental_report_id == report_id:
-                break
-
-        return list(effective_supplies.values())
-
-    @service_handler
-    async def get_effective_fuel_exports(
-        self, report_id: int, is_supplemental: bool = False
-    ):
-        if is_supplemental:
-            report = await self.repo.get_supplemental_report(report_id)
-            if not report:
-                raise ValueError("Supplemental report not found")
-            original_report_id = report.original_report_id
-        else:
-            original_report_id = report_id
-            report = await self.repo.get_compliance_report_by_id(
-                report_id, is_model=True
-            )
-            if not report:
-                raise ValueError("Compliance report not found")
-
-        # Get all supplemental reports in order
-        supplemental_reports = await self.repo.get_supplemental_reports(
-            original_report_id
-        )
-
-        # Start with the original report's fuel exports
-        original_exports = await self.fuel_export_repo.get_fuel_exports(
-            original_report_id
-        )
-
-        effective_exports = {
-            export.fuel_export_id: export for export in original_exports
-        }
-
-        # Apply changes from each supplemental report up to the desired version
-        for supp_report in supplemental_reports:
-            supp_supplies = await self.fuel_export_repo.get_fuel_exports(
-                supp_report.supplemental_report_id, is_supplemental=True
-            )
-
-            for export in supp_supplies:
-                if export.change_type == ChangeType.DELETE:
-                    effective_exports.pop(export.previous_fuel_export_id, None)
-                elif export.change_type == ChangeType.UPDATE:
-                    effective_exports[export.previous_fuel_export_id] = export
-                else:  # CREATE
-                    effective_exports[export.fuel_export_id] = export
-
-            if is_supplemental and supp_report.supplemental_report_id == report_id:
-                break
-
-        return list(effective_exports.values())
 
 
 #     async def are_identical(

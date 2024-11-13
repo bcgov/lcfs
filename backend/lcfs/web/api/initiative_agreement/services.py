@@ -1,4 +1,4 @@
-import logging
+import structlog
 from datetime import datetime
 from fastapi import Depends, Request, HTTPException
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
@@ -23,7 +23,7 @@ from lcfs.web.api.internal_comment.schema import (
     EntityTypeEnum,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class InitiativeAgreementServices:
@@ -179,7 +179,8 @@ class InitiativeAgreementServices:
 
         if not has_director_role:
             logger.error(
-                f"Non-Director tried to approve Agreement: {initiative_agreement.initiative_agreement_id}"
+                "Non-Director tried to approve Agreement",
+                initiative_agreement_id=initiative_agreement.initiative_agreement_id
             )
             raise HTTPException(status_code=403, detail="Forbidden.")
 

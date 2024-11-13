@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import Depends, Request
@@ -9,7 +9,7 @@ from .repo import InternalCommentRepository
 from .schema import InternalCommentCreateSchema, InternalCommentResponseSchema
 
 
-logger = getLogger("internal_comment_service")
+logger = structlog.get_logger(__name__)
 
 
 class InternalCommentService:
