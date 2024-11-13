@@ -156,5 +156,6 @@
     "value": "Value",
     "totalValue": "Total Value"
   },
-  "summaryLoadingMsg": "Loading compliance report summary..."
+  "summaryLoadingMsg": "Loading compliance report summary...",
+  "noSigningAuthorityTooltip": "Signing authority role required."
 }

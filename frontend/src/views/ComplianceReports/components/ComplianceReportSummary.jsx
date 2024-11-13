@@ -24,6 +24,8 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import Loading from '@/components/Loading'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
 
 const ComplianceReportSummary = ({
   reportID,
@@ -37,6 +39,8 @@ const ComplianceReportSummary = ({
 }) => {
   const [summaryData, setSummaryData] = useState(null)
   const { t } = useTranslation(['report'])
+
+  const { hasRoles } = useCurrentUser()
 
   const { data, isLoading, isError, error } =
     useGetComplianceReportSummary(reportID)
@@ -65,7 +69,10 @@ const ComplianceReportSummary = ({
       )
     }
     if (isError) {
-      alertRef.current?.triggerAlert({ message: error?.response?.data?.detail || error.message, severity: 'error' })
+      alertRef.current?.triggerAlert({
+        message: error?.response?.data?.detail || error.message,
+        severity: 'error'
+      })
     }
   }, [alertRef, data, error, isError, setHasMet])
 
@@ -122,20 +129,21 @@ const ComplianceReportSummary = ({
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
-            width={'81%'}
+            width={'80.65%'}
           />
           <SummaryTable
             title={t('report:nonCompliancePenaltySummary')}
             columns={nonComplianceColumns(t)}
             data={summaryData?.nonCompliancePenaltySummary}
-            width={'81%'}
+            width={'80.65%'}
           />
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>
               <SigningAuthorityDeclaration
                 onChange={setIsSigningAuthorityDeclared}
+                disabled={!hasRoles(roles.signing_authority)}
               />
-              <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
+              <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
                 {buttonClusterConfig[currentStatus]?.map(
                   (config) =>
                     config && (

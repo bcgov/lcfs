@@ -9,7 +9,6 @@ const checkedIcon = <CheckBoxIcon fontSize="small" />
 
 export const BCColumnSetFilter = forwardRef((props, ref) => {
   const { apiQuery, params } = props
-  const { columnWidth } = props.column.colDef
   const [options, setOptions] = useState([])
   const [currentValue, setCurrentValue] = useState(null)
   // make api call to retrieve list
@@ -71,7 +70,7 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       limitTags={1}
       className="bc-column-set-filter ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
       role="list-box"
-      sx={{ width: columnWidth }}
+      sx={{ width: '100%' }}
       options={options}
       loading={optionsIsLoading}
       autoHighlight
