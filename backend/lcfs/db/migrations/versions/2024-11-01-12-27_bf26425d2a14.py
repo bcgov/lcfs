@@ -1,5 +1,17 @@
 """Database-Level Audit Logging with JSON Delta
 
+Note:
+    As the table grows, automatic archiving (e.g., moving older logs to an archive table) and purging (e.g., deleting very old logs)
+    can be implemented in the future to maintain performance and manage storage efficiently.
+
+    Archiving:
+    - Create an `audit_log_archive` table with the same structure as `audit_log`.
+    - Use a scheduled job (e.g., with `pg_cron`) to move records older than a certain threshold (e.g., 1 month) from `audit_log` to `audit_log_archive`.
+    - Alternatively, consider creating date-based archive tables (e.g., audit_log_archive_2025_01) to organize logs by time periods.
+    
+    Purging:
+    - Use a scheduled job (e.g., with `pg_cron`) to delete records older than a defined retention period (e.g., 1 years) from `audit_log_archive`.
+
 Revision ID: bf26425d2a14
 Revises: 1b4d0dcf70a8
 Create Date: 2024-11-01 12:27:33.901648
@@ -21,31 +33,114 @@ def upgrade() -> None:
     # Step 1: Create the audit_log table
     op.create_table(
         "audit_log",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
-        sa.Column("table_name", sa.Text(), nullable=False),
-        sa.Column("operation", sa.Text(), nullable=False),
-        sa.Column("row_id", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("old_values", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column("new_values", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-        sa.Column("delta", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column(
+            "audit_log_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for each audit log entry.",
+        ),
+        sa.Column(
+            "table_name",
+            sa.Text(),
+            nullable=False,
+            comment="Name of the table where the action occurred.",
+        ),
+        sa.Column(
+            "operation",
+            sa.Text(),
+            nullable=False,
+            comment="Type of operation: 'INSERT', 'UPDATE', or 'DELETE'.",
+        ),
+        sa.Column(
+            "row_id",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            comment="Primary key of the affected row, stored as JSONB to support composite keys.",
+        ),
+        sa.Column(
+            "old_values",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+            comment="Previous values before the operation.",
+        ),
+        sa.Column(
+            "new_values",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+            comment="New values after the operation.",
+        ),
+        sa.Column(
+            "delta",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+            comment="JSONB delta of the changes.",
+        ),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
             server_default=sa.text("now()"),
             nullable=True,
+            comment="Timestamp when the audit log entry was created.",
         ),
-        sa.Column("create_user", sa.String(), nullable=True),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="User who created the audit log entry.",
+        ),
         sa.Column(
             "update_date",
             sa.TIMESTAMP(timezone=True),
             server_default=sa.text("now()"),
             nullable=True,
+            comment="Timestamp when the audit log entry was last updated.",
         ),
-        sa.Column("update_user", sa.String(), nullable=True),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_audit_log")),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="User who last updated the audit log entry.",
+        ),
+        sa.PrimaryKeyConstraint("audit_log_id", name=op.f("pk_audit_log")),
+        sa.UniqueConstraint(
+            "audit_log_id",
+            name=op.f("uq_audit_log_audit_log_id"),
+        ),
+        comment="Audit log capturing changes to database tables.",
+    )
+
+    # Create indexes
+    op.create_index(
+        "idx_audit_log_table_name",
+        "audit_log",
+        ["table_name"],
+        unique=False,
     )
     op.create_index(
-        "idx_audit_log_table_name", "audit_log", ["table_name"], unique=False
+        "idx_audit_log_operation",
+        "audit_log",
+        ["operation"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_audit_log_create_date",
+        "audit_log",
+        ["create_date"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_audit_log_create_user",
+        "audit_log",
+        ["create_user"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_audit_log_delta",
+        "audit_log",
+        ["delta"],
+        postgresql_using="gin",
+        unique=False,
     )
 
     # Step 2: Create JSONB_DIFF FUNCTION
@@ -228,5 +323,9 @@ def downgrade() -> None:
     op.execute("DROP FUNCTION IF EXISTS jsonb_diff;")
 
     # Step 1 Downgrade: Drop audit_log table
+    op.drop_index("idx_audit_log_delta", table_name="audit_log")
+    op.drop_index("idx_audit_log_create_user", table_name="audit_log")
+    op.drop_index("idx_audit_log_create_date", table_name="audit_log")
+    op.drop_index("idx_audit_log_operation", table_name="audit_log")
     op.drop_index("idx_audit_log_table_name", table_name="audit_log")
     op.drop_table("audit_log")
