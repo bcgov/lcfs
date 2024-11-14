@@ -5,7 +5,7 @@ on:
 
 env:
   VERSION: 0.2.0
-  GIT_URL: https://github.com/bcgov/lcfs.git 
+  GIT_URL: https://github.com/bcgov/lcfs.git
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
   TEST_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-test
 
@@ -17,11 +17,11 @@ jobs:
   run-tests:
     name: Run Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{ env.GIT_URL }}
+          repository: bcgov/lcfs
           ref: ${{ github.ref }}
 
       - name: Set up Python
@@ -157,10 +157,10 @@ jobs:
     name: Find Dev deployment pre-release number
     needs: run-tests
     runs-on: ubuntu-latest
-    
+
     outputs:
       output1: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
-    
+
     steps:
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
@@ -235,7 +235,7 @@ jobs:
           openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
-          namespace: ${{ env.DEV_NAMESPACE }}      
+          namespace: ${{ env.DEV_NAMESPACE }}
 
       - name: Tag LCFS images to Test
         run: |
@@ -248,7 +248,7 @@ jobs:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
-      
+
       - name: Update frontend tag
         uses: mikefarah/yq@v4.40.5
         with:
@@ -267,4 +267,3 @@ jobs:
           git add lcfs/charts/lcfs-backend/values-test.yaml
           git commit -m "Update the image tag to ${{ env.VERSION }}-${{ env.PRE_RELEASE }} on LCFS Test Environment"
           git push
-          
