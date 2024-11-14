@@ -99,7 +99,7 @@ def log_unhandled_exception(logger, e, context, layer_name, func=None):
     logger.error(
         f"Unhandled exception in {layer_name}",
         error=str(e),
-        exc_info=e,
+        exc_info=True,
         source_info=source_info,
         **context,
     )
@@ -140,7 +140,9 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 user_roles = user.role_names
 
                 # Check if user has all the required roles
-                if not any(required_role in user_roles for required_role in required_roles):
+                if not any(
+                    required_role in user_roles for required_role in required_roles
+                ):
                     raise HTTPException(
                         status_code=403, detail="Insufficient permissions"
                     )
