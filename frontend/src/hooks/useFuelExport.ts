@@ -1,5 +1,5 @@
 import {
-  FuelExportCreateSchema,
+  FuelExportCreateUpdateSchema,
   FuelExportsService,
   PaginationRequestSchema
 } from '@/services/apiClient'
@@ -80,7 +80,7 @@ export const useSaveFuelExport = (complianceReportId: number) => {
     //   )
     // },
     mutationFn: async (
-      data: Omit<FuelExportCreateSchema, 'complianceReportId'>
+      data: Omit<FuelExportCreateUpdateSchema, 'complianceReportId'>
     ) => {
       try {
         const body = {
