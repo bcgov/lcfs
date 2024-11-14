@@ -7,6 +7,7 @@ WORKDIR /app
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install
+RUN npm install -g concurrently
 
 # Copy other source files
 COPY . .
@@ -14,4 +15,4 @@ COPY . .
 # Expose port 3000 for the app
 EXPOSE 3000
 
-CMD [ "npm" , "run" , "dev" ]
+CMD ["sh", "-c", "npm run openapi:generate && concurrently \"npm run openapi:watch\" \"npm run dev --force\""]

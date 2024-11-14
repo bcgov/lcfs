@@ -97,6 +97,9 @@ services:
         source: ./backend
         target: /app
         consistency: cached
+      - type: bind
+        source: ./shared
+        target: /app/shared
     environment:
       LCFS_DB_HOST: db
       LCFS_DB_PORT: 5432
@@ -126,7 +129,6 @@ services:
     build:
       dockerfile: Dockerfile.dev
       context: ./frontend
-    command: npm run dev --force
     ports:
       - "3000:3000"
     volumes:
@@ -136,6 +138,9 @@ services:
       - type: volume
         source: node_modules
         target: /app/node_modules
+      - type: bind
+        source: ./shared
+        target: /app/shared
     networks:
       - shared_network
 

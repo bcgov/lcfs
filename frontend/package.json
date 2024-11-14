@@ -22,7 +22,8 @@
     "cypress:run": "cypress run --headless --browser chrome",
     "cypress:dev": "cypress run --config baseUrl=https://lcfs-dev.apps.silver.devops.gov.bc.ca/",
     "cypress:clear": "cypress cache clear",
-    "openapi:generate": "openapi-ts"
+    "openapi:generate": "openapi-ts",
+    "openapi:watch": "node watcher.js"
   },
   "lint-staged": {
     "*.{js,jsx}": [
@@ -109,6 +110,8 @@
     "@vitest/coverage-v8": "^2.1.4",
     "@vitest/ui": "^2.1.4",
     "axe-core": "^4.8.3",
+    "chokidar": "^4.0.1",
+    "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
     "cypress": "^13.13.3",
     "cypress-axe": "^1.5.0",

@@ -136,9 +136,8 @@ def get_app() -> FastAPI:
         @app.on_event("startup")
         async def generate_openapi_schema():
             openapi_schema = app.openapi()
-            path = Path(__file__).parent
+            path = Path(__file__).parent.parent.parent / "shared"
             openapi_file = path / "openapi.json"
-            print("===============", Path(__file__))
             with open(openapi_file, "w") as f:
                 json.dump(openapi_schema, f, indent=2)
 

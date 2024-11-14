@@ -57,6 +57,7 @@ export type AllocationAgreementCreateSchema = {
     transactionPartnerEmail: string;
     transactionPartnerPhone: string;
     fuelType: string;
+    fuelTypeOther?: (string | null);
     ciOfFuel: number;
     quantity: number;
     units: string;
@@ -80,6 +81,7 @@ export type AllocationAgreementSchema = {
     transactionPartnerEmail: string;
     transactionPartnerPhone: string;
     fuelType: string;
+    fuelTypeOther?: (string | null);
     ciOfFuel: number;
     quantity: number;
     units: string;
@@ -90,7 +92,36 @@ export type AllocationAgreementSchema = {
     deleted?: (boolean | null);
 };
 
+export type AllocationAgreementTableOptionsSchema = {
+    allocationTransactionTypes: Array<AllocationTransactionTypeSchema>;
+    fuelTypes: Array<lcfs__web__api__allocation_agreement__schema__FuelTypeSchema>;
+    provisionsOfTheAct: Array<ProvisionOfTheActSchema>;
+    fuelCodes: Array<lcfs__web__api__allocation_agreement__schema__FuelCodeSchema>;
+    unitsOfMeasure: Array<(string)>;
+};
+
+export type AllocationTransactionTypeSchema = {
+    allocationTransactionTypeId: number;
+    type: string;
+};
+
 export type AudienceScopeEnum = 'Compliance Manager' | 'Director' | 'Analyst';
+
+export type AuditLogResponseSchema = {
+    id: number;
+    table_name: string;
+    operation: string;
+    row_id: number;
+    old_values: ({
+    [key: string]: unknown;
+} | null);
+    new_values: ({
+    [key: string]: unknown;
+} | null);
+    delta: ({
+    [key: string]: unknown;
+} | null);
+};
 
 export type Body_uploadFile = {
     file: (Blob | File);
@@ -114,6 +145,9 @@ export type CompliancePeriodSchema = {
 
 export type ComplianceReportBaseSchema = {
     complianceReportId: number;
+    complianceReportGroupUuid: (string | null);
+    version: (number | null);
+    supplementalInitiator: (SupplementalInitiatorType | null);
     compliancePeriodId: number;
     compliancePeriod: CompliancePeriodSchema;
     organizationId: number;
@@ -124,8 +158,10 @@ export type ComplianceReportBaseSchema = {
     transactionId?: (number | null);
     nickname?: (string | null);
     supplementalNote?: (string | null);
+    reportingFrequency?: (ReportingFrequency | null);
     updateDate?: (string | null);
     history?: (Array<ComplianceReportHistorySchema> | null);
+    hasSupplemental: boolean;
 };
 
 export type ComplianceReportCreateSchema = {
@@ -179,7 +215,6 @@ export type ComplianceReportSummarySchema = {
     nonCompliancePenaltySummary: Array<ComplianceReportSummaryRowSchema>;
     summaryId?: (number | null);
     complianceReportId?: (number | null);
-    supplementalReportId?: (number | null);
     version?: (number | null);
     isLocked?: (boolean | null);
     quarter?: (number | null);
@@ -233,6 +268,11 @@ export type DirectorReviewCountsSchema = {
     adminAdjustments: number;
 };
 
+export type EndUserTypeSchema = {
+    endUserTypeId: number;
+    typeName: string;
+};
+
 export type EndUseTypeSchema = {
     endUseTypeId: number;
     type: string;
@@ -243,13 +283,6 @@ export type EnergyDensitySchema = {
     energyDensityId: number;
     energyDensity: number;
     unit: UnitOfMeasureSchema;
-};
-
-export type EnergyEffectivenessRatioSchema = {
-    eerId: (number | null);
-    fuelCategory: FuelCategorySchema;
-    endUseType: (EndUseTypeSchema | null);
-    energyEffectivenessRatio: number;
 };
 
 /**
@@ -313,11 +346,15 @@ export type FinalSupplyEquipmentCreateSchema = {
     complianceReportId?: (number | null);
     supplyFromDate: string;
     supplyToDate: string;
+    kwhUsage?: (number | null);
     serialNbr: string;
     manufacturer: string;
+    model?: (string | null);
     levelOfEquipment: string;
+    ports?: (PortsEnum | null);
     fuelMeasurementType: string;
     intendedUses: Array<(string)>;
+    intendedUsers: Array<(string)>;
     streetAddress: string;
     city: string;
     postalCode: string;
@@ -333,11 +370,15 @@ export type FinalSupplyEquipmentSchema = {
     supplyFromDate: string;
     supplyToDate: string;
     registrationNbr: string;
+    kwhUsage?: (number | null);
     serialNbr: string;
     manufacturer: string;
+    model?: (string | null);
     levelOfEquipment: LevelOfEquipmentSchema;
     fuelMeasurementType: FuelMeasurementTypeSchema;
+    ports?: (PortsEnum | null);
     intendedUseTypes: Array<EndUseTypeSchema>;
+    intendedUserTypes: Array<EndUserTypeSchema>;
     streetAddress: string;
     city: string;
     postalCode: string;
@@ -368,17 +409,13 @@ export type FSEOptionsSchema = {
     intendedUseTypes: Array<EndUseTypeSchema>;
     fuelMeasurementTypes: Array<FuelMeasurementTypeSchema>;
     levelsOfEquipment: Array<LevelOfEquipmentSchema>;
+    intendedUserTypes: Array<EndUserTypeSchema>;
+    ports: Array<PortsEnum>;
 };
 
 export type FuelCategoryResponseSchema = {
     fuelCategoryId?: (number | null);
     category: string;
-};
-
-export type FuelCategorySchema = {
-    fuelCategoryId: number;
-    fuelCategory: string;
-    defaultAndPrescribedCi?: (number | null);
 };
 
 export type FuelCodeCloneSchema = {
@@ -472,10 +509,15 @@ export type FuelCodesSchema = {
 
 export type FuelCodeStatusEnumSchema = 'Draft' | 'Approved' | 'Deleted';
 
-export type FuelExportCreateSchema = {
+export type FuelExportCreateUpdateSchema = {
     fuelExportId?: (number | null);
     complianceReportId: number;
+    groupUuid?: (string | null);
+    version?: (number | null);
+    userType?: (string | null);
+    actionType?: (string | null);
     compliancePeriod?: (string | null);
+    fuelTypeOther?: (string | null);
     fuelType: (string | FuelTypeSchema_Input);
     fuelTypeId: number;
     fuelCategory: (string | FuelCategoryResponseSchema);
@@ -495,16 +537,20 @@ export type FuelExportCreateSchema = {
     energyDensity?: (number | null);
     eer?: (number | null);
     energy?: (number | null);
-    customFuelId?: (number | null);
     deleted?: (boolean | null);
 };
 
 export type FuelExportSchema = {
     fuelExportId?: (number | null);
     complianceReportId: number;
+    groupUuid?: (string | null);
+    version?: (number | null);
+    userType?: (string | null);
+    actionType?: (string | null);
     compliancePeriod?: (string | null);
     fuelTypeId: number;
     fuelType: lcfs__web__api__fuel_export__schema__FuelTypeSchema;
+    fuelTypeOther?: (string | null);
     quantity: number;
     units: string;
     exportDate: string;
@@ -520,7 +566,6 @@ export type FuelExportSchema = {
     fuelCode?: (lcfs__web__api__fuel_export__schema__FuelCodeResponseSchema | null);
     provisionOfTheActId?: (number | null);
     provisionOfTheAct?: (ProvisionOfTheActSchema | null);
-    customFuelId?: (number | null);
     endUseId?: (number | null);
     endUseType?: (EndUseTypeSchema | null);
 };
@@ -545,25 +590,31 @@ export type FuelSuppliesSchema = {
 export type FuelSupplyCreateUpdateSchema = {
     complianceReportId: number;
     fuelSupplyId?: (number | null);
+    groupUuid?: (string | null);
+    version?: (number | null);
     fuelTypeId: number;
     fuelCategoryId: number;
     endUseId?: (number | null);
     provisionOfTheActId: number;
     quantity: number;
     units: string;
+    fuelTypeOther?: (string | null);
     fuelCodeId?: (number | null);
     targetCi?: (number | null);
     ciOfFuel?: (number | null);
     energyDensity?: (number | null);
     eer?: (number | null);
     energy?: (number | null);
-    customFuelId?: (number | null);
     deleted?: (boolean | null);
 };
 
 export type FuelSupplyResponseSchema = {
     fuelSupplyId: number;
     complianceReportId: number;
+    groupUuid: string;
+    version: number;
+    userType: string;
+    actionType: string;
     fuelTypeId: number;
     fuelType: lcfs__web__api__fuel_supply__schema__FuelTypeSchema;
     quantity: number;
@@ -580,9 +631,9 @@ export type FuelSupplyResponseSchema = {
     fuelCode?: (lcfs__web__api__fuel_supply__schema__FuelCodeResponseSchema | null);
     provisionOfTheActId?: (number | null);
     provisionOfTheAct?: (ProvisionOfTheActSchema | null);
-    customFuelId?: (number | null);
     endUseId?: (number | null);
     endUseType?: (EndUseTypeSchema | null);
+    fuelTypeOther?: (string | null);
 };
 
 export type FuelTypeQuantityUnitsEnumSchema = 'L' | 'kg' | 'kWh' | 'm3';
@@ -676,6 +727,29 @@ export type lcfs__web__api__admin_adjustment__schema__OrganizationSchema = {
     name: string;
 };
 
+export type lcfs__web__api__allocation_agreement__schema__FuelCategorySchema = {
+    fuelCategoryId: number;
+    category: string;
+    defaultAndPrescribedCi?: (number | null);
+};
+
+export type lcfs__web__api__allocation_agreement__schema__FuelCodeSchema = {
+    fuelCodeId: number;
+    fuelCode: string;
+    carbonIntensity: number;
+};
+
+export type lcfs__web__api__allocation_agreement__schema__FuelTypeSchema = {
+    fuelTypeId: number;
+    fuelType: string;
+    defaultCarbonIntensity: number;
+    units: string;
+    unrecognized: boolean;
+    fuelCategories: Array<lcfs__web__api__allocation_agreement__schema__FuelCategorySchema>;
+    fuelCodes?: (Array<lcfs__web__api__allocation_agreement__schema__FuelCodeSchema> | null);
+    provisionOfTheAct?: (Array<ProvisionOfTheActSchema> | null);
+};
+
 export type lcfs__web__api__fuel_code__schema__FuelCodeSchema = {
     fuelCodeId?: (number | null);
     fuelStatusId?: (number | null);
@@ -726,6 +800,19 @@ export type lcfs__web__api__fuel_code__schema__FuelTypeSchema = {
     units: FuelTypeQuantityUnitsEnumSchema;
 };
 
+export type lcfs__web__api__fuel_export__schema__EnergyEffectivenessRatioSchema = {
+    eerId: (number | null);
+    fuelCategory: lcfs__web__api__fuel_export__schema__FuelCategorySchema;
+    endUseType: (EndUseTypeSchema | null);
+    energyEffectivenessRatio: number;
+};
+
+export type lcfs__web__api__fuel_export__schema__FuelCategorySchema = {
+    fuelCategoryId: number;
+    fuelCategory: string;
+    defaultAndPrescribedCi?: (number | null);
+};
+
 export type lcfs__web__api__fuel_export__schema__FuelCodeResponseSchema = {
     fuelCodeId?: (number | null);
     fuelStatusId?: (number | null);
@@ -759,9 +846,9 @@ export type lcfs__web__api__fuel_export__schema__FuelTypeOptionsSchema = {
     unit: string;
     energyDensity: (EnergyDensitySchema | null);
     provisions: Array<ProvisionOfTheActSchema>;
-    fuelCategories: Array<FuelCategorySchema>;
-    eerRatios: Array<EnergyEffectivenessRatioSchema>;
-    targetCarbonIntensities: Array<TargetCarbonIntensitySchema>;
+    fuelCategories: Array<lcfs__web__api__fuel_export__schema__FuelCategorySchema>;
+    eerRatios: Array<lcfs__web__api__fuel_export__schema__EnergyEffectivenessRatioSchema>;
+    targetCarbonIntensities: Array<lcfs__web__api__fuel_export__schema__TargetCarbonIntensitySchema>;
     fuelCodes?: (Array<lcfs__web__api__fuel_export__schema__FuelCodeSchema> | null);
 };
 
@@ -773,6 +860,27 @@ export type lcfs__web__api__fuel_export__schema__FuelTypeSchema = {
     provision2Id?: (number | null);
     defaultCarbonIntensity?: (number | null);
     units: FuelTypeQuantityUnitsEnumSchema;
+};
+
+export type lcfs__web__api__fuel_export__schema__TargetCarbonIntensitySchema = {
+    targetCarbonIntensityId: number;
+    targetCarbonIntensity: number;
+    reductionTargetPercentage: number;
+    fuelCategory: lcfs__web__api__fuel_export__schema__FuelCategorySchema;
+    compliancePeriod: string;
+};
+
+export type lcfs__web__api__fuel_supply__schema__EnergyEffectivenessRatioSchema = {
+    eerId: (number | null);
+    fuelCategory: lcfs__web__api__fuel_supply__schema__FuelCategorySchema;
+    endUseType: (EndUseTypeSchema | null);
+    energyEffectivenessRatio: number;
+};
+
+export type lcfs__web__api__fuel_supply__schema__FuelCategorySchema = {
+    fuelCategoryId: number;
+    fuelCategory: string;
+    defaultAndPrescribedCi?: (number | null);
 };
 
 export type lcfs__web__api__fuel_supply__schema__FuelCodeResponseSchema = {
@@ -804,14 +912,14 @@ export type lcfs__web__api__fuel_supply__schema__FuelTypeOptionsSchema = {
     fuelTypeId: number;
     fuelType: string;
     fossilDerived: boolean;
-    defaultCarbonIntensity: number;
+    defaultCarbonIntensity?: (number | null);
     unit: string;
     unrecognized: boolean;
     energyDensity: (EnergyDensitySchema | null);
     provisions: Array<ProvisionOfTheActSchema>;
-    fuelCategories: Array<FuelCategorySchema>;
-    eerRatios: Array<EnergyEffectivenessRatioSchema>;
-    targetCarbonIntensities: Array<TargetCarbonIntensitySchema>;
+    fuelCategories: Array<lcfs__web__api__fuel_supply__schema__FuelCategorySchema>;
+    eerRatios: Array<lcfs__web__api__fuel_supply__schema__EnergyEffectivenessRatioSchema>;
+    targetCarbonIntensities: Array<lcfs__web__api__fuel_supply__schema__TargetCarbonIntensitySchema>;
     fuelCodes?: (Array<lcfs__web__api__fuel_supply__schema__FuelCodeSchema> | null);
 };
 
@@ -823,6 +931,14 @@ export type lcfs__web__api__fuel_supply__schema__FuelTypeSchema = {
     provision2Id?: (number | null);
     defaultCarbonIntensity?: (number | null);
     units: FuelTypeQuantityUnitsEnumSchema;
+};
+
+export type lcfs__web__api__fuel_supply__schema__TargetCarbonIntensitySchema = {
+    targetCarbonIntensityId: number;
+    targetCarbonIntensity: number;
+    reductionTargetPercentage: number;
+    fuelCategory: lcfs__web__api__fuel_supply__schema__FuelCategorySchema;
+    compliancePeriod: string;
 };
 
 export type lcfs__web__api__initiative_agreement__schema__OrganizationSchema = {
@@ -1005,6 +1121,7 @@ export type OrganizationListSchema = {
 };
 
 export type OrganizationResponseSchema = {
+    organizationId: number;
     name: string;
     operatingName: string;
     email?: (string | null);
@@ -1150,6 +1267,8 @@ export type PaginationResponseSchema = {
     totalPages: number;
 };
 
+export type PortsEnum = 'Single port' | 'Dual port';
+
 export type ProvisionOfTheActSchema = {
     provisionOfTheActId: number;
     name: string;
@@ -1164,6 +1283,8 @@ export type RedisValueDTO = {
     key: string;
     value?: (string | null);
 };
+
+export type ReportingFrequency = 'Annual' | 'Quarterly';
 
 export type RoleSchema = {
     roleId: number;
@@ -1188,6 +1309,8 @@ export type SummarySchema = {
     [key: string]: unknown | number | boolean;
 };
 
+export type SupplementalInitiatorType = 'Supplier Supplemental' | 'Government Reassessment';
+
 export type TableOptionsSchema = {
     fuelTypes: Array<lcfs__web__api__fuel_code__schema__FuelTypeSchema>;
     transportModes: Array<TransportModeSchema>;
@@ -1196,14 +1319,6 @@ export type TableOptionsSchema = {
     fieldOptions: FieldOptions;
     fpLocations: Array<FPLocationsSchema>;
     facilityNameplateCapacityUnits: Array<FuelTypeQuantityUnitsEnumSchema>;
-};
-
-export type TargetCarbonIntensitySchema = {
-    targetCarbonIntensityId: number;
-    targetCarbonIntensity: number;
-    reductionTargetPercentage: number;
-    fuelCategory: FuelCategorySchema;
-    compliancePeriod: string;
 };
 
 export type TransactionCountsSchema = {
@@ -1365,6 +1480,21 @@ export type UserCreateSchema = {
     roles?: (Array<(string)> | null);
 };
 
+export type UserLoginHistoryResponseSchema = {
+    histories: Array<UserLoginHistorySchema>;
+    pagination: PaginationResponseSchema;
+};
+
+export type UserLoginHistorySchema = {
+    userLoginHistoryId: number;
+    keycloakEmail: string;
+    externalUsername: string;
+    keycloakUserId: string;
+    isLoginSuccessful: boolean;
+    loginErrorMessage?: (string | null);
+    createDate: string;
+};
+
 export type UsersSchema = {
     pagination: PaginationResponseSchema;
     users: Array<UserBaseSchema>;
@@ -1402,7 +1532,7 @@ export type CreateAdminAdjustmentResponse = (AdminAdjustmentSchema);
 
 export type CreateAdminAdjustmentError = (HTTPValidationError);
 
-export type GetTableOptionsResponse = (unknown);
+export type GetTableOptionsResponse = (AllocationAgreementTableOptionsSchema);
 
 export type GetTableOptionsError = unknown;
 
@@ -1442,6 +1572,23 @@ export type SearchTableOptionsStringsData = {
 export type SearchTableOptionsStringsResponse = (Array<OrganizationDetailsSchema>);
 
 export type SearchTableOptionsStringsError = (HTTPValidationError);
+
+export type GetAuditLogData = {
+    query?: {
+        /**
+         * Filter by operation
+         */
+        operation?: (string | null);
+        /**
+         * Filter by table name
+         */
+        table_name?: (string | null);
+    };
+};
+
+export type GetAuditLogResponse = (AuditLogResponseSchema);
+
+export type GetAuditLogError = (HTTPValidationError);
 
 export type GetCompliancePeriodsResponse = (Array<CompliancePeriodSchema>);
 
@@ -1496,6 +1643,16 @@ export type UpdateComplianceReportSummaryData = {
 export type UpdateComplianceReportSummaryResponse = (ComplianceReportSummarySchema);
 
 export type UpdateComplianceReportSummaryError = (HTTPValidationError);
+
+export type CreateSupplementalReportData = {
+    path: {
+        report_id: number;
+    };
+};
+
+export type CreateSupplementalReportResponse = (ComplianceReportBaseSchema);
+
+export type CreateSupplementalReportError = (HTTPValidationError);
 
 export type GetDirectorReviewCountsResponse = (DirectorReviewCountsSchema);
 
@@ -1671,7 +1828,7 @@ export type GetFuelExportsResponse = (FuelExportsSchema);
 export type GetFuelExportsError = (HTTPValidationError);
 
 export type SaveFuelExportRowData = {
-    body: FuelExportCreateSchema;
+    body: FuelExportCreateUpdateSchema;
 };
 
 export type SaveFuelExportRowResponse = ((FuelExportSchema | DeleteFuelExportResponseSchema));
@@ -1703,6 +1860,10 @@ export type SaveFuelSupplyRowData = {
 export type SaveFuelSupplyRowResponse = ((FuelSupplyResponseSchema | DeleteFuelSupplyResponseSchema));
 
 export type SaveFuelSupplyRowError = (HTTPValidationError);
+
+export type GetFuelTypeOthersResponse = (Array<(string)>);
+
+export type GetFuelTypeOthersError = unknown;
 
 export type GetInitiativeAgreementData = {
     path: {
@@ -2284,3 +2445,11 @@ export type GetAllUserActivitiesData = {
 export type GetAllUserActivitiesResponse = (UserActivitiesResponseSchema);
 
 export type GetAllUserActivitiesError = (HTTPValidationError);
+
+export type GetAllUserLoginHistoryData = {
+    body: PaginationRequestSchema;
+};
+
+export type GetAllUserLoginHistoryResponse = (UserLoginHistoryResponseSchema);
+
+export type GetAllUserLoginHistoryError = (HTTPValidationError);

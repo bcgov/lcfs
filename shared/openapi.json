@@ -55,7 +55,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationAgreementTableOptionsSchema"
+                }
               }
             }
           }
@@ -1155,6 +1157,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserActivitiesResponseSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/login-history": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get All User Login History",
+        "description": "Get users login history.",
+        "operationId": "getAllUserLoginHistory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaginationRequestSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLoginHistoryResponseSchema"
                 }
               }
             }
@@ -3316,7 +3360,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FuelExportCreateSchema"
+                "$ref": "#/components/schemas/FuelExportCreateUpdateSchema"
               }
             }
           },
@@ -3841,6 +3885,49 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ComplianceReportSummarySchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/{report_id}/supplemental": {
+      "post": {
+        "tags": [
+          "compliance_reports"
+        ],
+        "summary": "Create Supplemental Report",
+        "description": "Create a supplemental compliance report.",
+        "operationId": "createSupplementalReport",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceReportBaseSchema"
                 }
               }
             }
@@ -4740,6 +4827,102 @@
           }
         }
       }
+    },
+    "/api/fuel-type/others/list": {
+      "get": {
+        "tags": [
+          "fuel_type"
+        ],
+        "summary": "Get Fuel Type Others",
+        "description": "Endpoint to get list of fuel type others",
+        "operationId": "getFuelTypeOthers",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Getfueltypeothers"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit_log/": {
+      "get": {
+        "tags": [
+          "audit_log"
+        ],
+        "summary": "Get Audit Log",
+        "description": "Get audit logs with optional filters for `table_name` and `operation`.",
+        "operationId": "getAuditLog",
+        "parameters": [
+          {
+            "name": "table_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by table name",
+              "title": "Table Name"
+            },
+            "description": "Filter by table name"
+          },
+          {
+            "name": "operation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by operation",
+              "title": "Operation"
+            },
+            "description": "Filter by operation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogResponseSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5065,6 +5248,17 @@
             "type": "string",
             "title": "Fueltype"
           },
+          "fuelTypeOther": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fueltypeother"
+          },
           "ciOfFuel": {
             "type": "number",
             "title": "Cioffuel"
@@ -5192,6 +5386,17 @@
             "type": "string",
             "title": "Fueltype"
           },
+          "fuelTypeOther": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fueltypeother"
+          },
           "ciOfFuel": {
             "type": "number",
             "title": "Cioffuel"
@@ -5262,6 +5467,72 @@
         ],
         "title": "AllocationAgreementSchema"
       },
+      "AllocationAgreementTableOptionsSchema": {
+        "properties": {
+          "allocationTransactionTypes": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationTransactionTypeSchema"
+            },
+            "type": "array",
+            "title": "Allocationtransactiontypes"
+          },
+          "fuelTypes": {
+            "items": {
+              "$ref": "#/components/schemas/lcfs__web__api__allocation_agreement__schema__FuelTypeSchema"
+            },
+            "type": "array",
+            "title": "Fueltypes"
+          },
+          "provisionsOfTheAct": {
+            "items": {
+              "$ref": "#/components/schemas/ProvisionOfTheActSchema"
+            },
+            "type": "array",
+            "title": "Provisionsoftheact"
+          },
+          "fuelCodes": {
+            "items": {
+              "$ref": "#/components/schemas/lcfs__web__api__allocation_agreement__schema__FuelCodeSchema"
+            },
+            "type": "array",
+            "title": "Fuelcodes"
+          },
+          "unitsOfMeasure": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unitsofmeasure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "allocationTransactionTypes",
+          "fuelTypes",
+          "provisionsOfTheAct",
+          "fuelCodes",
+          "unitsOfMeasure"
+        ],
+        "title": "AllocationAgreementTableOptionsSchema"
+      },
+      "AllocationTransactionTypeSchema": {
+        "properties": {
+          "allocationTransactionTypeId": {
+            "type": "integer",
+            "title": "Allocationtransactiontypeid"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "allocationTransactionTypeId",
+          "type"
+        ],
+        "title": "AllocationTransactionTypeSchema"
+      },
       "AudienceScopeEnum": {
         "type": "string",
         "enum": [
@@ -5270,6 +5541,70 @@
           "Analyst"
         ],
         "title": "AudienceScopeEnum"
+      },
+      "AuditLogResponseSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "table_name": {
+            "type": "string",
+            "title": "Table Name"
+          },
+          "operation": {
+            "type": "string",
+            "title": "Operation"
+          },
+          "row_id": {
+            "type": "integer",
+            "title": "Row Id"
+          },
+          "old_values": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Values"
+          },
+          "new_values": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Values"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "table_name",
+          "operation",
+          "row_id",
+          "old_values",
+          "new_values",
+          "delta"
+        ],
+        "title": "AuditLogResponseSchema"
       },
       "Body_uploadFile": {
         "properties": {
@@ -5407,6 +5742,38 @@
             "type": "integer",
             "title": "Compliancereportid"
           },
+          "complianceReportGroupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compliancereportgroupuuid"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "supplementalInitiator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupplementalInitiatorType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "compliancePeriodId": {
             "type": "integer",
             "title": "Complianceperiodid"
@@ -5471,6 +5838,16 @@
             ],
             "title": "Supplementalnote"
           },
+          "reportingFrequency": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportingFrequency"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "updateDate": {
             "anyOf": [
               {
@@ -5496,18 +5873,26 @@
               }
             ],
             "title": "History"
+          },
+          "hasSupplemental": {
+            "type": "boolean",
+            "title": "Hassupplemental"
           }
         },
         "type": "object",
         "required": [
           "complianceReportId",
+          "complianceReportGroupUuid",
+          "version",
+          "supplementalInitiator",
           "compliancePeriodId",
           "compliancePeriod",
           "organizationId",
           "organization",
           "summary",
           "currentStatusId",
-          "currentStatus"
+          "currentStatus",
+          "hasSupplemental"
         ],
         "title": "ComplianceReportBaseSchema"
       },
@@ -5794,17 +6179,6 @@
             ],
             "title": "Compliancereportid"
           },
-          "supplementalReportId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supplementalreportid"
-          },
           "version": {
             "anyOf": [
               {
@@ -6058,6 +6432,24 @@
         ],
         "title": "EndUseTypeSchema"
       },
+      "EndUserTypeSchema": {
+        "properties": {
+          "endUserTypeId": {
+            "type": "integer",
+            "title": "Endusertypeid"
+          },
+          "typeName": {
+            "type": "string",
+            "title": "Typename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endUserTypeId",
+          "typeName"
+        ],
+        "title": "EndUserTypeSchema"
+      },
       "EnergyDensitySchema": {
         "properties": {
           "energyDensityId": {
@@ -6079,46 +6471,6 @@
           "unit"
         ],
         "title": "EnergyDensitySchema"
-      },
-      "EnergyEffectivenessRatioSchema": {
-        "properties": {
-          "eerId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Eerid"
-          },
-          "fuelCategory": {
-            "$ref": "#/components/schemas/FuelCategorySchema"
-          },
-          "endUseType": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/EndUseTypeSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "energyEffectivenessRatio": {
-            "type": "number",
-            "title": "Energyeffectivenessratio"
-          }
-        },
-        "type": "object",
-        "required": [
-          "eerId",
-          "fuelCategory",
-          "endUseType",
-          "energyEffectivenessRatio"
-        ],
-        "title": "EnergyEffectivenessRatioSchema"
       },
       "EntityResponse": {
         "properties": {
@@ -6279,13 +6631,29 @@
             },
             "type": "array",
             "title": "Levelsofequipment"
+          },
+          "intendedUserTypes": {
+            "items": {
+              "$ref": "#/components/schemas/EndUserTypeSchema"
+            },
+            "type": "array",
+            "title": "Intendedusertypes"
+          },
+          "ports": {
+            "items": {
+              "$ref": "#/components/schemas/PortsEnum"
+            },
+            "type": "array",
+            "title": "Ports"
           }
         },
         "type": "object",
         "required": [
           "intendedUseTypes",
           "fuelMeasurementTypes",
-          "levelsOfEquipment"
+          "levelsOfEquipment",
+          "intendedUserTypes",
+          "ports"
         ],
         "title": "FSEOptionsSchema"
       },
@@ -6508,6 +6876,17 @@
             "format": "date",
             "title": "Supplytodate"
           },
+          "kwhUsage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kwhusage"
+          },
           "serialNbr": {
             "type": "string",
             "title": "Serialnbr"
@@ -6516,9 +6895,30 @@
             "type": "string",
             "title": "Manufacturer"
           },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
           "levelOfEquipment": {
             "type": "string",
             "title": "Levelofequipment"
+          },
+          "ports": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortsEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "fuelMeasurementType": {
             "type": "string",
@@ -6530,6 +6930,13 @@
             },
             "type": "array",
             "title": "Intendeduses"
+          },
+          "intendedUsers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Intendedusers"
           },
           "streetAddress": {
             "type": "string",
@@ -6584,6 +6991,7 @@
           "levelOfEquipment",
           "fuelMeasurementType",
           "intendedUses",
+          "intendedUsers",
           "streetAddress",
           "city",
           "postalCode",
@@ -6616,6 +7024,17 @@
             "type": "string",
             "title": "Registrationnbr"
           },
+          "kwhUsage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kwhusage"
+          },
           "serialNbr": {
             "type": "string",
             "title": "Serialnbr"
@@ -6624,11 +7043,32 @@
             "type": "string",
             "title": "Manufacturer"
           },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
           "levelOfEquipment": {
             "$ref": "#/components/schemas/LevelOfEquipmentSchema"
           },
           "fuelMeasurementType": {
             "$ref": "#/components/schemas/FuelMeasurementTypeSchema"
+          },
+          "ports": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PortsEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "intendedUseTypes": {
             "items": {
@@ -6636,6 +7076,13 @@
             },
             "type": "array",
             "title": "Intendedusetypes"
+          },
+          "intendedUserTypes": {
+            "items": {
+              "$ref": "#/components/schemas/EndUserTypeSchema"
+            },
+            "type": "array",
+            "title": "Intendedusertypes"
           },
           "streetAddress": {
             "type": "string",
@@ -6681,6 +7128,7 @@
           "levelOfEquipment",
           "fuelMeasurementType",
           "intendedUseTypes",
+          "intendedUserTypes",
           "streetAddress",
           "city",
           "postalCode",
@@ -6793,35 +7241,6 @@
           "category"
         ],
         "title": "FuelCategoryResponseSchema"
-      },
-      "FuelCategorySchema": {
-        "properties": {
-          "fuelCategoryId": {
-            "type": "integer",
-            "title": "Fuelcategoryid"
-          },
-          "fuelCategory": {
-            "type": "string",
-            "title": "Fuelcategory"
-          },
-          "defaultAndPrescribedCi": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Defaultandprescribedci"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fuelCategoryId",
-          "fuelCategory"
-        ],
-        "title": "FuelCategorySchema"
       },
       "FuelCodeCloneSchema": {
         "properties": {
@@ -7600,7 +8019,7 @@
         ],
         "title": "FuelCodesSchema"
       },
-      "FuelExportCreateSchema": {
+      "FuelExportCreateUpdateSchema": {
         "properties": {
           "fuelExportId": {
             "anyOf": [
@@ -7617,6 +8036,50 @@
             "type": "integer",
             "title": "Compliancereportid"
           },
+          "groupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupuuid"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "userType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usertype"
+          },
+          "actionType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actiontype"
+          },
           "compliancePeriod": {
             "anyOf": [
               {
@@ -7627,6 +8090,17 @@
               }
             ],
             "title": "Complianceperiod"
+          },
+          "fuelTypeOther": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fueltypeother"
           },
           "fuelType": {
             "anyOf": [
@@ -7809,17 +8283,6 @@
             "title": "Energy",
             "default": 0
           },
-          "customFuelId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customfuelid"
-          },
           "deleted": {
             "anyOf": [
               {
@@ -7845,7 +8308,7 @@
           "units",
           "exportDate"
         ],
-        "title": "FuelExportCreateSchema"
+        "title": "FuelExportCreateUpdateSchema"
       },
       "FuelExportSchema": {
         "properties": {
@@ -7864,6 +8327,50 @@
             "type": "integer",
             "title": "Compliancereportid"
           },
+          "groupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupuuid"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "userType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usertype"
+          },
+          "actionType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actiontype"
+          },
           "compliancePeriod": {
             "anyOf": [
               {
@@ -7881,6 +8388,17 @@
           },
           "fuelType": {
             "$ref": "#/components/schemas/lcfs__web__api__fuel_export__schema__FuelTypeSchema"
+          },
+          "fuelTypeOther": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fueltypeother"
           },
           "quantity": {
             "type": "integer",
@@ -8011,17 +8529,6 @@
                 "type": "null"
               }
             ]
-          },
-          "customFuelId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customfuelid"
           },
           "endUseId": {
             "anyOf": [
@@ -8172,6 +8679,28 @@
             ],
             "title": "Fuelsupplyid"
           },
+          "groupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupuuid"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
           "fuelTypeId": {
             "type": "integer",
             "title": "Fueltypeid"
@@ -8202,6 +8731,17 @@
           "units": {
             "type": "string",
             "title": "Units"
+          },
+          "fuelTypeOther": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fueltypeother"
           },
           "fuelCodeId": {
             "anyOf": [
@@ -8269,17 +8809,6 @@
             ],
             "title": "Energy"
           },
-          "customFuelId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customfuelid"
-          },
           "deleted": {
             "anyOf": [
               {
@@ -8312,6 +8841,22 @@
           "complianceReportId": {
             "type": "integer",
             "title": "Compliancereportid"
+          },
+          "groupUuid": {
+            "type": "string",
+            "title": "Groupuuid"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "userType": {
+            "type": "string",
+            "title": "Usertype"
+          },
+          "actionType": {
+            "type": "string",
+            "title": "Actiontype"
           },
           "fuelTypeId": {
             "type": "integer",
@@ -8450,17 +8995,6 @@
               }
             ]
           },
-          "customFuelId": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customfuelid"
-          },
           "endUseId": {
             "anyOf": [
               {
@@ -8481,12 +9015,27 @@
                 "type": "null"
               }
             ]
+          },
+          "fuelTypeOther": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fueltypeother"
           }
         },
         "type": "object",
         "required": [
           "fuelSupplyId",
           "complianceReportId",
+          "groupUuid",
+          "version",
+          "userType",
+          "actionType",
           "fuelTypeId",
           "fuelType",
           "quantity",
@@ -9718,6 +10267,10 @@
       },
       "OrganizationResponseSchema": {
         "properties": {
+          "organizationId": {
+            "type": "integer",
+            "title": "Organizationid"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -9795,6 +10348,7 @@
         },
         "type": "object",
         "required": [
+          "organizationId",
           "name",
           "operatingName"
         ],
@@ -10535,6 +11089,14 @@
         ],
         "title": "PaginationResponseSchema"
       },
+      "PortsEnum": {
+        "type": "string",
+        "enum": [
+          "Single port",
+          "Dual port"
+        ],
+        "title": "PortsEnum"
+      },
       "ProvisionOfTheActSchema": {
         "properties": {
           "provisionOfTheActId": {
@@ -10585,6 +11147,14 @@
         ],
         "title": "RedisValueDTO",
         "description": "DTO for redis values."
+      },
+      "ReportingFrequency": {
+        "type": "string",
+        "enum": [
+          "Annual",
+          "Quarterly"
+        ],
+        "title": "ReportingFrequency"
       },
       "RoleSchema": {
         "properties": {
@@ -10700,6 +11270,14 @@
         ],
         "title": "SummarySchema"
       },
+      "SupplementalInitiatorType": {
+        "type": "string",
+        "enum": [
+          "Supplier Supplemental",
+          "Government Reassessment"
+        ],
+        "title": "SupplementalInitiatorType"
+      },
       "TableOptionsSchema": {
         "properties": {
           "fuelTypes": {
@@ -10766,38 +11344,6 @@
           "facilityNameplateCapacityUnits"
         ],
         "title": "TableOptionsSchema"
-      },
-      "TargetCarbonIntensitySchema": {
-        "properties": {
-          "targetCarbonIntensityId": {
-            "type": "integer",
-            "title": "Targetcarbonintensityid"
-          },
-          "targetCarbonIntensity": {
-            "type": "number",
-            "title": "Targetcarbonintensity"
-          },
-          "reductionTargetPercentage": {
-            "type": "number",
-            "title": "Reductiontargetpercentage"
-          },
-          "fuelCategory": {
-            "$ref": "#/components/schemas/FuelCategorySchema"
-          },
-          "compliancePeriod": {
-            "type": "string",
-            "title": "Complianceperiod"
-          }
-        },
-        "type": "object",
-        "required": [
-          "targetCarbonIntensityId",
-          "targetCarbonIntensity",
-          "reductionTargetPercentage",
-          "fuelCategory",
-          "compliancePeriod"
-        ],
-        "title": "TargetCarbonIntensitySchema"
       },
       "TransactionCountsSchema": {
         "properties": {
@@ -11737,6 +12283,76 @@
         ],
         "title": "UserCreateSchema"
       },
+      "UserLoginHistoryResponseSchema": {
+        "properties": {
+          "histories": {
+            "items": {
+              "$ref": "#/components/schemas/UserLoginHistorySchema"
+            },
+            "type": "array",
+            "title": "Histories"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponseSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "histories",
+          "pagination"
+        ],
+        "title": "UserLoginHistoryResponseSchema"
+      },
+      "UserLoginHistorySchema": {
+        "properties": {
+          "userLoginHistoryId": {
+            "type": "integer",
+            "title": "Userloginhistoryid"
+          },
+          "keycloakEmail": {
+            "type": "string",
+            "title": "Keycloakemail"
+          },
+          "externalUsername": {
+            "type": "string",
+            "title": "Externalusername"
+          },
+          "keycloakUserId": {
+            "type": "string",
+            "title": "Keycloakuserid"
+          },
+          "isLoginSuccessful": {
+            "type": "boolean",
+            "title": "Isloginsuccessful"
+          },
+          "loginErrorMessage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loginerrormessage"
+          },
+          "createDate": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "userLoginHistoryId",
+          "keycloakEmail",
+          "externalUsername",
+          "keycloakUserId",
+          "isLoginSuccessful",
+          "createDate"
+        ],
+        "title": "UserLoginHistorySchema"
+      },
       "UsersSchema": {
         "properties": {
           "pagination": {
@@ -11807,6 +12423,129 @@
           "name"
         ],
         "title": "OrganizationSchema"
+      },
+      "lcfs__web__api__allocation_agreement__schema__FuelCategorySchema": {
+        "properties": {
+          "fuelCategoryId": {
+            "type": "integer",
+            "title": "Fuelcategoryid"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "defaultAndPrescribedCi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultandprescribedci"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fuelCategoryId",
+          "category"
+        ],
+        "title": "FuelCategorySchema"
+      },
+      "lcfs__web__api__allocation_agreement__schema__FuelCodeSchema": {
+        "properties": {
+          "fuelCodeId": {
+            "type": "integer",
+            "title": "Fuelcodeid"
+          },
+          "fuelCode": {
+            "type": "string",
+            "title": "Fuelcode"
+          },
+          "carbonIntensity": {
+            "type": "number",
+            "title": "Carbonintensity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fuelCodeId",
+          "fuelCode",
+          "carbonIntensity"
+        ],
+        "title": "FuelCodeSchema"
+      },
+      "lcfs__web__api__allocation_agreement__schema__FuelTypeSchema": {
+        "properties": {
+          "fuelTypeId": {
+            "type": "integer",
+            "title": "Fueltypeid"
+          },
+          "fuelType": {
+            "type": "string",
+            "title": "Fueltype"
+          },
+          "defaultCarbonIntensity": {
+            "type": "number",
+            "title": "Defaultcarbonintensity"
+          },
+          "units": {
+            "type": "string",
+            "title": "Units"
+          },
+          "unrecognized": {
+            "type": "boolean",
+            "title": "Unrecognized"
+          },
+          "fuelCategories": {
+            "items": {
+              "$ref": "#/components/schemas/lcfs__web__api__allocation_agreement__schema__FuelCategorySchema"
+            },
+            "type": "array",
+            "title": "Fuelcategories"
+          },
+          "fuelCodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/lcfs__web__api__allocation_agreement__schema__FuelCodeSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fuelcodes",
+            "default": []
+          },
+          "provisionOfTheAct": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProvisionOfTheActSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provisionoftheact",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "fuelTypeId",
+          "fuelType",
+          "defaultCarbonIntensity",
+          "units",
+          "unrecognized",
+          "fuelCategories"
+        ],
+        "title": "FuelTypeSchema"
       },
       "lcfs__web__api__fuel_code__schema__FuelCodeSchema": {
         "properties": {
@@ -12202,6 +12941,75 @@
         ],
         "title": "FuelTypeSchema"
       },
+      "lcfs__web__api__fuel_export__schema__EnergyEffectivenessRatioSchema": {
+        "properties": {
+          "eerId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eerid"
+          },
+          "fuelCategory": {
+            "$ref": "#/components/schemas/lcfs__web__api__fuel_export__schema__FuelCategorySchema"
+          },
+          "endUseType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EndUseTypeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "energyEffectivenessRatio": {
+            "type": "number",
+            "title": "Energyeffectivenessratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "eerId",
+          "fuelCategory",
+          "endUseType",
+          "energyEffectivenessRatio"
+        ],
+        "title": "EnergyEffectivenessRatioSchema"
+      },
+      "lcfs__web__api__fuel_export__schema__FuelCategorySchema": {
+        "properties": {
+          "fuelCategoryId": {
+            "type": "integer",
+            "title": "Fuelcategoryid"
+          },
+          "fuelCategory": {
+            "type": "string",
+            "title": "Fuelcategory"
+          },
+          "defaultAndPrescribedCi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultandprescribedci"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fuelCategoryId",
+          "fuelCategory"
+        ],
+        "title": "FuelCategorySchema"
+      },
       "lcfs__web__api__fuel_export__schema__FuelCodeResponseSchema": {
         "properties": {
           "fuelCodeId": {
@@ -12372,21 +13180,21 @@
           },
           "fuelCategories": {
             "items": {
-              "$ref": "#/components/schemas/FuelCategorySchema"
+              "$ref": "#/components/schemas/lcfs__web__api__fuel_export__schema__FuelCategorySchema"
             },
             "type": "array",
             "title": "Fuelcategories"
           },
           "eerRatios": {
             "items": {
-              "$ref": "#/components/schemas/EnergyEffectivenessRatioSchema"
+              "$ref": "#/components/schemas/lcfs__web__api__fuel_export__schema__EnergyEffectivenessRatioSchema"
             },
             "type": "array",
             "title": "Eerratios"
           },
           "targetCarbonIntensities": {
             "items": {
-              "$ref": "#/components/schemas/TargetCarbonIntensitySchema"
+              "$ref": "#/components/schemas/lcfs__web__api__fuel_export__schema__TargetCarbonIntensitySchema"
             },
             "type": "array",
             "title": "Targetcarbonintensities"
@@ -12487,6 +13295,107 @@
           "units"
         ],
         "title": "FuelTypeSchema"
+      },
+      "lcfs__web__api__fuel_export__schema__TargetCarbonIntensitySchema": {
+        "properties": {
+          "targetCarbonIntensityId": {
+            "type": "integer",
+            "title": "Targetcarbonintensityid"
+          },
+          "targetCarbonIntensity": {
+            "type": "number",
+            "title": "Targetcarbonintensity"
+          },
+          "reductionTargetPercentage": {
+            "type": "number",
+            "title": "Reductiontargetpercentage"
+          },
+          "fuelCategory": {
+            "$ref": "#/components/schemas/lcfs__web__api__fuel_export__schema__FuelCategorySchema"
+          },
+          "compliancePeriod": {
+            "type": "string",
+            "title": "Complianceperiod"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetCarbonIntensityId",
+          "targetCarbonIntensity",
+          "reductionTargetPercentage",
+          "fuelCategory",
+          "compliancePeriod"
+        ],
+        "title": "TargetCarbonIntensitySchema"
+      },
+      "lcfs__web__api__fuel_supply__schema__EnergyEffectivenessRatioSchema": {
+        "properties": {
+          "eerId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eerid"
+          },
+          "fuelCategory": {
+            "$ref": "#/components/schemas/lcfs__web__api__fuel_supply__schema__FuelCategorySchema"
+          },
+          "endUseType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EndUseTypeSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "energyEffectivenessRatio": {
+            "type": "number",
+            "title": "Energyeffectivenessratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "eerId",
+          "fuelCategory",
+          "endUseType",
+          "energyEffectivenessRatio"
+        ],
+        "title": "EnergyEffectivenessRatioSchema"
+      },
+      "lcfs__web__api__fuel_supply__schema__FuelCategorySchema": {
+        "properties": {
+          "fuelCategoryId": {
+            "type": "integer",
+            "title": "Fuelcategoryid"
+          },
+          "fuelCategory": {
+            "type": "string",
+            "title": "Fuelcategory"
+          },
+          "defaultAndPrescribedCi": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultandprescribedci"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fuelCategoryId",
+          "fuelCategory"
+        ],
+        "title": "FuelCategorySchema"
       },
       "lcfs__web__api__fuel_supply__schema__FuelCodeResponseSchema": {
         "properties": {
@@ -12639,7 +13548,14 @@
             "title": "Fossilderived"
           },
           "defaultCarbonIntensity": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Defaultcarbonintensity"
           },
           "unit": {
@@ -12669,21 +13585,21 @@
           },
           "fuelCategories": {
             "items": {
-              "$ref": "#/components/schemas/FuelCategorySchema"
+              "$ref": "#/components/schemas/lcfs__web__api__fuel_supply__schema__FuelCategorySchema"
             },
             "type": "array",
             "title": "Fuelcategories"
           },
           "eerRatios": {
             "items": {
-              "$ref": "#/components/schemas/EnergyEffectivenessRatioSchema"
+              "$ref": "#/components/schemas/lcfs__web__api__fuel_supply__schema__EnergyEffectivenessRatioSchema"
             },
             "type": "array",
             "title": "Eerratios"
           },
           "targetCarbonIntensities": {
             "items": {
-              "$ref": "#/components/schemas/TargetCarbonIntensitySchema"
+              "$ref": "#/components/schemas/lcfs__web__api__fuel_supply__schema__TargetCarbonIntensitySchema"
             },
             "type": "array",
             "title": "Targetcarbonintensities"
@@ -12709,7 +13625,6 @@
           "fuelTypeId",
           "fuelType",
           "fossilDerived",
-          "defaultCarbonIntensity",
           "unit",
           "unrecognized",
           "energyDensity",
@@ -12785,6 +13700,38 @@
           "units"
         ],
         "title": "FuelTypeSchema"
+      },
+      "lcfs__web__api__fuel_supply__schema__TargetCarbonIntensitySchema": {
+        "properties": {
+          "targetCarbonIntensityId": {
+            "type": "integer",
+            "title": "Targetcarbonintensityid"
+          },
+          "targetCarbonIntensity": {
+            "type": "number",
+            "title": "Targetcarbonintensity"
+          },
+          "reductionTargetPercentage": {
+            "type": "number",
+            "title": "Reductiontargetpercentage"
+          },
+          "fuelCategory": {
+            "$ref": "#/components/schemas/lcfs__web__api__fuel_supply__schema__FuelCategorySchema"
+          },
+          "compliancePeriod": {
+            "type": "string",
+            "title": "Complianceperiod"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targetCarbonIntensityId",
+          "targetCarbonIntensity",
+          "reductionTargetPercentage",
+          "fuelCategory",
+          "compliancePeriod"
+        ],
+        "title": "TargetCarbonIntensitySchema"
       },
       "lcfs__web__api__initiative_agreement__schema__OrganizationSchema": {
         "properties": {
