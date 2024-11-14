@@ -6,12 +6,8 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useFuelExportOptions = (params: { compliancePeriod: string }) => {
-  // const client = useApiService()
-  // const path =
-  //   apiRoutes.fuelExportOptions + 'compliancePeriod=' + params.compliancePeriod
   return useQuery({
     queryKey: ['fuel-export-options'],
-    // queryFn: async () => (await client.get(path)).data,
     queryFn: async () => {
       try {
         const { data } = await FuelExportsService.getFuelExportTableOptions({
@@ -30,17 +26,8 @@ export const useGetFuelExports = (
   params: number | ({ complianceReportId: number } & PaginationRequestSchema),
   pagination: number
 ) => {
-  // const client = useApiService()
   return useQuery({
     queryKey: ['fuel-exports', params, pagination],
-    // queryFn: async () => {
-    //   const response = await client.post(apiRoutes.getAllFuelExports, {
-    //     ...(typeof params === 'string' && { complianceReportId: params }),
-    //     ...(typeof params !== 'string' && params),
-
-    //   })
-    //   return response.data
-    // },
     queryFn: async () => {
       try {
         let body
@@ -64,21 +51,9 @@ export const useGetFuelExports = (
 }
 
 export const useSaveFuelExport = (complianceReportId: number) => {
-  // const client = useApiService()
   const queryClient = useQueryClient()
 
   return useMutation({
-    // mutationFn: async (data) => {
-    //   const modifedData = {
-    //     complianceReportId: complianceReportId,
-    //     ...data
-    //   }
-
-    //   return await client.post(
-    //     apiRoutes.saveFuelExports,
-    //     modifedData
-    //   )
-    // },
     mutationFn: async (
       data: Omit<FuelExportCreateUpdateSchema, 'complianceReportId'>
     ) => {

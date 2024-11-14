@@ -88,7 +88,7 @@ async def get_org_users(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
-async def get_user_by_id(
+async def get_org_user_by_id(
     request: Request,
     organization_id: int,
     response: Response = None,
@@ -106,7 +106,7 @@ async def get_user_by_id(
     "/{organization_id}/users", response_model=None, status_code=status.HTTP_201_CREATED
 )
 @view_handler([RoleEnum.SUPPLIER])
-async def create_user(
+async def create_org_user(
     request: Request,
     organization_id: int,
     response: Response = None,
@@ -128,7 +128,7 @@ async def create_user(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
-async def update_user(
+async def update_org_user(
     request: Request,
     organization_id: int,
     response: Response = None,
@@ -256,7 +256,7 @@ async def create_compliance_report(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
-async def get_compliance_reports(
+async def get_org_compliance_reports(
     request: Request,
     organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
@@ -264,7 +264,7 @@ async def get_compliance_reports(
 ) -> ComplianceReportListSchema:
     organization_id = request.user.organization.organization_id
     return await report_service.get_compliance_reports_paginated(
-        pagination, organization_id, bceid_user = True
+        pagination, organization_id, bceid_user=True
     )
 
 
@@ -292,7 +292,7 @@ async def get_all_org_reported_years(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
-async def get_compliance_report_by_id(
+async def get_org_compliance_report_by_id(
     request: Request,
     organization_id: int,
     response: Response = None,
@@ -305,4 +305,6 @@ async def get_compliance_report_by_id(
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     await report_validate.validate_organization_access(report_id)
-    return await report_service.get_compliance_report_by_id(report_id, apply_masking=True)
+    return await report_service.get_compliance_report_by_id(
+        report_id, apply_masking=True
+    )

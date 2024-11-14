@@ -44,7 +44,7 @@ get_async_db = dependencies.get_async_db_session
 )
 @view_handler(["*"])
 # @cache(expire=60 * 60 * 24)  # cache for 24 hours
-async def get_table_options(
+async def get_other_uses_table_options(
     request: Request,
     service: OtherUsesServices = Depends(),
 ):
@@ -64,7 +64,9 @@ async def get_other_uses(
     report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of other uses for a compliance report"""
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     return await service.get_other_uses(request_data.compliance_report_id)
 
 
@@ -86,7 +88,9 @@ async def get_other_uses_paginated(
         sort_orders=request_data.sort_orders,
         filters=request_data.filters,
     )
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_other_uses_paginated(pagination, compliance_report_id)
 

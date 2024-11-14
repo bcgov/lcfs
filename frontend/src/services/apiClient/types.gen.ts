@@ -1532,9 +1532,9 @@ export type CreateAdminAdjustmentResponse = (AdminAdjustmentSchema);
 
 export type CreateAdminAdjustmentError = (HTTPValidationError);
 
-export type GetTableOptionsResponse = (AllocationAgreementTableOptionsSchema);
+export type GetAllocationAgreementTableOptionsResponse = (AllocationAgreementTableOptionsSchema);
 
-export type GetTableOptionsError = unknown;
+export type GetAllocationAgreementTableOptionsError = unknown;
 
 export type GetAllocationAgreementsData = {
     body: ComplianceReportRequestSchema;
@@ -1560,7 +1560,7 @@ export type SaveAllocationAgreementsRowResponse = ((AllocationAgreementSchema | 
 
 export type SaveAllocationAgreementsRowError = (HTTPValidationError);
 
-export type SearchTableOptionsStringsData = {
+export type SearchAllocationAgreementTableOptionsStringsData = {
     query?: {
         /**
          * Trading partner (company) for filtering options
@@ -1569,9 +1569,9 @@ export type SearchTableOptionsStringsData = {
     };
 };
 
-export type SearchTableOptionsStringsResponse = (Array<OrganizationDetailsSchema>);
+export type SearchAllocationAgreementTableOptionsStringsResponse = (Array<OrganizationDetailsSchema>);
 
-export type SearchTableOptionsStringsError = (HTTPValidationError);
+export type SearchAllocationAgreementTableOptionsStringsError = (HTTPValidationError);
 
 export type GetAuditLogData = {
     query?: {
@@ -1761,6 +1761,43 @@ export type SearchTableOptionsData = {
 export type SearchTableOptionsResponse = (Array<(string)>);
 
 export type SearchTableOptionsError = (HTTPValidationError);
+
+export type GetFuelCodeTableOptionsResponse = (TableOptionsSchema);
+
+export type GetFuelCodeTableOptionsError = unknown;
+
+export type SearchFuelCodeTableOptionsStringsData = {
+    query?: {
+        /**
+         * Company for filtering options
+         */
+        company?: (string | null);
+        /**
+         * Contact email for filtering options
+         */
+        contactEmail?: (string | null);
+        /**
+         * Contact name for filtering options
+         */
+        contactName?: (string | null);
+        /**
+         * Based on flag retrieve entire row data or just the list of distinct values
+         */
+        distinctSearch?: (boolean | null);
+        /**
+         * Fuel code for filtering options
+         */
+        fuelCode?: (string | null);
+        /**
+         * Prefix for filtering options
+         */
+        prefix?: (string | null);
+    };
+};
+
+export type SearchFuelCodeTableOptionsStringsResponse = ((SearchFuelCodeList | Array<(string)>));
+
+export type SearchFuelCodeTableOptionsStringsError = (HTTPValidationError);
 
 export type GetFuelCodesData = {
     body: PaginationRequestSchema;
@@ -2008,6 +2045,10 @@ export type DeleteNotificationChannelSubscriptionResponse = (void);
 
 export type DeleteNotificationChannelSubscriptionError = (HTTPValidationError);
 
+export type GetNotionalTransferTableOptionsResponse = (NotionalTransferTableOptionsSchema);
+
+export type GetNotionalTransferTableOptionsError = unknown;
+
 export type GetNotionalTransfersData = {
     body: ComplianceReportRequestSchema;
 };
@@ -2059,18 +2100,18 @@ export type GetOrgUsersResponse = (UsersSchema);
 
 export type GetOrgUsersError = (HTTPValidationError);
 
-export type GetUserByIdData = {
+export type GetOrgUserByIdData = {
     path: {
         organization_id: number;
         user_id: number;
     };
 };
 
-export type GetUserByIdResponse = (UserBaseSchema);
+export type GetOrgUserByIdResponse = (UserBaseSchema);
 
-export type GetUserByIdError = (HTTPValidationError);
+export type GetOrgUserByIdError = (HTTPValidationError);
 
-export type UpdateUserData = {
+export type UpdateOrgUserData = {
     body: UserCreateSchema;
     path: {
         organization_id: number;
@@ -2078,20 +2119,20 @@ export type UpdateUserData = {
     };
 };
 
-export type UpdateUserResponse = (UserBaseSchema);
+export type UpdateOrgUserResponse = (UserBaseSchema);
 
-export type UpdateUserError = (HTTPValidationError);
+export type UpdateOrgUserError = (HTTPValidationError);
 
-export type CreateUserData = {
+export type CreateOrgUserData = {
     body: UserCreateSchema;
     path: {
         organization_id: number;
     };
 };
 
-export type CreateUserResponse = (unknown);
+export type CreateOrgUserResponse = (unknown);
 
-export type CreateUserError = (HTTPValidationError);
+export type CreateOrgUserError = (HTTPValidationError);
 
 export type GetTransactionsPaginatedForOrgData = {
     body: PaginationRequestSchema;
@@ -2148,6 +2189,17 @@ export type CreateComplianceReportResponse = (ComplianceReportBaseSchema);
 
 export type CreateComplianceReportError = (HTTPValidationError);
 
+export type GetOrgComplianceReportsData = {
+    body: PaginationRequestSchema;
+    path: {
+        organization_id: number;
+    };
+};
+
+export type GetOrgComplianceReportsResponse = (ComplianceReportListSchema);
+
+export type GetOrgComplianceReportsError = (HTTPValidationError);
+
 export type GetAllOrgReportedYearsData = {
     path: {
         organization_id: number;
@@ -2157,6 +2209,17 @@ export type GetAllOrgReportedYearsData = {
 export type GetAllOrgReportedYearsResponse = (Array<CompliancePeriodSchema>);
 
 export type GetAllOrgReportedYearsError = (HTTPValidationError);
+
+export type GetOrgComplianceReportByIdData = {
+    path: {
+        organization_id: number;
+        report_id: number;
+    };
+};
+
+export type GetOrgComplianceReportByIdResponse = (ComplianceReportBaseSchema);
+
+export type GetOrgComplianceReportByIdError = (HTTPValidationError);
 
 export type ExportOrganizationsResponse = (unknown);
 
@@ -2228,19 +2291,23 @@ export type GetExternallyRegisteredOrganizationsResponse = (Array<OrganizationSu
 
 export type GetExternallyRegisteredOrganizationsError = unknown;
 
-export type GetBalancesData = {
+export type GetBalancesByOrgIdData = {
     path: {
         organization_id: number;
     };
 };
 
+export type GetBalancesByOrgIdResponse = (OrganizationBalanceResponseSchema);
+
+export type GetBalancesByOrgIdError = (HTTPValidationError);
+
 export type GetBalancesResponse = (OrganizationBalanceResponseSchema);
 
-export type GetBalancesError = (HTTPValidationError);
+export type GetBalancesError = unknown;
 
-export type GetBalances1Response = (OrganizationBalanceResponseSchema);
+export type GetOtherUsesTableOptionsResponse = (OtherUsesTableOptionsSchema);
 
-export type GetBalances1Error = unknown;
+export type GetOtherUsesTableOptionsError = unknown;
 
 export type GetOtherUsesData = {
     body: ComplianceReportRequestSchema;
@@ -2407,6 +2474,27 @@ export type GetCurrentUserResponse = (UserBaseSchema);
 
 export type GetCurrentUserError = unknown;
 
+export type GetUserByIdData = {
+    path: {
+        user_id: number;
+    };
+};
+
+export type GetUserByIdResponse = (UserBaseSchema);
+
+export type GetUserByIdError = (HTTPValidationError);
+
+export type UpdateUserData = {
+    body: UserCreateSchema;
+    path: {
+        user_id: number;
+    };
+};
+
+export type UpdateUserResponse = (UserBaseSchema);
+
+export type UpdateUserError = (HTTPValidationError);
+
 export type DeleteUserData = {
     path: {
         user_id: number;
@@ -2416,6 +2504,14 @@ export type DeleteUserData = {
 export type DeleteUserResponse = (unknown);
 
 export type DeleteUserError = (HTTPValidationError);
+
+export type CreateUserData = {
+    body: UserCreateSchema;
+};
+
+export type CreateUserResponse = (unknown);
+
+export type CreateUserError = (HTTPValidationError);
 
 export type GetUserRolesData = {
     path: {

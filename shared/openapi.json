@@ -47,9 +47,9 @@
         "tags": [
           "allocation_agreements"
         ],
-        "summary": "Get Table Options",
+        "summary": "Get Allocation Agreement Table Options",
         "description": "Endpoint to retrieve table options related to allocation agreements",
-        "operationId": "getTableOptions",
+        "operationId": "getAllocationAgreementTableOptions",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -202,9 +202,9 @@
         "tags": [
           "allocation_agreements"
         ],
-        "summary": "Search Table Options Strings",
+        "summary": "Search Allocation Agreement Table Options Strings",
         "description": "Endpoint to search allocation agreement options based on a query string",
-        "operationId": "searchTableOptionsStrings",
+        "operationId": "searchAllocationAgreementTableOptionsStrings",
         "parameters": [
           {
             "name": "transactionPartner",
@@ -235,7 +235,7 @@
                   "items": {
                     "$ref": "#/components/schemas/OrganizationDetailsSchema"
                   },
-                  "title": "Response Searchtableoptionsstrings"
+                  "title": "Response Searchallocationagreementtableoptionsstrings"
                 }
               }
             }
@@ -2030,9 +2030,9 @@
         "tags": [
           "organizations"
         ],
-        "summary": "Get Balances",
+        "summary": "Get Balances By Org Id",
         "description": "Retrieve the total and reserved balances for a specific organization identified by its ID.",
-        "operationId": "getBalances",
+        "operationId": "getBalancesByOrgId",
         "parameters": [
           {
             "name": "organization_id",
@@ -2160,9 +2160,9 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get User By Id",
+        "summary": "Get Org User By Id",
         "description": "Endpoint to get information of a user by ID\nThis endpoint returns the information of a user by ID, including their roles and organization.",
-        "operationId": "getUserById",
+        "operationId": "getOrgUserById",
         "parameters": [
           {
             "name": "organization_id",
@@ -2210,9 +2210,9 @@
         "tags": [
           "organization"
         ],
-        "summary": "Update User",
+        "summary": "Update Org User",
         "description": "Endpoint to update a user\nThis endpoint updates a user and returns the information of the updated user.",
-        "operationId": "updateUser",
+        "operationId": "updateOrgUser",
         "parameters": [
           {
             "name": "organization_id",
@@ -2272,9 +2272,9 @@
         "tags": [
           "organization"
         ],
-        "summary": "Create User",
+        "summary": "Create Org User",
         "description": "Endpoint to create a new user\nThis endpoint creates a new user and returns the information of the created user.",
-        "operationId": "createUser",
+        "operationId": "createOrgUser",
         "parameters": [
           {
             "name": "organization_id",
@@ -2571,8 +2571,8 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get Compliance Reports",
-        "operationId": "getComplianceReports",
+        "summary": "Get Org Compliance Reports",
+        "operationId": "getOrgComplianceReports",
         "parameters": [
           {
             "name": "organization_id",
@@ -2670,9 +2670,9 @@
         "tags": [
           "organization"
         ],
-        "summary": "Get Compliance Report By Id",
+        "summary": "Get Org Compliance Report By Id",
         "description": "Endpoint to get information of a user by ID\nThis endpoint returns the information of a user by ID, including their roles and organization.",
-        "operationId": "getComplianceReportById",
+        "operationId": "getOrgComplianceReportById",
         "parameters": [
           {
             "name": "organization_id",
@@ -2873,9 +2873,9 @@
         "tags": [
           "fuel_codes"
         ],
-        "summary": "Get Table Options",
+        "summary": "Get Fuel Code Table Options",
         "description": "Endpoint to retrieve table options related to fuel codes",
-        "operationId": "getTableOptions",
+        "operationId": "getFuelCodeTableOptions",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2895,9 +2895,9 @@
         "tags": [
           "fuel_codes"
         ],
-        "summary": "Search Table Options Strings",
+        "summary": "Search Fuel Code Table Options Strings",
         "description": "Endpoint to search fuel codes based on a query string",
-        "operationId": "searchTableOptionsStrings",
+        "operationId": "searchFuelCodeTableOptionsStrings",
         "parameters": [
           {
             "name": "company",
@@ -3026,7 +3026,7 @@
                       }
                     }
                   ],
-                  "title": "Response Searchtableoptionsstrings"
+                  "title": "Response Searchfuelcodetableoptionsstrings"
                 }
               }
             }
@@ -3950,9 +3950,9 @@
         "tags": [
           "notional_transfers"
         ],
-        "summary": "Get Table Options",
+        "summary": "Get Notional Transfer Table Options",
         "description": "Endpoint to retrieve table options related to notional transfers",
-        "operationId": "getTableOptions",
+        "operationId": "getNotionalTransferTableOptions",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4147,9 +4147,9 @@
         "tags": [
           "other_uses"
         ],
-        "summary": "Get Table Options",
+        "summary": "Get Other Uses Table Options",
         "description": "Endpoint to retrieve table options related to other uses",
-        "operationId": "getTableOptions",
+        "operationId": "getOtherUsesTableOptions",
         "responses": {
           "200": {
             "description": "Successful Response",

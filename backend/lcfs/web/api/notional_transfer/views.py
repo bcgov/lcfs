@@ -45,7 +45,7 @@ get_async_db = dependencies.get_async_db_session
 )
 @view_handler(["*"])
 @cache(expire=60 * 60 * 24)  # cache for 24 hours
-async def get_table_options(
+async def get_notional_transfer_table_options(
     request: Request,
     service: NotionalTransferServices = Depends(),
 ):
@@ -67,7 +67,9 @@ async def get_notional_transfers(
     report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of notional transfers for a compliance report"""
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     return await service.get_notional_transfers(request_data.compliance_report_id)
 
 

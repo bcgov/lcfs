@@ -216,7 +216,7 @@ async def get_externally_registered_organizations(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
-async def get_balances(
+async def get_balances_by_org_id(
     request: Request, organization_id: int, service: OrganizationsService = Depends()
 ):
     """

@@ -46,7 +46,7 @@ get_async_db = dependencies.get_async_db_session
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-async def get_table_options(
+async def get_allocation_agreement_table_options(
     request: Request,
     service: AllocationAgreementServices = Depends(),
 ):
@@ -145,7 +145,7 @@ async def save_allocation_agreements_row(
 
 @router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=200)
 @view_handler(["*"])
-async def search_table_options_strings(
+async def search_allocation_agreement_table_options_strings(
     request: Request,
     transaction_partner: Optional[str] = Query(
         None,

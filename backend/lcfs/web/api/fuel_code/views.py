@@ -40,7 +40,7 @@ get_async_db = dependencies.get_async_db_session
     "/table-options", response_model=TableOptionsSchema, status_code=status.HTTP_200_OK
 )
 @view_handler([RoleEnum.GOVERNMENT])
-async def get_table_options(
+async def get_fuel_code_table_options(
     request: Request,
     service: FuelCodeServices = Depends(),
 ):
@@ -55,7 +55,7 @@ async def get_table_options(
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
-async def search_table_options_strings(
+async def search_fuel_code_table_options_strings(
     request: Request,
     company: Optional[str] = Query(
         None, alias="company", description="Company for filtering options"
@@ -117,6 +117,7 @@ async def get_fuel_codes(
     """Endpoint to get list of fuel codes with pagination options"""
     return await service.get_fuel_codes(pagination)
 
+
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
 @view_handler(["*"])
 async def get_fuel_code(
@@ -144,6 +145,7 @@ async def delete_fuel_code(
     request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
+
 
 @router.post(
     "/save",
