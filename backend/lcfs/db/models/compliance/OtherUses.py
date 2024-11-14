@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.base import BaseModel, Auditable, Versioning
 
 
-class OtherUses(BaseModel, Auditable):
+class OtherUses(BaseModel, Auditable, Versioning):
     __tablename__ = "other_uses"
     __table_args__ = {
         "comment": "Records other uses of fuels that are subject to renewable requirements but do not earn credits."
