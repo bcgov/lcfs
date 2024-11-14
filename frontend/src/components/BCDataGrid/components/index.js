@@ -1,6 +1,6 @@
 export { AsyncSuggestionEditor } from './Editors/AsyncSuggestionEditor'
 export { AsyncValidationEditor } from './Editors/AsyncValidationEditor'
-export { AutocompleteEditor } from './Editors/AutocompleteEditor'
+export { AutocompleteCellEditor } from './Editors/AutocompleteCellEditor'
 export { DateEditor } from './Editors/DateEditor'
 export { DateRangeCellEditor } from './Editors/DateRangeCellEditor'
 export { ActionsRenderer } from './Renderers/ActionsRenderer'
