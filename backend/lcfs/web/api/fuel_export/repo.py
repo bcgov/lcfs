@@ -233,7 +233,7 @@ class FuelExportRepository:
         """
         Update an existing fuel supply row in the database.
         """
-        updated_fuel_export = self.db.merge(fuel_export)
+        updated_fuel_export = await self.db.merge(fuel_export)
         await self.db.flush()
         await self.db.refresh(
             fuel_export,

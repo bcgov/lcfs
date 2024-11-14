@@ -36,7 +36,12 @@ export const useGetFuelExports = (
           body = {
             complianceReportId: params
           }
+        } else if (typeof params === 'string') {
+          body = {
+            complianceReportId: +params
+          }
         } else {
+          // BCGridViewer passes in object. TODO modify BCGridViewer
           body = params
         }
 
@@ -62,6 +67,7 @@ export const useSaveFuelExport = (complianceReportId: number) => {
           complianceReportId,
           ...data
         }
+        console.log(body)
         await FuelExportsService.saveFuelExportRow({ body })
       } catch (error) {
         console.log(error)
