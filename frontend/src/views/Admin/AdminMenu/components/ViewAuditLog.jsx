@@ -13,6 +13,7 @@ import {
   Typography
 } from '@mui/material'
 import { useTranslation } from 'react-i18next'
+import colors from '@/themes/base/colors'
 
 export const ViewAuditLog = () => {
   const { auditLogId } = useParams()
@@ -64,37 +65,63 @@ export const ViewAuditLog = () => {
 
       {/* Display the additional information */}
       <Box mb={2}>
-        <Typography variant="body1">
+        <Typography variant="body2">
           <strong>{t('auditLogColLabels.tableName')}:</strong> {tableName}
         </Typography>
-        <Typography variant="body1">
+        <Typography variant="body2">
           <strong>{t('auditLogColLabels.operation')}:</strong> {operation}
         </Typography>
-        <Typography variant="body1">
+        <Typography variant="body2">
           <strong>{t('auditLogColLabels.rowId')}:</strong> {rowId}
         </Typography>
-        <Typography variant="body1">
+        <Typography variant="body2">
           <strong>{t('auditLogColLabels.createDate')}:</strong>{' '}
           {new Date(createDate).toLocaleString()}
         </Typography>
-        <Typography variant="body1">
+        <Typography variant="body2">
           <strong>{t('auditLogColLabels.userId')}:</strong>{' '}
           {createUser || t('System')}
         </Typography>
       </Box>
 
       <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
+        <Table
+          sx={{
+            '& td, & th': {
+              borderRight: '1px solid #ccc',
+              borderBottom: '1px solid #ccc'
+            },
+            '& td:last-child, & th:last-child': {
+              borderRight: 'none'
+            },
+            '& tr:last-child td': {
+              borderBottom: 'none'
+            }
+          }}
+        >
+          <TableHead sx={{ textAlign: 'center' }}>
             <TableRow>
-              <TableCell>
-                <strong>{t('Field')}</strong>
+              <TableCell
+                sx={{
+                  width: '20%',
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap'
+                }}
+                bgcolor={colors.background.grey}
+              >
+                {t('Field')}
               </TableCell>
-              <TableCell>
-                <strong>{t('OldValue')}</strong>
+              <TableCell
+                sx={{ width: '40%', fontWeight: 'bold' }}
+                bgcolor={colors.background.grey}
+              >
+                {t('OldValue')}
               </TableCell>
-              <TableCell>
-                <strong>{t('NewValue')}</strong>
+              <TableCell
+                sx={{ width: '40%', fontWeight: 'bold' }}
+                bgcolor={colors.background.grey}
+              >
+                {t('NewValue')}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -119,8 +146,20 @@ export const ViewAuditLog = () => {
                   style={operation === 'UPDATE' ? fieldRowStyle : rowStyle}
                 >
                   <TableCell>{field}</TableCell>
-                  <TableCell>{formatValue(oldValue)}</TableCell>
-                  <TableCell>{formatValue(newValue)}</TableCell>
+                  <TableCell>
+                    {isChanged ? (
+                      <strong>{formatValue(oldValue)}</strong>
+                    ) : (
+                      formatValue(oldValue)
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isChanged ? (
+                      <strong>{formatValue(newValue)}</strong>
+                    ) : (
+                      formatValue(newValue)
+                    )}
+                  </TableCell>
                 </TableRow>
               )
             })}
