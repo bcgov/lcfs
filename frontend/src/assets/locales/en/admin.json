@@ -3,6 +3,13 @@
   "Users": "Users",
   "UserActivity": "User activity",
   "UserLoginHistory": "User login history",
+  "AuditLog": "Audit log",
+  "AuditLogDetails": "Audit log details — ID: {{id}}",
+  "Field": "Field",
+  "OldValue": "Old value",
+  "NewValue": "New value",
+  "System": "System",
+  "auditLogsNotFound": "No audit logs found.",
   "Roles": "Roles",
   "Role": "Role",
   "FuelCodes": "Fuel codes",
@@ -32,6 +39,14 @@
     "isLoginSuccessful": "Is login successful",
     "loginErrorMessage": "Login error message",
     "createDate": "Login time"
+  },
+  "auditLogColLabels": {
+    "userId": "User",
+    "tableName": "Table name",
+    "operation": "Operation",
+    "rowId": "Row ID",
+    "changedFields": "Changed fields",
+    "createDate": "Timestamp"
   },
   "historiesNotFound": "No user login history found",
   "errorRetrieving": "Error retrieving the record",

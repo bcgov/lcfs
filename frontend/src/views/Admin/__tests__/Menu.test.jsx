@@ -18,9 +18,33 @@ vi.mock('../AdminMenu/components/Users', () => ({
   Users: () => <div data-test="mock-users">Mocked Users Component</div>
 }))
 
+// Mock the UserActivity component
+vi.mock('../AdminMenu/components/UserActivity', () => ({
+  UserActivity: () => (
+    <div data-test="mock-user-activity">Mocked UserActivity Component</div>
+  )
+}))
+
+// Mock the UserLoginHistory component
+vi.mock('../AdminMenu/components/UserLoginHistory', () => ({
+  UserLoginHistory: () => (
+    <div data-test="mock-user-login-history">
+      Mocked UserLoginHistory Component
+    </div>
+  )
+}))
+
+// Mock the AuditLog component
+vi.mock('../AdminMenu/components/AuditLog', () => ({
+  AuditLog: () => (
+    <div data-test="mock-audit-log">Mocked AuditLog Component</div>
+  )
+}))
+
 // Mock Role component
 vi.mock('@/components/Role', () => ({
-  Role: ({ roles, children }) => (roles.includes('administrator') ? children : null)
+  Role: ({ roles, children }) =>
+    roles.includes('administrator') ? children : null
 }))
 
 // Mock the translation function
@@ -39,6 +63,7 @@ describe('AdminMenu Component', () => {
     expect(screen.getByText('Users')).toBeInTheDocument()
     expect(screen.getByText('UserActivity')).toBeInTheDocument()
     expect(screen.getByText('UserLoginHistory')).toBeInTheDocument()
+    expect(screen.getByText('AuditLog')).toBeInTheDocument()
     expect(screen.getByTestId('mock-users')).toBeInTheDocument()
   })
 
@@ -48,6 +73,8 @@ describe('AdminMenu Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/admin/user-activity')
     fireEvent.click(screen.getByText('UserLoginHistory'))
     expect(mockNavigate).toHaveBeenCalledWith('/admin/user-login-history')
+    fireEvent.click(screen.getByText('AuditLog'))
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/audit-log')
   })
 
   it('displays correct content for each tab with administrator role', () => {
@@ -61,5 +88,9 @@ describe('AdminMenu Component', () => {
     // Render UserLoginHistory tab content
     rerender(<AdminMenu tabIndex={2} />)
     expect(screen.getByText('UserLoginHistory')).toBeInTheDocument()
+
+    // Render AuditLog tab content
+    rerender(<AdminMenu tabIndex={3} />)
+    expect(screen.getByText('AuditLog')).toBeInTheDocument()
   })
 })
