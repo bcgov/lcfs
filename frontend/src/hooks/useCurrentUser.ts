@@ -1,27 +1,20 @@
-import { apiRoutes } from '@/constants/routes'
-import { useApiService } from '@/services/useApiService'
-import { useUserStore } from '@/stores/useUserStore'
+import { UsersService } from '@/services/apiClient'
 import { useKeycloak } from '@react-keycloak/web'
 import { useQuery } from '@tanstack/react-query'
 
 export const useCurrentUser = () => {
-  const client = useApiService()
+  // const client = useApiService()
   const { keycloak, initialized } = useKeycloak()
-  const setUser = useUserStore((state) => state.setUser)
 
   // Fetching current user data
   const query = useQuery({
     queryKey: ['currentUser', keycloak.token],
     queryFn: async () => {
-      const response = await client.get(apiRoutes.currentUser)
+      const response = await UsersService.getCurrentUser()
       return response.data
     },
     enabled: !!keycloak.authenticated && initialized,
-    retry: false,
-    onSuccess: setUser,
-    onError: (error) => {
-      console.error('Error fetching current user:', error)
-    }
+    retry: false
   })
 
   /**
@@ -41,9 +34,9 @@ export const useCurrentUser = () => {
    *     // Logic for users with both 'Government' and 'Administrator' roles
    *   }
    */
-  const hasRoles = (...roleNames) => {
-    return roleNames.every((roleName) =>
-      query.data?.roles?.some((role) => role.name === roleName)
+  const hasRoles = (...roleNames: string[]) => {
+    return roleNames.every(
+      (roleName) => query.data?.roles?.some((role) => role.name === roleName)
     )
   }
 
@@ -61,17 +54,15 @@ export const useCurrentUser = () => {
    *     // Logic for users with either 'Transfers' or 'Signing Authority' role
    *   }
    */
-  const hasAnyRole = (...roleNames) => {
-    return roleNames.some((roleName) =>
-      query.data?.roles?.some((role) => role.name === roleName)
+  const hasAnyRole = (...roleNames: string[]) => {
+    return roleNames.some(
+      (roleName) => query.data?.roles?.some((role) => role.name === roleName)
     )
   }
 
-  const fullName = () => {
-    return query.data?.firstName + ' ' + query.data?.lastName
-  }
+  const fullName: string = query.data?.firstName + ' ' + query.data?.lastName
 
-  const sameOrganization = (orgId) => {
+  const sameOrganization = (orgId: number) => {
     return query.data?.organization?.organizationId === orgId
   }
 
