@@ -9,13 +9,7 @@ GET: /reports/<report_id> - retrieve the compliance report by ID
 import structlog
 from typing import List
 
-from fastapi import (
-    APIRouter,
-    Body,
-    status,
-    Request,
-    Depends,
-)
+from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
@@ -33,6 +27,8 @@ from lcfs.web.api.compliance_report.summary_service import (
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.exception.exceptions import DataNotFoundException
+
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
@@ -70,7 +66,13 @@ async def get_compliance_reports(
     pagination.filters.append(
         FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual")
     )
-    return await service.get_compliance_reports_paginated(pagination)
+
+    try:
+        response = await service.get_compliance_reports_paginated(pagination)
+    except DataNotFoundException as e:
+        raise HTTPException(status_code=404, detail="No compliance reports found.")
+
+    return response
 
 
 @router.get(

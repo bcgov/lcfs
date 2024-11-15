@@ -352,9 +352,16 @@ class ComplianceReportRepository:
             )
             .where(and_(*conditions))
             .group_by(ComplianceReport.compliance_report_group_uuid)
-            .subquery()
         )
 
+        if not organization_id:
+            subquery = subquery.join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+
+        subquery = subquery.subquery()
         # Join the main ComplianceReport table with the subquery to get the latest version per group
         query = (
             select(ComplianceReport)
