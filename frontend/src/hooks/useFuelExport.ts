@@ -5,13 +5,17 @@ import {
 } from '@/services/apiClient'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export const useFuelExportOptions = (params: { compliancePeriod: string }) => {
+export const useFuelExportOptions = ({
+  compliancePeriod
+}: {
+  compliancePeriod: string
+}) => {
   return useQuery({
     queryKey: ['fuel-export-options'],
     queryFn: async () => {
       try {
         const { data } = await FuelExportsService.getFuelExportTableOptions({
-          query: { compliancePeriod: params.compliancePeriod }
+          query: { compliancePeriod }
         })
 
         return data

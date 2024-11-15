@@ -34,9 +34,9 @@ export const AddEditFuelSupplies = () => {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
-  } = useFuelSupplyOptions({ compliancePeriod })
+  } = useFuelSupplyOptions(compliancePeriod)
 
-  const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveFuelSupply(complianceReportId)
 
   const { data, isLoading: fuelSuppliesLoading } =
     useGetFuelSupplies(complianceReportId)
