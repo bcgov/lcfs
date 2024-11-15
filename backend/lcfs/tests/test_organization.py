@@ -4,7 +4,6 @@ from httpx import AsyncClient
 from starlette import status
 
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.tests.audit_log.conftest import mock_user_role
 from lcfs.web.api.organizations.schema import (
     OrganizationBalanceResponseSchema,
     OrganizationListSchema,
