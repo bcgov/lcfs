@@ -1,5 +1,5 @@
 import structlog
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from fastapi import Depends
 from sqlalchemy import and_, delete, or_, select, case
 from sqlalchemy import func
@@ -360,7 +360,7 @@ class FuelSupplyRepository:
     @repo_handler
     async def get_effective_fuel_supplies(
         self, compliance_report_group_uuid: str
-    ) -> List[FuelSupply]:
+    ) -> Sequence[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
         For each group_uuid:
@@ -436,6 +436,7 @@ class FuelSupplyRepository:
                     user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
                 ),
             )
+            .order_by(FuelSupply.create_date.asc())
         )
 
         # Step 5: Execute the query and retrieve results using unique()
