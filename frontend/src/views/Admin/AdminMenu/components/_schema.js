@@ -51,7 +51,9 @@ export const usersColumnDefs = (t) => [
     floatingFilterComponentParams: {
       apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
       // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
-      params: 'government_roles_only=true',
+      params: {
+        governmentRolesOnly: true
+      },
       key: 'admin-users',
       disableCloseOnSelect: false,
       multiple: false
