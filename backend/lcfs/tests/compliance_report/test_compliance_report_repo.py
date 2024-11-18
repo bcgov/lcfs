@@ -943,7 +943,8 @@ async def test_calculate_fuel_quantities_success_not_fossil_derived(
     )
 
     result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report=compliance_reports[0],
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        effective_fuel_supplies=non_fossil_fuel_supplies,
         fossil_derived=False,
     )
 
@@ -965,7 +966,8 @@ async def test_calculate_fuel_quantities_success_fossil_derived(
     )
 
     result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report=compliance_reports[0],
+        compliance_report_id=compliance_reports[0].compliance_report_id,
+        effective_fuel_supplies=fossil_fuel_supplies,
         fossil_derived=True,
     )
 

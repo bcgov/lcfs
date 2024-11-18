@@ -30,6 +30,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportSummarySchema,
+    ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
@@ -532,7 +533,7 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, summary: ComplianceReportSummarySchema
+        self, summary: ComplianceReportSummaryUpdateSchema
     ):
         """
         Save the compliance report summary to the database.
@@ -667,17 +668,15 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def calculate_fuel_quantities(
-        self, compliance_report: ComplianceReport, fossil_derived: bool
+        self,
+        compliance_report_id: int,
+        effective_fuel_supplies: List[FuelSupply],
+        fossil_derived: bool,
     ) -> Dict[str, float]:
         """
         Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
         """
         fuel_quantities = defaultdict(float)
-
-        # Get effective fuel supplies using the updated logic
-        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
-        )
 
         # Filter fuel supplies based on fossil_derived flag
         filtered_fuel_supplies = [
@@ -706,8 +705,7 @@ class ComplianceReportRepository:
                 OtherUses.fuel_category_id == FuelCategory.fuel_category_id,
             )
             .where(
-                OtherUses.compliance_report_id
-                == compliance_report.compliance_report_id,
+                OtherUses.compliance_report_id == compliance_report_id,
                 FuelType.fossil_derived.is_(fossil_derived),
                 FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
@@ -738,8 +736,7 @@ class ComplianceReportRepository:
                     == FuelCategory.fuel_category_id,
                 )
                 .where(
-                    AllocationAgreement.compliance_report_id
-                    == compliance_report.compliance_report_id,
+                    AllocationAgreement.compliance_report_id == compliance_report_id,
                     FuelType.fossil_derived.is_(False),
                     FuelType.other_uses_fossil_derived.is_(False),
                 )
