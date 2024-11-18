@@ -58,7 +58,7 @@ export const AddEditUser = ({ userType }) => {
         )
       : { undefined, isLoading: false, isFetched: false }
     : // eslint-disable-next-line react-hooks/rules-of-hooks
-      useUser(userID, { enabled: !!userID, retry: false })
+      useUser({ id: +userID }, { enabled: !!userID, retry: false })
 
   // User form hook and form validation
   const form = useForm({
