@@ -71,7 +71,7 @@ export const useSaveFuelExport = (complianceReportId: number) => {
           complianceReportId,
           ...data
         }
-        console.log(body)
+
         await FuelExportsService.saveFuelExportRow({ body })
       } catch (error) {
         console.log(error)
