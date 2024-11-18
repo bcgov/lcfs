@@ -107,20 +107,41 @@ export type AllocationTransactionTypeSchema = {
 
 export type AudienceScopeEnum = 'Compliance Manager' | 'Director' | 'Analyst';
 
-export type AuditLogResponseSchema = {
-    id: number;
-    table_name: string;
-    operation: string;
-    row_id: number;
-    old_values: ({
+export type AuditLogListItemSchema = {
+    auditLogId: number;
+    tableName: string;
+    operation: AuditLogOperationEnum;
+    rowId: number;
+    changedFields?: (string | null);
+    createDate?: (string | null);
+    createUser?: (string | null);
+};
+
+export type AuditLogListSchema = {
+    pagination: PaginationResponseSchema;
+    auditLogs: Array<AuditLogListItemSchema>;
+};
+
+export type AuditLogOperationEnum = 'INSERT' | 'UPDATE' | 'DELETE';
+
+export type AuditLogSchema = {
+    auditLogId: number;
+    tableName: string;
+    operation: AuditLogOperationEnum;
+    rowId: number;
+    oldValues?: ({
     [key: string]: unknown;
 } | null);
-    new_values: ({
+    newValues?: ({
     [key: string]: unknown;
 } | null);
-    delta: ({
+    delta?: ({
     [key: string]: unknown;
 } | null);
+    createDate?: (string | null);
+    createUser?: (string | null);
+    updateDate?: (string | null);
+    updateUser?: (string | null);
 };
 
 export type Body_uploadFile = {
@@ -1573,22 +1594,23 @@ export type SearchAllocationAgreementTableOptionsStringsResponse = (Array<Organi
 
 export type SearchAllocationAgreementTableOptionsStringsError = (HTTPValidationError);
 
-export type GetAuditLogData = {
-    query?: {
-        /**
-         * Filter by operation
-         */
-        operation?: (string | null);
-        /**
-         * Filter by table name
-         */
-        table_name?: (string | null);
+export type GetAuditLogsPaginatedData = {
+    body: PaginationRequestSchema;
+};
+
+export type GetAuditLogsPaginatedResponse = (AuditLogListSchema);
+
+export type GetAuditLogsPaginatedError = (HTTPValidationError);
+
+export type GetAuditLogByIdData = {
+    path: {
+        audit_log_id: number;
     };
 };
 
-export type GetAuditLogResponse = (AuditLogResponseSchema);
+export type GetAuditLogByIdResponse = (AuditLogSchema);
 
-export type GetAuditLogError = (HTTPValidationError);
+export type GetAuditLogByIdError = (HTTPValidationError);
 
 export type GetCompliancePeriodsResponse = (Array<CompliancePeriodSchema>);
 

@@ -4854,50 +4854,65 @@
         }
       }
     },
-    "/api/audit_log/": {
+    "/api/audit-log/list": {
+      "post": {
+        "tags": [
+          "audit_log"
+        ],
+        "summary": "Get Audit Logs Paginated",
+        "description": "Fetches a list of audit logs with pagination and filtering.",
+        "operationId": "getAuditLogsPaginated",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaginationRequestSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogListSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/audit-log/{audit_log_id}": {
       "get": {
         "tags": [
           "audit_log"
         ],
-        "summary": "Get Audit Log",
-        "description": "Get audit logs with optional filters for `table_name` and `operation`.",
-        "operationId": "getAuditLog",
+        "summary": "Get Audit Log By Id",
+        "description": "Retrieve an audit log entry by ID.",
+        "operationId": "getAuditLogById",
         "parameters": [
           {
-            "name": "table_name",
-            "in": "query",
-            "required": false,
+            "name": "audit_log_id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by table name",
-              "title": "Table Name"
-            },
-            "description": "Filter by table name"
-          },
-          {
-            "name": "operation",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by operation",
-              "title": "Operation"
-            },
-            "description": "Filter by operation"
+              "type": "integer",
+              "title": "Audit Log Id"
+            }
           }
         ],
         "responses": {
@@ -4906,7 +4921,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuditLogResponseSchema"
+                  "$ref": "#/components/schemas/AuditLogSchema"
                 }
               }
             }
@@ -5542,25 +5557,114 @@
         ],
         "title": "AudienceScopeEnum"
       },
-      "AuditLogResponseSchema": {
+      "AuditLogListItemSchema": {
         "properties": {
-          "id": {
+          "auditLogId": {
             "type": "integer",
-            "title": "Id"
+            "title": "Auditlogid"
           },
-          "table_name": {
+          "tableName": {
             "type": "string",
-            "title": "Table Name"
+            "title": "Tablename"
           },
           "operation": {
-            "type": "string",
-            "title": "Operation"
+            "$ref": "#/components/schemas/AuditLogOperationEnum"
           },
-          "row_id": {
+          "rowId": {
             "type": "integer",
-            "title": "Row Id"
+            "title": "Rowid"
           },
-          "old_values": {
+          "changedFields": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changedfields"
+          },
+          "createDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdate"
+          },
+          "createUser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createuser"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auditLogId",
+          "tableName",
+          "operation",
+          "rowId"
+        ],
+        "title": "AuditLogListItemSchema"
+      },
+      "AuditLogListSchema": {
+        "properties": {
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationResponseSchema"
+          },
+          "auditLogs": {
+            "items": {
+              "$ref": "#/components/schemas/AuditLogListItemSchema"
+            },
+            "type": "array",
+            "title": "Auditlogs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pagination",
+          "auditLogs"
+        ],
+        "title": "AuditLogListSchema"
+      },
+      "AuditLogOperationEnum": {
+        "type": "string",
+        "enum": [
+          "INSERT",
+          "UPDATE",
+          "DELETE"
+        ],
+        "title": "AuditLogOperationEnum"
+      },
+      "AuditLogSchema": {
+        "properties": {
+          "auditLogId": {
+            "type": "integer",
+            "title": "Auditlogid"
+          },
+          "tableName": {
+            "type": "string",
+            "title": "Tablename"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/AuditLogOperationEnum"
+          },
+          "rowId": {
+            "type": "integer",
+            "title": "Rowid"
+          },
+          "oldValues": {
             "anyOf": [
               {
                 "type": "object"
@@ -5569,9 +5673,9 @@
                 "type": "null"
               }
             ],
-            "title": "Old Values"
+            "title": "Oldvalues"
           },
-          "new_values": {
+          "newValues": {
             "anyOf": [
               {
                 "type": "object"
@@ -5580,7 +5684,7 @@
                 "type": "null"
               }
             ],
-            "title": "New Values"
+            "title": "Newvalues"
           },
           "delta": {
             "anyOf": [
@@ -5592,19 +5696,62 @@
               }
             ],
             "title": "Delta"
+          },
+          "createDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdate"
+          },
+          "createUser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createuser"
+          },
+          "updateDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedate"
+          },
+          "updateUser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updateuser"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "table_name",
+          "auditLogId",
+          "tableName",
           "operation",
-          "row_id",
-          "old_values",
-          "new_values",
-          "delta"
+          "rowId"
         ],
-        "title": "AuditLogResponseSchema"
+        "title": "AuditLogSchema"
       },
       "Body_uploadFile": {
         "properties": {

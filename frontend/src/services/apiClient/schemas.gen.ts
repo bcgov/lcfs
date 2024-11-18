@@ -561,25 +561,105 @@ export const AudienceScopeEnumSchema = {
     title: 'AudienceScopeEnum'
 } as const;
 
-export const AuditLogResponseSchemaSchema = {
+export const AuditLogListItemSchemaSchema = {
     properties: {
-        id: {
+        auditLogId: {
             type: 'integer',
-            title: 'Id'
+            title: 'Auditlogid'
         },
-        table_name: {
+        tableName: {
             type: 'string',
-            title: 'Table Name'
+            title: 'Tablename'
         },
         operation: {
-            type: 'string',
-            title: 'Operation'
+            '$ref': '#/components/schemas/AuditLogOperationEnum'
         },
-        row_id: {
+        rowId: {
             type: 'integer',
-            title: 'Row Id'
+            title: 'Rowid'
         },
-        old_values: {
+        changedFields: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Changedfields'
+        },
+        createDate: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Createdate'
+        },
+        createUser: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Createuser'
+        }
+    },
+    type: 'object',
+    required: ['auditLogId', 'tableName', 'operation', 'rowId'],
+    title: 'AuditLogListItemSchema'
+} as const;
+
+export const AuditLogListSchemaSchema = {
+    properties: {
+        pagination: {
+            '$ref': '#/components/schemas/PaginationResponseSchema'
+        },
+        auditLogs: {
+            items: {
+                '$ref': '#/components/schemas/AuditLogListItemSchema'
+            },
+            type: 'array',
+            title: 'Auditlogs'
+        }
+    },
+    type: 'object',
+    required: ['pagination', 'auditLogs'],
+    title: 'AuditLogListSchema'
+} as const;
+
+export const AuditLogOperationEnumSchema = {
+    type: 'string',
+    enum: ['INSERT', 'UPDATE', 'DELETE'],
+    title: 'AuditLogOperationEnum'
+} as const;
+
+export const AuditLogSchemaSchema = {
+    properties: {
+        auditLogId: {
+            type: 'integer',
+            title: 'Auditlogid'
+        },
+        tableName: {
+            type: 'string',
+            title: 'Tablename'
+        },
+        operation: {
+            '$ref': '#/components/schemas/AuditLogOperationEnum'
+        },
+        rowId: {
+            type: 'integer',
+            title: 'Rowid'
+        },
+        oldValues: {
             anyOf: [
                 {
                     type: 'object'
@@ -588,9 +668,9 @@ export const AuditLogResponseSchemaSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Old Values'
+            title: 'Oldvalues'
         },
-        new_values: {
+        newValues: {
             anyOf: [
                 {
                     type: 'object'
@@ -599,7 +679,7 @@ export const AuditLogResponseSchemaSchema = {
                     type: 'null'
                 }
             ],
-            title: 'New Values'
+            title: 'Newvalues'
         },
         delta: {
             anyOf: [
@@ -611,11 +691,57 @@ export const AuditLogResponseSchemaSchema = {
                 }
             ],
             title: 'Delta'
+        },
+        createDate: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Createdate'
+        },
+        createUser: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Createuser'
+        },
+        updateDate: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updatedate'
+        },
+        updateUser: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updateuser'
         }
     },
     type: 'object',
-    required: ['id', 'table_name', 'operation', 'row_id', 'old_values', 'new_values', 'delta'],
-    title: 'AuditLogResponseSchema'
+    required: ['auditLogId', 'tableName', 'operation', 'rowId'],
+    title: 'AuditLogSchema'
 } as const;
 
 export const Body_uploadFileSchema = {
