@@ -1,4 +1,8 @@
-import { phoneNumberFormatter, dateFormatter, timezoneFormatter } from '@/utils/formatters'
+import {
+  phoneNumberFormatter,
+  dateFormatter,
+  timezoneFormatter
+} from '@/utils/formatters'
 import {
   LinkRenderer,
   RoleRenderer,
@@ -132,12 +136,12 @@ export const userActivityColDefs = [
   {
     colId: 'actionTaken',
     field: 'actionTaken',
-    headerName: 'Action Taken',
+    headerName: 'Action Taken'
   },
   {
     colId: 'transactionType',
     field: 'transactionType',
-    headerName: 'Transaction Type',
+    headerName: 'Transaction Type'
   },
   {
     colId: 'transactionId',
@@ -147,15 +151,15 @@ export const userActivityColDefs = [
       const transactionType = params.data.transactionType
       const prefix = prefixMap[transactionType] || ''
       return `${prefix}${params.data.transactionId}`
-    },
+    }
   },
   {
     colId: 'createDate',
     field: 'createDate',
     headerName: 'Date',
     valueFormatter: dateFormatter,
-    filter: false,
-  },
+    filter: false
+  }
 ]
 
 export const userLoginHistoryColDefs = (t) => [
@@ -198,3 +202,66 @@ export const userLoginHistoryColDefs = (t) => [
 ]
 
 export const defaultSortModel = [{ field: 'createDate', direction: 'desc' }]
+
+export const auditLogColDefs = (t) => [
+  {
+    colId: 'createUser',
+    field: 'createUser',
+    headerName: t('admin:auditLogColLabels.userId'),
+    minWidth: 150,
+    sortable: true,
+    filter: 'agTextColumnFilter'
+  },
+  {
+    colId: 'tableName',
+    field: 'tableName',
+    headerName: t('admin:auditLogColLabels.tableName'),
+    minWidth: 150,
+    sortable: true,
+    filter: 'agTextColumnFilter'
+  },
+  {
+    colId: 'operation',
+    field: 'operation',
+    headerName: t('admin:auditLogColLabels.operation'),
+    minWidth: 150,
+    sortable: true,
+    filter: 'agTextColumnFilter'
+  },
+  {
+    colId: 'rowId',
+    field: 'rowId',
+    headerName: t('admin:auditLogColLabels.rowId'),
+    minWidth: 100,
+    sortable: true,
+    filter: 'agTextColumnFilter'
+  },
+  {
+    colId: 'changedFields',
+    field: 'changedFields',
+    headerName: t('admin:auditLogColLabels.changedFields'),
+    minWidth: 300,
+    sortable: false,
+    filter: false
+  },
+  {
+    colId: 'createDate',
+    field: 'createDate',
+    cellDataType: 'dateString',
+    headerName: t('admin:auditLogColLabels.createDate'),
+    flex: 1,
+    valueGetter: ({ data }) => data.createDate || '',
+    valueFormatter: timezoneFormatter,
+    suppressFloatingFilterButton: true,
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      buttons: ['clear']
+    }
+  }
+]
+
+export const defaultAuditLogSortModel = [
+  { field: 'createDate', direction: 'desc' }
+]

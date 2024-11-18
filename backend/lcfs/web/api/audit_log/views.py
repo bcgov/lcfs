@@ -1,30 +1,46 @@
-from functools import cache
-from fastapi import APIRouter, Depends, Query
-from typing import List, Optional
+import structlog
+from fastapi import APIRouter, Depends, status, Request, Body
 
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import view_handler
-from .services import AuditLogService
-from .schema import AuditLogResponseSchema
-from starlette import status
-from fastapi import Request 
+from lcfs.web.api.audit_log.services import AuditLogService
+from lcfs.web.api.audit_log.schema import AuditLogListSchema, AuditLogSchema
+from lcfs.db.models.user.Role import RoleEnum
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
 
-@router.get(
-    "/",
-    response_model=AuditLogResponseSchema,
+@router.post(
+    "/list",
+    response_model=AuditLogListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.ADMINISTRATOR])
-async def get_audit_log(
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
+async def get_audit_logs_paginated(
     request: Request,
-    table_name: Optional[str] = Query(None, description="Filter by table name"),
-    operation: Optional[str] = Query(None, description="Filter by operation"),
+    pagination: PaginationRequestSchema = Body(..., embed=False),
     service: AuditLogService = Depends(),
 ):
     """
-    Get audit logs with optional filters for `table_name` and `operation`.
+    Fetches a list of audit logs with pagination and filtering.
     """
-    return await service.get_audit_log(table_name=table_name, operation=operation)
+    return await service.get_audit_logs_paginated(pagination)
+
+
+@router.get(
+    "/{audit_log_id}",
+    response_model=AuditLogSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ADMINISTRATOR])
+async def get_audit_log_by_id(
+    request: Request,
+    audit_log_id: int,
+    service: AuditLogService = Depends(),
+):
+    """
+    Retrieve an audit log entry by ID.
+    """
+    return await service.get_audit_log_by_id(audit_log_id)
