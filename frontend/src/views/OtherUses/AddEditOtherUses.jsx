@@ -33,8 +33,9 @@ export const AddEditOtherUses = () => {
     isLoading: optionsLoading,
     isFetched
   } = useOtherUsesOptions()
-  const { data: otherUses, isLoading: usesLoading } =
-    useGetAllOtherUses(complianceReportId)
+  const { data: otherUsesData, isLoading: usesLoading } = useGetAllOtherUses({
+    complianceReportId
+  })
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
   const navigate = useNavigate()
 
@@ -61,9 +62,9 @@ export const AddEditOtherUses = () => {
       })
     }
 
-    if (otherUses && otherUses.length > 0) {
+    if (otherUsesData.otherUses && otherUsesData.otherUses.length > 0) {
       try {
-        setRowData(ensureRowIds(otherUses))
+        setRowData(ensureRowIds(otherUsesData.otherUses))
       } catch (error) {
         alertRef.triggerAlert({
           message: t('otherUses:otherUsesLoadFailMsg'),

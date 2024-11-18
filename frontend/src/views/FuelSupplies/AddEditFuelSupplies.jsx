@@ -38,8 +38,9 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply(complianceReportId)
 
-  const { data, isLoading: fuelSuppliesLoading } =
-    useGetFuelSupplies(complianceReportId)
+  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSupplies({
+    complianceReportId
+  })
 
   const gridOptions = useMemo(
     () => ({

@@ -20,7 +20,11 @@ export const useFuelSupplyOptions = (compliancePeriod: string) => {
   })
 }
 
-export const useGetFuelSupplies = (complianceReportId: string) => {
+export const useGetFuelSupplies = ({
+  complianceReportId
+}: {
+  complianceReportId: string
+}) => {
   return useQuery({
     queryKey: ['fuel-supplies', complianceReportId],
     queryFn: async () => {

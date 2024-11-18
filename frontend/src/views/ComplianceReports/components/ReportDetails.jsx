@@ -206,7 +206,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         </Link>
       </Typography>
       {activityList.map((activity, index) => {
-        const { data, error, isLoading } = activity.useFetch(complianceReportId)
+        const { data, error, isLoading } = activity.useFetch({
+          complianceReportId
+        })
         return (
           data &&
           !isArrayEmpty(data) && (

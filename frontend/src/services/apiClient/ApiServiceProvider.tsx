@@ -36,7 +36,6 @@ export const ApiServiceProvider = ({
   children: React.JSX.Element
 }) => {
   const { keycloak } = useKeycloak()
-  console.log(CONFIG)
   client.setConfig({
     baseURL: CONFIG.API_BASE.replace('/api', ''),
     throwOnError: true
