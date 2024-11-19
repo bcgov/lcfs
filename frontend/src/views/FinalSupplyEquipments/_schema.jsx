@@ -164,6 +164,7 @@ export const finalSupplyEquipmentColDefs = (
     ),
     minWidth: 220,
     cellEditor: AutocompleteCellEditor,
+    suppressKeyboardEvent,
     cellEditorParams: {
       options: optionsData?.ports || [],
       multiple: false,
