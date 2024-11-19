@@ -22,7 +22,7 @@ describe('Disclaimer Banner Visibility Test Suite', () => {
         'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'
       ).should('be.visible')
       cy.contains(
-        "For security and privacy reasons, please don't share personal information on this website."
+        "For security and privacy, please don't share personal information on this website."
       ).should('be.visible')
     })
   })
@@ -46,7 +46,7 @@ describe('Disclaimer Banner Visibility Test Suite', () => {
         'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'
       ).should('not.exist')
       cy.contains(
-        "For security and privacy reasons, please don't share personal information on this website."
+        "For security and privacy, please don't share personal information on this website."
       ).should('be.visible')
     })
   })
