@@ -139,12 +139,12 @@ export const renewableFuelColumns = (
     data[SUMMARY.LINE_2].gasoline > 0 &&
     data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
   )
-    gasolineEditableCells = [SUMMARY.LINE_6, SUMMARY.LINE_7]
+    gasolineEditableCells = [SUMMARY.LINE_6]
   else if (
     data[SUMMARY.LINE_1].gasoline > 0 &&
     data[SUMMARY.LINE_2].gasoline - data[SUMMARY.LINE_4].gasoline > 0
   )
-    gasolineEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
+    gasolineEditableCells = [SUMMARY.LINE_8]
 
   // Line 8
   if (data[SUMMARY.LINE_2].gasoline < data[SUMMARY.LINE_4].gasoline) {
@@ -164,12 +164,12 @@ export const renewableFuelColumns = (
     data[SUMMARY.LINE_2].diesel > 0 &&
     data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
   )
-    dieselEditableCells = [SUMMARY.LINE_6, SUMMARY.LINE_7]
+    dieselEditableCells = [SUMMARY.LINE_6]
   else if (
     data[SUMMARY.LINE_1].diesel > 0 &&
     data[SUMMARY.LINE_2].diesel - data[SUMMARY.LINE_4].diesel > 0
   )
-    dieselEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
+    dieselEditableCells = [SUMMARY.LINE_8]
 
   // Line 8
   if (data[SUMMARY.LINE_2].diesel < data[SUMMARY.LINE_4].diesel) {
@@ -189,12 +189,12 @@ export const renewableFuelColumns = (
     data[SUMMARY.LINE_2].jetFuel > 0 &&
     data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
   )
-    jetFuelEditableCells = [SUMMARY.LINE_6, SUMMARY.LINE_7]
+    jetFuelEditableCells = [SUMMARY.LINE_6]
   else if (
     data[SUMMARY.LINE_1].jetFuel > 0 &&
     data[SUMMARY.LINE_2].jetFuel - data[SUMMARY.LINE_4].jetFuel > 0
   )
-    jetFuelEditableCells = [SUMMARY.LINE_8, SUMMARY.LINE_9]
+    jetFuelEditableCells = [SUMMARY.LINE_8]
 
   // Line 8
   if (parseInt(compliancePeriodYear) >= 2028) {
