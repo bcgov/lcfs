@@ -24,8 +24,6 @@ async def set_user_context(session: AsyncSession, username: str):
     try:
         await session.execute(text(f"SET SESSION app.username = '{username}'"))
 
-        logging.info(f"SET SESSION app.username = '{username}' executed successfully")
-
     except Exception as e:
         logging.error(f"Failed to execute SET LOCAL app.user_id = '{username}': {e}")
         raise e

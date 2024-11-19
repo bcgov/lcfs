@@ -1,6 +1,6 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
@@ -20,9 +20,61 @@ export const otherUsesColDefs = (optionsData, errors) => [
     hide: true
   },
   {
+    // TODO Temporary column to show version types, change this logic in later ticket
+    field: 'actionType',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.actionType'),
+    minWidth: 125,
+    maxWidth: 150,
+    editable: false,
+    cellStyle: (params) => {
+      switch (params.data.actionType) {
+        case 'CREATE':
+          return {
+            backgroundColor: '#e0f7df',
+            color: '#388e3c',
+            fontWeight: 'bold'
+          }
+        case 'UPDATE':
+          return {
+            backgroundColor: '#fff8e1',
+            color: '#f57c00',
+            fontWeight: 'bold'
+          }
+        case 'DELETE':
+          return {
+            backgroundColor: '#ffebee',
+            color: '#d32f2f',
+            fontWeight: 'bold'
+          }
+        default:
+          return {}
+      }
+    },
+    cellRenderer: (params) => {
+      switch (params.data.actionType) {
+        case 'CREATE':
+          return 'Create'
+        case 'UPDATE':
+          return 'Edit'
+        case 'DELETE':
+          return 'Deleted'
+        default:
+          return ''
+      }
+    },
+    tooltipValueGetter: (params) => {
+      const actionMap = {
+        CREATE: 'This record was created.',
+        UPDATE: 'This record has been edited.',
+        DELETE: 'This record was deleted.'
+      }
+      return actionMap[params.data.actionType] || ''
+    }
+  },
+  {
     field: 'fuelType',
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     minWidth: '280',
     cellEditorParams: {
       options: optionsData.fuelTypes.map((obj) => obj.fuelType),
@@ -39,7 +91,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'fuelCategory',
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData.fuelCategories.map((obj) => obj.category),
       multiple: false,
@@ -68,7 +120,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'units',
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     minWidth: '155',
     cellEditorParams: {
       options: optionsData.unitsOfMeasure.map((obj) => obj),
@@ -85,7 +137,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'expectedUse',
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     flex: 1,
     cellEditorParams: {
       options: optionsData.expectedUses.map((obj) => obj.name),

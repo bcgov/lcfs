@@ -1,7 +1,3 @@
-"""
-Other Uses endpoints
-"""
-
 import structlog
 from typing import Optional, Union
 
@@ -12,6 +8,7 @@ from fastapi import (
     Request,
     Response,
     Depends,
+    HTTPException,
 )
 
 from lcfs.db import dependencies
@@ -21,7 +18,6 @@ from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.schema import (
     OtherUsesCreateSchema,
     OtherUsesSchema,
-    OtherUsesListSchema,
     OtherUsesTableOptionsSchema,
     DeleteOtherUsesResponseSchema,
     PaginatedOtherUsesRequestSchema,
@@ -64,7 +60,9 @@ async def get_other_uses(
     report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of other uses for a compliance report"""
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     return await service.get_other_uses(request_data.compliance_report_id)
 
 
@@ -86,7 +84,9 @@ async def get_other_uses_paginated(
         sort_orders=request_data.sort_orders,
         filters=request_data.filters,
     )
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_other_uses_paginated(pagination, compliance_report_id)
 
@@ -110,22 +110,29 @@ async def save_other_uses_row(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
+    # Determine user type for record creation
+    current_user_type = request.user.user_type
+    if not current_user_type:
+        raise HTTPException(
+            status_code=403, detail="User does not have the required role."
+        )
+
     if request_data.deleted:
         # Delete existing other use
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        await service.delete_other_use(other_uses_id)
+        await service.delete_other_use(request_data, current_user_type)
         return DeleteOtherUsesResponseSchema(message="Other use deleted successfully")
     elif other_uses_id:
         # Update existing other use
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.update_other_use(request_data)
+        return await service.update_other_use(request_data, current_user_type)
     else:
         # Create new other use
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.create_other_use(request_data)
+        return await service.create_other_use(request_data, current_user_type)

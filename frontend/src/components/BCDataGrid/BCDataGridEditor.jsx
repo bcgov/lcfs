@@ -6,7 +6,7 @@ import { v4 as uuid } from 'uuid'
 import BCBox from '@/components/BCBox'
 import DataGridLoading from '@/components/DataGridLoading'
 import {
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   AsyncValidationEditor,
   DateEditor,
   DateRangeCellEditor,
@@ -48,7 +48,7 @@ const BCDataGridEditor = ({
   const frameworkComponents = useMemo(
     () => ({
       asyncValidationEditor: AsyncValidationEditor,
-      autocompleteEditor: AutocompleteEditor,
+      AutocompleteCellEditor: AutocompleteCellEditor,
       dateEditor: DateEditor,
       actionsRenderer: ActionsRenderer,
       asyncSuggestionEditor: AsyncSuggestionEditor,

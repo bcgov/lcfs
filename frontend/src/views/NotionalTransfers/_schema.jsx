@@ -4,7 +4,7 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
   AsyncSuggestionEditor,
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
@@ -90,7 +90,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.fuelCategory'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
@@ -110,7 +110,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {

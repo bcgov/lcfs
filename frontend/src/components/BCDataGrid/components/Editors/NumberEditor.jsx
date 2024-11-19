@@ -62,7 +62,7 @@ export const NumberEditor = forwardRef(
         value={formatNumber(value)}
         onChange={onInputChange}
         variant="outlined"
-        margin="0"
+        margin="none"
         fullWidth
         size="small"
         inputProps={{

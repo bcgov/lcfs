@@ -8,6 +8,10 @@ import { timezoneFormatter } from '@/utils/formatters'
 import { Typography } from '@mui/material'
 import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
+import {
+  AutocompleteCellEditor,
+  RequiredHeader
+} from '@/components/BCDataGrid/components'
 
 export const fuelCodeColDefs = (t) => [
   {
@@ -272,7 +276,6 @@ export const addEditSchema = {
         })
       )
     }),
-
   fuelCodeColDefs: (t, optionsData, isDraftOrNew = true) => [
     {
       colId: 'action',
@@ -299,8 +302,9 @@ export const addEditSchema = {
     },
     {
       field: 'prefix',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellRenderer: (params) =>
         params.value ||
         (!params.value && <Typography variant="body4">Select</Typography>),
@@ -325,12 +329,14 @@ export const addEditSchema = {
     },
     {
       field: 'fuelSuffix',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
       cellDataType: 'text',
       editable: false
     },
     {
       field: 'carbonIntensity',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
       cellEditor: 'agNumberCellEditor',
       cellEditorParams: {
@@ -345,6 +351,7 @@ export const addEditSchema = {
     },
     {
       field: 'edrms',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.edrms'),
       cellEditor: 'agTextCellEditor',
       cellStyle: (params) => {
@@ -356,6 +363,7 @@ export const addEditSchema = {
     },
     {
       field: 'company',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.company'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
@@ -402,6 +410,7 @@ export const addEditSchema = {
     },
     {
       field: 'applicationDate',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
       maxWidth: 180,
       minWidth: 180,
@@ -463,8 +472,9 @@ export const addEditSchema = {
     },
     {
       field: 'fuel',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.fuel'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellRenderer: (params) =>
         params.value ||
         (!params.value && <Typography variant="body4">Select</Typography>),
@@ -490,6 +500,7 @@ export const addEditSchema = {
     },
     {
       field: 'feedstock',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
@@ -502,6 +513,7 @@ export const addEditSchema = {
     },
     {
       field: 'feedstockLocation',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
@@ -522,8 +534,9 @@ export const addEditSchema = {
     },
     {
       field: 'fuelProductionFacilityCity',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellDataType: 'text',
       cellStyle: (params) => {
         if (params.data.modified && (!params.value || params.value === ''))
@@ -552,10 +565,11 @@ export const addEditSchema = {
     },
     {
       field: 'fuelProductionFacilityProvinceState',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t(
         'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
       ),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellDataType: 'text',
       cellStyle: (params) => {
         if (params.data.modified && (!params.value || params.value === ''))
@@ -584,8 +598,9 @@ export const addEditSchema = {
     },
     {
       field: 'fuelProductionFacilityCountry',
+      headerComponent: isDraftOrNew ? RequiredHeader : undefined,
       headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellDataType: 'text',
       cellStyle: (params) => {
         if (params.data.modified && (!params.value || params.value === ''))
@@ -627,7 +642,7 @@ export const addEditSchema = {
     {
       field: 'facilityNameplateCapacityUnit',
       headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellRenderer: (params) =>
         params.value ||
         (!params.value && <Typography variant="body4">Select</Typography>),
@@ -652,7 +667,7 @@ export const addEditSchema = {
     {
       field: 'feedstockFuelTransportMode',
       headerName: t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellRenderer: (params) =>
         params.value ? (
           <CommonArrayRenderer {...params} />
@@ -675,7 +690,7 @@ export const addEditSchema = {
     {
       field: 'finishedFuelTransportMode',
       headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
-      cellEditor: 'autocompleteEditor',
+      cellEditor: AutocompleteCellEditor,
       cellRenderer: (params) =>
         params.value ? (
           <CommonArrayRenderer {...params} />

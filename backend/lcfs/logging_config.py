@@ -1,3 +1,4 @@
+import sys
 import logging
 import structlog
 import contextvars
@@ -5,6 +6,7 @@ from io import StringIO
 from rich.console import Console
 from rich.pretty import Pretty
 from rich.text import Text
+from rich.traceback import Traceback
 from lcfs.settings import settings
 
 # Context variables for correlation ID
@@ -69,10 +71,23 @@ def custom_console_renderer():
 
         # Print key-value pairs with custom colors
         for key, value in event_dict.items():
-            # Customize key color and style
-            console.print(f"  {key}=", style="bold bright_cyan", end="")
-            # Print the value with Pretty
-            console.print(Pretty(value))
+            if key == "exc_info" and value:
+                # value is a tuple containing exception info
+                if isinstance(value, tuple):
+                    exc_type, exc_value, exc_traceback = value
+                else:
+                    # Fallback if value is not a tuple
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+                # Create a Traceback object
+                rich_traceback = Traceback.from_exception(
+                    exc_type, exc_value, exc_traceback, width=console.width
+                )
+                console.print(rich_traceback)
+            else:
+                # Customize key color and style
+                console.print(f"  {key}=", style="bold bright_cyan", end="")
+                # Print the value with Pretty
+                console.print(Pretty(value))
 
         # Get the rendered message
         rendered_message = console_output.getvalue()
@@ -97,11 +112,25 @@ def setup_logging(level=logging.INFO):
     # Choose renderer based on environment
     if settings.environment.lower() == "dev":
         renderer = custom_console_renderer()
+        processors = [
+            structlog.contextvars.merge_contextvars,
+            add_correlation_id,
+            structlog.processors.add_log_level,
+            structlog.processors.CallsiteParameterAdder(
+                [
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.FUNC_NAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            ),
+            structlog.processors.StackInfoRenderer(),
+            exc_info_processor,
+            censor_sensitive_data_processor,
+            renderer,
+        ]
     else:
         renderer = structlog.processors.JSONRenderer()
-
-    structlog.configure(
-        processors=[
+        processors = [
             structlog.contextvars.merge_contextvars,
             add_correlation_id,
             structlog.processors.add_log_level,
@@ -116,7 +145,19 @@ def setup_logging(level=logging.INFO):
             structlog.processors.format_exc_info,
             censor_sensitive_data_processor,
             renderer,
-        ],
+        ]
+
+    structlog.configure(
+        processors=processors,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
+
+def exc_info_processor(logger, method_name, event_dict):
+    """Replace exc_info=True with the actual exception information."""
+    exc_info = event_dict.get("exc_info")
+    if exc_info:
+        if exc_info is True:
+            event_dict["exc_info"] = sys.exc_info()
+    return event_dict

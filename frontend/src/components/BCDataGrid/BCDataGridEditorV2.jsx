@@ -6,7 +6,6 @@ import { v4 as uuid } from 'uuid'
 import BCBox from '@/components/BCBox'
 import DataGridLoading from '@/components/DataGridLoading'
 import {
-  AutocompleteEditor,
   AsyncValidationEditor,
   DateEditor,
   DateRangeCellEditor,
@@ -15,7 +14,8 @@ import {
   ValidationRenderer,
   RequiredHeader,
   LargeTextareaEditor,
-  TextCellEditor
+  TextCellEditor,
+  AutocompleteCellEditor
 } from '@/components/BCDataGrid/components'
 import Papa from 'papaparse'
 import '@ag-grid-community/styles/ag-grid.css'
@@ -49,7 +49,7 @@ const BCDataGridEditorV2 = ({
   const frameworkComponents = useMemo(
     () => ({
       asyncValidationEditor: AsyncValidationEditor,
-      autocompleteEditor: AutocompleteEditor,
+      autocompleteCellEditor: AutocompleteCellEditor,
       dateEditor: DateEditor,
       actionsRenderer: ActionsRenderer,
       asyncSuggestionEditor: AsyncSuggestionEditor,
