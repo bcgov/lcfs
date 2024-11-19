@@ -10,6 +10,7 @@ import i18n from '@/i18n'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import { Typography } from '@mui/material'
 import { actions, validation } from '@/components/BCDataGrid/columns'
+import { numberFormatter } from '@/utils/formatters'
 
 const cellErrorStyle = (params) => {
   if (
@@ -28,7 +29,7 @@ const createCellRenderer = (field, customRenderer = null) => {
     const content = customRenderer
       ? customRenderer(params)
       : params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>)
+        (!params.value && <Typography variant="body4">Select</Typography>)
     return <div style={{ color: hasError ? 'red' : 'inherit' }}>{content}</div>
   }
 
@@ -53,7 +54,9 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
-      options: optionsData?.fuelCodePrefixes?.filter(obj => obj.prefix).map((obj) => obj.prefix),
+      options: optionsData?.fuelCodePrefixes
+        ?.filter((obj) => obj.prefix)
+        .map((obj) => obj.prefix),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -135,7 +138,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
+    cellDataType: 'text'
   },
   {
     field: 'company',
@@ -447,6 +450,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   {
     field: 'facilityNameplateCapacity',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
+    valueFormatter: numberFormatter,
     cellEditor: 'agNumberCellEditor',
     type: 'numericColumn',
     cellEditorParams: {

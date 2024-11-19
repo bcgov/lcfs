@@ -4,7 +4,7 @@ import {
   FuelCodeStatusTextRenderer,
   TextRenderer
 } from '@/utils/grid/cellRenderers'
-import { timezoneFormatter } from '@/utils/formatters'
+import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
 import { Typography } from '@mui/material'
 import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
@@ -126,6 +126,7 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'facilityNameplateCapacity',
     headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
+    valueFormatter: numberFormatter,
     cellRenderer: TextRenderer,
     minWidth: 290,
     type: 'numericColumn'
@@ -631,6 +632,7 @@ export const addEditSchema = {
       headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
       cellEditor: 'agNumberCellEditor',
       type: 'numericColumn',
+      valueFormatter: numberFormatter,
       cellEditorParams: {
         precision: 0,
         min: 0,
