@@ -51,17 +51,23 @@ export const ViewOrgTransaction = () => {
     isLoading: isTransactionDataLoading,
     isError: isLoadingError,
     error
-  } = transactionDataHook(transactionId, {
-    enabled: !!transactionId && !!transactionType,
-    retry: false,
-    staleTime: 0,
-    cacheTime: 0,
-    keepPreviousData: false
-  })
+  } = transactionDataHook(
+    { adminAdjustmentId: transactionId },
+    {
+      enabled: !!transactionId && !!transactionType,
+      retry: false,
+      staleTime: 0,
+      cacheTime: 0,
+      keepPreviousData: false
+    }
+  )
 
   useEffect(() => {
     if (isLoadingError) {
-      alertRef.current?.triggerAlert({ message: error.response?.data?.detail || error.message, severity: 'error' })
+      alertRef.current?.triggerAlert({
+        message: error.response?.data?.detail || error.message,
+        severity: 'error'
+      })
     }
   }, [isLoadingError, error])
 
@@ -72,13 +78,14 @@ export const ViewOrgTransaction = () => {
     }
 
     if (isLoadingError) {
-      return <>
-        <FloatingAlert
-          ref={alertRef}
-          data-test="alert-box"
-          delay={10000}
-        /><BCTypography color="error">{t(`${transactionType}:actionMsgs.errorRetrieval`)}</BCTypography>
-      </>
+      return (
+        <>
+          <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
+          <BCTypography color="error">
+            {t(`${transactionType}:actionMsgs.errorRetrieval`)}
+          </BCTypography>
+        </>
+      )
     }
 
     if (!transactionData) {

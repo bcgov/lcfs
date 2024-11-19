@@ -1,58 +1,58 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import {
-  useMatches,
-  useParams,
-  useNavigate,
-  useLocation
-} from 'react-router-dom'
-import { FormProvider, useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
-import { yupResolver } from '@hookform/resolvers/yup'
-import { govRoles, roles } from '@/constants/roles'
+import BCAlert from '@/components/BCAlert'
+import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import InternalComments from '@/components/InternalComments'
+import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
+import { govRoles, roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import {
   useAdminAdjustment,
   useCreateUpdateAdminAdjustment
 } from '@/hooks/useAdminAdjustment'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  useInitiativeAgreement,
-  useCreateUpdateInitiativeAgreement
+  useCreateUpdateInitiativeAgreement,
+  useInitiativeAgreement
 } from '@/hooks/useInitiativeAgreement'
-import {
-  useTheme,
-  Stack,
-  Typography,
-  useMediaQuery,
-  Step,
-  StepLabel,
-  Stepper
-} from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
-import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
-import Loading from '@/components/Loading'
-import BCAlert from '@/components/BCAlert'
-import BCModal from '@/components/BCModal'
 import { dateFormatter } from '@/utils/formatters'
 import {
   Comments,
   TransactionDetails,
-  TransactionView,
-  TransactionHistory
+  TransactionHistory,
+  TransactionView
 } from '@/views/Transactions/components'
-import { useQueryClient } from '@tanstack/react-query'
-import { AddEditTransactionSchema } from './_schema.yup'
-import { buttonClusterConfigFn } from './buttonConfigs'
-import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { useTransactionMutation } from './transactionMutation'
-import InternalComments from '@/components/InternalComments'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { yupResolver } from '@hookform/resolvers/yup'
+import {
+  Stack,
+  Step,
+  StepLabel,
+  Stepper,
+  Typography,
+  useMediaQuery,
+  useTheme
+} from '@mui/material'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import {
+  useLocation,
+  useMatches,
+  useNavigate,
+  useParams
+} from 'react-router-dom'
+import { AddEditTransactionSchema } from './_schema.yup'
+import { buttonClusterConfigFn } from './buttonConfigs'
+import { useTransactionMutation } from './transactionMutation'
 
 export const AddEditViewTransaction = () => {
   const queryClient = useQueryClient()
@@ -70,7 +70,7 @@ export const AddEditViewTransaction = () => {
   const [modalData, setModalData] = useState(null)
   const mode = matches[matches.length - 1]?.handle?.mode
   const { transactionId } = useParams()
-  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
+  const { hasRoles, hasAnyRole } = useCurrentUser()
   const [steps, setSteps] = useState(['Draft', 'Recommended', 'Approved'])
   const alertRef = useRef()
   const [alertMessage, setAlertMessage] = useState('')
@@ -88,20 +88,16 @@ export const AddEditViewTransaction = () => {
 
   const {
     mutate: createUpdateAdminAdjustment,
-    isLoading: isUpdatingAdminAdjustment
-  } = useCreateUpdateAdminAdjustment(transactionId, {
-    onSuccess: (response) =>
-      handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
-    onError: (error) => handleError(error, transactionId, ADMIN_ADJUSTMENT)
+    isPending: isUpdatingAdminAdjustment
+  } = useCreateUpdateAdminAdjustment({
+    adminAdjustmentId: transactionId ? +transactionId : undefined
   })
 
   const {
     mutate: createUpdateInitiativeAgreement,
-    isLoading: isUpdatingInitiativeAgreement
-  } = useCreateUpdateInitiativeAgreement(transactionId, {
-    onSuccess: (response) =>
-      handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
-    onError: (error) => handleError(error, transactionId, INITIATIVE_AGREEMENT)
+    isPending: isUpdatingInitiativeAgreement
+  } = useCreateUpdateInitiativeAgreement({
+    initiativeAgreementId: transactionId ? +transactionId : undefined
   })
 
   const methods = useForm({
@@ -109,19 +105,11 @@ export const AddEditViewTransaction = () => {
     mode: 'onChange',
     defaultValues: {
       txnType: '',
-      toOrganizationId: null,
-      complianceUnits: null,
-      transactionEffectiveDate: null,
-      govComment: null
+      transactionEffectiveDate: null
     }
   })
 
-  const {
-    watch,
-    setValue,
-    formState: { errors },
-    handleSubmit
-  } = methods
+  const { watch, setValue, handleSubmit } = methods
 
   let txnType = watch('txnType')
 
@@ -161,13 +149,14 @@ export const AddEditViewTransaction = () => {
     isLoading: isTransactionDataLoading,
     isFetched,
     isLoadingError
-  } = transactionDataHook(transactionId, {
-    enabled: !!transactionId && !!txnType,
-    retry: false,
-    staleTime: 0,
-    cacheTime: 0,
-    keepPreviousData: false
-  })
+  } = transactionDataHook(
+    { adminAdjustmentId: transactionId ? +transactionId : undefined },
+    {
+      enabled: !!transactionId && !!txnType,
+      retry: false,
+      staleTime: 0
+    }
+  )
 
   const stateId =
     txnType === ADMIN_ADJUSTMENT ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT
@@ -282,20 +271,33 @@ export const AddEditViewTransaction = () => {
         hasRoles,
         t,
         setModalData,
-        createUpdateAdminAdjustment,
-        createUpdateInitiativeAgreement,
+        createUpdateAdminAdjustment: (data) =>
+          createUpdateAdminAdjustment(data, {
+            onSuccess: (response) =>
+              handleSuccess(response, transactionId, ADMIN_ADJUSTMENT),
+            onError: (error) =>
+              handleError(error, transactionId, ADMIN_ADJUSTMENT)
+          }),
+        createUpdateInitiativeAgreement: (data) =>
+          createUpdateInitiativeAgreement(data, {
+            onSuccess: (response) =>
+              handleSuccess(response, transactionId, INITIATIVE_AGREEMENT),
+            onError: (error) =>
+              handleError(error, transactionId, INITIATIVE_AGREEMENT)
+          }),
         internalComment
       }),
     [
       transactionId,
       txnType,
       methods,
-      t,
-      setModalData,
-      createUpdateAdminAdjustment,
-      createUpdateInitiativeAgreement,
       hasRoles,
-      internalComment
+      t,
+      internalComment,
+      createUpdateAdminAdjustment,
+      handleSuccess,
+      handleError,
+      createUpdateInitiativeAgreement
     ]
   )
 

@@ -3,7 +3,12 @@ import { ViewAuditLog } from '@/views/Admin/AdminMenu/components/ViewAuditLog'
 import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  Navigate,
+  RouteObject,
+  RouterProvider
+} from 'react-router-dom'
 import { ApiDocs } from './components/ApiDocs'
 import ContactUs from './components/ContactUs'
 import { Login } from './components/Login'
@@ -36,13 +41,19 @@ import {
 import { AddEditViewTransfer } from './views/Transfers'
 import { AddEditUser } from './views/Users'
 
-const router = createBrowserRouter([
+export type TRoute = RouteObject & {
+  handle?: {
+    title?: string
+    mode?: number
+    crumb?: () => string
+  }
+}
+
+const routes: TRoute[] = [
   {
     element: <PublicLayout />,
     children: [
       {
-        name: 'Login',
-        key: 'login',
         path: ROUTES.LOGIN,
         element: <Login />,
         handle: { title: 'Login' }
@@ -170,7 +181,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.ORGANIZATIONS_VIEWUSER,
-        element: <ViewUser userType="bceid" />,
+        element: <ViewUser />,
         handle: {
           crumb: () => 'Users',
           title: 'View user'
@@ -399,7 +410,9 @@ const router = createBrowserRouter([
     path: '*',
     element: <NotFound />
   }
-])
+]
+
+const router = createBrowserRouter(routes)
 
 const App = () => <RouterProvider router={router} />
 

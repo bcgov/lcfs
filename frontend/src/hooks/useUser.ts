@@ -5,15 +5,6 @@ import {
 } from '@/services/apiClient'
 import { useQuery, UseQueryOptions } from '@tanstack/react-query'
 
-// export const useUsers = (options) => {
-//   const client = useApiService()
-//   return useQuery({
-//     queryKey: ['users'],
-//     queryFn: async () => (await client.post('/users/')).data,
-//     ...options
-//   })
-// }
-
 export const useUser = (
   { id }: { id: number },
   options?: Omit<
