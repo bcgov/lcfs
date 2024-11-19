@@ -5,11 +5,12 @@ import { CalendarToday, ArrowCircleRight, ArrowCircleDown } from '@mui/icons-mat
 import { PickerModal } from 'mui-daterange-picker-plus'
 import { format, parse, isAfter, isBefore, isValid } from 'date-fns'
 import InputMask from 'react-input-mask'
+import colors from '@/themes/base/colors'
 
 const customTheme = createTheme({
   palette: {
     primary: {
-      main: '#003366',
+      main: colors.primary.main,
       contrastText: '#fff',
     },
   },
@@ -19,12 +20,12 @@ const customTheme = createTheme({
         root: {
           textTransform: 'none',
           '&.Mui-focusVisible': {
-            outline: '2px solid #003366',
+            outline: `2px solid ${colors.primary.main}`,
             outlineOffset: '2px',
           },
         },
         containedPrimary: {
-          backgroundColor: '#003366',
+          backgroundColor: colors.primary.main,
           '&:hover': {
             backgroundColor: '#002850',
           },
@@ -35,7 +36,7 @@ const customTheme = createTheme({
       styleOverrides: {
         root: {
           '&.Mui-focused': {
-            borderColor: '#003366',
+            borderColor: colors.primary.main,
             borderWidth: '2px',
             boxShadow: '0 0 0 2px rgba(0, 51, 102, 0.25)',
           },
@@ -84,14 +85,14 @@ const RangeSeparatorIcons = {
   md: ArrowCircleRight,
 }
 
-export const DateRangeCellEditor = forwardRef(({ 
-  value, 
-  onValueChange, 
-  minDate, 
-  maxDate, 
-  api, 
+export const DateRangeCellEditor = forwardRef(({
+  value,
+  onValueChange,
+  minDate,
+  maxDate,
+  api,
   colDef,
-  ...props 
+  ...props
 }, ref) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [error, setError] = useState(false)
