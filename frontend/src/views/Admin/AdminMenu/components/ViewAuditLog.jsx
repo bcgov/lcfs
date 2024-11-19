@@ -17,7 +17,9 @@ import colors from '@/themes/base/colors'
 
 export const ViewAuditLog = () => {
   const { auditLogId } = useParams()
-  const { data, isLoading, isError, error } = useAuditLog(auditLogId)
+  const { data, isLoading, isError, error } = useAuditLog({
+    auditLogId: +auditLogId
+  })
   const { t } = useTranslation(['admin'])
 
   if (isLoading) return <Loading />
