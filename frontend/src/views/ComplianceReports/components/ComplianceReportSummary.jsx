@@ -26,7 +26,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import Loading from '@/components/Loading'
 
 const ComplianceReportSummary = ({
-  reportID,
+  reportId,
   currentStatus,
   compliancePeriodYear,
   setIsSigningAuthorityDeclared,
@@ -38,24 +38,11 @@ const ComplianceReportSummary = ({
   const [summaryData, setSummaryData] = useState(null)
   const { t } = useTranslation(['report'])
 
-  const { data, isLoading, isError, error } =
-    useGetComplianceReportSummary(reportID)
+  const { data, isLoading, isError, error } = useGetComplianceReportSummary({
+    reportId
+  })
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary(data?.complianceReportId, {
-      onSuccess: (response) => {
-        setSummaryData(response.data)
-        setHasMet(
-          response.data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
-            response.data?.nonCompliancePenaltySummary[1].totalValue <= 0
-        )
-      },
-      onError: (error) => {
-        alertRef.current?.triggerAlert({
-          message: error.message,
-          severity: 'error'
-        })
-      }
-    })
+    useUpdateComplianceReportSummary({ reportId: data.complianceReportId })
   useEffect(() => {
     if (data) {
       setSummaryData(data)
@@ -65,7 +52,10 @@ const ComplianceReportSummary = ({
       )
     }
     if (isError) {
-      alertRef.current?.triggerAlert({ message: error?.response?.data?.detail || error.message, severity: 'error' })
+      alertRef.current?.triggerAlert({
+        message: error?.response?.data?.detail || error.message,
+        severity: 'error'
+      })
     }
   }, [alertRef, data, error, isError, setHasMet])
 
@@ -74,7 +64,21 @@ const ComplianceReportSummary = ({
       // perform auto save of summary after each cell change
       const updatedData = { ...summaryData, renewableFuelTargetSummary: data }
       setSummaryData(updatedData)
-      updateComplianceReportSummary(updatedData)
+      updateComplianceReportSummary(updatedData, {
+        onSuccess: (data) => {
+          setSummaryData(data)
+          setHasMet(
+            data.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
+              data.nonCompliancePenaltySummary[1].totalValue <= 0
+          )
+        },
+        onError: (error) => {
+          alertRef.current?.triggerAlert({
+            message: error.message,
+            severity: 'error'
+          })
+        }
+      })
     },
     [summaryData, updateComplianceReportSummary]
   )

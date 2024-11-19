@@ -1,10 +1,10 @@
 // mui components
-import { Typography, Stack } from '@mui/material'
-import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
+import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { Stack, Typography } from '@mui/material'
 // react components
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 // Services
@@ -14,10 +14,10 @@ import { roles } from '@/constants/roles'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 // hooks
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 // internal components
-import { reportsColDefs, defaultSortModel } from './components/_schema'
+import { defaultSortModel, reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 
 export const ComplianceReports = () => {
@@ -39,7 +39,10 @@ export const ComplianceReports = () => {
     }),
     [t]
   )
-  const getRowId = useCallback((params) => params.data.complianceReportId.toString(), [])
+  const getRowId = useCallback(
+    (params) => params.data.complianceReportId.toString(),
+    []
+  )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(
     ({ data }) => {
@@ -64,36 +67,8 @@ export const ComplianceReports = () => {
     }
   }, [location.state])
 
-  const {
-    mutate: createComplianceReport,
-    isLoading: isCreating,
-    isError
-  } = useCreateComplianceReport(currentUser?.organization?.organizationId, {
-    onSuccess: (response, variables) => {
-      setAlertMessage(
-        t('report:actionMsgs.successText', {
-          status: 'created'
-        })
-      )
-      setIsButtonLoading(false)
-      setAlertSeverity('success')
-      navigate(
-        ROUTES.REPORTS_VIEW.replace(
-          ':compliancePeriod',
-          response.data.compliancePeriod.description
-        ).replace(':complianceReportId', response.data.complianceReportId),
-        { state: { data: response.data, newReport: true } }
-      )
-      alertRef.current.triggerAlert()
-    },
-    onError: (_error, _variables) => {
-      setIsButtonLoading(false)
-      const errorMsg = _error.response.data?.detail
-      setAlertMessage(errorMsg)
-      setAlertSeverity('error')
-      alertRef.current.triggerAlert()
-    }
-  })
+  const { mutate: createComplianceReport, isPending: isCreating } =
+    useCreateComplianceReport(currentUser?.organization?.organizationId)
 
   useEffect(() => {
     if (isCreating) {
@@ -128,11 +103,42 @@ export const ComplianceReports = () => {
         <Role roles={[roles.supplier]}>
           <NewComplianceReportButton
             handleNewReport={(option) => {
-              createComplianceReport({
-                compliancePeriod: option.description,
-                organizationId: currentUser?.organization?.organizationId,
-                status: COMPLIANCE_REPORT_STATUSES.DRAFT
-              })
+              createComplianceReport(
+                {
+                  compliancePeriod: option.description,
+                  organizationId: currentUser?.organization?.organizationId,
+                  status: COMPLIANCE_REPORT_STATUSES.DRAFT
+                },
+                {
+                  onSuccess: (data) => {
+                    setAlertMessage(
+                      t('report:actionMsgs.successText', {
+                        status: 'created'
+                      })
+                    )
+                    setIsButtonLoading(false)
+                    setAlertSeverity('success')
+                    navigate(
+                      ROUTES.REPORTS_VIEW.replace(
+                        ':compliancePeriod',
+                        data.data.compliancePeriod.description
+                      ).replace(
+                        ':complianceReportId',
+                        data.data.complianceReportId
+                      ),
+                      { state: { data: data.data, newReport: true } }
+                    )
+                    alertRef.current.triggerAlert()
+                  },
+                  onError: (error) => {
+                    setIsButtonLoading(false)
+                    const errorMsg = error.response.data?.detail
+                    setAlertMessage(errorMsg)
+                    setAlertSeverity('error')
+                    alertRef.current.triggerAlert()
+                  }
+                }
+              )
             }}
             isButtonLoading={isButtonLoading}
             setIsButtonLoading={setIsButtonLoading}

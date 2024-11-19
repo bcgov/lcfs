@@ -38,7 +38,7 @@ export const EditViewComplianceReport = () => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [internalComment, setInternalComment] = useState('')
+  // const [internalComment, setInternalComment] = useState('')
   const [hasMet, setHasMet] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
@@ -61,9 +61,9 @@ export const EditViewComplianceReport = () => {
       })
     }
   }
-  const handleCommentChange = useCallback((newComment) => {
-    setInternalComment(newComment)
-  }, [])
+  // const handleCommentChange = useCallback((newComment) => {
+  //   setInternalComment(newComment)
+  // }, [])
   const handleScroll = useCallback(() => {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop
     setIsScrollingUp(scrollTop < lastScrollTop || scrollTop === 0)
@@ -87,34 +87,18 @@ export const EditViewComplianceReport = () => {
     isLoading: isReportLoading,
     isError,
     error
-  } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId
-  )
+  } = useGetComplianceReport({
+    orgId: currentUser?.organization?.organizationId,
+    reportId: complianceReportId
+  })
 
-  const currentStatus = reportData?.data?.currentStatus?.status
+  const currentStatus = reportData.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
-    reportData?.data?.organizationId
+    reportData.organizationId
   )
-  const { mutate: updateComplianceReport } = useUpdateComplianceReport(
-    complianceReportId,
-    {
-      onSuccess: (response) => {
-        setModalData(null)
-        alertRef.current?.triggerAlert({
-          message: t('report:savedSuccessText'),
-          severity: 'success'
-        })
-      },
-      onError: (error) => {
-        setModalData(null)
-        alertRef.current?.triggerAlert({
-          message: error.message,
-          severity: 'error'
-        })
-      }
-    }
-  )
+  const { mutate: updateComplianceReport } = useUpdateComplianceReport({
+    reportId: complianceReportId
+  })
 
   const methods = useForm() // TODO we will need this for summary line inputs
 
@@ -125,7 +109,23 @@ export const EditViewComplianceReport = () => {
         currentUser,
         t,
         setModalData,
-        updateComplianceReport,
+        updateComplianceReport: (data) =>
+          updateComplianceReport(data, {
+            onSuccess: () => {
+              setModalData(null)
+              alertRef.current?.triggerAlert({
+                message: t('report:savedSuccessText'),
+                severity: 'success'
+              })
+            },
+            onError: (error) => {
+              setModalData(null)
+              alertRef.current?.triggerAlert({
+                message: error.message,
+                severity: 'error'
+              })
+            }
+          }),
         reportData,
         isGovernmentUser,
         isSigningAuthorityDeclared
@@ -182,7 +182,7 @@ export const EditViewComplianceReport = () => {
         <BCBox pb={2}>
           <Typography variant="h5" color="primary">
             {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
-            {reportData?.data?.nickname}
+            {reportData.nickname}
           </Typography>
           <Typography
             variant="h6"
@@ -203,20 +203,20 @@ export const EditViewComplianceReport = () => {
             )}
             <AssessmentCard
               orgData={orgData}
-              history={reportData?.data?.history}
+              history={reportData.history}
               isGovernmentUser={isGovernmentUser}
               hasMet={hasMet}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
-              hasSupplemental={reportData?.data?.hasSupplemental}
+              hasSupplemental={reportData.hasSupplemental}
             />
           </Stack>
           {!location.state?.newReport && (
             <>
               <ReportDetails currentStatus={currentStatus} />
               <ComplianceReportSummary
-                reportID={complianceReportId}
+                reportId={complianceReportId ? +complianceReportId : undefined}
                 currentStatus={currentStatus}
                 compliancePeriodYear={compliancePeriod}
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
@@ -244,7 +244,7 @@ export const EditViewComplianceReport = () => {
                   <InternalComments
                     entityType={'complianceReport'}
                     entityId={parseInt(complianceReportId)}
-                    onCommentChange={handleCommentChange}
+                    // onCommentChange={handleCommentChange}
                   />
                 </Role>
               </BCBox>

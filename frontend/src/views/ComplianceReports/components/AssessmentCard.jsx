@@ -1,18 +1,18 @@
-import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { List, ListItemText, Stack, Typography } from '@mui/material'
-import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-import { timezoneFormatter } from '@/utils/formatters'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { constructAddress } from '@/utils/constructAddress'
 import BCButton from '@/components/BCButton'
-import AssignmentIcon from '@mui/icons-material/Assignment'
-import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
-import Box from '@mui/material/Box'
-import { useNavigate } from 'react-router-dom'
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import { Role } from '@/components/Role'
 import { StyledListItem } from '@/components/StyledListItem'
 import { roles } from '@/constants/roles'
-import { Role } from '@/components/Role'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
+import { constructAddress } from '@/utils/constructAddress'
+import { timezoneFormatter } from '@/utils/formatters'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import { List, ListItemText, Stack, Typography } from '@mui/material'
+import Box from '@mui/material/Box'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
   orgData,
@@ -53,28 +53,7 @@ export const AssessmentCard = ({
   }, [history, isGovernmentUser, hasSupplemental])
 
   const { mutate: createSupplementalReport, isLoading } =
-    useCreateSupplementalReport(complianceReportId, {
-      onSuccess: (data) => {
-        // Navigate to the new report's page
-        const newReportId = data.data.complianceReportId
-        const compliancePeriodYear = data.data.compliancePeriod.description
-        navigate(
-          `/compliance-reporting/${compliancePeriodYear}/${newReportId}`,
-          {
-            state: {
-              message: t('report:supplementalCreated'),
-              severity: 'success'
-            }
-          }
-        )
-      },
-      onError: (error) => {
-        alertRef.current?.triggerAlert({
-          message: error.message,
-          severity: 'error'
-        })
-      }
-    })
+    useCreateSupplementalReport(complianceReportId)
 
   return (
     <BCWidgetCard
@@ -218,7 +197,29 @@ export const AssessmentCard = ({
                       variant="contained"
                       color="primary"
                       onClick={() => {
-                        createSupplementalReport()
+                        createSupplementalReport(null, {
+                          onSuccess: (data) => {
+                            // Navigate to the new report's page
+                            const newReportId = data.data.complianceReportId
+                            const compliancePeriodYear =
+                              data.data.compliancePeriod.description
+                            navigate(
+                              `/compliance-reporting/${compliancePeriodYear}/${newReportId}`,
+                              {
+                                state: {
+                                  message: t('report:supplementalCreated'),
+                                  severity: 'success'
+                                }
+                              }
+                            )
+                          },
+                          onError: (error) => {
+                            alertRef.current?.triggerAlert({
+                              message: error.message,
+                              severity: 'error'
+                            })
+                          }
+                        })
                       }}
                       startIcon={<AssignmentIcon />}
                       sx={{ mt: 2 }}

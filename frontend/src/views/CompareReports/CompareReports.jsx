@@ -31,16 +31,16 @@ export const CompareReports = () => {
   const { hasRoles, data: currentUser } = useCurrentUser()
   const [reports, setReports] = useState([])
 
-  const { data: response } = useListComplianceReports(
-    currentUser?.organization?.organizationId
-  )
+  const { data: complianceReportsData } = useListComplianceReports({
+    orgId: currentUser?.organization?.organizationId
+  })
 
   const [report1, setReport1] = useState(null)
   const [report2, setReport2] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
   useEffect(() => {
-    if (response) {
-      const { reports } = response.data
+    if (complianceReportsData) {
+      const { reports } = complianceReportsData
       if (reports?.length > 0) {
         setReport1(reports[0])
       }
@@ -50,14 +50,14 @@ export const CompareReports = () => {
       setReports(reports)
       setIsLoading(false)
     }
-  }, [response])
+  }, [complianceReportsData])
 
-  const { data: report1Summary } = useGetComplianceReportSummary(
-    report1?.complianceReportId
-  )
-  const { data: report2Summary } = useGetComplianceReportSummary(
-    report2?.complianceReportId
-  )
+  const { data: report1Summary } = useGetComplianceReportSummary({
+    reportId: report1?.complianceReportId
+  })
+  const { data: report2Summary } = useGetComplianceReportSummary({
+    reportId: report2?.complianceReportId
+  })
 
   const [renewableSummary, SetRenewableSummary] = useState([])
   const [lowCarbonSummary, SetLowCarbonSummary] = useState([])
