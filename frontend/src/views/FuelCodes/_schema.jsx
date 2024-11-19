@@ -10,8 +10,10 @@ import { v4 as uuid } from 'uuid'
 import * as yup from 'yup'
 import {
   AutocompleteCellEditor,
-  RequiredHeader
+  RequiredHeader,
+  NumberEditor
 } from '@/components/BCDataGrid/components'
+
 
 export const fuelCodeColDefs = (t) => [
   {
@@ -630,7 +632,7 @@ export const addEditSchema = {
     {
       field: 'facilityNameplateCapacity',
       headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
-      cellEditor: 'agNumberCellEditor',
+      cellEditor: NumberEditor,
       type: 'numericColumn',
       valueFormatter: numberFormatter,
       cellEditorParams: {

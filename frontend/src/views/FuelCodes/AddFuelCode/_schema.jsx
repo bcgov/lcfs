@@ -3,6 +3,7 @@ import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
   DateEditor,
+  NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
@@ -451,7 +452,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'facilityNameplateCapacity',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
     valueFormatter: numberFormatter,
-    cellEditor: 'agNumberCellEditor',
+    cellEditor: NumberEditor,
     type: 'numericColumn',
     cellEditorParams: {
       precision: 0,
