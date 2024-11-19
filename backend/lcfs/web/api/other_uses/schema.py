@@ -85,6 +85,10 @@ class OtherUsesCreateSchema(BaseSchema):
     units: str
     rationale: Optional[str] = None
     deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
 
 
 class OtherUsesSchema(OtherUsesCreateSchema):

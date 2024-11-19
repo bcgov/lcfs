@@ -1,9 +1,11 @@
 import math
-import structlog
-from typing import List
-from fastapi import Depends
-from datetime import datetime
+import uuid
+from typing import Optional
 
+import structlog
+from fastapi import Depends
+
+from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.OtherUses import OtherUses
@@ -16,12 +18,23 @@ from lcfs.web.api.other_uses.schema import (
     OtherUsesFuelCategorySchema,
     OtherUsesAllSchema,
     FuelTypeSchema,
-    UnitOfMeasureSchema,
     ExpectedUseTypeSchema,
+    DeleteOtherUsesResponseSchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 
 logger = structlog.get_logger(__name__)
+
+# Constants defining which fields to exclude during model operations
+OTHER_USE_EXCLUDE_FIELDS = {
+    "id",
+    "other_uses_id",
+    "deleted",
+    "group_uuid",
+    "user_type",
+    "version",
+    "action_type",
+}
 
 
 class OtherUsesServices:
@@ -33,7 +46,7 @@ class OtherUsesServices:
         self.repo = repo
         self.fuel_repo = fuel_repo
 
-    async def convert_to_model(self, other_use: OtherUsesCreateSchema) -> OtherUses:
+    async def schema_to_model(self, other_use: OtherUsesCreateSchema) -> OtherUses:
         """
         Converts data from OtherUsesCreateSchema to OtherUses data model to store into the database.
         """
@@ -47,12 +60,38 @@ class OtherUsesServices:
 
         return OtherUses(
             **other_use.model_dump(
-                exclude={"id", "fuel_category", "fuel_type", "expected_use", "deleted"}
+                exclude={
+                    "other_uses_id",
+                    "fuel_category",
+                    "fuel_type",
+                    "expected_use",
+                    "deleted",
+                }
             ),
             fuel_category_id=fuel_category.fuel_category_id,
             fuel_type_id=fuel_type.fuel_type_id,
             expected_use_id=expected_use.expected_use_type_id
         )
+
+    def model_to_schema(self, model: OtherUses):
+        """
+        Converts data from OtherUses to OtherUsesCreateSchema data model to store into the database.
+        """
+        updated_schema = OtherUsesSchema(
+            other_uses_id=model.other_uses_id,
+            compliance_report_id=model.compliance_report_id,
+            quantity_supplied=model.quantity_supplied,
+            rationale=model.rationale,
+            units=model.units,
+            fuel_type=model.fuel_type.fuel_type,
+            fuel_category=model.fuel_category.category,
+            expected_use=model.expected_use.name,
+            user_type=model.user_type,
+            group_uuid=model.group_uuid,
+            version=model.version,
+            action_type=model.action_type,
+        )
+        return updated_schema
 
     @service_handler
     async def get_table_options(self) -> OtherUsesTableOptionsSchema:
@@ -100,87 +139,105 @@ class OtherUsesServices:
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
             ),
-            other_uses=[
-                OtherUsesSchema(
-                    other_uses_id=ou.other_uses_id,
-                    compliance_report_id=ou.compliance_report_id,
-                    quantity_supplied=ou.quantity_supplied,
-                    fuel_type=ou.fuel_type.fuel_type,
-                    fuel_category=ou.fuel_category.category,
-                    expected_use=ou.expected_use.name,
-                    units=ou.units,
-                    rationale=ou.rationale,
-                )
-                for ou in other_uses
-            ],
+            other_uses=other_uses,
         )
 
     @service_handler
     async def update_other_use(
-        self, other_use_data: OtherUsesCreateSchema
+        self, other_use_data: OtherUsesCreateSchema, user_type: UserTypeEnum
     ) -> OtherUsesSchema:
         """Update an existing other use"""
-        existing_use = await self.repo.get_other_use(other_use_data.other_uses_id)
-        if not existing_use:
+        other_use = await self.repo.get_other_use_version_by_user(
+            other_use_data.group_uuid, other_use_data.version, user_type
+        )
+
+        if not other_use:
             raise ValueError("Other use not found")
 
-        if existing_use.fuel_type.fuel_type != other_use_data.fuel_type:
-            existing_use.fuel_type = await self.fuel_repo.get_fuel_type_by_name(
-                other_use_data.fuel_type
-            )
+        if other_use.compliance_report_id == other_use_data.compliance_report_id:
+            # Update existing record if compliance report ID matches
+            for field, value in other_use_data.model_dump(
+                exclude={"id", "deleted", "fuel_type", "fuel_category", "expected_use"}
+            ).items():
+                setattr(other_use, field, value)
 
-        if existing_use.fuel_category.category != other_use_data.fuel_category:
-            existing_use.fuel_category = await self.fuel_repo.get_fuel_category_by_name(
-                other_use_data.fuel_category
-            )
-
-        if existing_use.expected_use.name != other_use_data.expected_use:
-            existing_use.expected_use = (
-                await self.fuel_repo.get_expected_use_type_by_name(
-                    other_use_data.expected_use
+            if other_use.fuel_type.fuel_type != other_use_data.fuel_type:
+                other_use.fuel_type = await self.fuel_repo.get_fuel_type_by_name(
+                    other_use_data.fuel_type
                 )
+
+            if other_use.fuel_category.category != other_use_data.fuel_category:
+                other_use.fuel_category = (
+                    await self.fuel_repo.get_fuel_category_by_name(
+                        other_use_data.fuel_category
+                    )
+                )
+
+            if other_use.expected_use.name != other_use_data.expected_use:
+                other_use.expected_use = (
+                    await self.fuel_repo.get_expected_use_type_by_name(
+                        other_use_data.expected_use
+                    )
+                )
+
+            updated_use = await self.repo.update_other_use(other_use)
+            updated_schema = self.model_to_schema(updated_use)
+            return OtherUsesSchema.model_validate(updated_schema)
+
+        else:
+            updated_use = await self.create_other_use(
+                other_use_data, user_type, existing_record=other_use
             )
-
-        existing_use.quantity_supplied = other_use_data.quantity_supplied
-        existing_use.rationale = other_use_data.rationale
-
-        updated_use = await self.repo.update_other_use(existing_use)
-
-        return OtherUsesSchema(
-            other_uses_id=updated_use.other_uses_id,
-            compliance_report_id=updated_use.compliance_report_id,
-            quantity_supplied=updated_use.quantity_supplied,
-            fuel_type=updated_use.fuel_type.fuel_type,
-            fuel_category=updated_use.fuel_category.category,
-            expected_use=updated_use.expected_use.name,
-            units=updated_use.units,
-            rationale=updated_use.rationale,
-        )
+            return OtherUsesSchema.model_validate(updated_use)
 
     @service_handler
     async def create_other_use(
-        self, other_use_data: OtherUsesCreateSchema
+        self,
+        other_use_data: OtherUsesCreateSchema,
+        user_type: UserTypeEnum,
+        existing_record: Optional[OtherUses] = None,
     ) -> OtherUsesSchema:
         """Create a new other use"""
-        other_use = await self.convert_to_model(other_use_data)
+        other_use = await self.schema_to_model(other_use_data)
+        new_group_uuid = str(uuid.uuid4())
+        other_use.group_uuid = (
+            new_group_uuid if not existing_record else existing_record.group_uuid
+        )
+        other_use.action_type = (
+            ActionTypeEnum.CREATE if not existing_record else ActionTypeEnum.UPDATE
+        )
+        other_use.version = 0 if not existing_record else existing_record.version + 1
+        other_use.user_type = user_type
         created_use = await self.repo.create_other_use(other_use)
 
-        fuel_category_value = created_use.fuel_category.category
-        fuel_type_value = created_use.fuel_type.fuel_type
-        expected_use_value = created_use.expected_use.name
-
-        return OtherUsesSchema(
-            other_uses_id=created_use.other_uses_id,
-            compliance_report_id=created_use.compliance_report_id,
-            quantity_supplied=created_use.quantity_supplied,
-            rationale=created_use.rationale,
-            units=created_use.units,
-            fuel_type=fuel_type_value,
-            fuel_category=fuel_category_value,
-            expected_use=expected_use_value,
-        )
+        return self.model_to_schema(created_use)
 
     @service_handler
-    async def delete_other_use(self, other_uses_id: int) -> str:
+    async def delete_other_use(
+        self, other_use_data: OtherUsesCreateSchema, user_type: UserTypeEnum
+    ) -> DeleteOtherUsesResponseSchema:
         """Delete an other use"""
-        return await self.repo.delete_other_use(other_uses_id)
+        existing_fuel_supply = await self.repo.get_latest_other_uses_by_group_uuid(
+            other_use_data.group_uuid
+        )
+
+        if existing_fuel_supply.action_type == ActionTypeEnum.DELETE:
+            return DeleteOtherUsesResponseSchema(
+                success=True, message="Already deleted."
+            )
+
+        deleted_entity = OtherUses(
+            compliance_report_id=other_use_data.compliance_report_id,
+            group_uuid=other_use_data.group_uuid,
+            version=existing_fuel_supply.version + 1,
+            action_type=ActionTypeEnum.DELETE,
+            user_type=user_type,
+        )
+
+        # Copy fields from the latest version for the deletion record
+        for field in existing_fuel_supply.__table__.columns.keys():
+            if field not in OTHER_USE_EXCLUDE_FIELDS:
+                setattr(deleted_entity, field, getattr(existing_fuel_supply, field))
+
+        await self.repo.create_other_use(deleted_entity)
+        return DeleteOtherUsesResponseSchema(success=True, message="Marked as deleted.")
