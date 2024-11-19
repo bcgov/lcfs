@@ -19,7 +19,6 @@ import { faFloppyDisk, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack, Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -28,11 +27,10 @@ import { addEditSchema } from '../_schema'
 const ViewFuelCodeBase = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
-  const { fuelCodeID } = useParams()
+  const { fuelCodeId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation(['common', 'fuelCode'])
-  const queryClient = useQueryClient()
 
   const [rowData, setRowData] = useState([])
   const [gridApi, setGridApi] = useState(null)
@@ -44,31 +42,12 @@ const ViewFuelCodeBase = () => {
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
 
   const { data: fuelCodeData, isLoading: isFuelCodeDataLoading } =
-    useGetFuelCode(fuelCodeID)
+    useGetFuelCode({ fuelCodeId })
 
   const { mutate: updateFuelCode, isPending: isUpdateFuelCodePending } =
-    useUpdateFuelCode(fuelCodeID, {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['fuel-code', fuelCodeID])
-        navigate(ROUTES.FUELCODES + `?hid=${fuelCodeID}`)
-      },
-      onError: (error) => {
-        setAlertMessage(error.response.data.detail[0].msg)
-        setAlertSeverity('error')
-        alertRef.current?.triggerAlert()
-      }
-    })
+    useUpdateFuelCode({ fuelCodeId })
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
-    useDeleteFuelCode(fuelCodeID, {
-      onSuccess: () => {
-        navigate(ROUTES.FUELCODES, {
-          state: {
-            message: t('fuelCode:fuelCodeDeleteSuccessMsg'),
-            severity: 'success'
-          }
-        })
-      }
-    })
+    useDeleteFuelCode({ fuelCodeId })
 
   useEffect(() => {
     if (location.state?.message) {
@@ -94,9 +73,10 @@ const ViewFuelCodeBase = () => {
         ...fuelCodeData,
         prefix: fuelCodeData.fuelCodePrefix.prefix,
         fuel: fuelCodeData.fuelCodeType.fuelType,
-        feedstockFuelTransportMode: fuelCodeData.feedstockFuelTransportModes.map(
-          (mode) => mode.feedstockFuelTransportMode?.transportMode
-        ),
+        feedstockFuelTransportMode:
+          fuelCodeData.feedstockFuelTransportModes.map(
+            (mode) => mode.feedstockFuelTransportMode?.transportMode
+          ),
         finishedFuelTransportMode: fuelCodeData.finishedFuelTransportModes.map(
           (mode) => mode.finishedFuelTransportMode?.transportMode
         )
@@ -166,7 +146,17 @@ const ViewFuelCodeBase = () => {
     }
     if (status === FUEL_CODE_STATUSES.DELETED) {
       setModalData({
-        primaryButtonAction: () => deleteFuelCode(),
+        primaryButtonAction: () =>
+          deleteFuelCode(null, {
+            onSuccess: () => {
+              navigate(ROUTES.FUELCODES, {
+                state: {
+                  message: t('fuelCode:fuelCodeDeleteSuccessMsg'),
+                  severity: 'success'
+                }
+              })
+            }
+          }),
         primaryButtonText: t('fuelCode:deleteFuelCodeBtn'),
         secondaryButtonText: t('cancelBtn'),
         title: t('fuelCode:deleteFuelCode'),
@@ -206,7 +196,16 @@ const ViewFuelCodeBase = () => {
       status
     }
 
-    updateFuelCode(data)
+    updateFuelCode(data, {
+      onSuccess: () => {
+        navigate(ROUTES.FUELCODES + `?hid=${fuelCodeId}`)
+      },
+      onError: (error) => {
+        setAlertMessage(error.response.data.detail[0].msg)
+        setAlertSeverity('error')
+        alertRef.current?.triggerAlert()
+      }
+    })
   }
 
   const title = {

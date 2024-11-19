@@ -60,7 +60,7 @@ export const ADMIN_AUDIT_LOG_VIEW = `${ADMIN_AUDIT_LOG}/:auditLogId`
 
 export const FUELCODES = '/fuel-codes'
 export const FUELCODES_ADD = `${FUELCODES}/add-fuel-code`
-export const FUELCODES_VIEW = `${FUELCODES}/:fuelCodeID`
+export const FUELCODES_VIEW = `${FUELCODES}/:fuelCodeId`
 
 export const FSE = '/fse' // might not need
 
