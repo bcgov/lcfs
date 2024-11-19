@@ -1,8 +1,10 @@
 from datetime import datetime
+from typing import List
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
@@ -763,3 +765,72 @@ async def test_can_sign_flag_logic(
 
     # Assert that `can_sign` is False
     assert result.can_sign is False
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_quantities_fossil_derived(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+    mock_fuel_supply_repo,
+):
+    # Create a mock repository
+    mock_repo.aggregate_fuel_supplies.return_value = {"diesel": 100.0}
+    mock_repo.aggregate_other_uses.return_value = {"gasoline": 50.0}
+
+    # Define test inputs
+    compliance_report_id = 1
+    effective_fuel_supplies: List[FuelSupply] = (
+        []
+    )  # Add mock FuelSupply objects as needed
+    fossil_derived = True
+
+    # Call the method under test
+    result = await compliance_report_summary_service.calculate_fuel_quantities(
+        compliance_report_id, effective_fuel_supplies, fossil_derived
+    )
+
+    # Assertions
+    assert result == {"diesel": 100.0, "gasoline": 50.0}
+    mock_repo.aggregate_fuel_supplies.assert_called_once_with(
+        effective_fuel_supplies, fossil_derived
+    )
+    mock_repo.aggregate_other_uses.assert_awaited_once_with(
+        compliance_report_id, fossil_derived
+    )
+    mock_repo.aggregate_allocation_agreements.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_quantities_renewable(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+    mock_fuel_supply_repo,
+):
+    # Create a mock repository
+    mock_repo.aggregate_fuel_supplies.return_value = {"gasoline": 200.0}
+    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0}
+    mock_repo.aggregate_allocation_agreements.return_value = {"jet-fuel": 25.0}
+
+    # Define test inputs
+    compliance_report_id = 2
+    effective_fuel_supplies: List[FuelSupply] = []
+    fossil_derived = False
+
+    # Call the method under test
+    result = await compliance_report_summary_service.calculate_fuel_quantities(
+        compliance_report_id, effective_fuel_supplies, fossil_derived
+    )
+
+    # Assertions
+    mock_repo.aggregate_fuel_supplies.assert_called_once_with(
+        effective_fuel_supplies, fossil_derived
+    )
+    mock_repo.aggregate_other_uses.assert_awaited_once_with(
+        compliance_report_id, fossil_derived
+    )
+    mock_repo.aggregate_allocation_agreements.assert_awaited_once_with(
+        compliance_report_id
+    )
+    assert result == {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0}

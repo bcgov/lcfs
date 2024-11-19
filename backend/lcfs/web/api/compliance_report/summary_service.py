@@ -2,11 +2,12 @@ import logging
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from fastapi import Depends
 from sqlalchemy import inspect
 
+from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
@@ -262,7 +263,6 @@ class ComplianceReportSummaryService:
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
-            print("LOCKED")
             return self.convert_summary_to_dict(compliance_report.summary)
 
         compliance_period_start = compliance_report.compliance_period.effective_date
@@ -321,12 +321,12 @@ class ComplianceReportSummaryService:
         )
 
         # Fetch fuel quantities
-        fossil_quantities = await self.repo.calculate_fuel_quantities(
+        fossil_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             effective_fuel_supplies,
             fossil_derived=True,
         )
-        renewable_quantities = await self.repo.calculate_fuel_quantities(
+        renewable_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             effective_fuel_supplies,
             fossil_derived=False,
@@ -702,6 +702,30 @@ class ComplianceReportSummaryService:
         ]
 
         return non_compliance_penalty_summary
+
+    @service_handler
+    async def calculate_fuel_quantities(
+        self,
+        compliance_report_id: int,
+        effective_fuel_supplies: List[FuelSupply],
+        fossil_derived: bool,
+    ) -> Dict[str, float]:
+        """
+        Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
+        """
+        fuel_quantities = self.repo.aggregate_fuel_supplies(
+            effective_fuel_supplies, fossil_derived
+        )
+        fuel_quantities.update(
+            await self.repo.aggregate_other_uses(compliance_report_id, fossil_derived)
+        )
+
+        if not fossil_derived:
+            fuel_quantities.update(
+                await self.repo.aggregate_allocation_agreements(compliance_report_id)
+            )
+
+        return dict(fuel_quantities)
 
     @service_handler
     async def calculate_fuel_supply_compliance_units(
