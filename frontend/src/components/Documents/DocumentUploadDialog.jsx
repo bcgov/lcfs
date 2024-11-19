@@ -1,5 +1,14 @@
 import BCModal from '@/components/BCModal'
-import { useEffect, useRef, useState } from 'react'
+import BCTypography from '@/components/BCTypography'
+import {
+  useDeleteDocument,
+  useDocuments,
+  useUploadDocument,
+  useViewDocument
+} from '@/hooks/useDocuments'
+import colors from '@/themes/base/colors'
+import { Delete } from '@mui/icons-material'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import {
   Box,
   Card,
@@ -9,19 +18,10 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material'
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
-import BCTypography from '@/components/BCTypography'
-import { Delete } from '@mui/icons-material'
 import prettyBytes from 'pretty-bytes'
-import colors from '@/themes/base/colors'
-import {
-  useDeleteDocument,
-  useDocuments,
-  useUploadDocument,
-  useViewDocument
-} from '@/hooks/useDocuments'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -38,7 +38,7 @@ const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   }
 }))
 
-const FileTable = styled(Box)(({ theme }) => ({
+const FileTable = styled(Box)(() => ({
   width: '100%',
   display: 'grid',
   gridTemplateColumns: '1fr max-content max-content max-content',
@@ -52,22 +52,51 @@ const TableCell = styled(Box)({
 
 const BYTES_50 = 52428800
 
-function DocumentUploadDialog({ open, close, parentType, parentID }) {
+function DocumentButton({ file, parentId, parentType }) {
+  const { data, isSuccess, refetch } = useViewDocument({
+    parentType,
+    parentId,
+    documentId: file.documentId
+  })
+
+  useEffect(() => {
+    if (isSuccess) {
+      const fileURL = URL.createObjectURL(data)
+      window.open(fileURL, '_blank')
+      setTimeout(() => URL.revokeObjectURL(fileURL), 100)
+    }
+  }, [data, isSuccess])
+
+  return (
+    <BCTypography
+      variant="subtitle2"
+      color="link"
+      onClick={refetch}
+      sx={{
+        '&:hover': { cursor: 'pointer' },
+        textDecoration: 'underline'
+      }}
+    >
+      {file.fileName}
+    </BCTypography>
+  )
+}
+
+function DocumentUploadDialog({ open, close, parentType, parentId }) {
   const { t } = useTranslation(['report'])
-  const [isDragActive, setIsDragActive] = useState(false)
+  const [, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
 
-  const { data: loadedFiles } = useDocuments(parentType, parentID)
+  const { data: loadedFiles } = useDocuments({ parentType, parentId })
   useEffect(() => {
     if (loadedFiles) {
       setFiles(loadedFiles)
     }
   }, [loadedFiles])
 
-  const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
-  const { mutate: deleteFile } = useDeleteDocument(parentType, parentID)
-  const viewDocument = useViewDocument(parentType, parentID)
+  const { mutate: uploadFile } = useUploadDocument({ parentType, parentId })
+  const { mutate: deleteFile } = useDeleteDocument({ parentType, parentId })
 
   const handleDrag = (e) => {
     e.preventDefault()
@@ -225,23 +254,15 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
         </TableCell>
         <TableCell></TableCell>
 
-        {files.map((file, i) => (
+        {files.map((file) => (
           <div style={{ display: 'contents' }} key={file.documentId}>
             <TableCell>
               {!file.oversize && (
-                <BCTypography
-                  variant="subtitle2"
-                  color="link"
-                  onClick={() => {
-                    viewDocument(file.documentId)
-                  }}
-                  sx={{
-                    '&:hover': { cursor: 'pointer' },
-                    textDecoration: 'underline'
-                  }}
-                >
-                  {file.fileName}
-                </BCTypography>
+                <DocumentButton
+                  file={file}
+                  parentType={parentType}
+                  parentId={parentId}
+                />
               )}
               {file.oversize && (
                 <span>{file.fileName} (File is over 50MB)</span>

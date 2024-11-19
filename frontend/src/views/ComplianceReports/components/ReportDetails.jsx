@@ -1,37 +1,37 @@
-import { useState, useMemo, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography,
-  Link,
-  CircularProgress,
-  IconButton
-} from '@mui/material'
 import { faPen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  CircularProgress,
+  IconButton,
+  Link,
+  Typography
+} from '@mui/material'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
-import { ROUTES } from '@/constants/routes'
-import { roles } from '@/constants/roles'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { Role } from '@/components/Role'
-import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
+import { roles } from '@/constants/roles'
+import { ROUTES } from '@/constants/routes'
+import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
-import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
+import { useGetFuelExports } from '@/hooks/useFuelExport'
+import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
-import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
-import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
-import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
-import { useGetFuelExports } from '@/hooks/useFuelExport'
+import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
+import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
+import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
+import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
-import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
-import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 
 const ReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation()
@@ -152,20 +152,13 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           !isArrayEmpty(data) && <FuelExportSummary data={data} />
       }
     ],
-    [
-      currentStatus,
-      t,
-      navigate,
-      compliancePeriod,
-      complianceReportId,
-      isArrayEmpty
-    ]
+    [t, navigate, compliancePeriod, complianceReportId, isArrayEmpty]
   )
 
   const [expanded, setExpanded] = useState(() =>
     activityList.map((_, index) => `panel${index}`)
   )
-  const [allExpanded, setAllExpanded] = useState(true)
+  const [, setAllExpanded] = useState(true)
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded((prev) =>
@@ -273,7 +266,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         )
       })}
       <DocumentUploadDialog
-        parentID={complianceReportId}
+        parentId={+complianceReportId}
         parentType="compliance_report"
         open={isFileDialogOpen}
         close={() => {

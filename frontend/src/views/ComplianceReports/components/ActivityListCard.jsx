@@ -1,16 +1,15 @@
+import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
+import { Typography } from '@mui/material'
+import Box from '@mui/material/Box'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ActivityLinksList } from './ActivityLinkList'
-import { Typography } from '@mui/material'
-import BCBox from '@/components/BCBox'
-import BCTypography from '@/components/BCTypography'
-import BCButton from '@/components/BCButton'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
-import { useState } from 'react'
-import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
-import Box from '@mui/material/Box'
 
-export const ActivityListCard = ({ name, period, reportID }) => {
+export const ActivityListCard = ({ name, period, reportId }) => {
   const { t } = useTranslation(['report'])
 
   const [isOpen, setIsOpen] = useState(false)
@@ -70,7 +69,7 @@ export const ActivityListCard = ({ name, period, reportID }) => {
             </Box>
           </Box>
           <DocumentUploadDialog
-            parentID={reportID}
+            parentId={reportId}
             parentType="compliance_report"
             open={isOpen}
             close={() => {

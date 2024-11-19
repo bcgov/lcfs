@@ -1,33 +1,33 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { Fab, Stack, Tooltip, Typography } from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import colors from '@/themes/base/colors.js'
 import { govRoles } from '@/constants/roles'
-import { useTranslation } from 'react-i18next'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
-import { Introduction } from './components/Introduction'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useGetComplianceReport,
   useUpdateComplianceReport
 } from '@/hooks/useComplianceReports'
-import ComplianceReportSummary from './components/ComplianceReportSummary'
-import ReportDetails from './components/ReportDetails'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useOrganization } from '@/hooks/useOrganization'
+import colors from '@/themes/base/colors.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import { Fab, Stack, Tooltip, Typography } from '@mui/material'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useParams } from 'react-router-dom'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
 import { AssessmentCard } from './components/AssessmentCard'
-import InternalComments from '@/components/InternalComments'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import ComplianceReportSummary from './components/ComplianceReportSummary'
+import { Introduction } from './components/Introduction'
+import ReportDetails from './components/ReportDetails'
 
 const iconStyle = {
   width: '2rem',
@@ -198,7 +198,7 @@ export const EditViewComplianceReport = () => {
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
-                reportID={complianceReportId}
+                reportId={+complianceReportId}
               />
             )}
             <AssessmentCard
