@@ -1038,9 +1038,7 @@ export type NotionalTransferFuelCategorySchema = {
     description?: (string | null);
 };
 
-export type NotionalTransfersAllSchema = {
-    notionalTransfers: Array<NotionalTransferSchema>;
-};
+export type NotionalTransfersAllSchema = Array<NotionalTransferSchema>;
 
 export type NotionalTransferSchema = {
     legalName: string;
@@ -1260,10 +1258,10 @@ export type PaginatedAllocationAgreementRequestSchema = {
 
 export type PaginatedNotionalTransferRequestSchema = {
     complianceReportId: number;
-    filters: Array<FilterModel>;
-    page: number;
-    size: number;
-    sortOrders: Array<SortOrder>;
+    filters?: (Array<FilterModel> | null);
+    page?: (number | null);
+    size?: (number | null);
+    sortOrders?: (Array<SortOrder> | null);
 };
 
 export type PaginatedOtherUsesRequestSchema = {

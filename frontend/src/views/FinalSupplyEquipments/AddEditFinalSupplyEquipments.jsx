@@ -1,20 +1,19 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
+import * as ROUTES from '@/constants/routes/routes.js'
 import {
   useFinalSupplyEquipmentOptions,
   useGetFinalSupplyEquipments,
   useSaveFinalSupplyEquipment
 } from '@/hooks/useFinalSupplyEquipment'
-import { v4 as uuid } from 'uuid'
-import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
+import { Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
+import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -36,8 +35,9 @@ export const AddEditFinalSupplyEquipments = () => {
   } = useFinalSupplyEquipmentOptions()
   const { mutateAsync: saveRow } =
     useSaveFinalSupplyEquipment(complianceReportId)
-  const { data, isLoading: equipmentsLoading } =
-    useGetFinalSupplyEquipments(complianceReportId)
+  const { data, isLoading: equipmentsLoading } = useGetFinalSupplyEquipments({
+    complianceReportId: +complianceReportId
+  })
 
   const gridOptions = useMemo(
     () => ({
@@ -239,16 +239,21 @@ export const AddEditFinalSupplyEquipments = () => {
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
-  const onAddRows = useCallback((numRows) => {
-    return Array(numRows).fill().map(()=>({
-      id: uuid(),
-      complianceReportId,
-      supplyFromDate: `${compliancePeriod}-01-01`,
-      supplyToDate: `${compliancePeriod}-12-31`,
-      validationStatus: 'error',
-      modified: true
-    }))
-  }, [compliancePeriod, complianceReportId])
+  const onAddRows = useCallback(
+    (numRows) => {
+      return Array(numRows)
+        .fill()
+        .map(() => ({
+          id: uuid(),
+          complianceReportId,
+          supplyFromDate: `${compliancePeriod}-01-01`,
+          supplyToDate: `${compliancePeriod}-12-31`,
+          validationStatus: 'error',
+          modified: true
+        }))
+    },
+    [compliancePeriod, complianceReportId]
+  )
 
   return (
     isFetched &&

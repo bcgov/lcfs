@@ -30,7 +30,7 @@ export const useGetAllocationAgreements = ({
   complianceReportId,
   pagination
 }: {
-  complianceReportId: string
+  complianceReportId: number
   pagination: PaginationRequestSchema
 }) => {
   return useQuery({
@@ -39,7 +39,7 @@ export const useGetAllocationAgreements = ({
       try {
         const { data } =
           await AllocationAgreementsService.getAllocationAgreements({
-            body: { complianceReportId: +complianceReportId, ...pagination }
+            body: { complianceReportId, ...pagination }
           })
         return data
       } catch (error) {

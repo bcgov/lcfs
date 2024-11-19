@@ -61,7 +61,6 @@ export const AddEditNotionalTransfers = () => {
         return row
       })
     }
-
     if (notionalTransfers && notionalTransfers.length > 0) {
       try {
         setRowData(ensureRowIds(notionalTransfers))

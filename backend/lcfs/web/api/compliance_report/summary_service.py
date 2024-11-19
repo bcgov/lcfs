@@ -297,7 +297,7 @@ class ComplianceReportSummaryService:
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
 
-        for transfer in notional_transfers.notional_transfers:
+        for transfer in notional_transfers.root:
             # Normalize the fuel category key
             normalized_category = transfer.fuel_category.replace(" ", "_").lower()
 

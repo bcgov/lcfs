@@ -17,7 +17,7 @@ export const useCompliancePeriod = () => {
 
         return data
       } catch (error) {
-        console.log(error)
+        console.log(123, error)
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -31,9 +31,6 @@ export const useListComplianceReports = ({ orgId }: { orgId: number }) => {
     queryKey: ['compliance-reports', orgId],
     queryFn: async () => {
       try {
-        if (!orgId) {
-          return
-        }
         const { data } = await OrganizationService.getOrgComplianceReports({
           path: { organization_id: orgId },
           body: {
@@ -45,7 +42,7 @@ export const useListComplianceReports = ({ orgId }: { orgId: number }) => {
         })
         return data
       } catch (error) {
-        console.log(error)
+        console.log(123, error)
       }
     }
   })
@@ -78,6 +75,7 @@ export const useGetComplianceReport = ({
   reportId: number
 }) => {
   return useQuery({
+    enabled: !!orgId,
     queryKey: ['compliance-report', reportId],
     queryFn: async () => {
       try {

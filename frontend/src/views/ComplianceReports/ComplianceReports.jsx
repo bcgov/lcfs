@@ -19,6 +19,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 // internal components
 import { defaultSortModel, reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
+import Loading from '@/components/Loading'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -31,7 +32,7 @@ export const ComplianceReports = () => {
   const alertRef = useRef()
   const navigate = useNavigate()
   const location = useLocation()
-  const { hasRoles, data: currentUser } = useCurrentUser()
+  const { hasRoles, data: currentUser, isLoading } = useCurrentUser()
 
   const gridOptions = useMemo(
     () => ({
@@ -68,13 +69,19 @@ export const ComplianceReports = () => {
   }, [location.state])
 
   const { mutate: createComplianceReport, isPending: isCreating } =
-    useCreateComplianceReport(currentUser?.organization?.organizationId)
+    useCreateComplianceReport({
+      orgId: currentUser?.organization.organizationId
+    })
 
   useEffect(() => {
     if (isCreating) {
       setIsButtonLoading(true)
     }
   }, [isCreating])
+
+  if (isLoading) {
+    return <Loading />
+  }
   return (
     <>
       <div>

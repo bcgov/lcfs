@@ -42,7 +42,7 @@ const ComplianceReportSummary = ({
     reportId
   })
   const { mutate: updateComplianceReportSummary } =
-    useUpdateComplianceReportSummary({ reportId: data.complianceReportId })
+    useUpdateComplianceReportSummary({ reportId: data?.complianceReportId })
   useEffect(() => {
     if (data) {
       setSummaryData(data)

@@ -1,24 +1,23 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import {
-  defaultColDef,
-  allocationAgreementColDefs,
-  PROVISION_APPROVED_FUEL_CODE
-} from './_schema'
+import { DEFAULT_CI_FUEL } from '@/constants/common'
+import * as ROUTES from '@/constants/routes/routes.js'
 import {
   useAllocationAgreementOptions,
   useGetAllocationAgreements,
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
+import { Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import * as ROUTES from '@/constants/routes/routes.js'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
+import {
+  allocationAgreementColDefs,
+  defaultColDef,
+  PROVISION_APPROVED_FUEL_CODE
+} from './_schema'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
@@ -43,7 +42,7 @@ export const AddEditAllocationAgreements = () => {
   })
 
   const { data, isLoading: allocationAgreementsLoading } =
-    useGetAllocationAgreements(complianceReportId)
+    useGetAllocationAgreements({ complianceReportId: +complianceReportId })
 
   const gridOptions = useMemo(
     () => ({

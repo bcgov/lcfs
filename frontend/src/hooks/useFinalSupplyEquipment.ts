@@ -20,7 +20,11 @@ export const useFinalSupplyEquipmentOptions = () => {
   })
 }
 
-export const useGetFinalSupplyEquipments = (complianceReportId: string) => {
+export const useGetFinalSupplyEquipments = ({
+  complianceReportId
+}: {
+  complianceReportId: number
+}) => {
   return useQuery({
     queryKey: ['final-supply-equipments', complianceReportId],
     queryFn: async () => {
@@ -28,7 +32,7 @@ export const useGetFinalSupplyEquipments = (complianceReportId: string) => {
         const { data } =
           await FinalSupplyEquipmentsService.getFinalSupplyEquipments({
             body: {
-              complianceReportId: +complianceReportId
+              complianceReportId
             }
           })
         return data

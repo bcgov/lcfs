@@ -72,7 +72,7 @@ class NotionalTransferServices:
         notional_transfers = await self.repo.get_notional_transfers(
             compliance_report_id
         )
-        return NotionalTransfersAllSchema(notional_transfers=notional_transfers)
+        return NotionalTransfersAllSchema(notional_transfers)
 
     @service_handler
     async def get_notional_transfers_paginated(

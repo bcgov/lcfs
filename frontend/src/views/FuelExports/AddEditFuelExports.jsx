@@ -35,8 +35,9 @@ export const AddEditFuelExports = () => {
   } = useFuelExportOptions({ compliancePeriod })
   const { mutateAsync: saveRow } = useSaveFuelExport(complianceReportId)
 
-  const { data, isLoading: fuelExportsLoading } =
-    useGetFuelExports(complianceReportId)
+  const { data, isLoading: fuelExportsLoading } = useGetFuelExports({
+    complianceReportId: +complianceReportId
+  })
 
   const gridOptions = useMemo(
     () => ({

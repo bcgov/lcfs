@@ -27,29 +27,16 @@ export const useFuelExportOptions = ({
 }
 
 export const useGetFuelExports = (
-  params: number | ({ complianceReportId: number } & PaginationRequestSchema),
+  params: { complianceReportId: number } & PaginationRequestSchema,
   pagination: number
 ) => {
   return useQuery({
     queryKey: ['fuel-exports', params, pagination],
     queryFn: async () => {
       try {
-        let body
-
-        if (typeof params === 'number') {
-          body = {
-            complianceReportId: params
-          }
-        } else if (typeof params === 'string') {
-          body = {
-            complianceReportId: +params
-          }
-        } else {
-          // BCGridViewer passes in object. TODO modify BCGridViewer
-          body = params
-        }
-
-        const { data } = await FuelExportsService.getFuelExports({ body })
+        const { data } = await FuelExportsService.getFuelExports({
+          body: params
+        })
 
         return data
       } catch (error) {

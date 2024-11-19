@@ -4698,17 +4698,10 @@ export const NotionalTransferTableOptionsSchemaSchema = {
 } as const;
 
 export const NotionalTransfersAllSchemaSchema = {
-    properties: {
-        notionalTransfers: {
-            items: {
-                '$ref': '#/components/schemas/NotionalTransferSchema'
-            },
-            type: 'array',
-            title: 'Notionaltransfers'
-        }
+    items: {
+        '$ref': '#/components/schemas/NotionalTransferSchema'
     },
-    type: 'object',
-    required: ['notionalTransfers'],
+    type: 'array',
     title: 'NotionalTransfersAllSchema'
 } as const;
 
@@ -5796,30 +5789,58 @@ export const PaginatedNotionalTransferRequestSchemaSchema = {
             title: 'Compliancereportid'
         },
         filters: {
-            items: {
-                '$ref': '#/components/schemas/FilterModel'
-            },
-            type: 'array',
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/FilterModel'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Filters'
         },
         page: {
-            type: 'integer',
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Page'
         },
         size: {
-            type: 'integer',
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Size'
         },
         sortOrders: {
-            items: {
-                '$ref': '#/components/schemas/SortOrder'
-            },
-            type: 'array',
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/SortOrder'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Sortorders'
         }
     },
     type: 'object',
-    required: ['complianceReportId', 'filters', 'page', 'size', 'sortOrders'],
+    required: ['complianceReportId'],
     title: 'PaginatedNotionalTransferRequestSchema'
 } as const;
 

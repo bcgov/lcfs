@@ -6,6 +6,7 @@ from lcfs.web.api.base import (
     SortOrder,
     PaginationRequestSchema,
     PaginationResponseSchema,
+    RootSchema,
 )
 from enum import Enum
 
@@ -32,10 +33,10 @@ class NotionalTransferSchema(NotionalTransferCreateSchema):
 
 class PaginatedNotionalTransferRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
-    filters: List[FilterModel]
-    page: int
-    size: int
-    sort_orders: List[SortOrder]
+    filters: Optional[List[FilterModel]] = None
+    page: Optional[int] = None
+    size: Optional[int] = None
+    sort_orders: Optional[List[SortOrder]] = None
 
 
 class NotionalTransfersSchema(BaseSchema):
@@ -43,8 +44,8 @@ class NotionalTransfersSchema(BaseSchema):
     pagination: Optional[PaginationResponseSchema] = None
 
 
-class NotionalTransfersAllSchema(BaseSchema):
-    notional_transfers: List[NotionalTransferSchema]
+class NotionalTransfersAllSchema(RootSchema[List[NotionalTransferSchema]]):
+    pass
 
 
 class NotionalTransferFuelCategorySchema(BaseSchema):

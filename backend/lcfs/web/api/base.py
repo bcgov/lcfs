@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Generic, TypeVar
 from enum import Enum
 from typing_extensions import deprecated
 from sqlalchemy import and_, cast, Date, func, String
@@ -6,7 +6,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from fastapi import HTTPException, Query, Request, Response
 from fastapi_cache import FastAPICache
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, RootModel
 from pydantic.alias_generators import to_camel
 import structlog
 import re
@@ -15,6 +15,17 @@ logger = structlog.get_logger(__name__)
 
 
 class BaseSchema(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        from_attributes=True,
+    )
+
+
+T = TypeVar("T")
+
+
+class RootSchema(RootModel[T], Generic[T]):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
