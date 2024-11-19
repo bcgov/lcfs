@@ -67,6 +67,18 @@ export const fuelExportColDefs = (optionsData, errors) => [
     hide: true
   },
   {
+    field: 'fuelCodeId',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    hide: true
+  },
+  {
+    field: 'endUseId',
+    cellEditor: 'agTextCellEditor',
+    cellDataType: 'text',
+    hide: true
+  },
+  {
     field: 'complianceUnits',
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     minWidth: 100,
@@ -118,7 +130,8 @@ export const fuelExportColDefs = (optionsData, errors) => [
         params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = undefined
         params.data.fuelCategory = undefined
-        params.data.endUse = ''
+        params.data.endUseId = undefined
+        params.data.endUseType = undefined
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
@@ -189,7 +202,8 @@ export const fuelExportColDefs = (optionsData, errors) => [
           ?.fuelCategories?.find(
             (obj) => params.newValue === obj.fuelCategory
           )?.fuelCategoryId
-        params.data.endUse = undefined
+        params.data.endUseId = undefined
+        params.data.endUseType = undefined
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
@@ -216,7 +230,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     tooltipValueGetter: (p) => 'Select the fuel category from the list'
   },
   {
-    field: 'endUse',
+    field: 'endUseType',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUse'),
     options: (params) =>
@@ -245,9 +259,27 @@ export const fuelExportColDefs = (optionsData, errors) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
-    valueGetter: (params) =>
-      params.colDef?.options(params).length < 1 ? 'Any' : params.data?.endUse,
+    valueGetter: (params) => {
+      return params.colDef?.cellEditorParams(params).options.length < 1
+        ? 'Any'
+        : params.data?.endUseType?.type
+    },
     editable: (params) => params.colDef?.options(params).length > 0,
+    valueSetter: (params) => {
+      if (params.newValue) {
+        const eerRatio = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.eerRatios.filter(
+            (item) =>
+              item.fuelCategory.fuelCategory === params.data.fuelCategory
+          )
+          .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
+
+        params.data.endUseType = eerRatio.endUseType
+        params.data.endUseId = eerRatio.endUseType.endUseTypeId
+      }
+      return true
+    },
     minWidth: 260
   },
   {
@@ -442,7 +474,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
         eerOptions?.eerRatios.find(
           (item) =>
             item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUse
+            item.endUseType?.type === params.data.endUseType?.type
         )
       if (!eer) {
         eer = eerOptions?.eerRatios?.find(

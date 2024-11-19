@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_export.services import FuelExportServices
 from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
 from fastapi_cache import FastAPICache
@@ -11,18 +12,20 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 
 @pytest.fixture(scope="function", autouse=True)
 async def init_cache():
+    """Initialize the cache for testing."""
     FastAPICache.init(InMemoryBackend(), prefix="test-cache")
 
 
 @pytest.fixture
 def mock_db():
+    """Mock the AsyncSession for database interactions."""
     return AsyncMock(spec=AsyncSession)
 
 
 @pytest.fixture
-def mock_repo():
-    repo = AsyncMock(spec=FuelExportRepository())
-    # Add specific async mock methods that need to be available
+def mock_repo(mock_db):
+    """Mock FuelExportRepository."""
+    repo = FuelExportRepository(db=mock_db)
     repo.get_fuel_export_table_options = AsyncMock()
     repo.get_fuel_export_list = AsyncMock()
     repo.get_fuel_exports_paginated = AsyncMock()
@@ -38,17 +41,17 @@ def mock_repo():
 
 @pytest.fixture
 def mock_compliance_report_repo():
-    return AsyncMock(spec=ComplianceReportRepository)
+    """Mock ComplianceReportRepository."""
+    repo = AsyncMock(spec=ComplianceReportRepository)
+    return repo
 
 
 @pytest.fixture
-def fuel_export_service(mock_user_profile, mock_repo, mock_compliance_report_repo):
-    service = FuelExportServices()
-    service.repo = mock_repo
-    service.compliance_report_repo = mock_compliance_report_repo
-    service.request = MagicMock()
-    service.request.user = mock_user_profile
-    return service
+def mock_fuel_code_repo():
+    """Mock FuelCodeRepository."""
+    repo = AsyncMock(spec=FuelCodeRepository)
+    repo.get_standardized_fuel_data = AsyncMock()
+    return repo
 
 
 @pytest.fixture
@@ -59,23 +62,23 @@ def fuel_export_repo(mock_db):
 
 
 @pytest.fixture
-def mock_fuel_export_services():
-    services = AsyncMock(spec=FuelExportServices)
-    # Add specific methods that need to be available
-    services.validate_and_calculate_compliance_units = AsyncMock()
-    services.get_fuel_export_options = AsyncMock()
-    return services
-
-
-@pytest.fixture
-def fuel_export_action_service(mock_repo, mock_fuel_export_services):
-    service = FuelExportActionService(
-        repo=mock_repo, fuel_export_services=mock_fuel_export_services
+def fuel_export_service(mock_repo, mock_compliance_report_repo):
+    """Mock FuelExportServices."""
+    service = FuelExportServices(
+        repo=mock_repo,
+        compliance_report_repo=mock_compliance_report_repo,
     )
     return service
 
 
 @pytest.fixture
+def fuel_export_action_service(mock_repo, mock_fuel_code_repo):
+    """Mock FuelExportActionService."""
+    service = FuelExportActionService(repo=mock_repo, fuel_repo=mock_fuel_code_repo)
+    return service
+
+
+@pytest.fixture
 def mock_user_profile():
-    """Mock user profile with minimal required attributes"""
+    """Mock user profile with minimal required attributes."""
     return MagicMock(id=1, organization_id=1, user_type="SUPPLIER")

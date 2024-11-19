@@ -69,6 +69,7 @@ export const AddEditFuelSupplies = () => {
         const updatedRowData = data.fuelSupplies.map((item) => ({
           ...item,
           complianceReportId, // This takes current reportId, important for versioning
+          compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
           fuelTypeOther:
@@ -83,7 +84,7 @@ export const AddEditFuelSupplies = () => {
         setRowData([{ id: uuid() }])
       }
     },
-    [data, complianceReportId]
+    [data, complianceReportId, compliancePeriod]
   )
 
   useEffect(() => {

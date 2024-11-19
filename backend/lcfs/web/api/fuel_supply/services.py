@@ -233,7 +233,6 @@ class FuelSupplyServices:
         self, compliance_report_id: int
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
-        logger.info("Getting fuel supply list for compliance report", compliance_report_id=compliance_report_id)
         fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id)
         fs_list = [
             FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models

@@ -132,6 +132,7 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     fuel_supply_id: Optional[int] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
+    compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_category_id: int
     end_use_id: Optional[int] = None
@@ -160,6 +161,7 @@ class FuelSupplyResponseSchema(BaseSchema):
     action_type: str
     fuel_type_id: int
     fuel_type: FuelTypeSchema
+    compliance_period: Optional[str] = None
     quantity: int
     units: str
     compliance_units: Optional[int] = None

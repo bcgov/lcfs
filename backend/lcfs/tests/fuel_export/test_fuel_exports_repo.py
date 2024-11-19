@@ -222,9 +222,9 @@ async def test_update_fuel_export_success(fuel_export_repo, mock_db):
 
     assert result == updated_fuel_export
     mock_db.merge.assert_called_once_with(fuel_export)
-    mock_db.flush.assert_called_once()
+    mock_db.flush.assert_awaited_once()
     mock_db.refresh.assert_awaited_once_with(
-        fuel_export,
+        updated_fuel_export,
         [
             "fuel_category",
             "fuel_type",

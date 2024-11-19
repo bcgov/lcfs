@@ -443,7 +443,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'energyDensity',
