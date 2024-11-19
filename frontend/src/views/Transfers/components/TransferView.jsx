@@ -90,7 +90,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
       {/* Internal Comments */}
       <Role roles={govRoles}>
         {transferId && (
-          <InternalComments entityType="Transfer" entityId={transferId} />
+          <InternalComments entityType="Transfer" entityId={+transferId} />
         )}
       </Role>
 

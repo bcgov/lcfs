@@ -243,7 +243,7 @@ export const EditViewComplianceReport = () => {
                 <Role roles={govRoles}>
                   <InternalComments
                     entityType={'complianceReport'}
-                    entityId={parseInt(complianceReportId)}
+                    entityId={+complianceReportId}
                     // onCommentChange={handleCommentChange}
                   />
                 </Role>

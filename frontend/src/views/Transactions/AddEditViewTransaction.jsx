@@ -409,7 +409,7 @@ export const AddEditViewTransaction = () => {
             <Role roles={govRoles}>
               <InternalComments
                 entityType={txnType}
-                entityId={transactionId ?? null}
+                entityId={transactionId ? +transactionId : null}
                 onCommentChange={handleCommentChange}
               />
             </Role>
