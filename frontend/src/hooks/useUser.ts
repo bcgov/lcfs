@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 export const useUser = ({ id }: { id: number }) => {
   return useQuery({
+    enabled: !!id,
     queryKey: ['user', id],
     queryFn: async () => {
       try {

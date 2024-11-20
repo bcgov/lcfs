@@ -52,7 +52,7 @@ export const AssessmentCard = ({
       )
   }, [history, isGovernmentUser, hasSupplemental])
 
-  const { mutate: createSupplementalReport, isLoading } =
+  const { mutate: createSupplementalReport, isPending } =
     useCreateSupplementalReport({ complianceReportId: +complianceReportId })
 
   return (
@@ -223,7 +223,7 @@ export const AssessmentCard = ({
                       }}
                       startIcon={<AssignmentIcon />}
                       sx={{ mt: 2 }}
-                      disabled={isLoading}
+                      disabled={isPending}
                     >
                       {t('report:createSupplementalRptBtn')}
                     </BCButton>
@@ -243,7 +243,7 @@ export const AssessmentCard = ({
                   }}
                   startIcon={<AssignmentIcon />}
                   sx={{ mt: 2 }}
-                  disabled={isLoading}
+                  disabled={isPending}
                 >
                   {t('report:createReassessmentBtn')}
                 </BCButton>

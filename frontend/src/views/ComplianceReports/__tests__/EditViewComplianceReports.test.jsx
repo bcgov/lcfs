@@ -1,12 +1,12 @@
-import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { EditViewComplianceReport } from '../EditViewComplianceReport'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import * as useOrganizationHook from '@/hooks/useOrganization'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { wrapper } from '@/tests/utils/wrapper'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import React from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { EditViewComplianceReport } from '../EditViewComplianceReport'
 
 vi.mock('@react-keycloak/web', () => ({
   ReactKeycloakProvider: ({ children }) => children,
@@ -192,9 +192,7 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
-          }
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
         }
       },
       currentUser: {
@@ -214,10 +212,8 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
-            currentStatus: {
-              status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
-            }
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
           }
         }
       },
@@ -241,10 +237,8 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
-            currentStatus: {
-              status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
-            }
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
           }
         }
       },
@@ -268,9 +262,7 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-          }
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
         }
       },
       currentUser: {
@@ -339,9 +331,7 @@ describe('EditViewComplianceReport', () => {
   it('displays ActivityListCard for Draft status', async () => {
     setupMocks({
       complianceReport: {
-        data: {
-          data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } }
-        }
+        data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } }
       }
     })
     render(<EditViewComplianceReport />, { wrapper })
@@ -366,10 +356,8 @@ describe('EditViewComplianceReport', () => {
 
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
       data: {
-        data: {
-          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
-          history: historyMock
-        }
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: historyMock
       },
       isLoading: false,
       isError: false
@@ -400,5 +388,4 @@ describe('EditViewComplianceReport', () => {
       expect(screen.getByLabelText('scroll to top')).toBeInTheDocument()
     })
   })
-
 })

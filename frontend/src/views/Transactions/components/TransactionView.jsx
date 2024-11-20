@@ -16,14 +16,14 @@ export const TransactionView = ({ transaction }) => {
   const { t } = useTranslation(['txn'])
   const { hasAnyRole } = useCurrentUser()
 
-  const transactionType = transaction.adminAdjustmentId
+  const transactionType = transaction?.adminAdjustmentId
     ? t('txn:administrativeAdjustment')
     : t('txn:initiativeAgreement')
   const organizationName =
-    transaction.toOrganization?.name || t('common:unknown')
+    transaction?.toOrganization?.name || t('common:unknown')
 
   const isRecommended =
-    transaction.currentStatus?.status === TRANSACTION_STATUSES.RECOMMENDED
+    transaction?.currentStatus?.status === TRANSACTION_STATUSES.RECOMMENDED
 
   return (
     <BCBox mb={4}>
@@ -42,7 +42,7 @@ export const TransactionView = ({ transaction }) => {
                 {t('txn:complianceUnitsLabel')}
               </BCTypography>
               <BCTypography variant="body2" style={{ display: 'inline' }}>
-                {numberFormatter(transaction.complianceUnits)}
+                {numberFormatter(transaction?.complianceUnits)}
               </BCTypography>
             </Grid>
             <Grid item xs={12}>
@@ -50,7 +50,7 @@ export const TransactionView = ({ transaction }) => {
                 {t('txn:effectiveDateLabel')}
               </BCTypography>
               <BCTypography variant="body2" style={{ display: 'inline' }}>
-                {transaction.transactionEffectiveDate || ''}
+                {transaction?.transactionEffectiveDate || ''}
               </BCTypography>
             </Grid>
             <Grid item xs={12}>
@@ -65,7 +65,7 @@ export const TransactionView = ({ transaction }) => {
                 style={inlineLabelStyle}
               />
               <BCTypography variant="body2" style={{ display: 'inline' }}>
-                {transaction.govComment}
+                {transaction?.govComment}
               </BCTypography>
             </Grid>
           </Grid>

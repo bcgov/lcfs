@@ -10,12 +10,12 @@ vi.mock('@/services/useApiService', () => ({
 }))
 
 describe('SupportingDocumentSummary', () => {
-  const reportID = '123'
+  const reportId = '123'
   const data = [
     { documentId: '1', fileName: 'example1.txt' },
     { documentId: '2', fileName: 'example2.txt' }
   ]
-
+  window.URL.createObjectURL = vi.fn()
   beforeEach(() => {
     useApiService.mockReturnValue({
       get: vi.fn((url) => {
@@ -33,7 +33,7 @@ describe('SupportingDocumentSummary', () => {
   })
 
   it('renders without crashing', () => {
-    render(<SupportingDocumentSummary reportID={reportID} data={data} />, {
+    render(<SupportingDocumentSummary reportId={reportId} data={data} />, {
       wrapper
     })
     expect(screen.getByText('example1.txt')).toBeInTheDocument()
@@ -41,7 +41,8 @@ describe('SupportingDocumentSummary', () => {
   })
 
   it('opens document when clicked', async () => {
-    render(<SupportingDocumentSummary reportID={reportID} data={data} />, {
+    window.URL.createObjectURL.mockReturnValue('http://example.com/doc1')
+    render(<SupportingDocumentSummary reportId={reportId} data={data} />, {
       wrapper
     })
     const firstDocumentLink = screen.getByText('example1.txt')
@@ -52,7 +53,8 @@ describe('SupportingDocumentSummary', () => {
 
     await waitFor(() => {
       expect(useApiService().get).toHaveBeenCalledWith(
-        expect.stringContaining('1')
+        expect.stringContaining('1'),
+        expect.objectContaining({ responseType: 'blob' })
       )
       expect(window.open).toHaveBeenCalledWith(
         'http://example.com/doc1',
@@ -64,7 +66,7 @@ describe('SupportingDocumentSummary', () => {
   it('does not open document if documentID is missing', async () => {
     render(
       <SupportingDocumentSummary
-        reportID={reportID}
+        reportId={reportId}
         data={[{ documentId: '', fileName: 'example3.txt' }]}
       />,
       { wrapper }

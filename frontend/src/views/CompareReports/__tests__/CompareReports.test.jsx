@@ -28,9 +28,7 @@ describe('CompareReports Component', () => {
     ]
     useListComplianceReports.mockReturnValue({
       data: {
-        data: {
-          reports: reportData
-        }
+        reports: reportData
       }
     })
 
@@ -92,11 +90,11 @@ describe('CompareReports Component', () => {
       }
     }
 
-    useGetComplianceReportSummary.mockImplementation((id) => {
-      if (id === 1) {
+    useGetComplianceReportSummary.mockImplementation(({ reportId }) => {
+      if (reportId === 1) {
         return reportData1
       }
-      if (id === 2) {
+      if (reportId === 2) {
         return reportData2
       }
       return { data: null }

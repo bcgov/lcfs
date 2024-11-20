@@ -6,6 +6,7 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import {
   useDeleteDocument,
   useUploadDocument,
+  useViewDocument,
   useDocuments
 } from '@/hooks/useDocuments'
 
@@ -74,6 +75,12 @@ describe('DocumentUploadDialog', () => {
     const uploadFileMock = vi.fn()
     useUploadDocument.mockReturnValue({
       mutate: uploadFileMock
+    })
+
+    useViewDocument.mockReturnValue({
+      data: null, // Initial state for data
+      isSuccess: false, // Indicates the document hasn't been fetched yet
+      refetch: vi.fn() // Mock the refetch function
     })
 
     render(

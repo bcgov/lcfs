@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react'
-import { Box, MenuItem, Select } from '@mui/material'
-import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
-import { useOrganizationNames } from '@/hooks/useOrganizations.js'
-import { numberFormatter } from '@/utils/formatters.js'
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
+import { numberFormatter } from '@/utils/formatters'
+import { Box, MenuItem, Select } from '@mui/material'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const OrganizationsSummaryCard = () => {

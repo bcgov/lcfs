@@ -78,7 +78,7 @@ describe('ComplianceReports', () => {
       useComplianceReportsHook.useCreateComplianceReport
     ).mockReturnValue({
       mutate: vi.fn(),
-      isLoading: false,
+      isPending: false,
       isError: false
     })
 
@@ -110,7 +110,7 @@ describe('ComplianceReports', () => {
       useComplianceReportsHook.useCreateComplianceReport
     ).mockReturnValue({
       mutate: mockMutate,
-      isLoading: false,
+      isPending: false,
       isError: false
     })
 
@@ -118,11 +118,17 @@ describe('ComplianceReports', () => {
     fireEvent.click(screen.getByText('New Report'))
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith({
-        compliancePeriod: 'Test Period',
-        organizationId: '123',
-        status: 'Draft'
-      })
+      expect(mockMutate).toHaveBeenCalledWith(
+        {
+          compliancePeriod: 'Test Period',
+          organizationId: '123',
+          status: 'Draft'
+        },
+        {
+          onError: expect.any(Function),
+          onSuccess: expect.any(Function)
+        }
+      )
     })
   })
 

@@ -232,7 +232,7 @@ describe('AddEditViewTransaction Component Tests', () => {
     useInitiativeAgreement.mockReturnValue({ data: null })
     useCreateUpdateInitiativeAgreement.mockReturnValue({
       mutate: vi.fn(),
-      isLoading: true
+      isPending: true
     })
     renderComponent()
     expect(screen.getByText('txn:processingText')).toBeInTheDocument()

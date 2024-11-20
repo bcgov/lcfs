@@ -176,7 +176,7 @@ export const CompareReports = () => {
               variant="outlined"
               onChange={onSelectReport1}
             >
-              {reports.map((report, index) => (
+              {reports?.map((report, index) => (
                 <MenuItem
                   key={index}
                   value={report.compliancePeriod.description}
@@ -201,7 +201,7 @@ export const CompareReports = () => {
               variant="outlined"
               onChange={onSelectReport2}
             >
-              {reports.map((report, index) => (
+              {reports?.map((report, index) => (
                 <MenuItem
                   key={index}
                   value={report.compliancePeriod.description}
