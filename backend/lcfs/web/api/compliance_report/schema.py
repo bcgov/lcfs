@@ -2,7 +2,7 @@ from enum import Enum
 from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
 from enum import Enum
-from lcfs.web.api.fuel_code.schema import EndUseTypeSchema,EndUserTypeSchema
+from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
@@ -26,9 +26,11 @@ class ReportingFrequency(str, Enum):
     ANNUAL = "Annual"
     QUARTERLY = "Quarterly"
 
+
 class PortsEnum(str, Enum):
     SINGLE = "Single port"
     DUAL = "Dual port"
+
 
 class CompliancePeriodSchema(BaseSchema):
     compliance_period_id: int
@@ -185,11 +187,20 @@ class ComplianceReportSummarySchema(BaseSchema):
     renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
+    can_sign: bool = False
     summary_id: Optional[int] = None
     compliance_report_id: Optional[int] = None
     version: Optional[int] = None
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
+
+
+class ComplianceReportSummaryUpdateSchema(BaseSchema):
+    compliance_report_id: int
+    renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
+    summary_id: int
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):

@@ -1,7 +1,7 @@
 """Enhance audit_log: Rename id, add comments, enforce uniqueness, and create indexes.
 
 Revision ID: 1974af823b80
-Revises: b659816d0a86
+Revises: 654858661ae7
 Create Date: 2024-11-15 21:05:06.629584
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "1974af823b80"
-down_revision = "b659816d0a86"
+down_revision = "654858661ae7"
 branch_labels = None
 depends_on = None
 

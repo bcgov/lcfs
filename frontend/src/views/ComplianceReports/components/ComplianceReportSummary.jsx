@@ -38,6 +38,7 @@ const ComplianceReportSummary = ({
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
+  const [canSign, setCanSign] = useState(false)
   const { t } = useTranslation(['report'])
 
   const { hasRoles } = useCurrentUser()
@@ -67,6 +68,7 @@ const ComplianceReportSummary = ({
         data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
           data?.nonCompliancePenaltySummary[1].totalValue <= 0
       )
+      setCanSign(data && data.canSign)
     }
     if (isError) {
       alertRef.current?.triggerAlert({
@@ -140,6 +142,7 @@ const ComplianceReportSummary = ({
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>
               <SigningAuthorityDeclaration
+                disabled={!canSign}
                 onChange={setIsSigningAuthorityDeclared}
                 disabled={!hasRoles(roles.signing_authority)}
               />

@@ -30,6 +30,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportSummarySchema,
+    ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.web.core.decorators import repo_handler
@@ -532,7 +533,7 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, summary: ComplianceReportSummarySchema
+        self, summary: ComplianceReportSummaryUpdateSchema
     ):
         """
         Save the compliance report summary to the database.
@@ -665,34 +666,27 @@ class ComplianceReportRepository:
         )
         return result or 0
 
-    @repo_handler
-    async def calculate_fuel_quantities(
-        self, compliance_report: ComplianceReport, fossil_derived: bool
+    def aggregate_fuel_supplies(
+        self, fuel_supplies: List[FuelSupply], fossil_derived: bool
     ) -> Dict[str, float]:
-        """
-        Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
-        """
+        """Aggregate quantities from fuel supplies based on fossil_derived flag."""
         fuel_quantities = defaultdict(float)
 
-        # Get effective fuel supplies using the updated logic
-        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
-        )
-
-        # Filter fuel supplies based on fossil_derived flag
-        filtered_fuel_supplies = [
-            fs
-            for fs in effective_fuel_supplies
-            if fs.fuel_type.fossil_derived == fossil_derived
-        ]
-
-        # Aggregate quantities from fuel supplies
-        for fs in filtered_fuel_supplies:
-            fuel_category = fs.fuel_category.category.lower().replace(" ", "_")
+        # Use a list comprehension to filter and iterate in one step
+        for fs in (
+            fs for fs in fuel_supplies if fs.fuel_type.fossil_derived == fossil_derived
+        ):
+            fuel_category = self._format_category(fs.fuel_category.category)
             fuel_quantities[fuel_category] += fs.quantity
 
-        # Aggregate other uses quantities (OtherUses does NOT have versioning)
-        other_uses_query = (
+        return dict(fuel_quantities)
+
+    @repo_handler
+    async def aggregate_other_uses(
+        self, compliance_report_id: int, fossil_derived: bool
+    ) -> Dict[str, float]:
+        """Aggregate quantities from other uses."""
+        query = (
             select(
                 FuelCategory.category,
                 func.coalesce(func.sum(OtherUses.quantity_supplied), 0).label(
@@ -706,51 +700,49 @@ class ComplianceReportRepository:
                 OtherUses.fuel_category_id == FuelCategory.fuel_category_id,
             )
             .where(
-                OtherUses.compliance_report_id
-                == compliance_report.compliance_report_id,
+                OtherUses.compliance_report_id == compliance_report_id,
                 FuelType.fossil_derived.is_(fossil_derived),
                 FuelType.other_uses_fossil_derived.is_(fossil_derived),
             )
             .group_by(FuelCategory.category)
         )
 
-        other_uses_result = await self.db.execute(other_uses_query)
-        for row in other_uses_result:
-            fuel_category = row.category.lower().replace(" ", "_")
-            fuel_quantities[fuel_category] += row.quantity
+        result = await self.db.execute(query)
+        return {self._format_category(row.category): row.quantity for row in result}
 
-        # Aggregate allocation agreement quantities for renewable fuels (AllocationAgreement does NOT have versioning)
-        if not fossil_derived:
-            allocation_agreement_query = (
-                select(
-                    FuelCategory.category,
-                    func.coalesce(func.sum(AllocationAgreement.quantity), 0).label(
-                        "quantity"
-                    ),
-                )
-                .select_from(AllocationAgreement)
-                .join(
-                    FuelType, AllocationAgreement.fuel_type_id == FuelType.fuel_type_id
-                )
-                .join(
-                    FuelCategory,
-                    AllocationAgreement.fuel_category_id
-                    == FuelCategory.fuel_category_id,
-                )
-                .where(
-                    AllocationAgreement.compliance_report_id
-                    == compliance_report.compliance_report_id,
-                    FuelType.fossil_derived.is_(False),
-                    FuelType.other_uses_fossil_derived.is_(False),
-                )
-                .group_by(FuelCategory.category)
+    @repo_handler
+    async def aggregate_allocation_agreements(
+        self, compliance_report_id: int
+    ) -> Dict[str, float]:
+        """Aggregate quantities from allocation agreements for renewable fuels."""
+        query = (
+            select(
+                FuelCategory.category,
+                func.coalesce(func.sum(AllocationAgreement.quantity), 0).label(
+                    "quantity"
+                ),
             )
-            allocation_result = await self.db.execute(allocation_agreement_query)
-            for row in allocation_result:
-                fuel_category = row.category.lower().replace(" ", "_")
-                fuel_quantities[fuel_category] += row.quantity
+            .select_from(AllocationAgreement)
+            .join(FuelType, AllocationAgreement.fuel_type_id == FuelType.fuel_type_id)
+            .join(
+                FuelCategory,
+                AllocationAgreement.fuel_category_id == FuelCategory.fuel_category_id,
+            )
+            .where(
+                AllocationAgreement.compliance_report_id == compliance_report_id,
+                FuelType.fossil_derived.is_(False),
+                FuelType.other_uses_fossil_derived.is_(False),
+            )
+            .group_by(FuelCategory.category)
+        )
 
-        return dict(fuel_quantities)
+        result = await self.db.execute(query)
+        return {self._format_category(row.category): row.quantity for row in result}
+
+    @staticmethod
+    def _format_category(category: str) -> str:
+        """Format the fuel category string."""
+        return category.lower().replace(" ", "_")
 
     @repo_handler
     async def get_all_org_reported_years(self, organization_id: int):
