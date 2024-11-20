@@ -13,7 +13,7 @@ import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import TransferHistory from './TransferHistory'
 import { TransferDetailsCard } from '@/views/Transfers/components/TransferDetailsCard'
-import { Comments } from '@/views/Transactions/components'
+import { Comments } from '@/views/Transfers/components'
 import { CommentList } from '@/views/Transfers/components/CommentList'
 
 export const TransferView = ({ transferId, editorMode, transferData }) => {
