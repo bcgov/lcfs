@@ -25,7 +25,7 @@ export const useGetAllocationAgreements = ({
   complianceReportId: number
 }) => {
   return useQuery({
-    queryKey: ['allocation-agreements', complianceReportId, pagination],
+    queryKey: ['allocation-agreements', complianceReportId],
     queryFn: async () => {
       try {
         const { data } =
