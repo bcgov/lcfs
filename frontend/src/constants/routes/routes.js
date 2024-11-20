@@ -23,15 +23,15 @@ export const INITIATIVE_AGREEMENT_EDIT =
 
 export const ORGANIZATION = '/organization'
 export const ORGANIZATION_ADDUSER = `${ORGANIZATION}/add-user`
-export const ORGANIZATION_VIEWUSER = `${ORGANIZATION}/:userID`
+export const ORGANIZATION_VIEWUSER = `${ORGANIZATION}/:userId`
 export const ORGANIZATION_EDITUSER = `${ORGANIZATION_VIEWUSER}/edit-user`
 
 export const ORGANIZATIONS = '/organizations'
 export const ORGANIZATIONS_ADD = `${ORGANIZATIONS}/add-org`
-export const ORGANIZATIONS_VIEW = `${ORGANIZATIONS}/:orgID`
+export const ORGANIZATIONS_VIEW = `${ORGANIZATIONS}/:orgId`
 export const ORGANIZATIONS_EDIT = `${ORGANIZATIONS_VIEW}/edit-org`
 export const ORGANIZATIONS_ADDUSER = `${ORGANIZATIONS_VIEW}/add-user`
-export const ORGANIZATIONS_VIEWUSER = `${ORGANIZATIONS_VIEW}/:userID`
+export const ORGANIZATIONS_VIEWUSER = `${ORGANIZATIONS_VIEW}/:userId`
 export const ORGANIZATIONS_EDITUSER = `${ORGANIZATIONS_VIEWUSER}/edit-user`
 
 export const REPORTS = '/compliance-reporting'
@@ -50,7 +50,7 @@ export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/settings`
 export const ADMIN = '/admin'
 export const ADMIN_USERS = `${ADMIN}/users`
 export const ADMIN_USERS_ADD = `${ADMIN_USERS}/add-user`
-export const ADMIN_USERS_VIEW = `${ADMIN_USERS}/:userID`
+export const ADMIN_USERS_VIEW = `${ADMIN_USERS}/:userId`
 export const ADMIN_USERS_EDIT = `${ADMIN_USERS_VIEW}/edit-user`
 export const ADMIN_USERACTIVITY = `${ADMIN}/user-activity`
 export const ADMIN_COMPLIANCE_REPORTING = `${ADMIN}/compliance-reporting`

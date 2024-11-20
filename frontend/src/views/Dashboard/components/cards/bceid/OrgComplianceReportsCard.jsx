@@ -27,7 +27,7 @@ const CountDisplay = ({ count }) => (
 const OrgComplianceReportsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: orgData, isLoading: orgLoading } = useOrganization()
+  const { data: orgData } = useOrganization()
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import BCBox from '@/components/BCBox'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { numberFormatter } from '@/utils/formatters'
-import BCBox from '@/components/BCBox'
 import Icon from '@mui/material/Icon'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const SupplierBalance = () => {

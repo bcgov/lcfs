@@ -53,7 +53,7 @@ const FuelCodesBase = () => {
   const handleRowClicked = (params) => {
     if (!isAuthorized) return
     navigate(
-      ROUTES.FUELCODES_VIEW.replace(':fuelCodeID', params.data.fuelCodeId)
+      ROUTES.FUELCODES_VIEW.replace(':fuelCodeId', params.data.fuelCodeId)
     )
   }
 

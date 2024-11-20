@@ -1,11 +1,10 @@
-import React from 'react'
-import { useTranslation } from 'react-i18next'
-import { Box, Tooltip, Fade } from '@mui/material'
-import InfoIcon from '@mui/icons-material/Info'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
+import InfoIcon from '@mui/icons-material/Info'
+import { Box, Fade, Tooltip } from '@mui/material'
+import { useTranslation } from 'react-i18next'
 
 const OrgBalanceCard = () => {
   const { t } = useTranslation(['dashboard'])

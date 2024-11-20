@@ -93,9 +93,9 @@ export const EditViewComplianceReport = () => {
   })
 
   const currentStatus = reportData?.currentStatus?.status
-  const { data: orgData, isLoading } = useOrganization(
-    reportData?.organizationId
-  )
+  const { data: orgData, isLoading } = useOrganization({
+    orgId: reportData?.organizationId
+  })
   const { mutate: updateComplianceReport } = useUpdateComplianceReport({
     reportId: complianceReportId
   })

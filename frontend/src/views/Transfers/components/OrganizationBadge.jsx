@@ -14,7 +14,7 @@ export const OrganizationBadge = ({
   let orgData = {}
   if (isGovernmentUser) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    orgData = useOrganizationBalance(organizationId)
+    orgData = useOrganizationBalance({ orgId: organizationId })
   }
   const { data: orgInfo } = orgData
 

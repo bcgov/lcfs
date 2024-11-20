@@ -36,12 +36,9 @@ export const AddEditOrg = () => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
-  const { orgID } = useParams()
+  const { orgId } = useParams()
 
-  const { data, isFetched } = useOrganization(orgID, {
-    enabled: !!orgID,
-    retry: false
-  })
+  const { data, isFetched } = useOrganization({ orgId: orgId })
 
   // State for controlling checkbox behavior
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
@@ -146,7 +143,7 @@ export const AddEditOrg = () => {
   // Prepare payload and call mutate function
   const onSubmit = async (data) => {
     const payload = {
-      organizationId: orgID,
+      organizationId: orgId,
       name: data.orgLegalName,
       operatingName: data.orgOperatingName,
       email: data.orgEmailAddress,
@@ -174,7 +171,7 @@ export const AddEditOrg = () => {
       }
     }
 
-    if (orgID) {
+    if (orgId) {
       updateOrg(payload)
     } else {
       createOrg(payload)
@@ -210,7 +207,7 @@ export const AddEditOrg = () => {
     isError: isUpdateOrgError
   } = useMutation({
     mutationFn: async (payload) =>
-      await apiService.put(`/organizations/${orgID}`, payload),
+      await apiService.put(`/organizations/${orgId}`, payload),
     onSuccess: () => {
       navigate(ROUTES.ORGANIZATIONS, {
         state: {
@@ -302,7 +299,7 @@ export const AddEditOrg = () => {
       )}
 
       <Typography variant="h5" px={3}>
-        {orgID ? t('org:editOrgTitle') : t('org:addOrgTitle')}
+        {orgId ? t('org:editOrgTitle') : t('org:addOrgTitle')}
       </Typography>
       <Box
         component="form"

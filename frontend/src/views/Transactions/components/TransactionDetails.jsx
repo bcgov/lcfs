@@ -45,7 +45,9 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
   const maxDate = dateFormatter(currentDate)
 
   const selectedOrgId = watch('toOrganizationId')
-  const { data: orgBalanceInfo } = useOrganizationBalance(selectedOrgId)
+  const { data: orgBalanceInfo } = useOrganizationBalance({
+    orgId: selectedOrgId
+  })
 
   // Fetching organization balance
   const displayBalance = () => {

@@ -36,18 +36,18 @@ export const ViewOrganization = () => {
 
   const navigate = useNavigate()
   const location = useLocation()
-  const { orgID } = useParams()
+  const { orgId } = useParams()
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
     hasRoles
   } = useCurrentUser()
-  const { data: orgData, isLoading } = useOrganization(orgID ?? currentUser?.organization?.organizationId)
+  const { data: orgData, isLoading } = useOrganization({ orgId: orgId })
 
   let orgBalance = {}
   if (hasRoles(roles.government)) {
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    orgBalance = useOrganizationBalance(orgID)
+    orgBalance = useOrganizationBalance({ orgId })
   }
   const { data: orgBalaceInfo } = orgBalance
 
@@ -55,23 +55,23 @@ export const ViewOrganization = () => {
     navigate(
       ROUTES.ORGANIZATIONS_EDIT.replace(
         ':orgID',
-        orgID || currentUser?.organization?.organizationId
+        orgId || currentUser?.organization?.organizationId
       ),
       {
         state: {
-          orgID: orgID || currentUser?.organization?.organizationId,
+          orgID: orgId || currentUser?.organization?.organizationId,
           isEditMode: true
         }
       }
     )
   }
 
-  const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
+  const [gridKey, setGridKey] = useState(`users-grid-${orgId}-active`)
   const handleGridKey = useCallback(() => {
     if (showActive) {
-      setGridKey(`users-grid-${orgID}-active`)
+      setGridKey(`users-grid-${orgId}-active`)
     } else {
-      setGridKey(`users-grid-${orgID}-inactive`)
+      setGridKey(`users-grid-${orgId}-inactive`)
     }
   }, [])
 
@@ -103,7 +103,7 @@ export const ViewOrganization = () => {
           )
         )
       : navigate(
-          ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
+          ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgId).replace(
             ':userID',
             params.data.userProfileId
           )
@@ -262,7 +262,7 @@ export const ViewOrganization = () => {
                   onClick={() =>
                     !isCurrentUserLoading && hasRoles(roles.government)
                       ? navigate(
-                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgId)
                         )
                       : navigate(ROUTES.ORGANIZATION_ADDUSER)
                   }
@@ -335,7 +335,7 @@ export const ViewOrganization = () => {
           apiEndpoint={apiRoutes.orgUsers
             .replace(
               ':orgID',
-              orgID || currentUser?.organization?.organizationId
+              orgId || currentUser?.organization?.organizationId
             )
             .concat(showActive ? '?status=Active' : '?status=Inactive')}
           apiData={'users'}

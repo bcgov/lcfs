@@ -1,23 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { FormProvider, useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
-import {
-  useLocation,
-  useMatches,
-  useNavigate,
-  useParams
-} from 'react-router-dom'
+import BCAlert from '@/components/BCAlert'
+import BCBox from '@/components/BCBox'
+import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import Loading from '@/components/Loading'
+import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { TRANSACTIONS } from '@/constants/routes/routes'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useCreateUpdateTransfer, useTransfer } from '@/hooks/useTransfer'
-import { yupResolver } from '@hookform/resolvers/yup'
+import { dateFormatter } from '@/utils/formatters'
+import {
+  AgreementDate,
+  Comments,
+  TransferDetails,
+  TransferGraphic,
+  TransferView
+} from '@/views/Transfers/components'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { yupResolver } from '@hookform/resolvers/yup'
 import {
   Stack,
   Step,
@@ -27,21 +31,16 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material'
-import BCAlert from '@/components/BCAlert'
-import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
-import BCModal from '@/components/BCModal'
-import Loading from '@/components/Loading'
-import { Role } from '@/components/Role'
-import { dateFormatter } from '@/utils/formatters'
-import {
-  AgreementDate,
-  Comments,
-  TransferDetails,
-  TransferGraphic,
-  TransferView
-} from '@/views/Transfers/components'
 import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import {
+  useLocation,
+  useMatches,
+  useNavigate,
+  useParams
+} from 'react-router-dom'
 import { AddEditTransferSchema } from './_schema'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { CategoryCheckbox } from './components/CategoryCheckbox'
@@ -105,10 +104,6 @@ export const AddEditViewTransfer = () => {
     (currentUser.organization?.organizationId ===
       transferData?.fromOrganization?.organizationId ||
       mode === 'add')
-
-  const { refetch } = useCurrentOrgBalance({
-    enabled: false // Initially, do not automatically run the query
-  })
 
   /**
    * Fetches and populates the form with existing transfer data for editing.

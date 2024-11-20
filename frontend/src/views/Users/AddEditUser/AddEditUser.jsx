@@ -42,23 +42,23 @@ export const AddEditUser = ({ userType }) => {
   const navigate = useNavigate()
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
-  const { userID, orgID } = useParams()
+  const { userId, orgId } = useParams()
   const [orgName, setOrgName] = useState('')
 
   const {
     data,
     isLoading: isUserLoading,
     isFetched: isUserFetched
-  } = hasRoles(roles.supplier) && userID
-    ? userID
+  } = hasRoles(roles.supplier) && userId
+    ? userId
       ? // eslint-disable-next-line react-hooks/rules-of-hooks
-        useOrganizationUser(
-          orgID || currentUser?.organization?.organizationId,
-          userID
-        )
+        useOrganizationUser({
+          orgID: orgId || currentUser?.organization?.organizationId,
+          userID: userId
+        })
       : { undefined, isLoading: false, isFetched: false }
     : // eslint-disable-next-line react-hooks/rules-of-hooks
-      useUser({ id: +userID }, { enabled: !!userID, retry: false })
+      useUser({ id: +userId }, { enabled: !!userId, retry: false })
 
   // User form hook and form validation
   const form = useForm({
@@ -145,7 +145,7 @@ export const AddEditUser = ({ userType }) => {
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
-      userProfileId: userID,
+      userProfileId: userId,
       title: data.jobTitle,
       firstName: data.firstName,
       lastName: data.lastName,
@@ -155,7 +155,7 @@ export const AddEditUser = ({ userType }) => {
       phone: data.phone,
       mobilePhone: data.mobile,
       isActive: data.status === 'Active',
-      organizationId: orgID || currentUser.organizationId,
+      organizationId: orgId || currentUser.organizationId,
       roles:
         data.status === 'Active'
           ? [
@@ -166,7 +166,7 @@ export const AddEditUser = ({ userType }) => {
             ]
           : []
     }
-    if (orgID || hasRoles(roles.supplier)) {
+    if (orgId || hasRoles(roles.supplier)) {
       payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
     } else {
       payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
@@ -181,24 +181,24 @@ export const AddEditUser = ({ userType }) => {
   const { mutate, isPending, isError } = useMutation({
     mutationFn: async (payload) => {
       if (hasRoles(roles.supplier)) {
-        const orgId = orgID || currentUser.organization?.organizationId
-        return userID
+        const orgId = orgId || currentUser.organization?.organizationId
+        return userId
           ? await apiService.put(
-              `/organization/${orgId}/users/${userID}`,
+              `/organization/${orgId}/users/${userId}`,
               payload
             )
           : await apiService.post(`/organization/${orgId}/users`, payload)
       }
-      return userID
-        ? await apiService.put(`/users/${userID}`, payload)
+      return userId
+        ? await apiService.put(`/users/${userId}`, payload)
         : await apiService.post('/users', payload)
     },
     onSuccess: () => {
       // on success navigate somewhere
       if (hasRoles(roles.supplier)) {
         navigate(ROUTES.ORGANIZATION)
-      } else if (orgID) {
-        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+      } else if (orgId) {
+        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgId), {
           state: {
             message: 'User has been successfully saved.',
             severity: 'success'
@@ -235,7 +235,7 @@ export const AddEditUser = ({ userType }) => {
         </BCAlert>
       )}
       <Typography variant="h5" color={colors.primary.main} mb={2}>
-        {userID ? 'Edit' : 'Add'} user&nbsp;
+        {userId ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to ${orgName}`}
       </Typography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)} id={'user-form'}>
@@ -265,7 +265,7 @@ export const AddEditUser = ({ userType }) => {
                   data-test="status"
                   options={statusOptions(t)}
                 />
-                {hasRoles(roles.supplier) || orgName || orgID ? (
+                {hasRoles(roles.supplier) || orgName || orgId ? (
                   <BCeIDSpecificRoleFields
                     form={form}
                     disabled={disabled}

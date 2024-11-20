@@ -30,35 +30,35 @@ export const ViewUser = () => {
     paginationPageSize: 20
   }
 
-  const { userID, orgID } = useParams()
+  const { userId, orgId } = useParams()
   const { data: currentUser, hasRoles } = useCurrentUser()
   const navigate = useNavigate()
   const { data, isLoading, isLoadingError, isError, error } = hasRoles(
     roles.supplier
   )
     ? // eslint-disable-next-line react-hooks/rules-of-hooks
-      useOrganizationUser(
-        orgID || currentUser?.organization.organizationId,
-        userID
-      )
+      useOrganizationUser({
+        orgId: orgId || currentUser?.organization.organizationId,
+        userId
+      })
     : // eslint-disable-next-line react-hooks/rules-of-hooks
-      useUser({ id: +userID })
+      useUser({ id: +userId })
 
   const handleEditClick = () => {
     if (hasRoles(roles.supplier)) {
-      navigate(ROUTES.ORGANIZATION_EDITUSER.replace(':userID', userID))
-    } else if (orgID)
+      navigate(ROUTES.ORGANIZATION_EDITUSER.replace(':userID', userId))
+    } else if (orgId)
       navigate(
-        ROUTES.ORGANIZATIONS_EDITUSER.replace(':orgID', orgID).replace(
+        ROUTES.ORGANIZATIONS_EDITUSER.replace(':orgID', orgId).replace(
           ':userID',
-          userID
+          userId
         )
       )
-    else navigate(ROUTES.ADMIN_USERS_EDIT.replace(':userID', userID))
+    else navigate(ROUTES.ADMIN_USERS_EDIT.replace(':userID', userId))
   }
 
-  const apiEndpoint = apiRoutes.getUserActivities.replace(':userID', userID)
-  const gridKey = `user-activity-grid-${userID}`
+  const apiEndpoint = apiRoutes.getUserActivities.replace(':userID', userId)
+  const gridKey = `user-activity-grid-${userId}`
 
   const getRowId = useCallback((params) => {
     return `${params.data.transactionType.toLowerCase()}-${
