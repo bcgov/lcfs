@@ -1,9 +1,14 @@
 FROM artifacts.developer.gov.bc.ca/docker-remote/node:20 as builder
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
+
+COPY ./package*.json ./
+RUN npm install --omit=dev
+
+RUN npm run openapi:generate
+
 COPY ./ ./
-RUN npm install --omit=dev && \ 
-    npm run build
+RUN npm run build
 
 FROM artifacts.developer.gov.bc.ca/docker-remote/bitnami/nginx:1.24.0
 COPY --from=builder /usr/src/app/dist /app
