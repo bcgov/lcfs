@@ -1,18 +1,18 @@
-import pytest
 from unittest.mock import MagicMock, AsyncMock
-from fastapi import HTTPException
 
+import pytest
+
+from lcfs.db.base import ActionTypeEnum
+from lcfs.db.base import UserTypeEnum
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
+from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.other_uses.schema import (
-    OtherUsesCreateSchema,
     OtherUsesTableOptionsSchema,
-    OtherUsesSchema,
-    OtherUsesListSchema,
-    OtherUsesAllSchema,
 )
 from lcfs.web.api.other_uses.services import OtherUsesServices
-from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.exception.exceptions import ServiceException
+from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
+
 
 @pytest.fixture
 def other_uses_service():
@@ -20,6 +20,7 @@ def other_uses_service():
     mock_fuel_repo = MagicMock()
     service = OtherUsesServices(repo=mock_repo, fuel_repo=mock_fuel_repo)
     return service, mock_repo, mock_fuel_repo
+
 
 @pytest.mark.anyio
 async def test_get_table_options(other_uses_service):
@@ -38,39 +39,26 @@ async def test_get_table_options(other_uses_service):
     assert isinstance(response, OtherUsesTableOptionsSchema)
     mock_repo.get_table_options.assert_awaited_once()
 
+
 @pytest.mark.anyio
 async def test_create_other_use(other_uses_service):
     service, mock_repo, mock_fuel_repo = other_uses_service
-    other_use_data = OtherUsesCreateSchema(
-        compliance_report_id=1,
-        quantity_supplied=1000,
-        fuel_type="Gasoline",
-        fuel_category="Petroleum-based",
-        expected_use="Transportation",
-        units="L",
-        rationale="Test rationale",
+    other_use_data = create_mock_schema({})
+    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
+        return_value=MagicMock(fuel_category_id=1)
     )
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(return_value=MagicMock(fuel_category_id=1))
-    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=MagicMock(fuel_type_id=1))
-    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(return_value=MagicMock(expected_use_type_id=1))
+    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(
+        return_value=MagicMock(fuel_type_id=1)
+    )
+    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
+        return_value=MagicMock(expected_use_type_id=1)
+    )
 
-    mock_created_use = MagicMock()
-    mock_created_use.other_uses_id = 1
-    mock_created_use.compliance_report_id = 1
-    mock_created_use.quantity_supplied = 1000
-    mock_created_use.fuel_type.fuel_type = "Gasoline"
-    mock_created_use.fuel_category.category = "Petroleum-based"
-    mock_created_use.expected_use.name = "Transportation"
-    mock_created_use.units = "L"
-    mock_created_use.rationale = "Test rationale"
-
+    mock_created_use = create_mock_entity({})
     mock_repo.create_other_use = AsyncMock(return_value=mock_created_use)
 
-    try:
-        response = await service.create_other_use(other_use_data)
-    except ServiceException:
-        pytest.fail("ServiceException was raised unexpectedly")
-    
+    response = await service.create_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+
     assert isinstance(response, OtherUsesSchema)
     assert response.fuel_type == "Gasoline"
     assert response.fuel_category == "Petroleum-based"
@@ -78,74 +66,103 @@ async def test_create_other_use(other_uses_service):
 
     mock_repo.create_other_use.assert_awaited_once()
 
+
 @pytest.mark.anyio
 async def test_update_other_use(other_uses_service):
     service, mock_repo, mock_fuel_repo = other_uses_service
-    other_use_data = OtherUsesCreateSchema(
-        other_uses_id=1,
-        compliance_report_id=1,
-        quantity_supplied=2000,
-        fuel_type="Diesel",
-        fuel_category="Petroleum-based",
-        expected_use="Transportation",
-        units="L",
-        rationale="Updated rationale",
+
+    # Create test data with OtherUsesCreateSchema
+    other_use_data = create_mock_schema(
+        {"quantity_supplied": 4444, "rationale": "Updated rationale"}
+    )
+    mock_existing_use = create_mock_entity({})
+
+    # Configure repository methods to return these mocked objects
+    mock_repo.get_other_use_version_by_user = AsyncMock(return_value=mock_existing_use)
+    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(
+        return_value=MagicMock(fuel_type="Diesel")
+    )
+    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
+        return_value=MagicMock(category="Petroleum-based")
+    )
+    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
+        return_value=MagicMock(name="Transportation")
     )
 
-    mock_existing_use = MagicMock()
-    mock_existing_use.other_uses_id = 1
-    mock_existing_use.compliance_report_id = 1
-    mock_existing_use.quantity_supplied = 1000
-    mock_existing_use.fuel_type.fuel_type = "Gasoline"
-    mock_existing_use.fuel_category.category = "Petroleum-based"
-    mock_existing_use.expected_use.name = "Transportation"
-    mock_existing_use.units = "L"
-    mock_existing_use.rationale = "Test rationale"
-
-    mock_repo.get_other_use = AsyncMock(return_value=mock_existing_use)
-
-    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=MagicMock(fuel_type_id=2))
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(return_value=MagicMock(fuel_category_id=1))
-    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(return_value=MagicMock(expected_use_type_id=1))
-
-    mock_updated_use = MagicMock()
-    mock_updated_use.other_uses_id = 1
-    mock_updated_use.compliance_report_id = 1
-    mock_updated_use.quantity_supplied = 2000
-    mock_updated_use.fuel_type.fuel_type = "Diesel"
-    mock_updated_use.fuel_category.category = "Petroleum-based"
-    mock_updated_use.expected_use.name = "Transportation"
-    mock_updated_use.units = "L"
-    mock_updated_use.rationale = "Updated rationale"
-
+    # Mock the updated use that will be returned after the update
+    mock_updated_use = create_mock_entity(
+        {
+            "rationale": "Updated rationale",
+            "action_type": ActionTypeEnum.UPDATE,
+            "quantity_supplied": 2222,
+        }
+    )
+    # Set the return value for update_other_use
     mock_repo.update_other_use = AsyncMock(return_value=mock_updated_use)
 
-    try:
-        response = await service.update_other_use(other_use_data)
-    except ServiceException:
-        pytest.fail("ServiceException was raised unexpectedly")
+    # Execute the update function and capture the response
+    response = await service.update_other_use(other_use_data, UserTypeEnum.SUPPLIER)
 
+    # Assertions
     assert isinstance(response, OtherUsesSchema)
-    assert response.fuel_type == "Diesel"
-    assert response.fuel_category == "Petroleum-based"
-    assert response.expected_use == "Transportation"
+    assert response.action_type == ActionTypeEnum.UPDATE.value
+    assert response.quantity_supplied == 2222
+    assert response.rationale == "Updated rationale"
 
+    # Check that the update method was called
     mock_repo.update_other_use.assert_awaited_once()
+    mock_repo.get_other_use_version_by_user.assert_awaited_once()
+
 
 @pytest.mark.anyio
 async def test_update_other_use_not_found(other_uses_service):
     service, mock_repo, _ = other_uses_service
-    other_use_data = OtherUsesCreateSchema(
-        other_uses_id=1,
-        compliance_report_id=1,
-        quantity_supplied=2000,
-        fuel_type="Diesel",
-        fuel_category="Petroleum-based",
-        expected_use="Transportation",
-        units="L",
-        rationale="Updated rationale",
-    )
-    mock_repo.get_other_use = AsyncMock(return_value=None)
+    other_use_data = create_mock_schema({})
+
+    mock_repo.get_other_use_version_by_user = AsyncMock(return_value=None)
 
     with pytest.raises(ServiceException):
-        await service.update_other_use(other_use_data)
+        await service.update_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+
+
+@pytest.mark.anyio
+async def test_delete_other_use(other_uses_service):
+    service, mock_repo, _ = other_uses_service
+    other_use_data = create_mock_schema({})
+
+    # Mock the existing other use with a "CREATE" action type
+    mock_existing_use = MagicMock()
+    mock_existing_use.group_uuid = "test-group-uuid"
+    mock_existing_use.version = 1
+    mock_existing_use.action_type = ActionTypeEnum.CREATE
+
+    # Set up the mock __table__.columns.keys() to return field names as a list
+    mock_existing_use.__table__ = MagicMock()
+    mock_existing_use.__table__.columns.keys.return_value = [
+        "other_uses_id",
+        "compliance_report_id",
+        "quantity_supplied",
+        "fuel_type",
+        "fuel_category",
+        "expected_use",
+        "units",
+        "rationale",
+        "deleted",
+        "group_uuid",
+        "user_type",
+        "version",
+        "action_type",
+    ]
+
+    # Mock repository methods
+    mock_repo.get_latest_other_uses_by_group_uuid = AsyncMock(
+        return_value=mock_existing_use
+    )
+    mock_repo.create_other_use = AsyncMock(return_value=mock_existing_use)
+
+    # Call the delete service
+    response = await service.delete_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+
+    # Assertions
+    assert response.message == "Marked as deleted."
+    mock_repo.create_other_use.assert_awaited_once()

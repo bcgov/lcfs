@@ -1,12 +1,14 @@
-import pytest
 from unittest.mock import AsyncMock
-from lcfs.web.api.fuel_code.services import FuelCodeServices
+
+import pytest
+
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateSchema,
     FuelCodeSchema,
     PaginationResponseSchema,
 )
+from lcfs.web.api.fuel_code.services import FuelCodeServices
 
 
 @pytest.mark.anyio
@@ -89,7 +91,7 @@ async def test_create_fuel_code_success():
         fuel_production_facility_province_state="BC",
         last_updated="2023-10-01",
         feedstock_fuel_transport_modes=[],
-        finished_fuel_transport_modes=[]
+        finished_fuel_transport_modes=[],
     )
 
     repo_mock.create_fuel_code.return_value = mock_fuel_code_data
@@ -126,7 +128,7 @@ async def test_update_fuel_code_success():
         fuel_production_facility_country="Canada",
         fuel_production_facility_province_state="BC",
         feedstock_fuel_transport_modes=[],
-        finished_fuel_transport_modes=[]
+        finished_fuel_transport_modes=[],
     )
 
     repo_mock.get_fuel_code.return_value = mock_fuel_code

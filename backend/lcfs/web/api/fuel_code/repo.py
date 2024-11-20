@@ -1,10 +1,10 @@
 import structlog
 from datetime import date
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Tuple, Sequence
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import and_, or_, select, func, text, update, distinct
+from sqlalchemy import and_, or_, select, func, text, update, distinct, Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
@@ -56,11 +56,9 @@ class FuelCodeRepository:
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = or_(
-            FuelCode.effective_date == None,
-            FuelCode.effective_date <= current_date
+            FuelCode.effective_date == None, FuelCode.effective_date <= current_date
         ) & or_(
-            FuelCode.expiration_date == None,
-            FuelCode.expiration_date > current_date
+            FuelCode.expiration_date == None, FuelCode.expiration_date > current_date
         )
 
         # Build the query with filtered fuel_codes
@@ -282,7 +280,7 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_codes_paginated(
         self, pagination: PaginationRequestSchema
-    ) -> List[FuelCodeSchema]:
+    ) -> tuple[Sequence[FuelCode], int]:
         """
         Queries fuel codes from the database with optional filters. Supports pagination and sorting.
 

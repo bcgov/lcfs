@@ -1,17 +1,19 @@
-import asyncio
-import structlog
 import math
-from fastapi import Depends
 from datetime import datetime
 
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.web.core.decorators import service_handler
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+import structlog
+from fastapi import Depends
+
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+)
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeCreateSchema,
     FuelCodeSchema,
@@ -22,6 +24,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodePrefixSchema,
     TableOptionsSchema,
 )
+from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 
 logger = structlog.get_logger(__name__)
@@ -91,20 +94,20 @@ class FuelCodeServices:
             schema.next_fuel_code = next_code
             fuel_code_prefixes_with_next.append(schema)
 
-        return {
-            "fuel_types": [
+        return TableOptionsSchema(
+            fuel_types=[
                 FuelTypeSchema.model_validate(fuel_type) for fuel_type in fuel_types
             ],
-            "transport_modes": [
+            transport_modes=[
                 TransportModeSchema.model_validate(transport_mode)
                 for transport_mode in transport_modes
             ],
-            "fuel_code_prefixes": fuel_code_prefixes_with_next,
-            "latest_fuel_codes": latest_fuel_codes,
-            "field_options": field_options,
-            "fp_locations": list(set(fp_locations)),
-            "facility_nameplate_capacity_units": facility_nameplate_capacity_units,
-        }
+            fuel_code_prefixes=fuel_code_prefixes_with_next,
+            latest_fuel_codes=latest_fuel_codes,
+            field_options=field_options,
+            fp_locations=list(set(fp_locations)),
+            facility_nameplate_capacity_units=facility_nameplate_capacity_units,
+        )
 
     @service_handler
     async def get_fuel_codes(

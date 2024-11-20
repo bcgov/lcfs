@@ -15,8 +15,10 @@ from fastapi import (
     Query,
 )
 from fastapi_cache.decorator import cache
+from starlette.responses import StreamingResponse
 
 from lcfs.db import dependencies
+from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.api.fuel_code.schema import (
@@ -116,6 +118,34 @@ async def get_fuel_codes(
 ):
     """Endpoint to get list of fuel codes with pagination options"""
     return await service.get_fuel_codes(pagination)
+
+
+@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def export_users(
+    request: Request,
+    format: str = Query(default="xls", description="File export format"),
+    exporter: FuelCodeExporter = Depends(),
+):
+    """
+    Endpoint to export information of all fuel codes
+
+    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
+    as specified by the 'format' and 'media_type' variables.
+    - 'format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
+    - 'media_type' sets the appropriate MIME type based on 'format':
+        'application/vnd.ms-excel' for 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
+        'text/csv' for 'csv'.
+
+    The SpreadsheetBuilder class is used for building the spreadsheet.
+    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
+    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+
+    Note: Only the first sheet data is used for the CSV format,
+        as CSV files do not support multiple sheets.
+    """
+    return await exporter.export(format)
 
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)

@@ -3,9 +3,13 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from unittest.mock import MagicMock, AsyncMock, patch
 
+from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import ComplianceReportRequestSchema
+from lcfs.web.api.other_uses.schema import PaginatedOtherUsesRequestSchema
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
+from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
 
 
 @pytest.fixture
@@ -65,7 +69,7 @@ async def test_get_other_uses(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("get_other_uses")
-        payload = {"compliance_report_id": 1}
+        payload = ComplianceReportRequestSchema(compliance_report_id=1).model_dump()
 
         mock_validate_organization_access.return_value = True
         mock_other_uses_service.get_other_uses.return_value = {"otherUses": []}
@@ -93,13 +97,13 @@ async def test_get_other_uses_paginated(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("get_other_uses_paginated")
-        payload = {
-            "complianceReportId": 1,
-            "page": 1,
-            "size": 10,
-            "sort_orders": [],
-            "filters": [],
-        }
+        payload = PaginatedOtherUsesRequestSchema(
+            compliance_report_id=1,
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[],
+        ).model_dump()
 
         mock_validate_organization_access.return_value = True
         mock_other_uses_service.get_other_uses_paginated.return_value = {
@@ -132,26 +136,9 @@ async def test_save_other_uses_row_create(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("save_other_uses_row")
-        payload = {
-            "compliance_report_id": 1,
-            "quantity_supplied": 1000,
-            "fuel_type": "Gasoline",
-            "fuel_category": "Petroleum-based",
-            "expected_use": "Transportation",
-            "units": "L",
-            "rationale": "Test rationale",
-        }
+        payload = create_mock_schema({}).model_dump()
 
-        mock_other_uses_service.create_other_use.return_value = {
-            "otherUsesId": 1,
-            "complianceReportId": 1,
-            "quantitySupplied": 1000,
-            "fuelType": "Gasoline",
-            "fuelCategory": "Petroleum-based",
-            "expectedUse": "Transportation",
-            "units": "L",
-            "rationale": "Test rationale",
-        }
+        mock_other_uses_service.create_other_use.return_value = payload
         mock_validate_organization_access.return_value = True
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
@@ -183,27 +170,15 @@ async def test_save_other_uses_row_update(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("save_other_uses_row")
-        payload = {
-            "other_uses_id": 1,
-            "compliance_report_id": 1,
-            "quantity_supplied": 2000,
-            "fuel_type": "Diesel",
-            "fuel_category": "Petroleum-based",
-            "expected_use": "Transportation",
-            "units": "L",
-            "rationale": "Updated rationale",
-        }
+        payload = create_mock_schema(
+            {
+                "other_uses_id": 1,
+                "quantity_supplied": 2000,
+                "rationale": "Updated rationale",
+            }
+        ).model_dump()
 
-        mock_other_uses_service.update_other_use.return_value = {
-            "otherUsesId": 1,
-            "complianceReportId": 1,
-            "quantitySupplied": 2000,
-            "fuelType": "Diesel",
-            "fuelCategory": "Petroleum-based",
-            "expectedUse": "Transportation",
-            "units": "L",
-            "rationale": "Updated rationale",
-        }
+        mock_other_uses_service.update_other_use.return_value = payload
         mock_validate_organization_access.return_value = True
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
@@ -219,10 +194,9 @@ async def test_save_other_uses_row_update(
         data = response.json()
         assert data["otherUsesId"] == 1
         assert data["quantitySupplied"] == 2000
-        assert data["fuelType"] == "Diesel"
+        assert data["fuelType"] == "Gasoline"
 
 
-@pytest.mark.anyio
 @pytest.mark.anyio
 async def test_save_other_uses_row_delete(
     client: AsyncClient,
@@ -231,36 +205,22 @@ async def test_save_other_uses_row_delete(
     mock_other_uses_service,
     mock_other_uses_validation,
 ):
-    # Patch the validate_organization_access method in the correct module
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        # Set up a mock user with the correct role
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-
-        # Define the URL and payload for the test request
         url = fastapi_app.url_path_for("save_other_uses_row")
-        payload = {
-            "other_uses_id": 1,
-            "compliance_report_id": 1,
-            "quantity_supplied": 0,
-            "fuel_type": "",
-            "fuel_category": "",
-            "expected_use": "",
-            "units": "",
-            "rationale": "",
-            "deleted": True,
-        }
+        mock_schema = create_mock_schema(
+            {
+                "other_uses_id": 1,
+                "deleted": True,
+            }
+        )
 
-        # Mock the delete_other_use method to return None
         mock_other_uses_service.delete_other_use.return_value = None
-        # Mock validate_organization_access to return True (success)
         mock_validate_organization_access.return_value = True
-
-        # Mock the validation methods to avoid any validation errors
         mock_other_uses_validation.validate_compliance_report_id.return_value = None
 
-        # Override the service dependencies with the mocked versions
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
         )
@@ -268,22 +228,14 @@ async def test_save_other_uses_row_delete(
             lambda: mock_other_uses_validation
         )
 
-        # Send the POST request to the API
-        response = await client.post(url, json=payload)
+        response = await client.post(url, json=mock_schema.model_dump())
 
-        # Assert that the response status code is 200 (OK)
-        assert (
-            response.status_code == 200
-        ), f"Unexpected status code: {response.status_code}. Response: {response.text}"
-        # Assert the response data matches the expected message
+        assert response.status_code == 200
         data = response.json()
         assert data == {"message": "Other use deleted successfully"}
 
-        # Verify that the delete_other_use method was called with the correct parameter
-        mock_other_uses_service.delete_other_use.assert_called_once_with(1)
-
-        # **Directly** verify that validate_organization_access was called
+        mock_other_uses_service.delete_other_use.assert_called_once_with(
+            mock_schema, UserTypeEnum.SUPPLIER
+        )
         mock_validate_organization_access.assert_called_once_with(1)
-
-        # Verify that the validate_compliance_report_id method was called once
         mock_other_uses_validation.validate_compliance_report_id.assert_called_once()

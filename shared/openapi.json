@@ -3086,6 +3086,45 @@
         }
       }
     },
+    "/api/fuel-codes/export": {
+      "get": {
+        "tags": [
+          "fuel_codes"
+        ],
+        "summary": "Export Users",
+        "description": "Endpoint to export information of all fuel codes\n\nThis endpoint can support exporting data in different file formats (xls, xlsx, csv)\nas specified by the 'format' and 'media_type' variables.\n- 'format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.\n- 'media_type' sets the appropriate MIME type based on 'format':\n    'application/vnd.ms-excel' for 'xls',\n    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',\n    'text/csv' for 'csv'.\n\nThe SpreadsheetBuilder class is used for building the spreadsheet.\nIt allows adding multiple sheets with custom styling options and exports them as a byte stream.\nAlso, an example of how to use the SpreadsheetBuilder is provided in its class documentation.\n\nNote: Only the first sheet data is used for the CSV format,\n    as CSV files do not support multiple sheets.",
+        "operationId": "exportUsers",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "File export format",
+              "default": "xls",
+              "title": "Format"
+            },
+            "description": "File export format"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/fuel-codes/{fuel_code_id}": {
       "get": {
         "tags": [
@@ -10881,6 +10920,50 @@
               }
             ],
             "title": "Deleted"
+          },
+          "groupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupuuid"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "userType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usertype"
+          },
+          "actionType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actiontype"
           }
         },
         "type": "object",
@@ -11001,6 +11084,50 @@
               }
             ],
             "title": "Deleted"
+          },
+          "groupUuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groupuuid"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "userType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usertype"
+          },
+          "actionType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actiontype"
           }
         },
         "type": "object",

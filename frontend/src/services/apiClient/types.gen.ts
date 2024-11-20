@@ -1216,6 +1216,10 @@ export type OtherUsesCreateSchema = {
     units: string;
     rationale?: (string | null);
     deleted?: (boolean | null);
+    groupUuid?: (string | null);
+    version?: (number | null);
+    userType?: (string | null);
+    actionType?: (string | null);
 };
 
 export type OtherUsesFuelCategorySchema = {
@@ -1239,6 +1243,10 @@ export type OtherUsesSchema = {
     units: string;
     rationale?: (string | null);
     deleted?: (boolean | null);
+    groupUuid?: (string | null);
+    version?: (number | null);
+    userType?: (string | null);
+    actionType?: (string | null);
 };
 
 export type OtherUsesTableOptionsSchema = {
@@ -1826,6 +1834,19 @@ export type GetFuelCodesData = {
 export type GetFuelCodesResponse = (FuelCodesSchema);
 
 export type GetFuelCodesError = (HTTPValidationError);
+
+export type ExportUsersData = {
+    query?: {
+        /**
+         * File export format
+         */
+        format?: string;
+    };
+};
+
+export type ExportUsersResponse = (unknown);
+
+export type ExportUsersError = (HTTPValidationError);
 
 export type GetFuelCodeData = {
     path: {
@@ -2468,19 +2489,6 @@ export type UpdateCategoryData = {
 export type UpdateCategoryResponse = (TransferSchema);
 
 export type UpdateCategoryError = (HTTPValidationError);
-
-export type ExportUsersData = {
-    query?: {
-        /**
-         * File export format
-         */
-        format?: string;
-    };
-};
-
-export type ExportUsersResponse = (unknown);
-
-export type ExportUsersError = (HTTPValidationError);
 
 export type GetUsersData = {
     body: PaginationRequestSchema;

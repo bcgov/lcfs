@@ -54,6 +54,7 @@ export const AddEditOtherUses = () => {
         if (!row.id) {
           return {
             ...row,
+            complianceReportId, // This takes current reportId, important for versioning
             id: uuid(),
             isValid: true
           }
