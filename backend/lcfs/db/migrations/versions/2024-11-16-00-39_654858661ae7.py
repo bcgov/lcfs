@@ -1,8 +1,8 @@
 """Add Versioning to Other Uses
 
 Revision ID: 654858661ae7
-Revises: b659816d0a86
-Create Date: 2024-11-13 00:39:22.594912
+Revises: 1974af823b80
+Create Date: 2024-11-16 00:39:22.594912
 
 """
 
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "654858661ae7"
-down_revision = "b659816d0a86"
+down_revision = "1974af823b80"
 branch_labels = None
 depends_on = None
 
@@ -65,7 +65,7 @@ def upgrade() -> None:
         ),
     )
 
-    #Update existing records with generated UUIDs
+    # Update existing records with generated UUIDs
     connection = op.get_bind()
 
     # Update other_uses table
@@ -81,7 +81,7 @@ def upgrade() -> None:
             {"uuid": str(uuid.uuid4()), "export_id": export_id},
         )
 
-    #Alter the column to be non-nullable
+    # Alter the column to be non-nullable
     op.alter_column(
         "other_uses",
         "group_uuid",
