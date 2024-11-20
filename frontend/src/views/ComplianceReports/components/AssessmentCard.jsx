@@ -53,7 +53,7 @@ export const AssessmentCard = ({
   }, [history, isGovernmentUser, hasSupplemental])
 
   const { mutate: createSupplementalReport, isLoading } =
-    useCreateSupplementalReport(complianceReportId)
+    useCreateSupplementalReport({ complianceReportId: +complianceReportId })
 
   return (
     <BCWidgetCard

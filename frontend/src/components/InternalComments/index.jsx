@@ -16,7 +16,7 @@ const InternalComments = ({ entityType, entityId }) => {
     isEditingComment,
     commentInput,
     handleCommentInputChange
-  } = useInternalComments({ entityType, entityId })
+  } = useInternalComments({ entityType, entityId: +entityId })
 
   const showAddCommentBtn = entityId !== null
 

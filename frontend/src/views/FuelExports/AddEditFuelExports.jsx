@@ -24,8 +24,7 @@ export const AddEditFuelExports = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelExport'])
-  const params = useParams()
-  const { complianceReportId, compliancePeriod } = params
+  const { complianceReportId, compliancePeriod } = useParams()
   const navigate = useNavigate()
 
   const {
@@ -33,7 +32,9 @@ export const AddEditFuelExports = () => {
     isLoading: optionsLoading,
     isFetched
   } = useFuelExportOptions({ compliancePeriod })
-  const { mutateAsync: saveRow } = useSaveFuelExport({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveFuelExport({
+    complianceReportId: +complianceReportId
+  })
 
   const { data, isLoading: fuelExportsLoading } = useGetFuelExports({
     complianceReportId: +complianceReportId

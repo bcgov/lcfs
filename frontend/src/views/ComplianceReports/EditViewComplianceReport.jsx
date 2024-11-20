@@ -89,7 +89,7 @@ export const EditViewComplianceReport = () => {
     error
   } = useGetComplianceReport({
     orgId: currentUser?.organization?.organizationId,
-    reportId: complianceReportId
+    reportId: +complianceReportId
   })
 
   const currentStatus = reportData?.currentStatus?.status
@@ -97,7 +97,7 @@ export const EditViewComplianceReport = () => {
     orgId: reportData?.organizationId
   })
   const { mutate: updateComplianceReport } = useUpdateComplianceReport({
-    reportId: complianceReportId
+    reportId: +complianceReportId
   })
 
   const methods = useForm() // TODO we will need this for summary line inputs
@@ -198,7 +198,7 @@ export const EditViewComplianceReport = () => {
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
-                reportId={+complianceReportId}
+                reportId={complianceReportId}
               />
             )}
             <AssessmentCard
@@ -216,7 +216,7 @@ export const EditViewComplianceReport = () => {
             <>
               <ReportDetails currentStatus={currentStatus} />
               <ComplianceReportSummary
-                reportId={complianceReportId ? +complianceReportId : undefined}
+                reportId={complianceReportId}
                 currentStatus={currentStatus}
                 compliancePeriodYear={compliancePeriod}
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
@@ -243,7 +243,7 @@ export const EditViewComplianceReport = () => {
                 <Role roles={govRoles}>
                   <InternalComments
                     entityType={'complianceReport'}
-                    entityId={+complianceReportId}
+                    entityId={complianceReportId}
                     // onCommentChange={handleCommentChange}
                   />
                 </Role>

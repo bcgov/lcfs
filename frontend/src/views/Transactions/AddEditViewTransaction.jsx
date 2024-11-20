@@ -90,14 +90,14 @@ export const AddEditViewTransaction = () => {
     mutate: createUpdateAdminAdjustment,
     isPending: isUpdatingAdminAdjustment
   } = useCreateUpdateAdminAdjustment({
-    adminAdjustmentId: transactionId ? +transactionId : undefined
+    adminAdjustmentId: +transactionId
   })
 
   const {
     mutate: createUpdateInitiativeAgreement,
     isPending: isUpdatingInitiativeAgreement
   } = useCreateUpdateInitiativeAgreement({
-    initiativeAgreementId: transactionId ? +transactionId : undefined
+    initiativeAgreementId: +transactionId
   })
 
   const methods = useForm({
@@ -150,7 +150,7 @@ export const AddEditViewTransaction = () => {
     isFetched,
     isLoadingError
   } = transactionDataHook({
-    adminAdjustmentId: transactionId ? +transactionId : undefined
+    adminAdjustmentId: +transactionId
   })
 
   const stateId =
@@ -404,7 +404,7 @@ export const AddEditViewTransaction = () => {
             <Role roles={govRoles}>
               <InternalComments
                 entityType={txnType}
-                entityId={transactionId ? +transactionId : null}
+                entityId={transactionId}
                 onCommentChange={handleCommentChange}
               />
             </Role>

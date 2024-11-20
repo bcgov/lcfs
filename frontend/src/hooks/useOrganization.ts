@@ -2,7 +2,7 @@ import { OrganizationService, OrganizationsService } from '@/services/apiClient'
 import { useQuery } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 
-export const useOrganization = ({ orgId }: { orgId: number }) => {
+export const useOrganization = ({ orgId }: { orgId?: number }) => {
   const { data: currentUser } = useCurrentUser()
   const id = orgId ?? currentUser?.organization?.organizationId
 
@@ -11,6 +11,7 @@ export const useOrganization = ({ orgId }: { orgId: number }) => {
     queryKey: ['organization', id],
     queryFn: async () => {
       try {
+        if (!id) return
         const { data } = await OrganizationsService.getOrganization({
           path: { organization_id: id }
         })

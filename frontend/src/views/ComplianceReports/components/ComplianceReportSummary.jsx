@@ -39,7 +39,7 @@ const ComplianceReportSummary = ({
   const { t } = useTranslation(['report'])
 
   const { data, isLoading, isError, error } = useGetComplianceReportSummary({
-    reportId
+    reportId: +reportId
   })
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary({ reportId: data?.complianceReportId })

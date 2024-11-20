@@ -1,21 +1,19 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
-import { defaultColDef, notionalTransferColDefs } from './_schema'
+import * as ROUTES from '@/constants/routes/routes.js'
 import {
-  useNotionalTransferOptions,
   useGetAllNotionalTransfers,
+  useNotionalTransferOptions,
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
+import { Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { useApiService } from '@/services/useApiService'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { defaultColDef, notionalTransferColDefs } from './_schema'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -25,7 +23,6 @@ export const AddEditNotionalTransfers = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
-  const apiService = useApiService()
   const { t } = useTranslation(['common', 'notionalTransfer', 'reports'])
   const { complianceReportId, compliancePeriod } = useParams()
   const {
@@ -34,7 +31,7 @@ export const AddEditNotionalTransfers = () => {
     isFetched
   } = useNotionalTransferOptions()
   const { data: notionalTransfers, isLoading: transfersLoading } =
-    useGetAllNotionalTransfers(complianceReportId)
+    useGetAllNotionalTransfers({ complianceReportId: +complianceReportId })
   const { mutateAsync: saveRow } = useSaveNotionalTransfer()
   const navigate = useNavigate()
 
@@ -65,6 +62,7 @@ export const AddEditNotionalTransfers = () => {
       try {
         setRowData(ensureRowIds(notionalTransfers))
       } catch (error) {
+        console.log(error)
         alertRef.triggerAlert({
           message: t('notionalTransfer:LoadFailMsg'),
           severity: 'error'

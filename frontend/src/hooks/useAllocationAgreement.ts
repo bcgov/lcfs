@@ -1,23 +1,16 @@
 import {
   AllocationAgreementCreateSchema,
-  AllocationAgreementsService,
-  PaginationRequestSchema
+  AllocationAgreementsService
 } from '@/services/apiClient'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export const useAllocationAgreementOptions = ({
-  compliancePeriod
-}: {
-  compliancePeriod: string
-}) => {
+export const useAllocationAgreementOptions = () => {
   return useQuery({
     queryKey: ['allocation-agreement-options'],
     queryFn: async () => {
       try {
         const { data } =
-          await AllocationAgreementsService.getAllocationAgreementTableOptions({
-            query: { compliancePeriod }
-          })
+          await AllocationAgreementsService.getAllocationAgreementTableOptions()
         return data
       } catch (error) {
         console.log(error)
@@ -27,11 +20,9 @@ export const useAllocationAgreementOptions = ({
 }
 
 export const useGetAllocationAgreements = ({
-  complianceReportId,
-  pagination = {}
+  complianceReportId
 }: {
   complianceReportId: number
-  pagination: PaginationRequestSchema
 }) => {
   return useQuery({
     queryKey: ['allocation-agreements', complianceReportId, pagination],
@@ -39,7 +30,7 @@ export const useGetAllocationAgreements = ({
       try {
         const { data } =
           await AllocationAgreementsService.getAllocationAgreements({
-            body: { complianceReportId, ...pagination }
+            body: { complianceReportId }
           })
         return data
       } catch (error) {

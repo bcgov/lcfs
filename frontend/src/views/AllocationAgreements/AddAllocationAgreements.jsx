@@ -28,21 +28,22 @@ export const AddEditAllocationAgreements = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
-  const params = useParams()
-  const { complianceReportId, compliancePeriod } = params
+  const { complianceReportId, compliancePeriod } = useParams()
   const navigate = useNavigate()
 
   const {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
-  } = useAllocationAgreementOptions({ compliancePeriod })
+  } = useAllocationAgreementOptions()
   const { mutateAsync: saveRow } = useSaveAllocationAgreement({
     complianceReportId: +complianceReportId
   })
 
   const { data, isLoading: allocationAgreementsLoading } =
-    useGetAllocationAgreements({ complianceReportId: +complianceReportId })
+    useGetAllocationAgreements({
+      complianceReportId: +complianceReportId
+    })
 
   const gridOptions = useMemo(
     () => ({

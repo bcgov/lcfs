@@ -42,12 +42,12 @@ const ViewFuelCodeBase = () => {
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
 
   const { data: fuelCodeData, isLoading: isFuelCodeDataLoading } =
-    useGetFuelCode({ fuelCodeId })
+    useGetFuelCode({ fuelCodeId: +fuelCodeId })
 
   const { mutate: updateFuelCode, isPending: isUpdateFuelCodePending } =
-    useUpdateFuelCode({ fuelCodeId })
+    useUpdateFuelCode({ fuelCodeId: +fuelCodeId })
   const { mutate: deleteFuelCode, isPending: isDeleteFuelCodePending } =
-    useDeleteFuelCode({ fuelCodeId })
+    useDeleteFuelCode({ fuelCodeId: +fuelCodeId })
 
   useEffect(() => {
     if (location.state?.message) {

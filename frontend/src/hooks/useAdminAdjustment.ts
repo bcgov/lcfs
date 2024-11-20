@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 export const useAdminAdjustment = ({
   adminAdjustmentId
 }: {
-  adminAdjustmentId: number | undefined
+  adminAdjustmentId: number
 }) => {
   return useQuery({
     enabled: !!adminAdjustmentId,
@@ -33,7 +33,7 @@ export const useAdminAdjustment = ({
 export const useCreateUpdateAdminAdjustment = ({
   adminAdjustmentId
 }: {
-  adminAdjustmentId?: number
+  adminAdjustmentId: number
 }) => {
   const queryClient = useQueryClient()
   return useMutation({

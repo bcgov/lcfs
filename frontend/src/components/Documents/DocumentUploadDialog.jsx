@@ -55,7 +55,7 @@ const BYTES_50 = 52428800
 function DocumentButton({ file, parentId, parentType }) {
   const { data, isSuccess, refetch } = useViewDocument({
     parentType,
-    parentId,
+    parentId: +parentId,
     documentId: file.documentId
   })
 
@@ -88,15 +88,24 @@ function DocumentUploadDialog({ open, close, parentType, parentId }) {
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
 
-  const { data: loadedFiles } = useDocuments({ parentType, parentId })
+  const { data: loadedFiles } = useDocuments({
+    parentType,
+    parentId: +parentId
+  })
   useEffect(() => {
     if (loadedFiles) {
       setFiles(loadedFiles)
     }
   }, [loadedFiles])
 
-  const { mutate: uploadFile } = useUploadDocument({ parentType, parentId })
-  const { mutate: deleteFile } = useDeleteDocument({ parentType, parentId })
+  const { mutate: uploadFile } = useUploadDocument({
+    parentType,
+    parentId: +parentId
+  })
+  const { mutate: deleteFile } = useDeleteDocument({
+    parentType,
+    parentId: +parentId
+  })
 
   const handleDrag = (e) => {
     e.preventDefault()

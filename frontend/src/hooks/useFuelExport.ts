@@ -27,11 +27,10 @@ export const useFuelExportOptions = ({
 }
 
 export const useGetFuelExports = (
-  params: { complianceReportId: number } & PaginationRequestSchema,
-  pagination: number
+  params: { complianceReportId: number } & PaginationRequestSchema
 ) => {
   return useQuery({
-    queryKey: ['fuel-exports', params, pagination],
+    queryKey: ['fuel-exports', params],
     queryFn: async () => {
       try {
         const { data } = await FuelExportsService.getFuelExports({

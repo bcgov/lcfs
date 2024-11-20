@@ -1,21 +1,20 @@
-import BCAlert from '@/components/BCAlert'
-import React, { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import Loading from '@/components/Loading'
+import {
+  useGetComplianceReportSummary,
+  useListComplianceReports
+} from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   lowCarbonColumns,
   nonCompliancePenaltyColumns,
   renewableFuelColumns
 } from '@/views/CompareReports/_schema'
-import {
-  useGetComplianceReportSummary,
-  useListComplianceReports
-} from '@/hooks/useComplianceReports'
+import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { Icon, MenuItem, Select } from '@mui/material'
 import Box from '@mui/material/Box'
-import Loading from '@/components/Loading'
-import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const Controls = styled(Box)({
   width: '66%'
@@ -23,12 +22,12 @@ const Controls = styled(Box)({
 
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
-  const [alertMessage, setAlertMessage] = useState('')
+  // const [alertMessage, setAlertMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [alertSeverity, setAlertSeverity] = useState('info')
+  // const [alertSeverity, setAlertSeverity] = useState('info')
 
-  const alertRef = useRef()
-  const { hasRoles, data: currentUser } = useCurrentUser()
+  // const alertRef = useRef()
+  const { data: currentUser } = useCurrentUser()
   const [reports, setReports] = useState([])
 
   const { data: complianceReportsData } = useListComplianceReports({
@@ -144,7 +143,7 @@ export const CompareReports = () => {
   return (
     <>
       <Box>
-        {alertMessage && (
+        {/* {alertMessage && (
           <BCAlert
             ref={alertRef}
             data-test="alert-box"
@@ -153,7 +152,7 @@ export const CompareReports = () => {
           >
             {alertMessage}
           </BCAlert>
-        )}
+        )} */}
       </Box>
       <Controls>
         <Box>

@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 export const useInitiativeAgreement = ({
   adminAdjustmentId
 }: {
-  adminAdjustmentId: number | undefined
+  adminAdjustmentId: number
 }) => {
   return useQuery({
     enabled: !!adminAdjustmentId,
