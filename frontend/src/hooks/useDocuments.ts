@@ -96,7 +96,6 @@ export const useViewDocument = ({
   documentId: number
 }) => {
   return useQuery({
-    enabled: false,
     queryKey: ['view-document', parentId, parentType],
     queryFn: async () => {
       try {
