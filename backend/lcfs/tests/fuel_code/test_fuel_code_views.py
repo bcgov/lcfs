@@ -4,7 +4,7 @@ from unittest.mock import patch
 from httpx import AsyncClient
 from fastapi import FastAPI
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.fuel_code.schema import FuelCodeCreateSchema
+from lcfs.web.api.fuel_code.schema import FuelCodeCreateUpdateSchema
 from lcfs.web.exception.exceptions import DataNotFoundException
 from starlette import status
 
@@ -198,7 +198,8 @@ async def test_get_fuel_code_not_found(
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-pytest.mark.anyio
+
+@pytest.mark.anyio
 async def test_update_fuel_code_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
@@ -207,8 +208,8 @@ async def test_update_fuel_code_success(
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.update_fuel_code"
     ) as mock_update_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-        updated_fuel_code = FuelCodeCreateSchema(
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+        updated_fuel_code = FuelCodeCreateUpdateSchema(
             fuel_code_id=1,
             status="Draft",
             prefix="ABC",
@@ -237,14 +238,18 @@ async def test_update_fuel_code_success(
             finished_fuel_transport_mode=["Truck"],
             is_valid=True,
             validation_msg="Validated successfully",
-            deleted=False
+            deleted=False,
         )
 
-        mock_update_fuel_code.return_value = updated_fuel_code.model_dump(by_alias=True, mode='json')
+        mock_update_fuel_code.return_value = updated_fuel_code.model_dump(
+            by_alias=True, mode="json"
+        )
         url = "/api/fuel-codes/1"
 
         # Send the PUT request with the mock updated data
-        response = await client.put(url, json=updated_fuel_code.model_dump(by_alias=True, mode='json'))
+        response = await client.put(
+            url, json=updated_fuel_code.model_dump(by_alias=True, mode="json")
+        )
         # Assert the response status and data
         assert response.status_code == status.HTTP_200_OK
         result = response.json()
@@ -252,45 +257,228 @@ async def test_update_fuel_code_success(
         assert result["fuelCodeId"] == 1
         assert result["company"] == "XYZ Energy Corp"
 
-# delete_fuel_code (DELETE)
+
 @pytest.mark.anyio
 async def test_delete_fuel_code_success(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user,
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
+    """Test successful deletion of a fuel code."""
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    url = "/api/fuel-codes/1"
+    mock_response = {"message": "Fuel code deleted successfully"}
+
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.delete_fuel_code"
     ) as mock_delete_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-
-        mock_delete_fuel_code.return_value = {
-            "message": "Fuel code deleted successfully"
-        }
-
-        url = fastapi_app.url_path_for("delete_fuel_code", fuel_code_id=1)
+        mock_delete_fuel_code.return_value = mock_response
         response = await client.delete(url)
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json() == {"message": "Fuel code deleted successfully"}
-        mock_delete_fuel_code.assert_called_once_with(1)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == mock_response
+    mock_delete_fuel_code.assert_called_once_with(1)
 
 
 @pytest.mark.anyio
 async def test_delete_fuel_code_not_found(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user,
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
+    """Test deletion of a non-existent fuel code."""
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    url = "/api/fuel-codes/9999"
+
     with patch(
         "lcfs.web.api.fuel_code.services.FuelCodeServices.delete_fuel_code"
     ) as mock_delete_fuel_code:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-
         mock_delete_fuel_code.side_effect = DataNotFoundException("Fuel code not found")
-
-        url = fastapi_app.url_path_for("delete_fuel_code", fuel_code_id=9999)
-
         response = await client.delete(url)
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Not Found"
+
+
+@pytest.mark.anyio
+async def test_delete_fuel_code_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test deletion of a fuel code with unauthorized user role."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])  # Unauthorized role
+    url = "/api/fuel-codes/1"
+    response = await client.delete(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_create_fuel_code_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test successful creation of a fuel code."""
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    url = "/api/fuel-codes/"
+    request_data = {
+        "fuelCodeId": 1,
+        "status": "Draft",
+        "prefix": "ABC",
+        "prefixId": 1001,
+        "fuelSuffix": "001",
+        "carbonIntensity": 20.5,
+        "edrms": "EDRMS-123",
+        "company": "XYZ Energy Corp",
+        "lastUpdated": "2023-11-05T10:30:00",
+        "contactName": "John Doe",
+        "contactEmail": "john.doe@example.com",
+        "applicationDate": "2023-09-15",
+        "approvalDate": "2023-10-01",
+        "effectiveDate": "2023-10-15",
+        "expirationDate": "2024-10-15",
+        "fuel": "Diesel",
+        "fuelTypeId": 2,
+        "feedstock": "Corn",
+        "feedstockLocation": "USA",
+        "fuelProductionFacilityCity": "Vancouver",
+        "fuelProductionFacilityProvinceState": "BC",
+        "fuelProductionFacilityCountry": "Canada",
+        "facilityNameplateCapacity": 1000,
+        "facilityNameplateCapacityUnit": "L",
+        "feedstockFuelTransportMode": ["Truck", "Ship"],
+        "finishedFuelTransportMode": ["Truck"],
+        "isValid": True,
+        "validationMsg": "Validated successfully",
+        "deleted": False,
+    }
+
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.create_fuel_code"
+    ) as mock_create_fuel_code:
+        mock_create_fuel_code.return_value = request_data
+        response = await client.post(url, json=request_data)
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["fuelCodeId"] == request_data["fuelCodeId"]
+    assert result["company"] == request_data["company"]
+    mock_create_fuel_code.assert_called_once_with(
+        FuelCodeCreateUpdateSchema(**request_data)
+    )
+
+
+@pytest.mark.anyio
+async def test_create_fuel_code_invalid_data(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test creation of a fuel code with invalid data."""
+    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    url = "/api/fuel-codes/"
+    invalid_data = {"invalidField": "Invalid"}
+
+    response = await client.post(url, json=invalid_data)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_create_fuel_code_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test creation of a fuel code with unauthorized user role."""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])  # Unauthorized role
+    url = "/api/fuel-codes/"
+    request_data = {
+        "fuelCodeId": 1,
+        "status": "Draft",
+        "prefix": "ABC",
+        "prefixId": 1001,
+        "fuelSuffix": "001",
+        "carbonIntensity": 20.5,
+        "edrms": "EDRMS-123",
+        "company": "XYZ Energy Corp",
+        "lastUpdated": "2023-11-05T10:30:00",
+        "contactName": "John Doe",
+        "contactEmail": "john.doe@example.com",
+        "applicationDate": "2023-09-15",
+        "approvalDate": "2023-10-01",
+        "effectiveDate": "2023-10-15",
+        "expirationDate": "2024-10-15",
+        "fuel": "Diesel",
+        "fuelTypeId": 2,
+        "feedstock": "Corn",
+        "feedstockLocation": "USA",
+        "fuelProductionFacilityCity": "Vancouver",
+        "fuelProductionFacilityProvinceState": "BC",
+        "fuelProductionFacilityCountry": "Canada",
+        "facilityNameplateCapacity": 1000,
+        "facilityNameplateCapacityUnit": "L",
+        "feedstockFuelTransportMode": ["Truck", "Ship"],
+        "finishedFuelTransportMode": ["Truck"],
+        "isValid": True,
+        "validationMsg": "Validated successfully",
+        "deleted": False,
+    }
+
+    response = await client.post(url, json=request_data)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test successful approval of a fuel code."""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = "/api/fuel-codes/1/approve"
+    mock_response = {"message": "Fuel code approved successfully"}
+
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.approve_fuel_code"
+    ) as mock_approve_fuel_code:
+        mock_approve_fuel_code.return_value = mock_response
+        response = await client.post(url)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == mock_response
+    mock_approve_fuel_code.assert_called_once_with(1)
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_not_found(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test approval of a non-existent fuel code."""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = "/api/fuel-codes/9999/approve"
+
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.approve_fuel_code"
+    ) as mock_approve_fuel_code:
+        mock_approve_fuel_code.side_effect = DataNotFoundException(
+            "Fuel code not found"
+        )
+        response = await client.post(url)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Not Found"
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_invalid_request(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test approval of a fuel code with invalid data."""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    url = "/api/fuel-codes/invalid_id/approve"
+
+    response = await client.post(url)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    url = "/api/fuel-codes/1/approve"
+    response = await client.post(url)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN

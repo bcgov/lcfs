@@ -25,8 +25,7 @@ export const Navbar = () => {
       { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
       {
         name: t('FuelCodes'),
-        route: ROUTES.FUELCODES,
-        hide: !isAnalyst
+        route: ROUTES.FUELCODES
       },
       { name: t('Administration'), route: ROUTES.ADMIN, hide: !isAdmin }
     ]

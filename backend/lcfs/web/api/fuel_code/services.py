@@ -15,7 +15,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_code.schema import (
-    FuelCodeCreateSchema,
+    FuelCodeCreateUpdateSchema,
     FuelCodeSchema,
     FuelCodesSchema,
     FuelTypeSchema,
@@ -132,27 +132,26 @@ class FuelCodeServices:
             ],
         )
 
-    async def convert_to_model(self, fuel_code: FuelCodeCreateSchema) -> FuelCode:
+    async def convert_to_model(
+        self, fuel_code_schema: FuelCodeCreateUpdateSchema, status: FuelCodeStatusEnum
+    ) -> FuelCode:
         """
         Converts data from FuelCodeCreateSchema to FuelCode data model to store in the database.
         """
-        prefix = await self.repo.get_fuel_code_prefix_by_name(fuel_code.prefix)
-        fuel_status = await self.repo.get_fuel_status_by_status(fuel_code.status)
-        fuel_type = await self.repo.get_fuel_type_by_name(fuel_code.fuel)
+        prefix = await self.repo.get_fuel_code_prefix(fuel_code_schema.prefix_id)
+        fuel_type = await self.repo.get_fuel_type_by_id(fuel_code_schema.fuel_type_id)
         facility_nameplate_capacity_units_enum = (
-            QuantityUnitsEnum(fuel_code.facility_nameplate_capacity_unit)
-            if fuel_code.facility_nameplate_capacity_unit is not None
+            QuantityUnitsEnum(fuel_code_schema.facility_nameplate_capacity_unit)
+            if fuel_code_schema.facility_nameplate_capacity_unit is not None
             else None
         )
         transport_modes = await self.repo.get_transport_modes()
-
-        fc = FuelCode(
-            **fuel_code.model_dump(
+        fuel_status = await self.repo.get_fuel_status_by_status(status)
+        fuel_code = FuelCode(
+            **fuel_code_schema.model_dump(
                 exclude={
                     "id",
-                    "prefix",
                     "prefix_id",
-                    "fuel",
                     "fuel_type_id",
                     "feedstock_fuel_transport_mode",
                     "finished_fuel_transport_mode",
@@ -167,53 +166,56 @@ class FuelCodeServices:
                 }
             ),
             fuel_code_status=fuel_status,
-            fuel_suffix=str(fuel_code.fuel_suffix),
+            fuel_suffix=str(fuel_code_schema.fuel_suffix),
             prefix_id=prefix.fuel_code_prefix_id,
             fuel_type_id=fuel_type.fuel_type_id,
             facility_nameplate_capacity_unit=facility_nameplate_capacity_units_enum,
         )
 
-        fc.feedstock_fuel_transport_modes = []
-        fc.finished_fuel_transport_modes = []
-        for transport_mode in fuel_code.feedstock_fuel_transport_mode or []:
+        fuel_code.feedstock_fuel_transport_modes = []
+        fuel_code.finished_fuel_transport_modes = []
+        for transport_mode in fuel_code_schema.feedstock_fuel_transport_mode or []:
             matching_transport_mode = next(
                 (tm for tm in transport_modes if tm.transport_mode == transport_mode),
                 None,
             )
             if matching_transport_mode:
-                fc.feedstock_fuel_transport_modes.append(
+                fuel_code.feedstock_fuel_transport_modes.append(
                     FeedstockFuelTransportMode(
-                        fuel_code_id=fc.fuel_code_id,
+                        fuel_code_id=fuel_code.fuel_code_id,
                         transport_mode_id=matching_transport_mode.transport_mode_id,
                     )
                 )
 
-        for transport_mode in fuel_code.finished_fuel_transport_mode or []:
+        for transport_mode in fuel_code_schema.finished_fuel_transport_mode or []:
             matching_transport_mode = next(
                 (tm for tm in transport_modes if tm.transport_mode == transport_mode),
                 None,
             )
             if matching_transport_mode:
-                fc.finished_fuel_transport_modes.append(
+                fuel_code.finished_fuel_transport_modes.append(
                     FinishedFuelTransportMode(
-                        fuel_code_id=fc.fuel_code_id,
+                        fuel_code_id=fuel_code.fuel_code_id,
                         transport_mode_id=matching_transport_mode.transport_mode_id,
                     )
                 )
 
-        return fc
+        return fuel_code
 
     @service_handler
-    async def create_fuel_code(self, fuel_code: FuelCodeCreateSchema) -> FuelCodeSchema:
+    async def create_fuel_code(
+        self, fuel_code: FuelCodeCreateUpdateSchema
+    ) -> FuelCodeSchema:
         """
         Create a new fuel code.
         """
-        fuel_code.status = FuelCodeStatusEnum.Draft
         fuel_suffix_value = await self.repo.validate_fuel_code(
-            fuel_code.fuel_suffix, fuel_code.prefix
+            fuel_code.fuel_suffix, fuel_code.prefix_id
         )
         fuel_code.fuel_suffix = fuel_suffix_value
-        fuel_code_model = await self.convert_to_model(fuel_code)
+        fuel_code_model = await self.convert_to_model(
+            fuel_code, FuelCodeStatusEnum.Draft
+        )
         fuel_code_model = await self.repo.create_fuel_code(fuel_code_model)
         result = FuelCodeSchema.model_validate(fuel_code_model)
         return result
@@ -222,12 +224,24 @@ class FuelCodeServices:
     async def get_fuel_code(self, fuel_code_id: int):
         return await self.repo.get_fuel_code(fuel_code_id)
 
-    async def get_fuel_code_status(self, fuel_code_status: str) -> FuelCodeStatus:
-        return await self.repo.get_fuel_code_status(fuel_code_status)
+    @service_handler
+    async def approve_fuel_code(self, fuel_code_id: int):
+        fuel_code = await self.get_fuel_code(fuel_code_id)
+        if not fuel_code:
+            raise ValueError("Fuel code not found")
+
+        if fuel_code.fuel_code_status.status != FuelCodeStatusEnum.Draft:
+            raise ValueError("Fuel code is not in Draft")
+
+        fuel_code.fuel_code_status = await self.repo.get_fuel_code_status(
+            FuelCodeStatusEnum.Approved
+        )
+
+        return await self.repo.update_fuel_code(fuel_code)
 
     @service_handler
     async def update_fuel_code(
-        self, fuel_code_id: int, fuel_code_data: FuelCodeCreateSchema
+        self, fuel_code_id: int, fuel_code_data: FuelCodeCreateUpdateSchema
     ):
         fuel_code = await self.get_fuel_code(fuel_code_id)
         if not fuel_code:
@@ -280,12 +294,6 @@ class FuelCodeServices:
         fuel_code.facility_nameplate_capacity_unit = (
             facility_nameplate_capacity_units_enum
         )
-
-        if fuel_code_data.status == "Approved":
-            fuel_code.fuel_status_id = (
-                await self.get_fuel_code_status(fuel_code_data.status)
-            ).fuel_code_status_id
-            fuel_code.approval_date = datetime.now()
 
         return await self.repo.update_fuel_code(fuel_code)
 

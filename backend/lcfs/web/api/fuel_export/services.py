@@ -228,7 +228,7 @@ class FuelExportServices:
         self, compliance_period: str
     ) -> FuelTypeOptionsResponse:
         """Get fuel supply table options"""
-        logger.info("Getting fuel supply table options")
+        # logger.info("Getting fuel supply table options")
         fs_options = await self.repo.get_fuel_export_table_options(compliance_period)
         fuel_types = []
         for row in fs_options:
@@ -240,10 +240,6 @@ class FuelExportServices:
         self, compliance_report_id: int
     ) -> FuelExportsSchema:
         """Get fuel supply list for a compliance report"""
-        logger.info(
-            "Getting fuel export list for compliance report",
-            compliance_report_id=compliance_report_id,
-        )
         fuel_export_models = await self.repo.get_fuel_export_list(compliance_report_id)
         fs_list = [FuelExportSchema.model_validate(fs) for fs in fuel_export_models]
         return FuelExportsSchema(fuel_exports=fs_list if fs_list else [])
@@ -253,12 +249,6 @@ class FuelExportServices:
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ):
         """Get paginated fuel supply list for a compliance report"""
-        logger.info(
-            "Getting paginated fuel export list for compliance report",
-            compliance_report_id=compliance_report_id,
-            page=pagination.page,
-            size=pagination.size,
-        )
         fuel_exports, total_count = await self.repo.get_fuel_exports_paginated(
             pagination, compliance_report_id
         )

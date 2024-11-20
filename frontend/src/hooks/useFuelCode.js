@@ -12,11 +12,10 @@ export const useFuelCodeOptions = (params, options) => {
   })
 }
 
-
 export const useGetFuelCode = (fuelCodeID) => {
   const client = useApiService()
-  // const queryClient = useQueryClient()
   return useQuery({
+    enabled: !!fuelCodeID,
     queryKey: ['fuel-code', fuelCodeID],
     queryFn: async () => {
       return (
@@ -28,10 +27,21 @@ export const useGetFuelCode = (fuelCodeID) => {
   })
 }
 
+export const useCreateFuelCode = (options) => {
+  const client = useApiService()
+  return useMutation({
+    ...options,
+    mutationFn: async (data) => {
+      return await client.post(apiRoutes.createFuelCode, data)
+    }
+  })
+}
+
 export const useUpdateFuelCode = (fuelCodeID, options) => {
   const client = useApiService()
   return useMutation({
     ...options,
+    enabled: !!fuelCodeID,
     mutationFn: async (data) => {
       return await client.put(
         apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID),
@@ -41,29 +51,26 @@ export const useUpdateFuelCode = (fuelCodeID, options) => {
   })
 }
 
-export const useDeleteFuelCode = (fuelCodeID, options) => {
+export const useApproveFuelCode = (options) => {
   const client = useApiService()
   return useMutation({
     ...options,
-    mutationFn: async () => {
-      return await client.delete(
-        apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID)
+    mutationFn: async (fuelCodeID) => {
+      return await client.post(
+        apiRoutes.approveFuelCode.replace(':fuelCodeId', fuelCodeID)
       )
     }
   })
 }
 
-export const useSaveFuelCode = (options) => {
+export const useDeleteFuelCode = (options) => {
   const client = useApiService()
-  const queryClient = useQueryClient()
-
   return useMutation({
     ...options,
-    mutationFn: async (data) => {
-      return await client.post(apiRoutes.saveFuelCode, data)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(['fuel-codes'])
+    mutationFn: async (fuelCodeID) => {
+      return await client.delete(
+        apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID)
+      )
     }
   })
 }
