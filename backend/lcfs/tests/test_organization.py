@@ -258,7 +258,9 @@ async def test_get_balances(
 ) -> None:
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     organization_id = 1  # Assuming this organization exists
-    url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
+    url = fastapi_app.url_path_for(
+        "get_balances_by_org_id", organization_id=organization_id
+    )
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = OrganizationBalanceResponseSchema(**response.json())
@@ -323,7 +325,9 @@ async def test_get_balances_unauthorized(
 ) -> None:
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     organization_id = 1
-    url = fastapi_app.url_path_for("get_balances", organization_id=organization_id)
+    url = fastapi_app.url_path_for(
+        "get_balances_by_org_id", organization_id=organization_id
+    )
     response = await client.get(url)
     assert response.status_code == status.HTTP_403_FORBIDDEN
 

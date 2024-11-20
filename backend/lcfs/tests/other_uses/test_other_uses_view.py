@@ -33,14 +33,13 @@ async def test_get_table_options(
     mock_other_uses_service,
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-    url = fastapi_app.url_path_for("get_table_options")
+    url = fastapi_app.url_path_for("get_other_uses_table_options")
 
     mock_other_uses_service.get_table_options.return_value = {
-        "allocationTransactionTypes": [],
         "fuelCategories": [],
-        "fuelCodes": [],
         "fuelTypes": [],
         "unitsOfMeasure": [],
+        "expectedUses": [],
     }
 
     fastapi_app.dependency_overrides[OtherUsesServices] = (
@@ -51,10 +50,11 @@ async def test_get_table_options(
 
     assert response.status_code == 200
     data = response.json()
-    assert "allocationTransactionTypes" in data
-    assert "fuelCodes" in data
+    # assert "allocationTransactionTypes" in data
+    assert "fuelCategories" in data
     assert "fuelTypes" in data
     assert "unitsOfMeasure" in data
+    assert "expectedUses" in data
 
 
 @pytest.mark.anyio

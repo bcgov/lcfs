@@ -66,7 +66,7 @@ async def test_get_user_by_id_success(
     user_id = 1
     organization_id = 1
     url = fastapi_app.url_path_for(
-        "get_user_by_id", organization_id=organization_id, user_id=user_id
+        "get_org_user_by_id", organization_id=organization_id, user_id=user_id
     )
 
     mock_user_services.get_user_by_id.return_value = {
@@ -99,7 +99,7 @@ async def test_create_user_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = fastapi_app.url_path_for("create_user", organization_id=1)
+    url = fastapi_app.url_path_for("create_org_user", organization_id=1)
 
     payload = {
         "title": "testuser",
@@ -316,7 +316,7 @@ async def test_get_compliance_reports_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = fastapi_app.url_path_for("get_compliance_reports", organization_id=1)
+    url = fastapi_app.url_path_for("get_org_compliance_reports", organization_id=1)
 
     mock_compliance_report_services.get_compliance_reports_paginated.return_value = {
         "pagination": {"total": 1, "page": 1, "size": 10, "totalPages": 1},
@@ -373,7 +373,7 @@ async def test_get_compliance_report_by_id_success(
 
     # Define the URL for the endpoint
     url = fastapi_app.url_path_for(
-        "get_compliance_report_by_id",
+        "get_org_compliance_report_by_id",
         organization_id=1,
         report_id=1,
     )
