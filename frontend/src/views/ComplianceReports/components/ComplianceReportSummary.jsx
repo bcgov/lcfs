@@ -142,7 +142,6 @@ const ComplianceReportSummary = ({
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>
               <SigningAuthorityDeclaration
-                disabled={!canSign}
                 onChange={setIsSigningAuthorityDeclared}
                 disabled={!hasRoles(roles.signing_authority)}
               />
