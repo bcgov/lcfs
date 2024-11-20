@@ -96,6 +96,9 @@ export const DateRangeCellEditor = forwardRef(({
 }, ref) => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [error, setError] = useState(false)
+  const [inputValue, setInputValue] = useState(
+    Array.isArray(value) ? `${value[0]} to ${value[1]}` : ''
+  )
   const textFieldRef = useRef(null)
   const calendarIconRef = useRef(null)
 
@@ -122,14 +125,20 @@ export const DateRangeCellEditor = forwardRef(({
         format(end, 'yyyy-MM-dd'),
       ]
       setError(false)
+      setInputValue(`${formattedRange[0]} to ${formattedRange[1]}`)
       onValueChange(formattedRange)
     } else {
       setError(true)
     }
   }
 
-  const handleTextFieldBlur = (event) => {
-    const [startStr, endStr] = event.target.value.split(' to ')
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value)
+    setError(false) // Clear error while editing
+  }
+
+  const handleTextFieldBlur = () => {
+    const [startStr, endStr] = inputValue.split(' to ')
     if (startStr && endStr) {
       const startDate = parse(startStr, 'yyyy-MM-dd', new Date())
       const endDate = parse(endStr, 'yyyy-MM-dd', new Date())
@@ -140,6 +149,7 @@ export const DateRangeCellEditor = forwardRef(({
           format(endDate, 'yyyy-MM-dd'),
         ]
         setError(false)
+        setInputValue(`${formattedRange[0]} to ${formattedRange[1]}`)
         onValueChange(formattedRange)
       } else {
         setError(true)
@@ -192,8 +202,8 @@ export const DateRangeCellEditor = forwardRef(({
     >
       <InputMask
         mask="9999-99-99 to 9999-99-99"
-        value={Array.isArray(value) ? `${value[0]} to ${value[1]}` : ''}
-        onChange={(e) => onValueChange(e.target.value)}
+        value={inputValue}
+        onChange={handleInputChange}
         onBlur={handleTextFieldBlur}
       >
         {(inputProps) => (
