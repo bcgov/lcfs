@@ -16,7 +16,7 @@ dayjs.extend(duration)
 
 function TransferHistory({ transferHistory }) {
   const { transferId } = useParams()
-  const { data: transferData } = useTransfer(transferId)
+  const { data: transferData } = useTransfer({ transferId })
 
   const { t } = useTranslation(['common', 'transfer'])
 
@@ -74,7 +74,7 @@ function TransferHistory({ transferHistory }) {
             TRANSFER_STATUSES.SENT,
             TRANSFER_STATUSES.SUBMITTED,
             TRANSFER_STATUSES.RECOMMENDED,
-            TRANSFER_STATUSES.RECORDED,
+            TRANSFER_STATUSES.RECORDED
           ].includes(currentStatus) &&
             agreementDate && (
               <li>

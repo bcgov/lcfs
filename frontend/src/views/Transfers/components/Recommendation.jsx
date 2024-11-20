@@ -9,10 +9,7 @@ import { useParams } from 'react-router-dom'
 export const Recommendation = ({ currentStatus }) => {
   const { t } = useTranslation(['common', 'transfer'])
   const { transferId } = useParams()
-  const { data: transferData } = useTransfer(transferId, {
-    enabled: !!transferId,
-    retry: false
-  })
+  const { data: transferData } = useTransfer({ transferId })
 
   const { control } = useFormContext()
 

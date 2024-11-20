@@ -18,9 +18,7 @@ export const TransferGraphic = () => {
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
   const { transferId } = useParams()
-  const { data: transferData } = useTransfer(transferId, {
-    enabled: !!transferId
-  })
+  const { data: transferData } = useTransfer({ transferId })
 
   const quantity = parseInt(watch('quantity'), 10)
   const creditsFrom = transferId
@@ -32,8 +30,7 @@ export const TransferGraphic = () => {
     )?.name || ''
 
   const pricePerUnit = parseFloat(watch('pricePerUnit'))
-  const totalValue =
-    quantity && pricePerUnit ? quantity * pricePerUnit : 0
+  const totalValue = quantity && pricePerUnit ? quantity * pricePerUnit : 0
 
   const isNumberOfCreditsValid = (number) => !isNaN(number) && number > 0
   const isTotalValueValid = (value) => typeof value === 'number' && value > 0

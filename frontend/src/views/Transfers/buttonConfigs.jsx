@@ -70,13 +70,11 @@ export const buttonClusterConfigFn = ({
       id: 'save-draft-btn',
       handler: (formData) => {
         createUpdateTransfer({
-          data: {
-            ...formData,
-            fromOrganizationId: parseInt(formData.fromOrganizationId),
-            toOrganizationId: parseInt(formData.toOrganizationId),
-            agreementDate: formData.agreementDate.toISOString().split('T')[0],
-            currentStatus: TRANSFER_STATUSES.DRAFT
-          }
+          ...formData,
+          fromOrganizationId: parseInt(formData.fromOrganizationId),
+          toOrganizationId: parseInt(formData.toOrganizationId),
+          agreementDate: formData.agreementDate.toISOString().split('T')[0],
+          currentStatus: TRANSFER_STATUSES.DRAFT
         })
       }
     },
@@ -87,11 +85,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.DELETED
-              }
+              ...formData,
+              agreementDate: dateFormatter(formData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.DELETED
             }),
           primaryButtonText: t('transfer:actionBtns.deleteDraftBtn'),
           primaryButtonColor: 'error',
@@ -110,15 +106,11 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                fromOrganizationId: parseInt(formData.fromOrganizationId),
-                toOrganizationId: parseInt(formData.toOrganizationId),
-                agreementDate: formData.agreementDate
-                  .toISOString()
-                  .split('T')[0],
-                currentStatus: TRANSFER_STATUSES.SENT
-              }
+              ...formData,
+              fromOrganizationId: parseInt(formData.fromOrganizationId),
+              toOrganizationId: parseInt(formData.toOrganizationId),
+              agreementDate: formData.agreementDate.toISOString().split('T')[0],
+              currentStatus: TRANSFER_STATUSES.SENT
             }),
           primaryButtonText: t('transfer:actionBtns.signAndSendBtn'),
           secondaryButtonText: t('cancelBtn'),
@@ -145,11 +137,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.SUBMITTED
-              }
+              ...formData,
+              agreementDate: dateFormatter(formData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.SUBMITTED
             }),
           primaryButtonText: t('transfer:actionBtns.signAndSubmitBtn'),
           primaryButtonColor: 'primary',
@@ -169,11 +159,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.DECLINED
-              }
+              ...formData,
+              agreementDate: dateFormatter(formData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.DECLINED
             }),
           primaryButtonText: t('transfer:actionBtns.declineTransferBtn'),
           primaryButtonColor: 'error',
@@ -193,11 +181,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(formData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.RESCINDED
-              }
+              ...formData,
+              agreementDate: dateFormatter(formData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.RESCINDED
             }),
           primaryButtonText: t('transfer:actionBtns.rescindTransferBtn'),
           primaryButtonColor: 'error',
@@ -212,11 +198,9 @@ export const buttonClusterConfigFn = ({
       id: 'save-comment-btn',
       handler: (formData) =>
         createUpdateTransfer({
-          data: {
-            ...formData,
-            agreementDate: dateFormatter(transferData.agreementDate),
-            currentStatus: transferData.currentStatus.status
-          }
+          ...formData,
+          agreementDate: dateFormatter(transferData.agreementDate),
+          currentStatus: transferData.currentStatus.status
         }),
       disabled: !isGovernmentUser
     },
@@ -227,11 +211,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.REFUSED
-              }
+              ...formData,
+              agreementDate: dateFormatter(transferData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.REFUSED
             }),
           primaryButtonText: t('transfer:actionBtns.refuseTransferBtn'),
           primaryButtonColor: 'error',
@@ -249,11 +231,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.RECORDED
-              }
+              ...formData,
+              agreementDate: dateFormatter(transferData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.RECORDED
             }),
           primaryButtonText: t('transfer:actionBtns.recordTransferBtn'),
           primaryButtonColor: 'primary',
@@ -270,11 +250,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.RECOMMENDED
-              }
+              ...formData,
+              agreementDate: dateFormatter(transferData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.RECOMMENDED
             }),
           primaryButtonText: t('transfer:actionBtns.recommendBtn'),
           primaryButtonColor: 'primary',
@@ -290,11 +268,9 @@ export const buttonClusterConfigFn = ({
         setModalData({
           primaryButtonAction: () =>
             createUpdateTransfer({
-              data: {
-                ...formData,
-                agreementDate: dateFormatter(transferData.agreementDate),
-                currentStatus: TRANSFER_STATUSES.SUBMITTED
-              }
+              ...formData,
+              agreementDate: dateFormatter(transferData.agreementDate),
+              currentStatus: TRANSFER_STATUSES.SUBMITTED
             }),
           primaryButtonText: t('transfer:actionBtns.returnToAnalystBtn'),
           primaryButtonColor: 'error',

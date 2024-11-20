@@ -2,31 +2,27 @@ import BCTypography from '@/components/BCTypography'
 import { useTransfer, useUpdateCategory } from '@/hooks/useTransfer'
 import { useLoadingStore } from '@/stores/useLoadingStore'
 import { Checkbox, FormControlLabel } from '@mui/material'
-import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 
 export const CategoryCheckbox = () => {
   const { transferId } = useParams()
-  const queryClient = useQueryClient()
   const setLoading = useLoadingStore((state) => state.setLoading)
 
-  const { data: transferData, isFetching } = useTransfer(transferId)
+  const { data: transferData, isFetching } = useTransfer({ transferId })
 
-  const { mutate: updateCategory } = useUpdateCategory(transferId, {
-    onMutate: () => {
-      setLoading(true)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['transfer'])
-    }
+  const { mutate: updateCategory, isPending } = useUpdateCategory({
+    transferId
   })
 
   useEffect(() => {
     if (!isFetching) {
       setLoading(false)
     }
-  }, [isFetching, setLoading])
+    if (isPending) {
+      setLoading(true)
+    }
+  }, [isFetching, isPending, setLoading])
 
   return (
     <div data-test="category-checkbox">
