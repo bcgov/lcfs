@@ -66,7 +66,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         component: (data) => (
           <SupportingDocumentSummary
             data={data}
-            reportID={complianceReportId}
+            reportId={complianceReportId}
           />
         )
       },

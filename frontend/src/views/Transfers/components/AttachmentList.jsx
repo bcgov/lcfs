@@ -13,10 +13,13 @@ export const AttachmentList = ({ attachments = [] }) => {
         {attachments.map((attachment) => (
           <ListItemButton
             component="a"
-            key={attachment.attachmentID}
+            key={attachment.attachmentId}
             alignItems="flex-start"
           >
-            <AttachFileIcon data-test="AttachFileIcon" sx={{ marginTop: '8px' }} />
+            <AttachFileIcon
+              data-test="AttachFileIcon"
+              sx={{ marginTop: '8px' }}
+            />
             <ListItemText
               secondary={attachment.fileName}
               sx={({ palette: { info } }) => ({

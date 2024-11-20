@@ -266,8 +266,8 @@ Then(
 
         return paramObj.hid
       })
-      .then(async (transferID) => {
-        await cy.get(`div[row-id=${transferID}]`).should('contain', status)
+      .then(async (transferId) => {
+        await cy.get(`div[row-id=${transferId}]`).should('contain', status)
       })
   }
 )

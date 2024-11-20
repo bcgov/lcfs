@@ -115,7 +115,7 @@ export const Transactions = () => {
       return apiRoutes.orgTransactions
     } else if (selectedOrgId) {
       return apiRoutes.filteredTransactionsByOrg.replace(
-        ':orgID',
+        ':orgId',
         selectedOrgId
       )
     }
@@ -128,7 +128,7 @@ export const Transactions = () => {
       return apiRoutes.exportOrgTransactions
     } else if (selectedOrgId) {
       return apiRoutes.exportFilteredTransactionsByOrg.replace(
-        ':orgID',
+        ':orgId',
         selectedOrgId
       )
     }

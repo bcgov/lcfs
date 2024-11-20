@@ -4,16 +4,16 @@ import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 
-export const SupportingDocumentSummary = ({ reportID, data }) => {
+export const SupportingDocumentSummary = ({ reportId, data }) => {
   const apiService = useApiService()
 
-  const viewDocument = async (documentID) => {
-    if (!reportID || !documentID) return
+  const viewDocument = async (documentId) => {
+    if (!reportId || !documentId) return
     const res = await apiService.get(
       apiRoutes.getDocument
         .replace(':parentType', 'compliance_report')
-        .replace(':parentID', reportID)
-        .replace(':documentID', documentID),
+        .replace(':parentId', reportId)
+        .replace(':documentId', documentId),
       {
         responseType: 'blob'
       }

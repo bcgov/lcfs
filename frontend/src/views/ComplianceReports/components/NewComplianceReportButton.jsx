@@ -19,7 +19,7 @@ export const NewComplianceReportButton = ({
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
 
-  const reportedPeriodIDs = reportedPeriods?.map(
+  const reportedPeriodIds = reportedPeriods?.map(
     (period) => period.compliancePeriodId
   )
 
@@ -101,7 +101,7 @@ export const NewComplianceReportButton = ({
             <MenuItem
               key={period.compliancePeriodId}
               onClick={() => handleComplianceOptionClick(period)}
-              disabled={reportedPeriodIDs?.includes(period.compliancePeriodId)}
+              disabled={reportedPeriodIds?.includes(period.compliancePeriodId)}
             >
               {period.description}
             </MenuItem>

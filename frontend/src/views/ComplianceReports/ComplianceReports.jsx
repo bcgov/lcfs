@@ -157,7 +157,7 @@ export const ComplianceReports = () => {
             apiEndpoint={
               hasRoles(roles.supplier)
                 ? apiRoutes.getOrgComplianceReports.replace(
-                    ':orgID',
+                    ':orgId',
                     currentUser?.organization?.organizationId
                   )
                 : apiRoutes.getComplianceReports

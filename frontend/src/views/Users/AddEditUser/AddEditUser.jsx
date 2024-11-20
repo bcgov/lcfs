@@ -53,8 +53,8 @@ export const AddEditUser = ({ userType }) => {
     ? userId
       ? // eslint-disable-next-line react-hooks/rules-of-hooks
         useOrganizationUser({
-          orgID: orgId || currentUser?.organization?.organizationId,
-          userID: userId
+          orgId: orgId || currentUser?.organization?.organizationId,
+          userId
         })
       : { undefined, isLoading: false, isFetched: false }
     : // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -198,7 +198,7 @@ export const AddEditUser = ({ userType }) => {
       if (hasRoles(roles.supplier)) {
         navigate(ROUTES.ORGANIZATION)
       } else if (orgId) {
-        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgId), {
+        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgId', orgId), {
           state: {
             message: 'User has been successfully saved.',
             severity: 'success'

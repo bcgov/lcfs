@@ -42,7 +42,7 @@ export const Organizations = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback((params) => {
     navigate(
-      ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', params.data.organizationId)
+      ROUTES.ORGANIZATIONS_VIEW.replace(':orgId', params.data.organizationId)
     )
   })
   const apiService = useApiService()

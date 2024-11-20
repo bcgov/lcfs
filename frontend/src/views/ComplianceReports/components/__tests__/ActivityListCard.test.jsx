@@ -35,7 +35,7 @@ describe('ActivityListCard', () => {
   const defaultProps = {
     name: 'Test Name',
     period: 'Q1 2023',
-    reportID: '12345'
+    reportId: '12345'
   }
 
   it('renders correctly with given props', () => {

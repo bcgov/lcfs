@@ -46,18 +46,18 @@ export const ViewUser = () => {
 
   const handleEditClick = () => {
     if (hasRoles(roles.supplier)) {
-      navigate(ROUTES.ORGANIZATION_EDITUSER.replace(':userID', userId))
+      navigate(ROUTES.ORGANIZATION_EDITUSER.replace(':userId', userId))
     } else if (orgId)
       navigate(
-        ROUTES.ORGANIZATIONS_EDITUSER.replace(':orgID', orgId).replace(
-          ':userID',
+        ROUTES.ORGANIZATIONS_EDITUSER.replace(':orgId', orgId).replace(
+          ':userId',
           userId
         )
       )
-    else navigate(ROUTES.ADMIN_USERS_EDIT.replace(':userID', userId))
+    else navigate(ROUTES.ADMIN_USERS_EDIT.replace(':userId', userId))
   }
 
-  const apiEndpoint = apiRoutes.getUserActivities.replace(':userID', userId)
+  const apiEndpoint = apiRoutes.getUserActivities.replace(':userId', userId)
   const gridKey = `user-activity-grid-${userId}`
 
   const getRowId = useCallback((params) => {

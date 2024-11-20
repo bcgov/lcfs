@@ -45,7 +45,7 @@ vi.mock('@mui/material', async (importOriginal) => {
 })
 
 describe('ComplianceReportSummary', () => {
-  const mockReportID = '123'
+  const mockReportId = '123'
   const mockSetHasMet = vi.fn() // Mock setHasMet function
   const mockHandleSubmit = vi.fn() // Mock handleSubmit function
 
@@ -62,7 +62,7 @@ describe('ComplianceReportSummary', () => {
 
     render(
       <ComplianceReportSummary
-        reportID={mockReportID}
+        reportId={mockReportId}
         setHasMet={mockSetHasMet}
       />,
       { wrapper }
@@ -85,7 +85,7 @@ describe('ComplianceReportSummary', () => {
 
     render(
       <ComplianceReportSummary
-        reportID={mockReportID}
+        reportId={mockReportId}
         setHasMet={mockSetHasMet}
         alertRef={alertRef} // Pass the alertRef prop
       />,
@@ -112,7 +112,7 @@ describe('ComplianceReportSummary', () => {
 
     render(
       <ComplianceReportSummary
-        reportID={mockReportID}
+        reportId={mockReportId}
         currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
         setHasMet={mockSetHasMet}
         methods={{ handleSubmit: mockHandleSubmit }}

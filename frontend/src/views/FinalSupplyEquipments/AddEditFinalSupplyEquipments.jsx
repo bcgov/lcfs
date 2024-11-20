@@ -203,10 +203,10 @@ export const AddEditFinalSupplyEquipments = () => {
       }
     }
     if (action === 'duplicate') {
-      const newRowID = uuid()
+      const newRowId = uuid()
       const rowData = {
         ...params.node.data,
-        id: newRowID,
+        id: newRowId,
         serialNbr: null,
         latitude: null,
         longitude: null,
@@ -221,7 +221,7 @@ export const AddEditFinalSupplyEquipments = () => {
         addIndex: params.node?.rowIndex + 1
       })
 
-      setErrors({ [newRowID]: 'finalSupplyEquipment' })
+      setErrors({ [newRowId]: 'finalSupplyEquipment' })
 
       alertRef.current?.triggerAlert({
         message: 'Error updating row: Fuel supply equipment Fields required',

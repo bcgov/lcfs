@@ -54,12 +54,12 @@ export const ViewOrganization = () => {
   const handleEditClick = () => {
     navigate(
       ROUTES.ORGANIZATIONS_EDIT.replace(
-        ':orgID',
+        ':orgId',
         orgId || currentUser?.organization?.organizationId
       ),
       {
         state: {
-          orgID: orgId || currentUser?.organization?.organizationId,
+          orgId: orgId || currentUser?.organization?.organizationId,
           isEditMode: true
         }
       }
@@ -98,13 +98,13 @@ export const ViewOrganization = () => {
     hasRoles(roles.supplier)
       ? navigate(
           ROUTES.ORGANIZATION_VIEWUSER.replace(
-            ':userID',
+            ':userId',
             params.data.userProfileId
           )
         )
       : navigate(
-          ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgId).replace(
-            ':userID',
+          ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgId', orgId).replace(
+            ':userId',
             params.data.userProfileId
           )
         )
@@ -262,7 +262,7 @@ export const ViewOrganization = () => {
                   onClick={() =>
                     !isCurrentUserLoading && hasRoles(roles.government)
                       ? navigate(
-                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgId)
+                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgId', orgId)
                         )
                       : navigate(ROUTES.ORGANIZATION_ADDUSER)
                   }
@@ -334,7 +334,7 @@ export const ViewOrganization = () => {
           gridRef={gridRef}
           apiEndpoint={apiRoutes.orgUsers
             .replace(
-              ':orgID',
+              ':orgId',
               orgId || currentUser?.organization?.organizationId
             )
             .concat(showActive ? '?status=Active' : '?status=Inactive')}

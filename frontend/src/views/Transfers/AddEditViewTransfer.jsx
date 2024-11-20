@@ -308,13 +308,13 @@ export const AddEditViewTransfer = () => {
     const formattedTransferId = `CT${transferId}`
 
     if (!editorMode) {
-      return `${t('transfer:transferID')} ${formattedTransferId}`
+      return `${t('transfer:transferId')} ${formattedTransferId}`
     }
     switch (mode) {
       case 'add':
         return t('transfer:newTransfer')
       case 'edit':
-        return `${t('transfer:editTransferID')} ${formattedTransferId}`
+        return `${t('transfer:editTransferId')} ${formattedTransferId}`
     }
   }, [editorMode, mode, t, transferId])
 

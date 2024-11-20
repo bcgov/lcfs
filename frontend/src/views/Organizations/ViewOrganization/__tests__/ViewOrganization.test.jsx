@@ -95,7 +95,7 @@ vi.mock('react-router-dom', () => ({
   MemoryRouter: () => vi.fn(),
   useNavigate: () => vi.fn(),
   useLocation: () => ({ state: {} }),
-  useParams: () => ({ orgID: '123' })
+  useParams: () => ({ orgId: '123' })
 }))
 
 const renderComponent = (props) => {

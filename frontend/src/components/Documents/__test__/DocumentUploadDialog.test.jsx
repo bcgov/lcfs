@@ -18,7 +18,7 @@ vi.mock('@/hooks/useDocuments', () => ({
 }))
 
 describe('DocumentUploadDialog', () => {
-  const parentID = '123'
+  const parentId = '123'
   const closeMock = vi.fn()
 
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe('DocumentUploadDialog', () => {
         open={true}
         close={closeMock}
         parentType="report"
-        parentID={parentID}
+        parentId={parentId}
       />,
       { wrapper }
     )
@@ -60,7 +60,7 @@ describe('DocumentUploadDialog', () => {
         open={true}
         close={closeMock}
         parentType="report"
-        parentID={parentID}
+        parentId={parentId}
       />,
       { wrapper }
     )
@@ -81,7 +81,7 @@ describe('DocumentUploadDialog', () => {
         open={true}
         close={closeMock}
         parentType="report"
-        parentID={parentID}
+        parentId={parentId}
       />,
       { wrapper }
     )
@@ -119,7 +119,7 @@ describe('DocumentUploadDialog', () => {
         open={true}
         close={closeMock}
         parentType="report"
-        parentID={parentID}
+        parentId={parentId}
       />,
       { wrapper }
     )
@@ -142,7 +142,7 @@ describe('DocumentUploadDialog', () => {
         open={true}
         close={closeMock}
         parentType="report"
-        parentID={parentID}
+        parentId={parentId}
       />,
       { wrapper }
     )

@@ -56,7 +56,7 @@ describe('AddEditOrg', () => {
   beforeEach(() => {
     mockNavigate = vi.fn()
     useNavigate.mockReturnValue(mockNavigate)
-    useParams.mockReturnValue({ orgID: undefined })
+    useParams.mockReturnValue({ orgId: undefined })
 
     // Mocking the useOrganization hook
     useOrganization.mockReturnValue({
