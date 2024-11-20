@@ -1,15 +1,18 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AutocompleteCellEditor,
-  NumberEditor
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
+import { StandardCellErrors, StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 
-export const otherUsesColDefs = (optionsData, errors) => [
+export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+
+export const otherUsesColDefs = (optionsData, errors, warnings) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -21,11 +24,12 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelType',
+    headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
     minWidth: '280',
     cellEditorParams: {
-      options: optionsData.fuelTypes.map((obj) => obj.fuelType),
+      options: optionsData?.fuelTypes?.map((obj) => obj.fuelType) || [], // Safe check
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -38,10 +42,11 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelCategory',
+    headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
-      options: optionsData.fuelCategories.map((obj) => obj.category),
+      options: optionsData?.fuelCategories?.map((obj) => obj.category) || [], // Safe check
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -50,7 +55,101 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    minWidth: 200
+  },
+  {
+    field: 'provisionOfTheAct',
+    headerComponent: RequiredHeader,
+    headerName: i18n.t(
+      'otherUses:otherUsesColLabels.provisionOfTheAct'
+    ),
+    cellEditor: 'agSelectCellEditor',
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (type) => type.fuelType === params.data.fuelType
+      )
+
+      const provisionsOfTheAct = fuelType
+        ? fuelType.provisionOfTheAct.map((provision) => provision.name)
+        : []
+
+      return {
+        values: provisionsOfTheAct.sort()
+      }
+    },
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    suppressKeyboardEvent,
+    minWidth: 300,
+    editable: true,
+    tooltipValueGetter: (p) =>
+      'Select the method for determining carbon intensity'
+  },
+  {
+    field: 'fuelCode',
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
+    cellEditor: AutocompleteCellEditor,
+    cellEditorParams: (params) => {
+        const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+
+        return {
+            options: fuelType?.fuelCodes?.map((item) => item.fuelCode) || [], // Safely access fuelCodes
+            multiple: false,
+            disableCloseOnSelect: false,
+            freeSolo: false,
+            openOnFocus: true
+        };
+    },
+    cellRenderer: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+      if (
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+        fuelType?.fuelCodes?.length > 0
+      ) {
+        return params.value || <Typography variant="body4">Select</Typography>;
+      }
+      return null;
+    },
+    cellStyle: (params) => {
+        const style = StandardCellErrors(params, errors);
+        const conditionalStyle =
+            params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+            optionsData?.fuelTypes
+                ?.find((obj) => params.data.fuelType === obj.fuelType)
+                ?.fuelCodes?.length > 0
+                ? { backgroundColor: '#fff', borderColor: 'unset' }
+                : { backgroundColor: '#f2f2f2' };
+        return { ...style, ...conditionalStyle };
+    },
+    suppressKeyboardEvent,
+    minWidth: 150,
+    editable: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+      return (
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+        fuelType?.fuelCodes?.length > 0
+      );
+    },
+    valueSetter: (params) => {
+        if (params.newValue) {
+            params.data.fuelCode = params.newValue;
+
+            const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+            if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+                const matchingFuelCode = fuelType?.fuelCodes?.find(
+                    (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
+                );
+                if (matchingFuelCode) {
+                    params.data.fuelCodeId = matchingFuelCode.fuelCodeId;
+                }
+            }
+        }
+        return true;
+    },
+    tooltipValueGetter: (p) => 'Select the approved fuel code'
   },
   {
     field: 'quantitySupplied',
@@ -63,7 +162,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    minWidth: 200
   },
   {
     field: 'units',
@@ -71,7 +171,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteCellEditor,
     minWidth: '155',
     cellEditorParams: {
-      options: optionsData.unitsOfMeasure.map((obj) => obj),
+      options: optionsData?.unitsOfMeasure || [], // Safe check
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -81,6 +181,41 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => StandardCellErrors(params, errors)
+  },
+  {
+    field: 'ciOfFuel',
+    headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
+    valueFormatter: (params) => parseFloat(params.value).toFixed(2),
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    editable: false,
+    valueGetter: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      );
+
+      if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+        return (
+          fuelType?.fuelCodes?.find(
+            (item) => item.fuelCode === params.data.fuelCode
+          )?.carbonIntensity || 0
+        );
+      }
+      if (fuelType) {
+        if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+          const categories = fuelType.fuelCategories;
+          const defaultCI = categories?.find(
+            (cat) => cat.category === params.data.fuelCategory
+          )?.defaultAndPrescribedCi;
+
+          return defaultCI || 0;
+        }
+
+        return fuelType.defaultCarbonIntensity || 0;
+      }
+
+      return 0;
+    },
+    minWidth: 150,
   },
   {
     field: 'expectedUse',
@@ -88,7 +223,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteCellEditor,
     flex: 1,
     cellEditorParams: {
-      options: optionsData.expectedUses.map((obj) => obj.name),
+      options: optionsData?.expectedUses?.map((obj) => obj.name) || [], // Safe check
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -97,7 +232,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    minWidth: 200
   },
   {
     field: 'rationale',
@@ -105,7 +241,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    editable: (params) => params.data.expectedUse === 'Other'
+    editable: (params) => params.data.expectedUse === 'Other',
+    minWidth: 300
   }
 ]
 

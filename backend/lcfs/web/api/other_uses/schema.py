@@ -23,6 +23,12 @@ class FuelTypeQuantityUnitsEnumSchema(str, Enum):
     Cubic_metres = "m3"
 
 
+class FuelCodeSchema(BaseSchema):
+    fuel_code_id: int
+    fuel_code: str
+    carbon_intensity: float
+
+
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
@@ -47,8 +53,8 @@ class FuelTypeSchema(BaseSchema):
     provision_1_id: Optional[int] = None
     provision_2_id: Optional[int] = None
     default_carbon_intensity: Optional[float] = None
-    provision_1: Optional[ProvisionOfTheActSchema] = None
-    provision_2: Optional[ProvisionOfTheActSchema] = None
+    fuel_codes: Optional[List[FuelCodeSchema]] = []
+    provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = []
     units: FuelTypeQuantityUnitsEnumSchema
 
     @field_validator("default_carbon_intensity")
@@ -72,17 +78,22 @@ class OtherUsesTableOptionsSchema(BaseSchema):
     fuel_categories: List[OtherUsesFuelCategorySchema]
     fuel_types: List[FuelTypeSchema]
     units_of_measure: List[str]
+    provisions_of_the_act: List[ProvisionOfTheActSchema]
+    fuel_codes: List[FuelCodeSchema]
     expected_uses: List[ExpectedUseTypeSchema]
 
 
 class OtherUsesCreateSchema(BaseSchema):
-    other_uses_id: Optional[int] = None
     compliance_report_id: int
-    quantity_supplied: int
     fuel_type: str
     fuel_category: str
-    expected_use: str
+    provision_of_the_act: str
+    fuel_code: Optional[str] = None
+    quantity_supplied: int
     units: str
+    ci_of_fuel: Optional[float] = None
+    expected_use: str
+    other_uses_id: Optional[int] = None
     rationale: Optional[str] = None
     deleted: Optional[bool] = None
 
