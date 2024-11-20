@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import List
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportSummaryRowSchema,
+)
 
 
 @pytest.mark.anyio
@@ -670,3 +674,163 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
     assert result[7].gasoline == 0  # Line 8 should not be copied
     assert result[7].diesel == 0
     assert result[7].jet_fuel == 0
+
+
+@pytest.mark.anyio
+async def test_can_sign_flag_logic(
+    compliance_report_summary_service, mock_repo, mock_trxn_repo
+):
+    # Scenario 1: All conditions met
+    mock_effective_fuel_supplies = [MagicMock()]
+    mock_notional_transfers = MagicMock(notional_transfers=[MagicMock()])
+    mock_fuel_exports = [MagicMock()]
+    mock_allocation_agreements = [MagicMock()]
+    mock_compliance_report = MagicMock(
+        compliance_report_group_uuid="mock-group-uuid",
+        compliance_period=MagicMock(effective_date=MagicMock(year=2024)),
+        organization_id=1,
+        compliance_report_id=1,
+        summary=MagicMock(is_locked=False),
+    )
+
+    mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
+
+    # Mock previous retained and obligation dictionaries
+    previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 30}
+    previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 15}
+
+    # Mock repository methods
+    mock_repo.get_compliance_report_by_id = AsyncMock(
+        return_value=mock_compliance_report
+    )
+    mock_repo.calculate_fuel_quantities = AsyncMock(
+        return_value={
+            "gasoline": 100,
+            "diesel": 50,
+            "jet_fuel": 25,
+        }
+    )
+    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(
+        return_value=MagicMock(
+            summary=MagicMock(
+                line_6_renewable_fuel_retained_gasoline=previous_retained["gasoline"],
+                line_6_renewable_fuel_retained_diesel=previous_retained["diesel"],
+                line_6_renewable_fuel_retained_jet_fuel=previous_retained["jet_fuel"],
+                line_8_obligation_deferred_gasoline=previous_obligation["gasoline"],
+                line_8_obligation_deferred_diesel=previous_obligation["diesel"],
+                line_8_obligation_deferred_jet_fuel=previous_obligation["jet_fuel"],
+            )
+        )
+    )
+
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=mock_effective_fuel_supplies)
+    )
+    compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
+        return_value=mock_notional_transfers
+    )
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=mock_fuel_exports)
+    )
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
+        return_value=mock_allocation_agreements
+    )
+
+    # Call the method
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    )
+
+    # Assert that `can_sign` is True
+    assert result.can_sign is True
+
+    # Scenario 2: No conditions met
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[])
+    )
+    compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
+        return_value=MagicMock(notional_transfers=[])
+    )
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[])
+    )
+    compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
+        return_value=[]
+    )
+
+    # Call the method again
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    )
+
+    # Assert that `can_sign` is False
+    assert result.can_sign is False
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_quantities_fossil_derived(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+    mock_fuel_supply_repo,
+):
+    # Create a mock repository
+    mock_repo.aggregate_fuel_supplies.return_value = {"diesel": 100.0}
+    mock_repo.aggregate_other_uses.return_value = {"gasoline": 50.0}
+
+    # Define test inputs
+    compliance_report_id = 1
+    effective_fuel_supplies: List[FuelSupply] = (
+        []
+    )  # Add mock FuelSupply objects as needed
+    fossil_derived = True
+
+    # Call the method under test
+    result = await compliance_report_summary_service.calculate_fuel_quantities(
+        compliance_report_id, effective_fuel_supplies, fossil_derived
+    )
+
+    # Assertions
+    assert result == {"diesel": 100.0, "gasoline": 50.0}
+    mock_repo.aggregate_fuel_supplies.assert_called_once_with(
+        effective_fuel_supplies, fossil_derived
+    )
+    mock_repo.aggregate_other_uses.assert_awaited_once_with(
+        compliance_report_id, fossil_derived
+    )
+    mock_repo.aggregate_allocation_agreements.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_quantities_renewable(
+    compliance_report_summary_service,
+    mock_repo,
+    mock_trxn_repo,
+    mock_fuel_supply_repo,
+):
+    # Create a mock repository
+    mock_repo.aggregate_fuel_supplies.return_value = {"gasoline": 200.0}
+    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0}
+    mock_repo.aggregate_allocation_agreements.return_value = {"jet-fuel": 25.0}
+
+    # Define test inputs
+    compliance_report_id = 2
+    effective_fuel_supplies: List[FuelSupply] = []
+    fossil_derived = False
+
+    # Call the method under test
+    result = await compliance_report_summary_service.calculate_fuel_quantities(
+        compliance_report_id, effective_fuel_supplies, fossil_derived
+    )
+
+    # Assertions
+    mock_repo.aggregate_fuel_supplies.assert_called_once_with(
+        effective_fuel_supplies, fossil_derived
+    )
+    mock_repo.aggregate_other_uses.assert_awaited_once_with(
+        compliance_report_id, fossil_derived
+    )
+    mock_repo.aggregate_allocation_agreements.assert_awaited_once_with(
+        compliance_report_id
+    )
+    assert result == {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0}

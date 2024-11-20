@@ -11,6 +11,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import FilterModel
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
+    ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.services.s3.client import DocumentService
 
@@ -329,6 +330,7 @@ async def test_get_compliance_report_summary_success(
         mock_calculate_compliance_report_summary.assert_called_once_with(1)
         mock_validate_organization_access.assert_called_once_with(1)
 
+
 @pytest.mark.anyio
 async def test_get_compliance_report_summary_invalid_payload(
     client: AsyncClient,
@@ -386,6 +388,13 @@ async def test_update_compliance_report_summary_success(
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
         mock_compliance_report_summary = compliance_report_summary_schema()
+        request_schema = ComplianceReportSummaryUpdateSchema(
+            compliance_report_id=1,
+            renewable_fuel_target_summary=mock_compliance_report_summary.renewable_fuel_target_summary,
+            low_carbon_fuel_target_summary=mock_compliance_report_summary.low_carbon_fuel_target_summary,
+            non_compliance_penalty_summary=mock_compliance_report_summary.non_compliance_penalty_summary,
+            summary_id=mock_compliance_report_summary.summary_id,
+        )
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report_summary.return_value = (
             mock_compliance_report_summary
@@ -393,7 +402,7 @@ async def test_update_compliance_report_summary_success(
 
         url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
 
-        payload = mock_compliance_report_summary.dict(by_alias=True)
+        payload = request_schema.model_dump(by_alias=True)
 
         response = await client.put(url, json=payload)
 
@@ -404,9 +413,7 @@ async def test_update_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_update_compliance_report_summary.assert_called_once_with(
-            1, mock_compliance_report_summary
-        )
+        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -506,6 +513,7 @@ async def test_update_compliance_report_success(
             1, ComplianceReportUpdateSchema(**payload)
         )
         mock_validate_organization_access.assert_called_once_with(1)
+
 
 @pytest.mark.anyio
 async def test_update_compliance_report_forbidden(

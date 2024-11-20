@@ -2,13 +2,15 @@ import logging
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from fastapi import Depends
 from sqlalchemy import inspect
 
+from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
@@ -20,6 +22,7 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
+    ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -42,12 +45,16 @@ class ComplianceReportSummaryService:
         ),
         fuel_supply_repo: FuelSupplyRepository = Depends(FuelSupplyRepository),
         fuel_export_repo: FuelExportRepository = Depends(FuelExportRepository),
+        allocation_agreement_repo: AllocationAgreementRepository = Depends(
+            AllocationAgreementRepository
+        ),
     ):
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
         self.trxn_repo = trxn_repo
         self.fuel_supply_repo = fuel_supply_repo
         self.fuel_export_repo = fuel_export_repo
+        self.allocation_agreement_repo = allocation_agreement_repo
 
     def convert_summary_to_dict(
         self, summary_obj: ComplianceReportSummary
@@ -65,6 +72,7 @@ class ComplianceReportSummaryService:
             renewable_fuel_target_summary=[],
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
+            can_sign=False,
         )
         for column in inspector.mapper.column_attrs:
             match = re.search(r"line_(\d+)_", column.key)
@@ -218,7 +226,7 @@ class ComplianceReportSummaryService:
     async def update_compliance_report_summary(
         self,
         report_id: int,
-        summary_data: ComplianceReportSummarySchema,
+        summary_data: ComplianceReportSummaryUpdateSchema,
     ) -> ComplianceReportSummarySchema:
         """
         Autosave compliance report summary details for a specific summary by ID.
@@ -307,12 +315,21 @@ class ComplianceReportSummaryService:
             elif transfer.received_or_transferred.lower() == "transferred":
                 notional_transfers_sums[normalized_category] -= transfer.quantity
 
-        # Fetch fuel quantities
-        fossil_quantities = await self.repo.calculate_fuel_quantities(
-            compliance_report, fossil_derived=True
+        # Get effective fuel supplies using the updated logic
+        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
+            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
         )
-        renewable_quantities = await self.repo.calculate_fuel_quantities(
-            compliance_report, fossil_derived=False
+
+        # Fetch fuel quantities
+        fossil_quantities = await self.calculate_fuel_quantities(
+            compliance_report.compliance_report_id,
+            effective_fuel_supplies,
+            fossil_derived=True,
+        )
+        renewable_quantities = await self.calculate_fuel_quantities(
+            compliance_report.compliance_report_id,
+            effective_fuel_supplies,
+            fossil_derived=False,
         )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
@@ -338,12 +355,30 @@ class ComplianceReportSummaryService:
 
         existing_summary = self.convert_summary_to_dict(summary_model)
 
+        fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
+            compliance_report.compliance_report_group_uuid
+        )
+
+        allocation_agreements = (
+            await self.allocation_agreement_repo.get_allocation_agreements(
+                compliance_report_id=compliance_report.compliance_report_id
+            )
+        )
+
+        can_sign = (
+            len(effective_fuel_supplies) > 0
+            or len(notional_transfers.notional_transfers) > 0
+            or len(fuel_export_records) > 0
+            or len(allocation_agreements) > 0
+        )
+
         summary = self.map_to_schema(
             compliance_report,
             renewable_fuel_target_summary,
             low_carbon_fuel_target_summary,
             non_compliance_penalty_summary,
             summary_model,
+            can_sign,
         )
 
         # Only save if summary has changed
@@ -361,6 +396,7 @@ class ComplianceReportSummaryService:
         low_carbon_fuel_target_summary,
         non_compliance_penalty_summary,
         summary_model,
+        can_sign,
     ):
         summary = ComplianceReportSummarySchema(
             summary_id=summary_model.summary_id,
@@ -371,6 +407,7 @@ class ComplianceReportSummaryService:
             renewable_fuel_target_summary=renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary,
+            can_sign=can_sign,
         )
         return summary
 
@@ -665,6 +702,30 @@ class ComplianceReportSummaryService:
         ]
 
         return non_compliance_penalty_summary
+
+    @service_handler
+    async def calculate_fuel_quantities(
+        self,
+        compliance_report_id: int,
+        effective_fuel_supplies: List[FuelSupply],
+        fossil_derived: bool,
+    ) -> Dict[str, float]:
+        """
+        Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
+        """
+        fuel_quantities = self.repo.aggregate_fuel_supplies(
+            effective_fuel_supplies, fossil_derived
+        )
+        fuel_quantities.update(
+            await self.repo.aggregate_other_uses(compliance_report_id, fossil_derived)
+        )
+
+        if not fossil_derived:
+            fuel_quantities.update(
+                await self.repo.aggregate_allocation_agreements(compliance_report_id)
+            )
+
+        return dict(fuel_quantities)
 
     @service_handler
     async def calculate_fuel_supply_compliance_units(
