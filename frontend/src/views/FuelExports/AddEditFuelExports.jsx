@@ -18,7 +18,7 @@ import { defaultColDef, fuelExportColDefs } from './_schema'
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState()
+  const [, setGridApi] = useState()
   const [errors, setErrors] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
@@ -33,7 +33,7 @@ export const AddEditFuelExports = () => {
     isLoading: optionsLoading,
     isFetched
   } = useFuelExportOptions({ compliancePeriod })
-  const { mutateAsync: saveRow } = useSaveFuelExport(complianceReportId)
+  const { mutateAsync: saveRow } = useSaveFuelExport({ complianceReportId })
 
   const { data, isLoading: fuelExportsLoading } = useGetFuelExports({
     complianceReportId: +complianceReportId

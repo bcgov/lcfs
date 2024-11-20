@@ -1,21 +1,18 @@
 import {
   AdminAdjustmentCreateSchema,
-  AdminAdjustmentSchema,
   AdminAdjustmentsService,
   AdminAdjustmentUpdateSchema
 } from '@/services/apiClient'
-import { TQueryOptions } from '@/utils/reactQuery'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export const useAdminAdjustment = (
-  { adminAdjustmentId }: { adminAdjustmentId: number | undefined },
-  options?: Pick<
-    TQueryOptions<AdminAdjustmentSchema | undefined>,
-    'enabled' | 'retry' | 'staleTime'
-  >
-) => {
+export const useAdminAdjustment = ({
+  adminAdjustmentId
+}: {
+  adminAdjustmentId: number | undefined
+}) => {
   return useQuery({
+    enabled: !!adminAdjustmentId,
     queryKey: [ADMIN_ADJUSTMENT, adminAdjustmentId],
     queryFn: async () => {
       try {
@@ -29,8 +26,7 @@ export const useAdminAdjustment = (
       } catch (error) {
         console.log(error)
       }
-    },
-    ...options
+    }
   })
 }
 

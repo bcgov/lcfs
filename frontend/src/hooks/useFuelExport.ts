@@ -46,7 +46,11 @@ export const useGetFuelExports = (
   })
 }
 
-export const useSaveFuelExport = (complianceReportId: number) => {
+export const useSaveFuelExport = ({
+  complianceReportId
+}: {
+  complianceReportId: number
+}) => {
   const queryClient = useQueryClient()
 
   return useMutation({

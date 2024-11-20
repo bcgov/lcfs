@@ -28,7 +28,7 @@ export const useAllocationAgreementOptions = ({
 
 export const useGetAllocationAgreements = ({
   complianceReportId,
-  pagination
+  pagination = {}
 }: {
   complianceReportId: number
   pagination: PaginationRequestSchema
@@ -52,7 +52,7 @@ export const useGetAllocationAgreements = ({
 export const useSaveAllocationAgreement = ({
   complianceReportId
 }: {
-  complianceReportId: string
+  complianceReportId: number
 }) => {
   const queryClient = useQueryClient()
 

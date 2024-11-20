@@ -33,8 +33,9 @@ export const AddEditFinalSupplyEquipments = () => {
     isLoading: optionsLoading,
     isFetched
   } = useFinalSupplyEquipmentOptions()
-  const { mutateAsync: saveRow } =
-    useSaveFinalSupplyEquipment(complianceReportId)
+  const { mutateAsync: saveRow } = useSaveFinalSupplyEquipment({
+    complianceReportId: +complianceReportId
+  })
   const { data, isLoading: equipmentsLoading } = useGetFinalSupplyEquipments({
     complianceReportId: +complianceReportId
   })

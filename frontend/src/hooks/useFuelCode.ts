@@ -85,7 +85,7 @@ export const useSaveFuelCode = () => {
   })
 }
 
-export const useGetFuelCodes = (params: PaginationRequestSchema) => {
+export const useGetFuelCodes = (params: PaginationRequestSchema = {}) => {
   return useQuery({
     queryKey: ['fuel-codes', params],
     queryFn: async () => {

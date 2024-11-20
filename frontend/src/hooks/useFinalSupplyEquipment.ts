@@ -43,7 +43,11 @@ export const useGetFinalSupplyEquipments = ({
   })
 }
 
-export const useSaveFinalSupplyEquipment = (complianceReportId: string) => {
+export const useSaveFinalSupplyEquipment = ({
+  complianceReportId
+}: {
+  complianceReportId: number
+}) => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -52,7 +56,7 @@ export const useSaveFinalSupplyEquipment = (complianceReportId: string) => {
         ...data,
         levelOfEquipment: data.levelOfEquipment,
         fuelMeasurementType: data.fuelMeasurementType,
-        complianceReportId: +complianceReportId
+        complianceReportId
       }
 
       try {

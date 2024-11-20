@@ -22,7 +22,7 @@ import {
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState()
+  const [, setGridApi] = useState()
   const [errors, setErrors] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
@@ -38,7 +38,7 @@ export const AddEditAllocationAgreements = () => {
     isFetched
   } = useAllocationAgreementOptions({ compliancePeriod })
   const { mutateAsync: saveRow } = useSaveAllocationAgreement({
-    complianceReportId
+    complianceReportId: +complianceReportId
   })
 
   const { data, isLoading: allocationAgreementsLoading } =

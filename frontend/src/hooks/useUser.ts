@@ -1,17 +1,7 @@
-import {
-  PaginationRequestSchema,
-  UserBaseSchema,
-  UsersService
-} from '@/services/apiClient'
-import { useQuery, UseQueryOptions } from '@tanstack/react-query'
+import { PaginationRequestSchema, UsersService } from '@/services/apiClient'
+import { useQuery } from '@tanstack/react-query'
 
-export const useUser = (
-  { id }: { id: number },
-  options?: Omit<
-    UseQueryOptions<UserBaseSchema | undefined>,
-    'queryKey' | 'queryFn'
-  >
-) => {
+export const useUser = ({ id }: { id: number }) => {
   return useQuery({
     queryKey: ['user', id],
     queryFn: async () => {
@@ -23,8 +13,7 @@ export const useUser = (
       } catch (error) {
         console.log(error)
       }
-    },
-    ...options
+    }
   })
 }
 

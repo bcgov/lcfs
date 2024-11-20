@@ -149,14 +149,9 @@ export const AddEditViewTransaction = () => {
     isLoading: isTransactionDataLoading,
     isFetched,
     isLoadingError
-  } = transactionDataHook(
-    { adminAdjustmentId: transactionId ? +transactionId : undefined },
-    {
-      enabled: !!transactionId && !!txnType,
-      retry: false,
-      staleTime: 0
-    }
-  )
+  } = transactionDataHook({
+    adminAdjustmentId: transactionId ? +transactionId : undefined
+  })
 
   const stateId =
     txnType === ADMIN_ADJUSTMENT ? ADMIN_ADJUSTMENT : INITIATIVE_AGREEMENT

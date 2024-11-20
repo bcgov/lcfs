@@ -1,23 +1,19 @@
-import { BCAlert2 } from '@/components/BCAlert'
-import BCButton from '@/components/BCButton'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
+import * as ROUTES from '@/constants/routes/routes.js'
 import {
   useGetAllOtherUses,
   useOtherUsesOptions,
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack, Typography } from '@mui/material'
+import { Typography } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, otherUsesColDefs } from './_schema'
-import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -34,9 +30,11 @@ export const AddEditOtherUses = () => {
     isFetched
   } = useOtherUsesOptions()
   const { data: otherUsesData, isLoading: usesLoading } = useGetAllOtherUses({
-    complianceReportId
+    complianceReportId: +complianceReportId
   })
-  const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveOtherUses({
+    complianceReportId: +complianceReportId
+  })
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -67,6 +65,7 @@ export const AddEditOtherUses = () => {
       try {
         setRowData(ensureRowIds(otherUsesData.otherUses))
       } catch (error) {
+        console.log(error)
         alertRef.triggerAlert({
           message: t('otherUses:otherUsesLoadFailMsg'),
           severity: 'error'

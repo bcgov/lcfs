@@ -51,16 +51,9 @@ export const ViewOrgTransaction = () => {
     isLoading: isTransactionDataLoading,
     isError: isLoadingError,
     error
-  } = transactionDataHook(
-    { adminAdjustmentId: transactionId },
-    {
-      enabled: !!transactionId && !!transactionType,
-      retry: false,
-      staleTime: 0,
-      cacheTime: 0,
-      keepPreviousData: false
-    }
-  )
+  } = transactionDataHook({
+    adminAdjustmentId: +transactionId
+  })
 
   useEffect(() => {
     if (isLoadingError) {

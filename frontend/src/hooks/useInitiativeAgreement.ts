@@ -1,21 +1,18 @@
 import {
   InitiativeAgreementCreateSchema,
-  InitiativeAgreementSchema,
   InitiativeAgreementsService,
   InitiativeAgreementUpdateSchema
 } from '@/services/apiClient'
-import { TQueryOptions } from '@/utils/reactQuery'
 import { INITIATIVE_AGREEMENT } from '@/views/Transactions/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export const useInitiativeAgreement = (
-  { adminAdjustmentId }: { adminAdjustmentId: number | undefined },
-  options?: Pick<
-    TQueryOptions<InitiativeAgreementSchema | undefined>,
-    'enabled' | 'retry' | 'staleTime'
-  >
-) => {
+export const useInitiativeAgreement = ({
+  adminAdjustmentId
+}: {
+  adminAdjustmentId: number | undefined
+}) => {
   return useQuery({
+    enabled: !!adminAdjustmentId,
     queryKey: [INITIATIVE_AGREEMENT, adminAdjustmentId],
     queryFn: async () => {
       try {
@@ -30,8 +27,7 @@ export const useInitiativeAgreement = (
       } catch (error) {
         console.log(error)
       }
-    },
-    ...options
+    }
   })
 }
 

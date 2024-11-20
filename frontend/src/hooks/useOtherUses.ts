@@ -22,7 +22,7 @@ export const useOtherUsesOptions = () => {
 export const useGetAllOtherUses = ({
   complianceReportId
 }: {
-  complianceReportId: string
+  complianceReportId: number
 }) => {
   return useQuery({
     queryKey: ['all-other-uses', complianceReportId],
@@ -44,7 +44,7 @@ export const useGetAllOtherUses = ({
 export const useSaveOtherUses = ({
   complianceReportId
 }: {
-  complianceReportId: string
+  complianceReportId: number
 }) => {
   const queryClient = useQueryClient()
 

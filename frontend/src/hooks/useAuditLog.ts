@@ -1,25 +1,21 @@
-import { AuditLogService } from '@/services/apiClient'
+import { AuditLogService, PaginationRequestSchema } from '@/services/apiClient'
 import { useQuery } from '@tanstack/react-query'
 
-// export const useAuditLogs = (
-//   { page = 1, size = 10, sortOrders = [], filters = [] } = {},
-//   options
-// ) => {
-//   const client = useApiService()
-//   return useQuery({
-//     queryKey: ['audit-logs', page, size, sortOrders, filters],
-//     queryFn: async () =>
-//       (
-//         await client.post(apiRoutes.getAuditLogs, {
-//           page,
-//           size,
-//           sortOrders,
-//           filters
-//         })
-//       ).data,
-//     ...options
-//   })
-// }
+export const useAuditLogs = (params: PaginationRequestSchema = {}) => {
+  return useQuery({
+    queryKey: ['audit-logs', params],
+    queryFn: async () => {
+      try {
+        const { data } = await AuditLogService.getAuditLogsPaginated({
+          body: params
+        })
+        return data
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  })
+}
 
 export const useAuditLog = ({ auditLogId }: { auditLogId: number }) => {
   return useQuery({

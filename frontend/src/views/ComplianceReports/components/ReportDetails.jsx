@@ -200,7 +200,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
       </Typography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch({
-          complianceReportId
+          complianceReportId: +complianceReportId
         })
         return (
           data &&

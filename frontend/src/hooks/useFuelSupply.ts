@@ -4,7 +4,11 @@ import {
 } from '@/services/apiClient'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export const useFuelSupplyOptions = (compliancePeriod: string) => {
+export const useFuelSupplyOptions = ({
+  compliancePeriod
+}: {
+  compliancePeriod: string
+}) => {
   return useQuery({
     queryKey: ['fuel-supply-options'],
     queryFn: async () => {
@@ -23,7 +27,7 @@ export const useFuelSupplyOptions = (compliancePeriod: string) => {
 export const useGetFuelSupplies = ({
   complianceReportId
 }: {
-  complianceReportId: string
+  complianceReportId: number
 }) => {
   return useQuery({
     queryKey: ['fuel-supplies', complianceReportId],
@@ -40,14 +44,18 @@ export const useGetFuelSupplies = ({
   })
 }
 
-export const useSaveFuelSupply = (complianceReportId: string) => {
+export const useSaveFuelSupply = ({
+  complianceReportId
+}: {
+  complianceReportId: number
+}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (data: FuelSupplyCreateUpdateSchema) => {
       try {
         const body = {
           ...data,
-          complianceReportId: +complianceReportId
+          complianceReportId
         }
 
         return await FuelSuppliesService.saveFuelSupplyRow({
