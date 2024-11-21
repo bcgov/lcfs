@@ -109,7 +109,7 @@ export const transactionsColDefs = (t) => [
     },
     suppressHeaderMenuButton: true,
     minWidth: 180,
-    width: 180
+    width: 250
   },
   {
     colId: 'updateDate',
