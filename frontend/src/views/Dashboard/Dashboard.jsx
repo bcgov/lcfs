@@ -90,7 +90,7 @@ export const Dashboard = () => {
             <Role roles={nonGovRoles}>
               <OrgDetailsCard />
             </Role>
-            <Role roles={govRoles}>
+            <Role roles={[govRoles, roles.administrator]}>
               <AdminLinksCard />
             </Role>
           </Box>

@@ -34,13 +34,18 @@ describe('Navbar', () => {
     roles: [
       {
         name: roles.analyst
+      },
+      {
+        name: roles.administrator
       }
     ]
   }
 
   beforeEach(() => {
     useCurrentUser.mockReturnValue({
-      data: mockUser
+      data: mockUser,
+      hasRoles: (role) =>
+        mockUser.roles.some((userRole) => userRole.name === role)
     })
     useMediaQuery.mockReturnValue(false) // Set to false for desktop tests
     useTheme.mockReturnValue({
@@ -63,7 +68,7 @@ describe('Navbar', () => {
     expect(screen.getByText('Transactions')).toBeInTheDocument()
     expect(screen.getByText('ComplianceReporting')).toBeInTheDocument()
     expect(screen.getByText('FuelCodes')).toBeInTheDocument() // Analyst role allows this
-    expect(screen.getByText('Administration')).toBeInTheDocument()
+    expect(screen.getByText('Administration')).toBeInTheDocument() // Admin role allows this
   })
 
   it('displays the correct navigation menu items for non-government users', () => {

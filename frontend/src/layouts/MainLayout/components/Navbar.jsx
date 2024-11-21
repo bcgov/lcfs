@@ -10,15 +10,14 @@ import { useMediaQuery, useTheme } from '@mui/material'
 
 export const Navbar = () => {
   const { t } = useTranslation()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const theme = useTheme()
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
   // Nav Links
   const navMenuItems = useMemo(() => {
-    const isAnalyst = currentUser && currentUser.roles.find(
-      (role) => role.name === roles.analyst
-    )
+    const isAnalyst = hasRoles(roles.analyst)
+    const isAdmin = hasRoles(roles.administrator)
     const idirRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
@@ -29,7 +28,7 @@ export const Navbar = () => {
         route: ROUTES.FUELCODES,
         hide: !isAnalyst
       },
-      { name: t('Administration'), route: ROUTES.ADMIN }
+      { name: t('Administration'), route: ROUTES.ADMIN, hide: !isAdmin }
     ]
     const bceidRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
@@ -39,13 +38,15 @@ export const Navbar = () => {
     ]
     const mobileRoutes = [{ name: t('logout'), route: ROUTES.LOG_OUT }]
 
-    const activeRoutes = currentUser?.isGovernmentUser ? idirRoutes : bceidRoutes
+    const activeRoutes = currentUser?.isGovernmentUser
+      ? idirRoutes
+      : bceidRoutes
 
     if (isMobileView) {
       activeRoutes.push(...mobileRoutes)
     }
     return activeRoutes
-  }, [currentUser, t, isMobileView])
+  }, [currentUser, t, isMobileView, hasRoles])
 
   return (
     <BCNavbar
