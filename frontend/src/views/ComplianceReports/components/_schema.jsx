@@ -56,7 +56,7 @@ export const reportsColDefs = (t, bceidRole) => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
-    maxWidth: 300,
+    width: 300,
     valueGetter: ({ data }) => data.currentStatus?.status || '',
     cellRenderer: ReportsStatusRenderer,
     cellRendererParams: {
