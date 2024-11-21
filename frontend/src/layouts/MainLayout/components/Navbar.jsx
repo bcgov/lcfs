@@ -10,18 +10,14 @@ import { useMediaQuery, useTheme } from '@mui/material'
 
 export const Navbar = () => {
   const { t } = useTranslation()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const theme = useTheme()
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
   // Nav Links
   const navMenuItems = useMemo(() => {
-    const isAnalyst =
-      currentUser &&
-      currentUser.roles.find((role) => role.name === roles.analyst)
-    const isAdmin =
-      currentUser &&
-      currentUser.roles.find((role) => role.name === roles.administrator)
+    const isAnalyst = hasRoles(roles.analyst)
+    const isAdmin = hasRoles(roles.administrator)
     const idirRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
       { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
@@ -50,7 +46,7 @@ export const Navbar = () => {
       activeRoutes.push(...mobileRoutes)
     }
     return activeRoutes
-  }, [currentUser, t, isMobileView])
+  }, [currentUser, t, isMobileView, hasRoles])
 
   return (
     <BCNavbar
