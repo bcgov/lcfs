@@ -1,9 +1,10 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.compliance import OtherUses
+from lcfs.db.models.fuel import ProvisionOfTheAct, FuelCode
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.tests.other_uses.conftest import create_mock_entity
@@ -33,25 +34,119 @@ def other_uses_repo(mock_db_session):
 
 @pytest.mark.anyio
 async def test_get_table_options(other_uses_repo):
+    # Mock the database session
+    mock_db_session = AsyncMock()
+
+    # Mock the return value of the `execute` calls
+    mock_fuel_categories = [
+        MagicMock(fuel_category_id=1, category="Petroleum-based"),
+    ]
+    mock_fuel_types = [
+        MagicMock(
+            fuel_type_id=1,
+            fuel_type="Gasoline",
+            default_carbon_intensity=12.34,
+            units="L",
+            unrecognized=False,
+            fuel_instances=[
+                MagicMock(
+                    fuel_category=MagicMock(
+                        fuel_category_id=1, category="Petroleum-based"
+                    )
+                )
+            ],
+            fuel_codes=[
+                MagicMock(fuel_code_id=1, fuel_code="FC123", carbon_intensity=10.5)
+            ],
+            provision_1=MagicMock(provision_of_the_act_id=1, name="Provision A"),
+            provision_2=None,
+        )
+    ]
+    mock_expected_uses = [MagicMock(expected_use_id=1, name="Transportation")]
+    mock_provisions_of_the_act = [
+        MagicMock(provision_of_the_act_id=1, name="Provision A")
+    ]
+    mock_fuel_codes = [MagicMock(fuel_code_id=1, fuel_code="FuelCode123")]
+
+    def mock_execute_side_effect(*args, **kwargs):
+        query = args[0]  # Extract the query object
+
+        # Match the ProvisionOfTheAct table
+        if ProvisionOfTheAct.__tablename__ in str(query):
+            return AsyncMock(scalars=MagicMock(all=lambda: mock_provisions_of_the_act))
+
+        # Match the FuelCode table
+        elif FuelCode.__tablename__ in str(query):
+            return AsyncMock(scalars=MagicMock(all=lambda: mock_fuel_codes))
+
+        # If no match, raise an informative error
+        raise ValueError(f"Unexpected query: {query}")
+
+    mock_db_session.execute.side_effect = mock_execute_side_effect
+
+    # Create async mock for the fuel_code_repo's methods
+    mock_fuel_code_repo = AsyncMock()
+    mock_fuel_code_repo.get_fuel_categories = AsyncMock(
+        return_value=mock_fuel_categories
+    )
+    mock_fuel_code_repo.get_formatted_fuel_types = AsyncMock(
+        return_value=mock_fuel_types
+    )
+    mock_fuel_code_repo.get_expected_use_types = AsyncMock(
+        return_value=mock_expected_uses
+    )
+
+    # Mock the repository's fuel_code_repo dependency
+    other_uses_repo.fuel_code_repo = mock_fuel_code_repo
+    other_uses_repo.db = (
+        mock_db_session  # Assign the mock database session to the repository
+    )
+
+    # Execute the method under test
     result = await other_uses_repo.get_table_options()
 
+    # Assertions
     assert isinstance(result, dict)
     assert "fuel_categories" in result
     assert "fuel_types" in result
     assert "units_of_measure" in result
     assert "expected_uses" in result
+    assert "provisions_of_the_act" in result
+    assert "fuel_codes" in result
+
 
 
 @pytest.mark.anyio
 async def test_get_other_uses(other_uses_repo, mock_db_session):
     compliance_report_id = 1
-    mock_other_use = create_mock_entity({})
-    mock_result_other_uses = [mock_other_use]
     mock_compliance_report_uuid = "mock_group_uuid"
 
     # Mock the first db.execute call for fetching compliance report group UUID
     mock_first_execute = MagicMock()
     mock_first_execute.scalar.return_value = mock_compliance_report_uuid
+
+    # Create a realistic mock other_use object
+    mock_other_use = MagicMock()
+    mock_other_use.other_uses_id = 1
+    mock_other_use.compliance_report_id = compliance_report_id
+    mock_other_use.quantity_supplied = 1000
+    mock_other_use.fuel_type = MagicMock(fuel_type="Gasoline")
+    mock_other_use.fuel_category = MagicMock(category="Petroleum-based")
+    mock_other_use.ci_of_fuel = 20.0
+    mock_other_use.provision_of_the_act = MagicMock(name="Provision A")
+    mock_other_use.provision_of_the_act.name = "Provision A"
+    mock_other_use.fuel_code = MagicMock(fuel_code="Code123")
+    mock_other_use.fuel_code.fuel_code = "Code123"
+    mock_other_use.expected_use = MagicMock(name="Transportation")
+    mock_other_use.expected_use.name = "Transportation"
+    mock_other_use.units = "L"
+    mock_other_use.rationale = "For testing purposes"
+    mock_other_use.group_uuid = mock_compliance_report_uuid
+    mock_other_use.version = 1
+    mock_other_use.user_type = "Supplier"
+    mock_other_use.action_type = "Create"
+
+    mock_result_other_uses = [mock_other_use]
 
     # Mock the second db.execute call for fetching other uses
     mock_second_execute = MagicMock()
