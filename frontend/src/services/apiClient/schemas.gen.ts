@@ -3018,30 +3018,6 @@ export const FuelCodePrefixSchemaSchema = {
     title: 'FuelCodePrefixSchema'
 } as const;
 
-export const FuelCodeSchema_InputSchema = {
-    properties: {
-        fuelCodeId: {
-            type: 'integer',
-            title: 'Fuelcodeid'
-        },
-        fuelCodePrefixId: {
-            type: 'integer',
-            title: 'Fuelcodeprefixid'
-        },
-        fuelCode: {
-            type: 'string',
-            title: 'Fuelcode'
-        },
-        fuelCodeCarbonIntensity: {
-            type: 'number',
-            title: 'Fuelcodecarbonintensity'
-        }
-    },
-    type: 'object',
-    required: ['fuelCodeId', 'fuelCodePrefixId', 'fuelCode', 'fuelCodeCarbonIntensity'],
-    title: 'FuelCodeSchema'
-} as const;
-
 export const FuelCodeStatusEnumSchemaSchema = {
     type: 'string',
     enum: ['Draft', 'Approved', 'Deleted'],
@@ -3156,49 +3132,13 @@ export const FuelExportCreateUpdateSchemaSchema = {
             ],
             title: 'Fueltypeother'
         },
-        fuelType: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    '$ref': '#/components/schemas/FuelTypeSchema-Input'
-                }
-            ],
-            title: 'Fueltype'
-        },
         fuelTypeId: {
             type: 'integer',
             title: 'Fueltypeid'
         },
-        fuelCategory: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    '$ref': '#/components/schemas/FuelCategoryResponseSchema'
-                }
-            ],
-            title: 'Fuelcategory'
-        },
         fuelCategoryId: {
             type: 'integer',
             title: 'Fuelcategoryid'
-        },
-        endUseType: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    '$ref': '#/components/schemas/EndUseTypeSchema'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Endusetype'
         },
         endUseId: {
             anyOf: [
@@ -3211,34 +3151,9 @@ export const FuelExportCreateUpdateSchemaSchema = {
             ],
             title: 'Enduseid'
         },
-        provisionOfTheAct: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    '$ref': '#/components/schemas/ProvisionOfTheActSchema'
-                }
-            ],
-            title: 'Provisionoftheact'
-        },
         provisionOfTheActId: {
             type: 'integer',
             title: 'Provisionoftheactid'
-        },
-        fuelCode: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    '$ref': '#/components/schemas/FuelCodeSchema-Input'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Fuelcode'
         },
         fuelCodeId: {
             anyOf: [
@@ -3350,7 +3265,7 @@ export const FuelExportCreateUpdateSchemaSchema = {
         }
     },
     type: 'object',
-    required: ['complianceReportId', 'fuelType', 'fuelTypeId', 'fuelCategory', 'fuelCategoryId', 'provisionOfTheAct', 'provisionOfTheActId', 'quantity', 'units', 'exportDate'],
+    required: ['complianceReportId', 'fuelTypeId', 'fuelCategoryId', 'provisionOfTheActId', 'quantity', 'units', 'exportDate'],
     title: 'FuelExportCreateUpdateSchema'
 } as const;
 
@@ -3736,6 +3651,17 @@ export const FuelSupplyCreateUpdateSchemaSchema = {
             ],
             title: 'Version'
         },
+        compliancePeriod: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Complianceperiod'
+        },
         fuelTypeId: {
             type: 'integer',
             title: 'Fueltypeid'
@@ -3893,6 +3819,17 @@ export const FuelSupplyResponseSchemaSchema = {
         },
         fuelType: {
             '$ref': '#/components/schemas/lcfs__web__api__fuel_supply__schema__FuelTypeSchema'
+        },
+        compliancePeriod: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Complianceperiod'
         },
         quantity: {
             type: 'integer',
@@ -4066,69 +4003,6 @@ export const FuelTypeQuantityUnitsEnumSchemaSchema = {
     type: 'string',
     enum: ['L', 'kg', 'kWh', 'm3'],
     title: 'FuelTypeQuantityUnitsEnumSchema'
-} as const;
-
-export const FuelTypeSchema_InputSchema = {
-    properties: {
-        fuelTypeId: {
-            type: 'integer',
-            title: 'Fueltypeid'
-        },
-        fuelType: {
-            type: 'string',
-            title: 'Fueltype'
-        },
-        fossilDerived: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Fossilderived'
-        },
-        provision1Id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provision1Id'
-        },
-        provision2Id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Provision2Id'
-        },
-        defaultCarbonIntensity: {
-            anyOf: [
-                {
-                    type: 'number'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Defaultcarbonintensity'
-        },
-        units: {
-            '$ref': '#/components/schemas/FuelTypeQuantityUnitsEnumSchema'
-        }
-    },
-    type: 'object',
-    required: ['fuelTypeId', 'fuelType', 'units'],
-    title: 'FuelTypeSchema'
 } as const;
 
 export const HTTPValidationErrorSchema = {

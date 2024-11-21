@@ -525,13 +525,6 @@ export type FuelCodePrefixSchema = {
     prefix: string;
 };
 
-export type FuelCodeSchema_Input = {
-    fuelCodeId: number;
-    fuelCodePrefixId: number;
-    fuelCode: string;
-    fuelCodeCarbonIntensity: number;
-};
-
 export type FuelCodesSchema = {
     fuelCodes: Array<lcfs__web__api__fuel_code__schema__FuelCodeSchema>;
     pagination?: (PaginationResponseSchema | null);
@@ -548,15 +541,10 @@ export type FuelExportCreateUpdateSchema = {
     actionType?: (string | null);
     compliancePeriod?: (string | null);
     fuelTypeOther?: (string | null);
-    fuelType: (string | FuelTypeSchema_Input);
     fuelTypeId: number;
-    fuelCategory: (string | FuelCategoryResponseSchema);
     fuelCategoryId: number;
-    endUseType?: (string | EndUseTypeSchema | null);
     endUseId?: (number | null);
-    provisionOfTheAct: (string | ProvisionOfTheActSchema);
     provisionOfTheActId: number;
-    fuelCode?: (string | FuelCodeSchema_Input | null);
     fuelCodeId?: (number | null);
     quantity: number;
     units: string;
@@ -622,6 +610,7 @@ export type FuelSupplyCreateUpdateSchema = {
     fuelSupplyId?: (number | null);
     groupUuid?: (string | null);
     version?: (number | null);
+    compliancePeriod?: (string | null);
     fuelTypeId: number;
     fuelCategoryId: number;
     endUseId?: (number | null);
@@ -647,6 +636,7 @@ export type FuelSupplyResponseSchema = {
     actionType: string;
     fuelTypeId: number;
     fuelType: lcfs__web__api__fuel_supply__schema__FuelTypeSchema;
+    compliancePeriod?: (string | null);
     quantity: number;
     units: string;
     complianceUnits?: (number | null);
@@ -667,16 +657,6 @@ export type FuelSupplyResponseSchema = {
 };
 
 export type FuelTypeQuantityUnitsEnumSchema = 'L' | 'kg' | 'kWh' | 'm3';
-
-export type FuelTypeSchema_Input = {
-    fuelTypeId: number;
-    fuelType: string;
-    fossilDerived?: (boolean | null);
-    provision1Id?: (number | null);
-    provision2Id?: (number | null);
-    defaultCarbonIntensity?: (number | null);
-    units: FuelTypeQuantityUnitsEnumSchema;
-};
 
 export type HistoryUserSchema = {
     firstName: string;

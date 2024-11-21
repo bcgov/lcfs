@@ -8189,34 +8189,6 @@
         ],
         "title": "FuelCodePrefixSchema"
       },
-      "FuelCodeSchema-Input": {
-        "properties": {
-          "fuelCodeId": {
-            "type": "integer",
-            "title": "Fuelcodeid"
-          },
-          "fuelCodePrefixId": {
-            "type": "integer",
-            "title": "Fuelcodeprefixid"
-          },
-          "fuelCode": {
-            "type": "string",
-            "title": "Fuelcode"
-          },
-          "fuelCodeCarbonIntensity": {
-            "type": "number",
-            "title": "Fuelcodecarbonintensity"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fuelCodeId",
-          "fuelCodePrefixId",
-          "fuelCode",
-          "fuelCodeCarbonIntensity"
-        ],
-        "title": "FuelCodeSchema"
-      },
       "FuelCodeStatusEnumSchema": {
         "type": "string",
         "enum": [
@@ -8335,49 +8307,13 @@
             ],
             "title": "Fueltypeother"
           },
-          "fuelType": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/components/schemas/FuelTypeSchema-Input"
-              }
-            ],
-            "title": "Fueltype"
-          },
           "fuelTypeId": {
             "type": "integer",
             "title": "Fueltypeid"
           },
-          "fuelCategory": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/components/schemas/FuelCategoryResponseSchema"
-              }
-            ],
-            "title": "Fuelcategory"
-          },
           "fuelCategoryId": {
             "type": "integer",
             "title": "Fuelcategoryid"
-          },
-          "endUseType": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/components/schemas/EndUseTypeSchema"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Endusetype"
           },
           "endUseId": {
             "anyOf": [
@@ -8390,34 +8326,9 @@
             ],
             "title": "Enduseid"
           },
-          "provisionOfTheAct": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/components/schemas/ProvisionOfTheActSchema"
-              }
-            ],
-            "title": "Provisionoftheact"
-          },
           "provisionOfTheActId": {
             "type": "integer",
             "title": "Provisionoftheactid"
-          },
-          "fuelCode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "$ref": "#/components/schemas/FuelCodeSchema-Input"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fuelcode"
           },
           "fuelCodeId": {
             "anyOf": [
@@ -8531,11 +8442,8 @@
         "type": "object",
         "required": [
           "complianceReportId",
-          "fuelType",
           "fuelTypeId",
-          "fuelCategory",
           "fuelCategoryId",
-          "provisionOfTheAct",
           "provisionOfTheActId",
           "quantity",
           "units",
@@ -8934,6 +8842,17 @@
             ],
             "title": "Version"
           },
+          "compliancePeriod": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complianceperiod"
+          },
           "fuelTypeId": {
             "type": "integer",
             "title": "Fueltypeid"
@@ -9097,6 +9016,17 @@
           },
           "fuelType": {
             "$ref": "#/components/schemas/lcfs__web__api__fuel_supply__schema__FuelTypeSchema"
+          },
+          "compliancePeriod": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complianceperiod"
           },
           "quantity": {
             "type": "integer",
@@ -9286,72 +9216,6 @@
           "m3"
         ],
         "title": "FuelTypeQuantityUnitsEnumSchema"
-      },
-      "FuelTypeSchema-Input": {
-        "properties": {
-          "fuelTypeId": {
-            "type": "integer",
-            "title": "Fueltypeid"
-          },
-          "fuelType": {
-            "type": "string",
-            "title": "Fueltype"
-          },
-          "fossilDerived": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Fossilderived"
-          },
-          "provision1Id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provision1Id"
-          },
-          "provision2Id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provision2Id"
-          },
-          "defaultCarbonIntensity": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Defaultcarbonintensity"
-          },
-          "units": {
-            "$ref": "#/components/schemas/FuelTypeQuantityUnitsEnumSchema"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fuelTypeId",
-          "fuelType",
-          "units"
-        ],
-        "title": "FuelTypeSchema"
       },
       "HTTPValidationError": {
         "properties": {
