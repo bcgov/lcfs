@@ -236,7 +236,7 @@ class FuelExportRepository:
         updated_fuel_export = self.db.merge(fuel_export)
         await self.db.flush()
         await self.db.refresh(
-            fuel_export,
+            updated_fuel_export,
             [
                 "fuel_category",
                 "fuel_type",

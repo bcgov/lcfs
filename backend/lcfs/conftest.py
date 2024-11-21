@@ -1,10 +1,11 @@
 import structlog
 import warnings
+
 # Suppress the PendingDeprecationWarning for multipart
 warnings.filterwarnings(
     "ignore",
     message="Please use `import python_multipart` instead.",
-    category=PendingDeprecationWarning
+    category=PendingDeprecationWarning,
 )
 import subprocess
 import warnings
@@ -42,6 +43,7 @@ from lcfs.web.application import get_app
 
 
 logger = structlog.get_logger(__name__)
+
 
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
