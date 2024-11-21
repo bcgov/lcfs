@@ -32,7 +32,6 @@ logger = structlog.get_logger(__name__)
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_notification_messages_by_user_id(
     request: Request,
-    related_user_profile_id: int,
     is_read: bool = None,
     service: NotificationService = Depends(),
 ):
@@ -41,7 +40,7 @@ async def get_notification_messages_by_user_id(
     """
 
     return await service.get_notification_messages_by_user_id(
-        user_id=related_user_profile_id, is_read=is_read
+        user_id=request.user.user_profile_id, is_read=is_read
     )
 
 
@@ -52,35 +51,31 @@ async def get_notification_messages_by_user_id(
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_unread_notifications(
-    request: Request,
-    user_id: int,
-    service: NotificationService = Depends()
+    request: Request, service: NotificationService = Depends()
 ):
     """
     Retrieve counter for unread notifications by user id
     """
-    # Ensure that user_id is being parsed correctly
-    if not isinstance(user_id, int):
-        raise HTTPException(status_code=422, detail="Invalid user_id; must be an integer.")
-
-    count = await service.count_unread_notifications_by_user_id(user_id=user_id)
+    # Count unread notifications
+    count = await service.count_unread_notifications_by_user_id(
+        user_id=request.user.user_profile_id
+    )
     return NotificationCountSchema(count=count)
 
 
 @router.get(
-    "/{notification_id}",
-    response_model=NotificationMessageSchema,
+    "/subscriptions",
+    response_model=List[SubscriptionSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
-async def get_notification_message_by_id(
-    request: Request, notification_id: int, service: NotificationService = Depends()
+async def get_notifications_channel_subscriptions_by_user_id(
+    request: Request, service: NotificationService = Depends()
 ):
-    """
-    Retrieve a single notification by ID
-    """
 
-    return await service.get_notification_message_by_id(notification_id=notification_id)
+    return await service.get_notification_channel_subscriptions_by_user_id(
+        user_id=request.user.user_profile_id
+    )
 
 
 @router.post(
@@ -116,37 +111,6 @@ async def save_notification(
         return await service.create_notification_message(request_data)
 
 
-@router.get(
-    "/subscriptions",
-    response_model=SubscriptionSchema,
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.GOVERNMENT])
-async def get_notifications_channel_subscriptions_by_user_id(
-    request: Request, user_id, service: NotificationService = Depends()
-):
-
-    return await service.get_notification_channel_subscriptions_by_user_id(
-        user_id=user_id
-    )
-
-
-@router.get(
-    "/subscriptions/{notification_channel_subscription_id}",
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.GOVERNMENT])
-async def get_notification_channel_subscription_by_id(
-    request: Request,
-    notification_channel_subscription_id: int,
-    service: NotificationService = Depends(),
-):
-
-    return await service.get_notification_channel_subscription_by_id(
-        notification_channel_subscription_id=notification_channel_subscription_id
-    )
-
-
 @router.post(
     "/subscriptions/save",
     response_model=Union[
@@ -173,3 +137,52 @@ async def save_subscription(
         return await service.update_notification_channel_subscription(request_data)
     else:
         return await service.create_notification_channel_subscription(request_data)
+
+
+@router.get(
+    "/subscriptions/{notification_channel_subscription_id}",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_notification_channel_subscription_by_id(
+    request: Request,
+    notification_channel_subscription_id: int,
+    service: NotificationService = Depends(),
+):
+
+    subscription = await service.get_notification_channel_subscription_by_id(
+        notification_channel_subscription_id=notification_channel_subscription_id
+    )
+
+    if subscription.user_profile_id != request.user.user_profile_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to access this resource.",
+        )
+
+    return subscription
+
+
+@router.get(
+    "/{notification_id}",
+    response_model=NotificationMessageSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_notification_message_by_id(
+    request: Request, notification_id: int, service: NotificationService = Depends()
+):
+    """
+    Retrieve a single notification by ID
+    """
+
+    notification = await service.get_notification_message_by_id(
+        notification_id=notification_id
+    )
+    if notification.related_user_profile_id != request.user.user_profile_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to access this resource.",
+        )
+
+    return notification

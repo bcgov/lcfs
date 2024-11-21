@@ -138,20 +138,25 @@ async def test_get_notifications_by_id(
     with patch(
         "lcfs.web.api.notification.views.NotificationService.get_notification_message_by_id"
     ) as mock_get_notifications:
-        mock_get_notifications.return_value = mock_notification.model_dump(
-            by_alias=True
-        )
+        mock_notification_data = mock_notification.model_copy()
+        mock_notification_data.related_user_profile_id = 1
+        mock_get_notifications.return_value = mock_notification_data
 
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        set_mock_user(
+            fastapi_app,
+            [RoleEnum.GOVERNMENT],
+            user_details={"user_profile_id": 1},
+        )
 
         url = fastapi_app.url_path_for(
             "get_notification_message_by_id", notification_id=1
         )
+        print("Resolved URL:", url)
 
         response = await client.get(url)
 
         assert response.status_code == 200
-        assert response.json() == mock_notification.model_dump(by_alias=True)
+        assert response.json() == mock_notification_data.model_dump(by_alias=True)
         mock_get_notifications.assert_called_once_with(notification_id=1)
 
 
@@ -164,9 +169,22 @@ async def test_get_notification_channel_subscription_by_id(
     with patch(
         "lcfs.web.api.notification.views.NotificationService.get_notification_channel_subscription_by_id"
     ) as mock_get_subscription:
-        mock_get_subscription.return_value = mock_subscription.model_dump(by_alias=True)
+        mock_subscription = SubscriptionSchema(
+            notification_channel_subscription_id=1,
+            user_profile_id=1,  # Match mock user
+            channel_name="Test Channel",
+            is_active=True,
+            notification_type_id=1,
+            created_at="2023-01-01T00:00:00",
+            updated_at="2023-01-01T00:00:00",
+        )
+        mock_get_subscription.return_value = mock_subscription
 
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        set_mock_user(
+            fastapi_app,
+            [RoleEnum.GOVERNMENT],
+            user_details={"user_profile_id": 1},
+        )
 
         url = fastapi_app.url_path_for(
             "get_notification_channel_subscription_by_id",
@@ -180,6 +198,7 @@ async def test_get_notification_channel_subscription_by_id(
         mock_get_subscription.assert_called_once_with(
             notification_channel_subscription_id=1
         )
+
 
 
 @pytest.mark.anyio
@@ -227,7 +246,10 @@ async def test_delete_subscription(client, fastapi_app, set_mock_user):
         response = await client.post(url, json=subscription_data)
 
         assert response.status_code == 200
-        assert response.json()["message"] == "Notification Subscription deleted successfully"
+        assert (
+            response.json()["message"]
+            == "Notification Subscription deleted successfully"
+        )
         mock_delete_subscription.assert_called_once_with(1)
 
 

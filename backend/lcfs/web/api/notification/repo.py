@@ -77,7 +77,7 @@ class NotificationRepository:
             (NotificationMessage.notification_message_id == notification_id)
         )
         result = await self.db.execute(query)
-        notification = result.scalar_one()
+        notification = result.scalar_one_or_none()
 
         if not notification:
             raise DataNotFoundException(

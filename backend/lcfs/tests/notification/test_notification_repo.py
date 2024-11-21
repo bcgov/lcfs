@@ -52,29 +52,31 @@ async def test_get_notification_message_by_id_found(notification_repo, mock_db_s
 
     mock_result_chain = MagicMock()
     mock_result_chain.scalars = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.unique = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.scalar_one  = MagicMock(return_value=mock_result)
+    mock_result_chain.scalar_one_or_none = MagicMock(return_value=mock_result)
 
     async def mock_execute(*args, **kwargs):
         return mock_result_chain
 
-    mock_db_session.execute = mock_execute
+    mock_db_session.execute = MagicMock(side_effect=mock_execute)
 
     result = await notification_repo.get_notification_message_by_id(notification_id)
 
     assert result == mock_result
+    mock_db_session.execute.assert_called_once()
+    mock_result_chain.scalar_one_or_none.assert_called_once()
+
+
 
 @pytest.mark.anyio
 async def test_get_notification_message_by_id_not_found(notification_repo, mock_db_session):
     mock_result_chain = MagicMock()
     mock_result_chain.scalars = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.unique = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.scalar_one.side_effect = DataNotFoundException
+    mock_result_chain.scalar_one_or_none.side_effect = DataNotFoundException
 
     async def mock_execute(*args, **kwargs):
         return mock_result_chain
 
-    mock_db_session.execute = mock_execute
+    mock_db_session.execute = MagicMock(side_effect=mock_execute)
 
     with pytest.raises(DataNotFoundException):
         await notification_repo.get_notification_message_by_id(999)
