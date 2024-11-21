@@ -2,6 +2,7 @@ import {
   ComplianceReportCreateSchema,
   ComplianceReportsService,
   ComplianceReportSummarySchema,
+  ComplianceReportSummaryUpdateSchema,
   ComplianceReportUpdateSchema,
   DocumentsService,
   OrganizationService
@@ -129,7 +130,7 @@ export const useUpdateComplianceReportSummary = ({
 }) => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (body: ComplianceReportSummarySchema) => {
+    mutationFn: async (body: ComplianceReportSummaryUpdateSchema) => {
       try {
         const { data } =
           await ComplianceReportsService.updateComplianceReportSummary({

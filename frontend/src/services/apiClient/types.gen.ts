@@ -234,11 +234,20 @@ export type ComplianceReportSummarySchema = {
     renewableFuelTargetSummary: Array<ComplianceReportSummaryRowSchema>;
     lowCarbonFuelTargetSummary: Array<ComplianceReportSummaryRowSchema>;
     nonCompliancePenaltySummary: Array<ComplianceReportSummaryRowSchema>;
+    canSign?: boolean;
     summaryId?: (number | null);
     complianceReportId?: (number | null);
     version?: (number | null);
     isLocked?: (boolean | null);
     quarter?: (number | null);
+};
+
+export type ComplianceReportSummaryUpdateSchema = {
+    complianceReportId: number;
+    renewableFuelTargetSummary: Array<ComplianceReportSummaryRowSchema>;
+    lowCarbonFuelTargetSummary: Array<ComplianceReportSummaryRowSchema>;
+    nonCompliancePenaltySummary: Array<ComplianceReportSummaryRowSchema>;
+    summaryId: number;
 };
 
 export type ComplianceReportUpdateSchema = {
@@ -1662,7 +1671,7 @@ export type GetComplianceReportSummaryResponse = (ComplianceReportSummarySchema)
 export type GetComplianceReportSummaryError = (HTTPValidationError);
 
 export type UpdateComplianceReportSummaryData = {
-    body: ComplianceReportSummarySchema;
+    body: ComplianceReportSummaryUpdateSchema;
     path: {
         report_id: number;
     };

@@ -1265,6 +1265,11 @@ export const ComplianceReportSummarySchemaSchema = {
             type: 'array',
             title: 'Noncompliancepenaltysummary'
         },
+        canSign: {
+            type: 'boolean',
+            title: 'Cansign',
+            default: false
+        },
         summaryId: {
             anyOf: [
                 {
@@ -1325,6 +1330,43 @@ export const ComplianceReportSummarySchemaSchema = {
     type: 'object',
     required: ['renewableFuelTargetSummary', 'lowCarbonFuelTargetSummary', 'nonCompliancePenaltySummary'],
     title: 'ComplianceReportSummarySchema'
+} as const;
+
+export const ComplianceReportSummaryUpdateSchemaSchema = {
+    properties: {
+        complianceReportId: {
+            type: 'integer',
+            title: 'Compliancereportid'
+        },
+        renewableFuelTargetSummary: {
+            items: {
+                '$ref': '#/components/schemas/ComplianceReportSummaryRowSchema'
+            },
+            type: 'array',
+            title: 'Renewablefueltargetsummary'
+        },
+        lowCarbonFuelTargetSummary: {
+            items: {
+                '$ref': '#/components/schemas/ComplianceReportSummaryRowSchema'
+            },
+            type: 'array',
+            title: 'Lowcarbonfueltargetsummary'
+        },
+        nonCompliancePenaltySummary: {
+            items: {
+                '$ref': '#/components/schemas/ComplianceReportSummaryRowSchema'
+            },
+            type: 'array',
+            title: 'Noncompliancepenaltysummary'
+        },
+        summaryId: {
+            type: 'integer',
+            title: 'Summaryid'
+        }
+    },
+    type: 'object',
+    required: ['complianceReportId', 'renewableFuelTargetSummary', 'lowCarbonFuelTargetSummary', 'nonCompliancePenaltySummary', 'summaryId'],
+    title: 'ComplianceReportSummaryUpdateSchema'
 } as const;
 
 export const ComplianceReportUpdateSchemaSchema = {
