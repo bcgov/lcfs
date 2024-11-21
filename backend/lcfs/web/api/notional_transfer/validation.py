@@ -1,24 +1,16 @@
 from typing import List
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 from starlette import status
 
-from lcfs.web.api.organizations.repo import OrganizationsRepository
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.notional_transfer.schema import (
-    NotionalTransferCreateSchema,
-)
+from lcfs.web.api.notional_transfer.schema import NotionalTransferCreateSchema
 
 
 class NotionalTransferValidation:
     def __init__(
         self,
         request: Request = None,
-        org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
-        report_repo: ComplianceReportRepository = Depends(ComplianceReportRepository),
     ):
-        self.org_repo = org_repo
         self.request = request
-        self.report_repo = report_repo
 
     async def validate_compliance_report_id(
         self,

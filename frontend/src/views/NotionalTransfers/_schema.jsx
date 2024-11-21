@@ -33,6 +33,58 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     hide: true
   },
   {
+    // This column displays the action type (CREATE, UPDATE, DELETE)
+    field: 'actionType',
+    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.actionType'),
+    minWidth: 125,
+    maxWidth: 150,
+    editable: false,
+    cellStyle: (params) => {
+      switch (params.data.actionType) {
+        case 'CREATE':
+          return {
+            backgroundColor: '#e0f7df',
+            color: '#388e3c',
+            fontWeight: 'bold'
+          }
+        case 'UPDATE':
+          return {
+            backgroundColor: '#fff8e1',
+            color: '#f57c00',
+            fontWeight: 'bold'
+          }
+        case 'DELETE':
+          return {
+            backgroundColor: '#ffebee',
+            color: '#d32f2f',
+            fontWeight: 'bold'
+          }
+        default:
+          return {}
+      }
+    },
+    cellRenderer: (params) => {
+      switch (params.data.actionType) {
+        case 'CREATE':
+          return 'Create'
+        case 'UPDATE':
+          return 'Edit'
+        case 'DELETE':
+          return 'Deleted'
+        default:
+          return ''
+      }
+    },
+    tooltipValueGetter: (params) => {
+      const actionMap = {
+        CREATE: 'This record was created.',
+        UPDATE: 'This record has been edited.',
+        DELETE: 'This record was deleted.'
+      }
+      return actionMap[params.data.actionType] || ''
+    }
+  },
+  {
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     cellDataType: 'text',

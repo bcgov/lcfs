@@ -60,8 +60,7 @@ async def get_request_payload(request):
 def get_source_info(func=None, e=None):
     """Helper function to get source information for logging."""
     if func:
-        full_path = inspect.getfile(func)
-        filename = os.path.join(*full_path.split(os.path.sep)[-2:])
+        pathname = inspect.getfile(func)
         linenumber = inspect.getsourcelines(func)[1]
         function_name = func.__name__
     elif e:
@@ -72,22 +71,20 @@ def get_source_info(func=None, e=None):
         # Skip frames from 'decorators.py'
         for frame in frames:
             if "decorators.py" not in frame.filename:
-                file_path = frame.filename
+                pathname = frame.filename
                 function_name = frame.name
                 linenumber = frame.lineno
                 break
         else:
             # If all frames are in 'decorators.py', use the last frame
             frame = frames[-1]
-            file_path = frame.filename
+            pathname = frame.filename
             function_name = frame.name
             linenumber = frame.lineno
-        # Limit file path to last two components
-        filename = os.path.join(*file_path.split(os.path.sep)[-2:])
     else:
         return {}
     return {
-        "filename": filename,
+        "pathname": pathname,
         "func_name": function_name,
         "lineno": linenumber,
     }

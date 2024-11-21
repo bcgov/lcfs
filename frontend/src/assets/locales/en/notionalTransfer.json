@@ -26,6 +26,7 @@
   "notionalTransferColLabels": {
     "complianceReportId": "Compliance Report ID",
     "quantity": "Quantity (L)",
+    "actionType": "Action type",
     "legalName": "Legal name of trading partner",
     "addressForService": "Address for service",
     "fuelCategory": "Fuel category",
