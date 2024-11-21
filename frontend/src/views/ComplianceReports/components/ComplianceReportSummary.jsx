@@ -1,29 +1,31 @@
-import { useEffect, useState, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography,
-  Stack
-} from '@mui/material'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
-import SummaryTable from './SummaryTable'
-import {
-  renewableFuelColumns,
-  lowCarbonColumns,
-  nonComplianceColumns
-} from './_schema'
+import BCButton from '@/components/BCButton'
+import BCTypography from '@/components/BCTypography'
+import Loading from '@/components/Loading'
+import { roles } from '@/constants/roles'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useGetComplianceReportSummary,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
-import BCTypography from '@/components/BCTypography'
-import BCButton from '@/components/BCButton'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import Loading from '@/components/Loading'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Stack,
+  Typography
+} from '@mui/material'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
+import SummaryTable from './SummaryTable'
+import {
+  lowCarbonColumns,
+  nonComplianceColumns,
+  renewableFuelColumns
+} from './_schema'
 
 const ComplianceReportSummary = ({
   reportId,
@@ -36,7 +38,10 @@ const ComplianceReportSummary = ({
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
+  const [, setCanSign] = useState(false)
   const { t } = useTranslation(['report'])
+
+  const { hasRoles } = useCurrentUser()
 
   const { data, isLoading, isError, error } = useGetComplianceReportSummary({
     reportId: +reportId
@@ -50,6 +55,7 @@ const ComplianceReportSummary = ({
         data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
           data?.nonCompliancePenaltySummary[1].totalValue <= 0
       )
+      setCanSign(data && data.canSign)
     }
     if (isError) {
       alertRef.current?.triggerAlert({
@@ -126,20 +132,21 @@ const ComplianceReportSummary = ({
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
-            width={'81%'}
+            width={'80.65%'}
           />
           <SummaryTable
             title={t('report:nonCompliancePenaltySummary')}
             columns={nonComplianceColumns(t)}
             data={summaryData?.nonCompliancePenaltySummary}
-            width={'81%'}
+            width={'80.65%'}
           />
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>
               <SigningAuthorityDeclaration
                 onChange={setIsSigningAuthorityDeclared}
+                disabled={!hasRoles(roles.signing_authority)}
               />
-              <Stack direction="row" justifyContent="flex-end" mt={2} gap={2}>
+              <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
                 {buttonClusterConfig[currentStatus]?.map(
                   (config) =>
                     config && (

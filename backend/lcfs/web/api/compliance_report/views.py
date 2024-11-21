@@ -25,7 +25,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
     ComplianceReportSummarySchema,
-    ComplianceReportUpdateSchema,
+    ComplianceReportUpdateSchema, ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
@@ -120,7 +120,7 @@ async def get_compliance_report_summary(
 async def update_compliance_report_summary(
     request: Request,
     report_id: int,
-    summary_data: ComplianceReportSummarySchema,
+    summary_data: ComplianceReportSummaryUpdateSchema,
     summary_service: ComplianceReportSummaryService = Depends(),
     validate: ComplianceReportValidation = Depends(),
 ) -> ComplianceReportSummarySchema:

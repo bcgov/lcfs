@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, Request
+from sqlalchemy.exc import InvalidRequestError
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -117,6 +118,9 @@ class ComplianceReportUpdateService:
             )
         )
 
+        if not calculated_summary.can_sign:
+            raise ServiceException("ComplianceReportSummary is not able to be signed")
+
         # If there's an existing summary, preserve user-edited values
         if existing_summary:
             for row in calculated_summary.renewable_fuel_target_summary:
@@ -177,12 +181,15 @@ class ComplianceReportUpdateService:
             )
             # Update the report with the new summary
             report.summary = new_summary
-        # Create a new reserved transaction for receiving organization
-        report.transaction = await self.org_service.adjust_balance(
-            transaction_action=TransactionActionEnum.Reserved,
-            compliance_units=report.summary.line_20_surplus_deficit_units,
-            organization_id=report.organization_id,
-        )
+
+
+        if report.summary.line_20_surplus_deficit_units != 0:
+            # Create a new reserved transaction for receiving organization
+            report.transaction = await self.org_service.adjust_balance(
+                transaction_action=TransactionActionEnum.Reserved,
+                compliance_units=report.summary.line_20_surplus_deficit_units,
+                organization_id=report.organization_id,
+            )
         await self.repo.update_compliance_report(report)
 
         return calculated_summary
@@ -213,9 +220,11 @@ class ComplianceReportUpdateService:
         )
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
-        # Update the transaction to assessed
-        report.transaction.transaction_action = TransactionActionEnum.Adjustment
-        report.transaction.update_user = user.keycloak_username
+
+        if report.transaction:
+            # Update the transaction to assessed
+            report.transaction.transaction_action = TransactionActionEnum.Adjustment
+            report.transaction.update_user = user.keycloak_username
         await self.repo.update_compliance_report(report)
 
     async def handle_reassessed_status(self, report: ComplianceReport):

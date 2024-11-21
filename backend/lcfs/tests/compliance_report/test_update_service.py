@@ -14,13 +14,15 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
 )
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+
 
 # Mock for user_has_roles function
 @pytest.fixture
 def mock_user_has_roles():
-    with patch('lcfs.web.api.compliance_report.update_service.user_has_roles') as mock:
+    with patch("lcfs.web.api.compliance_report.update_service.user_has_roles") as mock:
         yield mock
+
 
 # Mock for adjust_balance method within the OrganizationsService
 @pytest.fixture
@@ -28,6 +30,7 @@ def mock_org_service():
     mock_org_service = MagicMock()
     mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
     return mock_org_service
+
 
 # update_compliance_report
 @pytest.mark.anyio
@@ -61,7 +64,9 @@ async def test_update_compliance_report_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(
+        report_id, is_model=True
+    )
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
         report_data.status
     )
@@ -109,7 +114,9 @@ async def test_update_compliance_report_no_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(
+        report_id, is_model=True
+    )
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
         report_data.status
     )
@@ -140,7 +147,10 @@ async def test_update_compliance_report_not_found(
             report_id, report_data
         )
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(
+        report_id, is_model=True
+    )
+
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_insufficient_permissions(
@@ -161,12 +171,17 @@ async def test_handle_submitted_status_insufficient_permissions(
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Forbidden."
 
+
 # SUBMIT STATUS TESTS
 
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_with_existing_summary(
-    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -216,6 +231,7 @@ async def test_handle_submitted_status_with_existing_summary(
                 line="21", field="non_compliance_penalty_payable", value=0
             ),
         ],
+        can_sign=True,
     )
 
     # Set up mocks
@@ -236,7 +252,7 @@ async def test_handle_submitted_status_with_existing_summary(
     # Assertions
     mock_user_has_roles.assert_called_once_with(
         compliance_report_update_service.request.user,
-        [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
+        [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
     )
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
@@ -260,7 +276,11 @@ async def test_handle_submitted_status_with_existing_summary(
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_without_existing_summary(
-    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -307,6 +327,7 @@ async def test_handle_submitted_status_without_existing_summary(
                 line="21", field="non_compliance_penalty_payable", value=0
             ),
         ],
+        can_sign=True,
     )
 
     # Set up mocks
@@ -346,7 +367,11 @@ async def test_handle_submitted_status_without_existing_summary(
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_partial_existing_values(
-    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -397,6 +422,7 @@ async def test_handle_submitted_status_partial_existing_values(
                 line="21", field="non_compliance_penalty_payable", value=0
             ),
         ],
+        can_sign=True,
     )
 
     # Set up mocks
@@ -427,7 +453,11 @@ async def test_handle_submitted_status_partial_existing_values(
 
 @pytest.mark.anyio
 async def test_handle_submitted_status_no_user_edits(
-    compliance_report_update_service, mock_repo, mock_user_has_roles, mock_org_service, compliance_report_summary_service
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -482,6 +512,7 @@ async def test_handle_submitted_status_no_user_edits(
                 line="21", field="non_compliance_penalty_payable", value=0
             ),
         ],
+        can_sign=True,
     )
 
     # Set up mocks
@@ -508,3 +539,46 @@ async def test_handle_submitted_status_no_user_edits(
     assert (
         saved_summary.renewable_fuel_target_summary[2].jet_fuel == 900
     )  # Used calculated value
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_no_sign(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.summary_id = 100
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+    # Mock existing summary with no user-edited values
+    existing_summary = MagicMock(spec=ComplianceReportSummary)
+
+    # Mock calculated summary
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+        can_sign=False,
+    )
+
+    # Set up mocks
+    mock_repo.get_summary_by_report_id.return_value = existing_summary
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+    # Inject the mocked org_service into the service being tested
+    compliance_report_update_service.org_service = mock_org_service
+
+    with pytest.raises(ServiceException):
+        await compliance_report_update_service.handle_submitted_status(mock_report)
