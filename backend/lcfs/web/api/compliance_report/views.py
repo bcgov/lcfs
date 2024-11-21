@@ -66,13 +66,7 @@ async def get_compliance_reports(
     pagination.filters.append(
         FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual")
     )
-
-    try:
-        response = await service.get_compliance_reports_paginated(pagination)
-    except DataNotFoundException as e:
-        raise HTTPException(status_code=404, detail="No compliance reports found.")
-
-    return response
+    return  await service.get_compliance_reports_paginated(pagination)
 
 
 @router.get(
