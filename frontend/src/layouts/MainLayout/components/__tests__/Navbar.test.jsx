@@ -43,7 +43,9 @@ describe('Navbar', () => {
 
   beforeEach(() => {
     useCurrentUser.mockReturnValue({
-      data: mockUser
+      data: mockUser,
+      hasRoles: (role) =>
+        mockUser.roles.some((userRole) => userRole.name === role)
     })
     useMediaQuery.mockReturnValue(false) // Set to false for desktop tests
     useTheme.mockReturnValue({
