@@ -9,7 +9,7 @@ import PropTypes from 'prop-types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
-import { Menu, MenuItem } from '@mui/material'
+import { Menu, MenuItem, Typography } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
@@ -159,9 +159,25 @@ export const BCGridEditor = ({
 
     setShowCloseModal(true)
   }
+  const hasRequiredHeaderComponent = useCallback(() => {
+    const columnDefs = ref.current?.api?.getColumnDefs() || [];
+    // Check if any column has `headerComponent` matching "RequiredHeader"
+    return columnDefs.some(
+      colDef => colDef.headerComponent?.name === 'RequiredHeader'
+    );
+  }, [ref])
+
 
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
+      {hasRequiredHeaderComponent() &&
+        <Typography
+          variant="body4"
+          color="text"
+          component="div"
+          dangerouslySetInnerHTML={{ __html: t('asterisk') }}
+        />
+      }
       <BCGridBase
         ref={ref}
         className="ag-theme-quartz"

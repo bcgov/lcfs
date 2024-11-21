@@ -388,7 +388,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true
