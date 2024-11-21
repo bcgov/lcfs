@@ -37,6 +37,16 @@ export const OtherUsesSummary = ({ data }) => {
       floatingFilter: false
     },
     {
+      headerName: t('otherUses:otherUsesColLabels.provisionOfTheAct'),
+      field: 'provisionOfTheAct',
+      floatingFilter: false
+    },
+    {
+      headerName: t('otherUses:otherUsesColLabels.fuelCode'),
+      field: 'fuelCode',
+      floatingFilter: false
+    },
+    {
       headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
       field: 'quantitySupplied',
       floatingFilter: false,
@@ -46,6 +56,14 @@ export const OtherUsesSummary = ({ data }) => {
       headerName: t('otherUses:otherUsesColLabels.units'),
       field: 'units',
       floatingFilter: false
+    },
+    {
+      headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
+      field: 'ciOfFuel',
+      floatingFilter: false,
+      valueFormatter: (params) => {
+        return params.value != null ? parseFloat(params.value).toFixed(2) : '';
+      },
     },
     {
       headerName: t('otherUses:otherUsesColLabels.expectedUse'),

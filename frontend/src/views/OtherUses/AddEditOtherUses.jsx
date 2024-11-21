@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, otherUsesColDefs } from './_schema'
+import { defaultColDef, otherUsesColDefs, PROVISION_APPROVED_FUEL_CODE} from './_schema'
 import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditOtherUses = () => {
@@ -106,6 +106,38 @@ export const AddEditOtherUses = () => {
       }
     }
   }
+
+  const onCellValueChanged = useCallback(
+    async (params) => {
+      if (params.colDef.field === 'provisionOfTheAct') {
+        params.node.setDataValue('fuelCode', '')
+      }
+      if (
+        ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
+          params.colDef.field
+        )
+      ) {
+        let ciOfFuel = 0
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )
+          const fuelCode = fuelType?.fuelCodes?.find(
+            (item) => item.fuelCode === params.data.fuelCode
+          )
+          ciOfFuel = fuelCode?.carbonIntensity || 0
+        } else {
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )
+          ciOfFuel = fuelType?.defaultCarbonIntensity || 0
+        }
+
+        params.node.setDataValue('ciOfFuel', ciOfFuel)
+      }
+    },
+    [optionsData]
+  )
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -207,6 +239,7 @@ export const AddEditOtherUses = () => {
           overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
           loading={optionsLoading || usesLoading}
           onAction={onAction}
+          onCellValueChanged={onCellValueChanged}
           onCellEditingStopped={onCellEditingStopped}
           showAddRowsButton
           stopEditingWhenCellsLoseFocus

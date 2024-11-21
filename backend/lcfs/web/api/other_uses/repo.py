@@ -12,11 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
+from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
+from sqlalchemy.dialects import postgresql
 
 logger = structlog.get_logger(__name__)
 
@@ -34,15 +37,21 @@ class OtherUsesRepository:
     async def get_table_options(self) -> dict:
         """Get all table options"""
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.fuel_code_repo.get_fuel_types()
+        fuel_types = await self.fuel_code_repo.get_formatted_fuel_types()
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
+        provisions_of_the_act = (
+            (await self.db.execute(select(ProvisionOfTheAct))).scalars().all()
+        )
+        fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
 
         return {
             "fuel_types": fuel_types,
             "fuel_categories": fuel_categories,
+            "provisions_of_the_act": provisions_of_the_act,
             "expected_uses": expected_uses,
             "units_of_measure": units_of_measure,
+            "fuel_codes": fuel_codes,
         }
 
     @repo_handler
@@ -140,6 +149,8 @@ class OtherUsesRepository:
                 joinedload(OtherUses.fuel_category),
                 joinedload(OtherUses.fuel_type),
                 joinedload(OtherUses.expected_use),
+                joinedload(OtherUses.provision_of_the_act),
+                joinedload(OtherUses.fuel_code),
             )
             .join(
                 valid_fuel_supplies_subq,
@@ -162,6 +173,11 @@ class OtherUsesRepository:
                 quantity_supplied=ou.quantity_supplied,
                 fuel_type=ou.fuel_type.fuel_type,
                 fuel_category=ou.fuel_category.category,
+                ci_of_fuel=ou.ci_of_fuel,
+                provision_of_the_act=(
+                    ou.provision_of_the_act.name if ou.provision_of_the_act else None
+                ),
+                fuel_code=(ou.fuel_code.fuel_code if ou.fuel_code else None),
                 expected_use=ou.expected_use.name,
                 units=ou.units,
                 rationale=ou.rationale,
@@ -221,7 +237,16 @@ class OtherUsesRepository:
         """
         updated_other_use = await self.db.merge(other_use)
         await self.db.flush()
-        await self.db.refresh(other_use, ["fuel_category", "fuel_type", "expected_use"])
+        await self.db.refresh(
+            other_use,
+            [
+                "fuel_category",
+                "fuel_type",
+                "expected_use",
+                "provision_of_the_act",
+                "fuel_code",
+            ],
+        )
         return updated_other_use
 
     @repo_handler
@@ -231,7 +256,16 @@ class OtherUsesRepository:
         """
         self.db.add(other_use)
         await self.db.flush()
-        await self.db.refresh(other_use, ["fuel_category", "fuel_type", "expected_use"])
+        await self.db.refresh(
+            other_use,
+            [
+                "fuel_category",
+                "fuel_type",
+                "expected_use",
+                "provision_of_the_act",
+                "fuel_code",
+            ],
+        )
         return other_use
 
     @repo_handler
@@ -261,6 +295,8 @@ class OtherUsesRepository:
                 joinedload(OtherUses.fuel_category),
                 joinedload(OtherUses.fuel_type),
                 joinedload(OtherUses.expected_use),
+                joinedload(OtherUses.provision_of_the_act),
+                joinedload(OtherUses.fuel_code),
             )
         )
 
