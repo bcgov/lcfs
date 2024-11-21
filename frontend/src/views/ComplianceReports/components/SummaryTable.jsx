@@ -200,7 +200,7 @@ const SummaryTable = ({
                         display: 'block'
                       }}
                     >
-                      {row.format
+                      {row.format && colIndex !== 0
                         ? rowFormatters[row.format](
                             row[column.id],
                             useParenthesis

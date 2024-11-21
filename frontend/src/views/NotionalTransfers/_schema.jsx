@@ -4,7 +4,8 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import i18n from '@/i18n'
 import {
   AsyncSuggestionEditor,
-  AutocompleteEditor,
+  AutocompleteCellEditor,
+  RequiredHeader,
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
@@ -35,6 +36,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   {
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
+    headerComponent: RequiredHeader,
     cellDataType: 'text',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
@@ -81,6 +83,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.addressForService'
     ),
+    headerComponent: RequiredHeader,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) => StandardCellErrors(params, errors)
@@ -90,7 +93,8 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.fuelCategory'
     ),
-    cellEditor: AutocompleteEditor,
+    headerComponent: RequiredHeader,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
@@ -110,7 +114,8 @@ export const notionalTransferColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
     ),
-    cellEditor: AutocompleteEditor,
+    headerComponent: RequiredHeader,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellEditorParams: {
@@ -128,6 +133,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
   {
     field: 'quantity',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
+    headerComponent: RequiredHeader,
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
@@ -142,7 +148,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true,

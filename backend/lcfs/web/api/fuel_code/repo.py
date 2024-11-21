@@ -1,10 +1,10 @@
 import structlog
 from datetime import date
-from typing import List, Dict, Any, Union, Optional
+from typing import List, Dict, Any, Union, Optional, Sequence
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import and_, or_, select, func, text, update, distinct
+from sqlalchemy import and_, or_, select, func, text, update, distinct, Row, RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
@@ -282,7 +282,7 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_codes_paginated(
         self, pagination: PaginationRequestSchema
-    ) -> List[FuelCodeSchema]:
+    ) -> tuple[Sequence[FuelCode], int]:
         """
         Queries fuel codes from the database with optional filters. Supports pagination and sorting.
 

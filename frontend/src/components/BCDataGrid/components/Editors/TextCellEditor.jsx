@@ -20,7 +20,7 @@ export const TextCellEditor = forwardRef(
             <TextField
               ref={ref}
               fullWidth
-              margin="0"
+              margin="none"
               InputProps={{ ...props.inputProps }}
             />
           )}

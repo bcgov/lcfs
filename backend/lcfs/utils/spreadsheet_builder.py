@@ -8,6 +8,7 @@ import xlwt
 
 logger = structlog.get_logger(__name__)
 
+
 class SpreadsheetBuilder:
     """
     A class to build spreadsheets in xlsx, xls, or csv format.
@@ -67,11 +68,7 @@ class SpreadsheetBuilder:
             return output.getvalue()
 
         except Exception as e:
-            logger.error(
-                "Failed to build spreadsheet",
-                error=str(e),
-                exc_info=e
-            )
+            logger.error("Failed to build spreadsheet", error=str(e), exc_info=e)
             raise
 
     def _write_xlsx(self, output):

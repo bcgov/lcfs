@@ -2,6 +2,7 @@ import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
 import { ROUTES } from './constants/routes'
 import { MainLayout } from './layouts/MainLayout'
 import { AdminMenu } from './views/Admin/AdminMenu'
+import { ViewAuditLog } from '@/views/Admin/AdminMenu/components/ViewAuditLog'
 import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
 import { ComplianceReports } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
@@ -227,6 +228,16 @@ const router = createBrowserRouter([
         path: ROUTES.ADMIN_USER_LOGIN_HISTORY,
         element: <AdminMenu tabIndex={2} />,
         handle: { title: 'User login history' }
+      },
+      {
+        path: ROUTES.ADMIN_AUDIT_LOG,
+        element: <AdminMenu tabIndex={3} />,
+        handle: { title: 'Audit log' }
+      },
+      {
+        path: ROUTES.ADMIN_AUDIT_LOG_VIEW,
+        element: <ViewAuditLog />,
+        handle: { title: 'View audit log' }
       },
       {
         path: ROUTES.ADMIN_USERS_ADD,

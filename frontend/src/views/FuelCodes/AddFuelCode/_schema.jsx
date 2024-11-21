@@ -1,8 +1,9 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import {
   AsyncSuggestionEditor,
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   DateEditor,
+  NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
@@ -10,6 +11,7 @@ import i18n from '@/i18n'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import { Typography } from '@mui/material'
 import { actions, validation } from '@/components/BCDataGrid/columns'
+import { numberFormatter } from '@/utils/formatters'
 
 const cellErrorStyle = (params) => {
   if (
@@ -28,7 +30,7 @@ const createCellRenderer = (field, customRenderer = null) => {
     const content = customRenderer
       ? customRenderer(params)
       : params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>)
+        (!params.value && <Typography variant="body4">Select</Typography>)
     return <div style={{ color: hasError ? 'red' : 'inherit' }}>{content}</div>
   }
 
@@ -51,9 +53,11 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'prefix',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
-      options: optionsData?.fuelCodePrefixes?.filter(obj => obj.prefix).map((obj) => obj.prefix),
+      options: optionsData?.fuelCodePrefixes
+        ?.filter((obj) => obj.prefix)
+        .map((obj) => obj.prefix),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -135,7 +139,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
+    cellDataType: 'text'
   },
   {
     field: 'company',
@@ -270,7 +274,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'fuel',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('fuel'),
     cellEditorParams: {
       options: optionsData?.fuelTypes
@@ -288,7 +292,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'feedstock',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstock'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('feedstock'),
@@ -306,7 +310,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'feedstockLocation',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockLocation'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('feedstockLocation'),
@@ -323,7 +327,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   {
     field: 'feedstockMisc',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.misc'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('feedstockMisc'),
@@ -341,7 +345,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     field: 'fuelProductionFacilityCity',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelProductionFacilityCity'),
@@ -370,9 +374,9 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       )
 
       params.data.fuelProductionFacilityProvinceState =
-        location.fuelProductionFacilityProvinceState
+        location?.fuelProductionFacilityProvinceState
       params.data.fuelProductionFacilityCountry =
-        location.fuelProductionFacilityCountry
+        location?.fuelProductionFacilityCountry
 
       return true
     }
@@ -383,7 +387,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelProductionFacilityProvinceState'),
@@ -412,7 +416,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
           location.fuelProductionFacilityProvinceState === params.newValue
       )
       params.data.fuelProductionFacilityCountry =
-        location.fuelProductionFacilityCountry
+        location?.fuelProductionFacilityCountry
 
       return true
     }
@@ -423,7 +427,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelProductionFacilityCountry'),
@@ -447,7 +451,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   {
     field: 'facilityNameplateCapacity',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
-    cellEditor: 'agNumberCellEditor',
+    valueFormatter: numberFormatter,
+    cellEditor: NumberEditor,
     type: 'numericColumn',
     cellEditorParams: {
       precision: 0,
@@ -461,7 +466,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('facilityNameplateCapacityUnit'),
     cellEditorParams: {
       options: optionsData.facilityNameplateCapacityUnits,
@@ -476,7 +481,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   {
     field: 'feedstockFuelTransportMode',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('feedstockFuelTransportMode', (params) =>
       params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
@@ -500,7 +505,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   {
     field: 'finishedFuelTransportMode',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) =>
       params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
@@ -524,7 +529,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   {
     field: 'formerCompany',
     headerName: i18n.t('fuelCode:fuelCodeColLabels.formerCompany'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('formerCompany'),

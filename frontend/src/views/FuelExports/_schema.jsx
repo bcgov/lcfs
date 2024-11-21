@@ -1,7 +1,7 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   NumberEditor,
   RequiredHeader,
   DateEditor,
@@ -105,7 +105,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'fuelType',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -179,7 +179,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'fuelCategory',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -253,7 +253,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -361,7 +361,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'units',
     headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
     minWidth: 100,
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
       options: ['L', 'kg', 'kWh', 'm3'],
       multiple: false,
@@ -499,7 +499,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true

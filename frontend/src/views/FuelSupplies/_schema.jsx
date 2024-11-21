@@ -2,7 +2,7 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
   AsyncSuggestionEditor,
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
@@ -115,7 +115,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'fuelType',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -192,7 +192,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'fuelCategory',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategory'),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -265,7 +265,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
@@ -404,7 +404,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'units',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
     minWidth: 60,
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
       options: ['L', 'kg', 'kWh', 'm3'],
       multiple: false,
@@ -516,7 +516,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true

@@ -2,7 +2,8 @@ import BCBox from '@/components/BCBox'
 import {
   ADMIN_USER_LOGIN_HISTORY,
   ADMIN_USERACTIVITY,
-  ADMIN_USERS
+  ADMIN_USERS,
+  ADMIN_AUDIT_LOG
 } from '@/constants/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
@@ -11,7 +12,7 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Users, UserActivity, UserLoginHistory } from '.'
+import { Users, UserActivity, UserLoginHistory, AuditLog } from '.'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 
@@ -26,11 +27,15 @@ export function AdminMenu({ tabIndex }) {
   const { t } = useTranslation(['admin'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
-  const paths = useMemo(() => [
-    ADMIN_USERS,
-    ADMIN_USERACTIVITY,
-    ADMIN_USER_LOGIN_HISTORY
-  ], [])
+  const paths = useMemo(
+    () => [
+      ADMIN_USERS,
+      ADMIN_USERACTIVITY,
+      ADMIN_USER_LOGIN_HISTORY,
+      ADMIN_AUDIT_LOG
+    ],
+    []
+  )
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.
@@ -58,7 +63,7 @@ export function AdminMenu({ tabIndex }) {
     <BCBox sx={{ bgcolor: 'background.paper' }}>
       <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
         <Tabs
-          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '40%' }}
+          sx={{ background: 'rgb(0, 0, 0, 0.08)', width: '50%' }}
           orientation={tabsOrientation}
           value={tabIndex}
           aria-label="Tabs for selection of administration options"
@@ -67,6 +72,7 @@ export function AdminMenu({ tabIndex }) {
           <Tab label={t('Users')} wrapped {...a11yProps(0)} />
           <Tab label={t('UserActivity')} {...a11yProps(1)} />
           <Tab label={t('UserLoginHistory')} {...a11yProps(2)} />
+          <Tab label={t('AuditLog')} {...a11yProps(3)} />
         </Tabs>
       </AppBar>
       <AdminTabPanel value={tabIndex} index={0} component="div" mx={-3}>
@@ -78,6 +84,9 @@ export function AdminMenu({ tabIndex }) {
         </AdminTabPanel>
         <AdminTabPanel value={tabIndex} index={2} component="div" mx={-3}>
           <UserLoginHistory />
+        </AdminTabPanel>
+        <AdminTabPanel value={tabIndex} index={3} component="div" mx={-3}>
+          <AuditLog />
         </AdminTabPanel>
       </Role>
     </BCBox>

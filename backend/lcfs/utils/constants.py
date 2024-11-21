@@ -3,7 +3,9 @@ from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 
 
 class LCFS_Constants:
-    MEDIA_TYPE = "application/vnd.ms-excel"
+    EXCEL_MEDIA_TYPE = "application/vnd.ms-excel"
+    USERS_EXPORT_FILENAME = "BC-LCFS-BCeID-Users"
+    USERS_EXPORT_SHEETNAME = "BCeID Users"
     USERS_EXPORT_COLUMNS = [
         "Last name",
         "First name",
@@ -16,8 +18,6 @@ class LCFS_Constants:
         "Role(s)",
         "Organization name",
     ]
-    USERS_EXPORT_SHEETNAME = "BCeID Users"
-    USERS_EXPORT_FILENAME = "BC-LCFS-BCeID-Users"
     FROM_ORG_TRANSFER_STATUSES = [
         TransferStatusEnum.Draft,
         TransferStatusEnum.Sent,

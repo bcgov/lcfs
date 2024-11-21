@@ -31,7 +31,11 @@ const AddFuelCodeBase = () => {
   const { t } = useTranslation(['common', 'fuelCode'])
   const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
   const apiService = useApiService()
-  const { data: clonedFuelCodeData, isLoading: isClonedFuelCodeLoading, refetch } = useQuery({
+  const {
+    data: clonedFuelCodeData,
+    isLoading: isClonedFuelCodeLoading,
+    refetch
+  } = useQuery({
     queryKey: ['fuelCode', cloneFuelCodeId, prefix],
     queryFn: async ({ queryKey }) => {
       // eslint-disable-next-line no-unused-vars
@@ -148,8 +152,9 @@ const AddFuelCodeBase = () => {
           const fieldLabels = fields.map((field) =>
             t(`fuelCode:fuelCodeColLabels.${field}`)
           )
-          const errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
-            } ${message}`
+          const errMsg = `Error updating row: ${
+            fieldLabels.length === 1 ? fieldLabels[0] : ''
+          } ${message}`
 
           alertRef.current?.triggerAlert({
             message: errMsg,
@@ -270,7 +275,14 @@ const AddFuelCodeBase = () => {
       gridApi.applyTransaction({ update: [updatedData] })
       setFocusedCell(undefined)
     }
-  }, [isClonedFuelCodeLoading, clonedFuelCodeData, focusedCell, paramsData, prefix, gridApi])
+  }, [
+    isClonedFuelCodeLoading,
+    clonedFuelCodeData,
+    focusedCell,
+    paramsData,
+    prefix,
+    gridApi
+  ])
 
   if (isLoading) {
     return <Loading />

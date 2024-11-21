@@ -15,7 +15,7 @@
     "fuelSupplyId": "Fuel supply ID",
     "fuelType": "Fuel type",
     "fuelTypeOther": "Fuel type other",
-    "fuelCategory": "Fuel catgory",
+    "fuelCategory": "Fuel category",
     "endUse": "End use",
     "provisionOfTheAct": "Determining carbon intensity",
     "fuelCode": "Fuel code",
@@ -26,7 +26,7 @@
     "ciOfFuel": "CI of fuel",
     "energyDensity": "Energy density",
     "eer": "EER",
-    "energy": "Energy",
+    "energy": "Energy Content",
     "determiningCarbonIntensity": "Determining carbon intensity"
   },
   "validateMsg": {

@@ -24,7 +24,7 @@
   "addRow": "Add row",
   "rows": "rows",
   "notionalTransferColLabels": {
-    "complianceReportId": "Compliance Report ID",
+    "complianceReportId": "Compliance report ID",
     "quantity": "Quantity (L)",
     "legalName": "Legal name of trading partner",
     "addressForService": "Address for service",
@@ -34,8 +34,8 @@
     "status": "Status",
     "transferId": "Transfer ID",
     "date": "Date",
-    "fromAccount": "From Account",
-    "toAccount": "To Account",
+    "fromAccount": "From account",
+    "toAccount": "To account",
     "comments": "Comments"
   },
   "validateMsg": {

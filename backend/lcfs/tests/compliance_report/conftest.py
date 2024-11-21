@@ -195,6 +195,7 @@ def compliance_report_summary_schema(
         version=1,
         is_locked=False,
         quarter=None,
+        can_sign=False
     ):
 
         return ComplianceReportSummarySchema(
@@ -206,6 +207,7 @@ def compliance_report_summary_schema(
             version=version,
             is_locked=is_locked,
             quarter=quarter,
+            can_sign=can_sign
         )
 
     return _create_compliance_report_summary

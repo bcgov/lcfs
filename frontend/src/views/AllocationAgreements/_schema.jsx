@@ -1,7 +1,7 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { Typography } from '@mui/material'
 import {
-  AutocompleteEditor,
+  AutocompleteCellEditor,
   RequiredHeader,
   AsyncSuggestionEditor,
   NumberEditor
@@ -163,7 +163,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelType'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
       multiple: false,
@@ -237,7 +237,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelCategory'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
       options:
         optionsData?.fuelTypes
@@ -290,7 +290,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelCode'
     ),
-    cellEditor: AutocompleteEditor,
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
       options:
         optionsData?.fuelTypes
@@ -388,7 +388,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true

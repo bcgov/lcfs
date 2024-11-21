@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock, AsyncMock
+
 import pytest
 from datetime import datetime
 import uuid
@@ -927,52 +929,6 @@ async def test_get_issued_compliance_units_not_found(compliance_report_repo):
 
 
 @pytest.mark.anyio
-async def test_calculate_fuel_quantities_success_not_fossil_derived(
-    compliance_report_repo,
-    compliance_reports,
-    fuel_supplies,
-):
-    # Filter non-fossil-derived fuel supplies
-    non_fossil_fuel_supplies = [
-        fs for fs in fuel_supplies if not fs.fuel_type.fossil_derived
-    ]
-
-    # Mock the method
-    compliance_report_repo.fuel_supply_repo.get_effective_fuel_supplies.return_value = (
-        non_fossil_fuel_supplies
-    )
-
-    result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report=compliance_reports[0],
-        fossil_derived=False,
-    )
-
-    assert result == {"gasoline": 1.0, "diesel": 1.0}
-
-
-@pytest.mark.anyio
-async def test_calculate_fuel_quantities_success_fossil_derived(
-    compliance_report_repo,
-    compliance_reports,
-    fuel_supplies,
-):
-    # Filter fossil-derived fuel supplies
-    fossil_fuel_supplies = [fs for fs in fuel_supplies if fs.fuel_type.fossil_derived]
-
-    # Mock the method
-    compliance_report_repo.fuel_supply_repo.get_effective_fuel_supplies.return_value = (
-        fossil_fuel_supplies
-    )
-
-    result = await compliance_report_repo.calculate_fuel_quantities(
-        compliance_report=compliance_reports[0],
-        fossil_derived=True,
-    )
-
-    assert result == {"gasoline": 1.0, "diesel": 1.0}
-
-
-@pytest.mark.anyio
 async def test_get_all_org_reported_years_success(
     compliance_report_repo, compliance_reports, compliance_periods
 ):
@@ -994,3 +950,48 @@ async def test_get_all_org_reported_years_not_found(
     )
 
     assert len(periods) == 0
+
+
+@pytest.mark.parametrize(
+    "fossil_derived, expected",
+    [
+        (True, {"diesel": 1.0, "gasoline": 1.0}),
+        (False, {"diesel": 1.0, "gasoline": 1.0}),
+    ],
+)
+def test_aggregate_fuel_supplies(
+    compliance_report_repo, fuel_supplies, fossil_derived, expected
+):
+    result = compliance_report_repo.aggregate_fuel_supplies(
+        fuel_supplies, fossil_derived
+    )
+
+    assert result == expected
+
+
+@pytest.mark.anyio
+async def test_aggregate_other_uses(compliance_report_repo, dbsession):
+    mock_result = [
+        MagicMock(category="Gasoline", quantity=50.0),
+        MagicMock(category="Ethanol", quantity=75.0),
+    ]
+    dbsession.execute = AsyncMock(return_value=mock_result)
+
+    result = await compliance_report_repo.aggregate_other_uses(1, True)
+
+    assert result == {"gasoline": 50.0, "ethanol": 75.0}
+    dbsession.execute.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_aggregate_allocation_agreements(compliance_report_repo, dbsession):
+    mock_result = [
+        MagicMock(category="Biogas", quantity=25.0),
+        MagicMock(category="Biodiesel", quantity=100.0),
+    ]
+    dbsession.execute = AsyncMock(return_value=mock_result)
+
+    result = await compliance_report_repo.aggregate_allocation_agreements(2)
+
+    assert result == {"biogas": 25.0, "biodiesel": 100.0}
+    dbsession.execute.assert_awaited_once()
