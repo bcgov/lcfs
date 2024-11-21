@@ -5,7 +5,8 @@ from typing import Optional
 from fastapi import Depends, HTTPException
 
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.db.models.compliance.FuelSupply import FuelSupply, QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
@@ -22,11 +23,13 @@ logger = getLogger(__name__)
 FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "id",
     "fuel_supply_id",
+    "compliance_period",
     "deleted",
     "group_uuid",
     "user_type",
     "version",
     "action_type",
+    "units",
 }
 
 
@@ -51,80 +54,51 @@ class FuelSupplyActionService:
         """
         Populate additional calculated and referenced fields for a FuelSupply instance.
 
-        This method:
-        - Sets unit types
-        - Populates default and overridden carbon intensities (CI)
-        - Calculates energy density, effectiveness ratios, and compliance units
+        Args:
+            fuel_supply (FuelSupply): The FuelSupply instance to populate.
+            fs_data (FuelSupplyCreateUpdateSchema): The data provided for creation or update.
 
-        Returns the updated FuelSupply object with calculated fields populated.
+        Returns:
+            FuelSupply: The populated FuelSupply instance.
         """
-        # Set quantity units
+        # Fetch standardized fuel data
+        fuel_data = await self.fuel_repo.get_standardized_fuel_data(
+            fuel_type_id=fuel_supply.fuel_type_id,
+            fuel_category_id=fuel_supply.fuel_category_id,
+            end_use_id=fuel_supply.end_use_id,
+            fuel_code_id=fuel_supply.fuel_code_id,
+            compliance_period=fs_data.compliance_period,
+        )
+
+        # Set units
         fuel_supply.units = QuantityUnitsEnum(fs_data.units)
 
-        # Get the fuel type details to check if it's unrecognized and set basic properties
-        fuel_type = await self.fuel_repo.get_fuel_type_by_id(fuel_supply.fuel_type_id)
-        if fuel_type.unrecognized:
-            # Unrecognized fuel type, reset specific properties
-            fuel_supply.ci_of_fuel = None
-            fuel_supply.energy_density = None
-            fuel_supply.eer = None
-            fuel_supply.energy = 0
-        else:
-            # Standard fuel type, set default carbon intensity
-            fuel_supply.ci_of_fuel = fuel_type.default_carbon_intensity
+        # Set calculated fields based on standardized fuel data
+        fuel_supply.ci_of_fuel = fuel_data["effective_carbon_intensity"]
+        fuel_supply.target_ci = fuel_data["target_ci"]
+        fuel_supply.eer = fuel_data["eer"] or 1  # Default EER to 1 if None
+        fuel_supply.energy_density = (
+            fuel_data["energy_density"] or fs_data.energy_density
+        )
 
-        # Set the Energy Effectiveness Ratio (EER) based on fuel type, category, and end-use
-        if (
-            fuel_supply.fuel_type_id
-            and fuel_supply.fuel_category_id
-            and fuel_supply.end_use_id
-        ):
-            energy_effectiveness = await self.fuel_repo.get_energy_effectiveness_ratio(
-                fuel_supply.fuel_type_id,
-                fuel_supply.fuel_category_id,
-                fuel_supply.end_use_id,
-            )
-            fuel_supply.eer = energy_effectiveness.ratio if energy_effectiveness else 1
+        # Calculate total energy if energy density is available
+        fuel_supply.energy = (
+            int(fuel_supply.energy_density * fuel_supply.quantity)
+            if fuel_supply.energy_density
+            else 0
+        )
 
-        # Override carbon intensity if a specific fuel code is assigned
-        if fuel_supply.fuel_code_id:
-            fuel_code = await self.fuel_repo.get_fuel_code(fuel_supply.fuel_code_id)
-            fuel_supply.ci_of_fuel = fuel_code.carbon_intensity
-
-        # Determine energy density based on fuel type or custom value
-        if (
-            fuel_type.fuel_type
-            == "Other"  # TODO this should be an enum/constant lookup
-        ):
-            energy_density = (
-                fs_data.energy_density
-            )  # Use provided energy density for custom types
-        else:
-            energy_density = (
-                await self.fuel_repo.get_energy_density(fuel_supply.fuel_type_id)
-            ).density
-
-        fuel_supply.energy_density = energy_density
-
-        # Calculate total energy
-        if fuel_supply.energy_density:
-            fuel_supply.energy = int(fuel_supply.energy_density * fuel_supply.quantity)
-
-        # Calculate compliance units for this fuel supply record
-        fuel_supply.compliance_units = self.calculate_compliance_units_for_supply(
-            fuel_supply
+        # Calculate compliance units using the direct utility function
+        fuel_supply.compliance_units = calculate_compliance_units(
+            TCI=fuel_supply.target_ci or 0,
+            EER=fuel_supply.eer or 1,
+            RCI=fuel_supply.ci_of_fuel or 0,
+            UCI=0,  # Assuming Additional Carbon Intensity Attributable to Use is zero
+            Q=fuel_supply.quantity or 0,
+            ED=fuel_supply.energy_density or 0,
         )
 
         return fuel_supply
-
-    async def _populate_and_save_fuel_supply(self, fuel_supply, fs_data):
-        """
-        Helper function to populate fields and save a fuel supply record.
-
-        Uses _populate_fuel_supply_fields to add calculated fields, then saves the populated record.
-        """
-        fuel_supply = await self._populate_fuel_supply_fields(fuel_supply, fs_data)
-        return await self.repo.create_fuel_supply(fuel_supply)
 
     @service_handler
     async def create_fuel_supply(
@@ -135,10 +109,16 @@ class FuelSupplyActionService:
 
         - Assigns a unique group UUID and sets the initial version to 0.
         - Uses `ActionTypeEnum.CREATE` to indicate a new record.
-        - Calls `_populate_and_save_fuel_supply` to add calculated fields and save.
+        - Populates calculated fields and saves the new record.
 
-        Returns the newly created fuel supply record as a response schema.
+        Args:
+            fs_data (FuelSupplyCreateUpdateSchema): The data for the new fuel supply.
+            user_type (UserTypeEnum): The type of user creating the record.
+
+        Returns:
+            FuelSupplyResponseSchema: The newly created fuel supply record as a response schema.
         """
+        # Assign a unique group UUID for the new fuel supply
         new_group_uuid = str(uuid.uuid4())
         fuel_supply = FuelSupply(
             **fs_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS),
@@ -147,7 +127,12 @@ class FuelSupplyActionService:
             user_type=user_type,
             action_type=ActionTypeEnum.CREATE,
         )
-        created_supply = await self._populate_and_save_fuel_supply(fuel_supply, fs_data)
+
+        # Populate calculated and referenced fields
+        fuel_supply = await self._populate_fuel_supply_fields(fuel_supply, fs_data)
+
+        # Save the populated fuel supply record
+        created_supply = await self.repo.create_fuel_supply(fuel_supply)
         return FuelSupplyResponseSchema.model_validate(created_supply)
 
     @service_handler
@@ -159,9 +144,18 @@ class FuelSupplyActionService:
 
         - Checks if a record exists for the given `group_uuid` and `version`.
         - If `compliance_report_id` matches, updates the existing record.
-        - If `compliance_report_id` differs, a new version is created.
+        - If `compliance_report_id` differs, creates a new version.
+        - If no existing record is found, raises an HTTPException.
 
-        Returns the updated or new version of the fuel supply record.
+        Args:
+            fs_data (FuelSupplyCreateUpdateSchema): The data for the fuel supply update.
+            user_type (UserTypeEnum): The type of user performing the update.
+
+        Returns:
+            FuelSupplyResponseSchema: The updated or new version of the fuel supply record.
+
+        Raises:
+            HTTPException: If the fuel supply record is not found.
         """
         existing_fuel_supply = await self.repo.get_fuel_supply_version_by_user(
             fs_data.group_uuid, fs_data.version, user_type
@@ -173,12 +167,17 @@ class FuelSupplyActionService:
             == fs_data.compliance_report_id
         ):
             # Update existing record if compliance report ID matches
-            for field, value in fs_data.model_dump(exclude={"id", "deleted"}).items():
+            for field, value in fs_data.model_dump(
+                exclude=FUEL_SUPPLY_EXCLUDE_FIELDS
+            ).items():
                 setattr(existing_fuel_supply, field, value)
 
-            updated_supply = await self.repo.update_fuel_supply(
-                await self._populate_fuel_supply_fields(existing_fuel_supply, fs_data)
+            # Populate calculated fields
+            existing_fuel_supply = await self._populate_fuel_supply_fields(
+                existing_fuel_supply, fs_data
             )
+
+            updated_supply = await self.repo.update_fuel_supply(existing_fuel_supply)
             return FuelSupplyResponseSchema.model_validate(updated_supply)
 
         elif existing_fuel_supply:
@@ -201,9 +200,14 @@ class FuelSupplyActionService:
             ).items():
                 setattr(fuel_supply, field, value)
 
-            new_supply = await self._populate_and_save_fuel_supply(fuel_supply, fs_data)
+            # Populate calculated fields
+            fuel_supply = await self._populate_fuel_supply_fields(fuel_supply, fs_data)
+
+            # Save the new version
+            new_supply = await self.repo.create_fuel_supply(fuel_supply)
             return FuelSupplyResponseSchema.model_validate(new_supply)
 
+        # Raise an exception if no existing record is found
         raise HTTPException(status_code=404, detail="Fuel supply record not found.")
 
     @service_handler
@@ -217,7 +221,12 @@ class FuelSupplyActionService:
         - If already deleted, returns success immediately.
         - Otherwise, creates a new version with `ActionTypeEnum.DELETE`.
 
-        Returns a response schema confirming deletion.
+        Args:
+            fs_data (FuelSupplyCreateUpdateSchema): The data for the fuel supply deletion.
+            user_type (UserTypeEnum): The type of user performing the deletion.
+
+        Returns:
+            DeleteFuelSupplyResponseSchema: A response schema confirming deletion.
         """
         existing_fuel_supply = await self.repo.get_latest_fuel_supply_by_group_uuid(
             fs_data.group_uuid
@@ -228,6 +237,7 @@ class FuelSupplyActionService:
                 success=True, message="Already deleted."
             )
 
+        # Create a new version with action_type DELETE
         delete_supply = FuelSupply(
             compliance_report_id=fs_data.compliance_report_id,
             group_uuid=fs_data.group_uuid,
@@ -241,27 +251,10 @@ class FuelSupplyActionService:
             if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
                 setattr(delete_supply, field, getattr(existing_fuel_supply, field))
 
+        delete_supply.units = QuantityUnitsEnum(fs_data.units)
+
+        # Save the deletion record
         await self.repo.create_fuel_supply(delete_supply)
         return DeleteFuelSupplyResponseSchema(
             success=True, message="Marked as deleted."
         )
-
-    def calculate_compliance_units_for_supply(self, fuel_supply: FuelSupply) -> float:
-        """
-        Calculate compliance units based on fuel supply properties.
-
-        Uses a formula incorporating Target Carbon Intensity (TCI), Recorded Carbon Intensity (RCI),
-        Energy Effectiveness Ratio (EER), and fuel properties like quantity and energy density.
-
-        Logs the calculation inputs for debugging and returns the computed compliance units.
-        """
-        TCI = fuel_supply.target_ci or 0
-        EER = fuel_supply.eer or 0
-        RCI = fuel_supply.ci_of_fuel or 0
-        Q = fuel_supply.quantity or 0
-        ED = fuel_supply.energy_density or 0
-
-        logger.debug(
-            f"Calculating compliance units: TCI={TCI}, EER={EER}, RCI={RCI}, Q={Q}, ED={ED}"
-        )
-        return calculate_compliance_units(TCI, EER, RCI, 0, Q, ED)

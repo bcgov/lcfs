@@ -1,6 +1,6 @@
 import structlog
 from datetime import date
-from typing import List, Dict, Any, Union, Tuple, Sequence
+from typing import List, Dict, Any, Union, Optional, Sequence
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
@@ -17,12 +17,14 @@ from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTranspor
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
+from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
@@ -711,7 +713,6 @@ class FuelCodeRepository:
         )
         return result.scalar_one_or_none()
 
-
     @repo_handler
     async def get_energy_effectiveness_ratio(
         self, fuel_type_id: int, fuel_category_id: int, end_use_type_id: int
@@ -726,3 +727,86 @@ class FuelCodeRepository:
         energy_density = result.scalars().first()
 
         return energy_density
+
+    @repo_handler
+    async def get_target_carbon_intensities(
+        self, fuel_category_id: int, compliance_period: str
+    ) -> List[TargetCarbonIntensity]:
+
+        compliance_period_id_subquery = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == compliance_period)
+            .scalar_subquery()
+        )
+
+        stmt = (
+            select(TargetCarbonIntensity)
+            .where(
+                TargetCarbonIntensity.fuel_category_id == fuel_category_id,
+                TargetCarbonIntensity.compliance_period_id
+                == compliance_period_id_subquery,
+            )
+            .options(
+                joinedload(TargetCarbonIntensity.fuel_category),
+                joinedload(TargetCarbonIntensity.compliance_period),
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_standardized_fuel_data(
+        self,
+        fuel_type_id: int,
+        fuel_category_id: int,
+        end_use_id: int,
+        compliance_period: str,
+        fuel_code_id: Optional[int] = None,
+    ):
+        """
+        Fetch and standardize fuel data values required for compliance calculations.
+        """
+        # Fetch the fuel type details
+        fuel_type = await self.get_fuel_type_by_id(fuel_type_id)
+        if not fuel_type:
+            raise ValueError("Invalid fuel type ID")
+
+        # Determine energy density
+        energy_density = (
+            (await self.get_energy_density(fuel_type_id)).density
+            if fuel_type.fuel_type != "Other"
+            else None
+        )
+
+        # Set effective carbon intensity and target carbon intensity
+        if fuel_code_id:
+            fuel_code = await self.get_fuel_code(fuel_code_id)
+            effective_carbon_intensity = fuel_code.carbon_intensity
+        else:
+            effective_carbon_intensity = fuel_type.default_carbon_intensity
+
+        # Get energy effectiveness ratio (EER)
+        eer = None
+        if fuel_type_id and fuel_category_id and end_use_id:
+            energy_effectiveness = await self.get_energy_effectiveness_ratio(
+                fuel_type_id, fuel_category_id, end_use_id
+            )
+            eer = energy_effectiveness.ratio if energy_effectiveness else 1
+
+        # Fetch target carbon intensity (TCI)
+        target_ci = None
+        target_carbon_intensities = await self.get_target_carbon_intensities(
+            fuel_category_id, compliance_period
+        )
+        if target_carbon_intensities:
+            target_ci = next(
+                (tci.target_carbon_intensity for tci in target_carbon_intensities),
+                0,
+            )
+
+        return {
+            "effective_carbon_intensity": effective_carbon_intensity,
+            "target_ci": target_ci,
+            "eer": eer,
+            "energy_density": energy_density,
+        }
