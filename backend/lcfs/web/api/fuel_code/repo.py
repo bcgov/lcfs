@@ -546,7 +546,7 @@ class FuelCodeRepository:
                 WHERE fcp.prefix = :prefix
             ),
             all_possible_codes AS (
-                SELECT generate_series(1, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 0) + 1) AS base_code
+                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101)) AS base_code
             ),
             available_codes AS (
                 SELECT base_code
@@ -554,7 +554,7 @@ class FuelCodeRepository:
                 WHERE base_code NOT IN (SELECT base_code FROM parsed_codes)
             ),
             next_code AS (
-                SELECT MAX(base_code) AS next_base_code
+                SELECT MIN(base_code) AS next_base_code
                 FROM available_codes
             )
             SELECT LPAD(next_base_code::TEXT, 3, '0') || '.0' AS next_fuel_code
