@@ -1,10 +1,8 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { ThemeProvider } from '@mui/material/styles'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import theme from '@/themes'
 import { UserActivity } from '../UserActivity'
+import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -26,34 +24,27 @@ vi.mock('@/constants/routes', () => ({
     TRANSFERS_VIEW: '/transfers/:transferId',
     ADMIN_ADJUSTMENT_VIEW: '/admin-adjustment/:transactionId',
     INITIATIVE_AGREEMENT_VIEW: '/initiative-agreement/:transactionId'
-  },
-  apiRoutes: {
-    getAllUserActivities: '/users/activities/all'
   }
 }))
 
-// Variable to hold the handleRowClicked function
-let handleRowClickedMock
-
-// Mock BCDataGridServer
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: (props) => {
-    handleRowClickedMock = props.handleRowClicked
-    return <div data-test="bc-data-grid-server">BCDataGridServer</div>
-  }
+// Mock userActivityColDefs
+vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
+  userActivityColDefs: () => [
+    { headerName: 'Column 1', field: 'col1' },
+    { headerName: 'Column 2', field: 'col2' }
+  ]
 }))
 
-// Custom render function with providers
-const customRender = (ui, options = {}) => {
-  const queryClient = new QueryClient()
-  const AllTheProviders = ({ children }) => (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
-    </QueryClientProvider>
-  )
+// Variable to hold the onRowClicked function
+let onRowClickedMock
 
-  return render(ui, { wrapper: AllTheProviders, ...options })
-}
+// Mock BCGridViewer
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: (props) => {
+    onRowClickedMock = props.onRowClicked
+    return <div data-test="bc-grid-viewer">BCGridViewer</div>
+  }
+}))
 
 describe('UserActivity', () => {
   beforeEach(() => {
@@ -61,30 +52,30 @@ describe('UserActivity', () => {
   })
 
   it('renders the component', () => {
-    customRender(<UserActivity />)
+    render(<UserActivity />, { wrapper })
     expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
-    expect(screen.getByTestId('bc-data-grid-server')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
   it('navigates to the correct route when transactionType is Transfer', () => {
-    customRender(<UserActivity />)
-    handleRowClickedMock({
+    render(<UserActivity />, { wrapper })
+    onRowClickedMock({
       data: { transactionType: 'Transfer', transactionId: '123' }
     })
     expect(mockUseNavigate).toHaveBeenCalledWith('/transfers/123')
   })
 
   it('navigates to the correct route when transactionType is AdminAdjustment', () => {
-    customRender(<UserActivity />)
-    handleRowClickedMock({
+    render(<UserActivity />, { wrapper })
+    onRowClickedMock({
       data: { transactionType: 'AdminAdjustment', transactionId: '456' }
     })
     expect(mockUseNavigate).toHaveBeenCalledWith('/admin-adjustment/456')
   })
 
   it('navigates to the correct route when transactionType is InitiativeAgreement', () => {
-    customRender(<UserActivity />)
-    handleRowClickedMock({
+    render(<UserActivity />, { wrapper })
+    onRowClickedMock({
       data: { transactionType: 'InitiativeAgreement', transactionId: '789' }
     })
     expect(mockUseNavigate).toHaveBeenCalledWith('/initiative-agreement/789')
