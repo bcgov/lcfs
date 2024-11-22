@@ -47,7 +47,7 @@ export const AsyncSuggestionEditor = ({
   const debouncedSetInputValue = useCallback(
     debounce((newInputValue) => setInputValue(newInputValue), debounceValue),
     [debounceValue]
-  );
+  )
 
   const handleInputChange = (_, newInputValue) => {
     debouncedSetInputValue(newInputValue)
@@ -60,7 +60,13 @@ export const AsyncSuggestionEditor = ({
       onKeyDownCapture(event)
     } else if (event.key === 'Tab') {
       event.preventDefault()
-      api.tabToNextCell()
+      if (event.shiftKey) {
+        // Shift + Tab: Move to the previous cell
+        api.tabToPreviousCell()
+      } else {
+        // Tab: Move to the next cell
+        api.tabToNextCell()
+      }
     }
   }
 

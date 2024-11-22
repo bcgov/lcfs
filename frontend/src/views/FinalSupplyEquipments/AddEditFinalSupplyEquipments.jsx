@@ -151,9 +151,8 @@ export const AddEditFinalSupplyEquipments = () => {
           if (fields[0] === 'postalCode') {
             errMsg = t('finalSupplyEquipment:postalCodeError')
           } else {
-            errMsg = `Error updating row: ${
-              fieldLabels.length === 1 ? fieldLabels[0] : ''
-            } ${String(message).toLowerCase()}`
+            errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
+              } ${String(message).toLowerCase()}`
           }
         } else {
           errMsg = error.response.data?.detail
@@ -216,7 +215,7 @@ export const AddEditFinalSupplyEquipments = () => {
         modified: true
       }
 
-      params.api.applyTransaction({
+      const transaction = params.api.applyTransaction({
         add: [rowData],
         addIndex: params.node?.rowIndex + 1
       })
@@ -227,6 +226,7 @@ export const AddEditFinalSupplyEquipments = () => {
         message: 'Error updating row: Fuel supply equipment Fields required',
         severity: 'error'
       })
+      return transaction
     }
   }
 
@@ -240,7 +240,7 @@ export const AddEditFinalSupplyEquipments = () => {
   }, [navigate, compliancePeriod, complianceReportId])
 
   const onAddRows = useCallback((numRows) => {
-    return Array(numRows).fill().map(()=>({
+    return Array(numRows).fill().map(() => ({
       id: uuid(),
       complianceReportId,
       supplyFromDate: `${compliancePeriod}-01-01`,
