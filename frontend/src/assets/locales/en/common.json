@@ -4,7 +4,7 @@
   "gov": "Government",
   "yes": "Yes",
   "no": "No",
-  "asterisk": "<span style='color: red;'>*</span> <b>indicates a required field</b>",
+  "asterisk": "<span><span style='color: red;'>*</span> indicates a required field</span>",
   "unknown": "Unknown",
   "backBtn": "Back",
   "cancelBtn": "Cancel",
