@@ -182,6 +182,16 @@
       "default_carbon_intensity": 0,
       "units": "L",
       "unrecognized": true
+    },
+    {
+      "fuel_type_id": 20,
+      "fuel_type": "Other diesel",
+      "fossil_derived": true,
+      "other_uses_fossil_derived": true,
+      "provision_1_id": 1,
+      "default_carbon_intensity": 94.38,
+      "units": "L",
+      "unrecognized": false
     }
   ],
   "fuel_code_prefixes": [
@@ -694,6 +704,12 @@
       "fuel_type_id": 7,
       "uom_id": 4,
       "density": 53.54
+    },
+    {
+      "energy_density_id": 16,
+      "fuel_type_id": 20,
+      "uom_id": 1,
+      "density": 36.51
     }
   ],
   "target_carbon_intensities": [
@@ -960,6 +976,11 @@
       "fuel_instance_id": 27,
       "fuel_type_id": 19,
       "fuel_category_id": 3
+    },
+    {
+      "fuel_instance_id": 28,
+      "fuel_type_id": 20,
+      "fuel_category_id": 2
     }
   ],
   "levels_of_equipment": [

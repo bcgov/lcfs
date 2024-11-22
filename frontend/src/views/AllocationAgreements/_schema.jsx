@@ -16,6 +16,7 @@ import {
 } from '@/utils/grid/errorRenderers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+const FUEL_TYPE_OTHER = 'Other'
 
 export const allocationAgreementColDefs = (optionsData, errors) => [
   validation,
@@ -191,7 +192,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
           fuelType.fuelCategories?.[0]?.category ?? null
         params.data.units = fuelType?.units
         params.data.unrecognized = fuelType?.unrecognized
-        params.data.provisionOfTheAct = null;
+        params.data.provisionOfTheAct = null
       }
       return true
     },
@@ -219,9 +220,10 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     }),
     cellStyle: (params) => {
       const style = StandardCellWarningAndErrors(params, errors)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
+      const conditionalStyle =
+        params.data.fuelType === FUEL_TYPE_OTHER
+          ? { backgroundColor: '#fff', borderColor: 'unset' }
+          : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
     valueSetter: (params) => {
@@ -229,7 +231,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => params.data.fuelType === 'Other',
+    editable: (params) => params.data.fuelType === FUEL_TYPE_OTHER,
     minWidth: 250
   },
   {
@@ -335,7 +337,10 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         )
       } else {
         if (optionsData) {
-          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+          if (
+            params.data.fuelType === FUEL_TYPE_OTHER &&
+            params.data.fuelCategory
+          ) {
             const categories = optionsData?.fuelTypes?.find(
               (obj) => params.data.fuelType === obj.fuelType
             ).fuelCategories

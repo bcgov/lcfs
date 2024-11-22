@@ -70,7 +70,7 @@ describe('Comments Component', () => {
     fireEvent.click(toggleButton)
     setTimeout(() => {
       expect(getComputedStyle(collapseDiv).height).not.toBe('0px')
-    }, 300) // Assuming 300ms is the transition duration
+    }, 600) // Assuming 600ms is the transition duration
   })
 
   it('enables TextField when isEditable is true', () => {

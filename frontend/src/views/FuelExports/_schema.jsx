@@ -13,6 +13,8 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 
+const FUEL_TYPE_OTHER = 'Other'
+
 const cellErrorStyle = (params, errors) => {
   let style = {}
   if (
@@ -162,9 +164,10 @@ export const fuelExportColDefs = (optionsData, errors) => [
     }),
     cellStyle: (params) => {
       const style = StandardCellWarningAndErrors(params, errors)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
+      const conditionalStyle =
+        params.data.fuelType === FUEL_TYPE_OTHER
+          ? { backgroundColor: '#fff', borderColor: 'unset' }
+          : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
     valueSetter: (params) => {
@@ -172,7 +175,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => /other/i.test(params.data.fuelType),
+    editable: (params) => params.data.fuelType === FUEL_TYPE_OTHER,
     minWidth: 250
   },
   {
@@ -373,12 +376,13 @@ export const fuelExportColDefs = (optionsData, errors) => [
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
     suppressKeyboardEvent,
-    editable: (params) => /other/i.test(params.data.fuelType),
+    editable: (params) => params.data.fuelType === FUEL_TYPE_OTHER,
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff' }
-        : { backgroundColor: '#f2f2f2' }
+      const conditionalStyle =
+        params.data.fuelType === FUEL_TYPE_OTHER
+          ? { backgroundColor: '#fff' }
+          : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle, borderColor: 'unset' }
     }
   },
@@ -409,7 +413,10 @@ export const fuelExportColDefs = (optionsData, errors) => [
           ?.fuelCodeCarbonIntensity
       } else {
         if (optionsData) {
-          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+          if (
+            params.data.fuelType === FUEL_TYPE_OTHER &&
+            params.data.fuelCategory
+          ) {
             const categories = optionsData?.fuelTypes?.find(
               (obj) => params.data.fuelType === obj.fuelType
             ).fuelCategories
@@ -437,9 +444,10 @@ export const fuelExportColDefs = (optionsData, errors) => [
     minWidth: 200,
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
+      const conditionalStyle =
+        params.data.fuelType === FUEL_TYPE_OTHER
+          ? { backgroundColor: '#fff', borderColor: 'unset' }
+          : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
     cellEditorParams: {
@@ -448,7 +456,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
       showStepperButtons: false
     },
     valueGetter: (params) => {
-      if (/other/i.test(params.data.fuelType)) {
+      if (params.data.fuelType === FUEL_TYPE_OTHER) {
         return params.data?.energyDensity + ' MJ/' + params.data?.units || 0
       } else {
         const ed = optionsData?.fuelTypes?.find(
@@ -457,7 +465,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
         return (ed && ed.energyDensity + ' MJ/' + params.data.units) || 0
       }
     },
-    editable: (params) => /other/i.test(params.data.fuelType)
+    editable: (params) => params.data.fuelType === FUEL_TYPE_OTHER
   },
   {
     field: 'eer',
