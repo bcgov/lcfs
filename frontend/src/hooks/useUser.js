@@ -39,3 +39,23 @@ export const useGetUserLoginHistory = (
     ...options
   })
 }
+
+export const useGetUserActivities = (
+  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['/users/activities/all', page, size, sortOrders, filters],
+    queryFn: async () =>
+      (
+        await client.post(apiRoutes.getAllUserActivities, {
+          page,
+          size,
+          sortOrders,
+          filters
+        })
+      ).data,
+    ...options
+  })
+}

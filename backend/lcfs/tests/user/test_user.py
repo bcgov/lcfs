@@ -166,8 +166,8 @@ async def test_get_user_activities_permission_denied(
     # Mock the current user as a user with MANAGE_USERS role in organization_id=1
     set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS])
 
-    # Assuming target user with user_profile_id=8 exists and is in organization_id=2
-    target_user_id = 8
+    # Assuming target user with user_profile_id=7 exists and is in organization_id=3
+    target_user_id = 7
 
     # Prepare request data
     pagination = {
@@ -181,7 +181,7 @@ async def test_get_user_activities_permission_denied(
     url = fastapi_app.url_path_for("get_user_activities", user_id=target_user_id)
     response = await client.post(url, json=pagination)
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_403_FORBIDDEN
 
 @pytest.mark.anyio
 async def test_get_all_user_activities_as_administrator(
