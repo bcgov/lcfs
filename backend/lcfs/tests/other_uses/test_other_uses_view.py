@@ -136,21 +136,7 @@ async def test_save_other_uses_row_create(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("save_other_uses_row")
-        payload = {
-            "compliance_report_id": 1,
-            "quantity_supplied": 1000,
-            "fuel_type": "Gasoline",
-            "fuel_category": "Petroleum-based",
-            "expected_use": "Transportation",
-            "units": "L",
-            "rationale": "Test rationale",
-            "provision_of_the_act": "Provision A",
-            "fuel_code": "FuelCode123",
-            "group_uuid": "test-group-uuid",
-            "version": 1,
-            "user_type": "Supplier",
-            "action_type": "Create",
-        }
+        payload = create_mock_schema({}).model_dump()
 
         # Mock the service method to return a valid schema object
         mock_other_uses_service.create_other_use.return_value = OtherUsesSchema(

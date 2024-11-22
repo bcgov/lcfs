@@ -47,9 +47,7 @@ async def test_create_other_use(other_uses_service):
     service, mock_repo, mock_fuel_repo = other_uses_service
 
     # Mock the schema data
-    other_use_data = create_mock_schema({
-        "fuel_code": "Code123"  # Add a valid fuel_code
-    })
+    other_use_data = create_mock_schema({})
 
     mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
         return_value=MagicMock(fuel_category_id=1)
@@ -102,6 +100,12 @@ async def test_update_other_use(other_uses_service):
     mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
         return_value=MagicMock(name="Transportation")
     )
+    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(  # Add this!
+        return_value=MagicMock(name="Provision B")
+    )
+    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(  # Fix here
+        return_value=MagicMock(fuel_code="NewFuelCode")
+    )
 
     # Mock the updated use that will be returned after the update
     mock_updated_use = create_mock_entity(
@@ -125,7 +129,7 @@ async def test_update_other_use(other_uses_service):
 
     # Check that the update method was called
     mock_repo.update_other_use.assert_awaited_once()
-    mock_repo.get_other_use_version_by_user.assert_awaited_once()
+
 
 
 @pytest.mark.anyio

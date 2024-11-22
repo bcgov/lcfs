@@ -5,7 +5,7 @@ import { useGetOtherUses } from '@/hooks/useOtherUses'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { formatNumberWithCommas as valueFormatter, decimalFormatter } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
 
 export const OtherUsesSummary = ({ data }) => {
@@ -61,9 +61,7 @@ export const OtherUsesSummary = ({ data }) => {
       headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
       field: 'ciOfFuel',
       floatingFilter: false,
-      valueFormatter: (params) => {
-        return params.value != null ? parseFloat(params.value).toFixed(2) : '';
-      },
+      valueFormatter: decimalFormatter
     },
     {
       headerName: t('otherUses:otherUsesColLabels.expectedUse'),

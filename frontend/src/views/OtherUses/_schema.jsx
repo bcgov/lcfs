@@ -80,7 +80,6 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelType',
-	headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
@@ -99,8 +98,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelCategory',
-	 headerComponent: RequiredHeader,
-    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
+	  headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
