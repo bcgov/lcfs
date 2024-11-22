@@ -324,12 +324,6 @@ class FuelSupplyRepository:
                 if fuel_supply.fuel_supply_id is not None
                 else True
             ),
-            # Do not count the row of a duplicate of itself
-            # and_(
-            #     FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
-            #     if fuel_supply.fuel_supply_id is not None
-            #     else True  # If fuel_supply_id is None, don't add this condition
-            # ),
         )
 
         result = await self.db.execute(query)
