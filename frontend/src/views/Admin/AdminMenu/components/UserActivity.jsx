@@ -53,7 +53,7 @@ export const UserActivity = () => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey={'all-user-activities-grid'}
-          columnDefs={userActivityColDefs(t)}
+          columnDefs={userActivityColDefs}
           query={useGetUserActivities}
           queryParams={{ cacheTime: 0, staleTime: 0 }}
           dataKey={'activities'}
