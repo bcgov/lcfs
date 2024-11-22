@@ -9,7 +9,8 @@ import PropTypes from 'prop-types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
-import { Menu, MenuItem, Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
+import { Menu, MenuItem } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
@@ -220,7 +221,7 @@ export const BCGridEditor = ({
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
       {hasRequiredHeaderComponent() &&
-        <Typography
+        <BCTypography
           variant="body4"
           color="text"
           component="div"
