@@ -108,6 +108,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         back_populates="to_organization",
     )
     compliance_reports = relationship("ComplianceReport", back_populates="organization")
+    notification_messages = relationship(
+        "NotificationMessage", back_populates="related_organization"
+    )
 
 
 @event.listens_for(Organization, "before_insert")
