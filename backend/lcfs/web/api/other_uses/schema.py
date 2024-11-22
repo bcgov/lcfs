@@ -91,7 +91,6 @@ class OtherUsesCreateSchema(BaseSchema):
     expected_use: str
     provision_of_the_act: str
     fuel_code: Optional[str] = None
-    quantity_supplied: int
     units: str
     ci_of_fuel: Optional[float] = None
     expected_use: str

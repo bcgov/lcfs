@@ -43,28 +43,25 @@ def create_mock_entity(overrides: dict):
 
 
 def create_mock_schema(overrides: dict):
-    mock_schema = OtherUsesCreateSchema(
-        other_uses_id=1,
-        compliance_report_id=1,
-        quantity_supplied=1000,
-        fuel_type="Gasoline",
-        fuel_category="Petroleum-based",
-        expected_use="Transportation",
-        provision_of_the_act="Provision A",
-        fuel_code="Code123",
-        units="L",
-        ci_of_fuel=20.0,
-        rationale="Test rationale",
-        deleted=False,
-        group_uuid="test-group-uuid",
-        version=1,
-        user_type="Supplier",
-        action_type="Create",
-    )
+    # Define default values
+    defaults = {
+        "compliance_report_id": 1,
+        "quantity_supplied": 1000,
+        "fuel_type": "Gasoline",
+        "fuel_category": "Petroleum-based",
+        "expected_use": "Transportation",
+        "units": "L",
+        "rationale": "Test rationale",
+        "provision_of_the_act": "Provision A",
+        "fuel_code": "FuelCode123",
+        "group_uuid": "test-group-uuid",
+        "version": 1,
+        "user_type": "Supplier",
+        "action_type": "Create",
+    }
 
-    # Apply overrides
-    if overrides:
-        for key, value in overrides.items():
-            setattr(mock_schema, key, value)
+    # Merge defaults with overrides
+    data = {**defaults, **overrides}
 
-    return mock_schema
+    # Pass merged data to the schema
+    return OtherUsesCreateSchema(**data)

@@ -219,7 +219,7 @@ class OtherUsesServices:
                 != other_use_data.provision_of_the_act
             ):
                 other_use.provision_of_the_act = (
-                    await self.get_provision_of_the_act_by_name(
+                    await self.fuel_repo.get_provision_of_the_act_by_name(
                         other_use_data.provision_of_the_act
                     )
                 )

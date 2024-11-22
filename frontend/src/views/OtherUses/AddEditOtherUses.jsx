@@ -47,6 +47,20 @@ export const AddEditOtherUses = () => {
     }
   }, [location.state])
 
+  // If otherUses data is available, set the rowData
+  useEffect(() => {
+    if (otherUses && otherUses.length > 0) {
+      const ensureRowIds = (rows) =>
+        rows.map((row) => ({
+          ...row,
+          id: row.id || uuid(),
+          isValid: true,
+        }));
+
+      setRowData(ensureRowIds(otherUses));
+    }
+  }, [otherUses]);
+
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
       return rows.map((row) => {
