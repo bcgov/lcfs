@@ -240,10 +240,8 @@ class FuelCodeServices:
         return await self.repo.update_fuel_code(fuel_code)
 
     @service_handler
-    async def update_fuel_code(
-        self, fuel_code_id: int, fuel_code_data: FuelCodeCreateUpdateSchema
-    ):
-        fuel_code = await self.get_fuel_code(fuel_code_id)
+    async def update_fuel_code(self, fuel_code_data: FuelCodeCreateUpdateSchema):
+        fuel_code = await self.get_fuel_code(fuel_code_data.fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
 

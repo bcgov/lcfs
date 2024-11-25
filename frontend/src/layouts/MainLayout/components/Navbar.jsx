@@ -16,7 +16,6 @@ export const Navbar = () => {
 
   // Nav Links
   const navMenuItems = useMemo(() => {
-    const isAnalyst = hasRoles(roles.analyst)
     const isAdmin = hasRoles(roles.administrator)
     const idirRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },

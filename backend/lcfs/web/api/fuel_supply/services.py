@@ -220,7 +220,6 @@ class FuelSupplyServices:
         self, compliance_period: str
     ) -> FuelTypeOptionsResponse:
         """Get fuel supply table options"""
-        #logger.info("Getting fuel supply table options")
         fs_options = await self.repo.get_fuel_supply_table_options(compliance_period)
         fuel_types = []
         for row in fs_options["fuel_types"]:

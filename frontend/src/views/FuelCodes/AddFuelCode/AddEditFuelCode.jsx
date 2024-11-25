@@ -84,6 +84,14 @@ const AddEditFuelCodeBase = () => {
     params.api.sizeColumnsToFit()
   }
 
+  const handleError = (error, message) => {
+    console.error(error)
+    alertRef.current?.triggerAlert({
+      message,
+      severity: 'error'
+    })
+  }
+
   const onCellValueChanged = useCallback(
     async (params) => {
       const updatedData = { ...params.data, modified: true }
@@ -109,11 +117,7 @@ const AddEditFuelCodeBase = () => {
           severity: 'success'
         })
       } catch (error) {
-        console.error('Error deleting row:', error)
-        alertRef.current?.triggerAlert({
-          message: `Error deleting row: ${error.message}`,
-          severity: 'error'
-        })
+        handleError(error, `Error deleting row: ${error.message}`)
       }
     } else {
       params.api.applyTransaction({ remove: [params.node.data] })
@@ -192,7 +196,7 @@ const AddEditFuelCodeBase = () => {
           await updateFuelCode(updatedData)
         } else {
           const res = await createFuelCode(updatedData)
-          updatedData.fuelCodeId = res.fuelCodeId
+          updatedData.fuelCodeId = res.data.fuelCodeId
         }
 
         updatedData = {
@@ -205,8 +209,6 @@ const AddEditFuelCodeBase = () => {
           severity: 'success'
         })
       } catch (error) {
-        console.error('Error updating row:', error)
-
         setErrors({
           [params.node.data.id]: error.response.data.errors[0].fields
         })
@@ -228,15 +230,9 @@ const AddEditFuelCodeBase = () => {
             fieldLabels.length === 1 ? fieldLabels[0] : ''
           } ${message}`
 
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
+          handleError(error, errMsg)
         } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
+          handleError(error, `Error updating row: ${error.message}`)
         }
       }
 
@@ -276,11 +272,7 @@ const AddEditFuelCodeBase = () => {
             severity: 'success'
           })
         } catch (error) {
-          console.error('Error duplicating row:', error)
-          alertRef.current?.triggerAlert({
-            message: `Error duplicating row: ${error.message}`,
-            severity: 'error'
-          })
+          handleError(error, `Error duplicating row: ${error.message}`)
         }
       } else {
         params.api.applyTransaction({
@@ -290,6 +282,10 @@ const AddEditFuelCodeBase = () => {
       }
     }
   }
+
+  const handleOpenApprovalModal = useCallback(() => {
+    openApprovalModal(fuelCodeID)
+  }, [fuelCodeID])
 
   const onAction = useCallback(
     async (action, params) => {
@@ -313,8 +309,8 @@ const AddEditFuelCodeBase = () => {
           <div className="header">
             <Typography variant="h5" color="primary">
               {!existingFuelCode && t('fuelCode:newFuelCodeTitle')}
-              {existingFuelCode?.fuelCodeStatus.status !==
-                FUEL_CODE_STATUSES.APPROVED && t('fuelCode:editFuelCodeTitle')}
+              {existingFuelCode?.fuelCodeStatus.status ===
+                FUEL_CODE_STATUSES.DRAFT && t('fuelCode:editFuelCodeTitle')}
               {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.APPROVED && t('fuelCode:viewFuelCodeTitle')}
             </Typography>
@@ -347,7 +343,7 @@ const AddEditFuelCodeBase = () => {
                 startIcon={
                   <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
                 }
-                onClick={() => openApprovalModal(fuelCodeID)}
+                onClick={handleOpenApprovalModal}
               >
                 <Typography variant="subtitle2">
                   {t('fuelCode:approveFuelCodeBtn')}

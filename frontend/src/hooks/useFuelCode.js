@@ -32,7 +32,7 @@ export const useCreateFuelCode = (options) => {
   return useMutation({
     ...options,
     mutationFn: async (data) => {
-      return await client.post(apiRoutes.createFuelCode, data)
+      return await client.post(apiRoutes.saveFuelCode, data)
     }
   })
 }
@@ -43,10 +43,10 @@ export const useUpdateFuelCode = (fuelCodeID, options) => {
     ...options,
     enabled: !!fuelCodeID,
     mutationFn: async (data) => {
-      return await client.put(
-        apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID),
-        data
-      )
+      return await client.post(apiRoutes.saveFuelCode, {
+        ...data,
+        fuelCodeID
+      })
     }
   })
 }

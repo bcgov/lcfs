@@ -167,15 +167,18 @@ async def approve_fuel_code(
     return await service.approve_fuel_code(fuel_code_id)
 
 
-@router.put("/{fuel_code_id}", status_code=status.HTTP_200_OK)
+@router.post("", status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.ANALYST])
-async def update_fuel_code(
+async def save_fuel_code(
     request: Request,
-    fuel_code_id: int,
     fuel_code_data: FuelCodeCreateUpdateSchema,
     service: FuelCodeServices = Depends(),
 ):
-    return await service.update_fuel_code(fuel_code_id, fuel_code_data)
+    """Endpoint to create or update a fuel code"""
+    if fuel_code_data.fuel_code_id:
+        return await service.update_fuel_code(fuel_code_data)
+    else:
+        return await service.create_fuel_code(fuel_code_data)
 
 
 @router.delete("/{fuel_code_id}", status_code=status.HTTP_200_OK)
@@ -184,19 +187,3 @@ async def delete_fuel_code(
     request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
-
-
-@router.post(
-    "/",
-    response_model=Union[FuelCodeSchema, DeleteFuelCodeResponseSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.ANALYST])
-async def create_fuel_code(
-    request: Request,
-    request_data: FuelCodeCreateUpdateSchema = Body(...),
-    service: FuelCodeServices = Depends(),
-):
-    """Endpoint to create a fuel code"""
-    return await service.create_fuel_code(request_data)
-

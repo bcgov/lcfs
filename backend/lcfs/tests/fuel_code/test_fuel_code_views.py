@@ -244,10 +244,10 @@ async def test_update_fuel_code_success(
         mock_update_fuel_code.return_value = updated_fuel_code.model_dump(
             by_alias=True, mode="json"
         )
-        url = "/api/fuel-codes/1"
+        url = "/api/fuel-codes"
 
         # Send the PUT request with the mock updated data
-        response = await client.put(
+        response = await client.post(
             url, json=updated_fuel_code.model_dump(by_alias=True, mode="json")
         )
         # Assert the response status and data
@@ -314,9 +314,8 @@ async def test_create_fuel_code_success(
 ):
     """Test successful creation of a fuel code."""
     set_mock_user(fastapi_app, [RoleEnum.ANALYST])
-    url = "/api/fuel-codes/"
+    url = "/api/fuel-codes"
     request_data = {
-        "fuelCodeId": 1,
         "status": "Draft",
         "prefix": "ABC",
         "prefixId": 1001,
@@ -355,8 +354,8 @@ async def test_create_fuel_code_success(
 
     assert response.status_code == status.HTTP_200_OK
     result = response.json()
-    assert result["fuelCodeId"] == request_data["fuelCodeId"]
     assert result["company"] == request_data["company"]
+    assert result["fuelTypeId"] == request_data["fuelTypeId"]
     mock_create_fuel_code.assert_called_once_with(
         FuelCodeCreateUpdateSchema(**request_data)
     )
@@ -368,7 +367,7 @@ async def test_create_fuel_code_invalid_data(
 ):
     """Test creation of a fuel code with invalid data."""
     set_mock_user(fastapi_app, [RoleEnum.ANALYST])
-    url = "/api/fuel-codes/"
+    url = "/api/fuel-codes"
     invalid_data = {"invalidField": "Invalid"}
 
     response = await client.post(url, json=invalid_data)
@@ -382,9 +381,8 @@ async def test_create_fuel_code_unauthorized(
 ):
     """Test creation of a fuel code with unauthorized user role."""
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])  # Unauthorized role
-    url = "/api/fuel-codes/"
+    url = "/api/fuel-codes"
     request_data = {
-        "fuelCodeId": 1,
         "status": "Draft",
         "prefix": "ABC",
         "prefixId": 1001,

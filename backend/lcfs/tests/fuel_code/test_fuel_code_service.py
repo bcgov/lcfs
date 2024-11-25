@@ -138,7 +138,7 @@ async def test_update_fuel_code_success():
     repo_mock.update_fuel_code.return_value = mock_fuel_code
 
     # Act
-    result = await service.update_fuel_code(fuel_code_id, mock_fuel_code)
+    result = await service.update_fuel_code(mock_fuel_code)
 
     # Assert
     assert result.fuel_code_id == 1

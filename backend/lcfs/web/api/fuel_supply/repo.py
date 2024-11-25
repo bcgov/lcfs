@@ -455,6 +455,4 @@ class FuelSupplyRepository:
         result = await self.db.execute(query)
         fuel_supplies = result.unique().scalars().all()
 
-        #logger.debug(f"Retrieved {len(fuel_supplies)} effective FuelSupply records.")
-
         return fuel_supplies

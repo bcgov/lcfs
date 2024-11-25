@@ -186,7 +186,6 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_code_prefix(self, prefix_id: int) -> FuelCodePrefix:
         """Get fuel code prefix"""
-        print(prefix_id)
         return await self.db.get_one(FuelCodePrefix, prefix_id)
 
     @repo_handler
