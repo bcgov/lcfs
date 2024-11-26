@@ -12,7 +12,10 @@ from lcfs.web.api.role.schema import RoleSchema, user_has_roles
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.utils.constants import LCFS_Constants, FILE_MEDIA_TYPE
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException, PermissionDeniedException
+from lcfs.web.exception.exceptions import (
+    DataNotFoundException,
+    PermissionDeniedException,
+)
 from lcfs.web.api.base import (
     FilterModel,
     PaginationRequestSchema,
@@ -144,7 +147,11 @@ class UserServices:
             raise DataNotFoundException("User not found")
         if user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]):
             pass
-        elif not user.organization or self.request.user.organization.organization_id != user.organization.organization_id:
+        elif (
+            not user.organization
+            or self.request.user.organization.organization_id
+            != user.organization.organization_id
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="You do not have permission to view this user's information.",
@@ -214,8 +221,12 @@ class UserServices:
 
         pagination = validate_pagination(pagination)
 
-        activities, total_count = await self.repo.get_user_activities_paginated(user_id, pagination)
-        activities_schema = [UserActivitySchema(**activity._asdict()) for activity in activities]
+        activities, total_count = await self.repo.get_user_activities_paginated(
+            user_id, pagination
+        )
+        activities_schema = [
+            UserActivitySchema(**activity._asdict()) for activity in activities
+        ]
 
         return UserActivitiesResponseSchema(
             activities=activities_schema,
@@ -224,7 +235,7 @@ class UserServices:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
-            )
+            ),
         )
 
     @service_handler
@@ -234,7 +245,9 @@ class UserServices:
         """
         Retrieves activities for all users (Administrator role only).
         """
-        if not any(role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles):
+        if not any(
+            role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="You do not have permission to view all user activities.",
@@ -242,8 +255,12 @@ class UserServices:
 
         pagination = validate_pagination(pagination)
 
-        activities, total_count = await self.repo.get_all_user_activities_paginated(pagination)
-        activities_schema = [UserActivitySchema(**activity._asdict()) for activity in activities]
+        activities, total_count = await self.repo.get_all_user_activities_paginated(
+            pagination
+        )
+        activities_schema = [
+            UserActivitySchema(**activity._asdict()) for activity in activities
+        ]
 
         return UserActivitiesResponseSchema(
             activities=activities_schema,
@@ -252,7 +269,7 @@ class UserServices:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
-            )
+            ),
         )
 
     @service_handler
@@ -262,14 +279,18 @@ class UserServices:
         """
         Retrieves login histories for all users (Administrator role only).
         """
-        if not any(role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles):
+        if not any(
+            role.role.name == RoleEnum.ADMINISTRATOR for role in current_user.user_roles
+        ):
             raise HTTPException(
                 status_code=403,
                 detail="You do not have permission to view all user login histories.",
             )
 
         pagination = validate_pagination(pagination)
-        login_history, total_count = await self.repo.get_all_user_login_history_paginated(pagination)
+        login_history, total_count = (
+            await self.repo.get_all_user_login_history_paginated(pagination)
+        )
 
         return UserLoginHistoryResponseSchema(
             histories=login_history,
@@ -278,7 +299,7 @@ class UserServices:
                 page=pagination.page,
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
-            )
+            ),
         )
 
     async def _has_access_to_user_activities(
@@ -302,9 +323,12 @@ class UserServices:
 
         # Manage Users can access activities of users within the same organization
         if (
-            RoleEnum.MANAGE_USERS in current_user_roles and
-            current_user.organization_id == target_user.organization_id
+            RoleEnum.MANAGE_USERS in current_user_roles
+            and current_user.organization_id == target_user.organization_id
         ):
             return True
 
         return False
+
+    async def track_user_login(self, user: UserProfile):
+        await self.repo.create_login_history(user)

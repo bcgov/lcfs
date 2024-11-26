@@ -68,6 +68,7 @@ export const apiRoutes = {
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',
   getFuelTypeOthers: '/fuel-type/others/list',
+  trackUserLogin: '/users/logged-in',
   getUserLoginHistories: '/users/login-history',
   getAuditLogs: '/audit-log/list',
   getAuditLog: '/audit-log/:auditLogId'
