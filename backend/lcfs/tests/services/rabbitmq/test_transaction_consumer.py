@@ -1,7 +1,7 @@
 from contextlib import ExitStack
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch, MagicMock, PropertyMock
 import json
 
 
@@ -103,8 +103,9 @@ async def test_process_message():
         }
         body = json.dumps(message).encode()
 
-        # Call the method under test
-        await consumer.process_message(body)
+        mock_request = AsyncMock()
+
+        await consumer.process_message(body, mock_request)
 
     # Assert that the organization service's adjust_balance method was called correctly
     adjust_balance.assert_called_once_with(TransactionActionEnum.Adjustment, 100, 1)

@@ -26,7 +26,7 @@ class UserAuthentication(AuthenticationBackend):
 
     def __init__(
         self,
-        redis_pool: ConnectionPool,
+        redis_pool: Redis,
         session_factory: async_sessionmaker,
         settings: Settings,
     ):
@@ -39,8 +39,7 @@ class UserAuthentication(AuthenticationBackend):
 
     async def refresh_jwk(self):
         # Try to get the JWKS data from Redis cache
-        async with Redis(connection_pool=self.redis_pool) as redis:
-            jwks_data = await redis.get("jwks_data")
+        jwks_data = await self.redis_pool.get("jwks_data")
 
         if jwks_data:
             jwks_data = json.loads(jwks_data)
@@ -59,8 +58,7 @@ class UserAuthentication(AuthenticationBackend):
         jwks_data = {"jwks": jwks, "jwks_uri": jwks_uri}
 
         # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
-        async with Redis(connection_pool=self.redis_pool) as redis:
-            await redis.set("jwks_data", json.dumps(jwks_data), ex=86400)
+        await self.redis_pool.set("jwks_data", json.dumps(jwks_data), ex=86400)
 
         self.jwks = jwks
         self.jwks_uri = jwks_uri
