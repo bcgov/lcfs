@@ -98,7 +98,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelCategory',
-	  headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
@@ -112,7 +112,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => StandardCellErrors(params, errors),
-	minWidth: 200
+    minWidth: 200
   },
   {
     field: 'provisionOfTheAct',
@@ -139,6 +139,14 @@ export const otherUsesColDefs = (optionsData, errors) => [
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
+    valueSetter: (params) => {
+      if (params.newValue !== params.oldValue) {
+        params.data.provisionOfTheAct = params.newValue;
+        params.data.fuelCode = ''; // Reset fuelCode when provisionOfTheAct changes
+        return true;
+      }
+      return false;
+    },
     minWidth: 300,
     editable: true,
     tooltipValueGetter: (p) =>
@@ -292,7 +300,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value || <Typography variant="body4">Select</Typography>,
     cellStyle: (params) => StandardCellErrors(params, errors),
-	minWidth: 200
+    minWidth: 200
   },
   {
     field: 'rationale',
@@ -301,7 +309,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     editable: (params) => params.data.expectedUse === 'Other',
-	minWidth: 300
+    minWidth: 300
   }
 ]
 

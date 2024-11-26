@@ -31,7 +31,7 @@ async def test_get_table_options(other_uses_service):
             "fuel_types": [],
             "units_of_measure": [],
             "expected_uses": [],
-            "provisions_of_the_act":[],
+            "provisions_of_the_act": [],
             "fuel_codes": [],
         }
     )
@@ -100,13 +100,9 @@ async def test_update_other_use(other_uses_service):
     mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
         return_value=MagicMock(name="Transportation")
     )
-    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(  # Add this!
+    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(
         return_value=MagicMock(name="Provision B")
     )
-    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(  # Fix here
-        return_value=MagicMock(fuel_code="NewFuelCode")
-    )
-
     # Mock the updated use that will be returned after the update
     mock_updated_use = create_mock_entity(
         {
@@ -114,6 +110,12 @@ async def test_update_other_use(other_uses_service):
             "action_type": ActionTypeEnum.UPDATE,
             "quantity_supplied": 2222,
         }
+    )
+
+    mock_updated_use.provision_of_the_act = MagicMock()
+    mock_updated_use.provision_of_the_act.name = "Provision B"
+    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(
+        return_value=MagicMock(fuel_code="NewFuelCode")
     )
     # Set the return value for update_other_use
     mock_repo.update_other_use = AsyncMock(return_value=mock_updated_use)
@@ -129,7 +131,6 @@ async def test_update_other_use(other_uses_service):
 
     # Check that the update method was called
     mock_repo.update_other_use.assert_awaited_once()
-
 
 
 @pytest.mark.anyio
