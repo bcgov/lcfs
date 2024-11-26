@@ -406,7 +406,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 60,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
-      options: ['L', 'kg', 'kWh', 'm3'],
+      options: ['L', 'kg', 'kWh', 'm³'],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
