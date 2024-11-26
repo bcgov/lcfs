@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Comments } from '../Comments'
 import { MemoryRouter } from 'react-router-dom'
@@ -47,32 +47,32 @@ describe('Comments Component', () => {
     expect(screen.getByText('txn:commentsDescText')).toBeInTheDocument()
   })
 
-  it('toggles collapse when clicking on the header', () => {
+  it('toggles collapse when clicking on the header', async () => {
     renderComponent({ commentField, isEditable: true })
 
-    const header = screen.getByText('txn:commentsDescText').closest('div')
-    expect(header).toBeInTheDocument()
-
-    // Find the button by its role
+    // Find the toggle button
     const toggleButton = screen.getByRole('button')
     expect(toggleButton).toBeInTheDocument()
 
-    // Click to collapse
-    fireEvent.click(toggleButton)
-    const collapseDiv = document.querySelector('.MuiCollapse-root')
+    // Initially, the collapse should be hidden
+    let collapseDiv = document.querySelector('.MuiCollapse-root')
     expect(collapseDiv).toBeInTheDocument()
-
-    setTimeout(() => {
-      expect(getComputedStyle(collapseDiv).height).toBe('0px')
-    }, 300) // Assuming 300ms is the transition duration
+    expect(getComputedStyle(collapseDiv).height).toBe('0px')
 
     // Click to expand
     fireEvent.click(toggleButton)
-    setTimeout(() => {
-      expect(getComputedStyle(collapseDiv).height).not.toBe('0px')
-    }, 600) // Assuming 600ms is the transition duration
-  })
+    await waitFor(() => {
+      collapseDiv = document.querySelector('.MuiCollapse-root')
+      expect(getComputedStyle(collapseDiv).height).not.toBe('0px') // Height should change
+    })
 
+    // Click to collapse again
+    fireEvent.click(toggleButton)
+    await waitFor(() => {
+      collapseDiv = document.querySelector('.MuiCollapse-root')
+      expect(getComputedStyle(collapseDiv).height).toBe('0px') // Height should reset to 0
+    })
+  })
   it('enables TextField when isEditable is true', () => {
     renderComponent({ commentField, isEditable: true })
     const textField = screen.getByTestId('external-comments')
