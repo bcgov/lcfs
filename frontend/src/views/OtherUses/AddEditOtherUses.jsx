@@ -61,6 +61,25 @@ export const AddEditOtherUses = () => {
     }
   }, [otherUses]);
 
+  const findCiOfFuel = useCallback((data, optionsData) => {
+    let ciOfFuel = 0;
+    if (data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => data.fuelType === obj.fuelType
+      );
+      const fuelCode = fuelType?.fuelCodes?.find(
+        (item) => item.fuelCode === data.fuelCode
+      );
+      ciOfFuel = fuelCode?.carbonIntensity || 0;
+    } else {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => data.fuelType === obj.fuelType
+      );
+      ciOfFuel = fuelType?.defaultCarbonIntensity || 0;
+    }
+    return ciOfFuel;
+  }, []);
+
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
       return rows.map((row) => {
@@ -128,22 +147,7 @@ export const AddEditOtherUses = () => {
           params.colDef.field
         )
       ) {
-        let ciOfFuel = 0
-        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-          const fuelType = optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )
-          const fuelCode = fuelType?.fuelCodes?.find(
-            (item) => item.fuelCode === params.data.fuelCode
-          )
-          ciOfFuel = fuelCode?.carbonIntensity || 0
-        } else {
-          const fuelType = optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )
-          ciOfFuel = fuelType?.defaultCarbonIntensity || 0
-        }
-
+        const ciOfFuel = findCiOfFuel(params.data, optionsData)
         params.node.setDataValue('ciOfFuel', ciOfFuel)
       }
     },
