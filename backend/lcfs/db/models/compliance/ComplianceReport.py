@@ -36,7 +36,7 @@ class QuantityUnitsEnum(enum.Enum):
     Litres = "L"
     Kilograms = "kg"
     Kilowatt_hour = "kWh"
-    Cubic_metres = "m3"
+    Cubic_metres = "m³"
 
 
 # Association table for
