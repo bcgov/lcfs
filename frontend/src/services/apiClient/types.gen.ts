@@ -283,12 +283,30 @@ export type DeleteFuelSupplyResponseSchema = {
     message: string;
 };
 
+export type DeleteNotificationChannelSubscriptionResponseSchema = {
+    message: string;
+};
+
+export type DeleteNotificationMessageResponseSchema = {
+    message: string;
+};
+
+export type DeleteNotificationMessageSchema = {
+    notificationMessageId: number;
+    deleted: boolean;
+};
+
 export type DeleteNotionalTransferResponseSchema = {
     message: string;
 };
 
 export type DeleteOtherUsesResponseSchema = {
     message: string;
+};
+
+export type DeleteSubscriptionSchema = {
+    notificationChannelSubscriptionId: number;
+    deleted: boolean;
 };
 
 export type DirectorReviewCountsSchema = {
@@ -313,22 +331,6 @@ export type EnergyDensitySchema = {
     energyDensityId: number;
     energyDensity: number;
     unit: UnitOfMeasureSchema;
-};
-
-/**
- * @deprecated
- */
-export type EntityResponse = {
-    status: number;
-    message: string;
-    error?: {
-        [key: string]: unknown;
-    };
-    total?: number;
-    size?: number;
-    page?: number;
-    total_pages?: number;
-    data?: unknown;
 };
 
 export type EntityTypeEnum = 'Transfer' | 'initiativeAgreement' | 'administrativeAdjustment' | 'Assessment' | 'complianceReport';
@@ -656,7 +658,7 @@ export type FuelSupplyResponseSchema = {
     fuelTypeOther?: (string | null);
 };
 
-export type FuelTypeQuantityUnitsEnumSchema = 'L' | 'kg' | 'kWh' | 'm3';
+export type FuelTypeQuantityUnitsEnumSchema = 'L' | 'kg' | 'kWh' | 'm³';
 
 export type HistoryUserSchema = {
     firstName: string;
@@ -999,15 +1001,22 @@ export type Message = {
     message: string;
 };
 
-export type NotificationChannelSubscriptionRequest = {
-    isEnabled: boolean;
-    channelId: number;
-    notificationTypeId: number;
+export type NotificationCountSchema = {
+    count: number;
 };
 
-export type NotificationMessageRequest = {
-    isRead: boolean;
-    isArchived: boolean;
+export type NotificationMessageSchema = {
+    notificationMessageId?: (number | null);
+    isRead?: (boolean | null);
+    isArchived?: (boolean | null);
+    isWarning?: (boolean | null);
+    isError?: (boolean | null);
+    message?: (string | null);
+    relatedOrganizationId?: (number | null);
+    originUserProfileId?: (number | null);
+    relatedUserProfileId?: (number | null);
+    notificationTypeId?: (number | null);
+    deleted?: (boolean | null);
 };
 
 export type NotionalTransferCreateSchema = {
@@ -1317,6 +1326,15 @@ export type SearchFuelCodeList = {
 export type SortOrder = {
     field: string;
     direction: string;
+};
+
+export type SubscriptionSchema = {
+    notificationChannelSubscriptionId?: (number | null);
+    isEnabled?: (boolean | null);
+    notificationChannelId?: (number | null);
+    userProfileId?: (number | null);
+    notificationTypeId?: (number | null);
+    deleted?: (boolean | null);
 };
 
 export type SummarySchema = {
@@ -1824,7 +1842,7 @@ export type GetFuelCodesResponse = (FuelCodesSchema);
 
 export type GetFuelCodesError = (HTTPValidationError);
 
-export type ExportUsersData = {
+export type ExportFuelCodesData = {
     query?: {
         /**
          * File export format
@@ -1833,9 +1851,9 @@ export type ExportUsersData = {
     };
 };
 
-export type ExportUsersResponse = (unknown);
+export type ExportFuelCodesResponse = (unknown);
 
-export type ExportUsersError = (HTTPValidationError);
+export type ExportFuelCodesError = (HTTPValidationError);
 
 export type GetFuelCodeData = {
     path: {
@@ -1992,88 +2010,59 @@ export type HealthCheckResponse = (unknown);
 
 export type HealthCheckError = unknown;
 
-export type GetNotificationsChannelSubscriptionsData = {
-    query: {
-        response_model?: unknown;
-        user: unknown;
+export type GetNotificationMessagesByUserIdData = {
+    query?: {
+        is_read?: boolean;
     };
 };
 
-export type GetNotificationsChannelSubscriptionsResponse = (unknown);
+export type GetNotificationMessagesByUserIdResponse = (Array<NotificationMessageSchema>);
 
-export type GetNotificationsChannelSubscriptionsError = (HTTPValidationError);
+export type GetNotificationMessagesByUserIdError = (HTTPValidationError);
 
-export type GetNotificationData = {
+export type GetUnreadNotificationsResponse = (NotificationCountSchema);
+
+export type GetUnreadNotificationsError = unknown;
+
+export type GetNotificationsChannelSubscriptionsByUserIdResponse = (Array<SubscriptionSchema>);
+
+export type GetNotificationsChannelSubscriptionsByUserIdError = unknown;
+
+export type SaveNotificationData = {
+    body: (NotificationMessageSchema | DeleteNotificationMessageSchema);
+};
+
+export type SaveNotificationResponse = ((NotificationMessageSchema | DeleteNotificationMessageResponseSchema));
+
+export type SaveNotificationError = (HTTPValidationError);
+
+export type SaveSubscriptionData = {
+    body: (SubscriptionSchema | DeleteSubscriptionSchema);
+};
+
+export type SaveSubscriptionResponse = ((SubscriptionSchema | DeleteNotificationChannelSubscriptionResponseSchema));
+
+export type SaveSubscriptionError = (HTTPValidationError);
+
+export type GetNotificationChannelSubscriptionByIdData = {
+    path: {
+        notification_channel_subscription_id: number;
+    };
+};
+
+export type GetNotificationChannelSubscriptionByIdResponse = (unknown);
+
+export type GetNotificationChannelSubscriptionByIdError = (HTTPValidationError);
+
+export type GetNotificationMessageByIdData = {
     path: {
         notification_id: number;
     };
-    query: {
-        response_model?: unknown;
-        user: unknown;
-    };
 };
 
-export type GetNotificationResponse = (EntityResponse);
+export type GetNotificationMessageByIdResponse = (NotificationMessageSchema);
 
-export type GetNotificationError = (HTTPValidationError);
-
-export type UpdateNotificationData = {
-    body: NotificationMessageRequest;
-    path: {
-        notification_id: number;
-    };
-    query: {
-        response_model?: unknown;
-        user: unknown;
-    };
-};
-
-export type UpdateNotificationResponse = (void);
-
-export type UpdateNotificationError = (HTTPValidationError);
-
-export type GetNotificationChannelSubscriptionData = {
-    path: {
-        notification_channel_subscription_id: number;
-    };
-    query: {
-        response_model?: unknown;
-        user: unknown;
-    };
-};
-
-export type GetNotificationChannelSubscriptionResponse = (EntityResponse);
-
-export type GetNotificationChannelSubscriptionError = (HTTPValidationError);
-
-export type UpdateNotificationChannelSubscriptionData = {
-    body: NotificationChannelSubscriptionRequest;
-    path: {
-        notification_channel_subscription_id: number;
-    };
-    query: {
-        response_model?: unknown;
-        user: unknown;
-    };
-};
-
-export type UpdateNotificationChannelSubscriptionResponse = (void);
-
-export type UpdateNotificationChannelSubscriptionError = (HTTPValidationError);
-
-export type DeleteNotificationChannelSubscriptionData = {
-    path: {
-        notification_channel_subscription_id: number;
-    };
-    query: {
-        response_model?: unknown;
-        user: unknown;
-    };
-};
-
-export type DeleteNotificationChannelSubscriptionResponse = (void);
-
-export type DeleteNotificationChannelSubscriptionError = (HTTPValidationError);
+export type GetNotificationMessageByIdError = (HTTPValidationError);
 
 export type GetNotionalTransferTableOptionsResponse = (NotionalTransferTableOptionsSchema);
 
@@ -2478,6 +2467,19 @@ export type UpdateCategoryData = {
 export type UpdateCategoryResponse = (TransferSchema);
 
 export type UpdateCategoryError = (HTTPValidationError);
+
+export type ExportUsersData = {
+    query?: {
+        /**
+         * File export format
+         */
+        format?: string;
+    };
+};
+
+export type ExportUsersResponse = (unknown);
+
+export type ExportUsersError = (HTTPValidationError);
 
 export type GetUsersData = {
     body: PaginationRequestSchema;

@@ -122,7 +122,7 @@ async def get_fuel_codes(
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-async def export_users(
+async def export_fuel_codes(
     request: Request,
     format: str = Query(default="xls", description="File export format"),
     exporter: FuelCodeExporter = Depends(),

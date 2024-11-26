@@ -1486,6 +1486,46 @@ export const DeleteFuelSupplyResponseSchemaSchema = {
     title: 'DeleteFuelSupplyResponseSchema'
 } as const;
 
+export const DeleteNotificationChannelSubscriptionResponseSchemaSchema = {
+    properties: {
+        message: {
+            type: 'string',
+            title: 'Message'
+        }
+    },
+    type: 'object',
+    required: ['message'],
+    title: 'DeleteNotificationChannelSubscriptionResponseSchema'
+} as const;
+
+export const DeleteNotificationMessageResponseSchemaSchema = {
+    properties: {
+        message: {
+            type: 'string',
+            title: 'Message'
+        }
+    },
+    type: 'object',
+    required: ['message'],
+    title: 'DeleteNotificationMessageResponseSchema'
+} as const;
+
+export const DeleteNotificationMessageSchemaSchema = {
+    properties: {
+        notificationMessageId: {
+            type: 'integer',
+            title: 'Notificationmessageid'
+        },
+        deleted: {
+            type: 'boolean',
+            title: 'Deleted'
+        }
+    },
+    type: 'object',
+    required: ['notificationMessageId', 'deleted'],
+    title: 'DeleteNotificationMessageSchema'
+} as const;
+
 export const DeleteNotionalTransferResponseSchemaSchema = {
     properties: {
         message: {
@@ -1508,6 +1548,22 @@ export const DeleteOtherUsesResponseSchemaSchema = {
     type: 'object',
     required: ['message'],
     title: 'DeleteOtherUsesResponseSchema'
+} as const;
+
+export const DeleteSubscriptionSchemaSchema = {
+    properties: {
+        notificationChannelSubscriptionId: {
+            type: 'integer',
+            title: 'Notificationchannelsubscriptionid'
+        },
+        deleted: {
+            type: 'boolean',
+            title: 'Deleted'
+        }
+    },
+    type: 'object',
+    required: ['notificationChannelSubscriptionId', 'deleted'],
+    title: 'DeleteSubscriptionSchema'
 } as const;
 
 export const DirectorReviewCountsSchemaSchema = {
@@ -1594,62 +1650,6 @@ export const EnergyDensitySchemaSchema = {
     type: 'object',
     required: ['energyDensityId', 'energyDensity', 'unit'],
     title: 'EnergyDensitySchema'
-} as const;
-
-export const EntityResponseSchema = {
-    properties: {
-        status: {
-            type: 'integer',
-            title: 'Status'
-        },
-        message: {
-            type: 'string',
-            title: 'Message'
-        },
-        error: {
-            type: 'object',
-            title: 'Error',
-            default: {}
-        },
-        total: {
-            type: 'integer',
-            title: 'Total',
-            default: 0
-        },
-        size: {
-            type: 'integer',
-            title: 'Size',
-            default: 10
-        },
-        page: {
-            type: 'integer',
-            title: 'Page',
-            default: 1
-        },
-        total_pages: {
-            type: 'integer',
-            title: 'Total Pages',
-            default: 1
-        },
-        data: {
-            title: 'Data',
-            default: {}
-        }
-    },
-    type: 'object',
-    required: ['status', 'message'],
-    title: 'EntityResponse',
-    deprecated: true,
-    example: {
-        data: [],
-        error: {},
-        message: 'Success',
-        page: 1,
-        size: 10,
-        status: 200,
-        total: 0,
-        total_pages: 1
-    }
 } as const;
 
 export const EntityTypeEnumSchema = {
@@ -4001,7 +4001,7 @@ export const FuelSupplyResponseSchemaSchema = {
 
 export const FuelTypeQuantityUnitsEnumSchemaSchema = {
     type: 'string',
-    enum: ['L', 'kg', 'kWh', 'm3'],
+    enum: ['L', 'kg', 'kWh', 'm³'],
     title: 'FuelTypeQuantityUnitsEnumSchema'
 } as const;
 
@@ -4422,40 +4422,148 @@ export const MessageSchema = {
     description: 'Simple message model.'
 } as const;
 
-export const NotificationChannelSubscriptionRequestSchema = {
+export const NotificationCountSchemaSchema = {
     properties: {
-        isEnabled: {
-            type: 'boolean',
-            title: 'Isenabled'
-        },
-        channelId: {
+        count: {
             type: 'integer',
-            title: 'Channelid'
-        },
-        notificationTypeId: {
-            type: 'integer',
-            title: 'Notificationtypeid'
+            title: 'Count'
         }
     },
     type: 'object',
-    required: ['isEnabled', 'channelId', 'notificationTypeId'],
-    title: 'NotificationChannelSubscriptionRequest'
+    required: ['count'],
+    title: 'NotificationCountSchema'
 } as const;
 
-export const NotificationMessageRequestSchema = {
+export const NotificationMessageSchemaSchema = {
     properties: {
+        notificationMessageId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notificationmessageid'
+        },
         isRead: {
-            type: 'boolean',
-            title: 'Isread'
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Isread',
+            default: false
         },
         isArchived: {
-            type: 'boolean',
-            title: 'Isarchived'
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Isarchived',
+            default: false
+        },
+        isWarning: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Iswarning',
+            default: false
+        },
+        isError: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Iserror',
+            default: false
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        relatedOrganizationId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Relatedorganizationid'
+        },
+        originUserProfileId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Originuserprofileid'
+        },
+        relatedUserProfileId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Relateduserprofileid'
+        },
+        notificationTypeId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notificationtypeid'
+        },
+        deleted: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted'
         }
     },
     type: 'object',
-    required: ['isRead', 'isArchived'],
-    title: 'NotificationMessageRequest'
+    title: 'NotificationMessageSchema'
 } as const;
 
 export const NotionalTransferCreateSchemaSchema = {
@@ -6081,6 +6189,80 @@ export const SortOrderSchema = {
     type: 'object',
     required: ['field', 'direction'],
     title: 'SortOrder'
+} as const;
+
+export const SubscriptionSchemaSchema = {
+    properties: {
+        notificationChannelSubscriptionId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notificationchannelsubscriptionid'
+        },
+        isEnabled: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Isenabled',
+            default: true
+        },
+        notificationChannelId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notificationchannelid'
+        },
+        userProfileId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Userprofileid'
+        },
+        notificationTypeId: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Notificationtypeid'
+        },
+        deleted: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted'
+        }
+    },
+    type: 'object',
+    title: 'SubscriptionSchema'
 } as const;
 
 export const SummarySchemaSchema = {

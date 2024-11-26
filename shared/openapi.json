@@ -1355,23 +1355,225 @@
         "tags": [
           "notifications"
         ],
-        "summary": "Get Notifications Channel Subscriptions",
-        "operationId": "getNotificationsChannelSubscriptions",
+        "summary": "Get Notification Messages By User Id",
+        "description": "Retrieve all notifications of a user",
+        "operationId": "getNotificationMessagesByUserId",
         "parameters": [
           {
-            "name": "user",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "User"
-            }
-          },
-          {
-            "name": "response_model",
+            "name": "is_read",
             "in": "query",
             "required": false,
             "schema": {
-              "title": "Response Model"
+              "type": "boolean",
+              "title": "Is Read"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationMessageSchema"
+                  },
+                  "title": "Response Getnotificationmessagesbyuserid"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/count": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Get Unread Notifications",
+        "description": "Retrieve counter for unread notifications by user id",
+        "operationId": "getUnreadNotifications",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationCountSchema"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/subscriptions": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Get Notifications Channel Subscriptions By User Id",
+        "operationId": "getNotificationsChannelSubscriptionsByUserId",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SubscriptionSchema"
+                  },
+                  "type": "array",
+                  "title": "Response Getnotificationschannelsubscriptionsbyuserid"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/save": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Save Notification",
+        "description": "Save a single notification",
+        "operationId": "saveNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NotificationMessageSchema"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeleteNotificationMessageSchema"
+                  }
+                ],
+                "title": "Request Data"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/NotificationMessageSchema"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeleteNotificationMessageResponseSchema"
+                    }
+                  ],
+                  "title": "Response Savenotification"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/subscriptions/save": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Save Subscription",
+        "operationId": "saveSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SubscriptionSchema"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeleteSubscriptionSchema"
+                  }
+                ],
+                "title": "Request Data"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SubscriptionSchema"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DeleteNotificationChannelSubscriptionResponseSchema"
+                    }
+                  ],
+                  "title": "Response Savesubscription"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/subscriptions/{notification_channel_subscription_id}": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Get Notification Channel Subscription By Id",
+        "operationId": "getNotificationChannelSubscriptionById",
+        "parameters": [
+          {
+            "name": "notification_channel_subscription_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Notification Channel Subscription Id"
             }
           }
         ],
@@ -1402,8 +1604,9 @@
         "tags": [
           "notifications"
         ],
-        "summary": "Get Notification",
-        "operationId": "getNotification",
+        "summary": "Get Notification Message By Id",
+        "description": "Retrieve a single notification by ID",
+        "operationId": "getNotificationMessageById",
         "parameters": [
           {
             "name": "notification_id",
@@ -1413,22 +1616,6 @@
               "type": "integer",
               "title": "Notification Id"
             }
-          },
-          {
-            "name": "user",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "User"
-            }
-          },
-          {
-            "name": "response_model",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "title": "Response Model"
-            }
           }
         ],
         "responses": {
@@ -1437,235 +1624,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EntityResponse"
+                  "$ref": "#/components/schemas/NotificationMessageSchema"
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "notifications"
-        ],
-        "summary": "Update Notification",
-        "operationId": "updateNotification",
-        "parameters": [
-          {
-            "name": "notification_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notification Id"
-            }
-          },
-          {
-            "name": "user",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "User"
-            }
-          },
-          {
-            "name": "response_model",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "title": "Response Model"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NotificationMessageRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/notifications/{notification_channel_subscription_id}": {
-      "get": {
-        "tags": [
-          "notifications"
-        ],
-        "summary": "Get Notification Channel Subscription",
-        "operationId": "getNotificationChannelSubscription",
-        "parameters": [
-          {
-            "name": "notification_channel_subscription_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notification Channel Subscription Id"
-            }
-          },
-          {
-            "name": "user",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "User"
-            }
-          },
-          {
-            "name": "response_model",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "title": "Response Model"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EntityResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "notifications"
-        ],
-        "summary": "Update Notification Channel Subscription",
-        "operationId": "updateNotificationChannelSubscription",
-        "parameters": [
-          {
-            "name": "notification_channel_subscription_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notification Channel Subscription Id"
-            }
-          },
-          {
-            "name": "user",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "User"
-            }
-          },
-          {
-            "name": "response_model",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "title": "Response Model"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NotificationChannelSubscriptionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "notifications"
-        ],
-        "summary": "Delete Notification Channel Subscription",
-        "operationId": "deleteNotificationChannelSubscription",
-        "parameters": [
-          {
-            "name": "notification_channel_subscription_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "title": "Notification Channel Subscription Id"
-            }
-          },
-          {
-            "name": "user",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "title": "User"
-            }
-          },
-          {
-            "name": "response_model",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "title": "Response Model"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -3091,9 +3053,9 @@
         "tags": [
           "fuel_codes"
         ],
-        "summary": "Export Users",
+        "summary": "Export Fuel Codes",
         "description": "Endpoint to export information of all fuel codes\n\nThis endpoint can support exporting data in different file formats (xls, xlsx, csv)\nas specified by the 'format' and 'media_type' variables.\n- 'format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.\n- 'media_type' sets the appropriate MIME type based on 'format':\n    'application/vnd.ms-excel' for 'xls',\n    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',\n    'text/csv' for 'csv'.\n\nThe SpreadsheetBuilder class is used for building the spreadsheet.\nIt allows adding multiple sheets with custom styling options and exports them as a byte stream.\nAlso, an example of how to use the SpreadsheetBuilder is provided in its class documentation.\n\nNote: Only the first sheet data is used for the CSV format,\n    as CSV files do not support multiple sheets.",
-        "operationId": "exportUsers",
+        "operationId": "exportFuelCodes",
         "parameters": [
           {
             "name": "format",
@@ -6582,6 +6544,50 @@
         ],
         "title": "DeleteFuelSupplyResponseSchema"
       },
+      "DeleteNotificationChannelSubscriptionResponseSchema": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteNotificationChannelSubscriptionResponseSchema"
+      },
+      "DeleteNotificationMessageResponseSchema": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeleteNotificationMessageResponseSchema"
+      },
+      "DeleteNotificationMessageSchema": {
+        "properties": {
+          "notificationMessageId": {
+            "type": "integer",
+            "title": "Notificationmessageid"
+          },
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "notificationMessageId",
+          "deleted"
+        ],
+        "title": "DeleteNotificationMessageSchema"
+      },
       "DeleteNotionalTransferResponseSchema": {
         "properties": {
           "message": {
@@ -6607,6 +6613,24 @@
           "message"
         ],
         "title": "DeleteOtherUsesResponseSchema"
+      },
+      "DeleteSubscriptionSchema": {
+        "properties": {
+          "notificationChannelSubscriptionId": {
+            "type": "integer",
+            "title": "Notificationchannelsubscriptionid"
+          },
+          "deleted": {
+            "type": "boolean",
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "notificationChannelSubscriptionId",
+          "deleted"
+        ],
+        "title": "DeleteSubscriptionSchema"
       },
       "DirectorReviewCountsSchema": {
         "properties": {
@@ -6704,64 +6728,6 @@
           "unit"
         ],
         "title": "EnergyDensitySchema"
-      },
-      "EntityResponse": {
-        "properties": {
-          "status": {
-            "type": "integer",
-            "title": "Status"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "error": {
-            "type": "object",
-            "title": "Error",
-            "default": {}
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total",
-            "default": 0
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size",
-            "default": 10
-          },
-          "page": {
-            "type": "integer",
-            "title": "Page",
-            "default": 1
-          },
-          "total_pages": {
-            "type": "integer",
-            "title": "Total Pages",
-            "default": 1
-          },
-          "data": {
-            "title": "Data",
-            "default": {}
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "message"
-        ],
-        "title": "EntityResponse",
-        "deprecated": true,
-        "example": {
-          "data": [],
-          "error": {},
-          "message": "Success",
-          "page": 1,
-          "size": 10,
-          "status": 200,
-          "total": 0,
-          "total_pages": 1
-        }
       },
       "EntityTypeEnum": {
         "type": "string",
@@ -9213,7 +9179,7 @@
           "L",
           "kg",
           "kWh",
-          "m3"
+          "m\u00b3"
         ],
         "title": "FuelTypeQuantityUnitsEnumSchema"
       },
@@ -9664,46 +9630,149 @@
         "title": "Message",
         "description": "Simple message model."
       },
-      "NotificationChannelSubscriptionRequest": {
+      "NotificationCountSchema": {
         "properties": {
-          "isEnabled": {
-            "type": "boolean",
-            "title": "Isenabled"
-          },
-          "channelId": {
+          "count": {
             "type": "integer",
-            "title": "Channelid"
-          },
-          "notificationTypeId": {
-            "type": "integer",
-            "title": "Notificationtypeid"
+            "title": "Count"
           }
         },
         "type": "object",
         "required": [
-          "isEnabled",
-          "channelId",
-          "notificationTypeId"
+          "count"
         ],
-        "title": "NotificationChannelSubscriptionRequest"
+        "title": "NotificationCountSchema"
       },
-      "NotificationMessageRequest": {
+      "NotificationMessageSchema": {
         "properties": {
+          "notificationMessageId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificationmessageid"
+          },
           "isRead": {
-            "type": "boolean",
-            "title": "Isread"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isread",
+            "default": false
           },
           "isArchived": {
-            "type": "boolean",
-            "title": "Isarchived"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isarchived",
+            "default": false
+          },
+          "isWarning": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iswarning",
+            "default": false
+          },
+          "isError": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iserror",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "relatedOrganizationId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relatedorganizationid"
+          },
+          "originUserProfileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Originuserprofileid"
+          },
+          "relatedUserProfileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relateduserprofileid"
+          },
+          "notificationTypeId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificationtypeid"
+          },
+          "deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted"
           }
         },
         "type": "object",
-        "required": [
-          "isRead",
-          "isArchived"
-        ],
-        "title": "NotificationMessageRequest"
+        "title": "NotificationMessageSchema"
       },
       "NotionalTransferCreateSchema": {
         "properties": {
@@ -11450,6 +11519,79 @@
           "direction"
         ],
         "title": "SortOrder"
+      },
+      "SubscriptionSchema": {
+        "properties": {
+          "notificationChannelSubscriptionId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificationchannelsubscriptionid"
+          },
+          "isEnabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isenabled",
+            "default": true
+          },
+          "notificationChannelId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificationchannelid"
+          },
+          "userProfileId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Userprofileid"
+          },
+          "notificationTypeId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notificationtypeid"
+          },
+          "deleted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "title": "SubscriptionSchema"
       },
       "SummarySchema": {
         "properties": {
