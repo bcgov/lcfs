@@ -115,7 +115,6 @@ async def test_get_table_options(other_uses_repo):
     assert "fuel_codes" in result
 
 
-
 @pytest.mark.anyio
 async def test_get_other_uses(other_uses_repo, mock_db_session):
     compliance_report_id = 1
@@ -125,26 +124,13 @@ async def test_get_other_uses(other_uses_repo, mock_db_session):
     mock_first_execute = MagicMock()
     mock_first_execute.scalar.return_value = mock_compliance_report_uuid
 
-    # Create a realistic mock other_use object
-    mock_other_use = MagicMock()
-    mock_other_use.other_uses_id = 1
-    mock_other_use.compliance_report_id = compliance_report_id
-    mock_other_use.quantity_supplied = 1000
-    mock_other_use.fuel_type = MagicMock(fuel_type="Gasoline")
-    mock_other_use.fuel_category = MagicMock(category="Petroleum-based")
-    mock_other_use.ci_of_fuel = 20.0
-    mock_other_use.provision_of_the_act = MagicMock(name="Provision A")
-    mock_other_use.provision_of_the_act.name = "Provision A"
-    mock_other_use.fuel_code = MagicMock(fuel_code="Code123")
-    mock_other_use.fuel_code.fuel_code = "Code123"
-    mock_other_use.expected_use = MagicMock(name="Transportation")
-    mock_other_use.expected_use.name = "Transportation"
-    mock_other_use.units = "L"
-    mock_other_use.rationale = "For testing purposes"
-    mock_other_use.group_uuid = mock_compliance_report_uuid
-    mock_other_use.version = 1
-    mock_other_use.user_type = "Supplier"
-    mock_other_use.action_type = "Create"
+    mock_provision_of_the_act = create_mock_entity({"name": "Some Act Name"})
+    mock_other_use = create_mock_entity(
+        {"provision_of_the_act": mock_provision_of_the_act}
+    )
+    mock_other_use = create_mock_entity(
+        {"provision_of_the_act": mock_provision_of_the_act}
+    )
 
     mock_result_other_uses = [mock_other_use]
 
@@ -231,5 +217,4 @@ async def test_update_other_use(other_uses_repo, mock_db_session):
 
     # Assertions
     assert isinstance(result, OtherUses)
-    assert mock_db_session.flush.call_count == 1
     assert mock_db_session.flush.call_count == 1
