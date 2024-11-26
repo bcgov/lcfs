@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 
@@ -20,6 +20,7 @@ class NotificationMessage(BaseModel, Auditable):
     is_warning = Column(Boolean, default=False)
     is_error = Column(Boolean, default=False)
     is_archived = Column(Boolean, default=False)
+    message = Column(Text, nullable=False)
 
     related_organization_id = Column(
         Integer, ForeignKey("organization.organization_id")
@@ -37,7 +38,9 @@ class NotificationMessage(BaseModel, Auditable):
     # related_document_id = Column(Integer, ForeignKey('document.id'))
     # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
 
-    related_organization = relationship("Organization")
+    related_organization = relationship(
+        "Organization", back_populates="notification_messages"
+    )
     notification_type = relationship("NotificationType")
     origin_user_profile = relationship(
         "UserProfile",

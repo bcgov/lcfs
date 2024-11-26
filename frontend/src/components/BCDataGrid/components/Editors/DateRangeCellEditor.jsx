@@ -1,139 +1,267 @@
-import { useState, forwardRef } from 'react'
+import { useState, forwardRef, useEffect, useRef, useMemo } from 'react'
+import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { InputAdornment, TextField, IconButton } from '@mui/material'
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
+import { CalendarToday, ArrowCircleRight, ArrowCircleDown } from '@mui/icons-material'
 import { PickerModal } from 'mui-daterange-picker-plus'
-import { format, parse } from 'date-fns'
-import ArrowCircleRightIcon from '@mui/icons-material/ArrowCircleRight'
-import ArrowCircleDownIcon from '@mui/icons-material/ArrowCircleDown'
+import { format, parse, isAfter, isBefore, isValid } from 'date-fns'
 import InputMask from 'react-input-mask'
+import colors from '@/themes/base/colors'
 
-export const DateRangeCellEditor = forwardRef(
-  ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
-    // State for the Modal
-    const [anchorEl, setAnchorEl] = useState(null)
+const customTheme = createTheme({
+  palette: {
+    primary: {
+      main: colors.primary.main,
+      contrastText: '#fff',
+    },
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          '&.Mui-focusVisible': {
+            outline: `2px solid ${colors.primary.main}`,
+            outlineOffset: '2px',
+          },
+        },
+        containedPrimary: {
+          backgroundColor: colors.primary.main,
+          '&:hover': {
+            backgroundColor: '#002850',
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          '&.Mui-focused': {
+            borderColor: colors.primary.main,
+            borderWidth: '2px',
+            boxShadow: '0 0 0 2px rgba(0, 51, 102, 0.25)',
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          '&.Mui-focusVisible': {
+            outline: '2px solid #003366',
+            outlineOffset: '2px',
+          },
+        },
+      },
+    },
+  },
+})
 
-    const handleClick = (event) => {
-      setAnchorEl(event.currentTarget)
-    }
+const modalBaseProps = {
+  hideDefaultRanges: true,
+  disablePortal: true,
+  anchorOrigin: {
+    vertical: 'bottom',
+    horizontal: 'left',
+  },
+  slotProps: {
+    paper: {
+      sx: {
+        borderRadius: '16px',
+        boxShadow: 'rgba(0, 0, 0, 0.21) 0px 0px 4px',
+        '.MuiButton-containedPrimary': {
+          backgroundColor: 'primary.main',
+          color: '#fff',
+          '&:hover': {
+            backgroundColor: 'primary.dark',
+          },
+        },
+      },
+    },
+  },
+}
 
-    const handleClose = () => {
+const RangeSeparatorIcons = {
+  xs: ArrowCircleDown,
+  md: ArrowCircleRight,
+}
+
+export const DateRangeCellEditor = forwardRef(({
+  value,
+  onValueChange,
+  minDate,
+  maxDate,
+  api,
+  colDef,
+  ...props
+}, ref) => {
+  const [anchorEl, setAnchorEl] = useState(null)
+  const [error, setError] = useState(false)
+  const [inputValue, setInputValue] = useState(
+    Array.isArray(value) ? `${value[0]} to ${value[1]}` : ''
+  )
+  const textFieldRef = useRef(null)
+  const calendarIconRef = useRef(null)
+
+  useEffect(() => {
+    textFieldRef.current?.focus()
+    textFieldRef.current?.select()
+  }, [])
+
+  const validateDateRange = useMemo(() => (startDate, endDate) => {
+    if (!isValid(startDate) || !isValid(endDate)) return false
+    if (isAfter(startDate, endDate)) return false
+    if (isBefore(startDate, minDate) || isAfter(endDate, maxDate)) return false
+    return true
+  }, [minDate, maxDate])
+
+  const handleSetDateRangeOnSubmit = ({ startDate, endDate }) => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+
+    if (validateDateRange(start, end)) {
       setAnchorEl(null)
-    }
-
-    const open = Boolean(anchorEl)
-
-    const handleSetDateRangeOnSubmit = (dateRange) => {
-      handleClose() // close the modal
       const formattedRange = [
-        format(new Date(dateRange.startDate.toUTCString()), 'yyyy-MM-dd'),
-        format(new Date(dateRange.endDate.toUTCString()), 'yyyy-MM-dd')
+        format(start, 'yyyy-MM-dd'),
+        format(end, 'yyyy-MM-dd'),
       ]
+      setError(false)
+      setInputValue(`${formattedRange[0]} to ${formattedRange[1]}`)
       onValueChange(formattedRange)
+    } else {
+      setError(true)
     }
+  }
 
-    const handleTextFieldChange = (event) => {
-      onValueChange(event.target.value)
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value)
+    setError(false) // Clear error while editing
+  }
+
+  const handleTextFieldBlur = () => {
+    const [startStr, endStr] = inputValue.split(' to ')
+    if (startStr && endStr) {
+      const startDate = parse(startStr, 'yyyy-MM-dd', new Date())
+      const endDate = parse(endStr, 'yyyy-MM-dd', new Date())
+
+      if (validateDateRange(startDate, endDate)) {
+        const formattedRange = [
+          format(startDate, 'yyyy-MM-dd'),
+          format(endDate, 'yyyy-MM-dd'),
+        ]
+        setError(false)
+        setInputValue(`${formattedRange[0]} to ${formattedRange[1]}`)
+        onValueChange(formattedRange)
+      } else {
+        setError(true)
+      }
+    } else {
+      setError(true)
     }
+  }
 
-    const handleTextFieldBlur = (event) => {
-      const inputText = event.target.value
-
-      // Parse the date range from the input, expecting "YYYY-MM-DD to YYYY-MM-DD" format
-      const dateParts = inputText.split(' to ')
-      if (dateParts.length === 2) {
-        const startDate = parse(dateParts[0], 'yyyy-MM-dd', new Date())
-        const endDate = parse(dateParts[1], 'yyyy-MM-dd', new Date())
-
-        if (!isNaN(startDate) && !isNaN(endDate)) {
-          const formattedRange = [
-            format(startDate, 'yyyy-MM-dd'),
-            format(endDate, 'yyyy-MM-dd')
-          ]
-          onValueChange(formattedRange)
-        } else {
-          console.warn("Invalid date format entered in text field")
+  const handleKeyDown = (event) => {
+    if (event.key === 'Tab') {
+      if (document.activeElement === textFieldRef.current) {
+        event.preventDefault()
+        calendarIconRef.current?.focus()
+      } else if (document.activeElement === calendarIconRef.current && api) {
+        event.preventDefault()
+        api.stopEditing()
+        api.tabToNextCell()
+        const focusedCell = api.getFocusedCell()
+        if (focusedCell) {
+          setTimeout(() => {
+            api.startEditingCell({
+              rowIndex: focusedCell.rowIndex,
+              colKey: focusedCell.column.getId(),
+            })
+          }, 0)
         }
       }
     }
+  }
 
-    return (
-      <>
-        <InputMask
-          mask="9999-99-99 to 9999-99-99"
-          value={value}
-          disabled={false}
-          onChange={handleTextFieldChange}
-          onBlur={handleTextFieldBlur}
-        >
-          {() => (
-            <TextField
-              ref={ref}
-              fullWidth
-              margin="none"
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={handleClick}>
-                      <CalendarTodayIcon />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-            />
-          )}
-        </InputMask>
+  const initialDateRange = useMemo(() => ({
+    startDate: Array.isArray(value) && value[0]
+      ? new Date(value[0] + 'T08:00:00.000Z')
+      : minDate,
+    endDate: Array.isArray(value) && value[1]
+      ? new Date(value[1] + 'T08:00:00.000Z')
+      : maxDate,
+  }), [value, minDate, maxDate])
+
+  return (
+    <div
+      className="ag-grid-date-range-selector ag-cell-not-inline-editing"
+      style={{ width: colDef?.minWidth || '330px' }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={handleKeyDown}
+      aria-label="Date range editor"
+      role="group"
+    >
+      <InputMask
+        mask="9999-99-99 to 9999-99-99"
+        value={inputValue}
+        onChange={handleInputChange}
+        onBlur={handleTextFieldBlur}
+      >
+        {(inputProps) => (
+          <TextField
+            {...inputProps}
+            inputRef={textFieldRef}
+            fullWidth
+            margin="none"
+            error={error}
+            helperText={error ? 'Invalid range. Using default range' : ''}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={(e) => setAnchorEl(e.currentTarget)}
+                    ref={calendarIconRef}
+                    tabIndex={0}
+                    aria-label="Open calendar"
+                  >
+                    <CalendarToday />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            inputProps={{
+              'aria-label': 'Date range input',
+              'aria-invalid': error,
+              'aria-describedby': error ? 'date-range-error' : undefined,
+            }}
+          />
+        )}
+      </InputMask>
+      {error && (
+        <span id="date-range-error" style={{ display: 'none' }}>
+          Invalid date range
+        </span>
+      )}
+      <ThemeProvider theme={customTheme}>
         <PickerModal
-          initialDateRange={
-            Array.isArray(value) && value[0]
-              ? {
-                  startDate: new Date(value[0] + 'T08:00:00.000Z'),
-                  endDate: new Date(value[1] + 'T08:00:00.000Z')
-                }
-              : {
-                  startDate: new Date(props.minDate + 'T08:00:00.000Z'),
-                  endDate: new Date(props.maxDate + 'T08:00:00.000Z')
-                }
-          }
-          minDate={new Date(props.minDate + 'T08:00:00.000Z')}
-          maxDate={new Date(props.maxDate + 'T08:00:00.000Z')}
-          hideDefaultRanges={true}
+          initialDateRange={initialDateRange}
+          minDate={minDate}
+          maxDate={maxDate}
+          {...modalBaseProps}
           customProps={{
-            onSubmit: (range) => handleSetDateRangeOnSubmit(range),
-            onCloseCallback: handleClose,
-            RangeSeparatorIcons: {
-              xs: ArrowCircleDownIcon,
-              md: ArrowCircleRightIcon
-            }
+            onSubmit: handleSetDateRangeOnSubmit,
+            onCloseCallback: () => setAnchorEl(null),
+            RangeSeparatorIcons,
           }}
           modalProps={{
-            open,
+            open: Boolean(anchorEl),
             anchorEl,
-            onClose: handleClose,
-            disablePortal: true,
-            slotProps: {
-              paper: {
-                sx: {
-                  borderRadius: '16px',
-                  boxShadow: 'rgba(0, 0, 0, 0.21) 0px 0px 4px',
-                  '.MuiButton-containedPrimary': {
-                    backgroundColor: 'primary.main',
-                    color: '#fff',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark'
-                    }
-                  }
-                }
-              }
-            },
-            anchorOrigin: {
-              vertical: 'bottom',
-              horizontal: 'left'
-            }
+            onClose: () => setAnchorEl(null),
+            ...modalBaseProps,
           }}
         />
-      </>
-    )
-  }
-)
+      </ThemeProvider>
+    </div>
+  )
+})
 
 DateRangeCellEditor.displayName = 'DateRangeCellEditor'

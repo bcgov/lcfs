@@ -406,7 +406,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 60,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
-      options: ['L', 'kg', 'kWh', 'm3'],
+      options: ['L', 'kg', 'kWh', 'm³'],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -443,7 +443,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'energyDensity',
@@ -516,7 +516,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true

@@ -164,6 +164,7 @@ export const finalSupplyEquipmentColDefs = (
     ),
     minWidth: 220,
     cellEditor: AutocompleteCellEditor,
+    suppressKeyboardEvent,
     cellEditorParams: {
       options: optionsData?.ports || [],
       multiple: false,
@@ -331,7 +332,7 @@ export const finalSupplyEquipmentColDefs = (
 export const defaultColDef = {
   editable: true,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true

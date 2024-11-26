@@ -182,7 +182,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                     exc_info=e,
                 )
                 if e.status_code == 403:
-                    raise HTTPException(status_code=404, detail="Not Found")
+                    raise HTTPException(status_code=403, detail="Forbidden resource")
                 raise
             except DataNotFoundException:
                 raise HTTPException(status_code=404, detail="Not Found")

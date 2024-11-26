@@ -99,9 +99,7 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
 
 # FuelExportActionService Tests
 @pytest.mark.anyio
-async def test_action_create_fuel_export_success(
-    fuel_export_action_service, mock_repo, mock_fuel_export_services
-):
+async def test_action_create_fuel_export_success(fuel_export_action_service, mock_repo):
     input_data = FuelExportCreateUpdateSchema(
         compliance_report_id=1,
         fuel_type_id=1,
@@ -132,27 +130,17 @@ async def test_action_create_fuel_export_success(
         fuel_type=mock_fuel_type.dict(),
         fuel_category=mock_fuel_category.dict(),
     )
-
-    mock_fuel_export_services.validate_and_calculate_compliance_units.return_value = (
-        input_data
-    )
     mock_repo.create_fuel_export.return_value = mock_created_export
 
     result = await fuel_export_action_service.create_fuel_export(
         input_data, UserTypeEnum.SUPPLIER
     )
-
     assert isinstance(result, FuelExportSchema)
-    mock_fuel_export_services.validate_and_calculate_compliance_units.assert_called_once_with(
-        input_data
-    )
     mock_repo.create_fuel_export.assert_called_once()
 
 
 @pytest.mark.anyio
-async def test_action_update_fuel_export_success(
-    fuel_export_action_service, mock_repo, mock_fuel_export_services
-):
+async def test_action_update_fuel_export_success(fuel_export_action_service, mock_repo):
     input_data = FuelExportCreateUpdateSchema(
         fuel_export_id=1,
         compliance_report_id=1,
@@ -186,21 +174,13 @@ async def test_action_update_fuel_export_success(
         fuel_type=mock_fuel_type.dict(),
         fuel_category=mock_fuel_category.dict(),
     )
-
-    mock_fuel_export_services.validate_and_calculate_compliance_units.return_value = (
-        input_data
-    )
     mock_repo.get_fuel_export_version_by_user.return_value = mock_existing_export
     mock_repo.update_fuel_export.return_value = mock_existing_export
 
     result = await fuel_export_action_service.update_fuel_export(
         input_data, UserTypeEnum.SUPPLIER
     )
-
     assert isinstance(result, FuelExportSchema)
-    mock_fuel_export_services.validate_and_calculate_compliance_units.assert_called_once_with(
-        input_data
-    )
     mock_repo.get_fuel_export_version_by_user.assert_called_once()
     mock_repo.update_fuel_export.assert_called_once()
 

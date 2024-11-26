@@ -14,7 +14,7 @@ class FuelTypeQuantityUnitsEnumSchema(str, Enum):
     Litres = "L"
     Kilograms = "kg"
     Kilowatt_hour = "kWh"
-    Cubic_metres = "m3"
+    Cubic_metres = "m³"
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -171,15 +171,10 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_other: Optional[str] = None
-    fuel_type: Union[str, FuelTypeSchema]
     fuel_type_id: int
-    fuel_category: Union[str, FuelCategoryResponseSchema]
     fuel_category_id: int
-    end_use_type: Optional[Union[str, EndUseTypeSchema]] = None
     end_use_id: Optional[int] = None
-    provision_of_the_act: Union[str, ProvisionOfTheActSchema]
     provision_of_the_act_id: int
-    fuel_code: Optional[Union[str, FuelCodeSchema]] = None
     fuel_code_id: Optional[int] = None
     quantity: int = Field(..., gt=0)
     units: str

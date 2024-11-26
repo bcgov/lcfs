@@ -298,6 +298,16 @@ class FuelSupplyRepository:
     @repo_handler
     async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
         """Check if this would duplicate an existing row"""
+
+        delete_group_subquery = (
+            select(FuelSupply.group_uuid)
+            .where(
+                FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
+                FuelSupply.action_type == ActionTypeEnum.DELETE,
+            )
+            .distinct()
+        )
+
         ### Type, Category, and Determine CI/Fuel codes are included
         query = select(FuelSupply.fuel_supply_id).where(
             FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
@@ -306,11 +316,13 @@ class FuelSupplyRepository:
             FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
             FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
             FuelSupply.group_uuid != fuel_supply.group_uuid,
-            # Do not count the row of a duplicate of itself
-            and_(
+            FuelSupply.end_use_id == fuel_supply.end_use_id,
+            FuelSupply.action_type == ActionTypeEnum.CREATE,
+            ~FuelSupply.group_uuid.in_(delete_group_subquery),
+            (
                 FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
                 if fuel_supply.fuel_supply_id is not None
-                else True  # If fuel_supply_id is None, don't add this condition
+                else True
             ),
         )
 

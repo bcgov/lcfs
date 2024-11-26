@@ -24,6 +24,12 @@ vi.mock('../SigningAuthorityDeclaration', () => ({
   )
 }))
 
+vi.mock('@react-keycloak/web', () => ({
+  useKeycloak: vi.fn().mockReturnValue({
+    keycloak: { authenticated: true }
+  })
+}))
+
 // Mock MUI components
 vi.mock('@mui/material', async (importOriginal) => {
   const actual = await importOriginal()

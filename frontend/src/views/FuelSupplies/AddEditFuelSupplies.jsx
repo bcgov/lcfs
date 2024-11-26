@@ -1,25 +1,25 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { DEFAULT_CI_FUEL } from '@/constants/common'
+import * as ROUTES from '@/constants/routes/routes.js'
 import {
   useFuelSupplyOptions,
   useGetFuelSupplies,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { v4 as uuid } from 'uuid'
-import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
+import { Typography } from '@mui/material'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
+import { defaultColDef, fuelSupplyColDefs } from './_schema'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState()
+  const [, setGridApi] = useState()
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
@@ -69,6 +69,7 @@ export const AddEditFuelSupplies = () => {
         const updatedRowData = data.fuelSupplies.map((item) => ({
           ...item,
           complianceReportId, // This takes current reportId, important for versioning
+          compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
           fuelTypeOther:
@@ -83,7 +84,7 @@ export const AddEditFuelSupplies = () => {
         setRowData([{ id: uuid() }])
       }
     },
-    [data, complianceReportId]
+    [data, complianceReportId, compliancePeriod]
   )
 
   useEffect(() => {

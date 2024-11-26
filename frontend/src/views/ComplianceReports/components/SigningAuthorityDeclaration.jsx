@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Checkbox, FormControlLabel, Paper } from '@mui/material'
+import { Checkbox, FormControlLabel, Paper, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import Box from '@mui/material/Box'
@@ -37,23 +37,28 @@ const SigningAuthorityDeclaration = ({ onChange, disabled }) => {
           </BCAlert>
         </Box>
       )}
-      <FormControlLabel
-        control={
-          <Checkbox
-            disabled={disabled}
-            checked={checked}
-            onChange={handleChange}
-            id="signing-authority-declaration"
-            data-test="signing-authority-checkbox"
-            color="primary"
-          />
-        }
-        label={t('report:declarationText')}
-        style={{
-          marginTop: 20,
-          alignItems: 'flex-start'
-        }}
-      />
+      <Tooltip
+        title={disabled ? t('report:noSigningAuthorityTooltip') : ''}
+        placement="top-start"
+      >
+        <FormControlLabel
+          control={
+            <Checkbox
+              disabled={disabled}
+              checked={checked}
+              onChange={handleChange}
+              id="signing-authority-declaration"
+              data-test="signing-authority-checkbox"
+              color="primary"
+            />
+          }
+          label={t('report:declarationText')}
+          style={{
+            marginTop: 20,
+            alignItems: 'flex-start'
+          }}
+        />
+      </Tooltip>
     </Paper>
   )
 }

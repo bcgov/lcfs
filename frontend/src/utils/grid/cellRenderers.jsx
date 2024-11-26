@@ -20,7 +20,11 @@ export const LinkRenderer = (props) => {
   const location = useLocation()
   return (
     <Link
-      to={location.pathname + '/' + ((props.url && props.url({ data: props.data })) || props?.node?.id)}
+      to={
+        location.pathname +
+        '/' +
+        ((props.url && props.url({ data: props.data })) || props?.node?.id)
+      }
       style={{ color: '#000' }}
     >
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
@@ -286,7 +290,9 @@ export const ReportsStatusRenderer = (props) => {
   const statusIndex = statusArr.indexOf(props.data.currentStatus.status)
   return (
     <Link
-      to={props.url && location.pathname + '/' + props.url({data: props.data})}
+      to={
+        props.url && location.pathname + '/' + props.url({ data: props.data })
+      }
       style={{ color: '#000' }}
     >
       <BCBox

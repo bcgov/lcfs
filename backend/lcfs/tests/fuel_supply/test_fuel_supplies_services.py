@@ -240,14 +240,12 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     mock_repo.get_fuel_supply_version_by_user.assert_awaited_once_with(
         fs_data.group_uuid, fs_data.version, user_type
     )
-    mock_fuel_code_repo.get_fuel_type_by_id.assert_awaited_once_with(
-        fs_data.fuel_type_id
-    )
-    mock_fuel_code_repo.get_energy_effectiveness_ratio.assert_awaited_once_with(
-        fs_data.fuel_type_id, fs_data.fuel_category_id, fs_data.end_use_id
-    )
-    mock_fuel_code_repo.get_energy_density.assert_awaited_once_with(
-        fs_data.fuel_type_id
+    mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
+        fuel_type_id=fs_data.fuel_type_id,
+        fuel_category_id=fs_data.fuel_category_id,
+        end_use_id=fs_data.end_use_id,
+        fuel_code_id=fs_data.fuel_code_id,
+        compliance_period=fs_data.compliance_period,
     )
     mock_repo.update_fuel_supply.assert_awaited_once_with(existing_fuel_supply)
 
@@ -295,6 +293,7 @@ async def test_create_fuel_supply(fuel_supply_action_service):
             provisionOfTheAct={"provisionOfTheActId": 1, "name": "Act Provision"},
             endUseType={"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
             units="L",
+            compliancePeriod="2024",
         )
     )
     mock_fuel_code_repo.get_fuel_type_by_id = AsyncMock(
@@ -315,11 +314,13 @@ async def test_create_fuel_supply(fuel_supply_action_service):
 
     assert isinstance(response, FuelSupplyResponseSchema)
     mock_repo.create_fuel_supply.assert_awaited_once()
-    mock_fuel_code_repo.get_fuel_type_by_id.assert_awaited_once_with(
-        fs_data.fuel_type_id
+    mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
+        fuel_type_id=fs_data.fuel_type_id,
+        fuel_category_id=fs_data.fuel_category_id,
+        end_use_id=fs_data.end_use_id,
+        fuel_code_id=fs_data.fuel_code_id,
+        compliance_period=fs_data.compliance_period,
     )
-    mock_fuel_code_repo.get_energy_effectiveness_ratio.assert_awaited_once()
-    mock_fuel_code_repo.get_energy_density.assert_awaited_once()
 
 
 @pytest.mark.anyio

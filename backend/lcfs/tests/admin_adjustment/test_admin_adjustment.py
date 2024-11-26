@@ -43,7 +43,7 @@ async def test_get_admin_adjustment_unauthorized(
 ):
     """Test that a user without correct organization access cannot retrieve an admin adjustment."""
     # Set user with an unauthorized role or incorrect organization
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])  # A non-government role
+    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS])  # A non-government role
     admin_adjustment_id = 1  # Assuming an admin adjustment with ID 1 exists
 
     # Mock the service to return an admin adjustment belonging to a different organization
@@ -58,7 +58,7 @@ async def test_get_admin_adjustment_unauthorized(
             "get_admin_adjustment", admin_adjustment_id=admin_adjustment_id
         )
         response = await client.get(url)
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
 @pytest.mark.anyio
@@ -119,4 +119,4 @@ async def test_fail_update_processed_admin_adjustment(
         "adminAdjustmentId": "2",
     }
     response = await client.put(url, json=admin_adjustment_update_payload)
-    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.status_code == status.HTTP_403_FORBIDDEN
