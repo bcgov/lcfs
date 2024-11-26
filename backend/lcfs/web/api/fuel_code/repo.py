@@ -548,7 +548,7 @@ class FuelCodeRepository:
                 WHERE fcp.prefix = :prefix
             ),
             all_possible_codes AS (
-                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101)) AS base_code
+                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101) + 1) AS base_code
             ),
             available_codes AS (
                 SELECT base_code

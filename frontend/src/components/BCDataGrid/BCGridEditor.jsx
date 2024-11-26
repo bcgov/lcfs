@@ -214,7 +214,7 @@ export const BCGridEditor = ({
     // Check if any column has `headerComponent` matching "RequiredHeader"
     return columnDefs.some(
       colDef => colDef.headerComponent?.name === 'RequiredHeader'
-    );
+    ) || columnDefs.some(colDef => !!colDef.headerComponent)
   }, [ref])
 
 
