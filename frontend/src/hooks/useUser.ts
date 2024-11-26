@@ -36,3 +36,20 @@ export const useGetUserLoginHistory = (
     }
   })
 }
+
+export const useGetUserActivities = (params: PaginationRequestSchema = {}) => {
+  return useQuery({
+    queryKey: ['/users/activities/all', params],
+    queryFn: async () => {
+      try {
+        const { data } = await UsersService.getAllUserActivities({
+          body: params
+        })
+
+        return data
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  })
+}

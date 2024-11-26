@@ -69,8 +69,29 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
       onValueChange(selectedValues)
       event.preventDefault()
       api.stopEditing()
+
+      const navigateToNextCell = () => {
+        const focusedCell = api.getFocusedCell()
+        if (focusedCell) {
+          api.startEditingCell({
+            rowIndex: focusedCell.rowIndex,
+            colKey: focusedCell.column.getId(),
+          })
+        }
+      }
+
+      if (event.shiftKey) {
+        // Shift + Tab: Move to the previous cell
+        api.tabToPreviousCell()
+        setTimeout(navigateToNextCell, 0) // Ensure editing starts after navigation
+      } else {
+        // Tab: Move to the next cell
+        api.tabToNextCell()
+        setTimeout(navigateToNextCell, 0) // Ensure editing starts after navigation
+      }
     }
   }
+
 
   const handleBlur = (event) => {
     if (onBlur) {
@@ -164,7 +185,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
             onBlur={handleBlur}
             inputProps={{
               ...params.inputProps,
-              autoComplete: 'new-password' // disable autocomplete and autofill
+              autoComplete: 'off' // disable autocomplete and autofill
             }}
           />
         )}

@@ -25,7 +25,7 @@ UNITS_MAPPING = {
     "L": QuantityUnitsEnum.Litres,
     "kg": QuantityUnitsEnum.Kilograms,
     "kWh": QuantityUnitsEnum.Kilowatt_hour,
-    "m3": QuantityUnitsEnum.Cubic_metres,
+    "m³": QuantityUnitsEnum.Cubic_metres,
 }
 
 

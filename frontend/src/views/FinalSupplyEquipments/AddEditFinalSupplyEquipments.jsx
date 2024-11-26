@@ -18,7 +18,7 @@ import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState(null)
+  const [, setGridApi] = useState(null)
   const [errors, setErrors] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
@@ -217,7 +217,7 @@ export const AddEditFinalSupplyEquipments = () => {
         modified: true
       }
 
-      params.api.applyTransaction({
+      const transaction = params.api.applyTransaction({
         add: [rowData],
         addIndex: params.node?.rowIndex + 1
       })
@@ -228,6 +228,7 @@ export const AddEditFinalSupplyEquipments = () => {
         message: 'Error updating row: Fuel supply equipment Fields required',
         severity: 'error'
       })
+      return transaction
     }
   }
 

@@ -363,7 +363,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     minWidth: 100,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
-      options: ['L', 'kg', 'kWh', 'm3'],
+      options: ['L', 'kg', 'kWh', 'm³'],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,

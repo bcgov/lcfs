@@ -9,7 +9,8 @@ import PropTypes from 'prop-types'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { v4 as uuid } from 'uuid'
 import BCButton from '@/components/BCButton'
-import { Menu, MenuItem, Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
+import { Menu, MenuItem } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
@@ -44,9 +45,43 @@ export const BCGridEditor = ({
 }) => {
   const localRef = useRef(null)
   const ref = gridRef || localRef
+  const firstEditableColumnRef = useRef(null)
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
   const { t } = useTranslation(['common'])
+
+  // Helper function to find and cache first editable column
+  const findFirstEditableColumn = useCallback(() => {
+    if (!ref.current?.api) return null
+
+    if (!firstEditableColumnRef.current) {
+      const columns = ref.current.api.getAllDisplayedColumns()
+      firstEditableColumnRef.current = columns.find(col =>
+        col.colDef.editable !== false &&
+        !['action', 'checkbox'].includes(col.colDef.field)
+      )
+    }
+    return firstEditableColumnRef.current
+  }, [])
+
+  // Helper function to start editing first editable cell in a row
+  const startEditingFirstEditableCell = useCallback((rowIndex) => {
+    if (!ref.current?.api) return
+
+    // Ensure we have the first editable column
+    const firstEditableColumn = findFirstEditableColumn()
+    if (!firstEditableColumn) return
+
+    // Use setTimeout to ensure the grid is ready
+    setTimeout(() => {
+      ref.current.api.ensureIndexVisible(rowIndex)
+      ref.current.api.setFocusedCell(rowIndex, firstEditableColumn.getColId())
+      ref.current.api.startEditingCell({
+        rowIndex,
+        colKey: firstEditableColumn.getColId()
+      })
+    }, 100)
+  }, [findFirstEditableColumn])
 
   const handleExcelPaste = useCallback(
     (params) => {
@@ -106,13 +141,18 @@ export const BCGridEditor = ({
     [onCellValueChanged]
   )
 
-  const onCellClicked = (params) => {
+  const onCellClicked = async (params) => {
     if (
       params.column.colId === 'action' &&
       params.event.target.dataset.action &&
       onAction
     ) {
-      onAction(params.event.target.dataset.action, params)
+      const transaction = await onAction(params.event.target.dataset.action, params)
+      // Focus and edit the first editable column of the duplicated row
+      if (transaction?.add.length > 0) {
+        const duplicatedRowNode = transaction.add[0]
+        startEditingFirstEditableCell(duplicatedRowNode.rowIndex)
+      }
     }
   }
 
@@ -124,7 +164,7 @@ export const BCGridEditor = ({
     setAnchorEl(null)
   }
 
-  const handleAddRows = (numRows) => {
+  const handleAddRows = useCallback((numRows) => {
     let newRows = []
     if (props.onAddRows) {
       newRows = props.onAddRows(numRows)
@@ -133,9 +173,19 @@ export const BCGridEditor = ({
         .fill()
         .map(() => ({ id: uuid() }))
     }
-    ref.current.api.applyTransaction({ add: newRows })
+
+    // Add the new rows
+    ref.current.api.applyTransaction({
+      add: newRows,
+      addIndex: ref.current.api.getDisplayedRowCount()
+    })
+
+    // Focus and start editing the first new row
+    const firstNewRowIndex = ref.current.api.getDisplayedRowCount() - numRows
+    startEditingFirstEditableCell(firstNewRowIndex)
+
     setAnchorEl(null)
-  }
+  }, [props.onAddRows, startEditingFirstEditableCell])
 
   const isGridValid = () => {
     let isValid = true
@@ -171,7 +221,7 @@ export const BCGridEditor = ({
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
       {hasRequiredHeaderComponent() &&
-        <Typography
+        <BCTypography
           variant="body4"
           color="text"
           component="div"
@@ -206,9 +256,7 @@ export const BCGridEditor = ({
                 <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
               )
             }
-            onClick={() =>
-              addMultiRow ? handleAddRowsClick : handleAddRows(1)
-            }
+            onClick={addMultiRow ? handleAddRowsClick : () => handleAddRows(1)}
           >
             Add row
           </BCButton>
@@ -271,5 +319,6 @@ BCGridEditor.propTypes = {
   onAction: PropTypes.func,
   onRowEditingStopped: PropTypes.func,
   onCellValueChanged: PropTypes.func,
-  showAddRowsButton: PropTypes.bool
+  showAddRowsButton: PropTypes.bool,
+  onAddRows: PropTypes.func
 }

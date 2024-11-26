@@ -133,7 +133,7 @@ describe('TransferView Component', () => {
     )
 
     // Check if Comments component is rendered based on the status
-    expect(screen.getByText('ExternalComments')).toBeInTheDocument()
+    expect(screen.getByText('transfer:commentsLabel')).toBeInTheDocument()
   })
 
   it('does not render Comments component for terminal statuses', () => {

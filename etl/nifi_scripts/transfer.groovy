@@ -1,34 +1,11 @@
-import org.apache.nifi.processor.io.StreamCallback
-import org.apache.nifi.processor.exception.ProcessException
 import groovy.json.JsonSlurper
-import groovy.json.JsonBuilder
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.SQLException
-import groovy.sql.Sql
+import java.time.OffsetDateTime
+import java.sql.Timestamp
 
-REL_SUCCESS = REL_SUCCESS
-REL_FAILURE = REL_FAILURE
-
-def flowFile = session.get()
-if (!flowFile) return
-
-try {
-    // Get database connections from controller services
-    log.info("Transfer data processing started")
-    def sourceDbcpService = context.controllerServiceLookup.getControllerService("3245b078-0192-1000-ffff-ffffba20c1eb")
-    def destinationDbcpService = context.controllerServiceLookup.getControllerService("3244bf63-0192-1000-ffff-ffffc8ec6d93")
-
-    if (!sourceDbcpService || !destinationDbcpService) {
-        log.error("Database connection services not found")
-        session.transfer(flowFile, REL_FAILURE)
-        return
-    }
-    final String INSERT_BATCH_SIZE = 100  // Configure batch size for inserts
-    final int CACHE_SIZE_LIMIT = 100
-    // SQL Queries
-    final String SOURCE_QUERY = """
+def SOURCE_QUERY = """
           WITH
         internal_comment AS (
           SELECT
@@ -174,162 +151,188 @@ try {
         ctzr.description,
         internal_comment.role_names;
       """
-    final String INSERT_TRANSFER_SQL = '''
+
+// Fetch connections to both the source and destination databases
+def sourceDbcpService = context.controllerServiceLookup.getControllerService('3245b078-0192-1000-ffff-ffffba20c1eb')
+def destinationDbcpService = context.controllerServiceLookup.getControllerService('3244bf63-0192-1000-ffff-ffffc8ec6d93')
+
+Connection sourceConn = null
+Connection destinationConn = null
+
+try {
+    sourceConn = sourceDbcpService.getConnection()
+    destinationConn = destinationDbcpService.getConnection()
+    destinationConn.setAutoCommit(false)
+
+    // Fetch status and category data once and cache it
+    def preparedData = prepareData(destinationConn)
+
+    def statements = prepareStatements(destinationConn)
+
+    destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_transaction_aggregate() CASCADE;')
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+
+    PreparedStatement sourceStmt = sourceConn.prepareStatement(SOURCE_QUERY)
+    ResultSet resultSet = sourceStmt.executeQuery()
+
+    int recordCount = 0
+
+    while (resultSet.next()) {
+        recordCount++
+        def jsonSlurper = new JsonSlurper()
+        def internalComments = resultSet.getString('internal_comments')
+        def creditTradeHistory = resultSet.getString('credit_trade_history')
+
+        def internalCommentsJson = internalComments ? jsonSlurper.parseText(internalComments) : []
+        def creditTradeHistoryJson = creditTradeHistory ? jsonSlurper.parseText(creditTradeHistory) : []
+
+        def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
+                resultSet,
+                statements.transactionStmt)
+
+        def transferId = insertTransfer(resultSet, statements.transferStmt,
+                fromTransactionId, toTransactionId, preparedData)
+
+        if (transferId) {
+            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
+            processInternalComments(transferId, internalCommentsJson, statements.internalCommentStmt,
+                    statements.transferInternalCommentStmt)
+        } else {
+            log.warn("Transfer not inserted for record: ${resultSet.getInt('transfer_id')}")
+        }
+    }
+    resultSet.close()
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
+        RETURNS void AS \$\$
+        BEGIN
+            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate;
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate')
+
+    destinationConn.commit()
+    log.debug("Processed ${recordCount} records successfully.")
+} catch (Exception e) {
+    log.error('Error occurred while processing data', e)
+    destinationConn?.rollback()
+} finally {
+    if (sourceConn != null) sourceConn.close()
+    if (destinationConn != null) destinationConn.close()
+}
+
+def logResultSetRow(ResultSet rs) {
+    def metaData = rs.getMetaData()
+    def columnCount = metaData.getColumnCount()
+    def rowData = [:]
+
+    for (int i = 1; i <= columnCount; i++) {
+        def columnName = metaData.getColumnName(i)
+        def columnValue = rs.getObject(i)
+        rowData[columnName] = columnValue
+    }
+
+    log.debug("Row data: ${rowData}")
+}
+
+def loadTableData(Connection conn, String query, String keyColumn, String valueColumn) {
+    def dataMap = [:]
+    def stmt = conn.createStatement()
+    def rs = stmt.executeQuery(query)
+
+    while (rs.next()) {
+        def key = rs.getString(keyColumn)
+        def value = rs.getInt(valueColumn)
+        if (dataMap.containsKey(key)) {
+            log.warn("Duplicate key found for ${key}. Existing value: ${dataMap[key]}, New value: ${value}.")
+        }
+        dataMap[key] = value
+    }
+
+    rs.close()
+    stmt.close()
+    return dataMap
+}
+
+def prepareData(Connection conn) {
+    def categoryMap = loadTableData(conn,
+        'SELECT DISTINCT category, MIN(transfer_category_id) AS transfer_category_id FROM transfer_category GROUP BY category',
+        'category',
+        'transfer_category_id'
+    )
+    def statusMap = loadTableData(conn,
+        'SELECT DISTINCT status, MIN(transfer_status_id) AS transfer_status_id FROM transfer_status GROUP BY status',
+        'status',
+        'transfer_status_id'
+    )
+    return [
+            categoryMap: categoryMap,
+            statusMap  : statusMap
+    ]
+}
+
+def getTransferCategoryId(String category, Map preparedData) {
+    return preparedData.categoryMap[category]
+}
+
+def getStatusId(String status, Map preparedData) {
+    return preparedData.statusMap[status]
+}
+
+def prepareStatements(Connection conn) {
+    def INSERT_TRANSFER_SQL = '''
           INSERT INTO transfer (
-              transfer_id, from_organization_id, to_organization_id, from_transaction_id, to_transaction_id, agreement_date, transaction_effective_date, price_per_unit, quantity, from_org_comment, to_org_comment, gov_comment, transfer_category_id, current_status_id, recommendation, current_date, update_date, create_user, udpate_user
-          ) VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              from_organization_id, to_organization_id, from_transaction_id, to_transaction_id,
+              agreement_date, transaction_effective_date, price_per_unit, quantity, from_org_comment, to_org_comment, gov_comment,
+              transfer_category_id, current_status_id, recommendation, create_date, update_date, create_user, update_user, effective_status, transfer_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::transfer_recommendation_enum, ?, ?, ?, ?, true, ?)
           RETURNING transfer_id
       '''
-    final String INSERT_TRANSFER_HISTORY_SQL = '''
+    def INSERT_TRANSFER_HISTORY_SQL = '''
           INSERT INTO transfer_history (
-              transfer_history_id, transfer_id, transfer_status_id, user_profile_id, create_date
-          ) VALUES (DEFAULT, ?, ?, ?, ?)
+              transfer_history_id, transfer_id, transfer_status_id, user_profile_id, create_date, effective_status
+          ) VALUES (DEFAULT, ?, ?, ?, ?, true)
       '''
-    final String INSERT_INTERNAL_COMMENT_SQL = '''
+    def INSERT_INTERNAL_COMMENT_SQL = '''
           INSERT INTO internal_comment (
               internal_comment_id, comment, audience_scope, create_user, create_date
           ) VALUES (DEFAULT, ?, ?::audience_scope, ?, ?)
           RETURNING internal_comment_id
       '''
-    final String INSERT_TRANSFER_INTERNAL_COMMENT_SQL = '''
+    def INSERT_TRANSFER_INTERNAL_COMMENT_SQL = '''
           INSERT INTO transfer_internal_comment (
               transfer_id, internal_comment_id
           ) VALUES (?, ?)
       '''
-    final String INSERT_TRANSACTION_SQL = ''''
+    def INSERT_TRANSACTION_SQL = '''
           INSERT INTO transaction (
-              transaction_id, compliance_units, organization_id, transaction_action, effective_date, create_user, create_date
-          ) VALUES (DEFAULT, ?, ?, ?::transaction_action_enum, ?, ?, ?)
+              transaction_id, compliance_units, organization_id, transaction_action, effective_date, create_user, create_date, effective_status
+          ) VALUES (DEFAULT, ?, ?, ?::transaction_action_enum, ?, ?, ?, true)
           RETURNING transaction_id
       '''
-    final String GET_CATEGORY_ID_QUERY = "SELECT transfer_category_id FROM transfer_category WHERE category = ?::transfercategoryenum"
-    final String GET_STATUS_ID_QUERY = "SELECT transfer_status_id FROM transfer_status WHERE status = ?::transfer_type_enum"
-
-    // Track processing metrics
-    def processingMetrics = [
-            recordsProcessed   : 0,
-            successfulTransfers: 0,
-            failedTransfers    : 0,
-            startTime          : System.currentTimeMillis()
-    ]
-
-    Connection sourceConn = null
-    Connection destinationConn = null
-
-    try {
-        sourceConn = sourceDbcpService.getConnection()
-        destinationConn = destinationDbcpService.getConnection()
-
-        // Disable auto-commit for batch processing
-        destinationConn.setAutoCommit(false)
-
-        // Prepare all statements
-        def statements = prepareStatements(destinationConn)
-
-        // Process records
-        PreparedStatement sourceStmt = sourceConn.prepareStatement(SOURCE_QUERY)
-        ResultSet resultSet = sourceStmt.executeQuery()
-
-        while (resultSet.next()) {
-            try {
-                processRecord(resultSet, statements, processingMetrics)
-                processingMetrics.recordsProcessed++
-
-                // Commit every INSERT_BATCH_SIZE records
-                if (processingMetrics.recordsProcessed % INSERT_BATCH_SIZE == 0) {
-                    destinationConn.commit()
-                }
-                session.transfer(flowFile, REL_SUCCESS)
-            } catch (Exception e) {
-                log.error("Error processing record: ${e.getMessage()}", e)
-                processingMetrics.failedTransfers++
-                session.transfer(flowFile, REL_FAILURE)
-            }
-        }
-
-        // Final commit
-        destinationConn.commit()
-
-        // Update flowfile attributes with metrics
-        def attributes = [
-                'transfer.records.processed' : String.valueOf(processingMetrics.recordsProcessed),
-                'transfer.records.successful': String.valueOf(processingMetrics.successfulTransfers),
-                'transfer.records.failed'    : String.valueOf(processingMetrics.failedTransfers),
-                'transfer.processing.time'   : String.valueOf(System.currentTimeMillis() - processingMetrics.startTime)
-        ]
-
-        flowFile = session.putAllAttributes(flowFile, attributes)
-
-        // Transfer flowfile to success if any records were processed successfully
-        if (processingMetrics.successfulTransfers > 0) {
-            session.transfer(flowFile, REL_SUCCESS)
-        } else {
-            session.transfer(flowFile, REL_FAILURE)
-        }
-        session.transfer(flowFile, REL_SUCCESS)
-    } catch (Exception e) {
-        // Rollback on error
-        if (destinationConn != null) {
-            try {
-                destinationConn.rollback()
-            } catch (SQLException se) {
-                log.error("Error rolling back transaction", se)
-            }
-        }
-        session.transfer(flowFile, REL_FAILURE)
-        throw new ProcessException("Failed to process transfers: ${e.getMessage()}", e)
-    } finally {
-        // Close connections
-        [sourceConn, destinationConn].each { conn ->
-            if (conn != null) {
-                try {
-                    conn.close()
-                } catch (SQLException e) {
-                    log.warn("Error closing database connection", e)
-                }
-            }
-        }
-    }
-
-} catch (Exception e) {
-    log.error("Processing failed: ${e.getMessage()}", e)
-    session.transfer(flowFile, REL_FAILURE)
-}
-
-def prepareStatements(Connection conn) {
-    return [
-            categoryStmt               : conn.prepareStatement(GET_CATEGORY_ID_QUERY),
-            statusStmt                 : conn.prepareStatement(GET_STATUS_ID_QUERY),
-            transferStmt               : conn.prepareStatement(INSERT_TRANSFER_SQL),
+    return [transferStmt               : conn.prepareStatement(INSERT_TRANSFER_SQL),
             historyStmt                : conn.prepareStatement(INSERT_TRANSFER_HISTORY_SQL),
             internalCommentStmt        : conn.prepareStatement(INSERT_INTERNAL_COMMENT_SQL),
             transferInternalCommentStmt: conn.prepareStatement(INSERT_TRANSFER_INTERNAL_COMMENT_SQL),
-            transactionStmt            : conn.prepareStatement(INSERT_TRANSACTION_SQL)
-    ]
+            transactionStmt            : conn.prepareStatement(INSERT_TRANSACTION_SQL)]
 }
 
-def processRecord(ResultSet resultSet, Map statements, Map metrics) {
-    def currentStatus = resultSet.getString("current_status")
-    def statusId = getStatusId(currentStatus)
-    def transferCategory = resultSet.getString("transfer_category")
-    def categoryId = getCategoryId(transferCategory, statements.categoryStmt)
-
-    // Process transactions based on status
-    def (fromTransactionId, toTransactionId) = processTransactions(
-            currentStatus,
-            resultSet,
-            statements.transactionStmt
-    )
-
-    // Insert transfer
-    def transferId = insertTransfer(resultSet, statements.transferStmt, fromTransactionId, toTransactionId, categoryId, statusId)
-
-    // Process history and comments
-    if (transferId) {
-        processHistory(transferId, resultSet, statements.historyStmt)
-        processInternalComments(transferId, resultSet, statements.internalCommentStmt,
-                statements.transferInternalCommentStmt)
-        metrics.successfulTransfers++
+def toSqlTimestamp(String timestampString) {
+    try {
+        // Parse the ISO 8601 timestamp and convert to java.sql.Timestamp
+        def offsetDateTime = OffsetDateTime.parse(timestampString)
+        return Timestamp.from(offsetDateTime.toInstant())
+    } catch (Exception e) {
+        log.error("Invalid timestamp format: ${timestampString}, defaulting to '1970-01-01T00:00:00Z'")
+        return Timestamp.valueOf('1970-01-01 00:00:00')
     }
 }
 
@@ -341,11 +344,11 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
         case ['Draft', 'Deleted', 'Refused', 'Declined', 'Rescinded']:
             break
         case ['Sent', 'Submitted', 'Recommended']:
-            fromTransactionId = insertTransaction(stmt, rs, "Reserved", rs.getInt("from_organization_id"))
+            fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'))
             break
         case 'Recorded':
-            fromTransactionId = insertTransaction(stmt, rs, "Adjustment", rs.getInt("from_organization_id"))
-            toTransactionId = insertTransaction(stmt, rs, "Adjustment", rs.getInt("to_organization_id"))
+            fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'))
+            toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'))
             break
     }
 
@@ -353,67 +356,71 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
 }
 
 def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int orgId) {
-    stmt.setInt(1, rs.getInt("quantity"))
+    stmt.setInt(1, rs.getInt('quantity'))
     stmt.setInt(2, orgId)
     stmt.setString(3, action)
-    stmt.setDate(4, rs.getDate("transaction_effective_date") ?: rs.getDate("agreement_date"))
-    stmt.setInt(5, rs.getInt("create_user"))
-    stmt.setTimestamp(6, rs.getTimestamp("create_date"))
+    stmt.setDate(4, rs.getDate('transaction_effective_date') ?: rs.getDate('agreement_date'))
+    stmt.setInt(5, rs.getInt('create_user'))
+    stmt.setTimestamp(6, rs.getTimestamp('create_date'))
 
     def result = stmt.executeQuery()
-    return result.next() ? result.getInt("transaction_id") : null
+    return result.next() ? result.getInt('transaction_id') : null
 }
 
-def processHistory(Long transferId, ResultSet rs, PreparedStatement historyStmt) {
-    def creditTradeHistory = rs.getArray("credit_trade_history")?.array
+def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
     if (!creditTradeHistory) return
+
+    // Use a Set to track unique combinations of transfer_id and transfer_status
+    def processedEntries = new HashSet<String>()
 
     creditTradeHistory.each { historyItem ->
         try {
-            historyStmt.setInt(1, transferId)
-            historyStmt.setInt(2, getStatusId(historyItem.transfer_status))
-            historyStmt.setInt(3, historyItem.user_profile_id)
-            historyStmt.setTimestamp(4, new java.sql.Timestamp(historyItem.create_timestamp.time))
-            historyStmt.addBatch()
+            def statusId = getStatusId(historyItem.transfer_status, preparedData)
+            def uniqueKey = "${transferId}_${statusId}"
+
+            // Check if this combination has already been processed
+            if (!processedEntries.contains(uniqueKey)) {
+                // If not processed, add to batch and mark as processed
+                historyStmt.setInt(1, transferId)
+                historyStmt.setInt(2, statusId)
+                historyStmt.setInt(3, historyItem.user_profile_id)
+                historyStmt.setTimestamp(4, toSqlTimestamp(historyItem.create_timestamp ?: '2013-01-01T00:00:00Z'))
+                historyStmt.addBatch()
+
+                processedEntries.add(uniqueKey)
+            }
         } catch (Exception e) {
-            log.error("Error processing history record for transfer ${transferId}: ${e.getMessage()}", e)
+            log.error("Error processing history record for transfer_id: ${transferId}", e)
         }
     }
 
     // Execute batch
-    try {
-        historyStmt.executeBatch()
-    } catch (SQLException e) {
-        log.error("Error executing history batch for transfer ${transferId}: ${e.getMessage()}", e)
-        throw e
-    }
+    historyStmt.executeBatch()
 }
 
-def processInternalComments(Long transferId, ResultSet rs,
+
+def processInternalComments(Integer transferId, List internalComments,
                             PreparedStatement internalCommentStmt,
                             PreparedStatement transferInternalCommentStmt) {
-    def internalComments = rs.getArray("internal_comments")?.array
     if (!internalComments) return
 
     // Use Set to track processed IDs and avoid duplicates
     def processedIds = new HashSet<Integer>()
 
     internalComments.each { comment ->
-        // Skip if we've already processed this comment
-        if (!processedIds.add(comment.credit_trade_id)) return
+        if (!comment) return // Skip null comments
 
         try {
             // Insert the internal comment
-            internalCommentStmt.setString(1, comment.credit_trade_comment)
-            internalCommentStmt.setString(2, getAudienceScope(comment.role_names))
-            internalCommentStmt.setInt(3, comment.create_user_id)
-            internalCommentStmt.setTimestamp(4,
-                    new java.sql.Timestamp(comment.create_timestamp.time))
+            internalCommentStmt.setString(1, comment.credit_trade_comment ?: '')
+            internalCommentStmt.setString(2, getAudienceScope(comment.role_names ?: ''))
+            internalCommentStmt.setInt(3, comment.create_user_id ?: null)
+            internalCommentStmt.setTimestamp(4, toSqlTimestamp(comment.create_timestamp ?: '2013-01-01T00:00:00Z'))
 
             def internalCommentId = null
             def commentResult = internalCommentStmt.executeQuery()
             if (commentResult.next()) {
-                internalCommentId = commentResult.getInt("internal_comment_id")
+                internalCommentId = commentResult.getInt('internal_comment_id')
 
                 // Insert the transfer-comment relationship
                 transferInternalCommentStmt.setInt(1, transferId)
@@ -426,7 +433,7 @@ def processInternalComments(Long transferId, ResultSet rs,
             log.error("Error processing internal comment for transfer ${transferId}: ${e.getMessage()}", e)
         }
     }
-}
+                            }
 
 // Helper function to determine audience scope based on role names
 def getAudienceScope(String roleNames) {
@@ -442,103 +449,29 @@ def getAudienceScope(String roleNames) {
     }
 }
 
-// Helper function to get status ID
-def statusIdCache = [:]
-
-def getStatusId(String status) {
-    // Check cache first
-    if (statusIdCache.containsKey(status)) {
-        return statusIdCache[status]
-    }
-
-    // If not in cache, fetch from database
-    def statusId = null
-    try {
-        def stmt = destinationConn.prepareStatement(GET_STATUS_ID_QUERY)
-        stmt.setString(1, status)
-        def rs = stmt.executeQuery()
-        if (rs.next()) {
-            statusId = rs.getInt("transfer_status_id")
-            statusIdCache[status] = statusId  // Cache the result
-        }
-        rs.close()
-        stmt.close()
-    } catch (Exception e) {
-        log.error("Error fetching status ID for status ${status}: ${e.getMessage()}", e)
-        throw e
-    }
-
-    return statusId
-}
-
-// Helper function to get category ID
-def categoryIdCache = Collections.synchronizedMap(new LinkedHashMap<String, Integer>(CACHE_SIZE_LIMIT + 1, .75F, true) {
-    protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
-        return size() > CACHE_SIZE_LIMIT
-    }
-})
-
-def getCategoryId(String category, PreparedStatement categoryStmt) {
-    if (category == null) return null
-
-    try {
-        // Check cache first
-        def cachedId = categoryIdCache.get(category)
-        if (cachedId != null) {
-            return cachedId
-        }
-
-        // If not in cache, fetch from database
-        categoryStmt.setString(1, category)
-        def rs = null
-        try {
-            rs = categoryStmt.executeQuery()
-            if (rs.next()) {
-                def categoryId = rs.getInt("transfer_category_id")
-                categoryIdCache.put(category, categoryId)
-                return categoryId
-            } else {
-                log.warn("No category ID found for category: ${category}")
-                return null
-            }
-        } finally {
-            rs?.close()
-        }
-    } catch (SQLException e) {
-        log.error("Error fetching category ID for category ${category}: ${e.getMessage()}", e)
-        throw new ProcessException("Failed to fetch category ID", e)
-    } catch (Exception e) {
-        log.error("Unexpected error fetching category ID for category ${category}: ${e.getMessage()}", e)
-        throw new ProcessException("Unexpected error fetching category ID", e)
-    }
-}
-
-def insertTransfer(ResultSet rs, PreparedStatement transferStmt,
-                   Long fromTransactionId, Long toTransactionId, Integer categoryId, Integer statusId) {
-    try {
-        transferStmt.setInt(1, rs.getInt("from_organization_id"))
-        transferStmt.setInt(2, rs.getInt("to_organization_id"))
-        transferStmt.setObject(3, fromTransactionId)
-        transferStmt.setObject(4, toTransactionId)
-        transferStmt.setTimestamp(5, rs.getTimestamp("agreement_date"))
-        transferStmt.setTimestamp(6, rs.getTimestamp("transaction_effective_date"))
-        transferStmt.setBigDecimal(7, rs.getBigDecimal("price_per_unit"))
-        transferStmt.setInt(8, rs.getInt("quantity"))
-        transferStmt.setString(9, rs.getString("from_org_comment"))
-        transferStmt.setString(10, rs.getString("to_org_comment"))
-        transferStmt.setString(11, rs.getString("gov_comment"))
-        transferStmt.setObject(12, categoryId)
-        transferStmt.setObject(13, statusId)
-        transferStmt.setString(14, rs.getString("recommendation"))
-        transferStmt.setTimestamp(15, rs.getTimestamp("create_date"))
-        transferStmt.setTimestamp(16, rs.getTimestamp("update_date"))
-        transferStmt.setInt(17, rs.getInt("create_user"))
-        transferStmt.setInt(18, rs.getInt("update_user"))
-
-        def result = transferStmt.executeQuery()
-        return result.next() ? result.getInt("transfer_id") : null
-    } catch (SQLException e) {
-        log.error("Error inserting transfer: ${e.getMessage()}", e)
-        throw new ProcessException("Failed to insert transfer", e)
-    }
-}
+def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransactionId,
+                   Long toTransactionId, Map preparedData) {
+    def categoryId = getTransferCategoryId(rs.getString('transfer_category'), preparedData)
+    def statusId = getStatusId(rs.getString('current_status'), preparedData)
+    transferStmt.setInt(1, rs.getInt('from_organization_id'))
+    transferStmt.setInt(2, rs.getInt('to_organization_id'))
+    transferStmt.setObject(3, fromTransactionId)
+    transferStmt.setObject(4, toTransactionId)
+    transferStmt.setTimestamp(5, rs.getTimestamp('agreement_date'))
+    transferStmt.setTimestamp(6, rs.getTimestamp('transaction_effective_date'))
+    transferStmt.setBigDecimal(7, rs.getBigDecimal('price_per_unit'))
+    transferStmt.setInt(8, rs.getInt('quantity'))
+    transferStmt.setString(9, rs.getString('from_org_comment'))
+    transferStmt.setString(10, rs.getString('to_org_comment'))
+    transferStmt.setString(11, rs.getString('gov_comment'))
+    transferStmt.setObject(12, categoryId)
+    transferStmt.setObject(13, statusId)
+    transferStmt.setString(14, rs.getString('recommendation'))
+    transferStmt.setTimestamp(15, rs.getTimestamp('create_date'))
+    transferStmt.setTimestamp(16, rs.getTimestamp('update_date'))
+    transferStmt.setInt(17, rs.getInt('create_user'))
+    transferStmt.setInt(18, rs.getInt('update_user'))
+    transferStmt.setInt(19, rs.getInt('transfer_id'))
+    def result = transferStmt.executeQuery()
+    return result.next() ? result.getInt('transfer_id') : null
+                   }
