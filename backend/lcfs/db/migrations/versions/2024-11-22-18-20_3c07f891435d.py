@@ -13,7 +13,7 @@ from lcfs.db.models import UnitOfMeasure, OtherUses
 
 # revision identifiers, used by Alembic.
 revision = "3c07f891435d"
-down_revision = "1974af823b80"
+down_revision = "e1e0aecfa5bb"
 branch_labels = None
 depends_on = None
 

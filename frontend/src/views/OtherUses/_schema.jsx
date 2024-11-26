@@ -228,7 +228,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
       showStepperButtons: false
     },
     cellStyle: (params) => StandardCellErrors(params, errors),
-	minWidth: 200
+    minWidth: 200
   },
   {
     field: 'units',
