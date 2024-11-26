@@ -29,7 +29,6 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 )
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
-    ComplianceReportSummarySchema,
     ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
@@ -435,34 +434,61 @@ class ComplianceReportRepository:
         """
         Retrieve a compliance report from the database by ID
         """
-        result = (
-            (
-                await self.db.execute(
-                    select(ComplianceReport)
-                    .options(
-                        joinedload(ComplianceReport.organization),
-                        joinedload(ComplianceReport.compliance_period),
-                        joinedload(ComplianceReport.current_status),
-                        joinedload(ComplianceReport.summary),
-                        joinedload(ComplianceReport.history).joinedload(
-                            ComplianceReportHistory.status
-                        ),
-                        joinedload(ComplianceReport.history).joinedload(
-                            ComplianceReportHistory.user_profile
-                        ),
-                        joinedload(ComplianceReport.transaction),
-                    )
-                    .where(ComplianceReport.compliance_report_id == report_id)
-                )
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+                joinedload(ComplianceReport.transaction),
             )
-            .unique()
-            .scalars()
-            .first()
+            .where(ComplianceReport.compliance_report_id == report_id)
         )
+
+        compliance_report = result.scalars().unique().first()
+
+        if not compliance_report:
+            return None
+
         if is_model:
-            return result
-        else:
-            return ComplianceReportBaseSchema.model_validate(result)
+            return compliance_report
+
+        return ComplianceReportBaseSchema.model_validate(compliance_report)
+
+    @repo_handler
+    async def get_compliance_report_chain(self, group_uuid: str):
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+                joinedload(ComplianceReport.transaction),
+            )
+            .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+            .order_by(ComplianceReport.version.desc())  # Ensure ordering by version
+        )
+
+        compliance_reports = result.scalars().unique().all()
+
+        return [
+            ComplianceReportBaseSchema.model_validate(report)
+            for report in compliance_reports
+        ]
 
     @repo_handler
     async def get_fuel_type(self, fuel_type_id: int) -> FuelType:
