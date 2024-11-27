@@ -26,5 +26,6 @@ export const actions = (props) => ({
   maxWidth: 110,
   editable: false,
   suppressKeyboardEvent,
-  filter: false
+  filter: false,
+  hide: props.hide,
 })
