@@ -4,10 +4,21 @@ from typing import List
 from fastapi import Depends
 from fastapi_cache.decorator import cache
 from lcfs.db.models.user import UserLoginHistory
-from sqlalchemy import and_, select, asc, desc, union_all, literal_column, func, cast, String
+from sqlalchemy import (
+    and_,
+    select,
+    asc,
+    desc,
+    union_all,
+    literal_column,
+    func,
+    cast,
+    String,
+)
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lcfs.services.keycloak.dependencies import parse_external_username
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.user.UserProfile import UserProfile
@@ -16,11 +27,21 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
-from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import InitiativeAgreementHistory
-from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import InitiativeAgreementStatus
-from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
+from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
+    InitiativeAgreementHistory,
+)
+from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
+    InitiativeAgreementStatus,
+)
+from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
+    AdminAdjustmentHistory,
+)
 from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
-from lcfs.web.api.user.schema import UserCreateSchema, UserBaseSchema, UserLoginHistorySchema
+from lcfs.web.api.user.schema import (
+    UserCreateSchema,
+    UserBaseSchema,
+    UserLoginHistorySchema,
+)
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     camel_to_snake,
@@ -32,7 +53,7 @@ logger = structlog.get_logger(__name__)
 
 
 class UserRepository:
-    EXCLUDED_USER_ACTIVITY_STATUSES = ['Draft']
+    EXCLUDED_USER_ACTIVITY_STATUSES = ["Draft"]
 
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
@@ -382,7 +403,7 @@ class UserRepository:
             ).where(UserProfile.keycloak_username == username)
         )
         return full_name_result.scalars().first()
-    
+
     def _build_activity_queries(self, user_id: int = None):
         """
         Builds the activity queries for user-specific or all-user activity logs.
@@ -401,57 +422,76 @@ class UserRepository:
         # TransferHistory Query
         transfer_query = (
             select(
-                cast(TransferHistory.transfer_id, String).label('transaction_id'),
-                cast(TransferStatus.status, String).label('action_taken'),
-                literal_column("'Transfer'").label('transaction_type'),
-                TransferHistory.create_date.label('create_date'),
-                TransferHistory.user_profile_id.label('user_id')
+                cast(TransferHistory.transfer_id, String).label("transaction_id"),
+                cast(TransferStatus.status, String).label("action_taken"),
+                literal_column("'Transfer'").label("transaction_type"),
+                TransferHistory.create_date.label("create_date"),
+                TransferHistory.user_profile_id.label("user_id"),
             )
             .select_from(TransferHistory)
-            .join(TransferStatus, TransferHistory.transfer_status_id == TransferStatus.transfer_status_id)
+            .join(
+                TransferStatus,
+                TransferHistory.transfer_status_id == TransferStatus.transfer_status_id,
+            )
             .where(
-                cast(TransferStatus.status, String).notin_(self.EXCLUDED_USER_ACTIVITY_STATUSES)
+                cast(TransferStatus.status, String).notin_(
+                    self.EXCLUDED_USER_ACTIVITY_STATUSES
+                )
             )
         )
 
         # InitiativeAgreementHistory Query
         initiative_query = (
             select(
-                cast(InitiativeAgreementHistory.initiative_agreement_id, String).label('transaction_id'),
-                cast(InitiativeAgreementStatus.status, String).label('action_taken'),
-                literal_column("'InitiativeAgreement'").label('transaction_type'),
-                InitiativeAgreementHistory.create_date.label('create_date'),
-                InitiativeAgreementHistory.user_profile_id.label('user_id')
+                cast(InitiativeAgreementHistory.initiative_agreement_id, String).label(
+                    "transaction_id"
+                ),
+                cast(InitiativeAgreementStatus.status, String).label("action_taken"),
+                literal_column("'InitiativeAgreement'").label("transaction_type"),
+                InitiativeAgreementHistory.create_date.label("create_date"),
+                InitiativeAgreementHistory.user_profile_id.label("user_id"),
             )
             .select_from(InitiativeAgreementHistory)
-            .join(InitiativeAgreementStatus, InitiativeAgreementHistory.initiative_agreement_status_id == InitiativeAgreementStatus.initiative_agreement_status_id)
+            .join(
+                InitiativeAgreementStatus,
+                InitiativeAgreementHistory.initiative_agreement_status_id
+                == InitiativeAgreementStatus.initiative_agreement_status_id,
+            )
             .where(
-                cast(InitiativeAgreementStatus.status, String).notin_(self.EXCLUDED_USER_ACTIVITY_STATUSES)
+                cast(InitiativeAgreementStatus.status, String).notin_(
+                    self.EXCLUDED_USER_ACTIVITY_STATUSES
+                )
             )
         )
 
         # AdminAdjustmentHistory Query
         admin_adjustment_query = (
             select(
-                cast(AdminAdjustmentHistory.admin_adjustment_id, String).label('transaction_id'),
-                cast(AdminAdjustmentStatus.status, String).label('action_taken'),
-                literal_column("'AdminAdjustment'").label('transaction_type'),
-                AdminAdjustmentHistory.create_date.label('create_date'),
-                AdminAdjustmentHistory.user_profile_id.label('user_id')
+                cast(AdminAdjustmentHistory.admin_adjustment_id, String).label(
+                    "transaction_id"
+                ),
+                cast(AdminAdjustmentStatus.status, String).label("action_taken"),
+                literal_column("'AdminAdjustment'").label("transaction_type"),
+                AdminAdjustmentHistory.create_date.label("create_date"),
+                AdminAdjustmentHistory.user_profile_id.label("user_id"),
             )
             .select_from(AdminAdjustmentHistory)
-            .join(AdminAdjustmentStatus, AdminAdjustmentHistory.admin_adjustment_status_id == AdminAdjustmentStatus.admin_adjustment_status_id)
+            .join(
+                AdminAdjustmentStatus,
+                AdminAdjustmentHistory.admin_adjustment_status_id
+                == AdminAdjustmentStatus.admin_adjustment_status_id,
+            )
             .where(
-                cast(AdminAdjustmentStatus.status, String).notin_(self.EXCLUDED_USER_ACTIVITY_STATUSES)
+                cast(AdminAdjustmentStatus.status, String).notin_(
+                    self.EXCLUDED_USER_ACTIVITY_STATUSES
+                )
             )
         )
 
         # Combine all queries using union_all
         combined_query = union_all(
-            transfer_query,
-            initiative_query,
-            admin_adjustment_query
-        ).alias('activities')
+            transfer_query, initiative_query, admin_adjustment_query
+        ).alias("activities")
 
         # If a specific user_id is provided, filter by that user_id
         conditions = []
@@ -460,7 +500,9 @@ class UserRepository:
 
         return combined_query, conditions
 
-    async def _get_paginated_user_activities(self, combined_query, conditions, pagination):
+    async def _get_paginated_user_activities(
+        self, combined_query, conditions, pagination
+    ):
         """
         Handles pagination, filtering, and sorting for user activities.
 
@@ -491,7 +533,7 @@ class UserRepository:
                 field_name = camel_to_snake(sort_order.field)
                 field = getattr(combined_query.c, field_name, None)
                 if field is not None:
-                    order = asc(field) if sort_order.direction == 'asc' else desc(field)
+                    order = asc(field) if sort_order.direction == "asc" else desc(field)
                     order_by_clauses.append(order)
         else:
             # Default ordering by timestamp descending
@@ -512,9 +554,7 @@ class UserRepository:
 
         # Get total count for pagination
         count_query = (
-            select(func.count())
-            .select_from(combined_query)
-            .where(and_(*conditions))
+            select(func.count()).select_from(combined_query).where(and_(*conditions))
         )
         total_count_result = await self.db.execute(count_query)
         total_count = total_count_result.scalar()
@@ -522,22 +562,30 @@ class UserRepository:
         return activities, total_count
 
     @repo_handler
-    async def get_user_activities_paginated(self, user_id: int, pagination: PaginationRequestSchema) -> List[dict]:
+    async def get_user_activities_paginated(
+        self, user_id: int, pagination: PaginationRequestSchema
+    ) -> List[dict]:
         """
         Fetches major activities for a specific user with pagination and filters,
         excluding specified statuses.
         """
         combined_query, conditions = self._build_activity_queries(user_id=user_id)
-        return await self._get_paginated_user_activities(combined_query, conditions, pagination)
+        return await self._get_paginated_user_activities(
+            combined_query, conditions, pagination
+        )
 
     @repo_handler
-    async def get_all_user_activities_paginated(self, pagination: PaginationRequestSchema) -> List[dict]:
+    async def get_all_user_activities_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> List[dict]:
         """
         Fetches major activities for all users with pagination and filters,
         excluding specified statuses.
         """
         combined_query, conditions = self._build_activity_queries()
-        return await self._get_paginated_user_activities(combined_query, conditions, pagination)
+        return await self._get_paginated_user_activities(
+            combined_query, conditions, pagination
+        )
 
     def _apply_login_history_filters(self, query, pagination):
         """
@@ -565,7 +613,7 @@ class UserRepository:
                         )
                         if condition is not None:
                             conditions.append(condition)
-                    
+
         query = query.where(and_(*conditions))
         # Apply ordering
         order_by_clauses = []
@@ -573,16 +621,19 @@ class UserRepository:
             for sort_order in pagination.sort_orders:
                 field = get_field_for_filter(UserLoginHistory, sort_order.field)
                 if field is not None:
-                    sort_order = asc(field) if sort_order.direction == 'asc' else desc(field)
+                    sort_order = (
+                        asc(field) if sort_order.direction == "asc" else desc(field)
+                    )
                     order_by_clauses.append(sort_order)
         else:
             # Default ordering by timestamp descending
             order_by_clauses.append(desc(UserLoginHistory.create_date))
         return query.order_by(*order_by_clauses)
 
-    
     @repo_handler
-    async def get_all_user_login_history_paginated(self, pagination: PaginationRequestSchema) -> List[UserLoginHistorySchema]:
+    async def get_all_user_login_history_paginated(
+        self, pagination: PaginationRequestSchema
+    ) -> List[UserLoginHistorySchema]:
         """
         Fetches major activities for all users with pagination and filters,
         excluding specified statuses.
@@ -591,5 +642,26 @@ class UserRepository:
         total_count = len((await self.db.execute(query)).scalars().unique().all())
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        result = (await self.db.execute(query.offset(offset).limit(limit))).scalars().unique().all()
-        return [UserLoginHistorySchema.model_validate(history) for history in result], total_count
+        result = (
+            (await self.db.execute(query.offset(offset).limit(limit)))
+            .scalars()
+            .unique()
+            .all()
+        )
+        return [
+            UserLoginHistorySchema.model_validate(history) for history in result
+        ], total_count
+
+    @repo_handler
+    async def create_login_history(self, user: UserProfile):
+        """
+        Creates a user login history entry asynchronously.
+        """
+        login_history = UserLoginHistory(
+            keycloak_email=user.email,
+            external_username=user.keycloak_username,
+            keycloak_user_id=user.keycloak_user_id,
+            is_login_successful=True,
+        )
+
+        self.db.add(login_history)
