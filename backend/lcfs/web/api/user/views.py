@@ -1,20 +1,6 @@
-"""
-User management endpoints
-GET: /users/export?format=xls/xlsx/csv
-GET: /users/current
-GET: /users/<user_id>
-POST: /users/list (Includes ability to perform sort, filter and pagination)
-POST: /users (Create a new user)
-PUT: /users/<user_id> (Update the user)
-DELETE: /users/<user_id> (Delete only if the user has never logged in/mapped)
-GET: /users/<user_id>/roles {List of Roles with IDs}
-POST: /users/<user_id>/activity
-POST: /users/activities/all
-"""
-
-import structlog
 from typing import List
 
+import structlog
 from fastapi import (
     APIRouter,
     Body,
@@ -26,9 +12,10 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
-from lcfs.web.api.role.schema import RoleSchema
 from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
     UserBaseSchema,
@@ -36,10 +23,8 @@ from lcfs.web.api.user.schema import (
     UsersSchema,
     UserActivitiesResponseSchema,
 )
-
-from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.user.services import UserServices
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -100,6 +85,21 @@ async def get_users(
         - field: Database Field that needs filtering.
     """
     return await service.get_all_users(pagination)
+
+
+@router.post("/logged-in", status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def track_logged_in(
+    request: Request, response: Response = None, service: UserServices = Depends()
+) -> str:
+    """
+    Endpoint to track when a user logs in
+
+    This endpoint returns the information of the current user, including their roles and organization.
+    """
+
+    await service.track_user_login(request.user)
+    return "Tracked"
 
 
 @router.get("/current", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
