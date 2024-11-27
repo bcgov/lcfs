@@ -1,8 +1,8 @@
 """Add Versioning to Notional Transfers
 
 Revision ID: 0775a141d335
-Revises: 1974af823b80
-Create Date: 2024-11-21 12:57:44.825449
+Revises: 3c07f891435d
+Create Date: 2024-11-26 12:57:44.825449
 
 """
 
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "0775a141d335"
-down_revision = "1974af823b80"
+down_revision = "3c07f891435d"
 branch_labels = None
 depends_on = None
 
