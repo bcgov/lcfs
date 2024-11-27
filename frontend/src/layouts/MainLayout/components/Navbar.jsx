@@ -16,7 +16,6 @@ export const Navbar = () => {
 
   // Nav Links
   const navMenuItems = useMemo(() => {
-    const isAnalyst = hasRoles(roles.analyst)
     const isAdmin = hasRoles(roles.administrator)
     const idirRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
@@ -25,8 +24,7 @@ export const Navbar = () => {
       { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
       {
         name: t('FuelCodes'),
-        route: ROUTES.FUELCODES,
-        hide: !isAnalyst
+        route: ROUTES.FUELCODES
       },
       { name: t('Administration'), route: ROUTES.ADMIN, hide: !isAdmin }
     ]
