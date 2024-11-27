@@ -50,7 +50,7 @@ async def test_create_other_use(other_uses_service):
     other_use_data = create_mock_schema({})
 
     # Mock related entities for other uses with actual string attributes
-    mock_fuel_type = MagicMock()
+    mock_fuel_type = create_mock_entity({})
     mock_fuel_type.fuel_type = "Gasoline"
 
     mock_fuel_category = MagicMock()
@@ -73,7 +73,7 @@ async def test_create_other_use(other_uses_service):
     mock_fuel_repo.get_fuel_code_by_name = AsyncMock(return_value=mock_fuel_code)
 
     # Create a mock for the created other use
-    mock_created_use = MagicMock()
+    mock_created_use = create_mock_entity({})
     mock_created_use.other_uses_id = 1
     mock_created_use.compliance_report_id = 1
     mock_created_use.quantity_supplied = 1000
