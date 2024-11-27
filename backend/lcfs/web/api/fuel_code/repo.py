@@ -179,6 +179,14 @@ class FuelCodeRepository:
         )
 
     @repo_handler
+    async def get_transport_mode_by_name(self, mode_name: str) -> TransportMode:
+        query = select(TransportMode).where(TransportMode.transport_mode == mode_name)
+        result = await self.db.execute(query)
+        transport_mode = result.scalar_one_or_none()
+
+        return transport_mode
+
+    @repo_handler
     async def get_fuel_code_prefixes(self) -> List[FuelCodePrefix]:
         """Get all fuel code prefix options"""
         return (await self.db.execute(select(FuelCodePrefix))).scalars().all()
