@@ -392,5 +392,4 @@ class FuelExportRepository:
         result = await self.db.execute(query)
         fuel_exports = result.unique().scalars().all()
 
-        logger.debug(f"Retrieved {len(fuel_exports)} effective FuelExport records.")
         return fuel_exports

@@ -112,7 +112,7 @@
 #       - name: Debug Cypress Run
 #         if: failure()
 #         run: cat /home/runner/work/lcfs/lcfs/frontend/cypress/reports/*.json
-#       - uses: actions/upload-artifact@v3
+#       - uses: actions/upload-artifact@v4
 #         if: failure()
 #         with:
 #           name: cypress-screenshots

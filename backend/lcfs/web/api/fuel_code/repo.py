@@ -184,15 +184,9 @@ class FuelCodeRepository:
         return (await self.db.execute(select(FuelCodePrefix))).scalars().all()
 
     @repo_handler
-    async def get_fuel_code_prefix_by_name(self, prefix_name: str) -> FuelCodePrefix:
-        """Get fuel code prefix by name"""
-        query = (
-            select(FuelCodePrefix)
-            .options(selectinload(FuelCodePrefix.fuel_codes))
-            .where(FuelCodePrefix.prefix == prefix_name)
-        )
-        result = await self.db.execute(query)
-        return result.unique().scalar_one_or_none()
+    async def get_fuel_code_prefix(self, prefix_id: int) -> FuelCodePrefix:
+        """Get fuel code prefix"""
+        return await self.db.get_one(FuelCodePrefix, prefix_id)
 
     @repo_handler
     async def get_fuel_status_by_status(
@@ -368,7 +362,9 @@ class FuelCodeRepository:
         )
 
     @repo_handler
-    async def get_fuel_code_status(self, fuel_code_status: str) -> FuelCodeStatus:
+    async def get_fuel_code_status(
+        self, fuel_code_status: FuelCodeStatusEnum
+    ) -> FuelCodeStatus:
         return await self.db.scalar(
             select(FuelCodeStatus).where(FuelCodeStatus.status == fuel_code_status)
         )
@@ -513,7 +509,7 @@ class FuelCodeRepository:
             return formatted_integer
 
     @repo_handler
-    async def validate_fuel_code(self, suffix: str, prefix: str) -> str:
+    async def validate_fuel_code(self, suffix: str, prefix_id: int) -> str:
         # check if the fuel_code already exists
         query = (
             select(FuelCode)
@@ -523,7 +519,7 @@ class FuelCodeRepository:
             .where(
                 and_(
                     FuelCode.fuel_suffix == suffix,
-                    func.lower(FuelCodePrefix.prefix) == func.lower(prefix),
+                    FuelCodePrefix.fuel_code_prefix_id == prefix_id,
                     FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
                 )
             )
@@ -532,7 +528,7 @@ class FuelCodeRepository:
         if result:
             fuel_code_main_version = suffix.split(".")[0]
             return await self.get_next_available_sub_version_fuel_code_by_prefix(
-                fuel_code_main_version, prefix
+                fuel_code_main_version, prefix_id
             )
         else:
             return suffix
@@ -548,7 +544,7 @@ class FuelCodeRepository:
                 WHERE fcp.prefix = :prefix
             ),
             all_possible_codes AS (
-                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101)) AS base_code
+                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101) + 1) AS base_code
             ),
             available_codes AS (
                 SELECT base_code
@@ -567,7 +563,7 @@ class FuelCodeRepository:
         return self.format_decimal(result)
 
     async def get_next_available_sub_version_fuel_code_by_prefix(
-        self, input_version: str, prefix: str
+        self, input_version: str, prefix_id: int
     ) -> str:
         query = text(
             """
@@ -578,7 +574,7 @@ class FuelCodeRepository:
                     CAST(SPLIT_PART(fuel_suffix, '.', 2) AS INTEGER) AS sub_version
                 FROM fuel_code fc
                 JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
-                WHERE fcp.prefix = :prefix
+                WHERE fcp.fuel_code_prefix_id = :prefix_id
             ),
             sub_versions AS (
                 SELECT
@@ -607,7 +603,7 @@ class FuelCodeRepository:
         )
         result = (
             await self.db.execute(
-                query, {"input_version": int(input_version), "prefix": prefix}
+                query, {"input_version": int(input_version), "prefix_id": prefix_id}
             )
         ).scalar_one_or_none()
         return self.format_decimal(result)

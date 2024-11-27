@@ -244,25 +244,20 @@ class FuelCodesSchema(BaseSchema):
     pagination: Optional[PaginationResponseSchema] = None
 
 
-class FuelCodeCreateSchema(BaseSchema):
-    id: Optional[str] = None
+class FuelCodeCreateUpdateSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
-    status: Optional[str] = None
-    prefix: str
-    prefix_id: Optional[int] = None
+    prefix_id: int = None
     fuel_suffix: str
     carbon_intensity: float
     edrms: str
     company: str
-    last_updated: Optional[datetime] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     application_date: date
     approval_date: Optional[date] = None
     effective_date: Optional[date] = None
     expiration_date: Optional[date] = None
-    fuel: str
-    fuel_type_id: Optional[int] = None
+    fuel_type_id: int
     feedstock: str
     feedstock_location: str
     feedstock_misc: Optional[str] = None
