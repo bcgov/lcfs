@@ -2,13 +2,16 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from lcfs.db.models import FuelCode
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import (
-    FuelCodeCreateSchema,
+    FuelCodeCreateUpdateSchema,
     FuelCodeSchema,
     PaginationResponseSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
+from lcfs.web.exception.exceptions import ServiceException
 
 
 @pytest.mark.anyio
@@ -55,15 +58,15 @@ async def test_create_fuel_code_success():
     repo_mock = AsyncMock()
     service = FuelCodeServices(repo=repo_mock)
 
-    input_data = FuelCodeCreateSchema(
+    input_data = FuelCodeCreateUpdateSchema(
         fuel_code_id=1,
+        fuel_type_id=1,
         status="Draft",
         prefix="ABC",
         prefix_id=1001,
         fuel_suffix="001",
         carbon_intensity=20.5,
         company="XYZ Corp",
-        fuel="Diesel",
         application_date="2023-10-01",
         edrms="EDRMS-123",
         feedstock="Corn oil",
@@ -111,15 +114,15 @@ async def test_update_fuel_code_success():
     service = FuelCodeServices(repo=repo_mock)
 
     fuel_code_id = 1
-    mock_fuel_code = FuelCodeCreateSchema(
+    mock_fuel_code = FuelCodeCreateUpdateSchema(
         fuel_code_id=1,
+        fuel_type_id=1,
         status="Draft",
         prefix="ABC",
         prefix_id=1001,
         fuel_suffix="001",
         carbon_intensity=20.5,
         company="XYZ Corp",
-        fuel="Diesel",
         application_date="2023-10-01",
         edrms="EDRMS-123",
         feedstock="Corn oil",
@@ -135,7 +138,7 @@ async def test_update_fuel_code_success():
     repo_mock.update_fuel_code.return_value = mock_fuel_code
 
     # Act
-    result = await service.update_fuel_code(fuel_code_id, mock_fuel_code)
+    result = await service.update_fuel_code(mock_fuel_code)
 
     # Assert
     assert result.fuel_code_id == 1
@@ -159,3 +162,68 @@ async def test_delete_fuel_code_success():
     # Assert
     assert result is True
     repo_mock.delete_fuel_code.assert_called_once_with(fuel_code_id)
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_success():
+    """Test successful approval of a fuel code."""
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    fuel_code_id = 1
+    # Mock a fuel code in Draft status
+    mock_fuel_code = FuelCode(fuel_code_status=AsyncMock())
+    mock_fuel_code.fuel_code_status.status = FuelCodeStatusEnum.Draft
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+
+    # Mock the Approved status and update operation
+    mock_approved_status = AsyncMock()
+    mock_approved_status.status = FuelCodeStatusEnum.Approved
+    repo_mock.get_fuel_code_status.return_value = mock_approved_status
+    repo_mock.update_fuel_code.return_value = mock_fuel_code
+
+    # Act
+    result = await service.approve_fuel_code(fuel_code_id)
+
+    # Assert
+    assert result == mock_fuel_code
+    repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
+    repo_mock.get_fuel_code_status.assert_called_once_with(FuelCodeStatusEnum.Approved)
+    repo_mock.update_fuel_code.assert_called_once_with(mock_fuel_code)
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_not_found():
+    """Test approving a non-existent fuel code."""
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    fuel_code_id = 9999
+    repo_mock.get_fuel_code.return_value = None
+
+    # Act & Assert
+    with pytest.raises(ServiceException):
+        await service.approve_fuel_code(fuel_code_id)
+    repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
+
+
+@pytest.mark.anyio
+async def test_approve_fuel_code_invalid_status():
+    """Test approving a fuel code that is not in Draft status."""
+    # Arrange
+    repo_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock)
+
+    fuel_code_id = 1
+
+    mock_fuel_code = FuelCode(fuel_code_status=AsyncMock())
+    mock_fuel_code.fuel_code_status.status = FuelCodeStatusEnum.Approved
+    repo_mock.get_fuel_code.return_value = mock_fuel_code
+
+    # Act & Assert
+    with pytest.raises(ServiceException):
+        await service.approve_fuel_code(fuel_code_id)
+
+    repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
