@@ -39,19 +39,29 @@ const createCellRenderer = (field, customRenderer = null) => {
   return CellRenderer
 }
 
-export const fuelCodeColDefs = (optionsData, errors) => [
+export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   validation,
   actions({
-    enableDuplicate: true,
-    enableDelete: true
+    enableDuplicate: isCreate,
+    enableDelete: canEdit,
+    hide: !canEdit
   }),
   {
     field: 'id',
     hide: true
   },
   {
+    field: 'fuelCodeId',
+    hide: true
+  },
+  {
+    field: 'prefixId',
+    hide: true
+  },
+  {
     field: 'prefix',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.prefix'),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
@@ -65,10 +75,23 @@ export const fuelCodeColDefs = (optionsData, errors) => [
     }),
     suppressKeyboardEvent,
     minWidth: 135,
-    valueGetter: (params) => params.data.prefix || 'BCLCF',
+    valueGetter: (params) => {
+      if (params.data?.fuelCodePrefix?.prefix) {
+        return params.data.fuelCodePrefix.prefix
+      } else if (params.data.prefixId) {
+        const selectedOption = optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.fuelCodePrefixId === params.data.prefixId
+        )
+        return selectedOption.prefix
+      }
+    },
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
-        params.data.prefix = params.newValue
+        const selectedPrefix = optionsData?.fuelCodePrefixes?.find(
+          (obj) => obj.prefix === params.newValue
+        )
+        params.data.fuelTypeId = selectedPrefix.fuelCodePrefixId
+
         params.data.fuelCode = optionsData?.fuelCodePrefixes?.find(
           (obj) => obj.prefix === params.newValue
         )?.nextFuelCode
@@ -84,14 +107,12 @@ export const fuelCodeColDefs = (optionsData, errors) => [
       }
       return true
     },
-    cellRenderer: createCellRenderer(
-      'prefix',
-      (params) => params.value || 'BCLCF'
-    )
+    cellRenderer: createCellRenderer('prefix', (params) => params.value)
   },
   {
     field: 'fuelSuffix',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelCode'),
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelSuffix'),
@@ -125,7 +146,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'carbonIntensity',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
@@ -136,14 +158,16 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'edrms',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.edrms'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text'
   },
   {
     field: 'company',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.company'),
     cellDataType: 'text',
     cellEditor: AsyncSuggestionEditor,
@@ -172,6 +196,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'contactName',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.contactName'),
     cellEditor: AsyncSuggestionEditor,
     cellDataType: 'text',
@@ -192,6 +217,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'contactEmail',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.contactEmail'),
     cellEditor: AsyncSuggestionEditor,
     cellDataType: 'text',
@@ -218,7 +244,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'applicationDate',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.applicationDate'),
     maxWidth: 220,
     minWidth: 200,
@@ -232,6 +259,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'approvalDate',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.approvalDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -246,6 +274,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'effectiveDate',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.effectiveDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -259,6 +288,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'expirationDate',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.expiryDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -272,10 +302,29 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuel',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('fuel'),
+    valueGetter: (params) => {
+      if (params.data?.fuelCodeType?.fuelType) {
+        return params.data.fuelCodeType.fuelType
+      } else if (params.data.fuelTypeId) {
+        const selectedOption = optionsData?.fuelTypes?.find(
+          (obj) => obj.fuelTypeId === params.data.fuelTypeId
+        )
+        return selectedOption.fuelType
+      }
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => obj.fuelType === params.newValue
+        )
+        params.data.fuelTypeId = selectedFuelType.fuelTypeId
+      }
+    },
     cellEditorParams: {
       options: optionsData?.fuelTypes
         .filter((fuel) => !fuel.fossilDerived)
@@ -290,7 +339,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'feedstock',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstock'),
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
@@ -308,7 +358,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'feedstockLocation',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockLocation'),
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
@@ -326,6 +377,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'feedstockMisc',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.misc'),
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
@@ -343,7 +395,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelProductionFacilityCity',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
@@ -383,7 +436,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelProductionFacilityProvinceState',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
@@ -423,7 +477,8 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'fuelProductionFacilityCountry',
-    headerComponent: RequiredHeader,
+    editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
     ),
@@ -450,6 +505,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'facilityNameplateCapacity',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
     valueFormatter: numberFormatter,
     cellEditor: NumberEditor,
@@ -463,6 +519,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'facilityNameplateCapacityUnit',
+    editable: canEdit,
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'
     ),
@@ -480,6 +537,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'feedstockFuelTransportMode',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('feedstockFuelTransportMode', (params) =>
@@ -504,6 +562,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'finishedFuelTransportMode',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: createCellRenderer('finishedFuelTransportMode', (params) =>
@@ -528,6 +587,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'formerCompany',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.formerCompany'),
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
@@ -545,6 +605,7 @@ export const fuelCodeColDefs = (optionsData, errors) => [
   },
   {
     field: 'notes',
+    editable: canEdit,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.notes'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
@@ -553,9 +614,9 @@ export const fuelCodeColDefs = (optionsData, errors) => [
 ]
 
 export const defaultColDef = {
-  editable: true,
+  editable: false,
   resizable: true,
-  filter: true,
+  filter: false,
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true,

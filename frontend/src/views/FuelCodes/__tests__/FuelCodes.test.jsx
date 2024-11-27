@@ -24,7 +24,7 @@ vi.mock('@react-keycloak/web', () => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => ({
     data: {
-      roles: [{ name: roles.administrator }, { name: roles.analyst }]
+      roles: [{ name: roles.government }, { name: roles.analyst }]
     }
   })
 }))
