@@ -6,6 +6,8 @@ Create Date: 2024-11-26 12:57:44.825449
 
 """
 
+import uuid
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
@@ -68,7 +70,9 @@ def upgrade() -> None:
 
     # Update notional_transfer table
     fuel_exports = connection.execute(
-        sa.text("SELECT notional_transfer_id FROM notional_transfer WHERE group_uuid IS NULL")
+        sa.text(
+            "SELECT notional_transfer_id FROM notional_transfer WHERE group_uuid IS NULL"
+        )
     ).fetchall()
     for export in fuel_exports:
         export_id = export[0]
