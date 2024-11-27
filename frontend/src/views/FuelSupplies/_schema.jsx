@@ -10,20 +10,14 @@ import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import {
+  isFuelTypeOther,
+  fuelTypeOtherConditionalStyle
+} from '@/utils/fuelTypeOther'
+import {
   StandardCellWarningAndErrors,
   StandardCellStyle
 } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
-
-const FUEL_TYPE_OTHER = 'Other'
-export const isFuelTypeOther = (params) => {
-  return params.data?.fuelType === FUEL_TYPE_OTHER
-}
-
-const fuelTypeOtherConditionalStyle = (params) => ({
-  backgroundColor: isFuelTypeOther(params) ? '#fff' : '#f2f2f2',
-  borderColor: isFuelTypeOther(params) ? 'unset' : undefined
-})
 
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,

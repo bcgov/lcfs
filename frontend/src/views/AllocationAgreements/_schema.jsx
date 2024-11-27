@@ -12,11 +12,14 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
 import {
   StandardCellErrors,
-  StandardCellWarningAndErrors
+  StandardCellStyle
 } from '@/utils/grid/errorRenderers'
+import {
+  isFuelTypeOther,
+  fuelTypeOtherConditionalStyle
+} from '@/utils/fuelTypeOther'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
-const FUEL_TYPE_OTHER = 'Other'
 
 export const allocationAgreementColDefs = (optionsData, errors) => [
   validation,
@@ -218,20 +221,14 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       api: params.api,
       minWords: 1
     }),
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors)
-      const conditionalStyle =
-        params.data.fuelType === FUEL_TYPE_OTHER
-          ? { backgroundColor: '#fff', borderColor: 'unset' }
-          : { backgroundColor: '#f2f2f2' }
-      return { ...style, ...conditionalStyle }
-    },
+    cellStyle: (params) =>
+      StandardCellStyle(params, errors, null, fuelTypeOtherConditionalStyle),
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => params.data.fuelType === FUEL_TYPE_OTHER,
+    editable: (params) => isFuelTypeOther(params),
     minWidth: 250
   },
   {
@@ -337,10 +334,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         )
       } else {
         if (optionsData) {
-          if (
-            params.data.fuelType === FUEL_TYPE_OTHER &&
-            params.data.fuelCategory
-          ) {
+          if (isFuelTypeOther(params) && params.data.fuelCategory) {
             const categories = optionsData?.fuelTypes?.find(
               (obj) => params.data.fuelType === obj.fuelType
             ).fuelCategories
