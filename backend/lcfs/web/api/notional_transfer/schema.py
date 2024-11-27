@@ -24,6 +24,10 @@ class NotionalTransferCreateSchema(BaseSchema):
     notional_transfer_id: Optional[int] = None
     compliance_report_id: int
     deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
 
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):
