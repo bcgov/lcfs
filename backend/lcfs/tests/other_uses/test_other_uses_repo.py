@@ -124,13 +124,39 @@ async def test_get_other_uses(other_uses_repo, mock_db_session):
     mock_first_execute = MagicMock()
     mock_first_execute.scalar.return_value = mock_compliance_report_uuid
 
-    mock_provision_of_the_act = create_mock_entity({"name": "Some Act Name"})
-    mock_other_use = create_mock_entity(
-        {"provision_of_the_act": mock_provision_of_the_act}
-    )
-    mock_other_use = create_mock_entity(
-        {"provision_of_the_act": mock_provision_of_the_act}
-    )
+    # Mock related entities for other uses
+    mock_fuel_type = MagicMock()
+    mock_fuel_type.fuel_type = "Gasoline"
+
+    mock_fuel_category = MagicMock()
+    mock_fuel_category.category = "Petroleum-based"
+
+    mock_expected_use = MagicMock()
+    mock_expected_use.name = "Transportation"
+
+    mock_provision_of_the_act = MagicMock()
+    mock_provision_of_the_act.name = "Provision A"
+
+    mock_fuel_code = MagicMock()
+    mock_fuel_code.fuel_code = "FuelCode123"
+
+    # Mock an instance of OtherUses
+    mock_other_use = MagicMock()
+    mock_other_use.other_uses_id = 1
+    mock_other_use.compliance_report_id = compliance_report_id
+    mock_other_use.quantity_supplied = 1000
+    mock_other_use.fuel_type = mock_fuel_type
+    mock_other_use.fuel_category = mock_fuel_category
+    mock_other_use.expected_use = mock_expected_use
+    mock_other_use.provision_of_the_act = mock_provision_of_the_act
+    mock_other_use.fuel_code = mock_fuel_code
+    mock_other_use.units = "L"
+    mock_other_use.ci_of_fuel = 10.5
+    mock_other_use.rationale = "Test rationale"
+    mock_other_use.group_uuid = mock_compliance_report_uuid
+    mock_other_use.version = 1
+    mock_other_use.user_type = "Supplier"
+    mock_other_use.action_type = "Create"
 
     mock_result_other_uses = [mock_other_use]
 
@@ -145,14 +171,20 @@ async def test_get_other_uses(other_uses_repo, mock_db_session):
         side_effect=[mock_first_execute, mock_second_execute]
     )
 
+    # Call the repository method
     result = await other_uses_repo.get_other_uses(compliance_report_id)
 
+    # Assertions
     assert isinstance(result, list)
     assert len(result) == 1
-    assert isinstance(result[0], OtherUsesSchema)
     assert result[0].fuel_type == "Gasoline"
     assert result[0].fuel_category == "Petroleum-based"
     assert result[0].expected_use == "Transportation"
+    assert result[0].provision_of_the_act == "Provision A"
+    assert result[0].fuel_code == "FuelCode123"
+    assert result[0].units == "L"
+    assert result[0].ci_of_fuel == 10.5
+    assert result[0].rationale == "Test rationale"
 
 
 @pytest.mark.anyio
