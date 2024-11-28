@@ -18,13 +18,19 @@ jobs:
   # Read the image tag from test environment
   get-image-tag:
 
-    name: Read release number from Test environment
+    name: Get the image-tag from values-test.yaml
     runs-on: ubuntu-latest
   
     outputs:
       IMAGE_TAG: ${{ steps.get-image-tag.outputs.IMAGE_TAG }}
 
     steps:
+      - name: Checkout Manifest repository
+        uses: actions/checkout@v3
+        with:
+          repository: bcgov-c/tenant-gitops-d2bd59
+          ref: main
+          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
 
       # to do: verify the frontend image tag is same as the backend image tag
       - name: Get the image tag from values-test.yaml
@@ -33,6 +39,7 @@ jobs:
         with:
             cmd: |
               imagetag=$(yq eval '.image.tag' lcfs/charts/lcfs-frontend/values-test.yaml)
+              echo "IMAGE_TAG retrieved from Test is $imagetag"
               echo "IMAGE_TAG=$imagetag" >> $GITHUB_OUTPUT
 
   # Deplog the image which is running on test to prod
