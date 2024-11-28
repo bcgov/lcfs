@@ -118,7 +118,7 @@ def setup_logging(level=logging.INFO):
             structlog.processors.add_log_level,
             structlog.processors.CallsiteParameterAdder(
                 [
-                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.PATHNAME,
                     structlog.processors.CallsiteParameter.FUNC_NAME,
                     structlog.processors.CallsiteParameter.LINENO,
                 ]
@@ -136,7 +136,7 @@ def setup_logging(level=logging.INFO):
             structlog.processors.add_log_level,
             structlog.processors.CallsiteParameterAdder(
                 [
-                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.PATHNAME,
                     structlog.processors.CallsiteParameter.FUNC_NAME,
                     structlog.processors.CallsiteParameter.LINENO,
                 ]

@@ -6,7 +6,6 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetFuelCodes } from '@/hooks/useFuelCode'
 import { useApiService } from '@/services/useApiService'
 import withRole from '@/utils/withRole'
@@ -23,16 +22,6 @@ const FuelCodesBase = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-
-  const { data: currentUser } = useCurrentUser()
-
-  const userRoles = currentUser?.roles?.map((role) => role.name) || []
-
-  const isAuthorized = [
-    roles.analyst,
-    roles.compliance_manager,
-    roles.director
-  ].some((role) => userRoles.includes(role))
 
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'fuelCodes'])
@@ -51,9 +40,8 @@ const FuelCodesBase = () => {
   }
 
   const handleRowClicked = (params) => {
-    if (!isAuthorized) return
     navigate(
-      ROUTES.FUELCODES_VIEW.replace(':fuelCodeID', params.data.fuelCodeId)
+      ROUTES.FUELCODES_EDIT.replace(':fuelCodeID', params.data.fuelCodeId)
     )
   }
 
@@ -91,7 +79,7 @@ const FuelCodesBase = () => {
         mt={1}
         mb={2}
       >
-        <Role roles={[roles.administrator]}>
+        <Role roles={[roles.analyst]}>
           <BCButton
             variant="contained"
             size="small"
@@ -137,7 +125,7 @@ const FuelCodesBase = () => {
 
 export const FuelCodes = withRole(
   FuelCodesBase,
-  [roles.analyst],
+  [roles.government],
   ROUTES.DASHBOARD
 )
 FuelCodes.displayName = 'FuelCodes'
