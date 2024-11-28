@@ -19,6 +19,8 @@ from lcfs.web.api.other_uses.schema import (
     OtherUsesAllSchema,
     FuelTypeSchema,
     ExpectedUseTypeSchema,
+    ProvisionOfTheActSchema,
+    FuelCodeSchema,
     DeleteOtherUsesResponseSchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
@@ -57,19 +59,31 @@ class OtherUsesServices:
         expected_use = await self.fuel_repo.get_expected_use_type_by_name(
             other_use.expected_use
         )
+        provision_of_the_act = await self.fuel_repo.get_provision_of_the_act_by_name(
+            other_use.provision_of_the_act
+        )
+        fuel_code_id = None
+        if other_use.fuel_code:
+            fuel_code = await self.fuel_repo.get_fuel_code_by_name(other_use.fuel_code)
+            fuel_code_id = fuel_code.fuel_code_id
 
         return OtherUses(
             **other_use.model_dump(
                 exclude={
                     "other_uses_id",
+                    "id",
                     "fuel_category",
                     "fuel_type",
+                    "provision_of_the_act",
+                    "fuel_code",
                     "expected_use",
                     "deleted",
                 }
             ),
             fuel_category_id=fuel_category.fuel_category_id,
             fuel_type_id=fuel_type.fuel_type_id,
+            provision_of_the_act_id=provision_of_the_act.provision_of_the_act_id,
+            fuel_code_id=fuel_code_id,
             expected_use_id=expected_use.expected_use_type_id
         )
 
@@ -85,6 +99,9 @@ class OtherUsesServices:
             units=model.units,
             fuel_type=model.fuel_type.fuel_type,
             fuel_category=model.fuel_category.category,
+            provision_of_the_act=model.provision_of_the_act.name,
+            fuel_code=model.fuel_code.fuel_code if model.fuel_code else None,
+            ci_of_fuel=model.ci_of_fuel,
             expected_use=model.expected_use.name,
             user_type=model.user_type,
             group_uuid=model.group_uuid,
@@ -112,6 +129,14 @@ class OtherUsesServices:
             expected_uses=[
                 ExpectedUseTypeSchema.model_validate(use)
                 for use in table_options["expected_uses"]
+            ],
+            provisions_of_the_act=[
+                ProvisionOfTheActSchema.model_validate(provision)
+                for provision in table_options["provisions_of_the_act"]
+            ],
+            fuel_codes=[
+                FuelCodeSchema.model_validate(fuel_code)
+                for fuel_code in table_options["fuel_codes"]
             ],
         )
 
@@ -157,7 +182,15 @@ class OtherUsesServices:
         if other_use.compliance_report_id == other_use_data.compliance_report_id:
             # Update existing record if compliance report ID matches
             for field, value in other_use_data.model_dump(
-                exclude={"id", "deleted", "fuel_type", "fuel_category", "expected_use"}
+                exclude={
+                    "id",
+                    "deleted",
+                    "fuel_type",
+                    "fuel_category",
+                    "expected_use",
+                    "provision_of_the_act",
+                    "fuel_code",
+                }
             ).items():
                 setattr(other_use, field, value)
 
@@ -179,6 +212,26 @@ class OtherUsesServices:
                         other_use_data.expected_use
                     )
                 )
+
+            if (
+                not other_use.provision_of_the_act
+                or other_use.provision_of_the_act.name
+                != other_use_data.provision_of_the_act
+            ):
+                other_use.provision_of_the_act = (
+                    await self.fuel_repo.get_provision_of_the_act_by_name(
+                        other_use_data.provision_of_the_act
+                    )
+                )
+            if (
+                other_use.fuel_code is None
+                or other_use_data.fuel_code is None
+                or other_use.fuel_code.fuel_code != other_use_data.fuel_code
+            ):
+                other_use.fuel_code = await self.fuel_repo.get_fuel_code_by_name(
+                    other_use_data.fuel_code
+                )
+            other_use.ci_of_fuel = other_use_data.ci_of_fuel
 
             updated_use = await self.repo.update_other_use(other_use)
             updated_schema = self.model_to_schema(updated_use)

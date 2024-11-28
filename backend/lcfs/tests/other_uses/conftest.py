@@ -37,8 +37,12 @@ def create_mock_schema(overrides: dict):
         expected_use="Transportation",
         units="L",
         rationale="Test rationale",
+        provision_of_the_act="Provision A",
+        fuel_code = "FuelCode123",
         group_uuid="test-group-uuid",
         version=1,
+        user_type="Supplier",
+        action_type="Create",
     )
 
     # Apply overrides
