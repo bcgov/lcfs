@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from redis.asyncio import Redis, ConnectionPool
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,16 +16,13 @@ app = FastAPI()
 logger = logging.getLogger(__name__)
 
 
-async def init_org_balance_cache():
+async def init_org_balance_cache(app: FastAPI):
+    redis = await app.state.redis_pool
     async with AsyncSession(async_engine) as session:
         async with session.begin():
 
             organization_repo = OrganizationsRepository(db=session)
             transaction_repo = TransactionRepository(db=session)
-
-            redis = Redis.from_url(
-                str(settings.redis_url), encoding="utf8", decode_responses=True
-            )
 
             # Get the oldest transaction year
             oldest_year = await transaction_repo.get_transaction_start_year()
