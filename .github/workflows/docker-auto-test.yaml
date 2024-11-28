@@ -105,7 +105,7 @@ jobs:
 
       - name: Upload pytest results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pytest-results
           path: backend/pytest-results.xml
@@ -121,7 +121,7 @@ jobs:
 
       - name: Upload Vitest results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vitest-results
           path: frontend/vitest-results.xml
@@ -184,7 +184,7 @@ jobs:
 
       # - name: Upload Cypress results
       #   if: always()
-      #   uses: actions/upload-artifact@v3
+      #   uses: actions/upload-artifact@v4
       #   with:
       #     name: cypress-results
       #     path: |

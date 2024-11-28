@@ -2,7 +2,7 @@ import json
 
 import httpx
 import jwt
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 from redis import ConnectionPool
 from redis.asyncio import Redis
 from sqlalchemy import func
@@ -12,11 +12,12 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 from starlette.authentication import AuthenticationBackend, AuthCredentials
 
-from lcfs.db.models.user.UserLoginHistory import UserLoginHistory
+from lcfs.db.models import UserLoginHistory
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
-from lcfs.services.keycloak.dependencies import _parse_external_username
+from lcfs.services.keycloak.dependencies import parse_external_username
 from lcfs.settings import Settings
+from lcfs.web.api.user.repo import UserRepository
 
 
 class UserAuthentication(AuthenticationBackend):
@@ -134,21 +135,13 @@ class UserAuthentication(AuthenticationBackend):
 
                     if user is None:
                         # Handle the case where no user is found
-                        await self.create_login_history(
-                            user_token, False, None, request.url.path
-                        )
                         pass
                     # Check if the user is active
                     elif not user.is_active:
                         error_text = "The account is currently inactive."
-                        await self.create_login_history(
-                            user_token, False, error_text, request.url.path
-                        )
+                        await self.create_login_history(user_token, False, error_text)
                         raise HTTPException(status_code=401, detail=error_text)
                     else:
-                        await self.create_login_history(
-                            user_token, True, None, request.url.path
-                        )
                         return AuthCredentials(["authenticated"]), user
 
             except NoResultFound:
@@ -164,7 +157,7 @@ class UserAuthentication(AuthenticationBackend):
                 .where(
                     func.lower(UserProfile.keycloak_email) == email,
                     func.lower(UserProfile.keycloak_username)
-                    == _parse_external_username(user_token),
+                    == parse_external_username(user_token),
                 )
             )
             # Check for Government or Supplier affiliation
@@ -174,9 +167,6 @@ class UserAuthentication(AuthenticationBackend):
                 user_query = user_query.where(UserProfile.organization_id.isnot(None))
             else:
                 error_text = "Unknown identity provider."
-                await self.create_login_history(
-                    user_token, False, error_text, request.url.path
-                )
                 raise HTTPException(status_code=401, detail=error_text)
 
             async with self.session_factory() as session:
@@ -184,28 +174,20 @@ class UserAuthentication(AuthenticationBackend):
                 user = user_result.unique().scalar_one_or_none()
                 if user is None:
                     error_text = "No User with that configuration exists."
-                    await self.create_login_history(
-                        user_token, False, error_text, request.url.path
-                    )
+                    await self.create_login_history(user_token, False, error_text)
                     raise HTTPException(status_code=401, detail=error_text)
 
                 # Check if the user is active
                 if not user.is_active:
                     error_text = "The account is currently inactive."
-                    await self.create_login_history(
-                        user_token, False, error_text, request.url.path
-                    )
+                    await self.create_login_history(user_token, False, error_text)
                     raise HTTPException(status_code=401, detail=error_text)
         else:
             error_text = "preferred_username or email is required in JWT payload."
-            await self.create_login_history(
-                user_token, False, error_text, request.url.path
-            )
             raise HTTPException(status_code=401, detail=error_text)
 
         await self.map_user_keycloak_id(user, user_token)
 
-        await self.create_login_history(user_token, True, None, request.url.path)
         return AuthCredentials(["authenticated"]), user
 
     async def map_user_keycloak_id(self, user_profile, user_token):
@@ -224,24 +206,17 @@ class UserAuthentication(AuthenticationBackend):
 
         return user_profile
 
-    async def create_login_history(
-        self, user_token, success=False, error=None, path=""
-    ):
-        """
-        Creates a user login history entry asynchronously.
-        """
-        # We only want to create a user_login_history when the current user is fetched
-        if path == "/api/users/current":
-            email = user_token.get("email", "").lower()
-            username = _parse_external_username(user_token)
-            preferred_username = user_token.get("preferred_username", "").lower()
-            login_history = UserLoginHistory(
-                keycloak_email=email,
-                external_username=username,
-                keycloak_user_id=preferred_username,
-                is_login_successful=success,
-                login_error_message=error,
-            )
-            async with self.session_factory() as session:
-                session.add(login_history)
-                await session.commit()
+    async def create_login_history(self, user_token, is_success=True, error_msg=None):
+        email = user_token.get("email", "").lower()
+        username = parse_external_username(user_token)
+        preferred_username = user_token.get("preferred_username", "").lower()
+        login_history = UserLoginHistory(
+            keycloak_email=email,
+            external_username=username,
+            keycloak_user_id=preferred_username,
+            is_login_successful=is_success,
+            login_error_message=error_msg,
+        )
+        async with self.session_factory() as session:
+            session.add(login_history)
+            await session.commit()

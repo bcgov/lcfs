@@ -12,6 +12,7 @@ from fastapi import (
     Request,
     Response,
     Depends,
+    HTTPException,
 )
 from fastapi_cache.decorator import cache
 
@@ -26,7 +27,6 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferTableOptionsSchema,
     DeleteNotionalTransferResponseSchema,
     PaginatedNotionalTransferRequestSchema,
-    NotionalTransfersSchema,
     NotionalTransfersAllSchema,
 )
 from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
@@ -67,7 +67,9 @@ async def get_notional_transfers(
     report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of notional transfers for a compliance report"""
-    await report_validate.validate_organization_access(request_data.compliance_report_id)
+    await report_validate.validate_organization_access(
+        request_data.compliance_report_id
+    )
     return await service.get_notional_transfers(request_data.compliance_report_id)
 
 
@@ -106,10 +108,13 @@ async def get_notional_transfer(
     service: NotionalTransferServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
 ) -> NotionalTransferSchema:
+    notional_transfer = await service.get_notional_transfer(notional_transfer_id)
+    if not notional_transfer:
+        raise HTTPException(status_code=404, detail="Notional transfer not found")
     await report_validate.validate_organization_access(
-        notional_transfer_id=notional_transfer_id
+        notional_transfer.compliance_report_id
     )
-    return await service.get_notional_transfer(notional_transfer_id)
+    return notional_transfer
 
 
 @router.post(
@@ -131,24 +136,28 @@ async def save_notional_transfer_row(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
+    # Determine user type for record creation
+    current_user_type = request.user.user_type
+    if not current_user_type:
+        raise HTTPException(
+            status_code=403, detail="User does not have the required role."
+        )
+
     if request_data.deleted:
         # Delete existing notional transfer
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        await service.delete_notional_transfer(notional_transfer_id)
-        return DeleteNotionalTransferResponseSchema(
-            message="Notional transfer deleted successfully"
-        )
+        return await service.delete_notional_transfer(request_data, current_user_type)
     elif notional_transfer_id:
         # Update existing notional transfer
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.update_notional_transfer(request_data)
+        return await service.update_notional_transfer(request_data, current_user_type)
     else:
         # Create new notional transfer
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.create_notional_transfer(request_data)
+        return await service.create_notional_transfer(request_data, current_user_type)

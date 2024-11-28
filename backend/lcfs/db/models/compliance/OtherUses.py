@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 
@@ -33,6 +33,21 @@ class OtherUses(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Foreign key to the fuel category",
     )
+    provision_of_the_act_id = Column(
+        Integer,
+        ForeignKey("provision_of_the_act.provision_of_the_act_id"),
+        nullable=False,
+        comment="Foreign key to the provision of the act",
+    )
+    fuel_code_id = Column(
+        Integer,
+        ForeignKey("fuel_code.fuel_code_id"),
+        nullable=True,
+        comment="Foreign key to the fuel code",
+    )
+    ci_of_fuel = Column(
+        Numeric(10, 2), nullable=False, comment="The Carbon intesity of fuel"
+    )
     quantity_supplied = Column(
         Integer, nullable=False, comment="Quantity of fuel used. Cannot be negative."
     )
@@ -57,6 +72,8 @@ class OtherUses(BaseModel, Auditable, Versioning):
     fuel_type = relationship("FuelType")
     fuel_category = relationship("FuelCategory")
     expected_use = relationship("ExpectedUseType")
+    provision_of_the_act = relationship("ProvisionOfTheAct")
+    fuel_code = relationship("FuelCode")
 
     def __repr__(self):
         return f"<OtherUses(id={self.other_uses_id}, quantity_supplied={self.quantity_supplied})>"
