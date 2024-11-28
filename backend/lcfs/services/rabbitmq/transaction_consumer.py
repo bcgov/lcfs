@@ -4,6 +4,8 @@ import logging
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+from lcfs.dependencies.dependencies import get_redis_pool
+from fastapi import Request
 
 from lcfs.db.dependencies import async_engine
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
@@ -43,14 +45,12 @@ class TransactionConsumer(BaseConsumer):
     ):
         super().__init__(queue_name)
 
-    async def process_message(self, body: bytes):
+    async def process_message(self, body: bytes, request: Request):
         message_content = json.loads(body.decode())
         compliance_units = message_content.get("compliance_units_amount")
         org_id = message_content.get("organization_id")
 
-        redis = Redis.from_url(
-            str(settings.redis_url), encoding="utf8", decode_responses=True
-        )
+        redis = await get_redis_pool(request)
 
         async with AsyncSession(async_engine) as session:
             async with session.begin():

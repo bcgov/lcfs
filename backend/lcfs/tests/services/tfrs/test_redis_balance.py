@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
 
 from redis.asyncio import ConnectionPool, Redis
@@ -18,33 +18,42 @@ async def test_init_org_balance_cache():
 
     # Mock the Redis client
     mock_redis = AsyncMock()
+    mock_redis.set = AsyncMock()  # Ensure the `set` method is mocked
 
     # Mock the settings
-    mock_settings = AsyncMock()
+    mock_settings = MagicMock()
     mock_settings.redis_url = "redis://localhost"
+
+    # Create a mock app object
+    mock_app = MagicMock()
+
+    # Simulate redis_pool as an awaitable returning mock_redis
+    async def mock_redis_pool():
+        return mock_redis
+
+    mock_app.state.redis_pool = mock_redis_pool()
+    mock_app.state.settings = mock_settings
 
     current_year = datetime.now().year
     last_year = current_year - 1
 
-    # Patch the Redis and session creation
-    with patch("redis.asyncio.Redis.from_url", return_value=mock_redis):
-        with patch("sqlalchemy.ext.asyncio.AsyncSession", return_value=mock_session):
+    with patch(
+        "lcfs.web.api.organizations.services.OrganizationsRepository.get_organizations",
+        return_value=[
+            MagicMock(organization_id=1, name="Org1"),
+            MagicMock(organization_id=2, name="Org2"),
+        ],
+    ):
+        with patch(
+            "lcfs.web.api.transaction.repo.TransactionRepository.get_transaction_start_year",
+            return_value=last_year,
+        ):
             with patch(
-                "lcfs.web.api.organizations.services.OrganizationsRepository.get_organizations",
-                return_value=[
-                    AsyncMock(organization_id=1, name="Org1"),
-                    AsyncMock(organization_id=2, name="Org2"),
-                ],
+                "lcfs.web.api.transaction.repo.TransactionRepository.calculate_available_balance_for_period",
+                side_effect=[100, 200, 150, 250, 300, 350],
             ):
-                with patch(
-                    "lcfs.web.api.transaction.repo.TransactionRepository.get_transaction_start_year",
-                    return_value=last_year,
-                ):
-                    with patch(
-                        "lcfs.web.api.transaction.repo.TransactionRepository.calculate_available_balance_for_period",
-                        side_effect=[100, 200, 150, 250, 300, 350],
-                    ):
-                        await init_org_balance_cache()
+                # Pass the mock app to the function
+                await init_org_balance_cache(mock_app)
 
     # Assert that each cache set operation was called correctly
     calls = mock_redis.set.mock_calls
