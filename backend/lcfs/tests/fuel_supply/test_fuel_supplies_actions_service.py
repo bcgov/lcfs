@@ -1,22 +1,21 @@
 # test_fuel_supply.py
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 from datetime import datetime
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from unittest.mock import AsyncMock
+from uuid import uuid4
+
+import pytest
+
+from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
-    FuelSupplyResponseSchema,
     DeleteFuelSupplyResponseSchema,
 )
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.web.exception.exceptions import DatabaseException
 from lcfs.web.utils.calculations import calculate_compliance_units
-
-from fastapi import HTTPException
 
 # Constants defining which fields to exclude during model operations
 FUEL_SUPPLY_EXCLUDE_FIELDS = {
@@ -150,12 +149,13 @@ async def test_create_fuel_supply_success(
     user_type = UserTypeEnum.SUPPLIER
 
     # Mock the response from get_standardized_fuel_data
-    mock_fuel_code_repo.get_standardized_fuel_data.return_value = {
-        "effective_carbon_intensity": 50.0,
-        "target_ci": 80.0,
-        "eer": 1.0,
-        "energy_density": 35.0,
-    }
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=50.0,
+        target_ci=80.0,
+        eer=1.0,
+        energy_density=35.0,
+        uci=None,
+    )
 
     fe_data.fuel_type_id = 3
     fe_data.fuel_category_id = 2
@@ -238,12 +238,13 @@ async def test_update_fuel_supply_success_existing_report(
     mock_repo.get_fuel_supply_version_by_user.return_value = existing_supply
 
     # Mock the response from get_standardized_fuel_data
-    mock_fuel_code_repo.get_standardized_fuel_data.return_value = {
-        "effective_carbon_intensity": 55.0,
-        "target_ci": 85.0,
-        "eer": 1.2,
-        "energy_density": 36.0,
-    }
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=55.0,
+        target_ci=85.0,
+        eer=1.2,
+        energy_density=36.0,
+        uci=None,
+    )
 
     # Mock the updated fuel supply
     updated_supply = FuelSupply(
@@ -319,12 +320,13 @@ async def test_update_fuel_supply_create_new_version(
     mock_repo.get_fuel_supply_version_by_user.return_value = existing_supply
 
     # Mock the response from get_standardized_fuel_data
-    mock_fuel_code_repo.get_standardized_fuel_data.return_value = {
-        "effective_carbon_intensity": 60.0,
-        "target_ci": 90.0,
-        "eer": 1.5,
-        "energy_density": 37.0,
-    }
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=60.0,
+        target_ci=90.0,
+        eer=1.5,
+        energy_density=37.0,
+        uci=None,
+    )
 
     # Mock the newly created supply (new version)
     new_supply = FuelSupply(
@@ -477,12 +479,13 @@ async def test_populate_fuel_supply_fields(
     fuel_supply = FuelSupply(**fe_data_dict)
 
     # Mock standardized fuel data
-    mock_fuel_code_repo.get_standardized_fuel_data.return_value = {
-        "effective_carbon_intensity": 50.0,
-        "target_ci": 80.0,
-        "eer": None,  # Test default EER
-        "energy_density": None,  # Should use fe_data.energy_density
-    }
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=50.0,
+        target_ci=80.0,
+        eer=1.0,
+        energy_density=None,
+        uci=None,
+    )
 
     # Call the method under test
     populated_supply = await fuel_supply_action_service._populate_fuel_supply_fields(
@@ -530,12 +533,13 @@ async def test_compliance_units_calculation(
     )
 
     # Mock standardized fuel data
-    mock_fuel_code_repo.get_standardized_fuel_data.return_value = {
-        "effective_carbon_intensity": case["input"]["ci_of_fuel"],
-        "target_ci": case["input"]["target_ci"],
-        "eer": case["input"]["eer"],
-        "energy_density": case["input"]["energy_density"],
-    }
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=case["input"]["ci_of_fuel"],
+        target_ci=case["input"]["target_ci"],
+        eer=case["input"]["eer"],
+        energy_density=case["input"]["energy_density"],
+        uci=None,
+    )
 
     # Exclude invalid fields and set related objects
     fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)

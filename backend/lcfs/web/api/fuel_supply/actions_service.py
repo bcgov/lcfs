@@ -74,11 +74,14 @@ class FuelSupplyActionService:
         fuel_supply.units = QuantityUnitsEnum(fs_data.units)
 
         # Set calculated fields based on standardized fuel data
-        fuel_supply.ci_of_fuel = fuel_data["effective_carbon_intensity"]
-        fuel_supply.target_ci = fuel_data["target_ci"]
-        fuel_supply.eer = fuel_data["eer"] or 1  # Default EER to 1 if None
+        fuel_supply.ci_of_fuel = fuel_data.effective_carbon_intensity
+        fuel_supply.target_ci = fuel_data.target_ci
+        fuel_supply.eer = fuel_data.eer
+        fuel_supply.uci = fuel_data.uci
         fuel_supply.energy_density = (
-            fuel_data["energy_density"] or fs_data.energy_density
+            fuel_data.energy_density
+            if fuel_data.energy_density
+            else fs_data.energy_density
         )
 
         # Calculate total energy if energy density is available
@@ -93,7 +96,7 @@ class FuelSupplyActionService:
             TCI=fuel_supply.target_ci or 0,
             EER=fuel_supply.eer or 1,
             RCI=fuel_supply.ci_of_fuel or 0,
-            UCI=0,  # Assuming Additional Carbon Intensity Attributable to Use is zero
+            UCI=fuel_supply.uci or 0,
             Q=fuel_supply.quantity or 0,
             ED=fuel_supply.energy_density or 0,
         )
