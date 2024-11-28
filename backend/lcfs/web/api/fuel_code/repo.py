@@ -544,7 +544,7 @@ class FuelCodeRepository:
                 WHERE fcp.prefix = :prefix
             ),
             all_possible_codes AS (
-                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101)) AS base_code
+                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101) + 1) AS base_code
             ),
             available_codes AS (
                 SELECT base_code
@@ -683,15 +683,16 @@ class FuelCodeRepository:
         result = await self.db.execute(
             select(FuelCode)
             .join(FuelCode.fuel_code_prefix)
+            .join(FuelCodeStatus, FuelCode.fuel_status_id == FuelCodeStatus.fuel_code_status_id)
+            .outerjoin(FuelType, FuelCode.fuel_type_id == FuelType.fuel_type_id)
             .options(
-                contains_eager(FuelCode.fuel_code_prefix).subqueryload(
-                    FuelCodePrefix.fuel_codes
-                )
+                contains_eager(FuelCode.fuel_code_prefix),
+                joinedload(FuelCode.fuel_code_status),
+                joinedload(FuelCode.fuel_code_type),
             )
             .where(
                 and_(
-                    func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix)
-                    == fuel_code,
+                    func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix) == fuel_code,
                     FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
                 )
             )

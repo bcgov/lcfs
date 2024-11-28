@@ -1,7 +1,7 @@
 """Consolidated Migration: Materialized Views, Audit Logging Functions, and Triggers
 
 Revision ID: 4038ff8d8c49
-Revises: 2c69188b9d1c
+Revises: a2240b2b5629
 Create Date: 2024-11-02 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "4038ff8d8c49"
-down_revision = "2c69188b9d1c"
+down_revision = "a2240b2b5629"
 branch_labels = None
 depends_on = None
 
