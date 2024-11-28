@@ -220,11 +220,10 @@ export const otherUsesColDefs = (optionsData, errors) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     headerComponent: RequiredHeader,
     cellEditor: NumberEditor,
-    valueFormatter,
+    valueFormatter: (params) => valueFormatter({ value: params.value }),
     type: 'numericColumn',
     cellEditorParams: {
       precision: 0,
-      min: 0,
       showStepperButtons: false
     },
     cellStyle: (params) => StandardCellErrors(params, errors),

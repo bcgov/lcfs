@@ -85,12 +85,13 @@ class OtherUsesTableOptionsSchema(BaseSchema):
 class OtherUsesCreateSchema(BaseSchema):
     other_uses_id: Optional[int] = None
     compliance_report_id: int
-    quantity_supplied: int
     fuel_type: str
     fuel_category: str
-    expected_use: str
     provision_of_the_act: str
     fuel_code: Optional[str] = None
+    quantity_supplied: int = Field(
+        ..., gt=0, description="Quantity supplied must be greater than 0"
+    )
     units: str
     ci_of_fuel: Optional[float] = None
     expected_use: str
