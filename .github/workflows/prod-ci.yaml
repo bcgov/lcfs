@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
   
     outputs:
-      output1: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
+      IMAGE_TAG: ${{ steps.get-image-tag.outputs.IMAGE_TAG }}
 
     steps:
 
@@ -33,7 +33,7 @@ jobs:
         with:
             cmd: |
               imagetag=$(yq eval '.image.tag' lcfs/charts/lcfs-frontend/values-test.yaml)
-              echo $imagetag >> $GITHUB_OUTPUT
+              echo "IMAGE_TAG=$imagetag" >> $GITHUB_OUTPUT
 
   # Deplog the image which is running on test to prod
   deploy-on-prod:
@@ -44,7 +44,7 @@ jobs:
     timeout-minutes: 60
 
     env:
-      IMAGE_TAG: ${{ needs.get-image-tag.outputs.output1 }}
+      IMAGE_TAG: ${{ needs.get-image-tag.outputs.IMAGE_TAG }}
 
     steps:
 
@@ -71,13 +71,10 @@ jobs:
       - name: Update frontend tag for prod deployment
         uses: mikefarah/yq@v4.40.5
         with:
-            cmd: yq -i '.image.tag = "${{env.IMAGE_TAG }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
+            cmd: |
+              yq -i '.image.tag = "${{env.IMAGE_TAG }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
+              yq -i '.image.tag = "${{env.IMAGE_TAG }}"' lcfs/charts/lcfs-backend/values-prod.yaml
     
-      - name: Update backend tag for prod deployment
-        uses: mikefarah/yq@v4.40.5
-        with:
-            cmd: yq -i '.image.tag = "${{env.IMAGE_TAG }}"' lcfs/charts/lcfs-backend/values-prod.yaml
-
       - name: GitHub Commit & Push
         run: |
           git config --global user.email "actions@github.com"
