@@ -1,7 +1,7 @@
 from contextlib import ExitStack
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, patch, MagicMock
 import json
 
 
