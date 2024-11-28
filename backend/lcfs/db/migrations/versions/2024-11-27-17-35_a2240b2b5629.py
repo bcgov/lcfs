@@ -1,8 +1,8 @@
 """initial migration
 
-Revision ID: e7fa1aeef86e
+Revision ID: a2240b2b5629
 Revises: 
-Create Date: 2024-09-23 15:31:32.885579
+Create Date: 2024-11-27 17:35:34.810640
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = "e7fa1aeef86e"
+revision = "a2240b2b5629"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -53,50 +53,12 @@ def upgrade() -> None:
         "Adjustment", "Reserved", "Released", name="transaction_action_enum"
     ).create(op.get_bind())
     sa.Enum(
-        "CREDIT_TRANSFER_CREATED",
-        "CREDIT_TRANSFER_SIGNED_1OF2",
-        "CREDIT_TRANSFER_SIGNED_2OF2",
-        "CREDIT_TRANSFER_PROPOSAL_REFUSED",
-        "CREDIT_TRANSFER_PROPOSAL_ACCEPTED",
-        "CREDIT_TRANSFER_RECOMMENDED_FOR_APPROVAL",
-        "CREDIT_TRANSFER_RECOMMENDED_FOR_DECLINATION",
-        "CREDIT_TRANSFER_DECLINED",
-        "CREDIT_TRANSFER_APPROVED",
-        "CREDIT_TRANSFER_RESCINDED",
-        "CREDIT_TRANSFER_COMMENT",
-        "CREDIT_TRANSFER_INTERNAL_COMMENT",
-        "PVR_CREATED",
-        "PVR_RECOMMENDED_FOR_APPROVAL",
-        "PVR_RESCINDED",
-        "PVR_PULLED_BACK",
-        "PVR_DECLINED",
-        "PVR_APPROVED",
-        "PVR_COMMENT",
-        "PVR_INTERNAL_COMMENT",
-        "PVR_RETURNED_TO_ANALYST",
-        "DOCUMENT_PENDING_SUBMISSION",
-        "DOCUMENT_SUBMITTED",
-        "DOCUMENT_SCAN_FAILED",
-        "DOCUMENT_RECEIVED",
-        "DOCUMENT_ARCHIVED",
-        "COMPLIANCE_REPORT_DRAFT",
-        "COMPLIANCE_REPORT_SUBMITTED",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_ACCEPTANCE_ANALYST",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_REJECTION_ANALYST",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_ACCEPTANCE_MANAGER",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_REJECTION_MANAGER",
-        "COMPLIANCE_REPORT_ACCEPTED",
-        "COMPLIANCE_REPORT_REJECTED",
-        "COMPLIANCE_REPORT_REQUESTED_SUPPLEMENTAL",
-        "EXCLUSION_REPORT_DRAFT",
-        "EXCLUSION_REPORT_SUBMITTED",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_ACCEPTANCE_ANALYST",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_REJECTION_ANALYST",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_ACCEPTANCE_MANAGER",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_REJECTION_MANAGER",
-        "EXCLUSION_REPORT_ACCEPTED",
-        "EXCLUSION_REPORT_REJECTED",
-        "EXCLUSION_REPORT_REQUESTED_SUPPLEMENTAL",
+        "TRANSFER_PARTNER_UPDATE",
+        "TRANSFER_DIRECTOR_REVIEW",
+        "INITIATIVE_APPROVED",
+        "INITIATIVE_DA_REQUEST",
+        "SUPPLEMENTAL_REQUESTED",
+        "DIRECTOR_ASSESSMENT",
         name="notification_type_enum",
     ).create(op.get_bind())
     sa.Enum(
@@ -123,17 +85,16 @@ def upgrade() -> None:
     sa.Enum("Gasoline", "Diesel", "Jet fuel", name="fuel_category_enum").create(
         op.get_bind()
     )
-    sa.Enum("SUPPLEMENTAL", "REASSESSMENT", name="supplementalreporttype").create(
-        op.get_bind()
-    )
     sa.Enum("Received", "Transferred", name="receivedortransferredenum").create(
         op.get_bind()
     )
+    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").create(op.get_bind())
+    sa.Enum("CREATE", "UPDATE", "DELETE", name="actiontypeenum").create(op.get_bind())
+    sa.Enum("SUPPLIER", "GOVERNMENT", name="usertypeenum").create(op.get_bind())
     sa.Enum(
         "Litres", "Kilograms", "Kilowatt_hour", "Cubic_metres", name="quantityunitsenum"
     ).create(op.get_bind())
-    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").create(op.get_bind())
-    sa.Enum("CREATE", "UPDATE", "DELETE", name="changetype").create(op.get_bind())
+    sa.Enum("Single port", "Dual port", name="ports_enum").create(op.get_bind())
     sa.Enum(
         "Draft",
         "Submitted",
@@ -143,7 +104,12 @@ def upgrade() -> None:
         "ReAssessed",
         name="compliancereportstatusenum",
     ).create(op.get_bind())
-    sa.Enum("ANNUAL", "QUARTERLY", name="reporttype").create(op.get_bind())
+    sa.Enum("ANNUAL", "QUARTERLY", name="reportingfrequency").create(op.get_bind())
+    sa.Enum(
+        "SUPPLIER_SUPPLEMENTAL",
+        "GOVERNMENT_REASSESSMENT",
+        name="supplementalinitiatortype",
+    ).create(op.get_bind())
     sa.Enum("Director", "Analyst", "Compliance Manager", name="audience_scope").create(
         op.get_bind()
     )
@@ -274,6 +240,94 @@ def upgrade() -> None:
         comment="Lookup table for allocation transaction types.",
     )
     op.create_table(
+        "audit_log",
+        sa.Column(
+            "audit_log_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for each audit log entry.",
+        ),
+        sa.Column(
+            "table_name",
+            sa.Text(),
+            nullable=False,
+            comment="Name of the table where the action occurred.",
+        ),
+        sa.Column(
+            "operation",
+            sa.Text(),
+            nullable=False,
+            comment="Type of operation: 'INSERT', 'UPDATE', or 'DELETE'.",
+        ),
+        sa.Column(
+            "row_id",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            comment="Primary key of the affected row, stored as JSONB to support composite keys.",
+        ),
+        sa.Column(
+            "old_values",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+            comment="Previous values before the operation.",
+        ),
+        sa.Column(
+            "new_values",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+            comment="New values after the operation.",
+        ),
+        sa.Column(
+            "delta",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=True,
+            comment="JSONB delta of the changes.",
+        ),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.PrimaryKeyConstraint("audit_log_id", name=op.f("pk_audit_log")),
+        comment="Track changes in defined tables.",
+    )
+    op.create_index(
+        "idx_audit_log_create_date", "audit_log", ["create_date"], unique=False
+    )
+    op.create_index(
+        "idx_audit_log_create_user", "audit_log", ["create_user"], unique=False
+    )
+    op.create_index(
+        "idx_audit_log_delta",
+        "audit_log",
+        ["delta"],
+        unique=False,
+        postgresql_using="gin",
+    )
+    op.create_index("idx_audit_log_operation", "audit_log", ["operation"], unique=False)
+    op.create_table(
         "compliance_period",
         sa.Column(
             "compliance_period_id",
@@ -399,6 +453,49 @@ def upgrade() -> None:
         comment="Lookup table for compliance reports status",
     )
     op.create_table(
+        "document",
+        sa.Column(
+            "document_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the document",
+        ),
+        sa.Column("file_key", sa.String(), nullable=False),
+        sa.Column("file_name", sa.String(), nullable=False),
+        sa.Column("file_size", sa.Integer(), nullable=False),
+        sa.Column("mime_type", sa.String(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.PrimaryKeyConstraint("document_id", name=op.f("pk_document")),
+        sa.UniqueConstraint("document_id", name=op.f("uq_document_document_id")),
+        comment="Main document table for storing base document information",
+    )
+    op.create_table(
         "end_use_type",
         sa.Column("end_use_type_id", sa.Integer(), nullable=False),
         sa.Column("type", sa.Text(), nullable=False),
@@ -438,6 +535,40 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("end_use_type_id", name=op.f("pk_end_use_type")),
         comment="Represents a end use types for various fuel types and categories",
+    )
+    op.create_table(
+        "end_user_type",
+        sa.Column(
+            "end_user_type_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="The unique identifier for the end user type.",
+        ),
+        sa.Column(
+            "type_name",
+            sa.String(),
+            nullable=False,
+            comment="The name of the end user type.",
+        ),
+        sa.Column("intended_use", sa.Boolean(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.PrimaryKeyConstraint("end_user_type_id", name=op.f("pk_end_user_type")),
+        sa.UniqueConstraint("type_name", name=op.f("uq_end_user_type_type_name")),
+        comment="Types of intended users for supply equipment",
     )
     op.create_table(
         "expected_use_type",
@@ -1004,50 +1135,12 @@ def upgrade() -> None:
         sa.Column(
             "name",
             postgresql.ENUM(
-                "CREDIT_TRANSFER_CREATED",
-                "CREDIT_TRANSFER_SIGNED_1OF2",
-                "CREDIT_TRANSFER_SIGNED_2OF2",
-                "CREDIT_TRANSFER_PROPOSAL_REFUSED",
-                "CREDIT_TRANSFER_PROPOSAL_ACCEPTED",
-                "CREDIT_TRANSFER_RECOMMENDED_FOR_APPROVAL",
-                "CREDIT_TRANSFER_RECOMMENDED_FOR_DECLINATION",
-                "CREDIT_TRANSFER_DECLINED",
-                "CREDIT_TRANSFER_APPROVED",
-                "CREDIT_TRANSFER_RESCINDED",
-                "CREDIT_TRANSFER_COMMENT",
-                "CREDIT_TRANSFER_INTERNAL_COMMENT",
-                "PVR_CREATED",
-                "PVR_RECOMMENDED_FOR_APPROVAL",
-                "PVR_RESCINDED",
-                "PVR_PULLED_BACK",
-                "PVR_DECLINED",
-                "PVR_APPROVED",
-                "PVR_COMMENT",
-                "PVR_INTERNAL_COMMENT",
-                "PVR_RETURNED_TO_ANALYST",
-                "DOCUMENT_PENDING_SUBMISSION",
-                "DOCUMENT_SUBMITTED",
-                "DOCUMENT_SCAN_FAILED",
-                "DOCUMENT_RECEIVED",
-                "DOCUMENT_ARCHIVED",
-                "COMPLIANCE_REPORT_DRAFT",
-                "COMPLIANCE_REPORT_SUBMITTED",
-                "COMPLIANCE_REPORT_RECOMMENDED_FOR_ACCEPTANCE_ANALYST",
-                "COMPLIANCE_REPORT_RECOMMENDED_FOR_REJECTION_ANALYST",
-                "COMPLIANCE_REPORT_RECOMMENDED_FOR_ACCEPTANCE_MANAGER",
-                "COMPLIANCE_REPORT_RECOMMENDED_FOR_REJECTION_MANAGER",
-                "COMPLIANCE_REPORT_ACCEPTED",
-                "COMPLIANCE_REPORT_REJECTED",
-                "COMPLIANCE_REPORT_REQUESTED_SUPPLEMENTAL",
-                "EXCLUSION_REPORT_DRAFT",
-                "EXCLUSION_REPORT_SUBMITTED",
-                "EXCLUSION_REPORT_RECOMMENDED_FOR_ACCEPTANCE_ANALYST",
-                "EXCLUSION_REPORT_RECOMMENDED_FOR_REJECTION_ANALYST",
-                "EXCLUSION_REPORT_RECOMMENDED_FOR_ACCEPTANCE_MANAGER",
-                "EXCLUSION_REPORT_RECOMMENDED_FOR_REJECTION_MANAGER",
-                "EXCLUSION_REPORT_ACCEPTED",
-                "EXCLUSION_REPORT_REJECTED",
-                "EXCLUSION_REPORT_REQUESTED_SUPPLEMENTAL",
+                "TRANSFER_PARTNER_UPDATE",
+                "TRANSFER_DIRECTOR_REVIEW",
+                "INITIATIVE_APPROVED",
+                "INITIATIVE_DA_REQUEST",
+                "SUPPLEMENTAL_REQUESTED",
+                "DIRECTOR_ASSESSMENT",
                 name="notification_type_enum",
                 create_type=False,
             ),
@@ -1797,7 +1890,7 @@ def upgrade() -> None:
         sa.Column("provision_2_id", sa.Integer(), nullable=True),
         sa.Column(
             "default_carbon_intensity",
-            sa.Float(precision=10, asdecimal=2),
+            sa.Numeric(precision=10, scale=2),
             nullable=True,
             comment="Carbon intensities: default & prescribed (gCO2e/MJ)",
         ),
@@ -2031,7 +2124,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "target_carbon_intensity",
-            sa.Float(),
+            sa.Numeric(precision=10, scale=2),
             nullable=False,
             comment="Target Carbon Intensity (gCO2e/MJ)",
         ),
@@ -2110,7 +2203,7 @@ def upgrade() -> None:
         sa.Column("fuel_type_id", sa.Integer(), nullable=True),
         sa.Column("end_use_type_id", sa.Integer(), nullable=True),
         sa.Column("uom_id", sa.Integer(), nullable=False),
-        sa.Column("intensity", sa.Float(precision=10, asdecimal=2), nullable=False),
+        sa.Column("intensity", sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
@@ -2169,7 +2262,7 @@ def upgrade() -> None:
             "energy_density_id", sa.Integer(), autoincrement=True, nullable=False
         ),
         sa.Column("fuel_type_id", sa.Integer(), nullable=False),
-        sa.Column("density", sa.Float(precision=10, asdecimal=2), nullable=False),
+        sa.Column("density", sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column("uom_id", sa.Integer(), nullable=False),
         sa.Column(
             "create_date",
@@ -2228,7 +2321,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "ratio",
-            sa.Float(precision=3, asdecimal=2),
+            sa.Float(precision=3, decimal_return_scale=2),
             nullable=False,
             comment="Energy effectiveness ratio constant",
         ),
@@ -2800,7 +2893,7 @@ def upgrade() -> None:
             sa.Integer(),
             autoincrement=True,
             nullable=False,
-            comment="Unique identifier for the compliance report",
+            comment="Unique identifier for the compliance report version",
         ),
         sa.Column(
             "compliance_period_id",
@@ -2827,11 +2920,35 @@ def upgrade() -> None:
             comment="Identifier for the transaction",
         ),
         sa.Column(
-            "report_type",
+            "compliance_report_group_uuid",
+            sa.String(length=36),
+            nullable=False,
+            comment="UUID that groups all versions of a compliance report",
+        ),
+        sa.Column(
+            "version",
+            sa.Integer(),
+            nullable=False,
+            comment="Version number of the compliance report",
+        ),
+        sa.Column(
+            "supplemental_initiator",
             postgresql.ENUM(
-                "ANNUAL", "QUARTERLY", name="reporttype", create_type=False
+                "SUPPLIER_SUPPLEMENTAL",
+                "GOVERNMENT_REASSESSMENT",
+                name="supplementalinitiatortype",
+                create_type=False,
+            ),
+            nullable=True,
+            comment="Indicates whether supplier or government initiated the supplemental",
+        ),
+        sa.Column(
+            "reporting_frequency",
+            postgresql.ENUM(
+                "ANNUAL", "QUARTERLY", name="reportingfrequency", create_type=False
             ),
             nullable=False,
+            comment="Reporting frequency",
         ),
         sa.Column(
             "nickname",
@@ -2896,112 +3013,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint(
             "compliance_report_id", name=op.f("pk_compliance_report")
         ),
-        comment="Main tracking table for all the sub-tables associated with a supplier's annual compliance report",
-    )
-    op.create_table(
-        "custom_fuel_type",
-        sa.Column(
-            "custom_fuel_type_id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the custom fuel type",
-        ),
-        sa.Column(
-            "type", sa.String(), nullable=False, comment="Type of the custom fuel"
-        ),
-        sa.Column(
-            "fuel_category_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to fuel_category table",
-        ),
-        sa.Column(
-            "provision_of_the_act_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to provision_of_the_act table",
-        ),
-        sa.Column(
-            "fuel_code_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to fuel_code table",
-        ),
-        sa.Column(
-            "unit", sa.String(), nullable=False, comment="Units of fuel quantity"
-        ),
-        sa.Column(
-            "energy_density",
-            sa.Float(precision=10, asdecimal=2),
-            nullable=False,
-            comment="Energy density of the fuel",
-        ),
-        sa.Column(
-            "description",
-            sa.String(),
-            nullable=True,
-            comment="Description of the custom fuel type",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "effective_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value became valid.",
-        ),
-        sa.Column(
-            "effective_status",
-            sa.Boolean(),
-            nullable=False,
-            comment="True if the value is currently valid, False if it is no longer valid.",
-        ),
-        sa.Column(
-            "expiration_date",
-            sa.Date(),
-            nullable=True,
-            comment="The calendar date the value is no longer valid.",
-        ),
-        sa.Column(
-            "display_order",
-            sa.Integer(),
-            nullable=True,
-            comment="Relative rank in display sorting order",
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_category_id"],
-            ["fuel_category.fuel_category_id"],
-            name=op.f("fk_custom_fuel_type_fuel_category_id_fuel_category"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_code_id"],
-            ["fuel_code.fuel_code_id"],
-            name=op.f("fk_custom_fuel_type_fuel_code_id_fuel_code"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["provision_of_the_act_id"],
-            ["provision_of_the_act.provision_of_the_act_id"],
-            name=op.f(
-                "fk_custom_fuel_type_provision_of_the_act_id_provision_of_the_act"
-            ),
-        ),
-        sa.PrimaryKeyConstraint(
-            "custom_fuel_type_id", name=op.f("pk_custom_fuel_type")
-        ),
-        comment="Lookup table for custom fuel types.",
+        comment="Main tracking table for all the sub-tables associated with a supplier's compliance report",
     )
     op.create_table(
         "feedstock_fuel_transport_mode",
@@ -3304,6 +3316,12 @@ def upgrade() -> None:
             "notification_channel_subscription_id",
             name=op.f("pk_notification_channel_subscription"),
         ),
+        sa.UniqueConstraint(
+            "user_profile_id",
+            "notification_channel_id",
+            "notification_type_id",
+            name="uq_user_channel_type",
+        ),
         comment="Represents a user's subscription to notification events",
     )
     op.create_table(
@@ -3315,6 +3333,7 @@ def upgrade() -> None:
         sa.Column("is_warning", sa.Boolean(), nullable=True),
         sa.Column("is_error", sa.Boolean(), nullable=True),
         sa.Column("is_archived", sa.Boolean(), nullable=True),
+        sa.Column("message", sa.Text(), nullable=False),
         sa.Column("related_organization_id", sa.Integer(), nullable=True),
         sa.Column("origin_user_profile_id", sa.Integer(), nullable=True),
         sa.Column("related_user_profile_id", sa.Integer(), nullable=True),
@@ -3396,7 +3415,10 @@ def upgrade() -> None:
             comment="transaction effective date",
         ),
         sa.Column(
-            "price_per_unit", sa.Integer(), nullable=True, comment="Price per unit"
+            "price_per_unit",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Price per unit with two decimal places",
         ),
         sa.Column("quantity", sa.Integer(), nullable=True, comment="Quantity of units"),
         sa.Column(
@@ -3739,7 +3761,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "ci_of_fuel",
-            sa.Float(),
+            sa.Numeric(precision=10, scale=2),
             nullable=False,
             comment="The Carbon intesity of fuel",
         ),
@@ -3756,6 +3778,12 @@ def upgrade() -> None:
             comment="Units of the fuel quantity. Auto-selected, locked field.",
         ),
         sa.Column(
+            "fuel_type_other",
+            sa.String(length=1000),
+            nullable=True,
+            comment="Other fuel type if one provided",
+        ),
+        sa.Column(
             "allocation_transaction_type_id",
             sa.Integer(),
             nullable=False,
@@ -3766,12 +3794,6 @@ def upgrade() -> None:
             sa.Integer(),
             nullable=False,
             comment="Foreign key to the fuel type",
-        ),
-        sa.Column(
-            "custom_fuel_type_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the custom fuel type",
         ),
         sa.Column(
             "fuel_category_id",
@@ -3842,11 +3864,6 @@ def upgrade() -> None:
             name=op.f("fk_allocation_agreement_compliance_report_id_compliance_report"),
         ),
         sa.ForeignKeyConstraint(
-            ["custom_fuel_type_id"],
-            ["custom_fuel_type.custom_fuel_type_id"],
-            name=op.f("fk_allocation_agreement_custom_fuel_type_id_custom_fuel_type"),
-        ),
-        sa.ForeignKeyConstraint(
             ["fuel_category_id"],
             ["fuel_category.fuel_category_id"],
             name=op.f("fk_allocation_agreement_fuel_category_id_fuel_category"),
@@ -3872,6 +3889,29 @@ def upgrade() -> None:
             "allocation_agreement_id", name=op.f("pk_allocation_agreement")
         ),
         comment="Records allocation agreements where the reporting obligation is passed from one party to another. Each party must report their end of the transaction.",
+    )
+    op.create_table(
+        "compliance_report_document_association",
+        sa.Column("compliance_report_id", sa.Integer(), nullable=False),
+        sa.Column("document_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["compliance_report_id"],
+            ["compliance_report.compliance_report_id"],
+            name=op.f(
+                "fk_compliance_report_document_association_compliance_report_id_compliance_report"
+            ),
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["document_id"],
+            ["document.document_id"],
+            name=op.f("fk_compliance_report_document_association_document_id_document"),
+        ),
+        sa.PrimaryKeyConstraint(
+            "compliance_report_id",
+            "document_id",
+            name=op.f("pk_compliance_report_document_association"),
+        ),
     )
     op.create_table(
         "compliance_report_history",
@@ -4000,6 +4040,152 @@ def upgrade() -> None:
         comment="Associates internal comments with compliance report.",
     )
     op.create_table(
+        "compliance_report_summary",
+        sa.Column("summary_id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("compliance_report_id", sa.Integer(), nullable=True),
+        sa.Column("quarter", sa.Integer(), nullable=True),
+        sa.Column("is_locked", sa.Boolean(), nullable=True),
+        sa.Column(
+            "line_1_fossil_derived_base_fuel_gasoline", sa.Float(), nullable=False
+        ),
+        sa.Column("line_1_fossil_derived_base_fuel_diesel", sa.Float(), nullable=False),
+        sa.Column(
+            "line_1_fossil_derived_base_fuel_jet_fuel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_2_eligible_renewable_fuel_supplied_gasoline",
+            sa.Float(),
+            nullable=False,
+        ),
+        sa.Column(
+            "line_2_eligible_renewable_fuel_supplied_diesel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_2_eligible_renewable_fuel_supplied_jet_fuel",
+            sa.Float(),
+            nullable=False,
+        ),
+        sa.Column(
+            "line_3_total_tracked_fuel_supplied_gasoline", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_3_total_tracked_fuel_supplied_diesel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_3_total_tracked_fuel_supplied_jet_fuel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_4_eligible_renewable_fuel_required_gasoline",
+            sa.Float(),
+            nullable=False,
+        ),
+        sa.Column(
+            "line_4_eligible_renewable_fuel_required_diesel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_4_eligible_renewable_fuel_required_jet_fuel",
+            sa.Float(),
+            nullable=False,
+        ),
+        sa.Column(
+            "line_5_net_notionally_transferred_gasoline", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_5_net_notionally_transferred_diesel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_5_net_notionally_transferred_jet_fuel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_6_renewable_fuel_retained_gasoline", sa.Float(), nullable=False
+        ),
+        sa.Column("line_6_renewable_fuel_retained_diesel", sa.Float(), nullable=False),
+        sa.Column(
+            "line_6_renewable_fuel_retained_jet_fuel", sa.Float(), nullable=False
+        ),
+        sa.Column("line_7_previously_retained_gasoline", sa.Float(), nullable=False),
+        sa.Column("line_7_previously_retained_diesel", sa.Float(), nullable=False),
+        sa.Column("line_7_previously_retained_jet_fuel", sa.Float(), nullable=False),
+        sa.Column("line_8_obligation_deferred_gasoline", sa.Float(), nullable=False),
+        sa.Column("line_8_obligation_deferred_diesel", sa.Float(), nullable=False),
+        sa.Column("line_8_obligation_deferred_jet_fuel", sa.Float(), nullable=False),
+        sa.Column("line_9_obligation_added_gasoline", sa.Float(), nullable=False),
+        sa.Column("line_9_obligation_added_diesel", sa.Float(), nullable=False),
+        sa.Column("line_9_obligation_added_jet_fuel", sa.Float(), nullable=False),
+        sa.Column(
+            "line_10_net_renewable_fuel_supplied_gasoline", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_10_net_renewable_fuel_supplied_diesel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_10_net_renewable_fuel_supplied_jet_fuel", sa.Float(), nullable=False
+        ),
+        sa.Column("line_11_non_compliance_penalty_gasoline", sa.Float(), nullable=True),
+        sa.Column("line_11_non_compliance_penalty_diesel", sa.Float(), nullable=True),
+        sa.Column("line_11_non_compliance_penalty_jet_fuel", sa.Float(), nullable=True),
+        sa.Column("line_12_low_carbon_fuel_required", sa.Float(), nullable=False),
+        sa.Column("line_13_low_carbon_fuel_supplied", sa.Float(), nullable=False),
+        sa.Column("line_14_low_carbon_fuel_surplus", sa.Float(), nullable=False),
+        sa.Column("line_15_banked_units_used", sa.Float(), nullable=False),
+        sa.Column("line_16_banked_units_remaining", sa.Float(), nullable=False),
+        sa.Column("line_17_non_banked_units_used", sa.Float(), nullable=False),
+        sa.Column("line_18_units_to_be_banked", sa.Float(), nullable=False),
+        sa.Column("line_19_units_to_be_exported", sa.Float(), nullable=False),
+        sa.Column("line_20_surplus_deficit_units", sa.Float(), nullable=False),
+        sa.Column("line_21_surplus_deficit_ratio", sa.Float(), nullable=False),
+        sa.Column("line_22_compliance_units_issued", sa.Float(), nullable=False),
+        sa.Column(
+            "line_11_fossil_derived_base_fuel_gasoline", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_11_fossil_derived_base_fuel_diesel", sa.Float(), nullable=False
+        ),
+        sa.Column(
+            "line_11_fossil_derived_base_fuel_jet_fuel", sa.Float(), nullable=False
+        ),
+        sa.Column("line_11_fossil_derived_base_fuel_total", sa.Float(), nullable=False),
+        sa.Column("line_21_non_compliance_penalty_payable", sa.Float(), nullable=False),
+        sa.Column("total_non_compliance_penalty_payable", sa.Float(), nullable=False),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.ForeignKeyConstraint(
+            ["compliance_report_id"],
+            ["compliance_report.compliance_report_id"],
+            name=op.f(
+                "fk_compliance_report_summary_compliance_report_id_compliance_report"
+            ),
+        ),
+        sa.PrimaryKeyConstraint(
+            "summary_id", name=op.f("pk_compliance_report_summary")
+        ),
+        comment="Summary of all compliance calculations displaying the compliance units over a compliance period",
+    )
+    op.create_table(
         "final_supply_equipment",
         sa.Column(
             "final_supply_equipment_id",
@@ -4027,6 +4213,12 @@ def upgrade() -> None:
             comment="The date until which the equipment is supplied.",
         ),
         sa.Column(
+            "kwh_usage",
+            sa.Double(precision=2),
+            nullable=True,
+            comment="Optional kWh usage with up to 2 decimal places.",
+        ),
+        sa.Column(
             "registration_nbr",
             sa.String(),
             nullable=True,
@@ -4045,10 +4237,24 @@ def upgrade() -> None:
             comment="The manufacturer of the equipment.",
         ),
         sa.Column(
+            "model",
+            sa.String(),
+            nullable=True,
+            comment="Optional model of the equipment, following 'Make' field.",
+        ),
+        sa.Column(
             "level_of_equipment_id",
             sa.Integer(),
             nullable=False,
             comment="The foreign key referencing the level of equipment.",
+        ),
+        sa.Column(
+            "ports",
+            postgresql.ENUM(
+                "Single port", "Dual port", name="ports_enum", create_type=False
+            ),
+            nullable=True,
+            comment="Port type with options 'Single port' and 'Dual port.'",
         ),
         sa.Column(
             "fuel_measurement_type_id",
@@ -4167,6 +4373,395 @@ def upgrade() -> None:
         "final_supply_equipment",
         ["registration_nbr"],
         unique=False,
+    )
+    op.create_table(
+        "fuel_export",
+        sa.Column(
+            "fuel_export_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the fuel supply",
+        ),
+        sa.Column(
+            "compliance_report_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the compliance report",
+        ),
+        sa.Column(
+            "export_date", sa.Date(), nullable=False, comment="Date of fuel supply"
+        ),
+        sa.Column(
+            "quarter",
+            postgresql.ENUM("Q1", "Q2", "Q3", "Q4", name="quarter", create_type=False),
+            nullable=True,
+            comment="Quarter for quarterly reports",
+        ),
+        sa.Column(
+            "quantity",
+            sa.Integer(),
+            nullable=False,
+            comment="Quantity of fuel supplied",
+        ),
+        sa.Column(
+            "units",
+            postgresql.ENUM(
+                "Litres",
+                "Kilograms",
+                "Kilowatt_hour",
+                "Cubic_metres",
+                name="quantityunitsenum",
+                create_type=False,
+            ),
+            nullable=False,
+            comment="Units of fuel quantity",
+        ),
+        sa.Column(
+            "compliance_units",
+            sa.Integer(),
+            nullable=True,
+            comment="Compliance units for the fuel supply",
+        ),
+        sa.Column(
+            "target_ci",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="CI limit for the fuel supply",
+        ),
+        sa.Column(
+            "ci_of_fuel",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="CI of fuel for the fuel supply",
+        ),
+        sa.Column(
+            "energy_density",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Energy density of the fuel supplied",
+        ),
+        sa.Column(
+            "eer",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Energy effectiveness ratio of the fuel supplied",
+        ),
+        sa.Column(
+            "energy",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Energy content of the fuel supplied",
+        ),
+        sa.Column(
+            "fuel_category_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the fuel category",
+        ),
+        sa.Column(
+            "fuel_code_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Foreign key to the fuel code",
+        ),
+        sa.Column(
+            "fuel_type_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the fuel type",
+        ),
+        sa.Column(
+            "provision_of_the_act_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the provision of the act",
+        ),
+        sa.Column(
+            "end_use_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Foreign key to the end use type",
+        ),
+        sa.Column(
+            "fuel_type_other",
+            sa.String(length=1000),
+            nullable=True,
+            comment="Other fuel type if one provided",
+        ),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "group_uuid",
+            sa.String(length=36),
+            nullable=False,
+            comment="UUID that groups all versions of a record series",
+        ),
+        sa.Column(
+            "version",
+            sa.Integer(),
+            nullable=False,
+            comment="Version number of the record",
+        ),
+        sa.Column(
+            "user_type",
+            postgresql.ENUM(
+                "SUPPLIER", "GOVERNMENT", name="usertypeenum", create_type=False
+            ),
+            nullable=False,
+            comment="Indicates whether the record was created/modified by a supplier or government user",
+        ),
+        sa.Column(
+            "action_type",
+            postgresql.ENUM(
+                "CREATE", "UPDATE", "DELETE", name="actiontypeenum", create_type=False
+            ),
+            server_default=sa.text("'CREATE'"),
+            nullable=False,
+            comment="Action type for this record",
+        ),
+        sa.ForeignKeyConstraint(
+            ["compliance_report_id"],
+            ["compliance_report.compliance_report_id"],
+            name=op.f("fk_fuel_export_compliance_report_id_compliance_report"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["end_use_id"],
+            ["end_use_type.end_use_type_id"],
+            name=op.f("fk_fuel_export_end_use_id_end_use_type"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_category_id"],
+            ["fuel_category.fuel_category_id"],
+            name=op.f("fk_fuel_export_fuel_category_id_fuel_category"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_code_id"],
+            ["fuel_code.fuel_code_id"],
+            name=op.f("fk_fuel_export_fuel_code_id_fuel_code"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_type_id"],
+            ["fuel_type.fuel_type_id"],
+            name=op.f("fk_fuel_export_fuel_type_id_fuel_type"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["provision_of_the_act_id"],
+            ["provision_of_the_act.provision_of_the_act_id"],
+            name=op.f("fk_fuel_export_provision_of_the_act_id_provision_of_the_act"),
+        ),
+        sa.PrimaryKeyConstraint("fuel_export_id", name=op.f("pk_fuel_export")),
+        comment="Records the supply of fuel for compliance purposes, including changes in supplemental reports",
+    )
+    op.create_table(
+        "fuel_supply",
+        sa.Column(
+            "fuel_supply_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the fuel supply version",
+        ),
+        sa.Column(
+            "compliance_report_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the compliance report",
+        ),
+        sa.Column(
+            "quantity",
+            sa.Integer(),
+            nullable=False,
+            comment="Quantity of fuel supplied",
+        ),
+        sa.Column(
+            "units",
+            postgresql.ENUM(
+                "Litres",
+                "Kilograms",
+                "Kilowatt_hour",
+                "Cubic_metres",
+                name="quantityunitsenum",
+                create_type=False,
+            ),
+            nullable=False,
+            comment="Units of fuel quantity",
+        ),
+        sa.Column(
+            "compliance_units", sa.Integer(), nullable=True, comment="Compliance units"
+        ),
+        sa.Column(
+            "target_ci",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Target Carbon Intensity",
+        ),
+        sa.Column(
+            "ci_of_fuel",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="CI of the fuel",
+        ),
+        sa.Column(
+            "energy_density",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Energy density",
+        ),
+        sa.Column(
+            "eer",
+            sa.Numeric(precision=10, scale=2),
+            nullable=True,
+            comment="Energy Effectiveness Ratio",
+        ),
+        sa.Column("energy", sa.BigInteger(), nullable=True, comment="Energy content"),
+        sa.Column(
+            "fuel_type_other",
+            sa.String(length=1000),
+            nullable=True,
+            comment="Other fuel type if one provided",
+        ),
+        sa.Column(
+            "fuel_category_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the fuel category",
+        ),
+        sa.Column(
+            "fuel_code_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Foreign key to the fuel code",
+        ),
+        sa.Column(
+            "fuel_type_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the fuel type",
+        ),
+        sa.Column(
+            "provision_of_the_act_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the provision of the act",
+        ),
+        sa.Column(
+            "end_use_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Foreign key to the end use type",
+        ),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.Column(
+            "group_uuid",
+            sa.String(length=36),
+            nullable=False,
+            comment="UUID that groups all versions of a record series",
+        ),
+        sa.Column(
+            "version",
+            sa.Integer(),
+            nullable=False,
+            comment="Version number of the record",
+        ),
+        sa.Column(
+            "user_type",
+            postgresql.ENUM(
+                "SUPPLIER", "GOVERNMENT", name="usertypeenum", create_type=False
+            ),
+            nullable=False,
+            comment="Indicates whether the record was created/modified by a supplier or government user",
+        ),
+        sa.Column(
+            "action_type",
+            postgresql.ENUM(
+                "CREATE", "UPDATE", "DELETE", name="actiontypeenum", create_type=False
+            ),
+            server_default=sa.text("'CREATE'"),
+            nullable=False,
+            comment="Action type for this record",
+        ),
+        sa.ForeignKeyConstraint(
+            ["compliance_report_id"],
+            ["compliance_report.compliance_report_id"],
+            name=op.f("fk_fuel_supply_compliance_report_id_compliance_report"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["end_use_id"],
+            ["end_use_type.end_use_type_id"],
+            name=op.f("fk_fuel_supply_end_use_id_end_use_type"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_category_id"],
+            ["fuel_category.fuel_category_id"],
+            name=op.f("fk_fuel_supply_fuel_category_id_fuel_category"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_code_id"],
+            ["fuel_code.fuel_code_id"],
+            name=op.f("fk_fuel_supply_fuel_code_id_fuel_code"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["fuel_type_id"],
+            ["fuel_type.fuel_type_id"],
+            name=op.f("fk_fuel_supply_fuel_type_id_fuel_type"),
+        ),
+        sa.ForeignKeyConstraint(
+            ["provision_of_the_act_id"],
+            ["provision_of_the_act.provision_of_the_act_id"],
+            name=op.f("fk_fuel_supply_provision_of_the_act_id_provision_of_the_act"),
+        ),
+        sa.PrimaryKeyConstraint("fuel_supply_id", name=op.f("pk_fuel_supply")),
+        comment="Records the supply of fuel for compliance purposes, including changes in supplemental reports",
     )
     op.create_table(
         "initiative_agreement_history",
@@ -4385,6 +4980,35 @@ def upgrade() -> None:
             nullable=True,
             comment="The user who last updated this record in the database.",
         ),
+        sa.Column(
+            "group_uuid",
+            sa.String(length=36),
+            nullable=False,
+            comment="UUID that groups all versions of a record series",
+        ),
+        sa.Column(
+            "version",
+            sa.Integer(),
+            nullable=False,
+            comment="Version number of the record",
+        ),
+        sa.Column(
+            "user_type",
+            postgresql.ENUM(
+                "SUPPLIER", "GOVERNMENT", name="usertypeenum", create_type=False
+            ),
+            nullable=False,
+            comment="Indicates whether the record was created/modified by a supplier or government user",
+        ),
+        sa.Column(
+            "action_type",
+            postgresql.ENUM(
+                "CREATE", "UPDATE", "DELETE", name="actiontypeenum", create_type=False
+            ),
+            server_default=sa.text("'CREATE'"),
+            nullable=False,
+            comment="Action type for this record",
+        ),
         sa.ForeignKeyConstraint(
             ["compliance_report_id"],
             ["compliance_report.compliance_report_id"],
@@ -4426,6 +5050,24 @@ def upgrade() -> None:
             sa.Integer(),
             nullable=False,
             comment="Foreign key to the fuel category",
+        ),
+        sa.Column(
+            "provision_of_the_act_id",
+            sa.Integer(),
+            nullable=False,
+            comment="Foreign key to the provision of the act",
+        ),
+        sa.Column(
+            "fuel_code_id",
+            sa.Integer(),
+            nullable=True,
+            comment="Foreign key to the fuel code",
+        ),
+        sa.Column(
+            "ci_of_fuel",
+            sa.Numeric(precision=10, scale=2),
+            nullable=False,
+            comment="The Carbon intesity of fuel",
         ),
         sa.Column(
             "quantity_supplied",
@@ -4477,6 +5119,35 @@ def upgrade() -> None:
             nullable=True,
             comment="The user who last updated this record in the database.",
         ),
+        sa.Column(
+            "group_uuid",
+            sa.String(length=36),
+            nullable=False,
+            comment="UUID that groups all versions of a record series",
+        ),
+        sa.Column(
+            "version",
+            sa.Integer(),
+            nullable=False,
+            comment="Version number of the record",
+        ),
+        sa.Column(
+            "user_type",
+            postgresql.ENUM(
+                "SUPPLIER", "GOVERNMENT", name="usertypeenum", create_type=False
+            ),
+            nullable=False,
+            comment="Indicates whether the record was created/modified by a supplier or government user",
+        ),
+        sa.Column(
+            "action_type",
+            postgresql.ENUM(
+                "CREATE", "UPDATE", "DELETE", name="actiontypeenum", create_type=False
+            ),
+            server_default=sa.text("'CREATE'"),
+            nullable=False,
+            comment="Action type for this record",
+        ),
         sa.ForeignKeyConstraint(
             ["compliance_report_id"],
             ["compliance_report.compliance_report_id"],
@@ -4493,126 +5164,22 @@ def upgrade() -> None:
             name=op.f("fk_other_uses_fuel_category_id_fuel_category"),
         ),
         sa.ForeignKeyConstraint(
+            ["fuel_code_id"],
+            ["fuel_code.fuel_code_id"],
+            name=op.f("fk_other_uses_fuel_code_id_fuel_code"),
+        ),
+        sa.ForeignKeyConstraint(
             ["fuel_type_id"],
             ["fuel_type.fuel_type_id"],
             name=op.f("fk_other_uses_fuel_type_id_fuel_type"),
         ),
+        sa.ForeignKeyConstraint(
+            ["provision_of_the_act_id"],
+            ["provision_of_the_act.provision_of_the_act_id"],
+            name=op.f("fk_other_uses_provision_of_the_act_id_provision_of_the_act"),
+        ),
         sa.PrimaryKeyConstraint("other_uses_id", name=op.f("pk_other_uses")),
         comment="Records other uses of fuels that are subject to renewable requirements but do not earn credits.",
-    )
-    op.create_table(
-        "supplemental_report",
-        sa.Column(
-            "supplemental_report_id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the supplemental report",
-        ),
-        sa.Column(
-            "original_report_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the original compliance report",
-        ),
-        sa.Column(
-            "previous_report_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the previous supplemental report",
-        ),
-        sa.Column(
-            "compliance_period_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the compliance period",
-        ),
-        sa.Column(
-            "organization_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Identifier for the organization",
-        ),
-        sa.Column(
-            "current_status_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Identifier for the compliance report status",
-        ),
-        sa.Column(
-            "version",
-            sa.Integer(),
-            nullable=False,
-            comment="Version number of the supplemental report",
-        ),
-        sa.Column(
-            "report_type",
-            postgresql.ENUM(
-                "SUPPLEMENTAL",
-                "REASSESSMENT",
-                name="supplementalreporttype",
-                create_type=False,
-            ),
-            nullable=False,
-            comment="Type of supplemental report",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["compliance_period_id"],
-            ["compliance_period.compliance_period_id"],
-            name=op.f("fk_supplemental_report_compliance_period_id_compliance_period"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["current_status_id"],
-            ["compliance_report_status.compliance_report_status_id"],
-            name=op.f(
-                "fk_supplemental_report_current_status_id_compliance_report_status"
-            ),
-        ),
-        sa.ForeignKeyConstraint(
-            ["organization_id"],
-            ["organization.organization_id"],
-            name=op.f("fk_supplemental_report_organization_id_organization"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["original_report_id"],
-            ["compliance_report.compliance_report_id"],
-            name=op.f("fk_supplemental_report_original_report_id_compliance_report"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["previous_report_id"],
-            ["supplemental_report.supplemental_report_id"],
-            name=op.f("fk_supplemental_report_previous_report_id_supplemental_report"),
-        ),
-        sa.PrimaryKeyConstraint(
-            "supplemental_report_id", name=op.f("pk_supplemental_report")
-        ),
-        comment="Tracks supplemental reports and reassessments for compliance reports",
     )
     op.create_table(
         "transfer_history",
@@ -4743,165 +5310,6 @@ def upgrade() -> None:
         comment="Associates internal comments with transfers.",
     )
     op.create_table(
-        "compliance_report_summary",
-        sa.Column("summary_id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("compliance_report_id", sa.Integer(), nullable=True),
-        sa.Column("supplemental_report_id", sa.Integer(), nullable=True),
-        sa.Column("quarter", sa.Integer(), nullable=True),
-        sa.Column("version", sa.Integer(), nullable=False),
-        sa.Column("is_locked", sa.Boolean(), nullable=True),
-        sa.Column(
-            "line_1_fossil_derived_base_fuel_gasoline", sa.Float(), nullable=False
-        ),
-        sa.Column("line_1_fossil_derived_base_fuel_diesel", sa.Float(), nullable=False),
-        sa.Column(
-            "line_1_fossil_derived_base_fuel_jet_fuel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_2_eligible_renewable_fuel_supplied_gasoline",
-            sa.Float(),
-            nullable=False,
-        ),
-        sa.Column(
-            "line_2_eligible_renewable_fuel_supplied_diesel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_2_eligible_renewable_fuel_supplied_jet_fuel",
-            sa.Float(),
-            nullable=False,
-        ),
-        sa.Column(
-            "line_3_total_tracked_fuel_supplied_gasoline", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_3_total_tracked_fuel_supplied_diesel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_3_total_tracked_fuel_supplied_jet_fuel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_4_eligible_renewable_fuel_required_gasoline",
-            sa.Float(),
-            nullable=False,
-        ),
-        sa.Column(
-            "line_4_eligible_renewable_fuel_required_diesel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_4_eligible_renewable_fuel_required_jet_fuel",
-            sa.Float(),
-            nullable=False,
-        ),
-        sa.Column(
-            "line_5_net_notionally_transferred_gasoline", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_5_net_notionally_transferred_diesel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_5_net_notionally_transferred_jet_fuel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_6_renewable_fuel_retained_gasoline", sa.Float(), nullable=False
-        ),
-        sa.Column("line_6_renewable_fuel_retained_diesel", sa.Float(), nullable=False),
-        sa.Column(
-            "line_6_renewable_fuel_retained_jet_fuel", sa.Float(), nullable=False
-        ),
-        sa.Column("line_7_previously_retained_gasoline", sa.Float(), nullable=False),
-        sa.Column("line_7_previously_retained_diesel", sa.Float(), nullable=False),
-        sa.Column("line_7_previously_retained_jet_fuel", sa.Float(), nullable=False),
-        sa.Column("line_8_obligation_deferred_gasoline", sa.Float(), nullable=False),
-        sa.Column("line_8_obligation_deferred_diesel", sa.Float(), nullable=False),
-        sa.Column("line_8_obligation_deferred_jet_fuel", sa.Float(), nullable=False),
-        sa.Column("line_9_obligation_added_gasoline", sa.Float(), nullable=False),
-        sa.Column("line_9_obligation_added_diesel", sa.Float(), nullable=False),
-        sa.Column("line_9_obligation_added_jet_fuel", sa.Float(), nullable=False),
-        sa.Column(
-            "line_10_net_renewable_fuel_supplied_gasoline", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_10_net_renewable_fuel_supplied_diesel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_10_net_renewable_fuel_supplied_jet_fuel", sa.Float(), nullable=False
-        ),
-        sa.Column("line_11_non_compliance_penalty_gasoline", sa.Float(), nullable=True),
-        sa.Column("line_11_non_compliance_penalty_diesel", sa.Float(), nullable=True),
-        sa.Column("line_11_non_compliance_penalty_jet_fuel", sa.Float(), nullable=True),
-        sa.Column("line_12_low_carbon_fuel_required", sa.Float(), nullable=False),
-        sa.Column("line_13_low_carbon_fuel_supplied", sa.Float(), nullable=False),
-        sa.Column("line_14_low_carbon_fuel_surplus", sa.Float(), nullable=False),
-        sa.Column("line_15_banked_units_used", sa.Float(), nullable=False),
-        sa.Column("line_16_banked_units_remaining", sa.Float(), nullable=False),
-        sa.Column("line_17_non_banked_units_used", sa.Float(), nullable=False),
-        sa.Column("line_18_units_to_be_banked", sa.Float(), nullable=False),
-        sa.Column("line_19_units_to_be_exported", sa.Float(), nullable=False),
-        sa.Column("line_20_surplus_deficit_units", sa.Float(), nullable=False),
-        sa.Column("line_21_surplus_deficit_ratio", sa.Float(), nullable=False),
-        sa.Column("line_22_compliance_units_issued", sa.Float(), nullable=False),
-        sa.Column(
-            "line_11_fossil_derived_base_fuel_gasoline", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_11_fossil_derived_base_fuel_diesel", sa.Float(), nullable=False
-        ),
-        sa.Column(
-            "line_11_fossil_derived_base_fuel_jet_fuel", sa.Float(), nullable=False
-        ),
-        sa.Column("line_11_fossil_derived_base_fuel_total", sa.Float(), nullable=False),
-        sa.Column("line_21_non_compliance_penalty_payable", sa.Float(), nullable=False),
-        sa.Column("total_non_compliance_penalty_payable", sa.Float(), nullable=False),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.CheckConstraint(
-            "(compliance_report_id IS NULL) != (supplemental_report_id IS NULL)",
-            name=op.f("ck_compliance_report_summary_check_one_report_id_not_null"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["compliance_report_id"],
-            ["compliance_report.compliance_report_id"],
-            name=op.f(
-                "fk_compliance_report_summary_compliance_report_id_compliance_report"
-            ),
-        ),
-        sa.ForeignKeyConstraint(
-            ["supplemental_report_id"],
-            ["supplemental_report.supplemental_report_id"],
-            name=op.f(
-                "fk_compliance_report_summary_supplemental_report_id_supplemental_report"
-            ),
-        ),
-        sa.PrimaryKeyConstraint(
-            "summary_id", name=op.f("pk_compliance_report_summary")
-        ),
-        comment="Summary of all compliance calculations displaying the compliance units credits or debits over a compliance period",
-    )
-    op.create_table(
         "final_supply_intended_use_association",
         sa.Column("final_supply_equipment_id", sa.Integer(), nullable=False),
         sa.Column("end_use_type_id", sa.Integer(), nullable=False),
@@ -4927,444 +5335,45 @@ def upgrade() -> None:
         ),
     )
     op.create_table(
-        "fuel_export",
-        sa.Column(
-            "fuel_export_id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the fuel supply",
-        ),
-        sa.Column(
-            "compliance_report_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the compliance report",
-        ),
-        sa.Column(
-            "supplemental_report_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the supplemental report",
-        ),
-        sa.Column(
-            "previous_fuel_export_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the previous fuel supply record",
-        ),
-        sa.Column(
-            "change_type",
-            postgresql.ENUM(
-                "CREATE", "UPDATE", "DELETE", name="changetype", create_type=False
+        "final_supply_intended_user_association",
+        sa.Column("final_supply_equipment_id", sa.Integer(), nullable=False),
+        sa.Column("end_user_type_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["end_user_type_id"],
+            ["end_user_type.end_user_type_id"],
+            name=op.f(
+                "fk_final_supply_intended_user_association_end_user_type_id_end_user_type"
             ),
-            server_default=sa.text("'CREATE'"),
-            nullable=False,
-            comment="Action type for this record",
         ),
-        sa.Column(
-            "export_date", sa.Date(), nullable=False, comment="Date of fuel supply"
-        ),
-        sa.Column(
-            "quarter",
-            postgresql.ENUM("Q1", "Q2", "Q3", "Q4", name="quarter", create_type=False),
-            nullable=True,
-            comment="Quarter for quarterly reports",
-        ),
-        sa.Column(
-            "quantity",
-            sa.Integer(),
-            nullable=False,
-            comment="Quantity of fuel supplied",
-        ),
-        sa.Column(
-            "units",
-            postgresql.ENUM(
-                "Litres",
-                "Kilograms",
-                "Kilowatt_hour",
-                "Cubic_metres",
-                name="quantityunitsenum",
-                create_type=False,
+        sa.ForeignKeyConstraint(
+            ["final_supply_equipment_id"],
+            ["final_supply_equipment.final_supply_equipment_id"],
+            name=op.f(
+                "fk_final_supply_intended_user_association_final_supply_equipment_id_final_supply_equipment"
             ),
-            nullable=False,
-            comment="Units of fuel quantity",
+            ondelete="CASCADE",
         ),
-        sa.Column(
-            "compliance_units",
-            sa.Integer(),
-            nullable=True,
-            comment="Compliance units for the fuel supply",
+        sa.PrimaryKeyConstraint(
+            "final_supply_equipment_id",
+            "end_user_type_id",
+            name=op.f("pk_final_supply_intended_user_association"),
         ),
-        sa.Column(
-            "target_ci",
-            sa.Float(),
-            nullable=True,
-            comment="CI limit for the fuel supply",
-        ),
-        sa.Column(
-            "ci_of_fuel",
-            sa.Float(),
-            nullable=True,
-            comment="CI of fuel for the fuel supply",
-        ),
-        sa.Column(
-            "energy_density",
-            sa.Float(),
-            nullable=True,
-            comment="Energy density of the fuel supplied",
-        ),
-        sa.Column(
-            "eer",
-            sa.Float(),
-            nullable=True,
-            comment="Energy effectiveness ratio of the fuel supplied",
-        ),
-        sa.Column(
-            "energy",
-            sa.Float(),
-            nullable=True,
-            comment="Energy content of the fuel supplied",
-        ),
-        sa.Column(
-            "fuel_category_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the fuel category",
-        ),
-        sa.Column(
-            "fuel_code_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the fuel code",
-        ),
-        sa.Column(
-            "fuel_type_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the fuel type",
-        ),
-        sa.Column(
-            "provision_of_the_act_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the provision of the act",
-        ),
-        sa.Column(
-            "custom_fuel_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the custom fuel type",
-        ),
-        sa.Column(
-            "end_use_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the end use type",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["compliance_report_id"],
-            ["compliance_report.compliance_report_id"],
-            name=op.f("fk_fuel_export_compliance_report_id_compliance_report"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["custom_fuel_id"],
-            ["custom_fuel_type.custom_fuel_type_id"],
-            name=op.f("fk_fuel_export_custom_fuel_id_custom_fuel_type"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["end_use_id"],
-            ["end_use_type.end_use_type_id"],
-            name=op.f("fk_fuel_export_end_use_id_end_use_type"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_category_id"],
-            ["fuel_category.fuel_category_id"],
-            name=op.f("fk_fuel_export_fuel_category_id_fuel_category"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_code_id"],
-            ["fuel_code.fuel_code_id"],
-            name=op.f("fk_fuel_export_fuel_code_id_fuel_code"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_type_id"],
-            ["fuel_type.fuel_type_id"],
-            name=op.f("fk_fuel_export_fuel_type_id_fuel_type"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["previous_fuel_export_id"],
-            ["fuel_export.fuel_export_id"],
-            name=op.f("fk_fuel_export_previous_fuel_export_id_fuel_export"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["provision_of_the_act_id"],
-            ["provision_of_the_act.provision_of_the_act_id"],
-            name=op.f("fk_fuel_export_provision_of_the_act_id_provision_of_the_act"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["supplemental_report_id"],
-            ["supplemental_report.supplemental_report_id"],
-            name=op.f("fk_fuel_export_supplemental_report_id_supplemental_report"),
-        ),
-        sa.PrimaryKeyConstraint("fuel_export_id", name=op.f("pk_fuel_export")),
-        comment="Records the supply of fuel for compliance purposes, including changes in supplemental reports",
-    )
-    op.create_table(
-        "fuel_supply",
-        sa.Column(
-            "fuel_supply_id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the fuel supply",
-        ),
-        sa.Column(
-            "compliance_report_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the compliance report",
-        ),
-        sa.Column(
-            "supplemental_report_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the supplemental report",
-        ),
-        sa.Column(
-            "previous_fuel_supply_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the previous fuel supply record",
-        ),
-        sa.Column(
-            "change_type",
-            postgresql.ENUM(
-                "CREATE", "UPDATE", "DELETE", name="changetype", create_type=False
-            ),
-            server_default=sa.text("'CREATE'"),
-            nullable=False,
-            comment="Action type for this record",
-        ),
-        sa.Column(
-            "quarter",
-            postgresql.ENUM("Q1", "Q2", "Q3", "Q4", name="quarter", create_type=False),
-            nullable=True,
-            comment="Quarter for quarterly reports",
-        ),
-        sa.Column(
-            "quantity",
-            sa.Integer(),
-            nullable=False,
-            comment="Quantity of fuel supplied",
-        ),
-        sa.Column(
-            "units",
-            postgresql.ENUM(
-                "Litres",
-                "Kilograms",
-                "Kilowatt_hour",
-                "Cubic_metres",
-                name="quantityunitsenum",
-                create_type=False,
-            ),
-            nullable=False,
-            comment="Units of fuel quantity",
-        ),
-        sa.Column(
-            "compliance_units",
-            sa.Integer(),
-            nullable=True,
-            comment="Compliance units for the fuel supply",
-        ),
-        sa.Column(
-            "target_ci",
-            sa.Float(),
-            nullable=True,
-            comment="Target CI for the fuel supply",
-        ),
-        sa.Column(
-            "ci_of_fuel",
-            sa.Float(),
-            nullable=True,
-            comment="CI of fuel for the fuel supply",
-        ),
-        sa.Column(
-            "energy_density",
-            sa.Float(),
-            nullable=True,
-            comment="Energy density of the fuel supplied",
-        ),
-        sa.Column(
-            "eer",
-            sa.Float(),
-            nullable=True,
-            comment="Energy effectiveness ratio of the fuel supplied",
-        ),
-        sa.Column(
-            "energy",
-            sa.Float(),
-            nullable=True,
-            comment="Energy content of the fuel supplied",
-        ),
-        sa.Column(
-            "fuel_type_other",
-            sa.String(length=1000),
-            nullable=True,
-            comment="Other fuel type is one provided",
-        ),
-        sa.Column(
-            "fuel_category_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the fuel category",
-        ),
-        sa.Column(
-            "fuel_code_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the fuel code",
-        ),
-        sa.Column(
-            "fuel_type_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the fuel type",
-        ),
-        sa.Column(
-            "provision_of_the_act_id",
-            sa.Integer(),
-            nullable=False,
-            comment="Foreign key to the provision of the act",
-        ),
-        sa.Column(
-            "custom_fuel_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the custom fuel type",
-        ),
-        sa.Column(
-            "end_use_id",
-            sa.Integer(),
-            nullable=True,
-            comment="Foreign key to the end use type",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.ForeignKeyConstraint(
-            ["compliance_report_id"],
-            ["compliance_report.compliance_report_id"],
-            name=op.f("fk_fuel_supply_compliance_report_id_compliance_report"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["custom_fuel_id"],
-            ["custom_fuel_type.custom_fuel_type_id"],
-            name=op.f("fk_fuel_supply_custom_fuel_id_custom_fuel_type"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["end_use_id"],
-            ["end_use_type.end_use_type_id"],
-            name=op.f("fk_fuel_supply_end_use_id_end_use_type"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_category_id"],
-            ["fuel_category.fuel_category_id"],
-            name=op.f("fk_fuel_supply_fuel_category_id_fuel_category"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_code_id"],
-            ["fuel_code.fuel_code_id"],
-            name=op.f("fk_fuel_supply_fuel_code_id_fuel_code"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["fuel_type_id"],
-            ["fuel_type.fuel_type_id"],
-            name=op.f("fk_fuel_supply_fuel_type_id_fuel_type"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["previous_fuel_supply_id"],
-            ["fuel_supply.fuel_supply_id"],
-            name=op.f("fk_fuel_supply_previous_fuel_supply_id_fuel_supply"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["provision_of_the_act_id"],
-            ["provision_of_the_act.provision_of_the_act_id"],
-            name=op.f("fk_fuel_supply_provision_of_the_act_id_provision_of_the_act"),
-        ),
-        sa.ForeignKeyConstraint(
-            ["supplemental_report_id"],
-            ["supplemental_report.supplemental_report_id"],
-            name=op.f("fk_fuel_supply_supplemental_report_id_supplemental_report"),
-        ),
-        sa.PrimaryKeyConstraint("fuel_supply_id", name=op.f("pk_fuel_supply")),
-        comment="Records the supply of fuel for compliance purposes, including changes in supplemental reports",
     )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_table("fuel_supply")
-    op.drop_table("fuel_export")
+    op.drop_table("final_supply_intended_user_association")
     op.drop_table("final_supply_intended_use_association")
-    op.drop_table("compliance_report_summary")
     op.drop_table("transfer_internal_comment")
     op.drop_table("transfer_history")
-    op.drop_table("supplemental_report")
     op.drop_table("other_uses")
     op.drop_table("notional_transfer")
     op.drop_table("initiative_agreement_internal_comment")
     op.drop_table("initiative_agreement_history")
+    op.drop_table("fuel_supply")
+    op.drop_table("fuel_export")
     op.drop_index(
         op.f("ix_final_supply_equipment_registration_nbr"),
         table_name="final_supply_equipment",
@@ -5382,8 +5391,10 @@ def downgrade() -> None:
         table_name="final_supply_equipment",
     )
     op.drop_table("final_supply_equipment")
+    op.drop_table("compliance_report_summary")
     op.drop_table("compliance_report_internal_comment")
     op.drop_table("compliance_report_history")
+    op.drop_table("compliance_report_document_association")
     op.drop_table("allocation_agreement")
     op.drop_table("admin_adjustment_internal_comment")
     op.drop_table("admin_adjustment_history")
@@ -5394,7 +5405,6 @@ def downgrade() -> None:
     op.drop_table("initiative_agreement")
     op.drop_table("finished_fuel_transport_mode")
     op.drop_table("feedstock_fuel_transport_mode")
-    op.drop_table("custom_fuel_type")
     op.drop_table("compliance_report")
     op.drop_table("admin_adjustment")
     op.drop_table("user_profile")
@@ -5429,9 +5439,16 @@ def downgrade() -> None:
     op.drop_table("fuel_category")
     op.drop_table("final_supply_equipment_reg_number")
     op.drop_table("expected_use_type")
+    op.drop_table("end_user_type")
     op.drop_table("end_use_type")
+    op.drop_table("document")
     op.drop_table("compliance_report_status")
     op.drop_table("compliance_period")
+    op.drop_index("idx_audit_log_operation", table_name="audit_log")
+    op.drop_index("idx_audit_log_delta", table_name="audit_log", postgresql_using="gin")
+    op.drop_index("idx_audit_log_create_user", table_name="audit_log")
+    op.drop_index("idx_audit_log_create_date", table_name="audit_log")
+    op.drop_table("audit_log")
     op.drop_table("allocation_transaction_type")
     op.drop_table("admin_adjustment_status")
     sa.Enum(
@@ -5440,7 +5457,12 @@ def downgrade() -> None:
     sa.Enum("Director", "Analyst", "Compliance Manager", name="audience_scope").drop(
         op.get_bind()
     )
-    sa.Enum("ANNUAL", "QUARTERLY", name="reporttype").drop(op.get_bind())
+    sa.Enum(
+        "SUPPLIER_SUPPLEMENTAL",
+        "GOVERNMENT_REASSESSMENT",
+        name="supplementalinitiatortype",
+    ).drop(op.get_bind())
+    sa.Enum("ANNUAL", "QUARTERLY", name="reportingfrequency").drop(op.get_bind())
     sa.Enum(
         "Draft",
         "Submitted",
@@ -5450,15 +5472,14 @@ def downgrade() -> None:
         "ReAssessed",
         name="compliancereportstatusenum",
     ).drop(op.get_bind())
-    sa.Enum("CREATE", "UPDATE", "DELETE", name="changetype").drop(op.get_bind())
-    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").drop(op.get_bind())
+    sa.Enum("Single port", "Dual port", name="ports_enum").drop(op.get_bind())
     sa.Enum(
         "Litres", "Kilograms", "Kilowatt_hour", "Cubic_metres", name="quantityunitsenum"
     ).drop(op.get_bind())
+    sa.Enum("SUPPLIER", "GOVERNMENT", name="usertypeenum").drop(op.get_bind())
+    sa.Enum("CREATE", "UPDATE", "DELETE", name="actiontypeenum").drop(op.get_bind())
+    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").drop(op.get_bind())
     sa.Enum("Received", "Transferred", name="receivedortransferredenum").drop(
-        op.get_bind()
-    )
-    sa.Enum("SUPPLEMENTAL", "REASSESSMENT", name="supplementalreporttype").drop(
         op.get_bind()
     )
     sa.Enum("Gasoline", "Diesel", "Jet fuel", name="fuel_category_enum").drop(
@@ -5486,50 +5507,12 @@ def downgrade() -> None:
         name="org_type_enum",
     ).drop(op.get_bind())
     sa.Enum(
-        "CREDIT_TRANSFER_CREATED",
-        "CREDIT_TRANSFER_SIGNED_1OF2",
-        "CREDIT_TRANSFER_SIGNED_2OF2",
-        "CREDIT_TRANSFER_PROPOSAL_REFUSED",
-        "CREDIT_TRANSFER_PROPOSAL_ACCEPTED",
-        "CREDIT_TRANSFER_RECOMMENDED_FOR_APPROVAL",
-        "CREDIT_TRANSFER_RECOMMENDED_FOR_DECLINATION",
-        "CREDIT_TRANSFER_DECLINED",
-        "CREDIT_TRANSFER_APPROVED",
-        "CREDIT_TRANSFER_RESCINDED",
-        "CREDIT_TRANSFER_COMMENT",
-        "CREDIT_TRANSFER_INTERNAL_COMMENT",
-        "PVR_CREATED",
-        "PVR_RECOMMENDED_FOR_APPROVAL",
-        "PVR_RESCINDED",
-        "PVR_PULLED_BACK",
-        "PVR_DECLINED",
-        "PVR_APPROVED",
-        "PVR_COMMENT",
-        "PVR_INTERNAL_COMMENT",
-        "PVR_RETURNED_TO_ANALYST",
-        "DOCUMENT_PENDING_SUBMISSION",
-        "DOCUMENT_SUBMITTED",
-        "DOCUMENT_SCAN_FAILED",
-        "DOCUMENT_RECEIVED",
-        "DOCUMENT_ARCHIVED",
-        "COMPLIANCE_REPORT_DRAFT",
-        "COMPLIANCE_REPORT_SUBMITTED",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_ACCEPTANCE_ANALYST",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_REJECTION_ANALYST",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_ACCEPTANCE_MANAGER",
-        "COMPLIANCE_REPORT_RECOMMENDED_FOR_REJECTION_MANAGER",
-        "COMPLIANCE_REPORT_ACCEPTED",
-        "COMPLIANCE_REPORT_REJECTED",
-        "COMPLIANCE_REPORT_REQUESTED_SUPPLEMENTAL",
-        "EXCLUSION_REPORT_DRAFT",
-        "EXCLUSION_REPORT_SUBMITTED",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_ACCEPTANCE_ANALYST",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_REJECTION_ANALYST",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_ACCEPTANCE_MANAGER",
-        "EXCLUSION_REPORT_RECOMMENDED_FOR_REJECTION_MANAGER",
-        "EXCLUSION_REPORT_ACCEPTED",
-        "EXCLUSION_REPORT_REJECTED",
-        "EXCLUSION_REPORT_REQUESTED_SUPPLEMENTAL",
+        "TRANSFER_PARTNER_UPDATE",
+        "TRANSFER_DIRECTOR_REVIEW",
+        "INITIATIVE_APPROVED",
+        "INITIATIVE_DA_REQUEST",
+        "SUPPLEMENTAL_REQUESTED",
+        "DIRECTOR_ASSESSMENT",
         name="notification_type_enum",
     ).drop(op.get_bind())
     sa.Enum("Adjustment", "Reserved", "Released", name="transaction_action_enum").drop(
