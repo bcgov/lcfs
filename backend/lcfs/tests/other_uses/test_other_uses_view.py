@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import ComplianceReportRequestSchema
-from lcfs.web.api.other_uses.schema import PaginatedOtherUsesRequestSchema
+from lcfs.web.api.other_uses.schema import PaginatedOtherUsesRequestSchema, OtherUsesSchema
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
 from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
@@ -138,7 +138,11 @@ async def test_save_other_uses_row_create(
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = create_mock_schema({}).model_dump()
 
-        mock_other_uses_service.create_other_use.return_value = payload
+        # Mock the service method to return a valid schema object
+        mock_other_uses_service.create_other_use.return_value = OtherUsesSchema(
+            **payload
+        )
+
         mock_validate_organization_access.return_value = True
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
