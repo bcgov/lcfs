@@ -81,6 +81,22 @@ export const AddEditOtherUses = () => {
     return ciOfFuel
   }, [])
 
+  const validateField = (params, field, validationFn, errorMessage, alertRef) => {
+    const newValue = params.newValue;
+
+    if (params.colDef.field === field) {
+      if (!validationFn(newValue)) {
+        alertRef.current?.triggerAlert({
+          message: errorMessage,
+          severity: 'error',
+        });
+        return false;
+      }
+    }
+
+    return true; // Proceed with the update
+  };
+
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
       return rows.map((row) => {
@@ -200,6 +216,16 @@ export const AddEditOtherUses = () => {
 
   const onCellEditingStopped = useCallback(
     async (params) => {
+      const isValid = validateField(
+        params,
+        'quantitySupplied',
+        (value) => value !== null && !isNaN(value) && value > 0,
+        'Quantity supplied must be greater than 0.',
+        alertRef
+      );
+
+      if (!isValid) return;
+
       if (params.oldValue === params.newValue) return
       params.data.complianceReportId = complianceReportId
       params.data.validationStatus = 'pending'
