@@ -1,8 +1,8 @@
 """Add options to the Feedstock Transport mode fuel code
 
 Revision ID: 043c52082a3b
-Revises: 0775a141d335
-Create Date: 2024-11-27 15:05:12.015327
+Revises: None
+Create Date: 2024-11-27 18:05:12.015327
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "043c52082a3b"
-down_revision = "0775a141d335"
+down_revision = "4038ff8d8c49"
 branch_labels = None
 depends_on = None
 
