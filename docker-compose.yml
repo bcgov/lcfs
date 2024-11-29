@@ -107,6 +107,12 @@ services:
       LCFS_REDIS_PORT: 6379
       LCFS_REDIS_PASSWORD: development_only
       LCFS_RELOAD: true
+      CHES_CLIENT_ID: ${CHES_CLIENT_ID}
+      CHES_CLIENT_SECRET: ${CHES_CLIENT_SECRET}
+      CHES_AUTH_URL: ${CHES_AUTH_URL}
+      CHES_SENDER_EMAIL: ${CHES_SENDER_EMAIL}
+      CHES_SENDER_NAME: ${CHES_SENDER_NAME}
+      CHES_EMAIL_URL: ${CHES_EMAIL_URL}
       APP_ENVIRONMENT: dev
     ports:
       - '8000:8000' # Application port
