@@ -1,5 +1,5 @@
 import {
-  FuelCodeCreateSchema,
+  FuelCodeCreateUpdateSchema,
   FuelCodesService,
   PaginationRequestSchema
 } from '@/services/apiClient'
@@ -21,6 +21,7 @@ export const useFuelCodeOptions = () => {
 
 export const useGetFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
   return useQuery({
+    enabled: !!fuelCodeId,
     queryKey: ['fuel-code', fuelCodeId],
     queryFn: async () => {
       try {
@@ -35,15 +36,29 @@ export const useGetFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
   })
 }
 
+export const useCreateFuelCode = () => {
+  return useMutation({
+    mutationFn: async (data: FuelCodeCreateUpdateSchema) => {
+      try {
+        return await FuelCodesService.saveFuelCode({ body: data })
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  })
+}
+
 export const useUpdateFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (data: FuelCodeCreateSchema) => {
+    mutationFn: async (data: FuelCodeCreateUpdateSchema) => {
       try {
-        await FuelCodesService.updateFuelCode({
-          path: { fuel_code_id: fuelCodeId },
-          body: data
+        await FuelCodesService.saveFuelCode({
+          body: {
+            ...data,
+            fuelCodeId
+          }
         })
       } catch (error) {
         console.log(error)
@@ -55,11 +70,11 @@ export const useUpdateFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
   })
 }
 
-export const useDeleteFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
+export const useApproveFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
   return useMutation({
     mutationFn: async () => {
       try {
-        await FuelCodesService.deleteFuelCode({
+        return await FuelCodesService.approveFuelCode({
           path: { fuel_code_id: fuelCodeId }
         })
       } catch (error) {
@@ -69,18 +84,16 @@ export const useDeleteFuelCode = ({ fuelCodeId }: { fuelCodeId: number }) => {
   })
 }
 
-export const useSaveFuelCode = () => {
-  const queryClient = useQueryClient()
+export const useDeleteFuelCode = () => {
   return useMutation({
-    mutationFn: async (data: FuelCodeCreateSchema) => {
+    mutationFn: async (fuelCodeId: number) => {
       try {
-        await FuelCodesService.saveFuelCodeRow({ body: data })
+        await FuelCodesService.deleteFuelCode({
+          path: { fuel_code_id: fuelCodeId }
+        })
       } catch (error) {
         console.log(error)
       }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['fuel-codes'] })
     }
   })
 }

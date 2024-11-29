@@ -2,11 +2,12 @@ import os
 import uuid
 
 import boto3
-from fastapi import Depends
+from fastapi import Depends, Request
 from pydantic.v1 import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
+from lcfs.dependencies.dependencies import get_s3_client
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import ComplianceReport
@@ -27,18 +28,13 @@ MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 class DocumentService:
     def __init__(
         self,
+        request: Request,
         db: AsyncSession = Depends(get_async_db_session),
         clamav_service: ClamAVService = Depends(),
     ):
         self.db = db
         self.clamav_service = clamav_service
-        self.s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.s3_access_key,
-            aws_secret_access_key=settings.s3_secret_key,
-            endpoint_url=settings.s3_endpoint,
-            region_name="us-east-1",
-        )
+        self.s3_client = get_s3_client(self.request)
 
     # Upload a file to S3 and store metadata in the database
     @repo_handler

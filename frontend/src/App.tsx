@@ -23,7 +23,7 @@ import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComp
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
-import { AddFuelCode, FuelCodes, ViewFuelCode } from './views/FuelCodes'
+import { FuelCodes, AddEditFuelCode } from './views/FuelCodes'
 import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
 import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 import { Notifications, NotificationSettings } from './views/Notifications'
@@ -272,12 +272,12 @@ const routes: TRoute[] = [
       },
       {
         path: ROUTES.FUELCODES_ADD,
-        element: <AddFuelCode />,
+        element: <AddEditFuelCode />,
         handle: { title: 'Add Fuel Code' }
       },
       {
-        path: ROUTES.FUELCODES_VIEW,
-        element: <ViewFuelCode />,
+        path: ROUTES.FUELCODES_EDIT,
+        element: <AddEditFuelCode />,
         handle: { title: 'Fuel Code' }
       },
       {

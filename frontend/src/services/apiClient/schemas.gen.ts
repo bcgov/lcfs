@@ -1442,18 +1442,6 @@ export const DeleteFinalSupplyEquipmentResponseSchemaSchema = {
     title: 'DeleteFinalSupplyEquipmentResponseSchema'
 } as const;
 
-export const DeleteFuelCodeResponseSchemaSchema = {
-    properties: {
-        message: {
-            type: 'string',
-            title: 'Message'
-        }
-    },
-    type: 'object',
-    required: ['message'],
-    title: 'DeleteFuelCodeResponseSchema'
-} as const;
-
 export const DeleteFuelExportResponseSchemaSchema = {
     properties: {
         success: {
@@ -2661,19 +2649,8 @@ export const FuelCodeCloneSchemaSchema = {
     title: 'FuelCodeCloneSchema'
 } as const;
 
-export const FuelCodeCreateSchemaSchema = {
+export const FuelCodeCreateUpdateSchemaSchema = {
     properties: {
-        id: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Id'
-        },
         fuelCodeId: {
             anyOf: [
                 {
@@ -2685,30 +2662,8 @@ export const FuelCodeCreateSchemaSchema = {
             ],
             title: 'Fuelcodeid'
         },
-        status: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Status'
-        },
-        prefix: {
-            type: 'string',
-            title: 'Prefix'
-        },
         prefixId: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'integer',
             title: 'Prefixid'
         },
         fuelSuffix: {
@@ -2726,18 +2681,6 @@ export const FuelCodeCreateSchemaSchema = {
         company: {
             type: 'string',
             title: 'Company'
-        },
-        lastUpdated: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Lastupdated'
         },
         contactName: {
             anyOf: [
@@ -2802,19 +2745,8 @@ export const FuelCodeCreateSchemaSchema = {
             ],
             title: 'Expirationdate'
         },
-        fuel: {
-            type: 'string',
-            title: 'Fuel'
-        },
         fuelTypeId: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'integer',
             title: 'Fueltypeid'
         },
         feedstock: {
@@ -2987,8 +2919,8 @@ export const FuelCodeCreateSchemaSchema = {
         }
     },
     type: 'object',
-    required: ['prefix', 'fuelSuffix', 'carbonIntensity', 'edrms', 'company', 'applicationDate', 'fuel', 'feedstock', 'feedstockLocation', 'fuelProductionFacilityCity', 'fuelProductionFacilityProvinceState', 'fuelProductionFacilityCountry'],
-    title: 'FuelCodeCreateSchema'
+    required: ['fuelSuffix', 'carbonIntensity', 'edrms', 'company', 'applicationDate', 'fuelTypeId', 'feedstock', 'feedstockLocation', 'fuelProductionFacilityCity', 'fuelProductionFacilityProvinceState', 'fuelProductionFacilityCountry'],
+    title: 'FuelCodeCreateUpdateSchema'
 } as const;
 
 export const FuelCodePrefixSchemaSchema = {
@@ -4612,6 +4544,50 @@ export const NotionalTransferCreateSchemaSchema = {
                 }
             ],
             title: 'Deleted'
+        },
+        groupUuid: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Groupuuid'
+        },
+        version: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        userType: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Usertype'
+        },
+        actionType: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Actiontype'
         }
     },
     type: 'object',
@@ -4692,6 +4668,50 @@ export const NotionalTransferSchemaSchema = {
                 }
             ],
             title: 'Deleted'
+        },
+        groupUuid: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Groupuuid'
+        },
+        version: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        userType: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Usertype'
+        },
+        actionType: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Actiontype'
         }
     },
     type: 'object',
@@ -5594,9 +5614,35 @@ export const OtherUsesCreateSchemaSchema = {
             type: 'string',
             title: 'Expecteduse'
         },
+        provisionOfTheAct: {
+            type: 'string',
+            title: 'Provisionoftheact'
+        },
+        fuelCode: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fuelcode'
+        },
         units: {
             type: 'string',
             title: 'Units'
+        },
+        ciOfFuel: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cioffuel'
         },
         rationale: {
             anyOf: [
@@ -5666,7 +5712,7 @@ export const OtherUsesCreateSchemaSchema = {
         }
     },
     type: 'object',
-    required: ['complianceReportId', 'quantitySupplied', 'fuelType', 'fuelCategory', 'expectedUse', 'units'],
+    required: ['complianceReportId', 'quantitySupplied', 'fuelType', 'fuelCategory', 'expectedUse', 'provisionOfTheAct', 'units'],
     title: 'OtherUsesCreateSchema'
 } as const;
 
@@ -5748,9 +5794,35 @@ export const OtherUsesSchemaSchema = {
             type: 'string',
             title: 'Expecteduse'
         },
+        provisionOfTheAct: {
+            type: 'string',
+            title: 'Provisionoftheact'
+        },
+        fuelCode: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Fuelcode'
+        },
         units: {
             type: 'string',
             title: 'Units'
+        },
+        ciOfFuel: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cioffuel'
         },
         rationale: {
             anyOf: [
@@ -5820,7 +5892,7 @@ export const OtherUsesSchemaSchema = {
         }
     },
     type: 'object',
-    required: ['complianceReportId', 'quantitySupplied', 'fuelType', 'fuelCategory', 'expectedUse', 'units'],
+    required: ['complianceReportId', 'quantitySupplied', 'fuelType', 'fuelCategory', 'expectedUse', 'provisionOfTheAct', 'units'],
     title: 'OtherUsesSchema'
 } as const;
 
@@ -5847,6 +5919,20 @@ export const OtherUsesTableOptionsSchemaSchema = {
             type: 'array',
             title: 'Unitsofmeasure'
         },
+        provisionsOfTheAct: {
+            items: {
+                '$ref': '#/components/schemas/ProvisionOfTheActSchema'
+            },
+            type: 'array',
+            title: 'Provisionsoftheact'
+        },
+        fuelCodes: {
+            items: {
+                '$ref': '#/components/schemas/lcfs__web__api__other_uses__schema__FuelCodeSchema'
+            },
+            type: 'array',
+            title: 'Fuelcodes'
+        },
         expectedUses: {
             items: {
                 '$ref': '#/components/schemas/ExpectedUseTypeSchema'
@@ -5856,7 +5942,7 @@ export const OtherUsesTableOptionsSchemaSchema = {
         }
     },
     type: 'object',
-    required: ['fuelCategories', 'fuelTypes', 'unitsOfMeasure', 'expectedUses'],
+    required: ['fuelCategories', 'fuelTypes', 'unitsOfMeasure', 'provisionsOfTheAct', 'fuelCodes', 'expectedUses'],
     title: 'OtherUsesTableOptionsSchema'
 } as const;
 
@@ -8707,6 +8793,26 @@ export const lcfs__web__api__organizations__schema__OrganizationSchemaSchema = {
     title: 'OrganizationSchema'
 } as const;
 
+export const lcfs__web__api__other_uses__schema__FuelCodeSchemaSchema = {
+    properties: {
+        fuelCodeId: {
+            type: 'integer',
+            title: 'Fuelcodeid'
+        },
+        fuelCode: {
+            type: 'string',
+            title: 'Fuelcode'
+        },
+        carbonIntensity: {
+            type: 'number',
+            title: 'Carbonintensity'
+        }
+    },
+    type: 'object',
+    required: ['fuelCodeId', 'fuelCode', 'carbonIntensity'],
+    title: 'FuelCodeSchema'
+} as const;
+
 export const lcfs__web__api__other_uses__schema__FuelTypeSchemaSchema = {
     properties: {
         fuelTypeId: {
@@ -8761,25 +8867,35 @@ export const lcfs__web__api__other_uses__schema__FuelTypeSchemaSchema = {
             ],
             title: 'Defaultcarbonintensity'
         },
-        provision1: {
+        fuelCodes: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/ProvisionOfTheActSchema'
+                    items: {
+                        '$ref': '#/components/schemas/lcfs__web__api__other_uses__schema__FuelCodeSchema'
+                    },
+                    type: 'array'
                 },
                 {
                     type: 'null'
                 }
-            ]
+            ],
+            title: 'Fuelcodes',
+            default: []
         },
-        provision2: {
+        provisionOfTheAct: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/ProvisionOfTheActSchema'
+                    items: {
+                        '$ref': '#/components/schemas/ProvisionOfTheActSchema'
+                    },
+                    type: 'array'
                 },
                 {
                     type: 'null'
                 }
-            ]
+            ],
+            title: 'Provisionoftheact',
+            default: []
         },
         units: {
             '$ref': '#/components/schemas/FuelTypeQuantityUnitsEnumSchema'

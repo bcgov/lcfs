@@ -9,6 +9,17 @@ export const apiRoutes = {
   orgTransactions: '/organization/transactions',
   exportOrgTransactions: '/organization/transactions/export',
   fuelCodeSearch: '/fuel-codes/search?',
+  adminAdjustments: '/admin-adjustments/',
+  initiativeAgreements: '/initiative-agreements/',
+  openapi: '/openapi.json/',
+  updateCategory: '/transfers/:transferId/category',
+  getTransfer: '/transfers/:transferId',
+  getFuelCode: '/fuel-codes/:fuelCodeId',
+  saveFuelCode: '/fuel-codes',
+  approveFuelCode: '/fuel-codes/:fuelCodeId/approve',
+  fuelCodeOptions: '/fuel-codes/table-options',
+  getFuelCodes: '/fuel-codes/list',
+  getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',
   getDocument: '/documents/:parentType/:parentId/:documentId',
   getOrgComplianceReports: '/organization/:orgId/reports/list',
@@ -20,5 +31,8 @@ export const apiRoutes = {
   getUserActivities: '/users/:userId/activity',
   getAllUserActivities: '/users/activities/all',
   getFuelTypeOthers: '/fuel-type/others/list',
-  getAuditLogs: '/audit-log/list'
+  getAuditLogs: '/audit-log/list',
+  trackUserLogin: '/users/logged-in',
+  getUserLoginHistories: '/users/login-history',
+  getAuditLog: '/audit-log/:auditLogId'
 }

@@ -269,10 +269,6 @@ export type DeleteFinalSupplyEquipmentResponseSchema = {
     message: string;
 };
 
-export type DeleteFuelCodeResponseSchema = {
-    message: string;
-};
-
 export type DeleteFuelExportResponseSchema = {
     success: boolean;
     message: string;
@@ -483,25 +479,20 @@ export type FuelCodeCloneSchema = {
     finishedFuelTransportModes?: (Array<FinishedFuelTransportModeSchema> | null);
 };
 
-export type FuelCodeCreateSchema = {
-    id?: (string | null);
+export type FuelCodeCreateUpdateSchema = {
     fuelCodeId?: (number | null);
-    status?: (string | null);
-    prefix: string;
-    prefixId?: (number | null);
+    prefixId?: number;
     fuelSuffix: string;
     carbonIntensity: number;
     edrms: string;
     company: string;
-    lastUpdated?: (string | null);
     contactName?: (string | null);
     contactEmail?: (string | null);
     applicationDate: string;
     approvalDate?: (string | null);
     effectiveDate?: (string | null);
     expirationDate?: (string | null);
-    fuel: string;
-    fuelTypeId?: (number | null);
+    fuelTypeId: number;
     feedstock: string;
     feedstockLocation: string;
     feedstockMisc?: (string | null);
@@ -975,6 +966,12 @@ export type lcfs__web__api__organizations__schema__OrganizationSchema = {
     orgStatus?: (OrganizationStatusSchema | null);
 };
 
+export type lcfs__web__api__other_uses__schema__FuelCodeSchema = {
+    fuelCodeId: number;
+    fuelCode: string;
+    carbonIntensity: number;
+};
+
 export type lcfs__web__api__other_uses__schema__FuelTypeSchema = {
     fuelTypeId: number;
     fuelType: string;
@@ -982,8 +979,8 @@ export type lcfs__web__api__other_uses__schema__FuelTypeSchema = {
     provision1Id?: (number | null);
     provision2Id?: (number | null);
     defaultCarbonIntensity?: (number | null);
-    provision1?: (ProvisionOfTheActSchema | null);
-    provision2?: (ProvisionOfTheActSchema | null);
+    fuelCodes?: (Array<lcfs__web__api__other_uses__schema__FuelCodeSchema> | null);
+    provisionOfTheAct?: (Array<ProvisionOfTheActSchema> | null);
     units: FuelTypeQuantityUnitsEnumSchema;
 };
 
@@ -1028,6 +1025,10 @@ export type NotionalTransferCreateSchema = {
     notionalTransferId?: (number | null);
     complianceReportId: number;
     deleted?: (boolean | null);
+    groupUuid?: (string | null);
+    version?: (number | null);
+    userType?: (string | null);
+    actionType?: (string | null);
 };
 
 export type NotionalTransferFuelCategorySchema = {
@@ -1047,6 +1048,10 @@ export type NotionalTransferSchema = {
     notionalTransferId?: (number | null);
     complianceReportId: number;
     deleted?: (boolean | null);
+    groupUuid?: (string | null);
+    version?: (number | null);
+    userType?: (string | null);
+    actionType?: (string | null);
 };
 
 export type NotionalTransfersSchema = {
@@ -1211,7 +1216,10 @@ export type OtherUsesCreateSchema = {
     fuelType: string;
     fuelCategory: string;
     expectedUse: string;
+    provisionOfTheAct: string;
+    fuelCode?: (string | null);
     units: string;
+    ciOfFuel?: (number | null);
     rationale?: (string | null);
     deleted?: (boolean | null);
     groupUuid?: (string | null);
@@ -1238,7 +1246,10 @@ export type OtherUsesSchema = {
     fuelType: string;
     fuelCategory: string;
     expectedUse: string;
+    provisionOfTheAct: string;
+    fuelCode?: (string | null);
     units: string;
+    ciOfFuel?: (number | null);
     rationale?: (string | null);
     deleted?: (boolean | null);
     groupUuid?: (string | null);
@@ -1251,6 +1262,8 @@ export type OtherUsesTableOptionsSchema = {
     fuelCategories: Array<OtherUsesFuelCategorySchema>;
     fuelTypes: Array<lcfs__web__api__other_uses__schema__FuelTypeSchema>;
     unitsOfMeasure: Array<(string)>;
+    provisionsOfTheAct: Array<ProvisionOfTheActSchema>;
+    fuelCodes: Array<lcfs__web__api__other_uses__schema__FuelCodeSchema>;
     expectedUses: Array<ExpectedUseTypeSchema>;
 };
 
@@ -1865,17 +1878,6 @@ export type GetFuelCodeResponse = (lcfs__web__api__fuel_code__schema__FuelCodeSc
 
 export type GetFuelCodeError = (HTTPValidationError);
 
-export type UpdateFuelCodeData = {
-    body: FuelCodeCreateSchema;
-    path: {
-        fuel_code_id: number;
-    };
-};
-
-export type UpdateFuelCodeResponse = (unknown);
-
-export type UpdateFuelCodeError = (HTTPValidationError);
-
 export type DeleteFuelCodeData = {
     path: {
         fuel_code_id: number;
@@ -1886,13 +1888,23 @@ export type DeleteFuelCodeResponse = (unknown);
 
 export type DeleteFuelCodeError = (HTTPValidationError);
 
-export type SaveFuelCodeRowData = {
-    body: FuelCodeCreateSchema;
+export type ApproveFuelCodeData = {
+    path: {
+        fuel_code_id: number;
+    };
 };
 
-export type SaveFuelCodeRowResponse = ((lcfs__web__api__fuel_code__schema__FuelCodeSchema | DeleteFuelCodeResponseSchema));
+export type ApproveFuelCodeResponse = (unknown);
 
-export type SaveFuelCodeRowError = (HTTPValidationError);
+export type ApproveFuelCodeError = (HTTPValidationError);
+
+export type SaveFuelCodeData = {
+    body: FuelCodeCreateUpdateSchema;
+};
+
+export type SaveFuelCodeResponse = (unknown);
+
+export type SaveFuelCodeError = (HTTPValidationError);
 
 export type GetFuelExportTableOptionsData = {
     query: {
@@ -2488,6 +2500,10 @@ export type GetUsersData = {
 export type GetUsersResponse = (UsersSchema);
 
 export type GetUsersError = (HTTPValidationError);
+
+export type TrackLoggedInResponse = (string);
+
+export type TrackLoggedInError = unknown;
 
 export type GetCurrentUserResponse = (UserBaseSchema);
 

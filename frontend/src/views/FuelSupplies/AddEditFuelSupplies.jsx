@@ -102,6 +102,7 @@ export const AddEditFuelSupplies = () => {
       const updatedRowData = data.fuelSupplies.map((item) => ({
         ...item,
         complianceReportId, // This takes current reportId, important for versioning
+        compliancePeriod,
         fuelCategory: item.fuelCategory?.category,
         fuelType: item.fuelType?.fuelType,
         fuelTypeOther:
@@ -115,7 +116,7 @@ export const AddEditFuelSupplies = () => {
     } else {
       setRowData([{ id: uuid() }])
     }
-  }, [data, fuelSuppliesLoading, complianceReportId])
+  }, [data, fuelSuppliesLoading, complianceReportId, compliancePeriod])
 
   const onCellValueChanged = useCallback(
     async (params) => {

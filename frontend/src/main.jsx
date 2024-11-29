@@ -1,8 +1,7 @@
-import Loading from '@/components/Loading'
+import { KeycloakProvider } from '@/components/KeycloakProvider'
 import theme from '@/themes'
-import { getKeycloak, keycloakInitOptions } from '@/utils/keycloak'
+import { getKeycloak } from '@/utils/keycloak'
 import { CssBaseline, ThemeProvider } from '@mui/material'
-import { ReactKeycloakProvider } from '@react-keycloak/web'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRoot } from 'react-dom/client'
 import App from './App'
@@ -16,11 +15,7 @@ const root = document.getElementById('root')
 if (root) {
   createRoot(root).render(
     <main>
-      <ReactKeycloakProvider
-        authClient={keycloak}
-        initOptions={keycloakInitOptions}
-        LoadingComponent={<Loading />}
-      >
+      <KeycloakProvider authClient={keycloak}>
         <ApiServiceProvider>
           <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme}>
@@ -29,7 +24,7 @@ if (root) {
             </ThemeProvider>
           </QueryClientProvider>
         </ApiServiceProvider>
-      </ReactKeycloakProvider>
+      </KeycloakProvider>
     </main>
   )
 }

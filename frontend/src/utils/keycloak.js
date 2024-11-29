@@ -17,6 +17,8 @@ export const getKeycloak = () => {
 }
 
 export const logout = () => {
+  sessionStorage.removeItem('keycloak-logged-in')
+
   const keycloakLogoutUrl =
     keycloak.endpoints.logout() +
     '?post_logout_redirect_uri=' +
