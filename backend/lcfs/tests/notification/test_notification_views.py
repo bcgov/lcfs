@@ -172,11 +172,9 @@ async def test_get_notification_channel_subscription_by_id(
         mock_subscription = SubscriptionSchema(
             notification_channel_subscription_id=1,
             user_profile_id=1,  # Match mock user
-            channel_name="Test Channel",
-            is_active=True,
-            notification_type_id=1,
-            created_at="2023-01-01T00:00:00",
-            updated_at="2023-01-01T00:00:00",
+            notification_channel_key="email",
+            notification_type_key="new_message",
+            is_enabled=True,
         )
         mock_get_subscription.return_value = mock_subscription
 
@@ -198,7 +196,6 @@ async def test_get_notification_channel_subscription_by_id(
         mock_get_subscription.assert_called_once_with(
             notification_channel_subscription_id=1
         )
-
 
 
 @pytest.mark.anyio
@@ -233,15 +230,18 @@ async def test_delete_subscription(client, fastapi_app, set_mock_user):
         "lcfs.web.api.notification.views.NotificationService.delete_notification_channel_subscription",
         return_value=None,
     ) as mock_delete_subscription:
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-
-        mock_delete_subscription.return_value = {
-            "message": "Notification Subscription deleted successfully"
-        }
-
-        subscription_data = {"notification_channel_subscription_id": 1, "deleted": True}
+        set_mock_user(
+            fastapi_app,
+            [RoleEnum.GOVERNMENT],
+            user_details={"user_profile_id": 1},
+        )
 
         url = fastapi_app.url_path_for("save_subscription")
+
+        subscription_data = {
+            "notification_channel_subscription_id": 1,
+            "deleted": True,
+        }
 
         response = await client.post(url, json=subscription_data)
 
@@ -250,32 +250,6 @@ async def test_delete_subscription(client, fastapi_app, set_mock_user):
             response.json()["message"]
             == "Notification Subscription deleted successfully"
         )
-        mock_delete_subscription.assert_called_once_with(1)
-
-
-@pytest.mark.anyio
-async def test_update_subscription(client, fastapi_app, set_mock_user):
-    with patch(
-        "lcfs.web.api.notification.views.NotificationService.update_notification_channel_subscription"
-    ) as mock_update_subscription:
-        updated_subscription_data = {
-            "notification_channel_subscription_id": 1,
-            "is_enabled": False,
-            "notification_channel_id": 1,
-            "user_profile_id": 1,
-            "notification_type_id": 1,
-        }
-
-        mock_update_subscription.return_value = updated_subscription_data
-
-        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
-
-        url = fastapi_app.url_path_for("save_subscription")
-
-        response = await client.post(url, json=updated_subscription_data)
-
-        assert response.status_code == 200
-        assert response.json()["isEnabled"] is False
-        mock_update_subscription.assert_called_once_with(
-            SubscriptionSchema(**updated_subscription_data)
-        )
+        mock_delete_subscription.assert_called_once_with(
+            1, 1
+        )  # subscription_id, user_profile_id

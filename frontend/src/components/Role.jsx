@@ -7,10 +7,6 @@ export const Role = ({ children, roles }) => {
   const isAuthorized =
     roles?.length > 0 ? roles.some((role) => userRoles.includes(role)) : true
 
-  if (!currentUser) {
-    return <div data-test="loading">Loading...</div>
-  }
-
   if (!isAuthorized) {
     return null
   }

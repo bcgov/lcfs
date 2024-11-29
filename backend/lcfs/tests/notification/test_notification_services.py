@@ -272,49 +272,43 @@ async def test_create_notification_channel_subscription(notification_service):
 
     subscription_data = SubscriptionSchema(
         is_enabled=True,
-        user_profile_id=1,
-        notification_type_id=2,
-        notification_channel_id=3,
+        notification_channel_key="email",
+        notification_type_key="new_message",
     )
+    user_profile_id = 1
 
+    # Mock the methods that fetch IDs from keys
+    service.get_notification_channel_id_by_key = AsyncMock(return_value=3)
+    service.get_notification_type_id_by_key = AsyncMock(return_value=2)
+
+    # Mock the repo method
     created_subscription = NotificationChannelSubscription(
         notification_channel_subscription_id=123,
         is_enabled=True,
-        user_profile_id=1,
+        user_profile_id=user_profile_id,
         notification_type_id=2,
         notification_channel_id=3,
     )
-
     mock_repo.create_notification_channel_subscription = AsyncMock(
         return_value=created_subscription
     )
 
-    result = await service.create_notification_channel_subscription(subscription_data)
+    result = await service.create_notification_channel_subscription(
+        subscription_data, user_profile_id
+    )
 
+    # Assertions
+    assert isinstance(result, SubscriptionSchema)
+    assert result.notification_channel_subscription_id == 123
+    assert result.is_enabled == True
+
+    # Verify that the repo method was called with the correct subscription
     called_args, _ = mock_repo.create_notification_channel_subscription.await_args
     passed_subscription = called_args[0]
-
-    assert (
-        result.notification_channel_subscription_id
-        == created_subscription.notification_channel_subscription_id
-    )
-    assert result.is_enabled == created_subscription.is_enabled
-    assert result.user_profile_id == created_subscription.user_profile_id
-    assert result.notification_type_id == created_subscription.notification_type_id
-    assert (
-        result.notification_channel_id == created_subscription.notification_channel_id
-    )
-
-    assert passed_subscription.is_enabled == subscription_data.is_enabled
-    assert passed_subscription.user_profile_id == subscription_data.user_profile_id
-    assert (
-        passed_subscription.notification_type_id
-        == subscription_data.notification_type_id
-    )
-    assert (
-        passed_subscription.notification_channel_id
-        == subscription_data.notification_channel_id
-    )
+    assert passed_subscription.is_enabled == True
+    assert passed_subscription.user_profile_id == user_profile_id
+    assert passed_subscription.notification_channel_id == 3
+    assert passed_subscription.notification_type_id == 2
 
 
 @pytest.mark.anyio
@@ -322,23 +316,33 @@ async def test_get_notification_channel_subscriptions_by_user_id(notification_se
     service, mock_repo = notification_service
 
     user_id = 1
-    expected_subscriptions = [
-        NotificationChannelSubscription(
-            notification_channel_subscription_id=123,
-            is_enabled=True,
-            user_profile_id=user_id,
-            notification_type_id=2,
-            notification_channel_id=3,
-        )
-    ]
+    # Mock subscription data
+    mock_subscription = MagicMock(spec=NotificationChannelSubscription)
+    mock_subscription.notification_channel_subscription_id = 123
+    mock_subscription.user_profile_id = user_id
+    mock_subscription.is_enabled = True
+
+    # Mock associated channel and type
+    mock_channel = MagicMock()
+    mock_channel.channel_name.name = "email"
+    mock_subscription.notification_channel = mock_channel
+
+    mock_type = MagicMock()
+    mock_type.name = "new_message"
+    mock_subscription.notification_type = mock_type
 
     mock_repo.get_notification_channel_subscriptions_by_user = AsyncMock(
-        return_value=expected_subscriptions
+        return_value=[mock_subscription]
     )
 
     result = await service.get_notification_channel_subscriptions_by_user_id(user_id)
 
-    assert result == expected_subscriptions
+    assert len(result) == 1
+    subscription = result[0]
+    assert subscription["notification_channel_subscription_id"] == 123
+    assert subscription["notification_channel_key"] == "email"
+    assert subscription["notification_type_key"] == "new_message"
+
     mock_repo.get_notification_channel_subscriptions_by_user.assert_awaited_once_with(
         user_id
     )
@@ -370,62 +374,15 @@ async def test_get_notification_channel_subscription_by_id(notification_service)
 
 
 @pytest.mark.anyio
-async def test_update_notification_channel_subscription(notification_service):
-    service, mock_repo = notification_service
-
-    subscription_data = SubscriptionSchema(
-        notification_channel_subscription_id=123,
-        is_enabled=False,
-        user_profile_id=1,
-        notification_type_id=2,
-        notification_channel_id=3,
-    )
-
-    updated_subscription = NotificationChannelSubscription(
-        notification_channel_subscription_id=123,
-        is_enabled=False,
-        user_profile_id=1,
-        notification_type_id=2,
-        notification_channel_id=3,
-    )
-
-    mock_repo.update_notification_channel_subscription = AsyncMock(
-        return_value=updated_subscription
-    )
-
-    result = await service.update_notification_channel_subscription(subscription_data)
-
-    called_args, _ = mock_repo.update_notification_channel_subscription.await_args
-    passed_subscription = called_args[0]
-    assert (
-        passed_subscription.notification_channel_subscription_id
-        == updated_subscription.notification_channel_subscription_id
-    )
-    assert passed_subscription.is_enabled == subscription_data.is_enabled
-    assert passed_subscription.user_profile_id == subscription_data.user_profile_id
-    assert (
-        passed_subscription.notification_type_id
-        == subscription_data.notification_type_id
-    )
-    assert (
-        passed_subscription.notification_channel_id
-        == subscription_data.notification_channel_id
-    )
-
-
-@pytest.mark.anyio
 async def test_delete_notification_channel_subscription(notification_service):
     service, mock_repo = notification_service
 
-    user_id = 1
+    user_profile_id = 1
     subscription_id = 456
 
     mock_subscription_data = NotificationChannelSubscription(
         notification_channel_subscription_id=subscription_id,
-        is_enabled=True,
-        user_profile_id=user_id,
-        notification_type_id=2,
-        notification_channel_id=3,
+        user_profile_id=user_profile_id,
     )
 
     mock_repo.get_notification_channel_subscription_by_id = AsyncMock(
@@ -433,7 +390,9 @@ async def test_delete_notification_channel_subscription(notification_service):
     )
     mock_repo.delete_notification_channel_subscription = AsyncMock()
 
-    await service.delete_notification_channel_subscription(subscription_id)
+    await service.delete_notification_channel_subscription(
+        subscription_id, user_profile_id
+    )
 
     mock_repo.get_notification_channel_subscription_by_id.assert_awaited_once_with(
         subscription_id

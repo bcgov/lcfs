@@ -14,9 +14,11 @@ from sqlalchemy import (
     func,
     cast,
     String,
+    update,
 )
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.services.keycloak.dependencies import parse_external_username
 from lcfs.web.core.decorators import repo_handler
@@ -665,3 +667,27 @@ class UserRepository:
         )
 
         self.db.add(login_history)
+
+    @repo_handler
+    async def update_notifications_email(
+        self, user_profile_id: int, email: str
+    ) -> UserProfile:
+        # Fetch the user profile
+        query = select(UserProfile).where(
+            UserProfile.user_profile_id == user_profile_id
+        )
+        result = await self.db.execute(query)
+        user_profile = result.scalar_one_or_none()
+
+        if not user_profile:
+            logger.warning(f"User with ID {user_profile_id} not found.")
+            raise DataNotFoundException(f"User with id '{user_profile_id}' not found.")
+
+        # Update the notifications_email field
+        user_profile.notifications_email = email
+
+        # Flush and refresh without committing
+        await self.db.flush()
+        await self.db.refresh(user_profile)
+
+        return user_profile

@@ -45,7 +45,7 @@ export const REPORTS_ADD_OTHER_USE_FUELS = `${REPORTS_VIEW}/fuels-other-use`
 export const REPORTS_ADD_FUEL_EXPORTS = `${REPORTS_VIEW}/fuel-exports`
 
 export const NOTIFICATIONS = '/notifications'
-export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/settings`
+export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/configure`
 
 export const ADMIN = '/admin'
 export const ADMIN_USERS = `${ADMIN}/users`

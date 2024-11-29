@@ -1,6 +1,8 @@
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
+    NotificationChannel,
+    NotificationType,
 )
 from lcfs.web.api.notification.schema import NotificationMessageSchema
 import structlog
@@ -162,12 +164,17 @@ class NotificationRepository:
     @repo_handler
     async def get_notification_channel_subscriptions_by_user(
         self, user_profile_id: int
-    ) -> Optional[NotificationChannelSubscription]:
+    ) -> List[NotificationChannelSubscription]:
         """
-        Retrieve channel subscriptions for a user
+        Retrieve channel subscriptions for a user, including channel key and notification type key.
         """
-        query = select(NotificationChannelSubscription).where(
-            NotificationChannelSubscription.user_profile_id == user_profile_id
+        query = (
+            select(NotificationChannelSubscription)
+            .options(
+                selectinload(NotificationChannelSubscription.notification_channel),
+                selectinload(NotificationChannelSubscription.notification_type),
+            )
+            .where(NotificationChannelSubscription.user_profile_id == user_profile_id)
         )
         result = await self.db.execute(query)
         subscriptions = result.scalars().all()
@@ -227,3 +234,26 @@ class NotificationRepository:
         )
         await self.db.execute(query)
         await self.db.flush()
+
+    @repo_handler
+    async def get_notification_type_by_key(self, key: str) -> Optional[int]:
+        """
+        Retrieve a NotificationType by its key
+        """
+        query = select(NotificationType.notification_type_id).where(
+            NotificationType.name == key
+        )
+        result = await self.db.execute(query)
+        x = result.scalars().first()
+        return x
+
+    @repo_handler
+    async def get_notification_channel_by_key(self, key: str) -> Optional[int]:
+        """
+        Retrieve a NotificationChannel by its key
+        """
+        query = select(NotificationChannel.notification_channel_id).where(
+            NotificationChannel.channel_name == key
+        )
+        result = await self.db.execute(query)
+        return result.scalars().first()
