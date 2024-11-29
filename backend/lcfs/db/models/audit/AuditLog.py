@@ -3,6 +3,7 @@ from sqlalchemy import (
     Integer,
     Column,
     Text,
+    Index,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -24,7 +25,13 @@ class AuditLog(BaseModel, Auditable):
     """
 
     __tablename__ = "audit_log"
-    __table_args__ = {"comment": "Track changes in defined tables."}
+    __table_args__ = (
+        Index("idx_audit_log_operation", "operation"),
+        Index("idx_audit_log_create_date", "create_date"),
+        Index("idx_audit_log_create_user", "create_user"),
+        Index("idx_audit_log_delta", "delta", postgresql_using="gin"),
+        {"comment": "Track changes in defined tables."},
+    )
 
     audit_log_id = Column(
         Integer,

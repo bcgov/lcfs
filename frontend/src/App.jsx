@@ -7,8 +7,9 @@ import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
 import { ComplianceReports } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
-import { FuelCodes, AddFuelCode, ViewFuelCode } from './views/FuelCodes'
 import { NotificationMenu } from '@/views/Notifications/NotificationMenu'
+import { FuelCodes, AddEditFuelCode } from './views/FuelCodes'
+import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
   AddEditOrg,
@@ -261,12 +262,12 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.FUELCODES_ADD,
-        element: <AddFuelCode />,
+        element: <AddEditFuelCode />,
         handle: { title: 'Add Fuel Code' }
       },
       {
-        path: ROUTES.FUELCODES_VIEW,
-        element: <ViewFuelCode />,
+        path: ROUTES.FUELCODES_EDIT,
+        element: <AddEditFuelCode />,
         handle: { title: 'Fuel Code' }
       },
       {

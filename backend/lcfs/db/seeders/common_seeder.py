@@ -23,6 +23,13 @@ from lcfs.db.seeders.common.allocation_agreement_seeder import (
     seed_allocation_transaction_types,
 )
 from lcfs.db.seeders.common.notification_type_seeder import seed_notification_types
+from lcfs.db.seeders.common.end_user_type_seeder import (
+    seed_end_user_types,
+)
+from lcfs.db.seeders.common.notifications_seeder import (
+    seed_notification_types,
+    seed_notification_channels,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -54,7 +61,9 @@ async def update_sequences(session):
         "transfer_category": "transfer_category_id",
         "transfer_status": "transfer_status_id",
         "role": "role_id",
+        "end_user_type": "end_user_type_id",
         "notification_type": "notification_type_id",
+        "notification_channel": "notification_channel_id",
     }
 
     for table, column in sequences.items():
@@ -80,7 +89,9 @@ async def seed_common(session: AsyncSession):
     await seed_static_fuel_data(session)
     await seed_compliance_report_statuses(session)
     await seed_allocation_transaction_types(session)
+    await seed_end_user_types(session)
     await seed_notification_types(session)
+    await seed_notification_channels(session)
 
     # Update sequences after all seeders have run
     await update_sequences(session)

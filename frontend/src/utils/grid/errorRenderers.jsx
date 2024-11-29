@@ -35,3 +35,21 @@ export const StandardCellWarningAndErrors = (params, errors, warnings) => {
   }
   return style
 }
+
+export const StandardCellStyle = (
+  params,
+  errors,
+  warnings,
+  conditionalStyleFn
+) => {
+  // Start with the base style from StandardCellWarningAndErrors
+  let style = StandardCellWarningAndErrors(params, errors, warnings)
+
+  // Apply additional conditional styles if provided
+  if (conditionalStyleFn && typeof conditionalStyleFn === 'function') {
+    const additionalStyle = conditionalStyleFn(params)
+    style = { ...style, ...additionalStyle }
+  }
+
+  return style
+}

@@ -2,9 +2,9 @@
 Fuel codes endpoints
 """
 
-import structlog
 from typing import List, Union, Optional
 
+import structlog
 from fastapi import (
     APIRouter,
     Body,
@@ -14,24 +14,22 @@ from fastapi import (
     Depends,
     Query,
 )
-from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
 from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.export import FuelCodeExporter
-from lcfs.web.core.decorators import view_handler
-from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.api.fuel_code.schema import (
-    FuelCodeCreateSchema,
+    FuelCodeCreateUpdateSchema,
     FuelCodesSchema,
-    FuelCodeSchema,
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
     DeleteFuelCodeResponseSchema,
 )
-from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.fuel_code.services import FuelCodeServices
+from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -158,46 +156,34 @@ async def get_fuel_code(
     return await service.get_fuel_code(fuel_code_id)
 
 
-@router.put("/{fuel_code_id}", status_code=status.HTTP_200_OK)
-@view_handler(["*"])
-async def update_fuel_code(
+@router.post("/{fuel_code_id}/approve", status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def approve_fuel_code(
     request: Request,
     fuel_code_id: int,
-    fuel_code_data: FuelCodeCreateSchema,
     service: FuelCodeServices = Depends(),
 ):
-    return await service.update_fuel_code(fuel_code_id, fuel_code_data)
+    # TODO: Add Logic that checks if the code has necessary fields for approval
+    return await service.approve_fuel_code(fuel_code_id)
+
+
+@router.post("", status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.ANALYST])
+async def save_fuel_code(
+    request: Request,
+    fuel_code_data: FuelCodeCreateUpdateSchema,
+    service: FuelCodeServices = Depends(),
+):
+    """Endpoint to create or update a fuel code"""
+    if fuel_code_data.fuel_code_id:
+        return await service.update_fuel_code(fuel_code_data)
+    else:
+        return await service.create_fuel_code(fuel_code_data)
 
 
 @router.delete("/{fuel_code_id}", status_code=status.HTTP_200_OK)
-@view_handler(["*"])
+@view_handler([RoleEnum.ANALYST])
 async def delete_fuel_code(
     request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
-
-
-@router.post(
-    "/save",
-    response_model=Union[FuelCodeSchema, DeleteFuelCodeResponseSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.ADMINISTRATOR])
-async def save_fuel_code_row(
-    request: Request,
-    request_data: FuelCodeCreateSchema = Body(...),
-    service: FuelCodeServices = Depends(),
-):
-    """Endpoint to save a single fuel code row"""
-    fuel_code_id: Optional[int] = request_data.fuel_code_id
-
-    if request_data.deleted:
-        # Delete existing fuel code
-        await service.delete_fuel_code(fuel_code_id)
-        return DeleteFuelCodeResponseSchema(message="Fuel code deleted successfully")
-    elif fuel_code_id:
-        # Update existing fuel code
-        return await service.update_fuel_code(fuel_code_id, request_data)
-    else:
-        # Create new fuel code
-        return await service.create_fuel_code(request_data)

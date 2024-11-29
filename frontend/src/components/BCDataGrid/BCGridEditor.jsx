@@ -4,6 +4,7 @@ import { isEqual } from '@/utils/grid/eventHandlers'
 import { AgGridReact } from '@ag-grid-community/react'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
+import '@ag-grid-community/styles/ag-theme-quartz.css'
 import Papa from 'papaparse'
 import PropTypes from 'prop-types'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -214,7 +215,7 @@ export const BCGridEditor = ({
     // Check if any column has `headerComponent` matching "RequiredHeader"
     return columnDefs.some(
       colDef => colDef.headerComponent?.name === 'RequiredHeader'
-    );
+    ) || columnDefs.some(colDef => !!colDef.headerComponent)
   }, [ref])
 
 
