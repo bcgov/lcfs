@@ -50,7 +50,7 @@ class TransactionConsumer(BaseConsumer):
         compliance_units = message_content.get("compliance_units_amount")
         org_id = message_content.get("organization_id")
 
-        redis = await get_redis_pool(request)
+        redis = get_redis_pool(request)
 
         async with AsyncSession(async_engine) as session:
             async with session.begin():

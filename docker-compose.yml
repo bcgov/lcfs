@@ -137,7 +137,7 @@ services:
         source: node_modules
         target: /app/node_modules
     networks:
-      - shared_network
+      - shared_network`
 
 volumes:
   postgres_data:

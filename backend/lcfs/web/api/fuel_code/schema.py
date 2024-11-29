@@ -4,18 +4,13 @@ from datetime import date, datetime
 from pydantic import Field, ValidationError, field_validator, model_validator
 from enum import Enum
 
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
     Approved = "Approved"
     Deleted = "Deleted"
-
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -42,6 +37,15 @@ class FuelTypeSchema(BaseSchema):
 class FuelCodeStatusSchema(BaseSchema):
     fuel_code_status_id: Optional[int] = None
     status: FuelCodeStatusEnumSchema
+
+
+class FuelCodeResponseSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
+    fuel_status_id: Optional[int] = None
+    fuel_status: Optional[FuelCodeStatusSchema] = None
+    prefix_id: Optional[int] = None
+    fuel_code: str
+    carbon_intensity: float
 
 
 class TransportModeSchema(BaseSchema):
@@ -79,6 +83,7 @@ class EndUseTypeSchema(BaseSchema):
     end_use_type_id: int
     type: str
     sub_type: Optional[str] = None
+
 
 class EndUserTypeSchema(BaseSchema):
     end_user_type_id: int
@@ -163,7 +168,7 @@ class FuelCodeSchema(BaseSchema):
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
-    fuel_code_type: Optional[FuelTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )
@@ -200,7 +205,7 @@ class FuelCodeCloneSchema(BaseSchema):
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
-    fuel_code_type: Optional[FuelTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )
@@ -286,7 +291,9 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     @model_validator(mode="before")
     def check_capacity_and_unit(cls, values):
         facility_nameplate_capacity = values.get("facility_nameplate_capacity")
-        facility_nameplate_capacity_unit = values.get("facility_nameplate_capacity_unit")
+        facility_nameplate_capacity_unit = values.get(
+            "facility_nameplate_capacity_unit"
+        )
 
         if facility_nameplate_capacity is None:
             values["facility_nameplate_capacity_unit"] = None

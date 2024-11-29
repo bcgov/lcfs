@@ -82,7 +82,7 @@ class FuelCodeExporter:
                     fuel_code.approval_date,
                     fuel_code.effective_date,
                     fuel_code.expiration_date,
-                    fuel_code.fuel_code_type.fuel_type,
+                    fuel_code.fuel_type.fuel_type,
                     fuel_code.feedstock,
                     fuel_code.feedstock_location,
                     fuel_code.feedstock_misc,

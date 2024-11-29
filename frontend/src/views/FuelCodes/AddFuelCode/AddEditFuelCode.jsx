@@ -324,6 +324,7 @@ const AddEditFuelCodeBase = () => {
             rowData={rowData}
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
+            stopEditingWhenCellsLoseFocus
             onAction={onAction}
             showAddRowsButton={!existingFuelCode && hasRoles(roles.analyst)}
             context={{ errors }}

@@ -36,7 +36,7 @@
     "approvalDate": "Approval date",
     "effectiveDate": "Effective date",
     "expiryDate": "Expiry date",
-    "fuel": "Fuel",
+    "fuelType": "Fuel",
     "feedstock": "Feedstock",
     "feedstockLocation": "Feedstock location",
     "misc": "Misc (e.g. CCS, EOR, waste steam, non rendered, etc.,)",

@@ -3,8 +3,14 @@ import pytest
 from unittest.mock import patch
 from httpx import AsyncClient
 from fastapi import FastAPI
+
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.fuel_code.schema import FuelCodeCreateUpdateSchema
+from lcfs.web.api.fuel_code.schema import (
+    FuelCodeCreateUpdateSchema,
+    TransportModeSchema,
+    FuelCodeStatusSchema,
+)
 from lcfs.web.exception.exceptions import DataNotFoundException
 from starlette import status
 
@@ -103,7 +109,7 @@ async def test_get_fuel_codes_success(
     pagination_request_schema,
 ):
     with patch(
-        "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_codes"
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.search_fuel_codes"
     ) as mock_get_fuel_codes:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
@@ -480,3 +486,62 @@ async def test_approve_fuel_code_unauthorized(
     response = await client.post(url)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_statuses_success(
+    client: AsyncClient, fastapi_app: FastAPI
+):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.get_fuel_code_statuses"
+    ) as mock_get_statuses:
+        # Mock the return value of the service
+        mock_get_statuses.return_value = [
+            FuelCodeStatusSchema(
+                fuel_code_status_id=1, status=FuelCodeStatusEnum.Draft
+            ),
+            FuelCodeStatusSchema(
+                fuel_code_status_id=2, status=FuelCodeStatusEnum.Approved
+            ),
+        ]
+
+        # Send GET request to the endpoint
+        url = "/api/fuel-codes/statuses"
+        response = await client.get(url)
+
+        # Assertions
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+        assert isinstance(result, list)
+        assert len(result) == 2
+        print(result[0])
+        assert result[0]["fuelCodeStatusId"] == 1
+        assert result[0]["status"] == "Draft"
+        assert result[1]["fuelCodeStatusId"] == 2
+        assert result[1]["status"] == "Approved"
+
+
+@pytest.mark.anyio
+async def test_get_transport_modes_success(client: AsyncClient, fastapi_app: FastAPI):
+    with patch(
+        "lcfs.web.api.fuel_code.services.FuelCodeServices.get_transport_modes"
+    ) as mock_get_modes:
+        # Mock the return value of the service
+        mock_get_modes.return_value = [
+            TransportModeSchema(transport_mode_id=1, transport_mode="Truck"),
+            TransportModeSchema(transport_mode_id=2, transport_mode="Ship"),
+        ]
+
+        # Send GET request to the endpoint
+        url = "/api/fuel-codes/transport-modes"
+        response = await client.get(url)
+
+        # Assertions
+        assert response.status_code == status.HTTP_200_OK
+        result = response.json()
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]["transportModeId"] == 1
+        assert result[0]["transportMode"] == "Truck"
+        assert result[1]["transportModeId"] == 2
+        assert result[1]["transportMode"] == "Ship"
