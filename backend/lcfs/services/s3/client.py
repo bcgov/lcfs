@@ -34,7 +34,7 @@ class DocumentService:
     ):
         self.db = db
         self.clamav_service = clamav_service
-        self.s3_client = get_s3_client(self.request)
+        self.s3_client = get_s3_client(request)
 
     # Upload a file to S3 and store metadata in the database
     @repo_handler
