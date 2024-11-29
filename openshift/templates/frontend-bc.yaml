@@ -58,17 +58,10 @@ objects:
       type: Git
     strategy:
       dockerStrategy:
-        target: prod
-        env:
-          - name: ARTIFACTORY_USER
-            valueFrom:
-              secretKeyRef:
-                name: artifacts-default-gyszor
-                key: username
-          - name: ARTIFACTORY_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: artifacts-default-gyszor
-                key: password
+        dockerfilePath: ./Dockerfile.openshift
+        pullSecret:
+          name: artifacts-pull-default-gyszor
+        forcePull: true
+        noCache: true     
       type: Docker
     triggers: []
