@@ -8,9 +8,8 @@
 
 # Start the FastAPI application
 if [ "$APP_ENVIRONMENT" = "prod" ]; then
-    echo "Prod build"
-    uvicorn main:lcfs --host 0.0.0.0 --port 8000 --workers 2
+  echo "Prod build"
+  uvicorn main:lcfs --host 0.0.0.0 --port 8000 --workers 2
 else
-    echo "Non-prod build"
-    poetry run python -m lcfs
-    
+  echo "Non-prod build"
+  poetry run python -m lcfs

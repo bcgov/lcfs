@@ -59,7 +59,6 @@ objects:
     strategy:
       dockerStrategy:
         dockerfilePath: ./Dockerfile.openshift
-        target: prod
         pullSecret:
           name: artifacts-pull-default-gyszor
         forcePull: true
