@@ -12,18 +12,13 @@ from pydantic import (
 )
 from enum import Enum
 
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
     Approved = "Approved"
     Deleted = "Deleted"
-
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -50,6 +45,15 @@ class FuelTypeSchema(BaseSchema):
 class FuelCodeStatusSchema(BaseSchema):
     fuel_code_status_id: Optional[int] = None
     status: FuelCodeStatusEnumSchema
+
+
+class FuelCodeResponseSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
+    fuel_status_id: Optional[int] = None
+    fuel_status: Optional[FuelCodeStatusSchema] = None
+    prefix_id: Optional[int] = None
+    fuel_code: str
+    carbon_intensity: float
 
 
 class TransportModeSchema(BaseSchema):
@@ -172,7 +176,7 @@ class FuelCodeSchema(BaseSchema):
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
-    fuel_code_type: Optional[FuelTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )
@@ -209,7 +213,7 @@ class FuelCodeCloneSchema(BaseSchema):
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
-    fuel_code_type: Optional[FuelTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )

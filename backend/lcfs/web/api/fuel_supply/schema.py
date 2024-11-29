@@ -1,20 +1,16 @@
 from enum import Enum
 from typing import List, Optional
+
+from pydantic import Field, field_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     PaginationResponseSchema,
     SortOrder,
 )
-from pydantic import Field, field_validator
-from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
-
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
+from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -111,20 +107,6 @@ class FuelTypeSchema(BaseSchema):
 class FuelCategoryResponseSchema(BaseSchema):
     fuel_category_id: Optional[int] = None
     category: str
-
-
-class FuelCodeStatusSchema(BaseSchema):
-    fuel_code_status_id: Optional[int] = None
-    status: str
-
-
-class FuelCodeResponseSchema(BaseSchema):
-    fuel_code_id: Optional[int] = None
-    fuel_status_id: Optional[int] = None
-    fuel_status: Optional[FuelCodeStatusSchema] = None
-    prefix_id: Optional[int] = None
-    fuel_code: Optional[str]
-    carbon_intensity: float
 
 
 class FuelSupplyCreateUpdateSchema(BaseSchema):

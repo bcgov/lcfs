@@ -94,7 +94,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     fuel_code_prefix = relationship(
         "FuelCodePrefix", back_populates="fuel_codes", lazy="joined"
     )
-    fuel_code_type = relationship(
+    fuel_type = relationship(
         "FuelType", back_populates="fuel_codes", lazy="joined"
     )
 
