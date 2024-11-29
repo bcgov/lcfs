@@ -12,8 +12,12 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
 import {
   StandardCellErrors,
-  StandardCellWarningAndErrors
+  StandardCellStyle
 } from '@/utils/grid/errorRenderers'
+import {
+  isFuelTypeOther,
+  fuelTypeOtherConditionalStyle
+} from '@/utils/fuelTypeOther'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -191,7 +195,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
           fuelType.fuelCategories?.[0]?.category ?? null
         params.data.units = fuelType?.units
         params.data.unrecognized = fuelType?.unrecognized
-        params.data.provisionOfTheAct = null;
+        params.data.provisionOfTheAct = null
       }
       return true
     },
@@ -217,19 +221,14 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
       api: params.api,
       minWords: 1
     }),
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
-      return { ...style, ...conditionalStyle }
-    },
+    cellStyle: (params) =>
+      StandardCellStyle(params, errors, null, fuelTypeOtherConditionalStyle),
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => params.data.fuelType === 'Other',
+    editable: (params) => isFuelTypeOther(params),
     minWidth: 250
   },
   {
@@ -335,7 +334,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         )
       } else {
         if (optionsData) {
-          if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
+          if (isFuelTypeOther(params) && params.data.fuelCategory) {
             const categories = optionsData?.fuelTypes?.find(
               (obj) => params.data.fuelType === obj.fuelType
             ).fuelCategories

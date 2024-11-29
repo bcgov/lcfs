@@ -80,7 +80,7 @@ const OrganizationsSummaryCard = () => {
           <BCTypography
             style={{ fontSize: '16px', color: '#003366', marginBottom: '2px' }}
           >
-            {t('txn:allOrganizations')}
+            {selectedOrganization.name}
           </BCTypography>
           <BCTypography
             style={{ fontSize: '32px', color: '#578260', marginBottom: '-2px' }}

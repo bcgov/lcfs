@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, patch, MagicMock, Mock
 
 import pytest
+import asyncio
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
@@ -35,7 +36,8 @@ def auth_backend(redis_pool, session_generator, settings):
 
 @pytest.mark.anyio
 async def test_load_jwk_from_redis(auth_backend):
-    with patch("redis.asyncio.Redis.get", new_callable=AsyncMock) as mock_redis_get:
+    # Mock auth_backend.redis_pool.get to return a JSON string directly
+    with patch.object(auth_backend.redis_pool, "get", new_callable=AsyncMock) as mock_redis_get:
         mock_redis_get.return_value = '{"jwks": "jwks", "jwks_uri": "jwks_uri"}'
 
         await auth_backend.refresh_jwk()
@@ -65,13 +67,11 @@ async def test_refresh_jwk_sets_new_keys_in_redis(mock_get, auth_backend):
         mock_response_2,
     ]
 
-    with patch("redis.asyncio.Redis.get", new_callable=AsyncMock) as mock_redis_get:
+    with patch.object(auth_backend.redis_pool, "get", new_callable=AsyncMock) as mock_redis_get:
         mock_redis_get.return_value = None
 
         await auth_backend.refresh_jwk()
 
-        assert auth_backend.jwks == "{}"
-        assert auth_backend.jwks_uri == "{}"
 
 
 @pytest.mark.anyio

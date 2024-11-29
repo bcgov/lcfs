@@ -1,3 +1,6 @@
+from unittest.mock import patch, AsyncMock
+
+from lcfs.db.models import UserProfile
 from lcfs.db.models.user import UserLoginHistory
 import pytest
 from fastapi import FastAPI, status
@@ -7,11 +10,19 @@ from datetime import datetime
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import InitiativeAgreementHistory
+from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
+    InitiativeAgreementHistory,
+)
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
-from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import AdminAdjustmentHistory
+from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
+    AdminAdjustmentHistory,
+)
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.user.schema import UserActivitiesResponseSchema, UserLoginHistoryResponseSchema
+from lcfs.web.api.user.schema import (
+    UserActivitiesResponseSchema,
+    UserLoginHistoryResponseSchema,
+)
+
 
 @pytest.mark.anyio
 async def test_get_user_activities_as_administrator(
@@ -24,7 +35,7 @@ async def test_get_user_activities_as_administrator(
     set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR])
 
     # Assuming user with user_profile_id=7 exists in the database
-    target_user_id = 7 # LCFS 1
+    target_user_id = 7  # LCFS 1
 
     # Create activity history records for the target user
     transfer = Transfer(
@@ -43,7 +54,7 @@ async def test_get_user_activities_as_administrator(
     transfer_history = TransferHistory(
         transfer_history_id=1,
         transfer_id=transfer.transfer_id,
-        transfer_status_id=3, # Sent
+        transfer_status_id=3,  # Sent
         user_profile_id=target_user_id,
     )
 
@@ -58,7 +69,7 @@ async def test_get_user_activities_as_administrator(
     initiative_history = InitiativeAgreementHistory(
         initiative_agreement_history_id=1,
         initiative_agreement_id=initiative.initiative_agreement_id,
-        initiative_agreement_status_id=2, # Approved
+        initiative_agreement_status_id=2,  # Approved
         user_profile_id=target_user_id,
     )
 
@@ -73,18 +84,20 @@ async def test_get_user_activities_as_administrator(
     admin_adjustment_history = AdminAdjustmentHistory(
         admin_adjustment_history_id=1,
         admin_adjustment_id=admin_adjustment.admin_adjustment_id,
-        admin_adjustment_status_id=2, # Approved
+        admin_adjustment_status_id=2,  # Approved
         user_profile_id=target_user_id,
     )
 
-    await add_models([
-        transfer,
-        transfer_history,
-        initiative,
-        initiative_history,
-        admin_adjustment,
-        admin_adjustment_history,
-    ])
+    await add_models(
+        [
+            transfer,
+            transfer_history,
+            initiative,
+            initiative_history,
+            admin_adjustment,
+            admin_adjustment_history,
+        ]
+    )
 
     # Prepare request data
     pagination = {
@@ -101,6 +114,7 @@ async def test_get_user_activities_as_administrator(
     assert response.status_code == status.HTTP_200_OK
     content = UserActivitiesResponseSchema(**response.json())
     assert len(content.activities) == 3  # Should have 3 activity records
+
 
 @pytest.mark.anyio
 async def test_get_user_activities_as_manage_users_same_org(
@@ -132,14 +146,16 @@ async def test_get_user_activities_as_manage_users_same_org(
     transfer_history = TransferHistory(
         transfer_history_id=1,
         transfer_id=transfer.transfer_id,
-        transfer_status_id=3, # Sent
+        transfer_status_id=3,  # Sent
         user_profile_id=target_user_id,
     )
 
-    await add_models([
-        transfer,
-        transfer_history,
-    ])
+    await add_models(
+        [
+            transfer,
+            transfer_history,
+        ]
+    )
 
     # Prepare request data
     pagination = {
@@ -156,6 +172,7 @@ async def test_get_user_activities_as_manage_users_same_org(
     assert response.status_code == status.HTTP_200_OK
     content = UserActivitiesResponseSchema(**response.json())
     assert len(content.activities) == 1  # Should have 1 activity record
+
 
 @pytest.mark.anyio
 async def test_get_user_activities_permission_denied(
@@ -182,6 +199,7 @@ async def test_get_user_activities_permission_denied(
     response = await client.post(url, json=pagination)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
 
 @pytest.mark.anyio
 async def test_get_all_user_activities_as_administrator(
@@ -210,8 +228,8 @@ async def test_get_all_user_activities_as_administrator(
     transfer_history = TransferHistory(
         transfer_history_id=1,
         transfer_id=transfer.transfer_id,
-        transfer_status_id=3, # Sent
-        user_profile_id=7, # LCFS 1
+        transfer_status_id=3,  # Sent
+        user_profile_id=7,  # LCFS 1
     )
 
     initiative = InitiativeAgreement(
@@ -225,16 +243,18 @@ async def test_get_all_user_activities_as_administrator(
     initiative_history = InitiativeAgreementHistory(
         initiative_agreement_history_id=1,
         initiative_agreement_id=initiative.initiative_agreement_id,
-        initiative_agreement_status_id=2, # Approved
-        user_profile_id=7, # LCFS 1
+        initiative_agreement_status_id=2,  # Approved
+        user_profile_id=7,  # LCFS 1
     )
 
-    await add_models([
-        transfer,
-        transfer_history,
-        initiative,
-        initiative_history,
-    ])
+    await add_models(
+        [
+            transfer,
+            transfer_history,
+            initiative,
+            initiative_history,
+        ]
+    )
 
     # Prepare request data
     pagination = {
@@ -251,6 +271,7 @@ async def test_get_all_user_activities_as_administrator(
     assert response.status_code == status.HTTP_200_OK
     content = UserActivitiesResponseSchema(**response.json())
     assert len(content.activities) == 2  # Should have 2 activity records
+
 
 @pytest.mark.anyio
 async def test_get_all_user_activities_permission_denied(
@@ -274,6 +295,7 @@ async def test_get_all_user_activities_permission_denied(
     response = await client.post(url, json=pagination)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
+
 
 @pytest.mark.anyio
 async def test_get_user_activities_user_not_found(
@@ -417,3 +439,28 @@ async def test_get_all_user_login_history_with_pagination(
     assert content.pagination.page == 1
     assert content.pagination.size == 5
     assert content.pagination.total_pages == 4
+
+
+@pytest.mark.anyio
+async def test_track_logged_in_success(client: AsyncClient, fastapi_app, set_mock_user):
+    """Test successful tracking of user login."""
+    # Arrange
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])  # Mock user with valid role
+    url = "/api/users/logged-in"  # Adjust prefix if needed
+
+    # Mock the UserServices method
+    with patch(
+        "lcfs.web.api.user.services.UserServices.track_user_login"
+    ) as mock_track_user_login:
+        mock_track_user_login.return_value = AsyncMock()
+
+        # Act
+        response = await client.post(url)
+
+    # Assert
+    assert response.status_code == status.HTTP_200_OK
+    assert response.text == '"Tracked"'  # FastAPI returns JSON-compatible strings
+
+    # Extract the first argument of the first call
+    user_profile = mock_track_user_login.call_args[0][0]
+    assert isinstance(user_profile, UserProfile)

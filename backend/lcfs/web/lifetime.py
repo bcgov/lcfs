@@ -55,13 +55,15 @@ def register_startup_event(
         # Assign settings to app state for global access
         app.state.settings = settings
 
-        # Initialize the cache with Redis backend
-        redis = aioredis.from_url(
+        # Initialize the Redis client and store in app.state
+        app.state.redis_pool = aioredis.from_url(
             str(settings.redis_url), encoding="utf8", decode_responses=True
         )
-        FastAPICache.init(RedisBackend(redis), prefix="lcfs")
 
-        await init_org_balance_cache()
+        # Initialize the cache with Redis backend using app.state.redis_pool
+        FastAPICache.init(RedisBackend(app.state.redis_pool), prefix="lcfs")
+
+        await init_org_balance_cache(app)
 
         # Setup RabbitMQ Listeners
         await start_consumers()

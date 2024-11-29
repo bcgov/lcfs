@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from sqlalchemy.orm import relationship
-from lcfs.db.base import BaseModel, Auditable
+from lcfs.db.base import BaseModel, Auditable, Versioning
 import enum
 
 
@@ -9,7 +9,7 @@ class ReceivedOrTransferredEnum(enum.Enum):
     Transferred = "Transferred"
 
 
-class NotionalTransfer(BaseModel, Auditable):
+class NotionalTransfer(BaseModel, Auditable, Versioning):
     __tablename__ = "notional_transfer"
     __table_args__ = {"comment": "Records notional transfers for compliance reports."}
 

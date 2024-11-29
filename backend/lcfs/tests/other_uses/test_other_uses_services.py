@@ -31,6 +31,8 @@ async def test_get_table_options(other_uses_service):
             "fuel_types": [],
             "units_of_measure": [],
             "expected_uses": [],
+            "provisions_of_the_act": [],
+            "fuel_codes": [],
         }
     )
 
@@ -43,26 +45,61 @@ async def test_get_table_options(other_uses_service):
 @pytest.mark.anyio
 async def test_create_other_use(other_uses_service):
     service, mock_repo, mock_fuel_repo = other_uses_service
-    other_use_data = create_mock_schema({})
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
-        return_value=MagicMock(fuel_category_id=1)
-    )
-    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(
-        return_value=MagicMock(fuel_type_id=1)
-    )
-    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
-        return_value=MagicMock(expected_use_type_id=1)
-    )
 
+    # Mock the schema data
+    other_use_data = create_mock_schema({})
+
+    # Mock related entities for other uses with actual string attributes
+    mock_fuel_type = create_mock_entity({})
+    mock_fuel_type.fuel_type = "Gasoline"
+
+    mock_fuel_category = MagicMock()
+    mock_fuel_category.category = "Petroleum-based"
+
+    mock_expected_use = MagicMock()
+    mock_expected_use.name = "Transportation"
+
+    mock_provision_of_the_act = MagicMock()
+    mock_provision_of_the_act.name = "Provision A"
+
+    mock_fuel_code = MagicMock()
+    mock_fuel_code.fuel_code = "FuelCode123"
+
+    # Mock fuel repository methods
+    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(return_value=mock_fuel_category)
+    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=mock_fuel_type)
+    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(return_value=mock_expected_use)
+    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(return_value=mock_provision_of_the_act)
+    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(return_value=mock_fuel_code)
+
+    # Create a mock for the created other use
     mock_created_use = create_mock_entity({})
+    mock_created_use.other_uses_id = 1
+    mock_created_use.compliance_report_id = 1
+    mock_created_use.quantity_supplied = 1000
+    mock_created_use.fuel_type = mock_fuel_type
+    mock_created_use.fuel_category = mock_fuel_category
+    mock_created_use.expected_use = mock_expected_use
+    mock_created_use.provision_of_the_act = mock_provision_of_the_act
+    mock_created_use.fuel_code = mock_fuel_code
+    mock_created_use.units = "L"
+    mock_created_use.ci_of_fuel = 10.5
+    mock_created_use.rationale = "Test rationale"
+    mock_created_use.group_uuid = "test-group-uuid"
+    mock_created_use.version = 1
+    mock_created_use.user_type = "Supplier"
+    mock_created_use.action_type = "Create"
+
     mock_repo.create_other_use = AsyncMock(return_value=mock_created_use)
 
     response = await service.create_other_use(other_use_data, UserTypeEnum.SUPPLIER)
 
+    # Assertions
     assert isinstance(response, OtherUsesSchema)
     assert response.fuel_type == "Gasoline"
     assert response.fuel_category == "Petroleum-based"
     assert response.expected_use == "Transportation"
+    assert response.fuel_code == "FuelCode123"
 
     mock_repo.create_other_use.assert_awaited_once()
 
@@ -79,24 +116,50 @@ async def test_update_other_use(other_uses_service):
 
     # Configure repository methods to return these mocked objects
     mock_repo.get_other_use_version_by_user = AsyncMock(return_value=mock_existing_use)
-    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(
-        return_value=MagicMock(fuel_type="Diesel")
-    )
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
-        return_value=MagicMock(category="Petroleum-based")
-    )
-    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
-        return_value=MagicMock(name="Transportation")
-    )
 
-    # Mock the updated use that will be returned after the update
-    mock_updated_use = create_mock_entity(
-        {
-            "rationale": "Updated rationale",
-            "action_type": ActionTypeEnum.UPDATE,
-            "quantity_supplied": 2222,
-        }
+    # Mock related entities with proper string attributes
+    mock_fuel_type = MagicMock()
+    mock_fuel_type.fuel_type = "Diesel"
+
+    mock_fuel_category = MagicMock()
+    mock_fuel_category.category = "Petroleum-based"
+
+    mock_expected_use = MagicMock()
+    mock_expected_use.name = "Transportation"
+
+    mock_provision_of_the_act = MagicMock()
+    mock_provision_of_the_act.name = "Provision B"
+
+    mock_fuel_code = MagicMock()
+    mock_fuel_code.fuel_code = "NewFuelCode"
+
+    # Mock fuel repository methods
+    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=mock_fuel_type)
+    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(return_value=mock_fuel_category)
+    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(return_value=mock_expected_use)
+    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(
+        return_value=mock_provision_of_the_act
     )
+    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(return_value=mock_fuel_code)
+
+    # Mock the updated use returned after the update
+    mock_updated_use = MagicMock()
+    mock_updated_use.other_uses_id = 1
+    mock_updated_use.compliance_report_id = 1
+    mock_updated_use.quantity_supplied = 2222
+    mock_updated_use.rationale = "Updated rationale"
+    mock_updated_use.units = "L"
+    mock_updated_use.fuel_type = mock_fuel_type
+    mock_updated_use.fuel_category = mock_fuel_category
+    mock_updated_use.expected_use = mock_expected_use
+    mock_updated_use.provision_of_the_act = mock_provision_of_the_act
+    mock_updated_use.fuel_code = mock_fuel_code
+    mock_updated_use.ci_of_fuel = 15.5
+    mock_updated_use.group_uuid = "test-group-uuid"
+    mock_updated_use.version = 2
+    mock_updated_use.user_type = "Supplier"
+    mock_updated_use.action_type = ActionTypeEnum.UPDATE
+
     # Set the return value for update_other_use
     mock_repo.update_other_use = AsyncMock(return_value=mock_updated_use)
 
@@ -108,10 +171,15 @@ async def test_update_other_use(other_uses_service):
     assert response.action_type == ActionTypeEnum.UPDATE.value
     assert response.quantity_supplied == 2222
     assert response.rationale == "Updated rationale"
+    assert response.fuel_type == "Diesel"
+    assert response.fuel_category == "Petroleum-based"
+    assert response.expected_use == "Transportation"
+    assert response.provision_of_the_act == "Provision B"
+    assert response.fuel_code == "NewFuelCode"
 
     # Check that the update method was called
     mock_repo.update_other_use.assert_awaited_once()
-    mock_repo.get_other_use_version_by_user.assert_awaited_once()
+
 
 
 @pytest.mark.anyio

@@ -9,7 +9,14 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import {
+  isFuelTypeOther,
+  fuelTypeOtherConditionalStyle
+} from '@/utils/fuelTypeOther'
+import {
+  StandardCellWarningAndErrors,
+  StandardCellStyle
+} from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
@@ -18,58 +25,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     enableDuplicate: false,
     enableDelete: true
   }),
-  // TODO Temporary column to show version types, change this logic in later ticket
-  {
-    field: 'actionType',
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.actionType'),
-    minWidth: 125,
-    maxWidth: 150,
-    editable: false,
-    cellStyle: (params) => {
-      switch (params.data.actionType) {
-        case 'CREATE':
-          return {
-            backgroundColor: '#e0f7df',
-            color: '#388e3c',
-            fontWeight: 'bold'
-          }
-        case 'UPDATE':
-          return {
-            backgroundColor: '#fff8e1',
-            color: '#f57c00',
-            fontWeight: 'bold'
-          }
-        case 'DELETE':
-          return {
-            backgroundColor: '#ffebee',
-            color: '#d32f2f',
-            fontWeight: 'bold'
-          }
-        default:
-          return {}
-      }
-    },
-    cellRenderer: (params) => {
-      switch (params.data.actionType) {
-        case 'CREATE':
-          return 'Create'
-        case 'UPDATE':
-          return 'Edit'
-        case 'DELETE':
-          return 'Deleted'
-        default:
-          return ''
-      }
-    },
-    tooltipValueGetter: (params) => {
-      const actionMap = {
-        CREATE: 'This record was created.',
-        UPDATE: 'This record has been edited.',
-        DELETE: 'This record was deleted.'
-      }
-      return actionMap[params.data.actionType] || ''
-    }
-  },
   {
     field: 'id',
     cellEditor: 'agTextCellEditor',
@@ -173,19 +128,19 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       api: params.api,
       minWords: 1
     }),
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
-      return { ...style, ...conditionalStyle }
-    },
+    cellStyle: (params) =>
+      StandardCellStyle(
+        params,
+        errors,
+        warnings,
+        fuelTypeOtherConditionalStyle
+      ),
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => /other/i.test(params.data.fuelType),
+    editable: (params) => isFuelTypeOther(params),
     minWidth: 250
   },
   {
@@ -406,7 +361,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 60,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => ({
-      options: ['L', 'kg', 'kWh', 'm3'],
+      options: ['L', 'kg', 'kWh', 'm³'],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -416,14 +371,9 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
     suppressKeyboardEvent,
-    editable: (params) => /other/i.test(params.data.fuelType),
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff' }
-        : { backgroundColor: '#f2f2f2' }
-      return { ...style, ...conditionalStyle, borderColor: 'unset' }
-    }
+    editable: (params) => isFuelTypeOther(params),
+    cellStyle: (params) =>
+      StandardCellStyle(params, errors, warnings, fuelTypeOtherConditionalStyle)
   },
   {
     field: 'targetCi',
@@ -449,20 +399,20 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'energyDensity',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const conditionalStyle = /other/i.test(params.data.fuelType)
-        ? { backgroundColor: '#fff', borderColor: 'unset' }
-        : { backgroundColor: '#f2f2f2' }
-      return { ...style, ...conditionalStyle }
-    },
+    cellStyle: (params) =>
+      StandardCellStyle(
+        params,
+        errors,
+        warnings,
+        fuelTypeOtherConditionalStyle
+      ),
     cellEditorParams: {
       precision: 2,
       min: 0,
       showStepperButtons: false
     },
     valueGetter: (params) => {
-      if (/other/i.test(params.data.fuelType)) {
+      if (isFuelTypeOther(params)) {
         return params.data?.energyDensity
           ? params.data?.energyDensity + ' MJ/' + params.data?.units
           : 0
@@ -473,7 +423,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         return (ed && ed.energyDensity + ' MJ/' + params.data.units) || 0
       }
     },
-    editable: (params) => /other/i.test(params.data.fuelType)
+    editable: (params) => isFuelTypeOther(params)
   },
   {
     field: 'eer',
