@@ -8,12 +8,10 @@ Create Date: 2024-11-28 01:09:21.241693
 
 import sqlalchemy as sa
 from alembic import op
-from alembic_postgresql_enum import TableReference
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "b4da565bb711"
-down_revision = "0775a141d335"
+down_revision = "4038ff8d8c49"
 branch_labels = None
 depends_on = None
 
