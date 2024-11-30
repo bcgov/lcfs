@@ -3,9 +3,13 @@ FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-slim-bullseye as ba
 
 RUN apt-get update && apt-get install -y \
   gcc \
+  build-essential \
+  ibpq-dev \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip install poetry==1.6.1
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir uvicorn[standard] && \
+    pip install poetry==1.6.1
 
 # Configuring poetry
 RUN poetry config virtualenvs.create true
