@@ -1,35 +1,45 @@
-import structlog
 from datetime import date
-from typing import List, Dict, Any, Union, Optional, Sequence
+from typing import List, Dict, Any, Union, Optional, Sequence, TypedDict
+
+import structlog
 from fastapi import Depends
-from lcfs.db.dependencies import get_async_db_session
-
-from sqlalchemy import and_, or_, select, func, text, update, distinct, Row, RowMapping
+from sqlalchemy import and_, or_, select, func, text, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager, selectinload
+from sqlalchemy.orm import joinedload, contains_eager
 
-from lcfs.db.models.fuel.FuelType import FuelType
-from lcfs.db.models.fuel.FuelInstance import FuelInstance
-from lcfs.db.models.fuel.TransportMode import TransportMode
-from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
-from lcfs.db.models.fuel.FuelCategory import FuelCategory
-from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
-from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
-from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
-from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
-from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
-from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
+from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
+from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
+from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
+from lcfs.db.models.fuel.FuelInstance import FuelInstance
+from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
-from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
+from lcfs.db.models.fuel.TransportMode import TransportMode
+from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
+from dataclasses import dataclass
 
 logger = structlog.get_logger(__name__)
+
+
+@dataclass
+class CarbonIntensityResult:
+    effective_carbon_intensity: float
+    target_ci: float | None
+    eer: float
+    energy_density: float | None
+    uci: float | None
 
 
 class FuelCodeRepository:
@@ -233,23 +243,6 @@ class FuelCodeRepository:
                         joinedload(EnergyEffectivenessRatio.fuel_category),
                         joinedload(EnergyEffectivenessRatio.fuel_type),
                         joinedload(EnergyEffectivenessRatio.end_use_type),
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
-
-    @repo_handler
-    async def get_use_of_a_carbon_intensities(self) -> List[AdditionalCarbonIntensity]:
-        """Get all use of a carbon intensities (UCI)"""
-        return (
-            (
-                await self.db.execute(
-                    select(AdditionalCarbonIntensity).options(
-                        joinedload(AdditionalCarbonIntensity.end_use_type),
-                        joinedload(AdditionalCarbonIntensity.fuel_type),
-                        joinedload(AdditionalCarbonIntensity.uom),
                     )
                 )
             )
@@ -749,6 +742,7 @@ class FuelCodeRepository:
             )
         )
         result = await self.db.execute(stmt)
+
         return result.scalars().all()
 
     @repo_handler
@@ -759,7 +753,7 @@ class FuelCodeRepository:
         end_use_id: int,
         compliance_period: str,
         fuel_code_id: Optional[int] = None,
-    ):
+    ) -> CarbonIntensityResult:
         """
         Fetch and standardize fuel data values required for compliance calculations.
         """
@@ -788,7 +782,7 @@ class FuelCodeRepository:
             energy_effectiveness = await self.get_energy_effectiveness_ratio(
                 fuel_type_id, fuel_category_id, end_use_id
             )
-            eer = energy_effectiveness.ratio if energy_effectiveness else 1
+            eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
 
         # Fetch target carbon intensity (TCI)
         target_ci = None
@@ -798,12 +792,29 @@ class FuelCodeRepository:
         if target_carbon_intensities:
             target_ci = next(
                 (tci.target_carbon_intensity for tci in target_carbon_intensities),
-                0,
+                0.0,
             )
 
-        return {
-            "effective_carbon_intensity": effective_carbon_intensity,
-            "target_ci": target_ci,
-            "eer": eer,
-            "energy_density": energy_density,
-        }
+        # Additional Carbon Intensity (UCI)
+        uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id)
+
+        return CarbonIntensityResult(
+            effective_carbon_intensity=effective_carbon_intensity,
+            target_ci=target_ci,
+            eer=eer,
+            energy_density=energy_density,
+            uci=uci.intensity if uci else None,
+        )
+
+    @repo_handler
+    async def get_additional_carbon_intensity(
+        self, fuel_type_id, end_use_type_id
+    ) -> Optional[AdditionalCarbonIntensity]:
+        """Get a single use of a carbon intensity (UCI), returns None if one does not apply"""
+        query = select(AdditionalCarbonIntensity).where(
+            AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
+            AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().one_or_none()

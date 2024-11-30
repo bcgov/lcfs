@@ -63,12 +63,11 @@ class FuelExportActionService:
         )
 
         fuel_export.units = QuantityUnitsEnum(fe_data.units)
-        fuel_export.ci_of_fuel = fuel_data["effective_carbon_intensity"]
-        fuel_export.target_ci = fuel_data["target_ci"]
-        fuel_export.eer = fuel_data["eer"] or 1  # Default EER to 1 if None
-        fuel_export.energy_density = (
-            fuel_data["energy_density"] or fe_data.energy_density
-        )
+        fuel_export.ci_of_fuel = fuel_data.effective_carbon_intensity
+        fuel_export.target_ci = fuel_data.target_ci
+        fuel_export.eer = fuel_data.eer
+        fuel_export.energy_density = fuel_data.energy_density
+        fuel_export.uci = fuel_data.uci
 
         # Calculate total energy if energy density is available
         fuel_export.energy = (
