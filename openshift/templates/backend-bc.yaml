@@ -58,9 +58,7 @@ objects:
       type: Git
     strategy:
       dockerStrategy:
-        dockerfilePath: ./Dockerfile.openshift
-        pullSecret:
-          name: artifacts-pull-default-gyszor
+        target: prod
         forcePull: true
         noCache: true   
       type: Docker
