@@ -186,6 +186,13 @@ export const TransferDetails = () => {
             })} CAD.`}
           </BCTypography>
         </BCTypography>
+        <BCTypography
+          variant="body4"
+          component="div"
+          sx={{ marginTop: '1rem', fontWeight: 'bold' }}
+        >
+          {t('transfer:zeroDollarInstructionText')}
+        </BCTypography>
       </LabelBox>
     </BCBox>
   )
