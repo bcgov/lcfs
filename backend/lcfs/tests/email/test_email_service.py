@@ -9,14 +9,15 @@ def mock_email_repo():
     return AsyncMock(spec=CHESEmailRepository)
 
 @pytest.fixture
-def mock_environment_vars(monkeypatch):
-    # Mock all required environment variables
-    monkeypatch.setenv('LCFS_CHES_AUTH_URL', 'http://mock_auth_url')
-    monkeypatch.setenv('LCFS_CHES_EMAIL_URL', 'http://mock_email_url')
-    monkeypatch.setenv('LCFS_CHES_CLIENT_ID', 'mock_client_id')
-    monkeypatch.setenv('LCFS_CHES_CLIENT_SECRET', 'mock_client_secret')
-    monkeypatch.setenv('LCFS_CHES_SENDER_EMAIL', 'noreply@example.com')
-    monkeypatch.setenv('LCFS_CHES_SENDER_NAME', 'Mock Notification System')
+def mock_environment_vars():
+    with patch("lcfs.settings.settings") as mock_settings:
+        mock_settings.ches_auth_url = "http://mock_auth_url"
+        mock_settings.ches_email_url = "http://mock_email_url"
+        mock_settings.ches_client_id = "mock_client_id"
+        mock_settings.ches_client_secret = "mock_client_secret"
+        mock_settings.ches_sender_email = "noreply@gov.bc.ca"
+        mock_settings.ches_sender_name = "Mock Notification System"
+        yield mock_settings
 
 @pytest.mark.anyio
 async def test_send_notification_email_success(mock_email_repo, mock_environment_vars):
