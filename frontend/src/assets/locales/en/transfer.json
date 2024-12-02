@@ -80,5 +80,6 @@
     "Refused": "Refused",
     "Declined": "Declined",
     "Rescinded": "Rescinded"
-  }
+  },
+  "zeroDollarInstructionText": "If proposing a zero-dollar transfer, use the comment box below to provide an explanation for this value."
 }
