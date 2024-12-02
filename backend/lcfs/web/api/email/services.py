@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from typing import Dict, List, Any
 from datetime import datetime
 
+from lcfs.settings import settings
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.email.template_mapping import TEMPLATE_MAPPING
@@ -25,12 +26,12 @@ class CHESEmailService:
 
         # CHES configuration
         self.config = {
-            "AUTH_URL": os.getenv("CHES_AUTH_URL", ""),
-            "EMAIL_URL": os.getenv("CHES_EMAIL_URL", ""),
-            "CLIENT_ID": os.getenv("CHES_CLIENT_ID", ""),
-            "CLIENT_SECRET": os.getenv("CHES_CLIENT_SECRET", ""),
-            "SENDER_EMAIL": os.getenv("CHES_SENDER_EMAIL", "noreply@gov.bc.ca"),
-            "SENDER_NAME": os.getenv("CHES_SENDER_NAME", "LCFS Notification System"),
+            "AUTH_URL": settings.ches_auth_url,
+            "EMAIL_URL": settings.ches_email_url,
+            "CLIENT_ID": settings.ches_client_id,
+            "CLIENT_SECRET": settings.ches_client_secret,
+            "SENDER_EMAIL": settings.ches_sender_email,
+            "SENDER_NAME": settings.ches_sender_name,
         }
         self._access_token = None
         self._token_expiry = None
