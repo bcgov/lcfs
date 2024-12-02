@@ -9,7 +9,6 @@ import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
 import { NotificationMenu } from '@/views/Notifications/NotificationMenu'
 import { FuelCodes, AddEditFuelCode } from './views/FuelCodes'
-import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
   AddEditOrg,

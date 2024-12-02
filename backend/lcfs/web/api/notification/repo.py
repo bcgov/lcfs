@@ -4,19 +4,16 @@ from lcfs.db.models.notification import (
     NotificationChannel,
     NotificationType,
 )
-from lcfs.web.api.notification.schema import NotificationMessageSchema
 import structlog
-from datetime import date
-from typing import List, Dict, Any, Optional, Union
+
+from typing import List, Optional
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-from sqlalchemy import and_, delete, or_, select, func, text, update, distinct
+from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager, selectinload
-from sqlalchemy.exc import NoResultFound
-from fastapi import HTTPException
+from sqlalchemy.orm import selectinload
 
 from lcfs.web.core.decorators import repo_handler
 
@@ -208,18 +205,6 @@ class NotificationRepository:
             )
 
         return subscription
-
-    @repo_handler
-    async def update_notification_channel_subscription(
-        self, notification_channel_subscription: NotificationChannelSubscription
-    ) -> NotificationChannelSubscription:
-        """
-        Update a notification chanel subscription
-        """
-        merged_subscription = await self.db.merge(notification_channel_subscription)
-        await self.db.flush()
-
-        return merged_subscription
 
     @repo_handler
     async def delete_notification_channel_subscription(

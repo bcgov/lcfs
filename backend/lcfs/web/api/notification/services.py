@@ -9,7 +9,6 @@ from lcfs.web.api.notification.schema import (
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 import structlog
-import math
 from fastapi import Depends
 from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.core.decorators import service_handler
@@ -173,31 +172,6 @@ class NotificationService:
         return await self.repo.get_notification_channel_subscription_by_id(
             notification_channel_subscription_id
         )
-
-    @service_handler
-    async def update_notification_channel_subscription(
-        self, subscription_data: SubscriptionSchema, user_profile_id: int
-    ):
-        notification_channel_subscription_id = (
-            await self.get_notification_channel_id_by_key(
-                subscription_data.notification_channel_subscription_id
-            )
-        )
-        existing_subscription = (
-            await self.repo.get_notification_channel_subscription_by_id(
-                notification_channel_subscription_id
-            )
-        )
-        if existing_subscription.user_profile_id != user_profile_id:
-            raise DataNotFoundException(
-                "You are not authorized to update this subscription."
-            )
-
-        subscription = NotificationChannelSubscription(
-            **subscription_data.model_dump(exclude={"deleted"})
-        )
-        subscription.user_profile_id = user_profile_id  # Ensure correct user
-        return await self.repo.update_notification_channel_subscription(subscription)
 
     @service_handler
     async def delete_notification_channel_subscription(

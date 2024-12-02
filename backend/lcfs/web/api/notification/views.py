@@ -5,8 +5,7 @@ Notification endpoints
 from typing import Union, List
 from lcfs.web.exception.exceptions import DataNotFoundException
 import structlog
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Query
-from lcfs.db import dependencies
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.notification.schema import (
     DeleteNotificationChannelSubscriptionResponseSchema,

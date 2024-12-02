@@ -22,7 +22,6 @@ from lcfs.db.seeders.common.compliance_report_status_seeder import (
 from lcfs.db.seeders.common.allocation_agreement_seeder import (
     seed_allocation_transaction_types,
 )
-from lcfs.db.seeders.common.notification_type_seeder import seed_notification_types
 from lcfs.db.seeders.common.end_user_type_seeder import (
     seed_end_user_types,
 )

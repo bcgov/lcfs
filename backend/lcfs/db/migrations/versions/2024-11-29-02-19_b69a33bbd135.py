@@ -1,7 +1,7 @@
 """Add notifications email to user_profile
 
 Revision ID: b69a33bbd135
-Revises: 0775a141d335
+Revises: b4da565bb711
 Create Date: 2024-11-27 20:48:24.724112
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "b69a33bbd135"
-down_revision = "0775a141d335"
+down_revision = "b4da565bb711"
 branch_labels = None
 depends_on = None
 
