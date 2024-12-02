@@ -1,6 +1,7 @@
 from typing import Awaitable, Callable
 
 from fastapi import FastAPI
+import boto3
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from redis import asyncio as aioredis
@@ -31,6 +32,33 @@ def _setup_db(app: FastAPI) -> None:  # pragma: no cover
     app.state.db_session_factory = session_factory
 
 
+async def startup_s3(app: FastAPI) -> None:
+    """
+    Initialize the S3 client and store it in the app state.
+
+    :param app: fastAPI application.
+    """
+    app.state.s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=settings.s3_access_key,
+        aws_secret_access_key=settings.s3_secret_key,
+        endpoint_url=settings.s3_endpoint,
+        region_name="us-east-1",
+    )
+    print("S3 client initialized.")
+
+
+async def shutdown_s3(app: FastAPI) -> None:
+    """
+    Cleanup the S3 client from the app state.
+
+    :param app: fastAPI application.
+    """
+    if hasattr(app.state, "s3_client"):
+        del app.state.s3_client
+        print("S3 client shutdown.")
+
+
 def register_startup_event(
     app: FastAPI,
 ) -> Callable[[], Awaitable[None]]:  # pragma: no cover
@@ -50,20 +78,18 @@ def register_startup_event(
         _setup_db(app)
 
         # Initialize Redis connection pool
-        init_redis(app)
+        await init_redis(app)
 
         # Assign settings to app state for global access
         app.state.settings = settings
-
-        # Initialize the Redis client and store in app.state
-        app.state.redis_pool = aioredis.from_url(
-            str(settings.redis_url), encoding="utf8", decode_responses=True
-        )
 
         # Initialize the cache with Redis backend using app.state.redis_pool
         FastAPICache.init(RedisBackend(app.state.redis_pool), prefix="lcfs")
 
         await init_org_balance_cache(app)
+
+        # Initialize the S3 client
+        await startup_s3(app)
 
         # Setup RabbitMQ Listeners
         await start_consumers()
@@ -86,6 +112,7 @@ def register_shutdown_event(
         await app.state.db_engine.dispose()
 
         await shutdown_redis(app)
+        await shutdown_s3(app)
         await stop_consumers()
 
     return _shutdown
