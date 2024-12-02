@@ -78,15 +78,10 @@ def register_startup_event(
         _setup_db(app)
 
         # Initialize Redis connection pool
-        init_redis(app)
+        await init_redis(app)
 
         # Assign settings to app state for global access
         app.state.settings = settings
-
-        # Initialize the Redis client and store in app.state
-        app.state.redis_pool = aioredis.from_url(
-            str(settings.redis_url), encoding="utf8", decode_responses=True
-        )
 
         # Initialize the cache with Redis backend using app.state.redis_pool
         FastAPICache.init(RedisBackend(app.state.redis_pool), prefix="lcfs")
