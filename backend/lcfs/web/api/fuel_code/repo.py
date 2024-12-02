@@ -192,7 +192,7 @@ class FuelCodeRepository:
     async def get_transport_mode_by_name(self, mode_name: str) -> TransportMode:
         query = select(TransportMode).where(TransportMode.transport_mode == mode_name)
         result = await self.db.execute(query)
-        transport_mode = result.scalar_one_or_none()
+        transport_mode = await result.scalar_one_or_none()
 
         return transport_mode
 
