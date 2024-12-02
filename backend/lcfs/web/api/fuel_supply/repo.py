@@ -77,7 +77,18 @@ class FuelSupplyRepository:
             .scalar_subquery()
         )
 
-        current_year = int(compliance_period)
+        try:
+            current_year = int(compliance_period)
+        except ValueError as e:
+            logger.error(
+                "Invalid compliance_period: not an integer",
+                compliance_period=compliance_period,
+                error=str(e),
+            )
+            raise ValueError(
+                f"Invalid compliance_period: '{compliance_period}' must be an integer."
+            ) from e
+
         start_of_this_year = datetime(current_year, 1, 1)
         start_of_previous_year = datetime(current_year - 1, 1, 1)
 
