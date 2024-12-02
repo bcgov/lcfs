@@ -16,7 +16,9 @@ export const BCeIDSpecificRoleFields = ({ form, disabled, t }) => {
         options={bceidRoleOptions(t)}
         disabled={disabled}
       />
-      <BCFormRadio
+
+      {/* "Read only" */}
+      {/* <BCFormRadio
         id={nonGovRoles[5].toLowerCase().replace(' ', '-')}
         control={control}
         name="readOnly"
@@ -31,7 +33,7 @@ export const BCeIDSpecificRoleFields = ({ form, disabled, t }) => {
           }
         ]}
         disabled={disabled}
-      />
+      /> */}
     </Box>
   )
 }

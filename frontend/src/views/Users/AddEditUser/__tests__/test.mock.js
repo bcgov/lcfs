@@ -8,6 +8,7 @@ export const userData = {
   lastName: 'User2',
   isActive: true
 }
+
 export const govUser = {
   userProfileId: 1,
   keycloakUsername: 'mockUser1',
