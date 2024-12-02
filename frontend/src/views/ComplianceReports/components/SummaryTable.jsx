@@ -54,29 +54,23 @@ const SummaryTable = ({
   }
 
   const handleCellChange = (e, rowIndex, columnId) => {
-    let newValue = e.target.value
-
-    // Remove any non-digit characters
-    newValue = newValue.replace(/\D/g, '')
+    const enteredValue = e.target.value
 
     // Convert to number
-    const numValue = newValue === '' ? '' : parseInt(newValue, 10)
+    let numValue =
+      enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
 
     // Check min and max constraints
     const { min, max } = getCellConstraints(rowIndex, columnId)
-    if (numValue !== '') {
-      if (min !== undefined && numValue < min) {
-        newValue = min
-      } else if (max !== undefined && numValue > max) {
-        newValue = max
-      } else {
-        newValue = numValue
-      }
+    if (min !== undefined && numValue < min) {
+      numValue = min
+    } else if (max !== undefined && numValue > max) {
+      numValue = max
     }
 
     setData((prevData) => {
       const newData = [...prevData]
-      newData[rowIndex] = { ...newData[rowIndex], [columnId]: newValue }
+      newData[rowIndex] = { ...newData[rowIndex], [columnId]: numValue }
       return newData
     })
     setEditingCell({ rowIndex, columnId })
@@ -155,37 +149,33 @@ const SummaryTable = ({
                   }}
                 >
                   {isCellEditable(rowIndex, column.id) ? (
-                    <>
-                      <Input
-                        value={formatNumberWithCommas({
-                          value: row[column.id]
-                        })}
-                        onChange={(e) =>
-                          handleCellChange(e, rowIndex, column.id)
+                    <Input
+                      value={formatNumberWithCommas({
+                        value: row[column.id]
+                      })}
+                      onChange={(e) => handleCellChange(e, rowIndex, column.id)}
+                      onBlur={() => handleBlur(rowIndex, column.id)}
+                      type="text"
+                      inputProps={{
+                        inputMode: 'numeric',
+                        pattern: '[0-9]*',
+                        ...getCellConstraints(rowIndex, column.id),
+                        ...props.inputProps
+                      }}
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        padding: '6px',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        border: '1px solid #495057',
+                        backgroundColor: '#fff',
+                        '& .MuiInputBase-input': {
+                          textAlign: column.align || 'left'
                         }
-                        onBlur={() => handleBlur(rowIndex, column.id)}
-                        type="text"
-                        inputProps={{
-                          inputMode: 'numeric',
-                          pattern: '[0-9]*',
-                          ...getCellConstraints(rowIndex, column.id),
-                          ...props.inputProps
-                        }}
-                        sx={{
-                          width: '100%',
-                          height: '100%',
-                          padding: '6px',
-                          borderRadius: '8px',
-                          fontSize: '1rem',
-                          border: '1px solid #495057',
-                          backgroundColor: '#fff',
-                          '& .MuiInputBase-input': {
-                            textAlign: column.align || 'left'
-                          }
-                        }}
-                        disableUnderline
-                      />
-                    </>
+                      }}
+                      disableUnderline
+                    />
                   ) : (
                     <span
                       style={{

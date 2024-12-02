@@ -34,9 +34,8 @@ class DocumentService:
     ):
         self.db = db
         self.clamav_service = clamav_service
-        self.s3_client = get_s3_client(self.request)
+        self.s3_client = request.app.state.s3_client
 
-    # Upload a file to S3 and store metadata in the database
     @repo_handler
     async def upload_file(self, file, parent_id: str, parent_type="compliance_report"):
         file_id = uuid.uuid4()

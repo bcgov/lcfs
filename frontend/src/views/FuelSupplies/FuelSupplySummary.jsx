@@ -8,6 +8,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
+import i18n from '@/i18n'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 
 export const FuelSupplySummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -96,6 +98,10 @@ export const FuelSupplySummary = ({ data }) => {
       {
         headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
         field: 'ciOfFuel'
+      },
+      {
+        field: 'uci',
+        headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci')
       },
       {
         headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
