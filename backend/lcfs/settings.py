@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     clamav_port: int = 3310
 
     # Variables for RabbitMQ
-    rabbitmq_host: str = "localhost"
+    rabbitmq_host: str = "rabbitmq"
     rabbitmq_port: int = 5672
     rabbitmq_pass: str = "development_only"
     rabbitmq_user: str = "lcfs"
