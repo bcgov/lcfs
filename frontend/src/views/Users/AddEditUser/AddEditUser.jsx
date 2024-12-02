@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-// hooks
 import { useUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -17,7 +16,6 @@ import {
 } from './_schema'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/constants/routes'
-// components
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
