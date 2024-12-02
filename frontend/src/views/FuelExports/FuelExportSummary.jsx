@@ -7,6 +7,7 @@ import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
+import i18n from '@/i18n'
 
 export const FuelExportSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -98,6 +99,10 @@ export const FuelExportSummary = ({ data }) => {
       {
         headerName: t('fuelExport:fuelExportColLabels.ciOfFuel'),
         field: 'ciOfFuel'
+      },
+      {
+        field: 'uci',
+        headerName: i18n.t('fuelExport:fuelExportColLabels.uci')
       },
       {
         headerName: t('fuelExport:fuelExportColLabels.energyDensity'),
