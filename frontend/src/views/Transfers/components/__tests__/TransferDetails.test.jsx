@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TransferDetails } from '../TransferDetails'
 import { useForm, FormProvider } from 'react-hook-form'
@@ -13,7 +12,7 @@ vi.mock('@/hooks/useOrganizations')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key
-  }),
+  })
 }))
 
 // MockFormProvider Component
@@ -22,9 +21,9 @@ const MockFormProvider = ({ children }) => {
     defaultValues: {
       toOrganizationId: '',
       quantity: '',
-      pricePerUnit: '',
+      pricePerUnit: ''
     },
-    mode: 'onBlur',
+    mode: 'onBlur'
   })
   return <FormProvider {...methods}>{children}</FormProvider>
 }
@@ -94,7 +93,7 @@ describe('TransferDetails Component', () => {
           style: 'currency',
           currency: 'CAD',
           minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
+          maximumFractionDigits: 2
         })} CAD.`
       )
     })
@@ -147,5 +146,17 @@ describe('TransferDetails Component', () => {
     fireEvent.click(option)
 
     expect(selectInput).toHaveTextContent('Org One')
+  })
+
+  it('renders the zero-dollar instructional text', () => {
+    render(
+      <MockFormProvider>
+        <TransferDetails />
+      </MockFormProvider>,
+      { wrapper }
+    )
+    expect(
+      screen.getByText('transfer:zeroDollarInstructionText')
+    ).toBeInTheDocument()
   })
 })
