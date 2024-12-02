@@ -10,7 +10,7 @@ def mock_email_repo():
 
 @pytest.fixture
 def mock_environment_vars():
-    with patch("lcfs.settings.settings") as mock_settings:
+    with patch("lcfs.web.api.email.services.settings") as mock_settings:
         mock_settings.ches_auth_url = "http://mock_auth_url"
         mock_settings.ches_email_url = "http://mock_email_url"
         mock_settings.ches_client_id = "mock_client_id"
@@ -33,7 +33,7 @@ async def test_send_notification_email_success(mock_email_repo, mock_environment
     # Setup mock repo and service
     mock_email_repo.get_subscribed_user_emails.return_value = ["user@example.com"]
     service = CHESEmailService(repo=mock_email_repo)
-    
+
     # Mock internal methods
     service._render_email_template = MagicMock(return_value="Rendered HTML Content")
     service.send_email = AsyncMock(return_value=True)
