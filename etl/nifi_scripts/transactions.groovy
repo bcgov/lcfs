@@ -40,8 +40,8 @@ try {
 
     def transactionStmt = destinationConn.prepareStatement('''
         INSERT INTO transaction (
-            compliance_units, organization_id, transaction_action
-        ) VALUES (?, ?, ?::transaction_action_enum)
+            compliance_units, organization_id, transaction_action, effective_status
+        ) VALUES (?, ?, ?::transaction_action_enum, TRUE)
         RETURNING transaction_id
     ''')
 
