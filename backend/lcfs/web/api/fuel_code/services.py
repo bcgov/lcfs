@@ -248,6 +248,7 @@ class FuelCodeServices:
         for field, value in fuel_code_data.model_dump(
             exclude={
                 "feedstock_fuel_transport_modes",
+                "feedstock_fuel_transport_mode",
                 "finished_fuel_transport_modes",
                 "facility_nameplate_capacity_unit",
             }
@@ -255,34 +256,27 @@ class FuelCodeServices:
             setattr(fuel_code, field, value)
 
         fuel_code.feedstock_fuel_transport_modes.clear()
-        if fuel_code_data.feedstock_fuel_transport_modes:
-            for mode in fuel_code_data.feedstock_fuel_transport_modes:
 
-                transport_mode = await self.repo.get_transport_mode(
-                    mode.transport_mode_id
-                )
-
+        if fuel_code_data.feedstock_fuel_transport_mode:
+            for mode_name in fuel_code_data.feedstock_fuel_transport_mode:
+                transport_mode = await self.repo.get_transport_mode_by_name(mode_name)
                 feedstock_mode = FeedstockFuelTransportMode(
                     fuel_code_id=fuel_code.fuel_code_id,
                     transport_mode_id=transport_mode.transport_mode_id,
                 )
-
                 fuel_code.feedstock_fuel_transport_modes.append(feedstock_mode)
 
         fuel_code.finished_fuel_transport_modes.clear()
-        if fuel_code_data.finished_fuel_transport_modes:
-            for mode in fuel_code_data.finished_fuel_transport_modes:
 
-                transport_mode = await self.repo.get_transport_mode(
-                    mode.transport_mode_id
-                )
-
-                finished_mode = FinishedFuelTransportMode(
-                    fuel_code_id=fuel_code.fuel_code_id,
-                    transport_mode_id=transport_mode.transport_mode_id,
-                )
-
-                fuel_code.finished_fuel_transport_modes.append(finished_mode)
+        if fuel_code_data.finished_fuel_transport_mode:
+            for mode_name in fuel_code_data.finished_fuel_transport_mode:
+                transport_mode = await self.repo.get_transport_mode_by_name(mode_name)
+                if transport_mode:
+                    finished_mode = FinishedFuelTransportMode(
+                        fuel_code_id=fuel_code.fuel_code_id,
+                        transport_mode_id=transport_mode.transport_mode_id,
+                    )
+                    fuel_code.finished_fuel_transport_modes.append(finished_mode)
 
         facility_nameplate_capacity_units_enum = (
             QuantityUnitsEnum(fuel_code_data.facility_nameplate_capacity_unit).name
