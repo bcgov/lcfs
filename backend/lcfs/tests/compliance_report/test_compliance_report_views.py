@@ -12,6 +12,7 @@ from lcfs.web.api.base import FilterModel
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    ChainedComplianceReportSchema,
 )
 from lcfs.services.s3.client import DocumentService
 
@@ -226,7 +227,9 @@ async def test_get_compliance_report_by_id_success(
     ) as mock_validate_organization_access:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
-        mock_compliance_report = compliance_report_base_schema()
+        mock_compliance_report = ChainedComplianceReportSchema(
+            report=compliance_report_base_schema(), chain=[]
+        )
 
         mock_get_compliance_report_by_id.return_value = mock_compliance_report
         mock_validate_organization_access.return_value = None
@@ -240,7 +243,9 @@ async def test_get_compliance_report_by_id_success(
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
         assert response.json() == expected_response
-        mock_get_compliance_report_by_id.assert_called_once_with(1, False)
+        mock_get_compliance_report_by_id.assert_called_once_with(
+            1, False, get_chain=True
+        )
         mock_validate_organization_access.assert_called_once_with(1)
 
 
