@@ -46,6 +46,7 @@ class FuelExport(BaseModel, Auditable, Versioning):
     ci_of_fuel = Column(
         Numeric(10, 2), nullable=True, comment="CI of fuel for the fuel supply"
     )
+    uci = Column(Numeric(10, 2), nullable=True, comment="Additional Carbon Intensity")
     energy_density = Column(
         Numeric(10, 2),
         nullable=True,
