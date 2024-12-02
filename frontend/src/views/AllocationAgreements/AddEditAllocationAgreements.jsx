@@ -67,6 +67,22 @@ export const AddEditAllocationAgreements = () => {
     }
   }, [location.state])
 
+  const validateField = (params, field, validationFn, errorMessage, alertRef) => {
+    const newValue = params.newValue;
+
+    if (params.colDef.field === field) {
+      if (!validationFn(newValue)) {
+        alertRef.current?.triggerAlert({
+          message: errorMessage,
+          severity: 'error',
+        });
+        return false;
+      }
+    }
+
+    return true; // Proceed with the update
+  };
+
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
@@ -154,6 +170,16 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellEditingStopped = useCallback(
     async (params) => {
+      const isValid = validateField(
+        params,
+        'quantity',
+        (value) => value !== null && !isNaN(value) && value > 0,
+        'Quantity must be greater than 0.',
+        alertRef
+      );
+
+      if (!isValid) return;
+
       if (params.oldValue === params.newValue) return
 
       params.node.updateData({

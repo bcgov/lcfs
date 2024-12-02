@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 from lcfs.web.api.base import BaseSchema
 from datetime import datetime
 from enum import Enum
@@ -71,7 +71,9 @@ class TransactionViewSchema(BaseSchema):
     transaction_type: str
     from_organization: Optional[str] = None
     to_organization: str
-    quantity: int
+    quantity: int = Field(
+        ..., gt=0, description="Quantity supplied must be greater than 0"
+    )
     price_per_unit: Optional[float] = None
     status: str
     create_date: datetime
