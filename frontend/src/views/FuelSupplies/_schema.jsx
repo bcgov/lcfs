@@ -382,7 +382,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'quantity',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-    valueFormatter,
+    valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
