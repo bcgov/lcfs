@@ -310,9 +310,9 @@ const GenericChipRenderer = ({
   const options = Array.isArray(value)
     ? value
     : value
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
@@ -544,9 +544,9 @@ export const RoleRenderer = (props) => {
   const filteredRoles = Array.isArray(value)
     ? value
     : value
-      .split(',')
-      .map((role) => role.trim())
-      .filter((role) => role !== roles.government && role !== roles.supplier)
+        .split(',')
+        .map((role) => role.trim())
+        .filter((role) => role !== roles.government && role !== roles.supplier)
 
   useEffect(() => {
     setIsGovernmentRole(
