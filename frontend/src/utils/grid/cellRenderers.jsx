@@ -5,8 +5,8 @@ import {
   getAllFuelCodeStatuses,
   getAllOrganizationStatuses
 } from '@/constants/statuses'
-import { Stack } from '@mui/material'
 import { Link, useLocation } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
 
 export const TextRenderer = (props) => {
   return (
@@ -173,59 +173,6 @@ export const FuelCodeStatusTextRenderer = (props) => {
   )
 }
 
-export const CommonArrayRenderer = (props) => {
-  const location = useLocation()
-  const options = Array.isArray(props.value)
-    ? props.value
-    : props.value.split(',')
-  const chipContent = (
-    <Stack
-      component="div"
-      sx={{
-        width: '100%',
-        height: '80%',
-        marginTop: props.marginTop || '0.2em',
-        display: 'flex',
-        justifyContent: 'flex-start',
-        alignItems: 'center'
-      }}
-      direction="row"
-      spacing={0}
-    >
-      {options.map((mode) => (
-        <BCBadge
-          key={mode}
-          badgeContent={mode}
-          color="light"
-          variant="contained"
-          size="lg"
-          sx={{
-            '& .MuiBadge-badge': {
-              borderRadius: '16px',
-              backgroundColor: '#606060',
-              color: '#fff',
-              marginRight: '0.4em',
-              fontWeight: 'regular',
-              fontSize: '0.8rem',
-              padding: '0.4em 0.6em'
-            }
-          }}
-        />
-      ))}
-    </Stack>
-  )
-  return props.disableLink ? (
-    chipContent
-  ) : (
-    <Link
-      to={props.node?.id && location.pathname + '/' + props?.node?.id}
-      style={{ color: '#000' }}
-    >
-      {chipContent}
-    </Link>
-  )
-}
-
 export const TransactionStatusRenderer = (props) => {
   const statusArr = [
     'Draft',
@@ -321,52 +268,6 @@ export const ReportsStatusRenderer = (props) => {
   )
 }
 
-// if the status of the user is in-active then don't show their previously held roles
-export const RoleRenderer = (props) => {
-  const location = useLocation()
-  return (
-    <Link
-      to={props.node?.id && location.pathname + '/' + props.node?.id}
-      style={{ color: '#000' }}
-    >
-      <BCBox sx={{ width: '100%', height: '100%' }}>
-        <Stack
-          component="div"
-          direction={{ lg: 'row' }}
-          spacing={0}
-          p={0.5}
-          useFlexGap
-          flexWrap="wrap"
-          key={props.data.userProfileId}
-        >
-          {props.data.isActive &&
-            props.data.roles
-              .filter(
-                (r) => r.name !== roles.government && r.name !== roles.supplier
-              )
-              .map((role) => (
-                <BCBadge
-                  key={role.roleId}
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      fontWeight: 'regular',
-                      fontSize: '0.9rem',
-                      padding: '0.4em 0.6em'
-                    },
-                    margin: '2px'
-                  }}
-                  badgeContent={role.name}
-                  color={role.isGovernmentRole ? 'primary' : 'secondary'}
-                  variant="outlined"
-                  size="md"
-                />
-              ))}{' '}
-        </Stack>
-      </BCBox>
-    </Link>
-  )
-}
-
 export const RoleSpanRenderer = (props) => (
   <>
     {props.data.roles
@@ -390,3 +291,220 @@ export const RoleSpanRenderer = (props) => (
       ))}
   </>
 )
+
+const GenericChipRenderer = ({
+  value,
+  disableLink = false,
+  renderChip = defaultRenderChip,
+  renderOverflowChip = defaultRenderOverflowChip,
+  chipConfig = {}
+}) => {
+  const location = useLocation()
+  const containerRef = useRef(null)
+  const [visibleChips, setVisibleChips] = useState([])
+  const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
+
+  const options = Array.isArray(value)
+    ? value
+    : value.split(',').map(item => item.trim()).filter(Boolean)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const containerWidth = containerRef.current.offsetWidth
+    let totalWidth = 0
+    const chipWidths = []
+
+    for (let i = 0; i < options.length; i++) {
+      const chipText = options[i]
+      const chipTextWidth = chipText.length * 6 // Assuming 6 pixels per character
+      const newTotalWidth = totalWidth + chipTextWidth + 32 // Add 32px for padding
+
+      if (newTotalWidth <= containerWidth) {
+        chipWidths.push({ text: chipText, width: chipTextWidth + 32, ...chipConfig })
+        totalWidth = newTotalWidth
+      } else {
+        // Stop and calculate remaining chips
+        setVisibleChips(chipWidths)
+        setHiddenChipsCount(options.length - chipWidths.length)
+        return
+      }
+    }
+
+    // If all chips fit
+    setVisibleChips(
+      options.map((text) => ({ text, width: text.length * 6 + 32, ...chipConfig }))
+    )
+    setHiddenChipsCount(0)
+  }, [chipConfig, options])
+
+  const chipContent = (
+    <div
+      ref={containerRef}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        margin: '8px 0px',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap'
+      }}
+    >
+      {visibleChips.map(renderChip)}
+      {renderOverflowChip(hiddenChipsCount)}
+    </div>
+  )
+
+  return disableLink ? (
+    chipContent
+  ) : (
+    <a
+      href={`${location.pathname}?filter=${options.join(',')}`}
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
+      {chipContent}
+    </a>
+  )
+}
+
+// Default Render Chip Function for CommonArrayRenderer
+const defaultRenderChip = (chip) => (
+  <span
+    key={chip.text}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      lineHeight: '23px',
+      padding: '0.5rem',
+      backgroundColor: '#606060',
+      color: '#fff',
+      margin: '0 2px',
+      width: `${chip.width}px`,
+      fontSize: '0.8125rem',
+      boxSizing: 'border-box',
+      height: '32px',
+      borderRadius: '16px',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
+      overflow: 'hidden'
+    }}
+  >
+    {chip.text}
+  </span>
+)
+
+// Default Overflow Chip for CommonArrayRenderer
+const defaultRenderOverflowChip = (hiddenChipsCount) =>
+  hiddenChipsCount > 0 && (
+    <span
+      key="overflow-chip"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.08)',
+        borderRadius: '16px',
+        padding: '0.5rem',
+        color: 'rgb(49, 49, 50)',
+        cursor: 'text',
+        margin: '0 2px',
+        fontSize: '0.8125rem',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box',
+        width: '40px',
+        height: '32px',
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden'
+      }}
+      title={`+${hiddenChipsCount} more`}
+    >
+      +{hiddenChipsCount}
+    </span>
+  )
+
+// Role Specific Render Chip Function
+const roleRenderChip = (chip, isGovernmentRole = false) => (
+  <BCBadge
+    key={chip.text}
+    sx={{
+      '& .MuiBadge-badge': {
+        fontWeight: 'regular',
+        fontSize: '0.9rem',
+        padding: '0.4em 0.6em'
+      },
+      margin: '2px'
+    }}
+    badgeContent={chip.text}
+    color={isGovernmentRole ? 'primary' : 'secondary'}
+    variant="outlined"
+    size="md"
+  />
+)
+
+// Role Specific Overflow Chip
+const roleRenderOverflowChip = (hiddenChipsCount, isGovernmentRole = false) =>
+  hiddenChipsCount > 0 && (
+    <span
+      key="overflow-chip"
+      style={{
+        backgroundColor: isGovernmentRole ? 'rgba(0, 51, 102, 0.3)' : 'rgba(252, 186, 25, 0.3)',
+        borderRadius: '16px',
+        padding: '0.5rem',
+        color: 'rgb(49, 49, 50)',
+        cursor: 'text',
+        margin: '0 2px',
+        fontSize: '0.8125rem',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box',
+        width: '40px',
+        height: '32px',
+        whiteSpace: 'nowrap',
+        textOverflow: 'ellipsis',
+        overflow: 'hidden'
+      }}
+      title={`+${hiddenChipsCount} more`}
+    >
+      +{hiddenChipsCount}
+    </span>
+  )
+
+export default GenericChipRenderer
+
+// Updated CommonArrayRenderer
+export const CommonArrayRenderer = (props) => (
+  <GenericChipRenderer
+    {...props}
+    renderChip={defaultRenderChip}
+    renderOverflowChip={defaultRenderOverflowChip}
+  />
+)
+
+export const RoleRenderer = (props) => {
+  const { value } = props
+  const [isGovernmentRole, setIsGovernmentRole] = useState(false)
+
+  const filteredRoles = Array.isArray(value)
+    ? value
+    : value.split(',').map((role) => role.trim()).filter(
+      role => role !== roles.government && role !== roles.supplier
+    )
+
+  useEffect(() => {
+    setIsGovernmentRole(
+      Array.isArray(value)
+        ? value.includes(roles.government)
+        : value.includes(roles.government)
+    )
+  }, [value])
+
+  return (
+    <GenericChipRenderer
+      {...props}
+      value={filteredRoles}
+      renderChip={(chip) => roleRenderChip(chip, isGovernmentRole)}
+      renderOverflowChip={(count) => roleRenderOverflowChip(count, isGovernmentRole)}
+    />
+  )
+}
