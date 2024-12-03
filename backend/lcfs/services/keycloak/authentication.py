@@ -39,30 +39,35 @@ class UserAuthentication(AuthenticationBackend):
         self.test_keycloak_user = None
 
     async def refresh_jwk(self):
-        # Try to get the JWKS data from Redis cache
-        jwks_data = await self.redis_pool.get("jwks_data")
+        try:
+            # Try to get the JWKS data from Redis cache
+            jwks_data = await self.redis_pool.get("jwks_data")
 
-        if jwks_data:
-            jwks_data = json.loads(jwks_data)
-            self.jwks = jwks_data.get("jwks")
-            self.jwks_uri = jwks_data.get("jwks_uri")
-            return
+            if jwks_data:
+                jwks_data = json.loads(jwks_data)
+                self.jwks = jwks_data.get("jwks")
+                self.jwks_uri = jwks_data.get("jwks_uri")
+                return
 
-        # If not in cache, retrieve from the well-known endpoint
-        async with httpx.AsyncClient() as client:
-            oidc_response = await client.get(self.settings.well_known_endpoint)
-            jwks_uri = oidc_response.json().get("jwks_uri")
-            certs_response = await client.get(jwks_uri)
-            jwks = certs_response.json()
+            # If not in cache, retrieve from the well-known endpoint
+            async with httpx.AsyncClient() as client:
+                oidc_response = await client.get(self.settings.well_known_endpoint)
+                jwks_uri = oidc_response.json().get("jwks_uri")
+                certs_response = await client.get(jwks_uri)
+                jwks = certs_response.json()
 
-        # Composite object containing both JWKS and JWKS URI
-        jwks_data = {"jwks": jwks, "jwks_uri": jwks_uri}
+            # Composite object containing both JWKS and JWKS URI
+            jwks_data = {"jwks": jwks, "jwks_uri": jwks_uri}
 
-        # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
-        await self.redis_pool.set("jwks_data", json.dumps(jwks_data), ex=86400)
+            # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
+            await self.redis_pool.set("jwks_data", json.dumps(jwks_data), ex=86400)
 
-        self.jwks = jwks
-        self.jwks_uri = jwks_uri
+            self.jwks = jwks
+            self.jwks_uri = jwks_uri
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+            logger.error(f"Error fetching JWKS: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error in refresh_jwk: {e}")
 
     async def authenticate(self, request):
         # Extract the authorization header from the request
