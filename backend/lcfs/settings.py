@@ -83,6 +83,13 @@ class Settings(BaseSettings):
     rabbitmq_vhost: str = "lcfs"
     rabbitmq_transaction_queue: str = "transaction_queue"
 
+    ches_auth_url: str = ""
+    ches_email_url: str = ""
+    ches_client_id: str = ""
+    ches_client_secret: str = ""
+    ches_sender_email: str = "noreply@gov.bc.ca"
+    ches_sender_name: str = "LCFS Notification System"
+
     @property
     def db_url(self) -> URL:
         """
