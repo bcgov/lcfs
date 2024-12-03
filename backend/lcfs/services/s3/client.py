@@ -7,7 +7,7 @@ from pydantic.v1 import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
-from lcfs.dependencies.dependencies import get_s3_client
+from lcfs.services.s3.dependency import get_s3_client
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import ComplianceReport
@@ -28,13 +28,13 @@ MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 class DocumentService:
     def __init__(
         self,
-        request: Request,
         db: AsyncSession = Depends(get_async_db_session),
         clamav_service: ClamAVService = Depends(),
+        s3_client=Depends(get_s3_client),
     ):
         self.db = db
         self.clamav_service = clamav_service
-        self.s3_client = request.app.state.s3_client
+        self.s3_client = s3_client
 
     @repo_handler
     async def upload_file(self, file, parent_id: str, parent_type="compliance_report"):
