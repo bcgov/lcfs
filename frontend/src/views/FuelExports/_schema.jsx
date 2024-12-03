@@ -279,7 +279,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
       }
       return true
     },
-    minWidth: 260
+    minWidth: 400
   },
   {
     field: 'provisionOfTheAct',
