@@ -52,7 +52,8 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(
+                f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -193,6 +194,7 @@ class ComplianceReportServices:
                     ComplianceReportStatusEnum.Submitted.value
                 )
                 report.current_status.compliance_report_status_id = None
+
                 masked_reports.append(report)
             else:
                 masked_reports.append(report)
@@ -223,10 +225,12 @@ class ComplianceReportServices:
             compliance_report_chain = await self.repo.get_compliance_report_chain(
                 report.compliance_report_group_uuid
             )
+            masked_compliance_report_chain = (self._mask_report_status(
+                compliance_report_chain) if apply_masking else compliance_report_chain)
 
             return {
                 "report": history_masked_report,
-                "chain": compliance_report_chain,
+                "chain": masked_compliance_report_chain,
             }
 
         return history_masked_report
