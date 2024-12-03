@@ -54,7 +54,7 @@ jobs:
       - id: get-current-time
         run: |
           TZ="America/Vancouver"
-          echo "CURRENT_TIME=$(date + '%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+          echo "CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
 
   # Deplog the image which is running on test to prod
   deploy-on-prod:
@@ -83,7 +83,7 @@ jobs:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin
           minimum-approvals: 2
-          issue-title: "LCFS ${{env.IMAGE_TAG }} Prod Deployment. ${{ env.CURRENT_TIME }}"
+          issue-title: "LCFS ${{env.IMAGE_TAG }} Prod Deployment at ${{ env.CURRENT_TIME }}."
 
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
