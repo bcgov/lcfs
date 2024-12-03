@@ -225,12 +225,21 @@ class ComplianceReportServices:
             compliance_report_chain = await self.repo.get_compliance_report_chain(
                 report.compliance_report_group_uuid
             )
-            masked_compliance_report_chain = (self._mask_report_status(
-                compliance_report_chain) if apply_masking else compliance_report_chain)
+
+            if apply_masking:
+                # Apply masking to each report in the chain
+                masked_chain = self._mask_report_status(
+                    compliance_report_chain)
+                # Apply history masking to each report in the chain
+                masked_chain = [
+                    self._mask_report_status_for_history(report, apply_masking)
+                    for report in masked_chain
+                ]
+                compliance_report_chain = masked_chain
 
             return {
                 "report": history_masked_report,
-                "chain": masked_compliance_report_chain,
+                "chain": compliance_report_chain,
             }
 
         return history_masked_report
