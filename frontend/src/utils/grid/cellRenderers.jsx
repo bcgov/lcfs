@@ -6,7 +6,7 @@ import {
   getAllOrganizationStatuses
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import colors from '@/themes/base/colors'
 
 export const TextRenderer = (props) => {
@@ -298,46 +298,100 @@ const GenericChipRenderer = ({
   disableLink = false,
   renderChip = defaultRenderChip,
   renderOverflowChip = defaultRenderOverflowChip,
-  chipConfig = {}
+  chipConfig = {},
+  ...props
 }) => {
   const location = useLocation()
+  const { colDef, api } = props
   const containerRef = useRef(null)
   const [visibleChips, setVisibleChips] = useState([])
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
   const options = Array.isArray(value)
     ? value
-    : value.split(',').map(item => item.trim()).filter(Boolean)
+    : value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
 
-  useEffect(() => {
-    if (!containerRef.current) return
+  const calculateChipWidths = useCallback(() => {
+    if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
 
-    const containerWidth = containerRef.current.offsetWidth
+    const containerWidth = containerRef.current.offsetWidth || 200 // Fallback width
     let totalWidth = 0
     const chipWidths = []
 
     for (let i = 0; i < options.length; i++) {
       const chipText = options[i]
-      const chipTextWidth = chipText.length * 6 // Assuming 6 pixels per character
-      const newTotalWidth = totalWidth + chipTextWidth + 32 + 20 // Add 32px for padding and 20px for overflow counter chip
+      const chipTextWidth = chipText.length * 6 // Assuming 6px per character
+      const newTotalWidth = totalWidth + chipTextWidth + 32 + 20 // Adding 32px for padding and 20px for overflow counter chip
 
       if (newTotalWidth <= containerWidth) {
-        chipWidths.push({ text: chipText, width: chipTextWidth + 32, ...chipConfig })
+        chipWidths.push({
+          text: chipText,
+          width: chipTextWidth + 32,
+          ...chipConfig
+        })
         totalWidth = newTotalWidth
       } else {
-        // calculate remaining chips
-        setVisibleChips(chipWidths)
-        setHiddenChipsCount(options.length - chipWidths.length)
-        return
+        return {
+          visibleChips: chipWidths,
+          hiddenChipsCount: options.length - chipWidths.length
+        }
       }
     }
 
-    // If all chips fit
-    setVisibleChips(
-      options.map((text) => ({ text, width: text.length * 6 + 32, ...chipConfig }))
-    )
-    setHiddenChipsCount(0)
-  }, [chipConfig, options])
+    return {
+      visibleChips: options.map((text) => ({
+        text,
+        width: text.length * 6 + 32,
+        ...chipConfig
+      })),
+      hiddenChipsCount: 0
+    }
+  }, [options])
+
+  // Initial render and resize handling
+  useEffect(() => {
+    // Calculate and set chips on initial render
+    const { visibleChips, hiddenChipsCount } = calculateChipWidths()
+    setVisibleChips(visibleChips)
+    setHiddenChipsCount(hiddenChipsCount)
+
+    // Resize listener
+    const resizeObserver = new ResizeObserver(() => {
+      const { visibleChips, hiddenChipsCount } = calculateChipWidths()
+      setVisibleChips(visibleChips)
+      setHiddenChipsCount(hiddenChipsCount)
+    })
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current)
+    }
+
+    // Column resize listener for ag-Grid
+    const resizeListener = (event) => {
+      const resizedColumn = event.column
+      if (resizedColumn.getColId() === colDef.field) {
+        const { visibleChips, hiddenChipsCount } = calculateChipWidths()
+        setVisibleChips(visibleChips)
+        setHiddenChipsCount(hiddenChipsCount)
+      }
+    }
+
+    if (api) {
+      api.addEventListener('columnResized', resizeListener)
+
+      // Cleanup
+      return () => {
+        api.removeEventListener('columnResized', resizeListener)
+        resizeObserver.disconnect()
+      }
+    }
+
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [value, api, colDef])
 
   const chipContent = (
     <div
@@ -448,7 +502,9 @@ const roleRenderOverflowChip = (hiddenChipsCount, isGovernmentRole = false) =>
     <span
       key="overflow-chip"
       style={{
-        backgroundColor: isGovernmentRole ? 'rgba(0, 51, 102, 0.3)' : 'rgba(252, 186, 25, 0.3)',
+        backgroundColor: isGovernmentRole
+          ? 'rgba(0, 51, 102, 0.3)'
+          : 'rgba(252, 186, 25, 0.3)',
         borderRadius: '16px',
         padding: '0.5rem',
         color: `${colors.text.main}`,
@@ -488,9 +544,10 @@ export const RoleRenderer = (props) => {
 
   const filteredRoles = Array.isArray(value)
     ? value
-    : value.split(',').map((role) => role.trim()).filter(
-      role => role !== roles.government && role !== roles.supplier
-    )
+    : value
+      .split(',')
+      .map((role) => role.trim())
+      .filter((role) => role !== roles.government && role !== roles.supplier)
 
   useEffect(() => {
     setIsGovernmentRole(
@@ -505,7 +562,9 @@ export const RoleRenderer = (props) => {
       {...props}
       value={filteredRoles}
       renderChip={(chip) => roleRenderChip(chip, isGovernmentRole)}
-      renderOverflowChip={(count) => roleRenderOverflowChip(count, isGovernmentRole)}
+      renderOverflowChip={(count) =>
+        roleRenderOverflowChip(count, isGovernmentRole)
+      }
     />
   )
 }
