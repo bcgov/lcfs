@@ -7,6 +7,7 @@ import {
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
+import colors from '@/themes/base/colors'
 
 export const TextRenderer = (props) => {
   return (
@@ -318,13 +319,13 @@ const GenericChipRenderer = ({
     for (let i = 0; i < options.length; i++) {
       const chipText = options[i]
       const chipTextWidth = chipText.length * 6 // Assuming 6 pixels per character
-      const newTotalWidth = totalWidth + chipTextWidth + 32 // Add 32px for padding
+      const newTotalWidth = totalWidth + chipTextWidth + 32 + 12 // Add 32px for padding and 12px for overflow counter chip
 
       if (newTotalWidth <= containerWidth) {
         chipWidths.push({ text: chipText, width: chipTextWidth + 32, ...chipConfig })
         totalWidth = newTotalWidth
       } else {
-        // Stop and calculate remaining chips
+        // calculate remaining chips
         setVisibleChips(chipWidths)
         setHiddenChipsCount(options.length - chipWidths.length)
         return
@@ -376,7 +377,7 @@ const defaultRenderChip = (chip) => (
       justifyContent: 'center',
       lineHeight: '23px',
       padding: '0.5rem',
-      backgroundColor: '#606060',
+      backgroundColor: `${colors.input.main}`,
       color: '#fff',
       margin: '0 2px',
       width: `${chip.width}px`,
@@ -402,7 +403,7 @@ const defaultRenderOverflowChip = (hiddenChipsCount) =>
         backgroundColor: 'rgba(0, 0, 0, 0.08)',
         borderRadius: '16px',
         padding: '0.5rem',
-        color: 'rgb(49, 49, 50)',
+        color: `${colors.text.main}`,
         cursor: 'text',
         margin: '0 2px',
         fontSize: '0.8125rem',
@@ -450,7 +451,7 @@ const roleRenderOverflowChip = (hiddenChipsCount, isGovernmentRole = false) =>
         backgroundColor: isGovernmentRole ? 'rgba(0, 51, 102, 0.3)' : 'rgba(252, 186, 25, 0.3)',
         borderRadius: '16px',
         padding: '0.5rem',
-        color: 'rgb(49, 49, 50)',
+        color: `${colors.text.main}`,
         cursor: 'text',
         margin: '0 2px',
         fontSize: '0.8125rem',
