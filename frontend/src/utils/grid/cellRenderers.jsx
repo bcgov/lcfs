@@ -529,7 +529,6 @@ const roleRenderOverflowChip = (hiddenChipsCount, isGovernmentRole = false) =>
 
 export default GenericChipRenderer
 
-// Updated CommonArrayRenderer
 export const CommonArrayRenderer = (props) => (
   <GenericChipRenderer
     {...props}
