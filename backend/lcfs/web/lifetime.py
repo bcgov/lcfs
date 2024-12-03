@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
+from lcfs.services.s3.lifetime import init_s3, shutdown_s3
 from lcfs.services.tfrs.redis_balance import init_org_balance_cache
 from lcfs.settings import settings
 
@@ -30,33 +31,6 @@ def _setup_db(app: FastAPI) -> None:  # pragma: no cover
     )
     app.state.db_engine = engine
     app.state.db_session_factory = session_factory
-
-
-async def startup_s3(app: FastAPI) -> None:
-    """
-    Initialize the S3 client and store it in the app state.
-
-    :param app: fastAPI application.
-    """
-    app.state.s3_client = boto3.client(
-        "s3",
-        aws_access_key_id=settings.s3_access_key,
-        aws_secret_access_key=settings.s3_secret_key,
-        endpoint_url=settings.s3_endpoint,
-        region_name="us-east-1",
-    )
-    print("S3 client initialized.")
-
-
-async def shutdown_s3(app: FastAPI) -> None:
-    """
-    Cleanup the S3 client from the app state.
-
-    :param app: fastAPI application.
-    """
-    if hasattr(app.state, "s3_client"):
-        del app.state.s3_client
-        print("S3 client shutdown.")
 
 
 def register_startup_event(
@@ -89,7 +63,7 @@ def register_startup_event(
         await init_org_balance_cache(app)
 
         # Initialize the S3 client
-        await startup_s3(app)
+        await init_s3(app)
 
         # Setup RabbitMQ Listeners
         await start_consumers()
