@@ -319,7 +319,7 @@ const GenericChipRenderer = ({
     for (let i = 0; i < options.length; i++) {
       const chipText = options[i]
       const chipTextWidth = chipText.length * 6 // Assuming 6 pixels per character
-      const newTotalWidth = totalWidth + chipTextWidth + 32 + 12 // Add 32px for padding and 12px for overflow counter chip
+      const newTotalWidth = totalWidth + chipTextWidth + 32 + 20 // Add 32px for padding and 20px for overflow counter chip
 
       if (newTotalWidth <= containerWidth) {
         chipWidths.push({ text: chipText, width: chipTextWidth + 32, ...chipConfig })
