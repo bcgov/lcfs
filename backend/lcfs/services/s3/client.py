@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 
 import boto3
 from fastapi import Depends, Request
@@ -25,6 +26,8 @@ MAX_FILE_SIZE_MB = 50
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
 
+logger = logging.getLogger(__name__)
+
 class DocumentService:
     def __init__(
         self,
@@ -35,6 +38,7 @@ class DocumentService:
         self.db = db
         self.clamav_service = clamav_service
         self.s3_client = request.app.state.s3_client
+        logger.info(f"S3 Client Initialized: {self.s3_client is not None}")
 
     @repo_handler
     async def upload_file(self, file, parent_id: str, parent_type="compliance_report"):
