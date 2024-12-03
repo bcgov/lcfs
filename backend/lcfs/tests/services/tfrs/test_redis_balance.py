@@ -31,7 +31,7 @@ async def test_init_org_balance_cache():
     async def mock_redis_pool():
         return mock_redis
 
-    mock_app.state.redis_pool = mock_redis_pool()
+    mock_app.state.redis_pool = await mock_redis_pool()
     mock_app.state.settings = mock_settings
 
     current_year = datetime.now().year
