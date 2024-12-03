@@ -77,12 +77,12 @@ describe('AssessmentCard', () => {
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={false}
-        history={mockHistory}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={[]}
       />,
       { wrapper }
     )
@@ -96,12 +96,12 @@ describe('AssessmentCard', () => {
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={true}
-        history={mockHistory}
         hasSupplemental={true}
         isGovernmentUser={true}
         currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={[]}
       />,
       { wrapper }
     )
@@ -112,16 +112,27 @@ describe('AssessmentCard', () => {
   })
 
   it('renders report history when history is available', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 0,
+        compliancePeriod: {
+          description: '2024'
+        },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+      }
+    ]
+
     render(
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={false}
-        history={mockHistory}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
       />,
       { wrapper }
     )
@@ -146,16 +157,28 @@ describe('AssessmentCard', () => {
       }
     ]
 
+    const mockChain = [
+      {
+        history: historyWithDraft,
+        version: 0,
+        compliancePeriod: {
+          description: '2024'
+        },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        hasSupplemental: true
+      }
+    ]
+
     render(
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={false}
-        history={historyWithDraft}
         hasSupplemental={true}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
       />,
       { wrapper }
     )
@@ -174,16 +197,27 @@ describe('AssessmentCard', () => {
       }
     ]
 
+    const mockChain = [
+      {
+        history: historyWithDraft,
+        version: 0,
+        compliancePeriod: {
+          description: '2024'
+        },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+      }
+    ]
+
     render(
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={false}
-        history={historyWithDraft}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
       />,
       { wrapper }
     )
@@ -201,16 +235,26 @@ describe('AssessmentCard', () => {
   })
 
   it('changes status to "AssessedBy" when the user is not a government user', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 0,
+        compliancePeriod: {
+          description: '2024'
+        },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+      }
+    ]
     render(
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={true}
-        history={mockHistory}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
       />,
       { wrapper }
     )
@@ -222,16 +266,26 @@ describe('AssessmentCard', () => {
   })
 
   it('displays organization information', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 0,
+        compliancePeriod: {
+          description: '2024'
+        },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+      }
+    ]
     render(
       <AssessmentCard
         orgData={mockOrgData}
         hasMet={true}
-        history={mockHistory}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
       />,
       { wrapper }
     )
