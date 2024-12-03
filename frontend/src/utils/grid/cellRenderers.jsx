@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import { roles } from '@/constants/roles'
@@ -6,7 +7,7 @@ import {
   getAllOrganizationStatuses
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import colors from '@/themes/base/colors'
 
 export const TextRenderer = (props) => {
@@ -36,7 +37,6 @@ export const LinkRenderer = (props) => {
 }
 
 export const StatusRenderer = (props) => {
-  const location = useLocation()
   return (
     <BCBox
       component={props.isView ? 'span' : 'div'}
