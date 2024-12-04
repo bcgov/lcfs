@@ -1,5 +1,5 @@
-import boto3
 from fastapi import FastAPI
+from aioboto3 import Session
 from lcfs.settings import settings
 
 
@@ -9,14 +9,15 @@ async def init_s3(app: FastAPI) -> None:
 
     :param app: FastAPI application.
     """
-    app.state.s3_client = boto3.client(
+    session = Session()
+    app.state.s3_client = session.client(
         "s3",
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret_key,
         endpoint_url=settings.s3_endpoint,
         region_name="us-east-1",
     )
-    print("S3 client initialized.")
+    print("Async S3 client initialized.")
 
 
 async def shutdown_s3(app: FastAPI) -> None:
@@ -25,6 +26,6 @@ async def shutdown_s3(app: FastAPI) -> None:
 
     :param app: FastAPI application.
     """
-    if hasattr(app.state, "s3_client"):
-        del app.state.s3_client
-        print("S3 client shutdown.")
+    if hasattr(app.state, "s3_client") and app.state.s3_client:
+        await app.state.s3_client.close()
+        print("Async S3 client shutdown.")
