@@ -1,11 +1,12 @@
 import logging
 from fastapi import FastAPI
-from redis import asyncio as aioredis
+from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import RedisError
 
 from lcfs.settings import settings
 
 logger = logging.getLogger(__name__)
+
 
 async def init_redis(app: FastAPI) -> None:
     """
@@ -14,13 +15,16 @@ async def init_redis(app: FastAPI) -> None:
     :param app: current fastapi application.
     """
     try:
-        app.state.redis_pool = aioredis.from_url(
+        app.state.redis_pool = ConnectionPool.from_url(
             str(settings.redis_url),
             encoding="utf8",
             decode_responses=True,
-            max_connections=200
+            max_connections=200,
         )
-        await app.state.redis_pool.ping()
+        # Test the connection
+        redis = Redis(connection_pool=app.state.redis_pool)
+        await redis.ping()
+        await redis.close()
         logger.info("Redis pool initialized successfully.")
     except RedisError as e:
         logger.error(f"Redis error during initialization: {e}")
@@ -28,6 +32,7 @@ async def init_redis(app: FastAPI) -> None:
     except Exception as e:
         logger.error(f"Unexpected error during Redis initialization: {e}")
         raise
+
 
 async def shutdown_redis(app: FastAPI) -> None:  # pragma: no cover
     """
@@ -37,8 +42,7 @@ async def shutdown_redis(app: FastAPI) -> None:  # pragma: no cover
     """
     try:
         if hasattr(app.state, "redis_pool"):
-            await app.state.redis_pool.close()
-            await app.state.redis_pool.wait_closed()
+            await app.state.redis_pool.disconnect(inuse_connections=True)
         logger.info("Redis pool closed successfully.")
     except RedisError as e:
         logger.error(f"Redis error during shutdown: {e}")
