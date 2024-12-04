@@ -58,6 +58,7 @@ class AllocationAgreementTableOptionsSchema(BaseSchema):
 class AllocationAgreementCreateSchema(BaseSchema):
     compliance_report_id: int
     allocation_agreement_id: Optional[int] = None
+    allocation_transaction_type: str
     transaction_partner: str
     postal_address: str
     transaction_partner_email: str
@@ -65,11 +66,12 @@ class AllocationAgreementCreateSchema(BaseSchema):
     fuel_type: str
     fuel_type_other: Optional[str] = None
     ci_of_fuel: float
-    quantity: int
+    provision_of_the_act: str
+    quantity: int = Field(
+        ..., gt=0, description="Quantity must be greater than 0"
+    )
     units: str
-    allocation_transaction_type: str
     fuel_category: str
-    provision_of_the_act: Optional[str] = None
     fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
 
