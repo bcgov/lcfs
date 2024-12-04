@@ -43,7 +43,6 @@ async def seed_allocation_transaction_types(session):
                 transaction_type = AllocationTransactionType(**type_data)
                 session.add(transaction_type)
 
-        logger.info("Successfully seeded allocation transaction types.")
     except Exception as e:
         context = {
             "function": "seed_allocation_transaction_types",

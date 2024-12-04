@@ -4,7 +4,7 @@ import logging
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from lcfs.services.redis.dependency import get_redis_pool
+from lcfs.services.redis.dependency import get_redis_client
 from fastapi import Request
 
 from lcfs.db.dependencies import async_engine
@@ -50,14 +50,14 @@ class TransactionConsumer(BaseConsumer):
         compliance_units = message_content.get("compliance_units_amount")
         org_id = message_content.get("organization_id")
 
-        redis_pool = await get_redis_pool(request)
+        redis_client = await get_redis_client(request)
 
         async with AsyncSession(async_engine) as session:
             async with session.begin():
                 repo = OrganizationsRepository(db=session)
                 transaction_repo = TransactionRepository(db=session)
                 redis_balance_service = RedisBalanceService(
-                    transaction_repo=transaction_repo, redis_pool=redis_pool
+                    transaction_repo=transaction_repo, redis_client=redis_client
                 )
                 org_service = OrganizationsService(
                     repo=repo,
