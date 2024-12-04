@@ -76,12 +76,8 @@ const HistoryCard = ({ report }) => {
         }
         return item
       })
-      .filter(
-        (item) =>
-          item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT ||
-          report.hasSupplemental
-      )
-  }, [isGovernmentUser, report.hasSupplemental, report.history])
+      .filter((item) => item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT)
+  }, [isGovernmentUser, report.history])
   return (
     <Accordion>
       <AccordionSummary
