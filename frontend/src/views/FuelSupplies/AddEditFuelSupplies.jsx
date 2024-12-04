@@ -58,13 +58,13 @@ export const AddEditFuelSupplies = () => {
   )
 
   useEffect(() => {
-    if (location.state?.message) {
+    if (location?.state?.message) {
       alertRef.current?.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
     }
-  }, [location.state])
+  }, [location?.state?.message, location?.state?.severity]);
 
   const validateField = (params, field, validationFn, errorMessage, alertRef) => {
     const newValue = params.newValue;

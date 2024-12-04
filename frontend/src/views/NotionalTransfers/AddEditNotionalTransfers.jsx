@@ -39,13 +39,13 @@ export const AddEditNotionalTransfers = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (location.state?.message) {
+    if (location?.state?.message) {
       alertRef.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
     }
-  }, [location.state])
+  }, [location?.state?.message, location?.state?.severity]);
 
   const validateField = (params, field, validationFn, errorMessage, alertRef) => {
     const newValue = params.newValue;

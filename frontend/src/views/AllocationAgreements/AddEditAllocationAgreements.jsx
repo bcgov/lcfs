@@ -65,23 +65,29 @@ export const AddEditAllocationAgreements = () => {
         severity: location.state.severity || 'info'
       })
     }
-  }, [location.state])
+  }, [location.state?.message, location.state?.severity])
 
-  const validateField = (params, field, validationFn, errorMessage, alertRef) => {
-    const newValue = params.newValue;
+  const validateField = (
+    params,
+    field,
+    validationFn,
+    errorMessage,
+    alertRef
+  ) => {
+    const newValue = params.newValue
 
     if (params.colDef.field === field) {
       if (!validationFn(newValue)) {
         alertRef.current?.triggerAlert({
           message: errorMessage,
-          severity: 'error',
-        });
-        return false;
+          severity: 'error'
+        })
+        return false
       }
     }
 
-    return true; // Proceed with the update
-  };
+    return true // Proceed with the update
+  }
 
   const onGridReady = useCallback(
     async (params) => {
@@ -176,9 +182,9 @@ export const AddEditAllocationAgreements = () => {
         (value) => value !== null && !isNaN(value) && value > 0,
         'Quantity must be greater than 0.',
         alertRef
-      );
+      )
 
-      if (!isValid) return;
+      if (!isValid) return
 
       if (params.oldValue === params.newValue) return
 
