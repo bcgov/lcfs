@@ -173,6 +173,7 @@ class FuelSupplyResponseSchema(BaseSchema):
     compliance_units: Optional[int] = None
     target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
+    uci: Optional[float] = None
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None

@@ -235,7 +235,7 @@
     },
     {
       "transport_mode_id": 3,
-      "transport_mode": "Marine"
+      "transport_mode": "Marine-domestic"
     },
     {
       "transport_mode_id": 4,
@@ -1001,7 +1001,7 @@
     },
     {
       "level_of_equipment_id": 4,
-      "name": "Other",
+      "name": "Other - Additional information provided in notes field",
       "display_order": 4
     }
   ],

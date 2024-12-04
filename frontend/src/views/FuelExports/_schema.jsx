@@ -426,6 +426,13 @@ export const fuelExportColDefs = (optionsData, errors) => [
     }
   },
   {
+    field: 'uci',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
+    editable: false,
+    cellStyle: (params) => cellErrorStyle(params, errors),
+    minWidth: 100
+  },
+  {
     field: 'energyDensity',
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',

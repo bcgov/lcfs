@@ -396,6 +396,13 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
+    field: 'uci',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
+    editable: false,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
+  },
+  {
     field: 'energyDensity',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',

@@ -1,13 +1,15 @@
 from typing import Awaitable, Callable
 
 from fastapi import FastAPI
+import boto3
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-from redis import asyncio as aioredis
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
+from lcfs.services.s3.lifetime import init_s3, shutdown_s3
 from lcfs.services.tfrs.redis_balance import init_org_balance_cache
 from lcfs.settings import settings
 
@@ -50,20 +52,21 @@ def register_startup_event(
         _setup_db(app)
 
         # Initialize Redis connection pool
-        init_redis(app)
+        await init_redis(app)
 
         # Assign settings to app state for global access
         app.state.settings = settings
 
-        # Initialize the Redis client and store in app.state
-        app.state.redis_pool = aioredis.from_url(
-            str(settings.redis_url), encoding="utf8", decode_responses=True
-        )
+        # Create a Redis client from the connection pool
+        redis_client = Redis(connection_pool=app.state.redis_pool)
 
-        # Initialize the cache with Redis backend using app.state.redis_pool
-        FastAPICache.init(RedisBackend(app.state.redis_pool), prefix="lcfs")
+        # Initialize FastAPI cache with the Redis client
+        FastAPICache.init(RedisBackend(redis_client), prefix="lcfs")
 
         await init_org_balance_cache(app)
+
+        # Initialize the S3 client
+        await init_s3(app)
 
         # Setup RabbitMQ Listeners
         await start_consumers()
@@ -86,6 +89,7 @@ def register_shutdown_event(
         await app.state.db_engine.dispose()
 
         await shutdown_redis(app)
+        await shutdown_s3(app)
         await stop_consumers()
 
     return _shutdown
