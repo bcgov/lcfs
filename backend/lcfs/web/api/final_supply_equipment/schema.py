@@ -40,7 +40,7 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     compliance_report_id: Optional[int] = None
     supply_from_date: date
     supply_to_date: date
-    kwh_usage: Optional[float] = None
+    kwh_usage: float
     serial_nbr: str
     manufacturer: str
     model: Optional[str] = None
