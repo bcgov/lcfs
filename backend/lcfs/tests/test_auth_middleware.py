@@ -11,7 +11,7 @@ from lcfs.settings import Settings
 
 
 @pytest.fixture
-def redis_pool():
+def redis_client():
     return AsyncMock()
 
 
@@ -30,14 +30,16 @@ def settings():
 
 
 @pytest.fixture
-def auth_backend(redis_pool, session_generator, settings):
-    return UserAuthentication(redis_pool, session_generator[0], settings)
+def auth_backend(redis_client, session_generator, settings):
+    return UserAuthentication(redis_client, session_generator[0], settings)
 
 
 @pytest.mark.anyio
 async def test_load_jwk_from_redis(auth_backend):
-    # Mock auth_backend.redis_pool.get to return a JSON string directly
-    with patch.object(auth_backend.redis_pool, "get", new_callable=AsyncMock) as mock_redis_get:
+    # Mock auth_backend.redis_client.get to return a JSON string directly
+    with patch.object(
+        auth_backend.redis_client, "get", new_callable=AsyncMock
+    ) as mock_redis_get:
         mock_redis_get.return_value = '{"jwks": "jwks", "jwks_uri": "jwks_uri"}'
 
         await auth_backend.refresh_jwk()
@@ -67,11 +69,12 @@ async def test_refresh_jwk_sets_new_keys_in_redis(mock_get, auth_backend):
         mock_response_2,
     ]
 
-    with patch.object(auth_backend.redis_pool, "get", new_callable=AsyncMock) as mock_redis_get:
+    with patch.object(
+        auth_backend.redis_client, "get", new_callable=AsyncMock
+    ) as mock_redis_get:
         mock_redis_get.return_value = None
 
         await auth_backend.refresh_jwk()
-
 
 
 @pytest.mark.anyio
