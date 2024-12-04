@@ -2,6 +2,7 @@ import pytest
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel, SortOrder
+from fakeredis.aioredis import FakeRedis
 
 
 @pytest.fixture
@@ -54,3 +55,15 @@ def mock_user_profile(
             return self.role_names
 
     return MockUserProfile()
+
+
+@pytest.fixture
+async def redis_client():
+    """
+    Fixture to provide a fake Redis client for tests.
+    """
+    client = FakeRedis()
+    try:
+        yield client
+    finally:
+        await client.close()

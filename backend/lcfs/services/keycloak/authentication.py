@@ -26,13 +26,13 @@ class UserAuthentication(AuthenticationBackend):
 
     def __init__(
         self,
-        redis_pool: ConnectionPool,
+        redis_client: Redis,
         session_factory: async_sessionmaker,
         settings: Settings,
     ):
         self.session_factory = session_factory
         self.settings = settings
-        self.redis_pool = redis_pool
+        self.redis_client = redis_client
         self.jwks = None
         self.jwks_uri = None
         self.test_keycloak_user = None
@@ -44,10 +44,9 @@ class UserAuthentication(AuthenticationBackend):
         If not found, it fetches it from the well-known endpoint
         and stores it in Redis for future use.
         """
-        # Create a Redis client from the connection pool
-        async with Redis(connection_pool=self.redis_pool) as redis:
+        try:
             # Try to get the JWKS data from Redis cache
-            jwks_data = await redis.get("jwks_data")
+            jwks_data = await self.redis_client.get("jwks_data")
 
             if jwks_data:
                 jwks_data = json.loads(jwks_data)
@@ -74,10 +73,15 @@ class UserAuthentication(AuthenticationBackend):
             jwks_data = {"jwks": jwks, "jwks_uri": jwks_uri}
 
             # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
-            await redis.set("jwks_data", json.dumps(jwks_data), ex=86400)
+            await self.redis_client.set("jwks_data", json.dumps(jwks_data), ex=86400)
 
             self.jwks = jwks
             self.jwks_uri = jwks_uri
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error refreshing JWK: {str(e)}"
+            )
 
     async def authenticate(self, request):
         # Extract the authorization header from the request

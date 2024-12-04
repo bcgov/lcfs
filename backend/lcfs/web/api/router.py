@@ -4,7 +4,6 @@ from lcfs.web.api import (
     echo,
     fuel_supply,
     monitoring,
-    redis,
     user,
     role,
     notification,
@@ -41,7 +40,6 @@ api_router.include_router(
 )
 api_router.include_router(transfer.router, prefix="/transfers", tags=["transfers"])
 api_router.include_router(echo.router, prefix="/echo", tags=["echo"])
-api_router.include_router(redis.router, prefix="/redis", tags=["redis"])
 api_router.include_router(user.router, prefix="/users", tags=["users"])
 api_router.include_router(role.router, prefix="/roles", tags=["roles"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])

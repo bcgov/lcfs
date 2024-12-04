@@ -17,6 +17,7 @@ db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(db_url, future=True)
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARN)
 
+
 async def set_user_context(session: AsyncSession, username: str):
     """
     Set user_id context for the session to be used in auditing.
@@ -49,15 +50,3 @@ async def get_async_db_session(request: Request) -> AsyncGenerator[AsyncSession,
                 raise e
             finally:
                 await session.close()  # Always close the session to free up the connection
-
-
-def create_redis():
-    return aioredis.ConnectionPool(
-        host=settings.redis_host,
-        port=settings.redis_port,
-        db=settings.redis_db,
-        decode_responses=True,
-    )
-
-
-pool = create_redis()
