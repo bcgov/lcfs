@@ -4,7 +4,7 @@ from fastapi import FastAPI
 import boto3
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-from redis import asyncio as aioredis
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
@@ -57,8 +57,11 @@ def register_startup_event(
         # Assign settings to app state for global access
         app.state.settings = settings
 
-        # Initialize the cache with Redis backend using app.state.redis_pool
-        FastAPICache.init(RedisBackend(app.state.redis_pool), prefix="lcfs")
+        # Create a Redis client from the connection pool
+        redis_client = Redis(connection_pool=app.state.redis_pool)
+
+        # Initialize FastAPI cache with the Redis client
+        FastAPICache.init(RedisBackend(redis_client), prefix="lcfs")
 
         await init_org_balance_cache(app)
 
