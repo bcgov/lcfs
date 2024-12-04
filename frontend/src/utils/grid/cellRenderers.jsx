@@ -549,11 +549,7 @@ export const RoleRenderer = (props) => {
         .filter((role) => role !== roles.government && role !== roles.supplier)
 
   useEffect(() => {
-    setIsGovernmentRole(
-      Array.isArray(value)
-        ? value.includes(roles.government)
-        : value.includes(roles.government)
-    )
+    setIsGovernmentRole(value.includes(roles.government))
   }, [value])
 
   return (
