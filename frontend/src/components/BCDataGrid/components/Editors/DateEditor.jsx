@@ -1,7 +1,6 @@
-import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
+import { DatePicker } from '@mui/x-date-pickers'
 import { format, parseISO } from 'date-fns'
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export const DateEditor = ({ value, onValueChange, minDate, maxDate }) => {
   const [selectedDate, setSelectedDate] = useState(
@@ -52,28 +51,26 @@ export const DateEditor = ({ value, onValueChange, minDate, maxDate }) => {
       onMouseDown={stopPropagation}
       onClick={stopPropagation}
     >
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          className="ag-grid-date-editor ag-input-field"
-          fullWidth
-          margin="normal"
-          id="date-picker-dialog"
-          format="yyyy-MM-dd"
-          slotProps={{
-            field: { clearable: true },
-            popper: { placement: 'bottom-start' }
-          }}
-          value={selectedDate}
-          onChange={updateValue}
-          open={isOpen}
-          onOpen={handleDatePickerOpen}
-          onClose={handleDatePickerClose}
-          variant="inline"
-          disableToolbar
-          minDate={minDate}
-          maxDate={maxDate}
-        />
-      </LocalizationProvider>
+      <DatePicker
+        className="ag-grid-date-editor ag-input-field"
+        fullWidth
+        margin="normal"
+        id="date-picker-dialog"
+        format="yyyy-MM-dd"
+        slotProps={{
+          field: { clearable: true },
+          popper: { placement: 'bottom-start' }
+        }}
+        value={selectedDate}
+        onChange={updateValue}
+        open={isOpen}
+        onOpen={handleDatePickerOpen}
+        onClose={handleDatePickerClose}
+        variant="inline"
+        disableToolbar
+        minDate={minDate}
+        maxDate={maxDate}
+      />
     </div>
   )
 }

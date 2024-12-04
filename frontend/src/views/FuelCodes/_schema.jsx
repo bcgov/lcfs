@@ -65,26 +65,46 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    cellRenderer: TextRenderer,
-    filter: false
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      maxValidYear: 2400
+    },
+    cellRenderer: TextRenderer
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    cellRenderer: TextRenderer,
-    filter: false
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      maxValidYear: 2400
+    },
+    cellRenderer: TextRenderer
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    cellRenderer: TextRenderer,
-    filter: false
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      maxValidYear: 2400
+    },
+    cellRenderer: TextRenderer
   },
   {
     field: 'expirationDate',
-    headerName: t('fuelCode:fuelCodeColLabels.expiryDate'),
-    cellRenderer: TextRenderer,
-    filter: false
+    headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
+      suppressAndOrCondition: true,
+      maxValidYear: 2400
+    },
+    cellRenderer: TextRenderer
   },
   {
     field: 'fuelType',
