@@ -151,8 +151,9 @@ export const AddEditFinalSupplyEquipments = () => {
           if (fields[0] === 'postalCode') {
             errMsg = t('finalSupplyEquipment:postalCodeError')
           } else {
-            errMsg = `Error updating row: ${fieldLabels.length === 1 ? fieldLabels[0] : ''
-              } ${String(message).toLowerCase()}`
+            errMsg = `Error updating row: ${
+              fieldLabels.length === 1 ? fieldLabels[0] : ''
+            } ${String(message).toLowerCase()}`
           }
         } else {
           errMsg = error.response.data?.detail
@@ -206,6 +207,7 @@ export const AddEditFinalSupplyEquipments = () => {
       const rowData = {
         ...params.node.data,
         id: newRowID,
+        kwhUsage: null,
         serialNbr: null,
         latitude: null,
         longitude: null,
@@ -239,16 +241,21 @@ export const AddEditFinalSupplyEquipments = () => {
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
-  const onAddRows = useCallback((numRows) => {
-    return Array(numRows).fill().map(() => ({
-      id: uuid(),
-      complianceReportId,
-      supplyFromDate: `${compliancePeriod}-01-01`,
-      supplyToDate: `${compliancePeriod}-12-31`,
-      validationStatus: 'error',
-      modified: true
-    }))
-  }, [compliancePeriod, complianceReportId])
+  const onAddRows = useCallback(
+    (numRows) => {
+      return Array(numRows)
+        .fill()
+        .map(() => ({
+          id: uuid(),
+          complianceReportId,
+          supplyFromDate: `${compliancePeriod}-01-01`,
+          supplyToDate: `${compliancePeriod}-12-31`,
+          validationStatus: 'error',
+          modified: true
+        }))
+    },
+    [compliancePeriod, complianceReportId]
+  )
 
   return (
     isFetched &&
