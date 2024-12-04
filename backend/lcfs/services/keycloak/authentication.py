@@ -2,9 +2,8 @@ import json
 
 import httpx
 import jwt
-from fastapi import HTTPException, Depends
-from redis import ConnectionPool
-from redis.asyncio import Redis
+from fastapi import HTTPException
+from redis.asyncio import Redis, ConnectionPool
 from sqlalchemy import func
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -27,7 +26,7 @@ class UserAuthentication(AuthenticationBackend):
 
     def __init__(
         self,
-        redis_pool: Redis,
+        redis_pool: ConnectionPool,
         session_factory: async_sessionmaker,
         settings: Settings,
     ):
@@ -39,30 +38,46 @@ class UserAuthentication(AuthenticationBackend):
         self.test_keycloak_user = None
 
     async def refresh_jwk(self):
-        # Try to get the JWKS data from Redis cache
-        jwks_data = await self.redis_pool.get("jwks_data")
+        """
+        Refreshes the JSON Web Key (JWK) used for token verification.
+        This method attempts to retrieve the JWK from Redis cache.
+        If not found, it fetches it from the well-known endpoint
+        and stores it in Redis for future use.
+        """
+        # Create a Redis client from the connection pool
+        async with Redis(connection_pool=self.redis_pool) as redis:
+            # Try to get the JWKS data from Redis cache
+            jwks_data = await redis.get("jwks_data")
 
-        if jwks_data:
-            jwks_data = json.loads(jwks_data)
-            self.jwks = jwks_data.get("jwks")
-            self.jwks_uri = jwks_data.get("jwks_uri")
-            return
+            if jwks_data:
+                jwks_data = json.loads(jwks_data)
+                self.jwks = jwks_data.get("jwks")
+                self.jwks_uri = jwks_data.get("jwks_uri")
+                return
 
-        # If not in cache, retrieve from the well-known endpoint
-        async with httpx.AsyncClient() as client:
-            oidc_response = await client.get(self.settings.well_known_endpoint)
-            jwks_uri = oidc_response.json().get("jwks_uri")
-            certs_response = await client.get(jwks_uri)
-            jwks = certs_response.json()
+            # If not in cache, retrieve from the well-known endpoint
+            async with httpx.AsyncClient() as client:
+                oidc_response = await client.get(self.settings.well_known_endpoint)
+                oidc_response.raise_for_status()
+                jwks_uri = oidc_response.json().get("jwks_uri")
 
-        # Composite object containing both JWKS and JWKS URI
-        jwks_data = {"jwks": jwks, "jwks_uri": jwks_uri}
+                if not jwks_uri:
+                    raise ValueError(
+                        "JWKS URI not found in the well-known endpoint response."
+                    )
 
-        # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
-        await self.redis_pool.set("jwks_data", json.dumps(jwks_data), ex=86400)
+                certs_response = await client.get(jwks_uri)
+                certs_response.raise_for_status()
+                jwks = certs_response.json()
 
-        self.jwks = jwks
-        self.jwks_uri = jwks_uri
+            # Composite object containing both JWKS and JWKS URI
+            jwks_data = {"jwks": jwks, "jwks_uri": jwks_uri}
+
+            # Cache the composite JWKS data with a TTL of 1 day (86400 seconds)
+            await redis.set("jwks_data", json.dumps(jwks_data), ex=86400)
+
+            self.jwks = jwks
+            self.jwks_uri = jwks_uri
 
     async def authenticate(self, request):
         # Extract the authorization header from the request
