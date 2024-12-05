@@ -260,6 +260,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'approvalDate',
     editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.approvalDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -275,6 +276,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'effectiveDate',
     editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.effectiveDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -289,7 +291,8 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'expirationDate',
     editable: canEdit,
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.expiryDate'),
+    headerComponent: canEdit ? RequiredHeader : undefined,
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.expirationDate'),
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: createCellRenderer('expirationDate', (params) => (
