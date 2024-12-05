@@ -50,12 +50,23 @@ export const UserProfileActions = () => {
       <BCBox
         display="flex"
         alignItems="center"
-        justifyContent="space-around"
+        justifyContent="space-between"
         mr={3}
       >
         {currentUser?.firstName && (
           <>
-            <BCTypography variant="subtitle1" color="light" mx={3}>
+            <BCTypography
+              style={{
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flexShrink: 1,
+                marginRight: '12px',
+                maxWidth: '17vw'
+              }}
+              variant="subtitle1"
+              color="light"
+            >
               {`${currentUser.firstName} ${currentUser.lastName}`}
             </BCTypography>
             <Divider
@@ -108,6 +119,7 @@ export const UserProfileActions = () => {
           />
         </>
         <BCButton
+          style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           onClick={logout}
           color="light"
           size="small"
