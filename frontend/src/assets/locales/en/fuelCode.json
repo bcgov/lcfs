@@ -37,6 +37,7 @@
     "effectiveDate": "Effective date",
     "expiryDate": "Expiry date",
     "fuel": "Fuel",
+    "fuelTypeId": "Fuel type id",
     "feedstock": "Feedstock",
     "feedstockLocation": "Feedstock location",
     "misc": "Misc (e.g. CCS, EOR, waste steam, non rendered, etc.,)",

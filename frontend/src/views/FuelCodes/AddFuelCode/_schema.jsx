@@ -78,12 +78,19 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     valueGetter: (params) => {
       if (params.data?.fuelCodePrefix?.prefix) {
         return params.data.fuelCodePrefix.prefix
-      } else if (params.data.prefixId) {
+      }else if (params.data.prefixId) {
         const selectedOption = optionsData?.fuelCodePrefixes?.find(
           (obj) => obj.fuelCodePrefixId === params.data.prefixId
         )
         return selectedOption.prefix
       }
+      const selectedOption = optionsData?.fuelCodePrefixes?.find(
+        (obj) => obj.prefix === params.data.prefix
+      )
+      if (params.data.prefix) {
+        params.data.prefixId = selectedOption.fuelCodePrefixId
+      }
+      return params.data.prefix
     },
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
@@ -316,6 +323,13 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         )
         return selectedOption.fuelType
       }
+      const selectedOption = optionsData?.fuelTypes?.find(
+        (obj) => obj.fuelType === params.data.fuel
+      )
+      if (selectedOption) {
+        params.data.fuelTypeId = selectedOption.fuelTypeId
+      }
+      return params.data.fuel
     },
     valueSetter: (params) => {
       if (params.newValue) {
