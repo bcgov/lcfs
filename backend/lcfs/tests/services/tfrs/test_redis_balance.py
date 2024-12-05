@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock, call
 from datetime import datetime
 
-from redis.asyncio import ConnectionPool, Redis
+from redis.asyncio import Redis
 
 from lcfs.services.tfrs.redis_balance import (
     init_org_balance_cache,
@@ -13,16 +13,15 @@ from lcfs.services.tfrs.redis_balance import (
 
 @pytest.mark.anyio
 async def test_init_org_balance_cache():
-    # Mock the Redis connection pool
-    mock_redis_pool = AsyncMock()
+    # Mock the Redis client
     mock_redis = AsyncMock()
     mock_redis.set = AsyncMock()
 
-    # Ensure the `Redis` instance is created with the connection pool
+    # Patch Redis client creation
     with patch("lcfs.services.tfrs.redis_balance.Redis", return_value=mock_redis):
         # Mock the app object
         mock_app = MagicMock()
-        mock_app.state.redis_pool = mock_redis_pool
+        mock_app.state.redis_client = mock_redis
 
         current_year = datetime.now().year
         last_year = current_year - 1
@@ -60,9 +59,7 @@ async def test_init_org_balance_cache():
 
 
 @pytest.mark.anyio
-async def test_populate_organization_redis_balance(
-    fake_redis_pool: ConnectionPool,
-):
+async def test_populate_organization_redis_balance(redis_client: Redis):
     # Mock the transaction repository
     current_year = datetime.now().year
     last_year = current_year - 1
@@ -77,7 +74,7 @@ async def test_populate_organization_redis_balance(
 
     # Create an instance of the service with mocked dependencies
     service = RedisBalanceService(
-        transaction_repo=mock_transaction_repo, redis_pool=fake_redis_pool
+        transaction_repo=mock_transaction_repo, redis_client=redis_client
     )
 
     await service.populate_organization_redis_balance(organization_id=1)
@@ -92,12 +89,8 @@ async def test_populate_organization_redis_balance(
     )
 
     # Assert that the Redis set method was called with the correct parameters
-    async with Redis(connection_pool=fake_redis_pool) as redis:
-        assert int(await redis.get(f"balance_1_{last_year}")) == 100
-        assert int(await redis.get(f"balance_1_{current_year}")) == 200
-
-
-# mock_redis.set.assert_any_call(name=f"balance_1_{current_year}", value=200)
+    assert int(await redis_client.get(f"balance_1_{last_year}")) == 100
+    assert int(await redis_client.get(f"balance_1_{current_year}")) == 200
 
 
 @pytest.mark.anyio

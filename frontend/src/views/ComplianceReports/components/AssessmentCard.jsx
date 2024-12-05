@@ -21,6 +21,7 @@ import Box from '@mui/material/Box'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
@@ -253,7 +254,7 @@ export const AssessmentCard = ({
                   variant="h6"
                   color="primary"
                 >
-                  {t(`report:reportHistory`)}
+                  {t('report:reportHistory')}
                 </Typography>
                 {chain.map((report) => (
                   <HistoryCard key={report.version} report={report} />
@@ -262,33 +263,34 @@ export const AssessmentCard = ({
             )}
 
             <Role roles={[roles.supplier]}>
-              {currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-                <>
-                  <Typography
-                    sx={{ paddingTop: '16px' }}
-                    component="div"
-                    variant="body4"
-                  >
-                    {t('report:supplementalWarning')}
-                  </Typography>
-                  <Box>
-                    <BCButton
-                      data-test="create-supplemental"
-                      size="large"
-                      variant="contained"
-                      color="primary"
-                      onClick={() => {
-                        createSupplementalReport()
-                      }}
-                      startIcon={<AssignmentIcon />}
-                      sx={{ mt: 2 }}
-                      disabled={isLoading}
+              {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
+                currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                  <>
+                    <Typography
+                      sx={{ paddingTop: '16px' }}
+                      component="div"
+                      variant="body4"
                     >
-                      {t('report:createSupplementalRptBtn')}
-                    </BCButton>
-                  </Box>
-                </>
-              )}
+                      {t('report:supplementalWarning')}
+                    </Typography>
+                    <Box>
+                      <BCButton
+                        data-test="create-supplemental"
+                        size="large"
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                          createSupplementalReport()
+                        }}
+                        startIcon={<AssignmentIcon />}
+                        sx={{ mt: 2 }}
+                        disabled={isLoading}
+                      >
+                        {t('report:createSupplementalRptBtn')}
+                      </BCButton>
+                    </Box>
+                  </>
+                )}
             </Role>
             <Role roles={[roles.analyst]}>
               <Box>

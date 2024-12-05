@@ -28,8 +28,6 @@ export const usersColumnDefs = (t) => [
       params.data.isActive
         ? params.data.roles.map((role) => role.name).join(', ')
         : '',
-    flex: 1,
-    minWidth: 300,
     sortable: false,
     suppressHeaderMenuButton: true,
     filterParams: {

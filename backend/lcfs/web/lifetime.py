@@ -57,11 +57,8 @@ def register_startup_event(
         # Assign settings to app state for global access
         app.state.settings = settings
 
-        # Create a Redis client from the connection pool
-        redis_client = Redis(connection_pool=app.state.redis_pool)
-
         # Initialize FastAPI cache with the Redis client
-        FastAPICache.init(RedisBackend(redis_client), prefix="lcfs")
+        FastAPICache.init(RedisBackend(app.state.redis_client), prefix="lcfs")
 
         await init_org_balance_cache(app)
 

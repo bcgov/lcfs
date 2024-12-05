@@ -136,6 +136,12 @@ class FuelExportSchema(BaseSchema):
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_type: FuelTypeSchema
+    fuel_category_id: int
+    fuel_category: FuelCategoryResponseSchema
+    end_use_id: Optional[int] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+    provision_of_the_act_id: Optional[int] = None
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
     fuel_type_other: Optional[str] = None
     quantity: int = Field(..., gt=0)
     units: str
@@ -147,14 +153,9 @@ class FuelExportSchema(BaseSchema):
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_category_id: int
-    fuel_category: FuelCategoryResponseSchema
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-    provision_of_the_act_id: Optional[int] = None
-    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    end_use_id: Optional[int] = None
-    end_use_type: Optional[EndUseTypeSchema] = None
+
 
     @validator("quantity")
     def quantity_must_be_positive(cls, v):
