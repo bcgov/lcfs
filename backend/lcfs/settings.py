@@ -30,10 +30,12 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
-    # quantity of workers for uvicorn
+    # Number of Uvicorn workers
     workers_count: int = 2
-    # Enable uvicorn reloading
-    reload: bool = True
+    # Enable Uvicorn reload (True for development, False for production)
+    reload: bool = False
+    # App timeout matching OpenShift's ROUTER_DEFAULT_SERVER_TIMEOUT
+    timeout_keep_alive: int = 30
 
     # Current environment
     environment: str = "dev"

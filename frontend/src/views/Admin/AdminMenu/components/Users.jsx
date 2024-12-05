@@ -51,19 +51,6 @@ export const Users = () => {
   })
 
   const gridRef = useRef()
-  const getRowHeight = useCallback((params) => {
-    const actualWidth = params.api.getColumn('role').getActualWidth()
-    return calculateRowHeight(actualWidth, params.data?.roles)
-  }, [])
-
-  const onColumnResized = useCallback((params) => {
-    const actualWidth = params.api.getColumn('role').getActualWidth()
-    params.api.resetRowHeights()
-    params.api.forEachNode((node) => {
-      const rowHeight = calculateRowHeight(actualWidth, node.data?.roles)
-      node.setRowHeight(rowHeight)
-    })
-  }, [])
   useEffect(() => {
     if (location.state?.message) {
       setAlertMessage(location.state.message)
@@ -115,8 +102,6 @@ export const Users = () => {
             handleRowClicked={handleRowClicked}
             enableResetButton={false}
             enableCopyButton={false}
-            getRowHeight={getRowHeight}
-            onColumnResized={onColumnResized}
           />
         </BCBox>
       </BCBox>

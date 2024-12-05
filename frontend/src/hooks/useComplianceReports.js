@@ -55,7 +55,7 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
   return useQuery({
     queryKey: ['compliance-report', reportID],
     queryFn: async () => {
-      return (await client.get(path))
+      return (await client.get(path)).data
     },
     ...options
   })
@@ -132,22 +132,22 @@ export const useComplianceReportDocuments = (parentID, options) => {
 }
 
 export const useCreateSupplementalReport = (reportID, options) => {
-  const client = useApiService();
-  const queryClient = useQueryClient();
-  const path = apiRoutes.createSupplementalReport.replace(':reportID', reportID);
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.createSupplementalReport.replace(':reportID', reportID)
 
   return useMutation({
     mutationFn: () => client.post(path),
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['compliance-reports']);
+      queryClient.invalidateQueries(['compliance-reports'])
       if (options && options.onSuccess) {
-        options.onSuccess(data);
+        options.onSuccess(data)
       }
     },
     onError: (error) => {
       if (options && options.onError) {
-        options.onError(error);
+        options.onError(error)
       }
-    },
-  });
-};
+    }
+  })
+}

@@ -14,11 +14,7 @@ import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 
-export const finalSupplyEquipmentColDefs = (
-  optionsData,
-  compliancePeriod,
-  errors
-) => [
+export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, errors) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -75,6 +71,7 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'kwhUsage',
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
@@ -83,9 +80,9 @@ export const finalSupplyEquipmentColDefs = (
     cellDataType: 'text',
     cellStyle: (params) => StandardCellErrors(params, errors),
     valueFormatter: (params) => {
-      const value = parseFloat(params.value);
-      return !isNaN(value) ? value.toFixed(2) : '';
-    },
+      const value = parseFloat(params.value)
+      return !isNaN(value) ? value.toFixed(2) : ''
+    }
   },
   {
     field: 'serialNbr',
@@ -110,13 +107,15 @@ export const finalSupplyEquipmentColDefs = (
       queryKey: 'fuel-code-search',
       queryFn: async ({ client, queryKey }) => {
         try {
-          const [, searchTerm] = queryKey;
-          const path = `${apiRoutes.searchFinalSupplyEquipments}manufacturer=${encodeURIComponent(searchTerm)}`;
-          const response = await client.get(path);
-          return response.data;
+          const [, searchTerm] = queryKey
+          const path = `${
+            apiRoutes.searchFinalSupplyEquipments
+          }manufacturer=${encodeURIComponent(searchTerm)}`
+          const response = await client.get(path)
+          return response.data
         } catch (error) {
-          console.error('Error fetching manufacturer data:', error);
-          return [];
+          console.error('Error fetching manufacturer data:', error)
+          return []
         }
       },
       optionLabel: 'manufacturer',
