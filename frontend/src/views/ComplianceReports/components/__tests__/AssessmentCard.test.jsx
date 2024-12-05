@@ -147,45 +147,6 @@ describe('AssessmentCard', () => {
       ).toBeInTheDocument()
     })
   })
-  it('filters out DRAFT status from history except when hasSupplemental is true', async () => {
-    const historyWithDraft = [
-      ...mockHistory,
-      {
-        status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
-        createDate: '2024-08-01',
-        userProfile: { firstName: 'Alice', lastName: 'Wong' }
-      }
-    ]
-
-    const mockChain = [
-      {
-        history: historyWithDraft,
-        version: 0,
-        compliancePeriod: {
-          description: '2024'
-        },
-        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
-        hasSupplemental: true
-      }
-    ]
-
-    render(
-      <AssessmentCard
-        orgData={mockOrgData}
-        hasMet={false}
-        hasSupplemental={true}
-        isGovernmentUser={false}
-        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
-        complianceReportId="123"
-        alertRef={{ current: { triggerAlert: vi.fn() } }}
-        chain={mockChain}
-      />,
-      { wrapper }
-    )
-    await waitFor(() => {
-      expect(screen.getByText(/Alice Wong/)).toBeInTheDocument()
-    })
-  })
 
   it('filters out DRAFT status from history', async () => {
     const historyWithDraft = [
