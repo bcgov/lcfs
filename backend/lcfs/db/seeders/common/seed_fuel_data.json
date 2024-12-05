@@ -83,7 +83,7 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 123.96,
-      "units": "kWh",
+      "units": "kg",
       "unrecognized": false
     },
     {
