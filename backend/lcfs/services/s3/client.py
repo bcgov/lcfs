@@ -1,8 +1,6 @@
 import os
 import uuid
-
-import boto3
-from fastapi import Depends, Request
+from fastapi import Depends
 from pydantic.v1 import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import InvalidRequestError
@@ -53,12 +51,13 @@ class DocumentService:
             self.clamav_service.scan_file(file)
 
         # Upload file to S3
-        self.s3_client.upload_fileobj(
-            Fileobj=file.file,
-            Bucket=BUCKET_NAME,
-            Key=file_key,
-            ExtraArgs={"ContentType": file.content_type},
-        )
+        async with self.s3_client as client:
+            await client.upload_fileobj(
+                Fileobj=file.file,
+                Bucket=BUCKET_NAME,
+                Key=file_key,
+                ExtraArgs={"ContentType": file.content_type},
+            )
 
         document = Document(
             file_key=file_key,
@@ -97,11 +96,12 @@ class DocumentService:
         if not document:
             raise Exception("Document not found")
 
-        presigned_url = self.s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": BUCKET_NAME, "Key": document.file_key},
-            ExpiresIn=60,  # URL expiration in seconds
-        )
+        async with self.s3_client as client:
+            presigned_url = await client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": BUCKET_NAME, "Key": document.file_key},
+                ExpiresIn=60,  # URL expiration in seconds
+            )
         return presigned_url
 
     # Delete a file from S3 and remove the entry from the database
@@ -113,7 +113,8 @@ class DocumentService:
             raise Exception("Document not found")
 
         # Delete the file from S3
-        self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        async with self.s3_client as client:
+            await client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
 
         # Delete the entry from the database
         await self.db.delete(document)
@@ -144,5 +145,8 @@ class DocumentService:
         if not document:
             raise Exception("Document not found")
 
-        response = self.s3_client.get_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        async with self.s3_client as client:
+            response = await client.get_object(
+                Bucket=BUCKET_NAME, Key=document.file_key
+            )
         return response, document
