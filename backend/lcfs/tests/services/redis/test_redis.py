@@ -1,63 +1,64 @@
-import uuid
-
 import pytest
+from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI
-from httpx import AsyncClient
-from redis.asyncio import ConnectionPool, Redis
-from starlette import status
+from redis.exceptions import RedisError
+from lcfs.services.redis.lifetime import init_redis, shutdown_redis
 
 
 @pytest.mark.anyio
-async def test_setting_value(
-    fastapi_app: FastAPI,
-    fake_redis_pool: ConnectionPool,
-    client: AsyncClient,
-) -> None:
+async def test_init_redis_success():
     """
-    Tests that you can set value in redis.
-
-    :param fastapi_app: current application fixture.
-    :param fake_redis_pool: fake redis pool.
-    :param client: client fixture.
+    Test Redis initialization succeeds and pings the client.
     """
-    url = fastapi_app.url_path_for("set_redis_value")
+    app = FastAPI()
+    mock_redis = AsyncMock()
 
-    test_key = uuid.uuid4().hex
-    test_val = uuid.uuid4().hex
-    response = await client.put(
-        url,
-        json={
-            "key": test_key,
-            "value": test_val,
-        },
-    )
+    with patch("lcfs.services.redis.lifetime.Redis", return_value=mock_redis):
+        # Mock Redis ping to simulate successful connection
+        mock_redis.ping.return_value = True
 
-    assert response.status_code == status.HTTP_200_OK
-    async with Redis(connection_pool=fake_redis_pool) as redis:
-        actual_value = await redis.get(test_key)
-    assert actual_value.decode() == test_val
+        await init_redis(app)
+
+        assert app.state.redis_client is mock_redis
+        mock_redis.ping.assert_called_once()
+        mock_redis.close.assert_not_called()
 
 
 @pytest.mark.anyio
-async def test_getting_value(
-    fastapi_app: FastAPI,
-    fake_redis_pool: ConnectionPool,
-    client: AsyncClient,
-) -> None:
+async def test_init_redis_failure():
     """
-    Tests that you can get value from redis by key.
-
-    :param fastapi_app: current application fixture.
-    :param fake_redis_pool: fake redis pool.
-    :param client: client fixture.
+    Test Redis initialization fails during connection.
     """
-    test_key = uuid.uuid4().hex
-    test_val = uuid.uuid4().hex
-    async with Redis(connection_pool=fake_redis_pool) as redis:
-        await redis.set(test_key, test_val)
-    url = fastapi_app.url_path_for("get_redis_value")
-    response = await client.get(url, params={"key": test_key})
+    app = FastAPI()
 
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["key"] == test_key
-    assert response.json()["value"] == test_val
+    with patch(
+        "lcfs.services.redis.lifetime.Redis",
+        side_effect=RedisError("Connection failed"),
+    ):
+        with pytest.raises(RedisError, match="Connection failed"):
+            await init_redis(app)
+
+        assert not hasattr(app.state, "redis_client")
+
+
+@pytest.mark.anyio
+async def test_shutdown_redis_success():
+    """
+    Test Redis client shutdown succeeds.
+    """
+    app = FastAPI()
+    mock_redis = AsyncMock()
+    app.state.redis_client = mock_redis
+
+    await shutdown_redis(app)
+
+    mock_redis.close.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_shutdown_redis_no_client():
+    """
+    Test Redis shutdown when no client exists.
+    """
+    app = FastAPI()
+    await shutdown_redis(app)  # Should not raise any exceptions

@@ -75,20 +75,6 @@ export const ViewOrganization = () => {
     }
   }, [])
 
-  const getRowHeight = useCallback((params) => {
-    const actualWidth = params.api.getColumn('role').getActualWidth()
-    return calculateRowHeight(actualWidth, params.data?.roles)
-  }, [])
-
-  const onColumnResized = useCallback((params) => {
-    const actualWidth = params.api.getColumn('role').getActualWidth()
-    params.api.resetRowHeights()
-    params.api.forEachNode((node) => {
-      const rowHeight = calculateRowHeight(actualWidth, node.data?.roles)
-      node.setRowHeight(rowHeight)
-    })
-  }, [])
-
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found',
     includeHiddenColumnsInQuickFilter: true
@@ -348,8 +334,6 @@ export const ViewOrganization = () => {
           handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           enableResetButton={false}
-          getRowHeight={getRowHeight}
-          onColumnResized={onColumnResized}
         />
       </BCBox>
     </>

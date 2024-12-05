@@ -14,6 +14,7 @@ def main() -> None:
             reload=settings.reload,
             log_level=settings.log_level.value.lower(),
             factory=True,
+            timeout_keep_alive=settings.timeout_keep_alive,
         )
     except Exception as e:
         print(e)

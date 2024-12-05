@@ -108,7 +108,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   {
     field: 'fuelType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -177,7 +177,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   {
     field: 'fuelCategory',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -279,12 +279,12 @@ export const fuelExportColDefs = (optionsData, errors) => [
       }
       return true
     },
-    minWidth: 260
+    minWidth: 400
   },
   {
     field: 'provisionOfTheAct',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.provisionOfTheAct'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.provisionOfTheActId'),
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
       params.value ||

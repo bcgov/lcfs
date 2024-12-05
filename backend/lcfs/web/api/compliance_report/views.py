@@ -19,7 +19,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
     ComplianceReportSummarySchema,
-    ComplianceReportUpdateSchema, ComplianceReportSummaryUpdateSchema,
+    ChainedComplianceReportSchema,
+    ComplianceReportUpdateSchema,
+    ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
@@ -66,12 +68,12 @@ async def get_compliance_reports(
     pagination.filters.append(
         FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual")
     )
-    return  await service.get_compliance_reports_paginated(pagination)
+    return await service.get_compliance_reports_paginated(pagination)
 
 
 @router.get(
     "/{report_id}",
-    response_model=ComplianceReportBaseSchema,
+    response_model=ChainedComplianceReportSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
@@ -80,12 +82,16 @@ async def get_compliance_report_by_id(
     report_id: int,
     service: ComplianceReportServices = Depends(),
     validate: ComplianceReportValidation = Depends(),
-) -> ComplianceReportBaseSchema:
+) -> ChainedComplianceReportSchema:
     await validate.validate_organization_access(report_id)
 
     mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
 
-    return await service.get_compliance_report_by_id(report_id, mask_statuses)
+    result = await service.get_compliance_report_by_id(
+        report_id, mask_statuses, get_chain=True
+    )
+
+    return result
 
 
 @router.get(
@@ -127,6 +133,7 @@ async def update_compliance_report_summary(
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
     )
+
 
 @view_handler(["*"])
 @router.put(
