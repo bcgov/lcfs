@@ -26,7 +26,6 @@ from lcfs.web.api.fuel_code.schema import (
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
-    DeleteFuelCodeResponseSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.core.decorators import view_handler

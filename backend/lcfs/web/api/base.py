@@ -21,8 +21,10 @@ class BaseSchema(BaseModel):
         from_attributes=True,
     )
 
+
 class ComplianceReportRequestSchema(BaseSchema):
     compliance_report_id: int
+
 
 def row_to_dict(row, schema):
     d = {}
@@ -222,6 +224,7 @@ def apply_number_filter_conditions(field, filter_value, filter_option):
             "greaterThanOrEqual": field >= int(filter_value),
             "lessThan": field < int(filter_value),
             "lessThanOrEqual": field <= int(filter_value),
+            "startsWith": cast(field, String).like(f"{filter_value}%"),
         }
         return number_filter_mapping.get(filter_option)
 

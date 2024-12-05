@@ -166,7 +166,12 @@ export const userLoginHistoryColDefs = (t) => [
   {
     field: 'userLoginHistoryId',
     headerName: t('admin:userLoginHistoryColLabels.userLoginHistoryId'),
-    cellDataType: 'number'
+    cellDataType: 'number',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'keycloakEmail',
@@ -234,7 +239,12 @@ export const auditLogColDefs = (t) => [
     headerName: t('admin:auditLogColLabels.rowId'),
     minWidth: 100,
     sortable: true,
-    filter: 'agTextColumnFilter'
+    cellDataType: 'number',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     colId: 'changedFields',

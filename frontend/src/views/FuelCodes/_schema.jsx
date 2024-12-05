@@ -14,7 +14,6 @@ import {
   NumberEditor
 } from '@/components/BCDataGrid/components'
 
-
 export const fuelCodeColDefs = (t) => [
   {
     field: 'status',
@@ -31,13 +30,24 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'fuelSuffix',
     headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
-    cellRenderer: TextRenderer
+    cellRenderer: TextRenderer,
+    type: 'numericColumn',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'carbonIntensity',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellRenderer: TextRenderer,
-    type: 'numericColumn'
+    type: 'numericColumn',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'edrms',

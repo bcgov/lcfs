@@ -1,5 +1,5 @@
 from datetime import date
-from typing import List, Dict, Any, Union, Optional, Sequence, TypedDict
+from typing import List, Dict, Any, Union, Optional, Sequence
 
 import structlog
 from fastapi import Depends
@@ -25,7 +25,7 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import get_field_for_filter, PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
 from dataclasses import dataclass
@@ -276,19 +276,18 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_fuel_codes_paginated(
-        self, pagination: PaginationRequestSchema
+        self, pagination: PaginationRequestSchema, conditions: list
     ) -> tuple[Sequence[FuelCode], int]:
         """
-        Queries fuel codes from the database with optional filters. Supports pagination and sorting.
+        Queries fuel codes from the database with optional filters and sorting.
 
         Args:
-            pagination (dict): Pagination and sorting parameters.
+            pagination (PaginationRequestSchema): Pagination and sorting parameters.
+            conditions (list): List of SQLAlchemy conditions to apply.
 
         Returns:
-            List[FuelCodeSchema]: A list of fuel codes matching the query.
+            Tuple containing a list of FuelCode instances and the total count.
         """
-        conditions = []
-        # TODO: Filtering and Sorting logic needs to be added.
         delete_status = await self.get_fuel_status_by_status("Deleted")
         # setup pagination
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
@@ -310,14 +309,38 @@ class FuelCodeRepository:
             )
             .where(FuelCode.fuel_status_id != delete_status.fuel_code_status_id)
         )
+
+        # Apply the conditions
+        if conditions:
+            query = query.where(and_(*conditions))
+
+        # Apply sorting
+        if pagination.sort_orders:
+            for order in pagination.sort_orders:
+                field_name = order.field
+                direction = order.direction
+                if field_name == "fuel_code":
+                    # Handle sorting for 'fuel_code' field
+                    field = func.concat(
+                        FuelCode.fuel_code_prefix.prefix, FuelCode.fuel_suffix
+                    )
+                else:
+                    field = get_field_for_filter(FuelCode, field_name)
+                if field is not None:
+                    if direction.lower() == "asc":
+                        query = query.order_by(field.asc())
+                    else:
+                        query = query.order_by(field.desc())
+        else:
+            # Default sorting
+            query = query.order_by(FuelCode.create_date.desc())
+
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
         total_count = (await self.db.execute(count_query)).scalar()
 
         # Execute the main query to retrieve all fuel codes
-        result = await self.db.execute(
-            query.offset(offset).limit(limit).order_by(FuelCode.create_date.desc())
-        )
+        result = await self.db.execute(query.offset(offset).limit(limit))
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
 
@@ -684,7 +707,10 @@ class FuelCodeRepository:
         result = await self.db.execute(
             select(FuelCode)
             .join(FuelCode.fuel_code_prefix)
-            .join(FuelCodeStatus, FuelCode.fuel_status_id == FuelCodeStatus.fuel_code_status_id)
+            .join(
+                FuelCodeStatus,
+                FuelCode.fuel_status_id == FuelCodeStatus.fuel_code_status_id,
+            )
             .outerjoin(FuelType, FuelCode.fuel_type_id == FuelType.fuel_type_id)
             .options(
                 contains_eager(FuelCode.fuel_code_prefix),
@@ -693,7 +719,8 @@ class FuelCodeRepository:
             )
             .where(
                 and_(
-                    func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix) == fuel_code,
+                    func.concat(FuelCodePrefix.prefix, FuelCode.fuel_suffix)
+                    == fuel_code,
                     FuelCodeStatus.status != FuelCodeStatusEnum.Deleted,
                 )
             )
