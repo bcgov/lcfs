@@ -251,12 +251,12 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       }
       return true
     },
-    minWidth: 260
+    minWidth: 400
   },
   {
     field: 'provisionOfTheAct',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheAct'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheActId'),
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
       params.value ||
