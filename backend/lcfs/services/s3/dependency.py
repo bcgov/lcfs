@@ -1,20 +1,32 @@
-from starlette.requests import Request
-from aioboto3 import Session
+import boto3
+from typing import Generator
+from lcfs.settings import settings
 
 
-# S3 Client Dependency
-async def get_s3_client(
-    request: Request,
-) -> Session.client:
+def get_s3_client() -> Generator:
     """
-    Returns the S3 client from the application state.
+    Dependency function to provide a synchronous S3 client using boto3.
+
+    This function creates a new S3 client session for each request that requires it.
+    The client is properly configured with the necessary AWS credentials and
+    endpoint settings.
 
     Usage:
-        >>> async def handler(s3_client = Depends(get_s3_client)):
-        >>>     async with s3_client as client:
-        >>>         await client.upload_fileobj('file.txt', 'my-bucket', 'file.txt')
-
-    :param request: Current request object.
-    :returns: S3 client.
+        >>> def some_endpoint(s3_client = Depends(get_s3_client)):
+        >>>     # Use the s3_client here
     """
-    return request.app.state.s3_client
+    # Initialize the S3 client with the required configurations
+    client = boto3.client(
+        "s3",
+        aws_access_key_id=settings.s3_access_key,  # Your AWS access key
+        aws_secret_access_key=settings.s3_secret_key,  # Your AWS secret key
+        endpoint_url=settings.s3_endpoint,  # Custom S3 endpoint (if any)
+        region_name="us-east-1",  # AWS region
+    )
+
+    try:
+        # Yield the S3 client to be used within the request scope
+        yield client
+    finally:
+        # boto3 clients do not require explicit closing, but this ensures cleanup if needed
+        pass
