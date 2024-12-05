@@ -1,39 +1,70 @@
-import { useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { List, ListItemText, Stack, Typography } from '@mui/material'
-import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-import { timezoneFormatter } from '@/utils/formatters'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { constructAddress } from '@/utils/constructAddress'
 import BCButton from '@/components/BCButton'
-import AssignmentIcon from '@mui/icons-material/Assignment'
-import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
-import Box from '@mui/material/Box'
-import { useNavigate } from 'react-router-dom'
+import BCTypography from '@/components/BCTypography'
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import { Role } from '@/components/Role'
 import { StyledListItem } from '@/components/StyledListItem'
 import { roles } from '@/constants/roles'
-import { Role } from '@/components/Role'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { constructAddress } from '@/utils/constructAddress'
+import { timezoneFormatter } from '@/utils/formatters'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { List, ListItemText, Stack, Typography, styled } from '@mui/material'
+import MuiAccordion from '@mui/material/Accordion'
+import MuiAccordionDetails from '@mui/material/AccordionDetails'
+import MuiAccordionSummary, {
+  accordionSummaryClasses
+} from '@mui/material/AccordionSummary'
+import Box from '@mui/material/Box'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 
-export const AssessmentCard = ({
-  orgData,
-  hasMet,
-  history,
-  hasSupplemental,
-  isGovernmentUser,
-  currentStatus,
-  complianceReportId,
-  alertRef
-}) => {
-  const { t } = useTranslation(['report'])
-  const navigate = useNavigate()
+const Accordion = styled((props) => (
+  <MuiAccordion disableGutters elevation={0} square {...props} />
+))(() => ({
+  border: `none`,
+  '&::before': {
+    display: 'none'
+  }
+}))
 
+const AccordionSummary = styled((props) => (
+  <MuiAccordionSummary
+    expandIcon={<ExpandMoreIcon sx={{ fontSize: '0.9rem' }} />}
+    {...props}
+  />
+))(() => ({
+  minHeight: 'unset',
+  padding: 0,
+  flexDirection: 'row-reverse',
+  [`& .${accordionSummaryClasses.content}`]: {
+    margin: 0
+  },
+  [`& .${accordionSummaryClasses.expanded}`]: {
+    margin: 0
+  }
+}))
+
+const AccordionDetails = styled(MuiAccordionDetails)(() => ({
+  paddingLeft: '1rem',
+  paddingTop: 0,
+  paddingBottom: 0
+}))
+
+const HistoryCard = ({ report }) => {
+  const { data: currentUser } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const { t } = useTranslation(['report'])
   const filteredHistory = useMemo(() => {
-    if (!history || history.length === 0) {
+    if (!report.history || report.history.length === 0) {
       return []
     }
     // Sort the history array by date in descending order
-    return [...history]
+    return [...report.history]
       .sort((a, b) => {
         return new Date(b.createDate) - new Date(a.createDate)
       })
@@ -46,12 +77,61 @@ export const AssessmentCard = ({
         }
         return item
       })
-      .filter(
-        (item) =>
-          item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT ||
-          hasSupplemental
-      )
-  }, [history, isGovernmentUser, hasSupplemental])
+      .filter((item) => item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT)
+  }, [isGovernmentUser, report.history])
+  return (
+    <Accordion>
+      <AccordionSummary
+        expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+        aria-controls="panel1-content"
+      >
+        <BCTypography color="link" variant="body2">
+          {report.version === 0
+            ? `${report.compliancePeriod.description} Compliance Report`
+            : report.nickname}
+          : {report.currentStatus.status}
+        </BCTypography>
+      </AccordionSummary>
+      <AccordionDetails>
+        <List>
+          {filteredHistory.map((item, index) => (
+            <StyledListItem key={index} disablePadding>
+              <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: t(
+                      `report:complianceReportHistory.${item.status.status}`,
+                      {
+                        createDate: timezoneFormatter({
+                          value: item?.createDate
+                        }),
+                        firstName: item.userProfile.firstName,
+                        lastName: item.userProfile.lastName
+                      }
+                    )
+                  }}
+                />
+              </ListItemText>
+            </StyledListItem>
+          ))}
+        </List>
+      </AccordionDetails>
+    </Accordion>
+  )
+}
+
+export const AssessmentCard = ({
+  orgData,
+  hasMet,
+  hasSupplemental,
+  isGovernmentUser,
+  currentStatus,
+  complianceReportId,
+  alertRef,
+  chain
+}) => {
+  const { t } = useTranslation(['report'])
+  const navigate = useNavigate()
 
   const { mutate: createSupplementalReport, isLoading } =
     useCreateSupplementalReport(complianceReportId, {
@@ -166,7 +246,7 @@ export const AssessmentCard = ({
                 </List>
               </>
             )}
-            {!!filteredHistory.length && (
+            {!!chain.length && (
               <>
                 <Typography
                   sx={{ paddingTop: '16px' }}
@@ -176,32 +256,12 @@ export const AssessmentCard = ({
                 >
                   {t('report:reportHistory')}
                 </Typography>
-                <List sx={{ padding: 0 }}>
-                  {filteredHistory.map((item, index) => (
-                    <StyledListItem key={index} disablePadding>
-                      <ListItemText
-                        primaryTypographyProps={{ variant: 'body4' }}
-                      >
-                        <span
-                          dangerouslySetInnerHTML={{
-                            __html: t(
-                              `report:complianceReportHistory.${item.status.status}`,
-                              {
-                                createDate: timezoneFormatter({
-                                  value: item?.createDate
-                                }),
-                                firstName: item.userProfile.firstName,
-                                lastName: item.userProfile.lastName
-                              }
-                            )
-                          }}
-                        />
-                      </ListItemText>
-                    </StyledListItem>
-                  ))}
-                </List>
+                {chain.map((report) => (
+                  <HistoryCard key={report.version} report={report} />
+                ))}
               </>
             )}
+
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
