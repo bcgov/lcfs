@@ -33,11 +33,13 @@ class FSEOptionsSchema(BaseSchema):
     levels_of_equipment: List[LevelOfEquipmentSchema]
     intended_user_types: List[EndUserTypeSchema]
     ports: List[PortsEnum]
+    organizations: List[str]
 
 
 class FinalSupplyEquipmentCreateSchema(BaseSchema):
     final_supply_equipment_id: Optional[int] = None
     compliance_report_id: Optional[int] = None
+    organization: str
     supply_from_date: date
     supply_to_date: date
     kwh_usage: float

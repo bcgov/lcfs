@@ -12,7 +12,7 @@ import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import moment from 'moment'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers'
+import { StandardCellWarningAndErrors, StandardCellErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 
@@ -40,6 +40,42 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     hide: true
+  },
+  {
+    field: 'organization',
+    headerComponent: RequiredHeader,
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.organization'
+    ),
+    cellEditor: AutocompleteCellEditor,
+    cellRenderer: (params) =>
+      params.value ||
+      (!params.value && <Typography variant="body4">Select</Typography>),
+    cellEditorParams: {
+      options: optionsData?.organizations?.sort() || [],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: true,
+      openOnFocus: true,
+    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors),
+    suppressKeyboardEvent,
+    minWidth: 260,
+    editable: true,
+    valueGetter: (params) => {
+      return params.data?.organization || '';
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        const isValidOrganization = optionsData?.organizations.includes(params.newValue);
+
+        params.data.organization = isValidOrganization ? params.newValue : params.newValue;
+        return true;
+      }
+      return false;
+    },
+  tooltipValueGetter: (params) => "Select the organization from the list"
   },
   {
     field: 'supplyFrom',

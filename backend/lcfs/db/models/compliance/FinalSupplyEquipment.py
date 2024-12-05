@@ -123,6 +123,7 @@ class FinalSupplyEquipment(BaseModel, Auditable):
         Double, nullable=False, comment="The longitude of the equipment location."
     )
     notes = Column(Text, comment="Any additional notes related to the equipment.")
+    organization = Column(Text, comment="External organization.")
 
     # relationships
     compliance_report = relationship(

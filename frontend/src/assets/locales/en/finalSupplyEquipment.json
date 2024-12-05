@@ -27,6 +27,7 @@
   "rows": "rows",
   "finalSupplyEquipmentColLabels": {
     "complianceReportId": "Compliance Report ID",
+    "organization": "Organization",
     "supplyFrom": "Supply date range",
     "kwhUsage":"kWh usage",
     "supplyFromDate": "Dates of supply from",
