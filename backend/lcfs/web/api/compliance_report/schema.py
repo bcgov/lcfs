@@ -160,6 +160,11 @@ class ComplianceReportBaseSchema(BaseSchema):
     has_supplemental: bool
 
 
+class ChainedComplianceReportSchema(BaseSchema):
+    report: ComplianceReportBaseSchema
+    chain: Optional[List[ComplianceReportBaseSchema]] = []
+
+
 class ComplianceReportCreateSchema(BaseSchema):
     compliance_period: str
     organization_id: int
