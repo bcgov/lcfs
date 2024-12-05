@@ -8,6 +8,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 docs/
+.DS_Store
 
 # C extensions
 *.so
