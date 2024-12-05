@@ -172,8 +172,8 @@ async def test_get_notification_channel_subscription_by_id(
         mock_subscription = SubscriptionSchema(
             notification_channel_subscription_id=1,
             user_profile_id=1,  # Match mock user
-            notification_channel_key="email",
-            notification_type_key="new_message",
+            notification_channel_name="EMAIL",
+            notification_type_name="BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT",
             is_enabled=True,
         )
         mock_get_subscription.return_value = mock_subscription

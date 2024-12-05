@@ -5,11 +5,11 @@ const IDIRComplianceManagerNotificationSettings = () => {
   const categories = {
     'idirComplianceManager.categories.complianceReports': {
       title: 'idirComplianceManager.categories.complianceReports.title',
-      IDIR_CM__CR__SUBMITTED_FOR_REVIEW:
+      IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW:
         'idirComplianceManager.categories.complianceReports.submittedForReview',
-      IDIR_CM__CR__ANALYST_RECOMMENDATION:
+      IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__ANALYST_RECOMMENDATION:
         'idirComplianceManager.categories.complianceReports.analystRecommendation',
-      IDIR_CM__CR__DIRECTOR_ASSESSMENT:
+      IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT:
         'idirComplianceManager.categories.complianceReports.directorAssessment'
     }
   }

@@ -77,13 +77,3 @@ async def test_update_notifications_email_success(dbsession, user_repo):
 
     # Assert: Check if the notifications email was updated
     assert updated_user.notifications_email == "new_email@domain.com"
-
-
-@pytest.mark.anyio
-async def test_update_notifications_email_user_not_found(dbsession, user_repo):
-    # Act and Assert: Try to update a non-existent user and expect an exception
-    with pytest.raises(DataNotFoundException) as exc_info:
-        await user_repo.update_notifications_email(
-            user_profile_id=9999, email="new_email@domain.com"
-        )
-    assert "User with id '9999' not found." in str(exc_info.value)

@@ -33,9 +33,9 @@ class DeleteNotificationMessageResponseSchema(BaseSchema):
 class SubscriptionSchema(BaseSchema):
     notification_channel_subscription_id: Optional[int] = None
     is_enabled: Optional[bool] = True
-    notification_channel_key: Optional[str] = None
+    notification_channel_name: Optional[str] = None
     user_profile_id: Optional[int] = None
-    notification_type_key: Optional[str] = None
+    notification_type_name: Optional[str] = None
     deleted: Optional[bool] = None
 
 

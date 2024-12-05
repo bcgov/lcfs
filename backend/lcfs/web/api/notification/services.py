@@ -2,6 +2,7 @@ from typing import Optional
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
+    ChannelEnum,
 )
 from lcfs.web.api.notification.schema import (
     SubscriptionSchema,
@@ -106,28 +107,29 @@ class NotificationService:
             raise DataNotFoundException(f"Notification with ID {notification_id}.")
 
     @service_handler
-    async def get_notification_type_id_by_key(self, key: str) -> int:
-        notification_type = await self.repo.get_notification_type_by_key(key)
+    async def get_notification_type_id_by_name(self, name: str) -> int:
+        notification_type = await self.repo.get_notification_type_by_name(name)
         if not notification_type:
-            raise ValueError(f"Invalid notification type key: {key}")
+            raise ValueError(f"Invalid notification type name: {name}")
         return notification_type
 
     @service_handler
-    async def get_notification_channel_id_by_key(self, key: str) -> int:
-        notification_channel = await self.repo.get_notification_channel_by_key(key)
+    async def get_notification_channel_id_by_name(self, name: ChannelEnum) -> int:
+        notification_channel = await self.repo.get_notification_channel_by_name(name)
         if not notification_channel:
-            raise ValueError(f"Invalid notification channel key: {key}")
+            raise ValueError(f"Invalid notification channel name: {name}")
         return notification_channel
 
     @service_handler
     async def create_notification_channel_subscription(
         self, subscription_data: SubscriptionSchema, user_profile_id: int
     ):
-        notification_channel_id = await self.get_notification_channel_id_by_key(
-            subscription_data.notification_channel_key
+        channel_enum_name = ChannelEnum(subscription_data.notification_channel_name)
+        notification_channel_id = await self.get_notification_channel_id_by_name(
+            channel_enum_name
         )
-        notification_type_id = await self.get_notification_type_id_by_key(
-            subscription_data.notification_type_key
+        notification_type_id = await self.get_notification_type_id_by_name(
+            subscription_data.notification_type_name
         )
 
         subscription = NotificationChannelSubscription(
@@ -151,16 +153,16 @@ class NotificationService:
             user_id
         )
 
-        subscriptions_with_keys = [
+        subscriptions_with_names = [
             {
                 "notification_channel_subscription_id": subscription.notification_channel_subscription_id,
-                "notification_channel_key": subscription.notification_channel.channel_name.name,
-                "notification_type_key": subscription.notification_type.name,
+                "notification_channel_name": subscription.notification_channel.channel_name.name,
+                "notification_type_name": subscription.notification_type.name,
             }
             for subscription in subscriptions
         ]
 
-        return subscriptions_with_keys
+        return subscriptions_with_names
 
     @service_handler
     async def get_notification_channel_subscription_by_id(

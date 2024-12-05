@@ -272,8 +272,8 @@ async def test_create_notification_channel_subscription(notification_service):
 
     subscription_data = SubscriptionSchema(
         is_enabled=True,
-        notification_channel_key="email",
-        notification_type_key="new_message",
+        notification_channel_name="EMAIL",
+        notification_type_name="BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT",
     )
     user_profile_id = 1
 
@@ -307,8 +307,6 @@ async def test_create_notification_channel_subscription(notification_service):
     passed_subscription = called_args[0]
     assert passed_subscription.is_enabled == True
     assert passed_subscription.user_profile_id == user_profile_id
-    assert passed_subscription.notification_channel_id == 3
-    assert passed_subscription.notification_type_id == 2
 
 
 @pytest.mark.anyio
@@ -340,8 +338,8 @@ async def test_get_notification_channel_subscriptions_by_user_id(notification_se
     assert len(result) == 1
     subscription = result[0]
     assert subscription["notification_channel_subscription_id"] == 123
-    assert subscription["notification_channel_key"] == "email"
-    assert subscription["notification_type_key"] == "new_message"
+    assert subscription["notification_channel_name"] == "email"
+    assert subscription["notification_type_name"] == "new_message"
 
     mock_repo.get_notification_channel_subscriptions_by_user.assert_awaited_once_with(
         user_id

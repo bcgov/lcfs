@@ -4,7 +4,6 @@ from lcfs.db.models.notification.NotificationChannel import (
     ChannelEnum,
     NotificationChannel,
 )
-from lcfs.db.models.notification.NotificationType import NotificationTypeEnum
 from lcfs.web.core.decorators import repo_handler
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
@@ -32,7 +31,7 @@ class CHESEmailRepository:
             .join(NotificationChannelSubscription.notification_channel)
             .filter(
                 NotificationChannelSubscription.notification_type.has(
-                    name=NotificationTypeEnum[notification_type.upper()]
+                    name=notification_type
                 ),
                 NotificationChannelSubscription.is_enabled == True,
                 NotificationChannel.channel_name
@@ -59,9 +58,7 @@ class CHESEmailRepository:
                 NotificationChannelSubscription.notification_type_id
                 == NotificationType.notification_type_id,
             )
-            .filter(
-                NotificationType.name == NotificationTypeEnum[notification_type.upper()]
-            )
+            .filter(NotificationType.name == notification_type)
             .limit(1)  # Fetch only one record
         )
 

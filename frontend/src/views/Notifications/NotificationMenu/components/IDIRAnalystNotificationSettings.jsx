@@ -5,25 +5,25 @@ const IDIRAnalystNotificationSettings = () => {
   const categories = {
     'idirAnalyst.categories.transfers': {
       title: 'idirAnalyst.categories.transfers.title',
-      IDIR_A__TR__SUBMITTED_FOR_REVIEW:
+      IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW:
         'idirAnalyst.categories.transfers.submittedForReview',
-      IDIR_A__TR__RESCINDED_ACTION:
+      IDIR_ANALYST__TRANSFER__RESCINDED_ACTION:
         'idirAnalyst.categories.transfers.rescindedAction',
-      IDIR_A__TR__DIRECTOR_RECORDED:
+      IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDEDIDIR_A__TR__DIRECTOR_RECORDED:
         'idirAnalyst.categories.transfers.directorRecorded'
     },
     'idirAnalyst.categories.initiativeAgreements': {
       title: 'idirAnalyst.categories.initiativeAgreements.title',
-      IDIR_A__IA__RETURNED_TO_ANALYST:
+      IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST:
         'idirAnalyst.categories.initiativeAgreements.returnedToAnalyst'
     },
     'idirAnalyst.categories.complianceReports': {
       title: 'idirAnalyst.categories.complianceReports.title',
-      IDIR_A__CR__SUBMITTED_FOR_REVIEW:
+      IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW:
         'idirAnalyst.categories.complianceReports.submittedForReview',
-      IDIR_A__CR__MANAGER_RECOMMENDATION:
+      IDIR_ANALYST__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION:
         'idirAnalyst.categories.complianceReports.managerRecommendation',
-      IDIR_A__CR__DIRECTOR_DECISION:
+      IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION:
         'idirAnalyst.categories.complianceReports.directorDecision'
     }
   }

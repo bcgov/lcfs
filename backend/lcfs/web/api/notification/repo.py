@@ -3,6 +3,7 @@ from lcfs.db.models.notification import (
     NotificationMessage,
     NotificationChannel,
     NotificationType,
+    ChannelEnum,
 )
 import structlog
 
@@ -163,7 +164,7 @@ class NotificationRepository:
         self, user_profile_id: int
     ) -> List[NotificationChannelSubscription]:
         """
-        Retrieve channel subscriptions for a user, including channel key and notification type key.
+        Retrieve channel subscriptions for a user, including channel name and notification type name.
         """
         query = (
             select(NotificationChannelSubscription)
@@ -221,24 +222,26 @@ class NotificationRepository:
         await self.db.flush()
 
     @repo_handler
-    async def get_notification_type_by_key(self, key: str) -> Optional[int]:
+    async def get_notification_type_by_name(self, name: str) -> Optional[int]:
         """
-        Retrieve a NotificationType by its key
+        Retrieve a NotificationType by its name
         """
         query = select(NotificationType.notification_type_id).where(
-            NotificationType.name == key
+            NotificationType.name == name
         )
         result = await self.db.execute(query)
         x = result.scalars().first()
         return x
 
     @repo_handler
-    async def get_notification_channel_by_key(self, key: str) -> Optional[int]:
+    async def get_notification_channel_by_name(
+        self, name: ChannelEnum
+    ) -> Optional[int]:
         """
-        Retrieve a NotificationChannel by its key
+        Retrieve a NotificationChannel by its name
         """
         query = select(NotificationChannel.notification_channel_id).where(
-            NotificationChannel.channel_name == key
+            NotificationChannel.channel_name == name.value
         )
         result = await self.db.execute(query)
         return result.scalars().first()

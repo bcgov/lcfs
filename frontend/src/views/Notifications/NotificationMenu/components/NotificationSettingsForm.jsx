@@ -68,9 +68,9 @@ const NotificationSettingsForm = ({
   useEffect(() => {
     if (subscriptionsData) {
       subscriptionsData.forEach((subscription) => {
-        const { notificationTypeKey, notificationChannelKey, isEnabled } =
+        const { notificationTypeName, notificationChannelName, isEnabled } =
           subscription
-        const fieldName = `${notificationTypeKey}_${notificationChannelKey}`
+        const fieldName = `${notificationTypeName}_${notificationChannelName}`
         setValue(fieldName, isEnabled)
       })
     }
@@ -80,8 +80,8 @@ const NotificationSettingsForm = ({
   }, [subscriptionsData, showEmailField, initialEmail, setValue])
 
   const handleCheckboxChange = async (
-    notificationTypeKey,
-    notificationChannelKey,
+    notificationTypeName,
+    notificationChannelName,
     isChecked
   ) => {
     setIsFormLoading(true)
@@ -90,16 +90,16 @@ const NotificationSettingsForm = ({
       if (isChecked) {
         // Create the subscription
         await createSubscription.mutateAsync({
-          notificationTypeKey,
-          notificationChannelKey,
+          notificationTypeName,
+          notificationChannelName,
           isEnabled: true
         })
       } else {
         // Find the subscription ID
         const subscription = subscriptionsData.find(
           (sub) =>
-            sub.notificationTypeKey === notificationTypeKey &&
-            sub.notificationChannelKey === notificationChannelKey
+            sub.notificationTypeName === notificationTypeName &&
+            sub.notificationChannelName === notificationChannelName
         )
         if (subscription) {
           // Delete the subscription
@@ -126,10 +126,6 @@ const NotificationSettingsForm = ({
           notifications_email: data.notificationEmail
         })
         setMessage(t('messages.emailSaved'))
-      }
-
-      if (!showEmailField) {
-        navigate(ROUTES.NOTIFICATIONS)
       }
     } catch (err) {
       setMessage(t('errors.operationFailed'))
@@ -197,7 +193,7 @@ const NotificationSettingsForm = ({
                 md: 'column' // Column layout on larger screens
               },
               justifyContent: 'flex-end',
-              alignItems: 'flex-end',
+              alignItems: 'flex-start',
               gap: 2,
               mt: {
                 xs: 0, // Margin-top on mobile devices
@@ -220,7 +216,9 @@ const NotificationSettingsForm = ({
                 }
               }}
             >
-              <MailIcon sx={{ color: '#578260' }} />
+              <MailIcon
+                sx={{ color: '#578260', width: '22px', height: '22px' }}
+              />
               <BCTypography variant="body2" sx={{ color: 'text.primary' }}>
                 {t('emailNotification')}
               </BCTypography>
@@ -238,7 +236,9 @@ const NotificationSettingsForm = ({
                 }
               }}
             >
-              <NotificationsIcon sx={{ color: '#578260' }} />
+              <NotificationsIcon
+                sx={{ color: '#578260', width: '22px', height: '22px' }}
+              />
               <BCTypography variant="body2" sx={{ color: 'text.primary' }}>
                 {t('inAppNotification')}
               </BCTypography>
@@ -264,7 +264,13 @@ const NotificationSettingsForm = ({
                             paddingTop: index === 0 ? 1 : 4
                           }}
                         >
-                          <MailIcon style={{ color: '#578260' }} />
+                          <MailIcon
+                            style={{
+                              color: '#578260',
+                              width: '22px',
+                              height: '22px'
+                            }}
+                          />
                         </TableCell>
                         <TableCell
                           align="center"
@@ -275,7 +281,13 @@ const NotificationSettingsForm = ({
                             paddingTop: index === 0 ? 1 : 4
                           }}
                         >
-                          <NotificationsIcon style={{ color: '#578260' }} />
+                          <NotificationsIcon
+                            style={{
+                              color: '#578260',
+                              width: '22px',
+                              height: '22px'
+                            }}
+                          />
                         </TableCell>
                         <TableCell
                           sx={{
@@ -391,16 +403,18 @@ const NotificationSettingsForm = ({
                       padding: '10px'
                     }}
                   >
-                    <BCButton
-                      type="submit"
-                      variant="contained"
-                      size="medium"
-                      color="primary"
-                      sx={{ marginTop: 5, marginBottom: 3 }}
-                      disabled={isFormLoading} // Disable during loading
-                    >
-                      {t('saveButton')}
-                    </BCButton>
+                    {showEmailField && (
+                      <BCButton
+                        type="submit"
+                        variant="contained"
+                        size="medium"
+                        color="primary"
+                        sx={{ marginTop: 5, marginBottom: 3 }}
+                        disabled={isFormLoading}
+                      >
+                        {t('saveButton')}
+                      </BCButton>
+                    )}
                   </TableCell>
                   <TableCell
                     sx={{

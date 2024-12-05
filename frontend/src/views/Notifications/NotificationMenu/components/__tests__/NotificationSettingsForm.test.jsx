@@ -69,14 +69,14 @@ describe('NotificationSettingsForm Component', () => {
 
     const subscriptionsData = [
       {
-        notificationTypeKey: 'notificationType1',
-        notificationChannelKey: 'EMAIL',
+        notificationTypeName: 'notificationType1',
+        notificationChannelName: 'EMAIL',
         isEnabled: true,
         notificationChannelSubscriptionId: '1'
       },
       {
-        notificationTypeKey: 'notificationType2',
-        notificationChannelKey: 'IN_APP',
+        notificationTypeName: 'notificationType2',
+        notificationChannelName: 'IN_APP',
         isEnabled: true,
         notificationChannelSubscriptionId: '2'
       }

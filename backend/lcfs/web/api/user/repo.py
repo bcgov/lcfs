@@ -679,10 +679,6 @@ class UserRepository:
         result = await self.db.execute(query)
         user_profile = result.scalar_one_or_none()
 
-        if not user_profile:
-            logger.warning(f"User with ID {user_profile_id} not found.")
-            raise DataNotFoundException(f"User with id '{user_profile_id}' not found.")
-
         # Update the notifications_email field
         user_profile.notifications_email = email
 
