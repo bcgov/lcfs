@@ -52,7 +52,8 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(
+                f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -193,6 +194,7 @@ class ComplianceReportServices:
                     ComplianceReportStatusEnum.Submitted.value
                 )
                 report.current_status.compliance_report_status_id = None
+
                 masked_reports.append(report)
             else:
                 masked_reports.append(report)
@@ -201,21 +203,44 @@ class ComplianceReportServices:
 
     @service_handler
     async def get_compliance_report_by_id(
-        self, report_id: int, apply_masking: bool = False
-    ) -> ComplianceReportBaseSchema:
+        self, report_id: int, apply_masking: bool = False, get_chain: bool = False
+    ):
         """Fetches a specific compliance report by ID."""
         report = await self.repo.get_compliance_report_by_id(report_id)
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
+
         validated_report = ComplianceReportBaseSchema.model_validate(report)
         masked_report = (
             self._mask_report_status([validated_report])[0]
             if apply_masking
             else validated_report
         )
+
         history_masked_report = self._mask_report_status_for_history(
             masked_report, apply_masking
         )
+
+        if get_chain:
+            compliance_report_chain = await self.repo.get_compliance_report_chain(
+                report.compliance_report_group_uuid
+            )
+
+            if apply_masking:
+                # Apply masking to each report in the chain
+                masked_chain = self._mask_report_status(
+                    compliance_report_chain)
+                # Apply history masking to each report in the chain
+                masked_chain = [
+                    self._mask_report_status_for_history(report, apply_masking)
+                    for report in masked_chain
+                ]
+                compliance_report_chain = masked_chain
+
+            return {
+                "report": history_masked_report,
+                "chain": compliance_report_chain,
+            }
 
         return history_masked_report
 

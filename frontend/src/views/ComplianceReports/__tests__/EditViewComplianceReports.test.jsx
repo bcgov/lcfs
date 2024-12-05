@@ -91,10 +91,11 @@ describe('EditViewComplianceReport', () => {
       },
       complianceReport: {
         data: {
-          data: {
+          report: {
             organizationId: '123',
             currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
-          }
+          },
+          chain: []
         },
         isLoading: false,
         isError: false
@@ -192,9 +193,10 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
+          report: {
             currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
-          }
+          },
+          chain: []
         }
       },
       currentUser: {
@@ -214,11 +216,12 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
+          report: {
             currentStatus: {
               status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
             }
-          }
+          },
+          chain: []
         }
       },
       currentUser: {
@@ -241,11 +244,12 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
+          report: {
             currentStatus: {
               status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
             }
-          }
+          },
+          chain: []
         }
       },
       currentUser: {
@@ -268,9 +272,10 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
+          report: {
             currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-          }
+          },
+          chain: []
         }
       },
       currentUser: {
@@ -290,9 +295,10 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: {
+          report: {
             currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
-          }
+          },
+          chain: []
         }
       },
       currentUser: { data: { isGovernmentUser: false }, hasRoles: () => false }
@@ -340,7 +346,10 @@ describe('EditViewComplianceReport', () => {
     setupMocks({
       complianceReport: {
         data: {
-          data: { currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT } }
+          report: {
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
+          },
+          chain: []
         }
       }
     })
@@ -366,10 +375,20 @@ describe('EditViewComplianceReport', () => {
 
     vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
       data: {
-        data: {
+        report: {
           currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
           history: historyMock
-        }
+        },
+        chain: [
+          {
+            history: historyMock,
+            version: 0,
+            compliancePeriod: {
+              description: '2024'
+            },
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+          }
+        ]
       },
       isLoading: false,
       isError: false
@@ -400,5 +419,4 @@ describe('EditViewComplianceReport', () => {
       expect(screen.getByLabelText('scroll to top')).toBeInTheDocument()
     })
   })
-
 })
