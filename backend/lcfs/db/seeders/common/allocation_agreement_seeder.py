@@ -18,15 +18,15 @@ async def seed_allocation_transaction_types(session):
     allocation_transaction_types_to_seed = [
         {
             "allocation_transaction_type_id": 1,
-            "type": "Purchased",
-            "description": "Fuel purchased under an allocation agreement",
+            "type": "Allocated from",
+            "description": "Fuel allocated from another supplier under an allocation agreement",
             "display_order": 1,
             "effective_date": datetime.strptime("2012-01-01", "%Y-%m-%d").date(),
         },
         {
             "allocation_transaction_type_id": 2,
-            "type": "Sold",
-            "description": "Fuel sold under an allocation agreement",
+            "type": "Allocated to",
+            "description": "Fuel allocated to another supplier under an allocation agreement",
             "display_order": 2,
             "effective_date": datetime.strptime("2012-01-01", "%Y-%m-%d").date(),
         },
@@ -43,7 +43,6 @@ async def seed_allocation_transaction_types(session):
                 transaction_type = AllocationTransactionType(**type_data)
                 session.add(transaction_type)
 
-        logger.info("Successfully seeded allocation transaction types.")
     except Exception as e:
         context = {
             "function": "seed_allocation_transaction_types",

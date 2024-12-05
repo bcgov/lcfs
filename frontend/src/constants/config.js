@@ -28,6 +28,15 @@ export function getApiBaseUrl() {
   return window.lcfs_config.api_base ?? baseUrl
 }
 
+export const isFeatureEnabled = (featureFlag) => {
+  return CONFIG.feature_flags[featureFlag]
+}
+
+export const FEATURE_FLAGS = {
+  SUPPLEMENTAL_REPORTING: 'supplementalReporting',
+  NOTIFICATIONS: 'notifications'
+}
+
 export const CONFIG = {
   API_BASE: getApiBaseUrl(),
   KEYCLOAK: {
@@ -42,5 +51,10 @@ export const CONFIG = {
     SM_LOGOUT_URL:
       window.lcfs_config.keycloak.SM_LOGOUT_URL ??
       'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
+  },
+  feature_flags: {
+    supplementalReporting:
+      window.lcfs_config.feature_flags.supplementalReporting ?? true,
+    notifications: window.lcfs_config.feature_flags.notifications ?? false
   }
 }

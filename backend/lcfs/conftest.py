@@ -37,7 +37,7 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.db.seeders.seed_database import seed_database
 from lcfs.db.utils import create_test_database, drop_test_database
-from lcfs.services.redis.dependency import get_redis_pool
+from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
 from lcfs.web.application import get_app
 
@@ -118,19 +118,20 @@ async def dbsession(
 
 
 @pytest.fixture
-async def fake_redis_pool() -> AsyncGenerator[ConnectionPool, None]:
+async def fake_redis_client() -> AsyncGenerator[aioredis.FakeRedis, None]:
     """
-    Get instance of a fake redis.
+    Get instance of a fake Redis client.
 
-    :yield: FakeRedis instance.
+    :yield: FakeRedis client instance.
     """
     server = FakeServer()
     server.connected = True
-    pool = ConnectionPool(connection_class=FakeConnection, server=server)
+    redis_client = aioredis.FakeRedis(server=server, decode_responses=True)
 
-    yield pool
-
-    await pool.disconnect()
+    try:
+        yield redis_client
+    finally:
+        await redis_client.close()
 
 
 @pytest.fixture
@@ -153,26 +154,24 @@ async def dbsession_factory(
 @pytest.fixture
 def fastapi_app(
     dbsession: AsyncSession,
-    fake_redis_pool: ConnectionPool,
+    fake_redis_client: aioredis.FakeRedis,
     set_mock_user,  # Fixture for setting up mock authentication
     user_roles: List[RoleEnum] = [RoleEnum.ADMINISTRATOR],  # Default role
 ) -> FastAPI:
     # Create the FastAPI application instance
     application = get_app()
     application.dependency_overrides[get_async_db_session] = lambda: dbsession
-    application.dependency_overrides[get_redis_pool] = lambda: fake_redis_pool
+    application.dependency_overrides[get_redis_client] = lambda: fake_redis_client
 
     # Set up application state for testing
-    application.state.redis_pool = fake_redis_pool
-    # application.state.db_session_factory = test_session_factory
+    application.state.redis_client = fake_redis_client
     application.state.settings = settings
 
     # Set up mock authentication backend with the specified roles
     set_mock_user(application, user_roles)
 
     # Initialize the cache with fake Redis backend
-    fake_redis = aioredis.FakeRedis(connection_pool=fake_redis_pool)
-    FastAPICache.init(RedisBackend(fake_redis), prefix="lcfs")
+    FastAPICache.init(RedisBackend(fake_redis_client), prefix="lcfs")
 
     return application
 

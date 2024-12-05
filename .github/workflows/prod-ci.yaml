@@ -42,16 +42,31 @@ jobs:
               echo "IMAGE_TAG retrieved from Test is $imagetag"
               echo "IMAGE_TAG=$imagetag" >> $GITHUB_OUTPUT
 
+  get-current-time:
+    name: Get Current Time
+    runs-on: ubuntu-latest
+    needs: get-image-tag
+  
+    outputs:
+      CURRENT_TIME: ${{ steps.get-current-time.outputs.CURRENT_TIME }}
+    
+    steps:
+      - id: get-current-time
+        run: |
+          TZ="America/Vancouver"
+          echo "CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+
   # Deplog the image which is running on test to prod
   deploy-on-prod:
 
     name: Deploy LCFS on Prod
     runs-on: ubuntu-latest
-    needs: get-image-tag
+    needs: [get-image-tag, get-current-time]
     timeout-minutes: 60
 
     env:
       IMAGE_TAG: ${{ needs.get-image-tag.outputs.IMAGE_TAG }}
+      CURRENT_TIME: ${{ needs.get-current-time.outputs.CURRENT_TIME }}
 
     steps:
 
@@ -66,9 +81,17 @@ jobs:
         uses: trstringer/manual-approval@v1.6.0
         with:
           secret: ${{ github.TOKEN }}
-          approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin,justin-lepitzki,kevin-hashimoto
+          approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin
           minimum-approvals: 2
-          issue-title: "LCFS ${{env.IMAGE_TAG }} Prod Deployment"
+          issue-title: "LCFS ${{env.IMAGE_TAG }} Prod Deployment at ${{ env.CURRENT_TIME }}."
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.PROD_NAMESPACE }}
 
       - name: Tag LCFS images from Test to Prod
         run: |
@@ -88,6 +111,6 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add lcfs/charts/lcfs-frontend/values-prod.yaml
           git add lcfs/charts/lcfs-backend/values-prod.yaml
-          git commit -m "update the version with pre-release number for prod"
+          git commit -m "Update image tag ${{env.IMAGE_TAG }} for prod"
           git push
               

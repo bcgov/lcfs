@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import structlog
 from typing import List, Optional, Sequence
 from fastapi import Depends
@@ -52,13 +54,14 @@ class FuelSupplyRepository:
         )
 
     @repo_handler
-    async def get_fuel_supply_table_options(self, compliancePeriod: str):
+    async def get_fuel_supply_table_options(self, compliance_period: str):
         """
         Retrieve Fuel Type and other static data to use them while populating fuel supply form.
         """
+
         subquery_compliance_period_id = (
             select(CompliancePeriod.compliance_period_id)
-            .where(CompliancePeriod.description == compliancePeriod)
+            .where(CompliancePeriod.description == compliance_period)
             .scalar_subquery()
         )
 
@@ -73,6 +76,21 @@ class FuelSupplyRepository:
             .where(ProvisionOfTheAct.name == "Fuel code - section 19 (b) (i)")
             .scalar_subquery()
         )
+
+        try:
+            current_year = int(compliance_period)
+        except ValueError as e:
+            logger.error(
+                "Invalid compliance_period: not an integer",
+                compliance_period=compliance_period,
+                error=str(e),
+            )
+            raise ValueError(
+                f"Invalid compliance_period: '{compliance_period}' must be an integer."
+            ) from e
+
+        start_of_this_year = datetime(current_year, 1, 1)
+        start_of_previous_year = datetime(current_year - 1, 1, 1)
 
         query = (
             select(
@@ -157,6 +175,8 @@ class FuelSupplyRepository:
                     FuelCode.fuel_status_id == subquery_fuel_code_status_id,
                     ProvisionOfTheAct.provision_of_the_act_id
                     == subquery_provision_of_the_act_id,
+                    FuelCode.expiration_date > start_of_previous_year,
+                    FuelCode.effective_date <= start_of_this_year,
                 ),
             )
             .outerjoin(

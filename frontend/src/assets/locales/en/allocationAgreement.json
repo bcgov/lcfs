@@ -4,7 +4,7 @@
   "addAllocationAgreementRowsTitle": "Allocation agreements (e.g., allocating responsibility for fuel)",
   "allocationAgreementSubtitle": "Enter allocation agreement details below",
   "allocationAgreementColLabels": {
-    "transaction": "Transaction",
+    "transaction": "Responsibility",
     "transactionPartner": "Legal name of transaction partner",
     "postalAddress": "Address for service",
     "transactionPartnerEmail": "Email",

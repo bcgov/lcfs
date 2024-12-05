@@ -16,6 +16,7 @@ from lcfs.web.api.transfer.services import TransferServices
 from lcfs.web.api.organization.validation import OrganizationValidation
 
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.schema import ChainedComplianceReportSchema
 
 
 @pytest.mark.anyio
@@ -160,7 +161,8 @@ async def test_export_transactions_for_org_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    mock_transactions_services.export_transactions.return_value = {"streaming": True}
+    mock_transactions_services.export_transactions.return_value = {
+        "streaming": True}
 
     fastapi_app.dependency_overrides[TransactionsService] = (
         lambda: mock_transactions_services
@@ -188,7 +190,8 @@ async def test_create_transfer_success(
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     organization_id = 1
-    url = fastapi_app.url_path_for("create_transfer", organization_id=organization_id)
+    url = fastapi_app.url_path_for(
+        "create_transfer", organization_id=organization_id)
 
     payload = {"from_organization_id": 1, "to_organization_id": 2}
 
@@ -226,7 +229,8 @@ async def test_update_transfer_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = fastapi_app.url_path_for("update_transfer", organization_id=1, transfer_id=1)
+    url = fastapi_app.url_path_for(
+        "update_transfer", organization_id=1, transfer_id=1)
 
     payload = {"from_organization_id": 1, "to_organization_id": 2}
 
@@ -274,7 +278,8 @@ async def test_create_compliance_report_success(
         "create_compliance_report", organization_id=organization_id
     )
 
-    payload = {"compliance_period": "2024", "organization_id": 1, "status": "status"}
+    payload = {"compliance_period": "2024",
+               "organization_id": 1, "status": "status"}
 
     mock_organization_validation.create_compliance_report.return_value = None
     mock_compliance_report_services.create_compliance_report.return_value = {
@@ -346,7 +351,8 @@ async def test_get_all_org_reported_years_success(
 ):
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    url = fastapi_app.url_path_for("get_all_org_reported_years", organization_id=1)
+    url = fastapi_app.url_path_for(
+        "get_all_org_reported_years", organization_id=1)
 
     mock_compliance_report_services.get_all_org_reported_years.return_value = [
         {"compliance_period_id": 1, "description": "2024"}
@@ -379,20 +385,23 @@ async def test_get_compliance_report_by_id_success(
     )
 
     # Mock the compliance report service's method
-    mock_compliance_report_services.get_compliance_report_by_id.return_value = {
-        "compliance_report_id": 1,
-        "compliance_period_id": 1,
-        "compliance_period": {"compliance_period_id": 1, "description": "2024"},
-        "organization_id": 1,
-        "organization": {"organization_id": 1, "name": "org1"},
-        "current_status_id": 1,
-        "current_status": {"compliance_report_status_id": 1, "status": "status"},
-        "summary": {"summary_id": 1, "is_locked": False},
-        "compliance_report_group_uuid": "uuid",
-        "version": 0,
-        "supplemental_initiator": SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
-        "has_supplemental": False,
-    }
+    mock_compliance_report_services.get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        report={
+            "compliance_report_id": 1,
+            "compliance_period_id": 1,
+            "compliance_period": {"compliance_period_id": 1, "description": "2024"},
+            "organization_id": 1,
+            "organization": {"organization_id": 1, "name": "org1"},
+            "current_status_id": 1,
+            "current_status": {"compliance_report_status_id": 1, "status": "status"},
+            "summary": {"summary_id": 1, "is_locked": False},
+            "compliance_report_group_uuid": "uuid",
+            "version": 0,
+            "supplemental_initiator": SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
+            "has_supplemental": False,
+        },
+        chain=[]
+    )
 
     # Create a mock for the validation service
     mock_compliance_report_validation = AsyncMock()
@@ -412,7 +421,7 @@ async def test_get_compliance_report_by_id_success(
     # Assertions
     assert response.status_code == 200
     mock_compliance_report_services.get_compliance_report_by_id.assert_awaited_once_with(
-        1, apply_masking=True
+        1, apply_masking=True, get_chain=True
     )
     mock_compliance_report_validation.validate_organization_access.assert_awaited_once_with(
         1

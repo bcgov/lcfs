@@ -1,26 +1,19 @@
-from typing import AsyncGenerator
-
 from redis.asyncio import Redis
 from starlette.requests import Request
 
 
-async def get_redis_pool(
+# Redis Client Dependency
+async def get_redis_client(
     request: Request,
-) -> AsyncGenerator[Redis, None]:  # pragma: no cover
+) -> Redis:
     """
-    Returns connection pool.
+    Returns the Redis client.
 
-    You can use it like this:
+    Usage:
+        >>> async def handler(redis_client: Redis = Depends(get_redis_client)):
+        >>>     value = await redis_client.get('key')
 
-    >>> from redis.asyncio import ConnectionPool, Redis
-    >>>
-    >>> async def handler(redis_pool: ConnectionPool = Depends(get_redis_pool)):
-    >>>     async with Redis(connection_pool=redis_pool) as redis:
-    >>>         await redis.get('key')
-
-    I use pools, so you don't acquire connection till the end of the handler.
-
-    :param request: current request.
-    :returns:  redis connection pool.
+    :param request: Current request object.
+    :returns: Redis client.
     """
-    return request.app.state.redis_pool
+    return request.app.state.redis_client
