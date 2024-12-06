@@ -1,8 +1,10 @@
-#!/bin/bash
+#!/usr/local/bin/bash
+# Update bash dir to your local version
 # Optimized NiFi Processor Management Script with Advanced Logging
 # This script manages NiFi processors, updates database connections, and establishes port-forwarding.
 # Usage:
 #   ./nifi_processor_manager.sh [dev|test|prod] [--debug|--verbose]
+#   ./data-migration.sh test --debug
 #
 # Arguments:
 #   [dev|test|prod] - The environment for which the script will run.
@@ -39,6 +41,7 @@ DEBUG_LEVEL=${DEBUG_LEVEL:-$DEBUG_INFO}
 readonly ORGANIZATION_PROCESSOR="328e2539-0192-1000-0000-00007a4304c1"
 readonly USER_PROCESSOR="e6c63130-3eac-1b13-a947-ee0103275138"
 readonly TRANSFER_PROCESSOR="b9d73248-1438-1418-a736-cc94c8c21e70"
+readonly TRANSACTIONS_PROCESSOR="7a010ef5-0193-1000-ffff-ffff8c22e67e"
 
 # Global Port Configuration (Update these based on your setup)
 declare -A LOCAL_PORTS=(
@@ -116,8 +119,10 @@ curl_with_retry() {
             response=$(curl -sS -w "%{http_code}" -X "$method" -H "Content-Type: application/json" -d "$data" "$url")
         fi
 
-        http_code=$(echo "$response" | tail -c 4)
-        response_body=$(echo "$response" | head -c -4)
+        # Extract the HTTP status code (last 3 characters)
+        http_code="${response: -3}"
+        # Extract the response body (everything except the last 3 characters)
+        response_body="${response:0:${#response}-3}"
 
         if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
             verbose "Curl successful. HTTP Code: $http_code"
@@ -179,8 +184,9 @@ execute_processor() {
         -d "$run_once_payload" \
         "$NIFI_API_URL/processors/$processor_id/run-status")
 
-    local http_code=$(echo "$response" | tail -c 4)
-    local response_body=$(echo "$response" | head -c -4)
+    # Extract HTTP code and response body using parameter expansion
+    local http_code="${response: -3}"
+    local response_body="${response:0:${#response}-3}"
 
     if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
         info "Processor $processor_id triggered for single run successfully"
@@ -257,7 +263,7 @@ forward_database_ports() {
 
     local port_mappings=(
         "tfrs:0ab226-$env:tfrs-spilo:tfrs"
-        # "lcfs:d2bd59-$env:lcfs-crunchy-$env-lcfs:lcfs"  # Uncomment if you want to load directly to LCFS openshift environment
+        "lcfs:d2bd59-$env:lcfs-crunchy-$env-lcfs:lcfs"  # Uncomment if you want to load directly to LCFS openshift environment
     )
 
     for mapping in "${port_mappings[@]}"; do
@@ -312,10 +318,10 @@ update_nifi_connection() {
         database_name=$(echo "$db_env_vars" | grep 'DATABASE_NAME' | cut -d'=' -f2)
         ;;
     lcfs)
-        db_env_vars=$(oc exec -n "$namespace" "$pod_name" -- bash -c "env | grep 'LCFS_DB_")
+        db_env_vars=$(oc exec -n "$namespace" "$pod_name" -- env | grep 'LCFS_DB_')
         database_user=$(echo "$db_env_vars" | grep 'LCFS_DB_USER' | cut -d'=' -f2)
         database_pass=$(echo "$db_env_vars" | grep 'LCFS_DB_PASS' | cut -d'=' -f2)
-        database_name=$(echo "$db_env_vars" | grep 'LCFS_DB_NAME' | cut -d'=' -f2)
+        database_name=$(echo "$db_env_vars" | grep 'LCFS_DB_BASE' | cut -d'=' -f2)
         ;;
     *)
         error_exit "Invalid application: $app"
@@ -412,25 +418,29 @@ main() {
     oc whoami
 
     # Controller service configuration
-    local LCFS_CONTROLLER_SERVICE_ID="3244bf63-0192-1000-ffff-ffffc8ec6d93"
+    local LCFS_CONTROLLER_SERVICE_ID="32417e8c-0192-1000-ffff-ffff8ccb5dfa"
     local TFRS_CONTROLLER_SERVICE_ID="3245b078-0192-1000-ffff-ffffba20c1eb"
 
     # Update NiFi connections
-    # update_nifi_connection "$LCFS_CONTROLLER_SERVICE_ID" "d2bd59-$env" "lcfs-backend-$env" "lcfs" # Uncomment if we're loading the data to openshift database.
+    update_nifi_connection "$LCFS_CONTROLLER_SERVICE_ID" "d2bd59-$env" "lcfs-backend-$env" "lcfs" # Uncomment if we're loading the data to openshift database.
     update_nifi_connection "$TFRS_CONTROLLER_SERVICE_ID" "0ab226-$env" "tfrs-backend-$env" "tfrs"
+    
+    # Uncomment if you want to use port forwarding from the script
     ## Duplicating as the connections gets disconnected when the port forwarding is enabled for first time.
-    forward_database_ports "$env"
-    sleep 5 # Allow time for port forwarding
-    info "Executing processors in sequence..."
-    execute_processor "$ORGANIZATION_PROCESSOR" "$env"
-    ##
-    # Actual processing starts here
-    forward_database_ports "$env"
-    sleep 5 # Allow time for port forwarding
+    # forward_database_ports "$env"
+    # sleep 5 # Allow time for port forwarding
+    # info "Executing processors in sequence..."
+    # execute_processor "$ORGANIZATION_PROCESSOR" "$env"
+    # ##
+    # # Actual processing starts here
+    # forward_database_ports "$env"
+    # sleep 5 # Allow time for port forwarding
+
     # Expand these processors as needed
     execute_processor "$ORGANIZATION_PROCESSOR" "$env"
     execute_processor "$USER_PROCESSOR" "$env"
     execute_processor "$TRANSFER_PROCESSOR" "$env"
+    execute_processor "$TRANSACTIONS_PROCESSOR" "$env"
 
     info "All processors executed successfully."
     info "Validate all the loaded data manually in the database."

@@ -43,6 +43,9 @@ def upgrade():
 
 
 def downgrade():
+    # First, remove all existing data that might not match the enum
+    op.execute("DELETE FROM notification_type;")
+
     # Re-create the old enum type
     notification_type_enum_v2 = ENUM(
         "TRANSFER_PARTNER_UPDATE",
@@ -61,7 +64,7 @@ def downgrade():
             "name",
             type_=notification_type_enum_v2,
             existing_type=sa.String(length=255),
-            postgresql_using="name::text::notification_type_enum_v2",
+            postgresql_using="name::notification_type_enum_v2",
             existing_nullable=False,
         )
 
@@ -79,9 +82,9 @@ def downgrade():
     """
     )
 
-    # Reset the sequence for the id column
+    # Reset the sequence for the id column with correct sequence name
     op.execute(
         """
-        SELECT setval('notification_type_id_seq', (SELECT MAX(notification_type_id) FROM notification_type));
+        SELECT setval('notification_type_notification_type_id_seq', (SELECT MAX(notification_type_id) FROM notification_type));
     """
     )
