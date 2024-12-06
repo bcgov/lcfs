@@ -198,7 +198,7 @@ try {
                 statements.transactionStmt)
 
         def transferId = insertTransfer(resultSet, statements.transferStmt,
-                fromTransactionId, toTransactionId, preparedData)
+                fromTransactionId, toTransactionId, preparedData, destinationConn)
 
         if (transferId) {
             processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
@@ -450,7 +450,23 @@ def getAudienceScope(String roleNames) {
 }
 
 def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransactionId,
-                   Long toTransactionId, Map preparedData) {
+                   Long toTransactionId, Map preparedData, Connection conn) {
+    // Check for duplicates in the `transfer` table
+    def transferId = rs.getInt('transfer_id')
+    def duplicateCheckStmt = conn.prepareStatement('SELECT COUNT(*) FROM transfer WHERE transfer_id = ?')
+    duplicateCheckStmt.setInt(1, transferId)
+    def duplicateResult = duplicateCheckStmt.executeQuery()
+    duplicateResult.next()
+    def count = duplicateResult.getInt(1)
+    duplicateResult.close()
+    duplicateCheckStmt.close()
+
+    if (count > 0) {
+        log.warn("Duplicate transfer detected with transfer_id: ${transferId}, skipping insertion.")
+        return null
+    }
+
+    // Proceed with insertion if no duplicate exists
     def categoryId = getTransferCategoryId(rs.getString('transfer_category'), preparedData)
     def statusId = getStatusId(rs.getString('current_status'), preparedData)
     transferStmt.setInt(1, rs.getInt('from_organization_id'))
@@ -474,4 +490,5 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransa
     transferStmt.setInt(19, rs.getInt('transfer_id'))
     def result = transferStmt.executeQuery()
     return result.next() ? result.getInt('transfer_id') : null
-                   }
+}
+

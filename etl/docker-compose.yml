@@ -62,23 +62,23 @@ services:
     networks:
       - shared_network
 # TFRS database loaded with TFRS data
-  tfrs:
-    image: postgres:14.2
-    container_name: tfrs
-    environment:
-      POSTGRES_USER: tfrs
-      POSTGRES_PASSWORD: development_only
-      POSTGRES_DB: tfrs
-    ports:
-      - "5435:5432"
-    volumes:
-      - tfrs_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - shared_network
+  # tfrs:
+  #   image: postgres:14.2
+  #   container_name: tfrs
+  #   environment:
+  #     POSTGRES_USER: tfrs
+  #     POSTGRES_PASSWORD: development_only
+  #     POSTGRES_DB: tfrs
+  #   ports:
+  #     - "5435:5432"
+  #   volumes:
+  #     - tfrs_data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - shared_network
 
 volumes:
-  tfrs_data:
+  # tfrs_data:
   nifi_output:
   nifi_scripts:
 
