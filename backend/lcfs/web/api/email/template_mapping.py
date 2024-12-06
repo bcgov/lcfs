@@ -1,12 +1,20 @@
-from lcfs.db.models.notification.NotificationType import NotificationTypeEnum
-
-
 TEMPLATE_MAPPING = {
-    NotificationTypeEnum.TRANSFER_DIRECTOR_REVIEW: "transfer_director_review.html",
-    NotificationTypeEnum.INITIATIVE_APPROVED: "initiative_approved.html",
-    NotificationTypeEnum.INITIATIVE_DA_REQUEST: "initiative_da_request.html",
-    NotificationTypeEnum.SUPPLEMENTAL_REQUESTED: "supplemental_requested.html",
-    NotificationTypeEnum.DIRECTOR_ASSESSMENT: "director_assessment.html",
-    NotificationTypeEnum.TRANSFER_PARTNER_UPDATE: "transfer_partner_update.html",
-    "default": "default.html"
+    "BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT": "bceid__compliance_report__director_assessment.html",
+    "BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL": "bceid__initiative_agreement__director_approval.html",
+    "BCEID__TRANSFER__DIRECTOR_DECISION": "bceid__transfer__director_decision.html",
+    "BCEID__TRANSFER__PARTNER_ACTIONS": "bceid__transfer__partner_actions.html",
+    "IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION": "idir_analyst__compliance_report__director_decision.html",
+    "IDIR_ANALYST__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION": "idir_analyst__compliance_report__manager_recommendation.html",
+    "IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW": "idir_analyst__compliance_report__submitted_for_review.html",
+    "IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST": "idir_analyst__initiative_agreement__returned_to_analyst.html",
+    "IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED": "idir_analyst__transfer__director_recorded.html",
+    "IDIR_ANALYST__TRANSFER__RESCINDED_ACTION": "idir_analyst__transfer__rescinded_action.html",
+    "IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW": "idir_analyst__transfer__submitted_for_review.html",
+    "IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__ANALYST_RECOMMENDATION": "idir_compliance_manager__compliance_report__analyst_recommendation.html",
+    "IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT": "idir_compliance_manager__compliance_report__director_assessment.html",
+    "IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW": "idir_compliance_manager__compliance_report__submitted_for_review.html",
+    "IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION": "idir_director__compliance_report__manager_recommendation.html",
+    "IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION": "idir_director__initiative_agreement__analyst_recommendation.html",
+    "IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION": "idir_director__transfer__analyst_recommendation.html",
+    "default": "default.html",
 }

@@ -26,6 +26,9 @@ class UserProfile(BaseModel, Auditable):
         String(150), unique=True, nullable=False, comment="keycloak Username"
     )
     email = Column(String(255), nullable=True, comment="Primary email address")
+    notifications_email = Column(
+        String(255), nullable=True, comment="Email address used for notifications"
+    )
     title = Column(String(100), nullable=True, comment="Professional Title")
     phone = Column(String(50), nullable=True, comment="Primary phone number")
     mobile_phone = Column(String(50), nullable=True, comment="Mobile phone number")
