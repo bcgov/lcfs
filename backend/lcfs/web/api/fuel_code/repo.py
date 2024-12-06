@@ -296,7 +296,14 @@ class FuelCodeRepository:
         conditions = [FuelCode.fuel_status_id != delete_status.fuel_code_status_id]
 
         for filter in pagination.filters:
+
             filter_value = filter.filter
+            if filter.filter_type == "date":
+                if filter.type == "inRange":
+                    filter_value = [filter.date_from, filter.date_to]
+                else:
+                    filter_value = filter.date_from
+
             filter_option = filter.type
             filter_type = filter.filter_type
             if filter.field == "status":
@@ -378,37 +385,6 @@ class FuelCodeRepository:
         query = select(FuelCodeStatus).order_by(asc(FuelCodeStatus.status))
         status_results = await self.db.execute(query)
         return status_results.scalars().all()
-
-    def apply_filters(self, pagination, conditions):
-        """
-        Apply filters to the fuel code query.
-
-        Args:
-            pagination (PaginationRequestSchema): The pagination object containing page and size information.
-            conditions (List[Condition]): The list of conditions to apply.
-
-        Returns:
-            List[QueryCondition]: Array of where clauses to be applied to the query
-        """
-
-        for filter in pagination.filters:
-            # Handle other filters as before
-            field = get_field_for_filter(FuelCode, filter.field)
-            # Check if the filter is of type "date"
-            if filter.filter_type == "date":
-                if filter.type == "inRange":
-                    filter_value = [filter.date_from, filter.date_to]
-                else:
-                    filter_value = filter.date_from
-            else:
-                # For non-date filters, use the standard filter value
-                filter_value = filter.filter
-
-            filter_option = filter.type
-            filter_type = filter.filter_type
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
-            )
 
     @repo_handler
     async def create_fuel_code(self, fuel_code: FuelCode) -> FuelCode:
