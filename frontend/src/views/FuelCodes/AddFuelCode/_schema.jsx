@@ -78,7 +78,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     valueGetter: (params) => {
       if (params.data?.fuelCodePrefix?.prefix) {
         return params.data.fuelCodePrefix.prefix
-      }else if (params.data.prefixId) {
+      } else if (params.data.prefixId) {
         const selectedOption = optionsData?.fuelCodePrefixes?.find(
           (obj) => obj.fuelCodePrefixId === params.data.prefixId
         )
@@ -87,7 +87,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       const selectedOption = optionsData?.fuelCodePrefixes?.find(
         (obj) => obj.prefix === params.data.prefix
       )
-      if (params.data.prefix) {
+      if (params.data.prefix && selectedOption) {
         params.data.prefixId = selectedOption.fuelCodePrefixId
       }
       return params.data.prefix
