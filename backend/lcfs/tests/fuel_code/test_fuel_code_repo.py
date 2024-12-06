@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.db.models.fuel.TransportMode import TransportMode
 
@@ -23,10 +23,10 @@ async def test_get_transport_mode_by_name(fuel_code_repo, mock_db):
     # Define the test transport mode
     transport_mode_name = "Truck"
     mock_transport_mode = TransportMode(transport_mode_id=1, transport_mode="Truck")
-    
+
     # Mock the database query result
-    mock_db.execute.return_value.scalar_one_or_none = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = mock_transport_mode
+    mock_db.execute.return_value.scalar_one = MagicMock()
+    mock_db.execute.return_value.scalar_one.return_value = mock_transport_mode
 
     # Call the repository method
     result = await fuel_code_repo.get_transport_mode_by_name(transport_mode_name)

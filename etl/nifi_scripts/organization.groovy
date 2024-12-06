@@ -123,7 +123,7 @@ try {
 
         // If no duplicate exists, proceed with the insert logic
         def name = resultSet.getString("name")
-        def operatingName = resultSet.getString("operating_name")
+        def operatingName = resultSet.getString("operating_name") ?: "" // not nullable string field
         def email = resultSet.getString("email")
         def phone = resultSet.getString("phone")
         def edrmsRecord = resultSet.getString("edrms_record")

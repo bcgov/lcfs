@@ -304,12 +304,12 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     cellEditor: DateEditor
   },
   {
-    field: 'fuel',
+    field: 'fuelType',
     editable: canEdit,
     headerComponent: canEdit ? RequiredHeader : undefined,
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: createCellRenderer('fuel'),
+    cellRenderer: createCellRenderer('fuelType'),
     valueGetter: (params) => {
       if (params.data?.fuelCodeType?.fuelType) {
         return params.data.fuelCodeType.fuelType

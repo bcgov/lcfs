@@ -1,5 +1,4 @@
 import math
-from datetime import datetime
 
 import structlog
 from fastapi import Depends
@@ -7,7 +6,7 @@ from fastapi import Depends
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
 from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -23,9 +22,9 @@ from lcfs.web.api.fuel_code.schema import (
     TransportModeSchema,
     FuelCodePrefixSchema,
     TableOptionsSchema,
+    FuelCodeStatusSchema,
 )
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 logger = structlog.get_logger(__name__)
 
@@ -110,16 +109,13 @@ class FuelCodeServices:
         )
 
     @service_handler
-    async def get_fuel_codes(
+    async def search_fuel_codes(
         self, pagination: PaginationRequestSchema
     ) -> FuelCodesSchema:
         """
         Gets the list of fuel codes.
         """
         fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(pagination)
-
-        if len(fuel_codes) == 0:
-            raise DataNotFoundException("No fuel codes found")
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
@@ -131,6 +127,32 @@ class FuelCodeServices:
                 FuelCodeSchema.model_validate(fuel_code) for fuel_code in fuel_codes
             ],
         )
+
+    async def get_fuel_code_statuses(self):
+        """
+        Get all available statuses for fuel codes from the database.
+
+        Returns:
+            List[TransactionStatusView]: A list of TransactionStatusView objects containing the basic transaction status details.
+        """
+        fuel_code_statuses = await self.repo.get_fuel_code_statuses()
+        return [
+            FuelCodeStatusSchema.model_validate(fuel_code_status)
+            for fuel_code_status in fuel_code_statuses
+        ]
+
+    async def get_transport_modes(self):
+        """
+        Get all available transport modes for fuel codes from the database.
+
+        Returns:
+            List[TransportModeSchema]: A list of TransportModeSchema.
+        """
+        transport_modes = await self.repo.get_transport_modes()
+        return [
+            TransportModeSchema.model_validate(fuel_code_status)
+            for fuel_code_status in transport_modes
+        ]
 
     async def convert_to_model(
         self, fuel_code_schema: FuelCodeCreateUpdateSchema, status: FuelCodeStatusEnum

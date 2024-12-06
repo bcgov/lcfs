@@ -36,9 +36,12 @@ class CHESEmailService:
         self._token_expiry = None
         self._validate_configuration()
 
-        # Initialize template environment
+        # Update template directory path to the root templates directory
         template_dir = os.path.join(os.path.dirname(__file__), "templates")
-        self.template_env = Environment(loader=FileSystemLoader(template_dir))
+        self.template_env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=True  # Enable autoescaping for security
+        )
 
     def _validate_configuration(self):
         """
@@ -63,7 +66,8 @@ class CHESEmailService:
             notification_type, organization_id
         )
         if not recipient_emails:
-            logger.info(f"No subscribers for notification type: {notification_type}")
+            logger.info(f"""No subscribers for notification type: {
+                        notification_type}""")
             return False
 
         # Render the email content
@@ -84,15 +88,16 @@ class CHESEmailService:
     ) -> str:
         """
         Render an email template using a predefined mapping of template names to file paths.
+        Raises an exception if template is not found.
         """
-        # Fetch template file path from the imported mapping
-        template_file = TEMPLATE_MAPPING.get(
-            template_name, TEMPLATE_MAPPING["default"]
-        )
-
-        # Render the template
-        template = self.template_env.get_template(template_file)
-        return template.render(context)
+        try:
+            template_file = TEMPLATE_MAPPING[template_name]
+            template = self.template_env.get_template(template_file)
+            return template.render(**context)
+        except Exception as e:
+            logger.error(f"Template rendering error: {str(e)}")
+            raise ValueError(
+                f"Failed to render email template for {template_name}")
 
     def _build_email_payload(
         self, recipients: List[str], context: Dict[str, Any], body: str
