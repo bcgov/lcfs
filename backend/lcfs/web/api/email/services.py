@@ -36,9 +36,12 @@ class CHESEmailService:
         self._token_expiry = None
         self._validate_configuration()
 
-        # Initialize template environment
+        # Update template directory path to the root templates directory
         template_dir = os.path.join(os.path.dirname(__file__), "templates")
-        self.template_env = Environment(loader=FileSystemLoader(template_dir))
+        self.template_env = Environment(
+            loader=FileSystemLoader(template_dir),
+            autoescape=True  # Enable autoescaping for security
+        )
 
     def _validate_configuration(self):
         """
@@ -63,7 +66,8 @@ class CHESEmailService:
             notification_type, organization_id
         )
         if not recipient_emails:
-            logger.info(f"No subscribers for notification type: {notification_type}")
+            logger.info(f"No subscribers for notification type: {
+                        notification_type}")
             return False
 
         # Render the email content
@@ -85,14 +89,19 @@ class CHESEmailService:
         """
         Render an email template using a predefined mapping of template names to file paths.
         """
-        # Fetch template file path from the imported mapping
-        template_file = TEMPLATE_MAPPING.get(
-            template_name, TEMPLATE_MAPPING["default"]
-        )
+        try:
+            # Get template file path from mapping using the notification type string directly
+            template_file = TEMPLATE_MAPPING.get(
+                template_name, TEMPLATE_MAPPING["default"])
 
-        # Render the template
-        template = self.template_env.get_template(template_file)
-        return template.render(context)
+            # Load and render the template
+            template = self.template_env.get_template(template_file)
+            return template.render(**context)
+        except Exception as e:
+            logger.error(f"Template rendering error: {str(e)}")
+            template = self.template_env.get_template(
+                TEMPLATE_MAPPING["default"])
+            return template.render(**context)
 
     def _build_email_payload(
         self, recipients: List[str], context: Dict[str, Any], body: str
