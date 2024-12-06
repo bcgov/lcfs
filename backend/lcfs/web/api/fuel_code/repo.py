@@ -515,7 +515,7 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_code_by_code_prefix(
         self, fuel_suffix: str, prefix: str
-    ) -> List[str]:
+    ) -> list[FuelCodeCloneSchema]:
         query = (
             select(FuelCode)
             .options(
@@ -751,7 +751,7 @@ class FuelCodeRepository:
             .options(
                 contains_eager(FuelCode.fuel_code_prefix),
                 joinedload(FuelCode.fuel_code_status),
-                joinedload(FuelCode.fuel_code_type),
+                joinedload(FuelCode.fuel_type),
             )
             .where(
                 and_(
