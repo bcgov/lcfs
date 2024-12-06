@@ -1,5 +1,3 @@
-{% extends 'emailWrapper.jinja2' %}
-{% block content %}
-<p>A Transfer update has occurred within the Low Carbon Fuel Standard portal.</p>
-<p>For more details, please go to: <a href="https://lowcarbonfuels.gov.bc.ca/transfer-requests">https://lowcarbonfuels.gov.bc.ca/transfer-requests</a></p>
-{% endblock %}
+{% extends 'notification_base.html' %}
+{% set notification_type = 'Transfer' %}
+{% set url_slug = 'transfer-requests' %}

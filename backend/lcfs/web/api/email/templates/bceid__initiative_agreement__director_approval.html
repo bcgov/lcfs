@@ -1,5 +1,3 @@
-{% extends 'emailWrapper.jinja2' %}
-{% block content %}
-<p>An Initiative Agreement update has occurred within the Low Carbon Fuel Standard portal.</p>
-<p>For more details, please go to: <a href="https://lowcarbonfuels.gov.bc.ca/initiative-agreement">https://lowcarbonfuels.gov.bc.ca/initiative-agreement</a></p>
-{% endblock %}
+{% extends 'notification_base.html' %}
+{% set notification_type = 'Initiative Agreement' %}
+{% set url_slug = 'initiative-agreement' %}
