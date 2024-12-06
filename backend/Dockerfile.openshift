@@ -1,6 +1,8 @@
 # Base stage for common setup
 FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-bullseye as base
 
+WORKDIR /app
+
 RUN apt-get update && apt-get install -y --no-install-recommends procps \
   gcc \
   && rm -rf /var/lib/apt/lists/*
@@ -12,7 +14,6 @@ RUN poetry config virtualenvs.create false
 
 # Copying requirements of a project
 COPY pyproject.toml poetry.lock /app/
-WORKDIR /app
 
 # Set PYTHONPATH to include the lcfs directory
 ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
