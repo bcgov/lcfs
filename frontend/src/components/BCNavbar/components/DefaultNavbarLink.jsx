@@ -31,7 +31,7 @@ function DefaultNavbarLink({
       mb={isMobileView ? 0.2 : -1}
       mr={isMobileView ? 2 : 1}
       py={1}
-      px={2}
+      px={1}
       display="flex"
       alignItems="center"
       sx={({ transitions, palette }) => ({
@@ -54,8 +54,7 @@ function DefaultNavbarLink({
           backgroundColor: isMobileView
             ? 'rgba(0, 0, 0, 0.2)'
             : 'rgba(0, 0, 0, 0.3)',
-          paddingBottom: isMobileView ? '11px' : '12px',
-          paddingLeft: isMobileView ? '13px' : 2
+          paddingBottom: isMobileView ? '11px' : '12px'
         },
         transform: 'translateX(0)',
         transition: transitions.create('transform', {
@@ -87,7 +86,9 @@ function DefaultNavbarLink({
           lineHeight: 0,
           '&:hover': {
             textDecoration: 'none'
-          }
+          },
+          whiteSpace: 'nowrap',
+          flexShrink: 0
         }}
       >
         {name}

@@ -59,7 +59,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     ),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: {
-      values: ['Purchased', 'Sold']
+      values: ['Allocated from', 'Allocated to']
     },
     cellRenderer: (params) =>
       params.value ||

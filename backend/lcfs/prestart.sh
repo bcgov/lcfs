@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 
-echo "running prestart.sh from $(pwd)"
+echo "Running prestart.sh from $(pwd)"
+
+# Check for Alembic head conflicts
+HEAD_COUNT=$(poetry run alembic heads | wc -l)
+if [ "$HEAD_COUNT" -gt 1 ]; then
+    echo "Alembic head conflict detected: Multiple migration heads present."
+    exit 1
+fi
 
 # Apply base database migrations
 echo "Applying base migrations."
@@ -23,5 +30,4 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Migrations and seeding completed successfully."
-
-echo "done running prestart.sh from $(pwd)"
+echo "Done running prestart.sh from $(pwd)"
