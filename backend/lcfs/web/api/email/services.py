@@ -88,20 +88,16 @@ class CHESEmailService:
     ) -> str:
         """
         Render an email template using a predefined mapping of template names to file paths.
+        Raises an exception if template is not found.
         """
         try:
-            # Get template file path from mapping using the notification type string directly
-            template_file = TEMPLATE_MAPPING.get(
-                template_name, TEMPLATE_MAPPING["default"])
-
-            # Load and render the template
+            template_file = TEMPLATE_MAPPING[template_name]
             template = self.template_env.get_template(template_file)
             return template.render(**context)
         except Exception as e:
             logger.error(f"Template rendering error: {str(e)}")
-            template = self.template_env.get_template(
-                TEMPLATE_MAPPING["default"])
-            return template.render(**context)
+            raise ValueError(
+                f"Failed to render email template for {template_name}")
 
     def _build_email_payload(
         self, recipients: List[str], context: Dict[str, Any], body: str
