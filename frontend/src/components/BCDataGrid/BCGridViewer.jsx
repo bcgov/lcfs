@@ -82,12 +82,12 @@ export const BCGridViewer = ({
     [defaultSortModel, gridKey]
   )
   const resetGrid = useCallback(() => {
-    localStorage.removeItem(`${gridKey}-filter`);
-    localStorage.removeItem(`${gridKey}-column`);
-    setPage(1);
-    setSize(paginationPageSize);
-    setSortModel(defaultSortModel);
-    setFilterModel(defaultFilterModel);
+    localStorage.removeItem(`${gridKey}-filter`)
+    localStorage.removeItem(`${gridKey}-column`)
+    setPage(1)
+    setSize(paginationPageSize)
+    setSortModel(defaultSortModel)
+    setFilterModel(defaultFilterModel)
 
     // Re-fetch the data by calling the query function
     query(
@@ -99,8 +99,15 @@ export const BCGridViewer = ({
         ...queryParams
       },
       { retry: false }
-    );
-  }, [gridKey, paginationPageSize, defaultSortModel, defaultFilterModel, query, queryParams]);
+    )
+  }, [
+    gridKey,
+    paginationPageSize,
+    defaultSortModel,
+    defaultFilterModel,
+    query,
+    queryParams
+  ])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.hideOverlay()
@@ -115,21 +122,21 @@ export const BCGridViewer = ({
     setPage(1)
   }, [])
 
-  const onFilterChanged = useCallback(() => {
-    setPage(1)
-    const filterModel = ref.current?.api.getFilterModel()
-    const filterArr = [
-      ...Object.entries(filterModel).map(([field, value]) => {
-        return { field, ...value }
-      }),
-      ...defaultFilterModel
-    ]
-    setFilterModel(filterArr)
-    localStorage.setItem(
-      `${gridKey}-filter`,
-      JSON.stringify(ref.current?.api.getFilterModel())
-    )
-  }, [defaultFilterModel, gridKey, ref])
+  const onFilterChanged = useCallback(
+    (grid) => {
+      setPage(1)
+      const gridFilters = grid.api.getFilterModel()
+      const filterArr = [
+        ...Object.entries(gridFilters).map(([field, value]) => {
+          return { field, ...value }
+        }),
+        ...defaultFilterModel
+      ]
+      setFilterModel(filterArr)
+      localStorage.setItem(`${gridKey}-filter`, JSON.stringify(filterArr))
+    },
+    [defaultFilterModel, gridKey, ref]
+  )
 
   const onSortChanged = useCallback(() => {
     setPage(1)
@@ -173,10 +180,13 @@ export const BCGridViewer = ({
         <BCAlert severity="error">
           {error.message}. Please contact your administrator.
         </BCAlert>
-        <BCButton onClick={resetGrid} variant="contained"
-          id='grid-reset-btn'
-          color='primary'
-          autoFocus>
+        <BCButton
+          onClick={resetGrid}
+          variant="contained"
+          id="grid-reset-btn"
+          color="primary"
+          autoFocus
+        >
           Clear filter & sort
         </BCButton>
       </div>

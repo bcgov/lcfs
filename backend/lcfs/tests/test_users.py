@@ -110,7 +110,7 @@ async def test_get_users_with_filter(
             {
                 "filterType": "number",
                 "type": "equals",
-                "filter": "1",
+                "filter": 1,
                 "field": "user_profile_id",
             }
         ],
@@ -120,6 +120,7 @@ async def test_get_users_with_filter(
     # Check the status code
     assert response.status_code == status.HTTP_200_OK
     # check if pagination is working as expected.
+
     content = UsersSchema(**response.json())
     ids = [user.user_profile_id for user in content.users]
     # check if only one user element exists with user_profile_id 1.

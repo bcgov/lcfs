@@ -43,7 +43,7 @@ async def test_get_fuel_codes_success():
     pagination = PaginationRequestSchema(page=1, size=10)
 
     # Act
-    result = await service.get_fuel_codes(pagination)
+    result = await service.search_fuel_codes(pagination)
 
     # Assert
     assert isinstance(result.pagination, PaginationResponseSchema)

@@ -28,7 +28,7 @@ async def test_export_success():
             approval_date="2023-11-01",
             effective_date="2023-12-01",
             expiration_date="2024-01-01",
-            fuel_code_type=MagicMock(fuel_type="Diesel"),
+            fuel_type=MagicMock(fuel_type="Diesel"),
             feedstock="Corn oil",
             feedstock_location="Canada",
             feedstock_misc=None,
