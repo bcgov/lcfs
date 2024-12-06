@@ -66,8 +66,8 @@ class CHESEmailService:
             notification_type, organization_id
         )
         if not recipient_emails:
-            logger.info(f"No subscribers for notification type: {
-                        notification_type}")
+            logger.info(f"""No subscribers for notification type: {
+                        notification_type}""")
             return False
 
         # Render the email content
