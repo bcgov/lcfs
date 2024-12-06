@@ -1,8 +1,6 @@
 # Base stage for common setup
 FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-bullseye as base
 
-WORKDIR /app
-
 RUN apt-get update && apt-get install -y --no-install-recommends procps \
   gcc \
   && rm -rf /var/lib/apt/lists/*
@@ -10,23 +8,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends procps \
 RUN pip install poetry==1.6.1
 
 # Configuring poetry
-RUN poetry config virtualenvs.create false
+RUN poetry config virtualenvs.create true
 
 # Copying requirements of a project
 COPY pyproject.toml poetry.lock /app/
+WORKDIR /app
 
 # Set PYTHONPATH to include the lcfs directory
 ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
 
-ENV POETRY_CACHE_DIR=.cache/pypoetry
+ENV POETRY_CACHE_DIR=/.cache/pypoetry
 
 # Installing requirements
 RUN poetry install --only main
 
 # Removing gcc
-# RUN apt-get purge -y \
-#   gcc \
-#   && rm -rf /var/lib/apt/lists/*
+RUN apt-get purge -y \
+  gcc \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copying the actual application, wait-for-it script, and prestart script
 COPY . /app/
@@ -37,11 +36,9 @@ COPY . /app/
 
 # Update the group ownership and grant the read/write permission for /app
 RUN chgrp -R root /app && \
-    chmod -R g+rw /app 
-    
-    # && \
-    # chgrp -R root /.cache && \
-    # chmod -R g+rw /.cache
+    chmod -R g+rw /app && \
+    chgrp -R root /.cache && \
+    chmod -R g+rw /.cache
 # Make all startup scripts executable
 RUN chmod +x /app/wait-for-it.sh /app/lcfs/prestart.sh /app/lcfs/start.sh
 
