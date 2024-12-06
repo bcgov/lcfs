@@ -40,6 +40,7 @@ class UserBaseSchema(BaseSchema):
     keycloak_username: str
     keycloak_email: EmailStr
     email: Optional[EmailStr] = None
+    notifications_email: Optional[EmailStr] = None
     title: Optional[str] = None
     phone: Optional[str] = None
     first_name: Optional[str] = None
@@ -80,6 +81,7 @@ class UserActivitiesResponseSchema(BaseSchema):
     activities: List[UserActivitySchema]
     pagination: PaginationResponseSchema
 
+
 class UserLoginHistorySchema(BaseSchema):
     user_login_history_id: int
     keycloak_email: str
@@ -93,3 +95,7 @@ class UserLoginHistorySchema(BaseSchema):
 class UserLoginHistoryResponseSchema(BaseSchema):
     histories: List[UserLoginHistorySchema]
     pagination: PaginationResponseSchema
+
+
+class UpdateNotificationsEmailSchema(BaseSchema):
+    notifications_email: EmailStr

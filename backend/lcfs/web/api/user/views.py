@@ -9,6 +9,7 @@ from fastapi import (
     Response,
     Depends,
     Query,
+    HTTPException,
 )
 from fastapi.responses import StreamingResponse
 
@@ -22,6 +23,7 @@ from lcfs.web.api.user.schema import (
     UserLoginHistoryResponseSchema,
     UsersSchema,
     UserActivitiesResponseSchema,
+    UpdateNotificationsEmailSchema,
 )
 from lcfs.web.api.user.services import UserServices
 from lcfs.web.core.decorators import view_handler
@@ -250,3 +252,21 @@ async def get_all_user_login_history(
     """
     current_user = request.user
     return await service.get_all_user_login_history(current_user, pagination)
+
+
+@router.post(
+    "/update-notifications-email",
+    response_model=UpdateNotificationsEmailSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def update_notifications_email(
+    request: Request,
+    email_data: UpdateNotificationsEmailSchema = Body(...),
+    service: UserServices = Depends(),
+):
+    user_id = request.user.user_profile_id
+    email = email_data.notifications_email
+
+    user = await service.update_notifications_email(user_id, email)
+    return user

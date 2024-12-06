@@ -22,6 +22,7 @@ from lcfs.web.api.user.schema import (
     UserActivitiesResponseSchema,
     UserLoginHistoryResponseSchema,
 )
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 @pytest.mark.anyio
@@ -464,3 +465,23 @@ async def test_track_logged_in_success(client: AsyncClient, fastapi_app, set_moc
     # Extract the first argument of the first call
     user_profile = mock_track_user_login.call_args[0][0]
     assert isinstance(user_profile, UserProfile)
+
+
+@pytest.mark.anyio
+async def test_update_notifications_email_success(
+    client: AsyncClient,
+    fastapi_app,
+    set_mock_user,
+    add_models,
+):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+    # Prepare request data
+    request_data = {"notifications_email": "new_email@domain.com"}
+
+    # Act: Send POST request to the endpoint
+    url = fastapi_app.url_path_for("update_notifications_email")
+    response = await client.post(url, json=request_data)
+
+    # Assert: Check response status and content
+    assert response.status_code == status.HTTP_200_OK

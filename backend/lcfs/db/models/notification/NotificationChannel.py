@@ -5,8 +5,8 @@ from sqlalchemy.orm import relationship
 
 
 class ChannelEnum(enum.Enum):
-    EMAIL = "Email"
-    IN_APP = "In-Application"
+    EMAIL = "EMAIL"
+    IN_APP = "IN_APP"
 
 
 class NotificationChannel(BaseModel, Auditable):
