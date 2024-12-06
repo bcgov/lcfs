@@ -180,7 +180,11 @@ export const EditViewComplianceReport = () => {
           data={modalData}
         />
         <BCBox pb={2}>
-          <Typography variant="h5" color="primary">
+          <Typography
+            data-test="compliance-report-header"
+            variant="h5"
+            color="primary"
+          >
             {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
             {reportData?.report.nickname}
           </Typography>
@@ -188,6 +192,7 @@ export const EditViewComplianceReport = () => {
             variant="h6"
             color="primary"
             style={{ marginLeft: '0.25rem' }}
+            data-test="compliance-report-status"
           >
             Status: {currentStatus}
           </Typography>
