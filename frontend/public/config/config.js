@@ -7,6 +7,10 @@ export const config = {
     POST_LOGOUT_URL: 'http://localhost:3000/',
     SM_LOGOUT_URL:
       'https://logontest7.gov.bc.ca/clp-cgi/logoff.cgi?retnow=1&returl='
+  },
+  feature_flags: {
+    supplementalReporting: true,
+    notifications: false
   }
 }
 

@@ -17,18 +17,19 @@ const MenuBar = (props) => {
         backdropFilter: `saturate(200%) blur(30px)`,
         color: white.main,
         maxHeight: '50px',
-        display: { xs: 'none', sm: 'flex' }
+        display: { xs: 'none', sm: 'flex' },
+        justifyContent: 'space-between'
       })}
       disableGutters
       variant="dense"
     >
       <BCBox
         sx={{
-          flexGrow: 1,
           display: { xs: 'none', lg: 'flex' },
           flexDirection: 'row',
           margin: 0,
-          padding: 0
+          padding: 0,
+          marginLeft: 1
         }}
       >
         {routes.map(

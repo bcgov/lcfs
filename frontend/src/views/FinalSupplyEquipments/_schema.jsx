@@ -5,7 +5,8 @@ import {
   RequiredHeader,
   DateRangeCellEditor,
   TextCellEditor,
-  AsyncSuggestionEditor
+  AsyncSuggestionEditor,
+  NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -13,8 +14,13 @@ import moment from 'moment'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
+import { numberFormatter } from '@/utils/formatters.js'
 
-export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, errors) => [
+export const finalSupplyEquipmentColDefs = (
+  optionsData,
+  compliancePeriod,
+  errors
+) => [
   validation,
   actions({
     enableDuplicate: true,
@@ -76,13 +82,15 @@ export const finalSupplyEquipmentColDefs = (optionsData, compliancePeriod, error
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
     minWidth: 220,
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors),
-    valueFormatter: (params) => {
-      const value = parseFloat(params.value)
-      return !isNaN(value) ? value.toFixed(2) : ''
-    }
+    valueFormatter: numberFormatter,
+    cellEditor: NumberEditor,
+    type: 'numericColumn',
+    cellEditorParams: {
+      precision: 0,
+      min: 0,
+      showStepperButtons: false
+    },
+    cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
     field: 'serialNbr',

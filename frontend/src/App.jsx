@@ -7,8 +7,8 @@ import { ViewUser } from '@/views/Admin/AdminMenu/components/ViewUser'
 import { ComplianceReports } from './views/ComplianceReports'
 import { Dashboard } from './views/Dashboard'
 import { FileSubmissions } from './views/FileSubmissions'
+import { NotificationMenu } from '@/views/Notifications/NotificationMenu'
 import { FuelCodes, AddEditFuelCode } from './views/FuelCodes'
-import { Notifications, NotificationSettings } from './views/Notifications'
 import {
   Organizations,
   AddEditOrg,
@@ -201,13 +201,13 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.NOTIFICATIONS,
-        element: <Notifications />,
+        element: <NotificationMenu tabIndex={0} />,
         handle: { title: 'Notifications' }
       },
       {
         path: ROUTES.NOTIFICATIONS_SETTINGS,
-        element: <NotificationSettings />,
-        handle: { title: 'Notification Settings' }
+        element: <NotificationMenu tabIndex={1} />,
+        handle: { title: 'Configure notifications' }
       },
       {
         path: ROUTES.ADMIN,
