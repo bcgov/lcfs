@@ -16,8 +16,10 @@ class NotificationMessageSchema(BaseSchema):
     notification_type_id: Optional[int] = None
     deleted: Optional[bool] = None
 
+
 class NotificationCountSchema(BaseSchema):
     count: int
+
 
 class DeleteNotificationMessageSchema(BaseSchema):
     notification_message_id: int
@@ -31,9 +33,9 @@ class DeleteNotificationMessageResponseSchema(BaseSchema):
 class SubscriptionSchema(BaseSchema):
     notification_channel_subscription_id: Optional[int] = None
     is_enabled: Optional[bool] = True
-    notification_channel_id: Optional[int] = None
-    user_profile_id: Optional[int]= None
-    notification_type_id: Optional[int] = None
+    notification_channel_name: Optional[str] = None
+    user_profile_id: Optional[int] = None
+    notification_type_name: Optional[str] = None
     deleted: Optional[bool] = None
 
 
