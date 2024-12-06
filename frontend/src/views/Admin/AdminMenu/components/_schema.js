@@ -45,7 +45,6 @@ export const usersColumnDefs = (t) => [
       suppressFilterButton: true
     },
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
       // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
@@ -86,7 +85,6 @@ export const usersColumnDefs = (t) => [
     cellRenderer: StatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       apiQuery: () => ({
         data: [
@@ -250,7 +248,6 @@ export const auditLogColDefs = (t) => [
     flex: 1,
     valueGetter: ({ data }) => data.createDate || '',
     valueFormatter: timezoneFormatter,
-    suppressFloatingFilterButton: true,
     filter: 'agDateColumnFilter',
     filterParams: {
       filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],

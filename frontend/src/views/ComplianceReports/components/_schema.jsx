@@ -1,4 +1,3 @@
-/* eslint-disable chai-friendly/no-unused-expressions */
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
 import { ReportsStatusRenderer, LinkRenderer } from '@/utils/grid/cellRenderers'
@@ -14,7 +13,6 @@ export const reportsColDefs = (t, bceidRole) => [
       url: ({ data }) =>
         `${data.compliancePeriod?.description}/${data.complianceReportId}`
     },
-    suppressFloatingFilterButton: true,
     valueGetter: ({ data }) => data.compliancePeriod?.description || '',
     filterParams: {
       buttons: ['clear']
@@ -42,7 +40,6 @@ export const reportsColDefs = (t, bceidRole) => [
       return `${typeLabel}${nickname}`
     },
     filter: 'agTextColumnFilter', // Enable text filtering
-    suppressFloatingFilterButton: true,
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
       textCustomComparator: (filter, value, filterText) => {
@@ -96,12 +93,12 @@ export const reportsColDefs = (t, bceidRole) => [
     flex: 1,
     valueGetter: ({ data }) => data.updateDate || '',
     valueFormatter: timezoneFormatter,
-    suppressFloatingFilterButton: true,
     filter: 'agDateColumnFilter',
     filterParams: {
       filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
       suppressAndOrCondition: true,
-      buttons: ['clear']
+      buttons: ['clear'],
+      maxValidYear: 2400
     }
   }
 ]

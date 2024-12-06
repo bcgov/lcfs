@@ -66,6 +66,7 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       multiple={props.multiple}
       disableCloseOnSelect={props.disableCloseOnSelect}
       onChange={onInputBoxChanged}
+      openOnFocus
       isOptionEqualToValue={(option, value) => option.name === value.name}
       limitTags={1}
       className="bc-column-set-filter ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"

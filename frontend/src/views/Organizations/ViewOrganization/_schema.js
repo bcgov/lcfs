@@ -49,7 +49,6 @@ export const organizationsColDefs = (t) => [
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
     floatingFilterComponent: BCColumnSetFilter,
-    suppressFloatingFilterButton: true,
     floatingFilterComponentParams: {
       apiOptionField: 'status',
       apiQuery: useOrganizationStatuses,
