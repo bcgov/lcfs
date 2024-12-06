@@ -1,5 +1,4 @@
 import os
-from lcfs.db.models.notification.NotificationType import NotificationTypeEnum
 import requests
 import structlog
 from fastapi import Depends
@@ -88,7 +87,7 @@ class CHESEmailService:
         """
         # Fetch template file path from the imported mapping
         template_file = TEMPLATE_MAPPING.get(
-            NotificationTypeEnum[template_name], TEMPLATE_MAPPING["default"]
+            template_name, TEMPLATE_MAPPING["default"]
         )
 
         # Render the template
