@@ -16,5 +16,4 @@ TEMPLATE_MAPPING = {
     "IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION": "idir_director__compliance_report__manager_recommendation.html",
     "IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION": "idir_director__initiative_agreement__analyst_recommendation.html",
     "IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION": "idir_director__transfer__analyst_recommendation.html",
-    "default": "default.html",
 }
