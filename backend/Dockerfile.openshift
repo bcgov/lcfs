@@ -23,9 +23,9 @@ ENV POETRY_CACHE_DIR=/.cache/pypoetry
 RUN poetry install --only main
 
 # Removing gcc
-# RUN apt-get purge -y \
-#   gcc \
-#   && rm -rf /var/lib/apt/lists/*
+RUN apt-get purge -y \
+  gcc \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copying the actual application, wait-for-it script, and prestart script
 COPY . /app/
