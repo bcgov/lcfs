@@ -1,20 +1,21 @@
 import structlog
-from typing import List, Optional, Tuple, Any
+from datetime import date
+from typing import List, Optional, Tuple, Dict, Any
 
 from fastapi import Depends
-
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import select, delete, func, case, and_
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select, delete, func, case, and_, or_
+from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
+from lcfs.db.models.fuel.FuelInstance import FuelInstance
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
@@ -37,7 +38,7 @@ class OtherUsesRepository:
     async def get_table_options(self) -> dict:
         """Get all table options"""
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.fuel_code_repo.get_formatted_fuel_types()
+        fuel_types = await self.get_formatted_fuel_types()
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
         provisions_of_the_act = (
@@ -302,3 +303,80 @@ class OtherUsesRepository:
 
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
+        """Get all fuel type options with their associated fuel categories and fuel codes for other uses"""
+        # Define the filtering conditions for fuel codes
+        current_date = date.today()
+        fuel_code_filters = (
+            or_(FuelCode.effective_date == None, FuelCode.effective_date <= current_date)
+            & or_(FuelCode.expiration_date == None, FuelCode.expiration_date > current_date)
+            & (FuelType.other_uses_fossil_derived == True)
+        )
+
+        # Build the query with filtered fuel_codes
+        query = (
+            select(FuelType)
+            .outerjoin(FuelType.fuel_instances)
+            .outerjoin(FuelInstance.fuel_category)
+            .outerjoin(FuelType.fuel_codes)
+            .where(fuel_code_filters)
+            .options(
+                contains_eager(FuelType.fuel_instances).contains_eager(
+                    FuelInstance.fuel_category
+                ),
+                contains_eager(FuelType.fuel_codes),
+                joinedload(FuelType.provision_1),
+                joinedload(FuelType.provision_2),
+            )
+        )
+
+        result = await self.db.execute(query)
+        fuel_types = result.unique().scalars().all()
+
+        # Prepare the data in the format matching your schema
+        formatted_fuel_types = []
+        for fuel_type in fuel_types:
+            formatted_fuel_type = {
+                "fuel_type_id": fuel_type.fuel_type_id,
+                "fuel_type": fuel_type.fuel_type,
+                "default_carbon_intensity": fuel_type.default_carbon_intensity,
+                "units": fuel_type.units if fuel_type.units else None,
+                "unrecognized": fuel_type.unrecognized,
+                "fuel_categories": [
+                    {
+                        "fuel_category_id": fc.fuel_category.fuel_category_id,
+                        "category": fc.fuel_category.category,
+                    }
+                    for fc in fuel_type.fuel_instances
+                ],
+                "fuel_codes": [
+                    {
+                        "fuel_code_id": fc.fuel_code_id,
+                        "fuel_code": fc.fuel_code,
+                        "carbon_intensity": fc.carbon_intensity,
+                    }
+                    for fc in fuel_type.fuel_codes
+                ],
+                "provision_of_the_act": [],
+            }
+
+            if fuel_type.provision_1:
+                formatted_fuel_type["provision_of_the_act"].append(
+                    {
+                        "provision_of_the_act_id": fuel_type.provision_1_id,
+                        "name": fuel_type.provision_1.name,
+                    }
+                )
+
+            if fuel_type.provision_2:
+                formatted_fuel_type["provision_of_the_act"].append(
+                    {
+                        "provision_of_the_act_id": fuel_type.provision_2_id,
+                        "name": fuel_type.provision_2.name,
+                    }
+                )
+            formatted_fuel_types.append(formatted_fuel_type)
+
+        return formatted_fuel_types
