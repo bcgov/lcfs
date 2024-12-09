@@ -6,7 +6,6 @@ user_orm_model = UserProfile(
     keycloak_email="email@domain.com",
     keycloak_username="username",
     email="email@domain.com",
-    notifications_email=None,
     title="Developer",
     phone="1234567890",
     mobile_phone="0987654321",
