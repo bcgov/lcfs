@@ -74,6 +74,7 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
         price_per_unit=5.75,
     )
     mock_transfer_repo.create_transfer.return_value = transfer
+    transfer_service.notfn_service = AsyncMock()
 
     result = await transfer_service.create_transfer(transfer)
 
