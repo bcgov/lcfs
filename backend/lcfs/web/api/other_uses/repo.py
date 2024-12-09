@@ -76,7 +76,7 @@ class OtherUsesRepository:
         )
 
         result = await self.db.execute(query)
-        return result.scalars().first()
+        return await result.unique().scalars().first()
 
     @repo_handler
     async def get_other_uses(self, compliance_report_id: int) -> List[OtherUsesSchema]:
@@ -302,7 +302,7 @@ class OtherUsesRepository:
         )
 
         result = await self.db.execute(query)
-        return result.scalars().first()
+        return await result.scalars().first()
 
     @repo_handler
     async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
@@ -333,7 +333,7 @@ class OtherUsesRepository:
         )
 
         result = await self.db.execute(query)
-        fuel_types = result.unique().scalars().all()
+        fuel_types = await result.unique().scalars().all()
 
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []

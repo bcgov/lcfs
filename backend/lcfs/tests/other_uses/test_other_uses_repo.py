@@ -11,14 +11,19 @@ from lcfs.tests.other_uses.conftest import create_mock_entity
 
 
 @pytest.fixture
-def mock_db_session():
+def mock_query_result():
+    # Setup mock for database query result chain
+    mock_result = AsyncMock()
+    mock_result.unique = MagicMock(return_value=mock_result)
+    mock_result.scalars = MagicMock(return_value=mock_result)
+    mock_result.all = MagicMock(return_value=[MagicMock(spec=OtherUses)])
+    return mock_result
+
+
+@pytest.fixture
+def mock_db_session(mock_query_result):
     session = MagicMock(spec=AsyncSession)
-    execute_result = AsyncMock()
-    execute_result.unique = MagicMock(return_value=execute_result)
-    execute_result.scalars = MagicMock(return_value=execute_result)
-    execute_result.all = MagicMock(return_value=[MagicMock(spec=OtherUses)])
-    execute_result.first = MagicMock(return_value=MagicMock(spec=OtherUses))
-    session.execute.return_value = execute_result
+    session.execute = AsyncMock(return_value=mock_query_result)
     return session
 
 
@@ -29,6 +34,14 @@ def other_uses_repo(mock_db_session):
     repo.fuel_code_repo.get_fuel_categories = AsyncMock(return_value=[])
     repo.fuel_code_repo.get_fuel_types = AsyncMock(return_value=[])
     repo.fuel_code_repo.get_expected_use_types = AsyncMock(return_value=[])
+
+    # Mock for local get_formatted_fuel_types method
+    async def mock_get_formatted_fuel_types():
+        mock_result = await mock_db_session.execute(AsyncMock())
+        return mock_result.unique().scalars().all()
+
+    repo.get_formatted_fuel_types = AsyncMock(side_effect=mock_get_formatted_fuel_types)
+
     return repo
 
 
