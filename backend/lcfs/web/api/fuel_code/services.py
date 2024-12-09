@@ -2,7 +2,6 @@ import math
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import func
 
 from lcfs.db.models.fuel.FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from lcfs.db.models.fuel.FinishedFuelTransportMode import FinishedFuelTransportMode
@@ -10,9 +9,6 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
-    get_field_for_filter,
-    apply_filter_conditions,
-    validate_pagination,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -26,9 +22,9 @@ from lcfs.web.api.fuel_code.schema import (
     TransportModeSchema,
     FuelCodePrefixSchema,
     TableOptionsSchema,
+    FuelCodeStatusSchema,
 )
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 logger = structlog.get_logger(__name__)
 
@@ -113,68 +109,50 @@ class FuelCodeServices:
         )
 
     @service_handler
-    async def get_fuel_codes(
+    async def search_fuel_codes(
         self, pagination: PaginationRequestSchema
     ) -> FuelCodesSchema:
         """
-        Gets the list of fuel codes with filtering and sorting.
+        Gets the list of fuel codes.
         """
-        conditions = []
-        pagination = validate_pagination(pagination)
-        if pagination.filters and len(pagination.filters) > 0:
-            self.apply_fuel_code_filters(pagination, conditions)
-
-        fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(
-            pagination, conditions
-        )
-
-        if len(fuel_codes) == 0:
-            fuel_codes = []
-            total_count = 0
-
+        fuel_codes, total_count = await self.repo.get_fuel_codes_paginated(pagination)
         return FuelCodesSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 1
-                ),
+                total_pages=math.ceil(total_count / pagination.size),
             ),
             fuel_codes=[
                 FuelCodeSchema.model_validate(fuel_code) for fuel_code in fuel_codes
             ],
         )
 
-    def apply_fuel_code_filters(self, pagination, conditions):
+    async def get_fuel_code_statuses(self):
         """
-        Apply filters to the fuel codes query.
+        Get all available statuses for fuel codes from the database.
 
-        Args:
-            pagination (PaginationRequestSchema): The pagination object containing page and size information.
-            conditions (List[Condition]): The list of conditions to apply.
+        Returns:
+            List[TransactionStatusView]: A list of TransactionStatusView objects containing the basic transaction status details.
         """
-        for filter in pagination.filters:
-            field_name = filter.field
-            filter_value = filter.filter
-            filter_type = filter.filter_type
-            filter_option = filter.type
+        fuel_code_statuses = await self.repo.get_fuel_code_statuses()
+        return [
+            FuelCodeStatusSchema.model_validate(fuel_code_status)
+            for fuel_code_status in fuel_code_statuses
+        ]
 
-            if field_name == "fuel_code":
-                # Handle the 'fuel_code' field, which is a combination of prefix and suffix
-                field = func.concat(
-                    FuelCode.fuel_code_prefix.prefix, FuelCode.fuel_suffix
-                )
-            else:
-                field = get_field_for_filter(FuelCode, field_name)
+    async def get_transport_modes(self):
+        """
+        Get all available transport modes for fuel codes from the database.
 
-            if field is None:
-                # Skip if the field is not found
-                continue
-
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
-            )
+        Returns:
+            List[TransportModeSchema]: A list of TransportModeSchema.
+        """
+        transport_modes = await self.repo.get_transport_modes()
+        return [
+            TransportModeSchema.model_validate(fuel_code_status)
+            for fuel_code_status in transport_modes
+        ]
 
     async def convert_to_model(
         self, fuel_code_schema: FuelCodeCreateUpdateSchema, status: FuelCodeStatusEnum

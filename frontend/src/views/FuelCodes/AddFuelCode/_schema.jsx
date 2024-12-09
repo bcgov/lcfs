@@ -84,6 +84,13 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         )
         return selectedOption.prefix
       }
+      const selectedOption = optionsData?.fuelCodePrefixes?.find(
+        (obj) => obj.prefix === params.data.prefix
+      )
+      if (selectedOption) {
+        params.data.prefixId = selectedOption.fuelCodePrefixId
+      }
+      return params.data.prefix
     },
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
@@ -260,6 +267,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'approvalDate',
     editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.approvalDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -275,6 +283,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'effectiveDate',
     editable: canEdit,
+    headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.effectiveDate'),
     maxWidth: 220,
     minWidth: 220,
@@ -289,7 +298,8 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'expirationDate',
     editable: canEdit,
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.expiryDate'),
+    headerComponent: canEdit ? RequiredHeader : undefined,
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.expirationDate'),
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: createCellRenderer('expirationDate', (params) => (
@@ -301,12 +311,12 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     cellEditor: DateEditor
   },
   {
-    field: 'fuel',
+    field: 'fuelType',
     editable: canEdit,
     headerComponent: canEdit ? RequiredHeader : undefined,
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuel'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: createCellRenderer('fuel'),
+    cellRenderer: createCellRenderer('fuelType'),
     valueGetter: (params) => {
       if (params.data?.fuelCodeType?.fuelType) {
         return params.data.fuelCodeType.fuelType
@@ -316,6 +326,13 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         )
         return selectedOption.fuelType
       }
+      const selectedOption = optionsData?.fuelTypes?.find(
+        (obj) => obj.fuelType === params.data.fuel
+      )
+      if (selectedOption) {
+        params.data.fuelTypeId = selectedOption.fuelTypeId
+      }
+      return params.data.fuel
     },
     valueSetter: (params) => {
       if (params.newValue) {

@@ -54,7 +54,7 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
     )
 
     # Relationships
-    fuel_codes = relationship("FuelCode", back_populates="fuel_code_type")
+    fuel_codes = relationship("FuelCode", back_populates="fuel_type")
     energy_density = relationship(
         "EnergyDensity", back_populates="fuel_type", uselist=False
     )  # One energy density per fuel type

@@ -1,21 +1,24 @@
 from typing import Optional, List, Union
+
+from fastapi.exceptions import RequestValidationError
+
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
-from pydantic import Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from enum import Enum
+
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
     Approved = "Approved"
     Deleted = "Deleted"
-
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -42,6 +45,15 @@ class FuelTypeSchema(BaseSchema):
 class FuelCodeStatusSchema(BaseSchema):
     fuel_code_status_id: Optional[int] = None
     status: FuelCodeStatusEnumSchema
+
+
+class FuelCodeResponseSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
+    fuel_status_id: Optional[int] = None
+    fuel_status: Optional[FuelCodeStatusSchema] = None
+    prefix_id: Optional[int] = None
+    fuel_code: str
+    carbon_intensity: float
 
 
 class TransportModeSchema(BaseSchema):
@@ -79,6 +91,7 @@ class EndUseTypeSchema(BaseSchema):
     end_use_type_id: int
     type: str
     sub_type: Optional[str] = None
+
 
 class EndUserTypeSchema(BaseSchema):
     end_user_type_id: int
@@ -163,7 +176,7 @@ class FuelCodeSchema(BaseSchema):
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
-    fuel_code_type: Optional[FuelTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )
@@ -200,7 +213,7 @@ class FuelCodeCloneSchema(BaseSchema):
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
     fuel_code_prefix: Optional[FuelCodePrefixSchema] = None
-    fuel_code_type: Optional[FuelTypeSchema] = None
+    fuel_type: Optional[FuelTypeSchema] = None
     feedstock_fuel_transport_modes: Optional[List[FeedstockFuelTransportModeSchema]] = (
         None
     )
@@ -254,9 +267,9 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     application_date: date
-    approval_date: Optional[date] = None
-    effective_date: Optional[date] = None
-    expiration_date: Optional[date] = None
+    approval_date: date
+    effective_date: date
+    expiration_date: date
     fuel_type_id: int
     feedstock: str
     feedstock_location: str
@@ -283,21 +296,97 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
 
-    @model_validator(mode="before")
-    def check_capacity_and_unit(cls, values):
-        facility_nameplate_capacity = values.get("facility_nameplate_capacity")
-        facility_nameplate_capacity_unit = values.get("facility_nameplate_capacity_unit")
+    @model_validator(mode="after")
+    def check_capacity_and_unit(self):
+        facility_nameplate_capacity = self.facility_nameplate_capacity
+        facility_nameplate_capacity_unit = self.facility_nameplate_capacity_unit
 
         if facility_nameplate_capacity is None:
-            values["facility_nameplate_capacity_unit"] = None
+            self.facility_nameplate_capacity = None
         elif (
             facility_nameplate_capacity is not None
             and facility_nameplate_capacity_unit is None
         ):
-            raise ValidationError(
-                "facility_nameplate_capacity_unit must be provided when facility_nameplate_capacity is not None"
+            errors = [
+                {
+                    "loc": ("facilityNameplateCapacityUnit",),
+                    "msg": "must be provided when the facility nameplate capacity is set",
+                    "type": "value_error",
+                }
+            ]
+            raise RequestValidationError(errors)
+        return self
+
+    @model_validator(mode="after")
+    def validate_dates(self):
+        application_date = self.application_date
+        approval_date = self.approval_date
+        effective_date = self.effective_date
+        expiration_date = self.expiration_date
+
+        errors = []
+
+        # Application Date: Must be before Approval Date and Expiry Date
+        if application_date >= approval_date:
+            errors.append(
+                {
+                    "loc": ("applicationDate",),
+                    "msg": "must be before Approval Date.",
+                    "type": "value_error",
+                }
             )
-        return values
+        if application_date >= expiration_date:
+            errors.append(
+                {
+                    "loc": ("applicationDate",),
+                    "msg": "must be before Expiration Date.",
+                    "type": "value_error",
+                }
+            )
+
+        # Approval Date: Must be after Application Date
+        if approval_date <= application_date:
+            errors.append(
+                {
+                    "loc": ("approvalDate",),
+                    "msg": "must be after Application Date.",
+                    "type": "value_error",
+                }
+            )
+
+        # Effective Date: Must be on/after Application Date and before Expiry Date
+        if effective_date < application_date:
+            errors.append(
+                {
+                    "loc": ("effectiveDate",),
+                    "msg": "must be on or after Application Date.",
+                    "type": "value_error",
+                }
+            )
+        if expiration_date and effective_date >= expiration_date:
+            errors.append(
+                {
+                    "loc": ("effectiveDate",),
+                    "msg": "must be before Expiry Date.",
+                    "type": "value_error",
+                }
+            )
+
+        # Expiry Date: Must be after Effective Date
+        if expiration_date <= effective_date:
+            errors.append(
+                {
+                    "loc": ("expirationDate",),
+                    "msg": "must be after Effective Date.",
+                    "type": "value_error",
+                }
+            )
+
+        # Raise RequestValidationError if any errors exist
+        if errors:
+            raise RequestValidationError(errors)
+
+        return self
 
 
 class DeleteFuelCodeResponseSchema(BaseSchema):

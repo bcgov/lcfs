@@ -9,12 +9,8 @@ from lcfs.web.api.base import (
 )
 from pydantic import Field, field_validator, validator
 
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
+from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -112,20 +108,6 @@ class FuelCategoryResponseSchema(BaseSchema):
     category: str
 
 
-class FuelCodeStatusSchema(BaseSchema):
-    fuel_code_status_id: Optional[int] = None
-    status: str
-
-
-class FuelCodeResponseSchema(BaseSchema):
-    fuel_code_id: Optional[int] = None
-    fuel_status_id: Optional[int] = None
-    fuel_status: Optional[FuelCodeStatusSchema] = None
-    prefix_id: Optional[int] = None
-    fuel_code: str
-    carbon_intensity: float
-
-
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
@@ -136,6 +118,12 @@ class FuelExportSchema(BaseSchema):
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_type: FuelTypeSchema
+    fuel_category_id: int
+    fuel_category: FuelCategoryResponseSchema
+    end_use_id: Optional[int] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+    provision_of_the_act_id: Optional[int] = None
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
     fuel_type_other: Optional[str] = None
     quantity: int = Field(..., gt=0)
     units: str
@@ -147,14 +135,9 @@ class FuelExportSchema(BaseSchema):
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_category_id: int
-    fuel_category: FuelCategoryResponseSchema
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-    provision_of_the_act_id: Optional[int] = None
-    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    end_use_id: Optional[int] = None
-    end_use_type: Optional[EndUseTypeSchema] = None
+
 
     @validator("quantity")
     def quantity_must_be_positive(cls, v):

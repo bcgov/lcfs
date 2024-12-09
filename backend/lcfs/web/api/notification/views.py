@@ -5,8 +5,7 @@ Notification endpoints
 from typing import Union, List
 from lcfs.web.exception.exceptions import DataNotFoundException
 import structlog
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, Query
-from lcfs.db import dependencies
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.notification.schema import (
     DeleteNotificationChannelSubscriptionResponseSchema,
@@ -49,7 +48,7 @@ async def get_notification_messages_by_user_id(
     response_model=NotificationCountSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler(["*"])
 async def get_unread_notifications(
     request: Request, service: NotificationService = Depends()
 ):
@@ -68,11 +67,10 @@ async def get_unread_notifications(
     response_model=List[SubscriptionSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler(["*"])
 async def get_notifications_channel_subscriptions_by_user_id(
     request: Request, service: NotificationService = Depends()
 ):
-
     return await service.get_notification_channel_subscriptions_by_user_id(
         user_id=request.user.user_profile_id
     )
@@ -118,25 +116,29 @@ async def save_notification(
     ],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler(["*"])
 async def save_subscription(
     request: Request,
     request_data: Union[SubscriptionSchema, DeleteSubscriptionSchema] = Body(...),
     service: NotificationService = Depends(),
 ):
+    user_profile_id = request.user.user_profile_id
     subscription_id = request_data.notification_channel_subscription_id
+
     if request_data.deleted:
         try:
-            await service.delete_notification_channel_subscription(subscription_id)
+            await service.delete_notification_channel_subscription(
+                subscription_id, user_profile_id
+            )
             return DeleteNotificationChannelSubscriptionResponseSchema(
                 message="Notification Subscription deleted successfully"
             )
         except DataNotFoundException as e:
             raise HTTPException(status_code=404, detail=str(e))
-    elif subscription_id:
-        return await service.update_notification_channel_subscription(request_data)
     else:
-        return await service.create_notification_channel_subscription(request_data)
+        return await service.create_notification_channel_subscription(
+            request_data, user_profile_id
+        )
 
 
 @router.get(

@@ -92,9 +92,9 @@ export const EditViewComplianceReport = () => {
     complianceReportId
   )
 
-  const currentStatus = reportData?.data?.currentStatus?.status
+  const currentStatus = reportData?.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
-    reportData?.data?.organizationId
+    reportData?.report.organizationId
   )
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -126,7 +126,7 @@ export const EditViewComplianceReport = () => {
         t,
         setModalData,
         updateComplianceReport,
-        reportData,
+
         isGovernmentUser,
         isSigningAuthorityDeclared
       }),
@@ -136,7 +136,7 @@ export const EditViewComplianceReport = () => {
       t,
       setModalData,
       updateComplianceReport,
-      reportData,
+
       isGovernmentUser,
       isSigningAuthorityDeclared
     ]
@@ -180,14 +180,19 @@ export const EditViewComplianceReport = () => {
           data={modalData}
         />
         <BCBox pb={2}>
-          <Typography variant="h5" color="primary">
+          <Typography
+            data-test="compliance-report-header"
+            variant="h5"
+            color="primary"
+          >
             {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
-            {reportData?.data?.nickname}
+            {reportData?.report.nickname}
           </Typography>
           <Typography
             variant="h6"
             color="primary"
             style={{ marginLeft: '0.25rem' }}
+            data-test="compliance-report-status"
           >
             Status: {currentStatus}
           </Typography>
@@ -203,13 +208,14 @@ export const EditViewComplianceReport = () => {
             )}
             <AssessmentCard
               orgData={orgData}
-              history={reportData?.data?.history}
+              history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
               hasMet={hasMet}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
-              hasSupplemental={reportData?.data?.hasSupplemental}
+              hasSupplemental={reportData?.report.hasSupplemental}
+              chain={reportData.chain}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -228,7 +234,10 @@ export const EditViewComplianceReport = () => {
             </>
           )}
           {!isGovernmentUser && (
-            <Introduction expanded={location.state?.newReport} compliancePeriod={compliancePeriod} />
+            <Introduction
+              expanded={location.state?.newReport}
+              compliancePeriod={compliancePeriod}
+            />
           )}
           {/* Internal Comments */}
           {isGovernmentUser && (

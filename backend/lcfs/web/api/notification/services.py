@@ -2,6 +2,7 @@ from typing import Optional
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
+    ChannelEnum,
 )
 from lcfs.web.api.notification.schema import (
     SubscriptionSchema,
@@ -9,7 +10,6 @@ from lcfs.web.api.notification.schema import (
 )
 from lcfs.web.exception.exceptions import DataNotFoundException
 import structlog
-import math
 from fastapi import Depends
 from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.core.decorators import service_handler
@@ -107,20 +107,41 @@ class NotificationService:
             raise DataNotFoundException(f"Notification with ID {notification_id}.")
 
     @service_handler
+    async def get_notification_type_id_by_name(self, name: str) -> int:
+        notification_type = await self.repo.get_notification_type_by_name(name)
+        if not notification_type:
+            raise ValueError(f"Invalid notification type name: {name}")
+        return notification_type
+
+    @service_handler
+    async def get_notification_channel_id_by_name(self, name: ChannelEnum) -> int:
+        notification_channel = await self.repo.get_notification_channel_by_name(name)
+        if not notification_channel:
+            raise ValueError(f"Invalid notification channel name: {name}")
+        return notification_channel
+
+    @service_handler
     async def create_notification_channel_subscription(
-        self, subscription_data: SubscriptionSchema
+        self, subscription_data: SubscriptionSchema, user_profile_id: int
     ):
-        """
-        Create a new notification channel subscription.
-        """
+        channel_enum_name = ChannelEnum(subscription_data.notification_channel_name)
+        notification_channel_id = await self.get_notification_channel_id_by_name(
+            channel_enum_name
+        )
+        notification_type_id = await self.get_notification_type_id_by_name(
+            subscription_data.notification_type_name
+        )
+
         subscription = NotificationChannelSubscription(
-            **subscription_data.model_dump(exclude={"deleted"})
+            user_profile_id=user_profile_id,
+            notification_channel_id=notification_channel_id,
+            notification_type_id=notification_type_id,
+            is_enabled=subscription_data.is_enabled,
         )
         created_subscription = await self.repo.create_notification_channel_subscription(
             subscription
         )
-
-        # Convert the SQLAlchemy model instance to the Pydantic model
+        x = 1
         return SubscriptionSchema.model_validate(created_subscription)
 
     @service_handler
@@ -128,7 +149,20 @@ class NotificationService:
         """
         Retrieve all notification channel subscriptions for a user.
         """
-        return await self.repo.get_notification_channel_subscriptions_by_user(user_id)
+        subscriptions = await self.repo.get_notification_channel_subscriptions_by_user(
+            user_id
+        )
+
+        subscriptions_with_names = [
+            {
+                "notification_channel_subscription_id": subscription.notification_channel_subscription_id,
+                "notification_channel_name": subscription.notification_channel.channel_name.name,
+                "notification_type_name": subscription.notification_type.name,
+            }
+            for subscription in subscriptions
+        ]
+
+        return subscriptions_with_names
 
     @service_handler
     async def get_notification_channel_subscription_by_id(
@@ -142,35 +176,16 @@ class NotificationService:
         )
 
     @service_handler
-    async def update_notification_channel_subscription(
-        self, subscription_data: SubscriptionSchema
-    ):
-        """
-        Update an existing notification channel subscription.
-        """
-        subscription = NotificationChannelSubscription(
-            **subscription_data.model_dump(exclude={"deleted"})
-        )
-        return await self.repo.update_notification_channel_subscription(subscription)
-
-    @service_handler
     async def delete_notification_channel_subscription(
-        self, subscription_id: int
+        self, subscription_id: int, user_profile_id: int
     ):
-        """
-        Delete a notification channel subscription.
-        """
-        # Ensure the subscription exists
         subscription = await self.repo.get_notification_channel_subscription_by_id(
             subscription_id
         )
-        if not subscription:
+        if not subscription or subscription.user_profile_id != user_profile_id:
             raise DataNotFoundException(
-                f"Subscription with ID {subscription_id} not found."
+                "Subscription not found or you are not authorized to delete it."
             )
 
-        # Proceed to delete if it exists and belongs to the user
         await self.repo.delete_notification_channel_subscription(subscription_id)
-        logger.info(
-            f"Deleted notification channel subscription {subscription_id}."
-        )
+        logger.info(f"Deleted notification channel subscription {subscription_id}.")

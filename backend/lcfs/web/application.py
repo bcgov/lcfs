@@ -68,13 +68,15 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Lazily retrieve Redis, session, and settings from app state
-        redis_pool = self.app.state.redis_pool
+        redis_client = self.app.state.redis_client
         session_factory = self.app.state.db_session_factory
         settings = self.app.state.settings
 
         # Now that we have the dependencies, we can instantiate the real backend
         real_backend = UserAuthentication(
-            redis_pool=redis_pool, session_factory=session_factory, settings=settings
+            redis_client=redis_client,
+            session_factory=session_factory,
+            settings=settings,
         )
 
         # Call the authenticate method of the real backend

@@ -1,20 +1,20 @@
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
+    NotificationChannel,
+    NotificationType,
+    ChannelEnum,
 )
-from lcfs.web.api.notification.schema import NotificationMessageSchema
 import structlog
-from datetime import date
-from typing import List, Dict, Any, Optional, Union
+
+from typing import List, Optional
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-from sqlalchemy import and_, delete, or_, select, func, text, update, distinct
+from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager, selectinload
-from sqlalchemy.exc import NoResultFound
-from fastapi import HTTPException
+from sqlalchemy.orm import selectinload
 
 from lcfs.web.core.decorators import repo_handler
 
@@ -162,12 +162,17 @@ class NotificationRepository:
     @repo_handler
     async def get_notification_channel_subscriptions_by_user(
         self, user_profile_id: int
-    ) -> Optional[NotificationChannelSubscription]:
+    ) -> List[NotificationChannelSubscription]:
         """
-        Retrieve channel subscriptions for a user
+        Retrieve channel subscriptions for a user, including channel name and notification type name.
         """
-        query = select(NotificationChannelSubscription).where(
-            NotificationChannelSubscription.user_profile_id == user_profile_id
+        query = (
+            select(NotificationChannelSubscription)
+            .options(
+                selectinload(NotificationChannelSubscription.notification_channel),
+                selectinload(NotificationChannelSubscription.notification_type),
+            )
+            .where(NotificationChannelSubscription.user_profile_id == user_profile_id)
         )
         result = await self.db.execute(query)
         subscriptions = result.scalars().all()
@@ -203,18 +208,6 @@ class NotificationRepository:
         return subscription
 
     @repo_handler
-    async def update_notification_channel_subscription(
-        self, notification_channel_subscription: NotificationChannelSubscription
-    ) -> NotificationChannelSubscription:
-        """
-        Update a notification chanel subscription
-        """
-        merged_subscription = await self.db.merge(notification_channel_subscription)
-        await self.db.flush()
-
-        return merged_subscription
-
-    @repo_handler
     async def delete_notification_channel_subscription(
         self, notification_channel_subscription_id: int
     ):
@@ -227,3 +220,28 @@ class NotificationRepository:
         )
         await self.db.execute(query)
         await self.db.flush()
+
+    @repo_handler
+    async def get_notification_type_by_name(self, name: str) -> Optional[int]:
+        """
+        Retrieve a NotificationType by its name
+        """
+        query = select(NotificationType.notification_type_id).where(
+            NotificationType.name == name
+        )
+        result = await self.db.execute(query)
+        x = result.scalars().first()
+        return x
+
+    @repo_handler
+    async def get_notification_channel_by_name(
+        self, name: ChannelEnum
+    ) -> Optional[int]:
+        """
+        Retrieve a NotificationChannel by its name
+        """
+        query = select(NotificationChannel.notification_channel_id).where(
+            NotificationChannel.channel_name == name.value
+        )
+        result = await self.db.execute(query)
+        return result.scalars().first()

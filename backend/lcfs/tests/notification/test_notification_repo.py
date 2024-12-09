@@ -1,10 +1,14 @@
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete 
+from sqlalchemy import delete
 from lcfs.web.api.notification.repo import NotificationRepository
-from lcfs.db.models.notification import NotificationMessage, NotificationChannelSubscription
+from lcfs.db.models.notification import (
+    NotificationMessage,
+    NotificationChannelSubscription,
+)
 from lcfs.web.exception.exceptions import DataNotFoundException
 from unittest.mock import AsyncMock, MagicMock
+
 
 @pytest.fixture
 def mock_db_session():
@@ -37,7 +41,9 @@ def notification_repo(mock_db_session):
 async def test_create_notification_message(notification_repo, mock_db_session):
     new_notification_message = MagicMock(spec=NotificationMessage)
 
-    result = await notification_repo.create_notification_message(new_notification_message)
+    result = await notification_repo.create_notification_message(
+        new_notification_message
+    )
 
     assert result == new_notification_message
     mock_db_session.add.assert_called_once_with(new_notification_message)
@@ -66,9 +72,10 @@ async def test_get_notification_message_by_id_found(notification_repo, mock_db_s
     mock_result_chain.scalar_one_or_none.assert_called_once()
 
 
-
 @pytest.mark.anyio
-async def test_get_notification_message_by_id_not_found(notification_repo, mock_db_session):
+async def test_get_notification_message_by_id_not_found(
+    notification_repo, mock_db_session
+):
     mock_result_chain = MagicMock()
     mock_result_chain.scalars = MagicMock(return_value=mock_result_chain)
     mock_result_chain.scalar_one_or_none.side_effect = DataNotFoundException
@@ -97,7 +104,10 @@ async def test_get_notification_messages_by_user(notification_repo, mock_db_sess
     mock_notification2.message = "Test message 2"
 
     mock_result_chain = MagicMock()
-    mock_result_chain.scalars.return_value.all.return_value = [mock_notification1, mock_notification2]
+    mock_result_chain.scalars.return_value.all.return_value = [
+        mock_notification1,
+        mock_notification2,
+    ]
 
     async def mock_execute(*args, **kwargs):
         return mock_result_chain
@@ -113,7 +123,9 @@ async def test_get_notification_messages_by_user(notification_repo, mock_db_sess
 
 
 @pytest.mark.anyio
-async def test_get_unread_notification_message_count_by_user_id(notification_repo, mock_db_session):
+async def test_get_unread_notification_message_count_by_user_id(
+    notification_repo, mock_db_session
+):
     user_id = 1
     expected_unread_count = 5
 
@@ -122,7 +134,9 @@ async def test_get_unread_notification_message_count_by_user_id(notification_rep
 
     mock_db_session.execute = AsyncMock(return_value=mock_result)
 
-    result = await notification_repo.get_unread_notification_message_count_by_user_id(user_id)
+    result = await notification_repo.get_unread_notification_message_count_by_user_id(
+        user_id
+    )
 
     assert result == expected_unread_count
     mock_db_session.execute.assert_called_once()
@@ -146,7 +160,6 @@ async def test_delete_notification_message(notification_repo, mock_db_session):
     assert str(executed_query) == str(expected_query)
 
     mock_db_session.flush.assert_called_once()
-
 
 
 @pytest.mark.anyio
@@ -197,14 +210,20 @@ async def test_mark_notification_as_read(notification_repo, mock_db_session):
 
     assert result.is_read is True  # Verify that is_read was set to True
     mock_db_session.commit.assert_called_once()  # Ensure commit was called
-    mock_db_session.refresh.assert_called_once_with(mock_notification)  # Check refresh was called
+    mock_db_session.refresh.assert_called_once_with(
+        mock_notification
+    )  # Check refresh was called
 
 
 @pytest.mark.anyio
-async def test_create_notification_channel_subscription(notification_repo, mock_db_session):
+async def test_create_notification_channel_subscription(
+    notification_repo, mock_db_session
+):
     new_subscription = MagicMock(spec=NotificationChannelSubscription)
 
-    result = await notification_repo.create_notification_channel_subscription(new_subscription)
+    result = await notification_repo.create_notification_channel_subscription(
+        new_subscription
+    )
 
     assert result == new_subscription
     mock_db_session.add.assert_called_once_with(new_subscription)
@@ -213,16 +232,18 @@ async def test_create_notification_channel_subscription(notification_repo, mock_
 
 
 @pytest.mark.anyio
-async def test_get_notification_channel_subscriptions_by_user(notification_repo, mock_db_session):
+async def test_get_notification_channel_subscriptions_by_user(
+    notification_repo, mock_db_session
+):
     mock_subscription = MagicMock(spec=NotificationChannelSubscription)
     mock_subscription.user_profile_id = 1
     mock_subscription.notification_channel_subscription_id = 1
     mock_subscription.notification_type_id = 1
     mock_subscription.notification_channel_id = 1
-    
+
     mock_result_chain = MagicMock()
     mock_result_chain.scalars.return_value.all.return_value = [mock_subscription]
-    
+
     async def mock_execute(*args, **kwargs):
         return mock_result_chain
 
@@ -235,54 +256,24 @@ async def test_get_notification_channel_subscriptions_by_user(notification_repo,
 
 
 @pytest.mark.anyio
-async def test_get_notification_channel_subscriptions_by_id(notification_repo, mock_db_session):
+async def test_get_notification_channel_subscriptions_by_id(
+    notification_repo, mock_db_session
+):
     subscription_id = 1
     mock_subscription = MagicMock(spec=NotificationChannelSubscription)
     mock_subscription.notification_channel_subscription_id = subscription_id
 
-   
     mock_result_chain = MagicMock()
-    mock_result_chain.scalar_one.return_value = mock_subscription 
-    
+    mock_result_chain.scalar_one.return_value = mock_subscription
+
     async def mock_execute(*args, **kwargs):
         return mock_result_chain
 
     mock_db_session.execute = mock_execute
 
-    result = await notification_repo.get_notification_channel_subscription_by_id(subscription_id)
+    result = await notification_repo.get_notification_channel_subscription_by_id(
+        subscription_id
+    )
 
     assert result is not None
     assert result.notification_channel_subscription_id == subscription_id
-
-
-@pytest.mark.anyio
-async def test_update_notification_channel_subscription(notification_repo, mock_db_session):
-    mock_subscription = MagicMock(spec=NotificationChannelSubscription)
-    mock_subscription.notification_channel_subscription_id = 1
-    mock_subscription.is_enabled = True
-    mock_subscription.user_profile_id = 1
-    mock_subscription.notification_type_id= 1
-    mock_subscription.notification_channel_id = 1
-
-    updated_subscription = NotificationChannelSubscription(
-        notification_channel_subscription_id=1,
-        is_enabled=False,
-        user_profile_id=1,
-        notification_type_id=2,
-        notification_channel_id=1
-    )
-
-    mock_db_session.merge.return_value = updated_subscription
-    mock_db_session.flush = AsyncMock()
-
-    notification_repo.db = mock_db_session
-
-    result = await notification_repo.update_notification_channel_subscription(mock_subscription)
-
-    mock_db_session.merge.assert_called_once_with(mock_subscription)
-    mock_db_session.flush.assert_called_once()
-    assert result == updated_subscription
-    assert result.is_enabled is False
-    assert result.notification_type_id == 2
-
-

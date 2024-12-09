@@ -43,7 +43,7 @@ async def test_get_fuel_codes_success():
     pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
 
     # Act
-    result = await service.get_fuel_codes(pagination)
+    result = await service.search_fuel_codes(pagination)
 
     # Assert
     assert isinstance(result.pagination, PaginationResponseSchema)
@@ -68,6 +68,9 @@ async def test_create_fuel_code_success():
         carbon_intensity=20.5,
         company="XYZ Corp",
         application_date="2023-10-01",
+        approval_date="2023-10-02",
+        effective_date="2023-10-03",
+        expiration_date="2024-10-01",
         edrms="EDRMS-123",
         feedstock="Corn oil",
         feedstock_location="Canada",
@@ -124,6 +127,9 @@ async def test_update_fuel_code_success():
         carbon_intensity=20.5,
         company="XYZ Corp",
         application_date="2023-10-01",
+        approval_date="2023-10-02",
+        effective_date="2023-10-03",
+        expiration_date="2024-10-01",
         edrms="EDRMS-123",
         feedstock="Corn oil",
         feedstock_location="Canada",

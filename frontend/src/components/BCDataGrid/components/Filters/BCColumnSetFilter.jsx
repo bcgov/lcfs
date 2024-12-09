@@ -40,11 +40,11 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       if (!props.multiple) {
         const val = input ? input.name : ''
         setCurrentValue(val)
-        instance.onFloatingFilterChanged('equals', val)
+        instance.onFloatingFilterChanged('custom', val)
       } else {
         const filterArr = input.map((item) => item.name).join(', ')
         setCurrentValue(filterArr)
-        instance.onFloatingFilterChanged('equals', filterArr)
+        instance.onFloatingFilterChanged('custom', filterArr)
       }
     })
   }
@@ -66,6 +66,7 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       multiple={props.multiple}
       disableCloseOnSelect={props.disableCloseOnSelect}
       onChange={onInputBoxChanged}
+      openOnFocus
       isOptionEqualToValue={(option, value) => option.name === value.name}
       limitTags={1}
       className="bc-column-set-filter ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
@@ -79,7 +80,6 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       renderOption={(propsIn, option, { selected }) => (
         <Box
           component="li"
-          key={option}
           className={
             selected
               ? 'ag-list-item ag-select-list-item selected'
@@ -88,6 +88,7 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
           role="option"
           sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
           {...propsIn}
+          key={option.name}
         >
           {props.multiple && (
             <Checkbox

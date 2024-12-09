@@ -5,7 +5,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HeaderComponent } from './HeaderComponent'
-import { Logout } from './Logout'
+import { UserProfileActions } from './UserProfileActions'
 import { useMediaQuery, useTheme } from '@mui/material'
 
 export const Navbar = () => {
@@ -34,7 +34,10 @@ export const Navbar = () => {
       { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
       { name: t('Organization'), route: ROUTES.ORGANIZATION }
     ]
-    const mobileRoutes = [{ name: t('logout'), route: ROUTES.LOG_OUT }]
+    const mobileRoutes = [
+      { name: t('Notifications'), route: ROUTES.NOTIFICATIONS },
+      { name: t('logout'), route: ROUTES.LOG_OUT }
+    ]
 
     const activeRoutes = currentUser?.isGovernmentUser
       ? idirRoutes
@@ -53,7 +56,7 @@ export const Navbar = () => {
       beta={true}
       data-test="main-layout-navbar"
       headerRightPart={<HeaderComponent key="headerRight" />}
-      menuRightPart={<Logout key="menRight" />}
+      menuRightPart={<UserProfileActions key="menuRight" />}
     />
   )
 }

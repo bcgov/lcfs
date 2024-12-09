@@ -14,6 +14,7 @@ from fastapi import (
     Depends,
     Query,
 )
+from fastapi_cache.decorator import cache
 from starlette.responses import StreamingResponse
 
 from lcfs.db import dependencies
@@ -26,6 +27,8 @@ from lcfs.web.api.fuel_code.schema import (
     SearchFuelCodeList,
     TableOptionsSchema,
     FuelCodeSchema,
+    FuelCodeStatusSchema,
+    TransportModeSchema,
 )
 from lcfs.web.api.fuel_code.services import FuelCodeServices
 from lcfs.web.core.decorators import view_handler
@@ -114,7 +117,7 @@ async def get_fuel_codes(
     service: FuelCodeServices = Depends(),
 ):
     """Endpoint to get list of fuel codes with pagination options"""
-    return await service.get_fuel_codes(pagination)
+    return await service.search_fuel_codes(pagination)
 
 
 @router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
@@ -143,6 +146,34 @@ async def export_users(
         as CSV files do not support multiple sheets.
     """
     return await exporter.export(format)
+
+
+@router.get(
+    "/statuses",
+    response_model=List[FuelCodeStatusSchema],
+    status_code=status.HTTP_200_OK,
+)
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
+@view_handler(["*"])
+async def get_fuel_code_statuses(
+    request: Request, service: FuelCodeServices = Depends()
+) -> List[FuelCodeStatusSchema]:
+    """Fetch all fuel code statuses"""
+    return await service.get_fuel_code_statuses()
+
+
+@router.get(
+    "/transport-modes",
+    response_model=List[TransportModeSchema],
+    status_code=status.HTTP_200_OK,
+)
+@cache(expire=60 * 60 * 24)  # cache for 24 hours
+@view_handler(["*"])
+async def get_transport_modes(
+    request: Request, service: FuelCodeServices = Depends()
+) -> List[TransportModeSchema]:
+    """Fetch all fuel code transport modes"""
+    return await service.get_transport_modes()
 
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)

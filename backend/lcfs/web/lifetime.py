@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
-from lcfs.services.s3.lifetime import init_s3, shutdown_s3
 from lcfs.services.tfrs.redis_balance import init_org_balance_cache
 from lcfs.settings import settings
 
@@ -57,16 +56,10 @@ def register_startup_event(
         # Assign settings to app state for global access
         app.state.settings = settings
 
-        # Create a Redis client from the connection pool
-        redis_client = Redis(connection_pool=app.state.redis_pool)
-
         # Initialize FastAPI cache with the Redis client
-        FastAPICache.init(RedisBackend(redis_client), prefix="lcfs")
+        FastAPICache.init(RedisBackend(app.state.redis_client), prefix="lcfs")
 
         await init_org_balance_cache(app)
-
-        # Initialize the S3 client
-        await init_s3(app)
 
         # Setup RabbitMQ Listeners
         await start_consumers()
@@ -89,7 +82,6 @@ def register_shutdown_event(
         await app.state.db_engine.dispose()
 
         await shutdown_redis(app)
-        await shutdown_s3(app)
         await stop_consumers()
 
     return _shutdown

@@ -33,6 +33,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
     CompliancePeriodSchema,
+    ChainedComplianceReportSchema
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -55,7 +56,8 @@ get_async_db = dependencies.get_async_db_session
 async def get_org_users(
     request: Request,
     organization_id: int,
-    status: str = Query(default="Active", description="Active or Inactive users list"),
+    status: str = Query(
+        default="Active", description="Active or Inactive users list"),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
     org_service: OrganizationService = Depends(),
@@ -264,7 +266,7 @@ async def get_compliance_reports(
 ) -> ComplianceReportListSchema:
     organization_id = request.user.organization.organization_id
     return await report_service.get_compliance_reports_paginated(
-        pagination, organization_id, bceid_user = True
+        pagination, organization_id, bceid_user=True
     )
 
 
@@ -288,7 +290,7 @@ async def get_all_org_reported_years(
 
 @router.get(
     "/{organization_id}/reports/{report_id}",
-    response_model=ComplianceReportBaseSchema,
+    response_model=ChainedComplianceReportSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER])
@@ -299,10 +301,10 @@ async def get_compliance_report_by_id(
     report_id: int = None,
     report_service: ComplianceReportServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
-) -> ComplianceReportBaseSchema:
+) -> ChainedComplianceReportSchema:
     """
     Endpoint to get information of a user by ID
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     await report_validate.validate_organization_access(report_id)
-    return await report_service.get_compliance_report_by_id(report_id, apply_masking=True)
+    return await report_service.get_compliance_report_by_id(report_id, apply_masking=True, get_chain=True)

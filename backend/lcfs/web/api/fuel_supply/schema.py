@@ -1,20 +1,16 @@
 from enum import Enum
 from typing import List, Optional
+
+from pydantic import Field, field_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     PaginationResponseSchema,
     SortOrder,
 )
-from pydantic import Field, field_validator
-from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
-
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
+from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -113,20 +109,6 @@ class FuelCategoryResponseSchema(BaseSchema):
     category: str
 
 
-class FuelCodeStatusSchema(BaseSchema):
-    fuel_code_status_id: Optional[int] = None
-    status: str
-
-
-class FuelCodeResponseSchema(BaseSchema):
-    fuel_code_id: Optional[int] = None
-    fuel_status_id: Optional[int] = None
-    fuel_status: Optional[FuelCodeStatusSchema] = None
-    prefix_id: Optional[int] = None
-    fuel_code: Optional[str]
-    carbon_intensity: float
-
-
 class FuelSupplyCreateUpdateSchema(BaseSchema):
     compliance_report_id: int
     fuel_supply_id: Optional[int] = None
@@ -161,6 +143,12 @@ class FuelSupplyResponseSchema(BaseSchema):
     action_type: str
     fuel_type_id: int
     fuel_type: FuelTypeSchema
+    fuel_category_id: Optional[int] = None
+    fuel_category: FuelCategoryResponseSchema
+    end_use_id: Optional[int] = None
+    end_use_type: Optional[EndUseTypeSchema] = None
+    provision_of_the_act_id: Optional[int] = None
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
     compliance_period: Optional[str] = None
     quantity: int
     units: str
@@ -171,14 +159,8 @@ class FuelSupplyResponseSchema(BaseSchema):
     energy_density: Optional[float] = None
     eer: Optional[float] = None
     energy: Optional[float] = None
-    fuel_category_id: Optional[int] = None
-    fuel_category: FuelCategoryResponseSchema
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-    provision_of_the_act_id: Optional[int] = None
-    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    end_use_id: Optional[int] = None
-    end_use_type: Optional[EndUseTypeSchema] = None
     fuel_type_other: Optional[str] = None
 
 

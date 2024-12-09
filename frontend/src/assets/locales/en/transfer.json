@@ -51,7 +51,7 @@
   "loadingText": "Loading transfer...",
   "processingText": "Processing transfer...",
   "detailsLabel": "Transfer Details (required)",
-  "fairMarketText": "The fair market value of any consideration, in CAD",
+  "fairMarketText": "The fair market value of any consideration, in $CAD",
   "totalValueText": " per compliance unit for a total value of ",
   "saLabel": "Signing Authority Declaration",
   "saConfirmation": "I confirm that records evidencing each matter reported under section 18 of the Low Carbon Fuel (General) Regulation are available on request.",

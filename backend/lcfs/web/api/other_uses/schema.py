@@ -9,18 +9,13 @@ from lcfs.web.api.base import (
 )
 from enum import Enum
 
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
     Approved = "Approved"
     Deleted = "Deleted"
-
-
-class FuelTypeQuantityUnitsEnumSchema(str, Enum):
-    Litres = "L"
-    Kilograms = "kg"
-    Kilowatt_hour = "kWh"
-    Cubic_metres = "m³"
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
@@ -85,13 +80,13 @@ class OtherUsesTableOptionsSchema(BaseSchema):
 class OtherUsesCreateSchema(BaseSchema):
     other_uses_id: Optional[int] = None
     compliance_report_id: int
-    quantity_supplied: int
     fuel_type: str
     fuel_category: str
-    expected_use: str
     provision_of_the_act: str
-    fuel_code: Optional[str] = None
+    quantity_supplied: int
     units: str
+    expected_use: str
+    fuel_code: Optional[str] = None
     ci_of_fuel: Optional[float] = None
     expected_use: str
     other_uses_id: Optional[int] = None

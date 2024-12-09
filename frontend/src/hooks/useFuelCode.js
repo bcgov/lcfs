@@ -1,6 +1,9 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
+import { TRANSFER_STATUSES } from '@/constants/statuses'
 
 export const useFuelCodeOptions = (params, options) => {
   const client = useApiService()
@@ -72,6 +75,32 @@ export const useDeleteFuelCode = (options) => {
         apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID)
       )
     }
+  })
+}
+
+export const useFuelCodeStatuses = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['fuel-code-statuses'],
+    queryFn: async () => {
+      const optionsData = await client.get('/fuel-codes/statuses')
+      return optionsData.data
+    },
+    ...options
+  })
+}
+
+export const useTransportModes = (options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['transport-modes'],
+    queryFn: async () => {
+      const optionsData = await client.get('/fuel-codes/transport-modes')
+      return optionsData.data
+    },
+    ...options
   })
 }
 

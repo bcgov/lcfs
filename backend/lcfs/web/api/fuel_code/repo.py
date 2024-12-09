@@ -3,7 +3,8 @@ from typing import List, Dict, Any, Union, Optional, Sequence
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func, text, update, distinct
+from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
@@ -25,7 +26,11 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
-from lcfs.web.api.base import get_field_for_filter, PaginationRequestSchema
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    get_field_for_filter,
+    apply_filter_conditions,
+)
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
 from dataclasses import dataclass
@@ -192,7 +197,7 @@ class FuelCodeRepository:
     async def get_transport_mode_by_name(self, mode_name: str) -> TransportMode:
         query = select(TransportMode).where(TransportMode.transport_mode == mode_name)
         result = await self.db.execute(query)
-        transport_mode = await result.scalar_one_or_none()
+        transport_mode = result.scalar_one()
 
         return transport_mode
 
@@ -276,19 +281,62 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_fuel_codes_paginated(
-        self, pagination: PaginationRequestSchema, conditions: list
+        self, pagination: PaginationRequestSchema
     ) -> tuple[Sequence[FuelCode], int]:
         """
-        Queries fuel codes from the database with optional filters and sorting.
+        Queries fuel codes from the database with optional filters. Supports pagination and sorting.
 
         Args:
-            pagination (PaginationRequestSchema): Pagination and sorting parameters.
-            conditions (list): List of SQLAlchemy conditions to apply.
+            pagination (dict): Pagination and sorting parameters.
 
         Returns:
-            Tuple containing a list of FuelCode instances and the total count.
+            List[FuelCodeSchema]: A list of fuel codes matching the query.
         """
         delete_status = await self.get_fuel_status_by_status("Deleted")
+        conditions = [FuelCode.fuel_status_id != delete_status.fuel_code_status_id]
+
+        for filter in pagination.filters:
+
+            filter_value = filter.filter
+            if filter.filter_type == "date":
+                if filter.type == "inRange":
+                    filter_value = [filter.date_from, filter.date_to]
+                else:
+                    filter_value = filter.date_from
+
+            filter_option = filter.type
+            filter_type = filter.filter_type
+            if filter.field == "status":
+                field = get_field_for_filter(FuelCodeStatus, filter.field)
+            elif filter.field == "prefix":
+                field = get_field_for_filter(FuelCodePrefix, filter.field)
+            elif filter.field == "fuel_type":
+                field = get_field_for_filter(FuelType, filter.field)
+            elif (
+                filter.field == "feedstock_fuel_transport_mode"
+                or filter.field == "finished_fuel_transport_mode"
+            ):
+                transport_mode = await self.get_transport_mode_by_name(filter_value)
+
+                if filter.field == "feedstock_fuel_transport_mode":
+                    conditions.append(
+                        FeedstockFuelTransportMode.transport_mode_id
+                        == transport_mode.transport_mode_id
+                    )
+
+                if filter.field == "finished_fuel_transport_mode":
+                    conditions.append(
+                        FinishedFuelTransportMode.transport_mode_id
+                        == transport_mode.transport_mode_id
+                    )
+                continue
+            else:
+                field = get_field_for_filter(FuelCode, filter.field)
+
+            conditions.append(
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+            )
+
         # setup pagination
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
@@ -298,8 +346,8 @@ class FuelCodeRepository:
             .options(
                 joinedload(FuelCode.fuel_code_status),
                 joinedload(FuelCode.fuel_code_prefix),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_1),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
                 joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
@@ -307,42 +355,36 @@ class FuelCodeRepository:
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
             )
-            .where(FuelCode.fuel_status_id != delete_status.fuel_code_status_id)
+            .where(and_(*conditions))
         )
 
-        # Apply the conditions
-        if conditions:
-            query = query.where(and_(*conditions))
-
         # Apply sorting
-        if pagination.sort_orders:
-            for order in pagination.sort_orders:
-                field_name = order.field
-                direction = order.direction
-                if field_name == "fuel_code":
-                    # Handle sorting for 'fuel_code' field
-                    field = func.concat(
-                        FuelCode.fuel_code_prefix.prefix, FuelCode.fuel_suffix
-                    )
-                else:
-                    field = get_field_for_filter(FuelCode, field_name)
-                if field is not None:
-                    if direction.lower() == "asc":
-                        query = query.order_by(field.asc())
-                    else:
-                        query = query.order_by(field.desc())
-        else:
-            # Default sorting
-            query = query.order_by(FuelCode.create_date.desc())
+        for order in pagination.sort_orders:
+            direction = asc if order.direction == "asc" else desc
+            if order.field == "status":
+                field = getattr(FuelCodeStatus, "status")
+            elif order.field == "prefix":
+                field = getattr(FuelCodePrefix, "prefix")
+            else:
+                field = getattr(FuelCode, order.field)
+            query = query.order_by(direction(field))
 
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
         total_count = (await self.db.execute(count_query)).scalar()
 
         # Execute the main query to retrieve all fuel codes
-        result = await self.db.execute(query.offset(offset).limit(limit))
+        result = await self.db.execute(
+            query.offset(offset).limit(limit).order_by(FuelCode.create_date.desc())
+        )
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
+
+    @repo_handler
+    async def get_fuel_code_statuses(self):
+        query = select(FuelCodeStatus).order_by(asc(FuelCodeStatus.status))
+        status_results = await self.db.execute(query)
+        return status_results.scalars().all()
 
     @repo_handler
     async def create_fuel_code(self, fuel_code: FuelCode) -> FuelCode:
@@ -359,13 +401,13 @@ class FuelCodeRepository:
             [
                 "fuel_code_status",
                 "fuel_code_prefix",
-                "fuel_code_type",
+                "fuel_type",
                 "feedstock_fuel_transport_modes",
                 "finished_fuel_transport_modes",
             ],
         )
         # Manually load nested relationships
-        await self.db.refresh(fuel_code.fuel_code_type, ["provision_1", "provision_2"])
+        await self.db.refresh(fuel_code.fuel_type, ["provision_1", "provision_2"])
         return fuel_code
 
     @repo_handler
@@ -379,8 +421,8 @@ class FuelCodeRepository:
                 joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_1),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
             )
             .where(FuelCode.fuel_code_id == fuel_code_id)
         )
@@ -490,8 +532,8 @@ class FuelCodeRepository:
             .options(
                 joinedload(FuelCode.fuel_code_status),
                 joinedload(FuelCode.fuel_code_prefix),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_1),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
                 joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
@@ -649,8 +691,8 @@ class FuelCodeRepository:
                 joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_1),
-                joinedload(FuelCode.fuel_code_type).joinedload(FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
             )
             .filter(FuelCodeStatus.status != FuelCodeStatusEnum.Deleted)
         )

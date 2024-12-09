@@ -83,7 +83,7 @@
       "provision_1_id": 2,
       "provision_2_id": 3,
       "default_carbon_intensity": 123.96,
-      "units": "kWh",
+      "units": "kg",
       "unrecognized": false
     },
     {
@@ -97,7 +97,6 @@
       "units": "kg",
       "unrecognized": false
     },
-
     {
       "fuel_type_id": 11,
       "fuel_type": "Alternative jet fuel",
@@ -328,42 +327,52 @@
     },
     {
       "end_use_type_id": 14,
-      "type": "Marine",
-      "sub_type": "General",
+      "type": "Aircraft",
       "intended_use": true
     },
     {
       "end_use_type_id": 15,
-      "type": "Marine",
-      "sub_type": "Operated within 51 to 75% of load range"
+      "type": "Compression-ignition engine- Marine, general",
+      "intended_use": true
     },
     {
       "end_use_type_id": 16,
-      "type": "Marine",
-      "sub_type": "Operated within 76 to 100% of load range"
+      "type": "Compression-ignition engine- Marine, operated within 51 to 75% of load range",
+      "intended_use": true
     },
     {
       "end_use_type_id": 17,
-      "type": "Marine, w/ methane slip reduction kit",
-      "sub_type": "General"
+      "type": "Compression-ignition engine- Marine, operated within 76 to 100% of load range",
+      "intended_use": true
     },
     {
       "end_use_type_id": 18,
-      "type": "Marine, w/ methane slip reduction kit",
-      "sub_type": "Operated within 51 to 75% of load range"
+      "type": "Compression-ignition engine- Marine, with methane slip reduction kit- General",
+      "intended_use": true
     },
     {
       "end_use_type_id": 19,
-      "type": "Marine, w/ methane slip reduction kit",
-      "sub_type": "Operated within 76 to 100% of load range"
+      "type": "Compression-ignition engine- Marine, with methane slip reduction kit- Operated within 51 to 75% of load range",
+      "intended_use": true
     },
     {
       "end_use_type_id": 20,
-      "type": "Unknown"
+      "type": "Compression-ignition engine- Marine, with methane slip reduction kit- Operated within 76 to 100% of load range",
+      "intended_use": true
     },
     {
       "end_use_type_id": 21,
-      "type": "Aircraft",
+      "type": "Compression-ignition engine- Marine, unknown whether kit is installed or average operating load range",
+      "intended_use": true
+    },
+    {
+      "end_use_type_id": 22,
+      "type": "Unknown engine type",
+      "intended_use": true
+    },
+    {
+      "end_use_type_id": 23,
+      "type": "Other (i.e. road transportation)",
       "intended_use": true
     }
   ],
@@ -399,60 +408,74 @@
       "additional_uci_id": 1,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 14,
-      "intensity": 27.3
+      "intensity": 0
     },
     {
       "additional_uci_id": 2,
-      "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 15,
-      "intensity": 17.8
+      "intensity": 0
     },
     {
       "additional_uci_id": 3,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 16,
-      "intensity": 12.2
+      "end_use_type_id": 15,
+      "intensity": 27.3
     },
     {
       "additional_uci_id": 4,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 17,
-      "intensity": 10.6
+      "end_use_type_id": 16,
+      "intensity": 17.8
     },
     {
       "additional_uci_id": 5,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 18,
-      "intensity": 8.4
+      "end_use_type_id": 17,
+      "intensity": 12.2
     },
     {
       "additional_uci_id": 6,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 19,
-      "intensity": 8.0
+      "end_use_type_id": 18,
+      "intensity": 10.6
     },
     {
       "additional_uci_id": 7,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "end_use_type_id": 20,
-      "intensity": 27.3
+      "end_use_type_id": 19,
+      "intensity": 8.4
     },
     {
       "additional_uci_id": 8,
       "fuel_type_id": 7,
       "uom_id": 5,
-      "intensity": 0
+      "end_use_type_id": 20,
+      "intensity": 8.0
     },
     {
       "additional_uci_id": 9,
+      "fuel_type_id": 7,
       "uom_id": 5,
+      "end_use_type_id": 21,
+      "intensity": 27.3
+    },
+    {
+      "additional_uci_id": 10,
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 22,
+      "intensity": 27.3
+    },
+    {
+      "additional_uci_id": 11,
+      "fuel_type_id": 7,
+      "uom_id": 5,
+      "end_use_type_id": 23,
       "intensity": 0
     }
   ],
@@ -549,75 +572,117 @@
       "eer_id": 14,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
-      "end_use_type_id": 14,
-      "ratio": 2.5
-    },
-    {
-      "eer_id": 15,
-      "fuel_category_id": 2,
-      "fuel_type_id": 3,
       "end_use_type_id": 10,
       "ratio": 2.8
     },
     {
-      "eer_id": 16,
+      "eer_id": 15,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 11,
       "ratio": 2.4
     },
     {
-      "eer_id": 17,
+      "eer_id": 16,
       "fuel_category_id": 2,
       "fuel_type_id": 3,
       "end_use_type_id": 2,
       "ratio": 1.0
     },
     {
-      "eer_id": 18,
+      "eer_id": 17,
       "fuel_category_id": 2,
       "fuel_type_id": 6,
       "end_use_type_id": 3,
       "ratio": 1.8
     },
     {
-      "eer_id": 19,
+      "eer_id": 18,
       "fuel_category_id": 2,
       "fuel_type_id": 6,
       "end_use_type_id": 2,
       "ratio": 0.9
     },
     {
-      "eer_id": 20,
-      "fuel_category_id": 2,
-      "fuel_type_id": 7,
-      "end_use_type_id": 12,
-      "ratio": 1.0
-    },
-    {
-      "eer_id": 21,
-      "fuel_category_id": 2,
-      "fuel_type_id": 7,
-      "end_use_type_id": 2,
-      "ratio": 0.9
-    },
-    {
-      "eer_id": 22,
+      "eer_id": 19,
       "fuel_category_id": 2,
       "fuel_type_id": 13,
       "ratio": 0.9
     },
     {
-      "eer_id": 23,
+      "eer_id": 20,
       "fuel_category_id": 3,
       "fuel_type_id": 3,
       "ratio": 2.5
     },
     {
-      "eer_id": 24,
+      "eer_id": 21,
       "fuel_category_id": 3,
       "fuel_type_id": 11,
       "ratio": 1.0
+    },
+    {
+      "eer_id": 22,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 15,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 23,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 16,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 24,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 17,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 25,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 18,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 26,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 19,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 27,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 20,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 28,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 21,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 29,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 22,
+      "ratio": 0.9
+    },
+    {
+      "eer_id": 30,
+      "fuel_category_id": 2,
+      "fuel_type_id": 7,
+      "end_use_type_id": 23,
+      "ratio": 0.9
     }
   ],
   "energy_densities": [
