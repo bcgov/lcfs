@@ -126,6 +126,7 @@ async def test_update_initiative_agreement(service, mock_repo, mock_request):
     mock_repo.get_initiative_agreement_by_id.return_value = mock_agreement
     mock_repo.get_initiative_agreement_status_by_name.return_value = mock_status
     mock_repo.update_initiative_agreement.return_value = mock_agreement
+    service.notfn_service = AsyncMock()
 
     update_data = InitiativeAgreementUpdateSchema(
         initiative_agreement_id=1,
