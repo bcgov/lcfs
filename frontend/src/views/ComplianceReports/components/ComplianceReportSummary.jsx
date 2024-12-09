@@ -112,6 +112,7 @@ const ComplianceReportSummary = ({
         </AccordionSummary>
         <AccordionDetails>
           <SummaryTable
+            data-test="renewable-summary"
             title={t('report:renewableFuelTargetSummary')}
             columns={
               summaryData
@@ -128,12 +129,14 @@ const ComplianceReportSummary = ({
             useParenthesis={true}
           />
           <SummaryTable
+            data-test="low-carbon-summary"
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
             width={'80.65%'}
           />
           <SummaryTable
+            data-test="non-compliance-summary"
             title={t('report:nonCompliancePenaltySummary')}
             columns={nonComplianceColumns(t)}
             data={summaryData?.nonCompliancePenaltySummary}
