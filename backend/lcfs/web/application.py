@@ -1,30 +1,26 @@
-from importlib import metadata
-import structlog
 import logging
+import uuid
 
-import os
-import debugpy
+import structlog
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import UJSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import UJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
-from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.authentication import (
     AuthenticationBackend,
     AuthCredentials,
     UnauthenticatedUser,
 )
+from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-import uuid
-import contextvars
 
-from lcfs.settings import settings
 from lcfs.logging_config import setup_logging, correlation_id_var
-from lcfs.web.api.router import api_router
 from lcfs.services.keycloak.authentication import UserAuthentication
+from lcfs.settings import settings
+from lcfs.web.api.router import api_router
 from lcfs.web.exception.exception_handler import validation_exception_handler
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
@@ -65,6 +61,9 @@ class LazyAuthenticationBackend(AuthenticationBackend):
 
     async def authenticate(self, request):
         if request.scope["method"] == "OPTIONS":
+            return AuthCredentials([]), UnauthenticatedUser()
+
+        if request.url.path == "/api/health":  # Skip for health check
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Lazily retrieve Redis, session, and settings from app state
