@@ -29,14 +29,14 @@ class FinalSupplyEquipmentServices:
     @service_handler
     async def get_fse_options(self):
         """Fetches all FSE options concurrently."""
-        organization= self.request.user.organization
+        organization = self.request.user.organization
         (
             intended_use_types,
             levels_of_equipment,
             fuel_measurement_types,
             intended_user_types,
             ports,
-            organizations
+            organization_names,
         ) = await self.repo.get_fse_options(organization)
 
         return {
@@ -54,7 +54,7 @@ class FinalSupplyEquipmentServices:
                 EndUserTypeSchema.model_validate(u) for u in intended_user_types
             ],
             "ports": [port.value for port in ports],
-            "organizations": organizations,
+            "organization_names": organization_names,
         }
 
     async def convert_to_fse_model(self, fse: FinalSupplyEquipmentCreateSchema):
@@ -144,7 +144,7 @@ class FinalSupplyEquipmentServices:
         if not existing_fse:
             raise ValueError("final supply equipment not found")
 
-        existing_fse.organization = fse_data.organization
+        existing_fse.organization_name = fse_data.organization_name
         existing_fse.kwh_usage = fse_data.kwh_usage
         existing_fse.serial_nbr = fse_data.serial_nbr
         existing_fse.manufacturer = fse_data.manufacturer

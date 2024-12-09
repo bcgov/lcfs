@@ -42,17 +42,17 @@ export const finalSupplyEquipmentColDefs = (
     hide: true
   },
   {
-    field: 'organization',
+    field: 'organizationName',
     headerComponent: RequiredHeader,
     headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.organization'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
     ),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <Typography variant="body4">Select</Typography>),
     cellEditorParams: {
-      options: optionsData?.organizations?.sort() || [],
+      options: optionsData?.organizationNames?.sort() || [],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: true,
@@ -64,18 +64,18 @@ export const finalSupplyEquipmentColDefs = (
     minWidth: 260,
     editable: true,
     valueGetter: (params) => {
-      return params.data?.organization || '';
+      return params.data?.organizationName || '';
     },
     valueSetter: (params) => {
       if (params.newValue) {
-        const isValidOrganization = optionsData?.organizations.includes(params.newValue);
+        const isValidOrganizationName = optionsData?.organizationNames.includes(params.newValue);
 
-        params.data.organization = isValidOrganization ? params.newValue : params.newValue;
+        params.data.organizationName = isValidOrganizationName ? params.newValue : params.newValue;
         return true;
       }
       return false;
     },
-  tooltipValueGetter: (params) => "Select the organization from the list"
+  tooltipValueGetter: (params) => "Select the organization name from the list"
   },
   {
     field: 'supplyFrom',

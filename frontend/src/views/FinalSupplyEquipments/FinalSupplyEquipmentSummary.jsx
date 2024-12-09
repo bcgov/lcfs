@@ -50,9 +50,9 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
     () => [
       {
         headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.organization'
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
         ),
-        field: 'organization'
+        field: 'organizationName'
       },
       {
         headerName: t(

@@ -43,7 +43,7 @@ class FinalSupplyEquipmentRepository:
             levels_of_equipment = await self.get_levels_of_equipment()
             fuel_measurement_types = await self.get_fuel_measurement_types()
             intended_user_types = await self.get_intended_user_types()
-            organizations = await self.get_organizations(organization)
+            organization_names = await self.get_organization_names(organization)
         ports = list(PortsEnum)
         return (
             intended_use_types,
@@ -51,7 +51,7 @@ class FinalSupplyEquipmentRepository:
             fuel_measurement_types,
             intended_user_types,
             ports,
-            organizations,
+            organization_names,
         )
 
     async def get_intended_use_types(self) -> List[EndUseType]:
@@ -102,7 +102,7 @@ class FinalSupplyEquipmentRepository:
             .all()
         )
 
-    async def get_organizations(self, organization) -> List[str]:
+    async def get_organization_names(self, organization) -> List[str]:
         """
         Retrieve unique organization names for Final Supply Equipment records
         associated with the given organization_id via ComplianceReport.
@@ -115,10 +115,10 @@ class FinalSupplyEquipmentRepository:
         """
         organization_names = (
             await self.db.execute(
-                select(distinct(FinalSupplyEquipment.organization))
+                select(distinct(FinalSupplyEquipment.organization_name))
                 .join(ComplianceReport, FinalSupplyEquipment.compliance_report_id == ComplianceReport.compliance_report_id)
                 .filter(ComplianceReport.organization_id == organization.organization_id)
-                .filter(FinalSupplyEquipment.organization.isnot(None))
+                .filter(FinalSupplyEquipment.organization_name.isnot(None))
             )
         ).all()
 

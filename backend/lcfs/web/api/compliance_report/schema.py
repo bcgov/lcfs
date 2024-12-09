@@ -114,7 +114,7 @@ class FSEOptionsSchema(BaseSchema):
 class FinalSupplyEquipmentSchema(BaseSchema):
     final_supply_equipment_id: int
     compliance_report_id: int
-    organization: str
+    organization_name: str
     supply_from_date: date
     supply_to_date: date
     registration_nbr: str
