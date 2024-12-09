@@ -40,7 +40,7 @@ async def test_get_fuel_codes_success():
     ]
     repo_mock.get_fuel_codes_paginated.return_value = (mock_fuel_codes, 1)
 
-    pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
+    pagination = PaginationRequestSchema(page=1, size=10)
 
     # Act
     result = await service.search_fuel_codes(pagination)
@@ -49,7 +49,7 @@ async def test_get_fuel_codes_success():
     assert isinstance(result.pagination, PaginationResponseSchema)
     assert len(result.fuel_codes) == 1
     assert result.fuel_codes[0].company == "XYZ Corp"
-    repo_mock.get_fuel_codes_paginated.assert_called_once_with(pagination, [])
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(pagination)
 
 
 @pytest.mark.anyio
