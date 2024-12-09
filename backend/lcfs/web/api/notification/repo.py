@@ -5,6 +5,8 @@ from lcfs.db.models.notification import (
     NotificationType,
     ChannelEnum,
 )
+from lcfs.db.models.user import UserProfile
+from lcfs.web.api.base import NotificationTypeEnum
 import structlog
 
 from typing import List, Optional
@@ -12,7 +14,7 @@ from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-from sqlalchemy import delete, select, func
+from sqlalchemy import delete, or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -45,6 +47,16 @@ class NotificationRepository:
         )
         # await self.db.refresh(notification_message)
         return notification_message
+
+    @repo_handler
+    async def create_notification_messages(
+        self, notification_messages: List[NotificationMessage]
+    ) -> None:
+        """
+        Create bulk notification messages
+        """
+        self.db.add_all(notification_messages)
+        await self.db.flush()
 
     @repo_handler
     async def get_notification_messages_by_user(
@@ -245,3 +257,43 @@ class NotificationRepository:
         )
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_subscribed_users_by_channel(
+        self,
+        notification_type: NotificationTypeEnum,
+        channel: ChannelEnum,
+        organization_id: int = None,
+    ) -> List[int]:
+        """
+        Retrieve a list of user ids subscribed to a notification type
+        """
+        query = (
+            select(NotificationChannelSubscription)
+            .join(
+                NotificationType,
+                NotificationType.notification_type_id
+                == NotificationChannelSubscription.notification_type_id,
+            )
+            .join(
+                NotificationChannel,
+                NotificationChannel.notification_channel_id
+                == NotificationChannelSubscription.notification_channel_id,
+            )
+            .join(
+                UserProfile,
+                UserProfile.user_profile_id
+                == NotificationChannelSubscription.user_profile_id,
+            )
+            .filter(
+                NotificationType.name == notification_type.value,
+                NotificationChannelSubscription.is_enabled == True,
+                NotificationChannel.channel_name == channel.value,
+                or_(
+                    UserProfile.organization_id == organization_id,
+                    UserProfile.organization_id.is_(None), 
+                ),
+            )
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()

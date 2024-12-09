@@ -1,3 +1,9 @@
+from lcfs.web.api.notification.schema import (
+    INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 import structlog
 from datetime import datetime
 from fastapi import Depends, Request, HTTPException
@@ -34,12 +40,14 @@ class InitiativeAgreementServices:
         internal_comment_service: InternalCommentService = Depends(
             InternalCommentService
         ),
+        notfn_service: NotificationService = Depends(NotificationService),
         request: Request = None,
     ) -> None:
         self.repo = repo
         self.org_service = org_service
         self.internal_comment_service = internal_comment_service
         self.request = request
+        self.notfn_service = notfn_service
 
     @service_handler
     async def get_initiative_agreement(
@@ -121,7 +129,7 @@ class InitiativeAgreementServices:
         # Return the updated initiative agreement schema with the returned status flag
         ia_schema = InitiativeAgreementSchema.from_orm(updated_initiative_agreement)
         ia_schema.returned = returned
-
+        await self._perform_notificaiton_call(ia_schema, re_recommended)
         return ia_schema
 
     @service_handler
@@ -166,7 +174,7 @@ class InitiativeAgreementServices:
             await self.internal_comment_service.create_internal_comment(
                 internal_comment_data
             )
-
+        await self._perform_notificaiton_call(initiative_agreement)
         return initiative_agreement
 
     async def director_approve_initiative_agreement(
@@ -180,7 +188,7 @@ class InitiativeAgreementServices:
         if not has_director_role:
             logger.error(
                 "Non-Director tried to approve Agreement",
-                initiative_agreement_id=initiative_agreement.initiative_agreement_id
+                initiative_agreement_id=initiative_agreement.initiative_agreement_id,
             )
             raise HTTPException(status_code=403, detail="Forbidden.")
 
@@ -200,3 +208,23 @@ class InitiativeAgreementServices:
             initiative_agreement.transaction_effective_date = datetime.now().date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
+        await self._perform_notificaiton_call(initiative_agreement)
+
+    async def _perform_notificaiton_call(self, ia, re_recommended=False):
+        """Send notifications based on the current status of the transfer."""
+        notifications = INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER.get(
+            ia.current_status.status if not re_recommended else "Return to analyst",
+            None,
+        )
+        notification_data = NotificationMessageSchema(
+            message=f"Initiative Agreement {ia.initiative_agreement_id} has been {ia.current_status.status}",
+            related_organization_id=ia.to_organization_id,
+            origin_user_profile_id=self.request.user.user_profile_id,
+        )
+        if notifications and isinstance(notifications, list):
+            await self.notfn_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notifications,
+                    notification_data=notification_data,
+                )
+            )

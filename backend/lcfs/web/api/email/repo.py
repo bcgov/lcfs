@@ -6,7 +6,7 @@ from lcfs.db.models.notification.NotificationChannel import (
 )
 from lcfs.web.core.decorators import repo_handler
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import func, select, or_
 from typing import List
 from lcfs.db.models.user import UserProfile
 from lcfs.db.dependencies import get_async_db_session
@@ -26,7 +26,9 @@ class CHESEmailRepository:
         Ignores In-Application notification types.
         """
         query = (
-            select(UserProfile.email)
+            select(
+                func.coalesce(UserProfile.notifications_email, UserProfile.email).label("email")
+            )
             .join(NotificationChannelSubscription)
             .join(NotificationChannelSubscription.notification_channel)
             .filter(
