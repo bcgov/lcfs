@@ -1,12 +1,10 @@
 from fastapi import Depends, HTTPException, Request
-from lcfs.web.api.base import NotificationTypeEnum
 from lcfs.web.api.notification.schema import (
     COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
     NotificationRequestSchema,
 )
 from lcfs.web.api.notification.services import NotificationService
-from sqlalchemy.exc import InvalidRequestError
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
