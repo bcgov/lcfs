@@ -224,6 +224,7 @@ def apply_number_filter_conditions(field, filter_value, filter_option):
             "greaterThanOrEqual": field >= filter_value,
             "lessThan": field < filter_value,
             "lessThanOrEqual": field <= filter_value,
+            "startsWith": cast(field, String).like(f"{filter_value}%"),
         }
         return number_filter_mapping.get(filter_option)
 
