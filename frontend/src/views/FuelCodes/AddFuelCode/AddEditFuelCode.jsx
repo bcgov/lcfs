@@ -25,6 +25,7 @@ import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import Papa from 'papaparse'
 
 const AddEditFuelCodeBase = () => {
   const { fuelCodeID } = useParams()
@@ -197,6 +198,7 @@ const AddEditFuelCodeBase = () => {
         } else {
           const res = await createFuelCode(updatedData)
           updatedData.fuelCodeId = res.data.fuelCodeId
+          updatedData.fuelSuffix = res.data.fuelSuffix
         }
 
         updatedData = {
@@ -210,7 +212,7 @@ const AddEditFuelCodeBase = () => {
         })
       } catch (error) {
         setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
+          [params.node.data.id]: error.response.data?.errors && error.response.data?.errors[0]?.fields
         })
 
         updatedData = {
@@ -229,16 +231,65 @@ const AddEditFuelCodeBase = () => {
           const errMsg = `Error updating row: ${
             fieldLabels.length === 1 ? fieldLabels[0] : ''
           } ${message}`
-
+          updatedData.validationMsg = errMsg
           handleError(error, errMsg)
         } else {
-          handleError(error, `Error updating row: ${error.message}`)
+          const errMsg = error.response?.data?.detail || error.message
+          updatedData.validationMsg = errMsg
+          handleError(error, `Error updating row: ${errMsg}`)
         }
       }
 
       params.node.updateData(updatedData)
     },
     [updateFuelCode, t]
+  )
+
+  const handlePaste = useCallback(
+    (event, { api, columnApi }) => {
+      const newData = []
+      const clipboardData = event.clipboardData || window.clipboardData
+      const pastedData = clipboardData.getData('text/plain')
+      const headerRow = api
+        .getAllDisplayedColumns()
+        .map((column) => column.colDef.field)
+        .filter((col) => col)
+        .join('\t')
+      const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
+        delimiter: '\t',
+        header: true,
+        transform: (value) => {
+          const num = Number(value) // Attempt to convert to a number if possible
+          return isNaN(num) ? value : num // Return the number if valid, otherwise keep as string
+        },
+        skipEmptyLines: true
+      })
+      if (parsedData.data?.length < 0) {
+        return
+      }
+      parsedData.data.forEach((row) => {
+        const newRow = { ...row }
+        newRow.id = uuid()
+        newRow.prefixId = optionsData?.fuelCodePrefixes?.find(o => o.prefix === row.prefix)?.fuelCodePrefixId
+        newRow.fuelTypeId = optionsData?.fuelTypes?.find(o => o.fuelType === row.fuelType)?.fuelTypeId
+        newRow.fuelSuffix = newRow.fuelSuffix.toString()
+        newRow.feedstockFuelTransportMode = row.feedstockFuelTransportMode.split(',').map(item => item.trim())
+        newRow.finishedFuelTransportMode = row.finishedFuelTransportMode.split(',').map(item => item.trim())
+        newRow.modified = true
+        newData.push(newRow)
+      })
+      const transactions = api.applyTransaction({ add: newData })
+      // Trigger onCellEditingStopped event to update the row in backend.
+      transactions.add.forEach((node) => {
+        onCellEditingStopped({
+          node,
+          oldValue: '',
+          newvalue: undefined,
+          ...api
+        })
+      })
+    },
+    [onCellEditingStopped, optionsData]
   )
 
   const duplicateFuelCode = async (params) => {
@@ -327,6 +378,7 @@ const AddEditFuelCodeBase = () => {
             onAction={onAction}
             showAddRowsButton={!existingFuelCode && hasRoles(roles.analyst)}
             context={{ errors }}
+            handlePaste={handlePaste}
           />
           {existingFuelCode?.fuelCodeStatus.status !==
             FUEL_CODE_STATUSES.APPROVED && (

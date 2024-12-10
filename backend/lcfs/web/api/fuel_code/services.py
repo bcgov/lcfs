@@ -208,6 +208,8 @@ class FuelCodeServices:
                         transport_mode_id=matching_transport_mode.transport_mode_id,
                     )
                 )
+            else:
+                raise ValueError(f"Invalid transport mode: {transport_mode}")
 
         for transport_mode in fuel_code_schema.finished_fuel_transport_mode or []:
             matching_transport_mode = next(
@@ -221,6 +223,8 @@ class FuelCodeServices:
                         transport_mode_id=matching_transport_mode.transport_mode_id,
                     )
                 )
+            else:
+                raise ValueError(f"Invalid transport mode: {transport_mode}")
 
         return fuel_code
 
