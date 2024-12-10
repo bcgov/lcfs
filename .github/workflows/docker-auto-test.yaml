@@ -102,12 +102,12 @@ jobs:
           LCFS_REDIS_PORT: 6379
           LCFS_REDIS_PASSWORD: development_only
           APP_ENVIRONMENT: dev
-          LCFS_CHES_CLIENT_ID: ${LCFS_CHES_CLIENT_ID}
-          LCFS_CHES_CLIENT_SECRET: ${LCFS_CHES_CLIENT_SECRET}
-          LCFS_CHES_AUTH_URL: ${LCFS_CHES_AUTH_URL}
-          LCFS_CHES_SENDER_EMAIL: ${LCFS_CHES_SENDER_EMAIL}
-          LCFS_CHES_SENDER_NAME: ${LCFS_CHES_SENDER_NAME}
-          LCFS_CHES_EMAIL_URL: ${LCFS_CHES_EMAIL_URL}
+          LCFS_CHES_CLIENT_ID: mock_client_id
+          LCFS_CHES_CLIENT_SECRET: mock_client_secret
+          LCFS_CHES_AUTH_URL: http://mock_auth_url
+          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+          LCFS_CHES_SENDER_NAME: Mock Notification System
+          LCFS_CHES_EMAIL_URL: http://mock_email_url
 
       - name: Upload pytest results
         if: always()
