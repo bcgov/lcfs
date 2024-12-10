@@ -76,5 +76,5 @@ export const apiRoutes = {
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
-  updateNotificationsEmail: '/users/update-notifications-email'
+  updateNotificationsEmail: '/users/update-email'
 }

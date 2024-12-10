@@ -25,8 +25,6 @@ import {
   notificationTypes,
   notificationChannels
 } from '@/constants/notificationTypes'
-import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
 import MailIcon from '@mui/icons-material/Mail'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import BCButton from '@/components/BCButton'
@@ -40,19 +38,18 @@ const NotificationSettingsForm = ({
   initialEmail
 }) => {
   const { t } = useTranslation(['notifications'])
-  const navigate = useNavigate()
   const [isFormLoading, setIsFormLoading] = useState(false)
   const [message, setMessage] = useState('')
   const { data: subscriptionsData, isLoading: isSubscriptionsLoading } =
     useNotificationSubscriptions()
   const createSubscription = useCreateSubscription()
   const deleteSubscription = useDeleteSubscription()
-  const updateNotificationsEmail = useUpdateNotificationsEmail()
+  const updateEmail = useUpdateNotificationsEmail()
 
   // Validation schema
   const validationSchema = Yup.object().shape({
     ...(showEmailField && {
-      notificationEmail: Yup.string()
+      email: Yup.string()
         .email(t('errors.invalidEmail'))
         .required(t('errors.emailRequired'))
     })
@@ -75,7 +72,7 @@ const NotificationSettingsForm = ({
       })
     }
     if (showEmailField && initialEmail) {
-      setValue('notificationEmail', initialEmail)
+      setValue('email', initialEmail)
     }
   }, [subscriptionsData, showEmailField, initialEmail, setValue])
 
@@ -122,8 +119,8 @@ const NotificationSettingsForm = ({
     try {
       if (showEmailField) {
         // BCeID user, save the email address
-        await updateNotificationsEmail.mutateAsync({
-          notifications_email: data.notificationEmail
+        await updateEmail.mutateAsync({
+          email: data.email
         })
         setMessage(t('messages.emailSaved'))
       }
@@ -423,11 +420,11 @@ const NotificationSettingsForm = ({
                   >
                     {showEmailField && (
                       <BCBox sx={{ marginTop: 2 }}>
-                        <InputLabel htmlFor="notificationEmail" sx={{ pb: 1 }}>
-                          {t('notificationsEmail')}:
+                        <InputLabel htmlFor="email" sx={{ pb: 1 }}>
+                          {t('email')}:
                         </InputLabel>
                         <Controller
-                          name="notificationEmail"
+                          name="email"
                           control={control}
                           render={({ field, fieldState: { error } }) => (
                             <TextField

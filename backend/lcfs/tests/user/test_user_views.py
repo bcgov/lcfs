@@ -468,19 +468,18 @@ async def test_track_logged_in_success(client: AsyncClient, fastapi_app, set_moc
 
 
 @pytest.mark.anyio
-async def test_update_notifications_email_success(
+async def test_update_email_success(
     client: AsyncClient,
     fastapi_app,
     set_mock_user,
-    add_models,
 ):
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
     # Prepare request data
-    request_data = {"notifications_email": "new_email@domain.com"}
+    request_data = {"email": "new_email@domain.com"}
 
     # Act: Send POST request to the endpoint
-    url = fastapi_app.url_path_for("update_notifications_email")
+    url = fastapi_app.url_path_for("update_email")
     response = await client.post(url, json=request_data)
 
     # Assert: Check response status and content

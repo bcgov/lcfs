@@ -29,7 +29,7 @@ const BCeIDNotificationSettings = () => {
     <NotificationSettingsForm
       categories={categories}
       showEmailField
-      initialEmail={currentUser.notificationsEmail}
+      initialEmail={currentUser.email}
     />
   )
 }
