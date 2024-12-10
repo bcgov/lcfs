@@ -244,8 +244,11 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                         helperText={errors.complianceUnits?.message}
                         value={formattedValue}
                         onChange={(e) => {
-                          // Remove all non-digit characters
-                          const numericValue = e.target.value.replace(/\D/g, '')
+                          // Remove all non-digit characters (other than - at the front)
+                          const numericValue = e.target.value.replace(
+                            /(?!^-)[^0-9]/g,
+                            ''
+                          )
                           // Update the form state with the raw number
                           onChange(numericValue)
                         }}
