@@ -2,7 +2,7 @@ import {
   numberFormatter,
   currencyFormatter,
   dateFormatter,
-  spacesFormatter,
+  spacesFormatter
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
@@ -26,7 +26,7 @@ export const transactionsColDefs = (t) => [
       return `${prefix}${params.data.transactionId}`
     },
     filterParams: {
-      buttons:["clear"],
+      buttons: ['clear']
     }
   },
   {
@@ -39,11 +39,11 @@ export const transactionsColDefs = (t) => [
       textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
       textCustomComparator: (filter, value, filterText) => {
         // Remove spaces and convert both to lowercase for comparison
-        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase();
-        const cleanValue = value.replace(/\s+/g, '').toLowerCase();
-        return cleanValue.includes(cleanFilterText);
+        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase()
+        const cleanValue = value.replace(/\s+/g, '').toLowerCase()
+        return cleanValue.includes(cleanFilterText)
       },
-      buttons:["clear"],
+      buttons: ['clear']
     },
     width: 222
   },
@@ -54,7 +54,7 @@ export const transactionsColDefs = (t) => [
     minWidth: 300,
     flex: 2,
     filterParams: {
-      buttons:["clear"],
+      buttons: ['clear']
     }
   },
   {
@@ -64,7 +64,7 @@ export const transactionsColDefs = (t) => [
     minWidth: 300,
     flex: 2,
     filterParams: {
-      buttons:["clear"],
+      buttons: ['clear']
     }
   },
   {
@@ -76,7 +76,8 @@ export const transactionsColDefs = (t) => [
     width: 140,
     filter: 'agNumberColumnFilter',
     filterParams: {
-      buttons:["clear"],
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
     }
   },
   {
@@ -86,12 +87,13 @@ export const transactionsColDefs = (t) => [
     valueFormatter: currencyFormatter,
     width: 190,
     valueGetter: (params) => {
-      const value = params.data?.pricePerUnit;
-      return value !== null && value !== undefined ? value : null;
+      const value = params.data?.pricePerUnit
+      return value !== null && value !== undefined ? value : null
     },
     filter: 'agNumberColumnFilter',
     filterParams: {
-      buttons:["clear"],
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
     }
   },
   {
@@ -122,20 +124,20 @@ export const transactionsColDefs = (t) => [
       filterOptions: ['inRange', 'equals', 'lessThan', 'greaterThan'],
       defaultOption: 'inRange',
       comparator: (filterDate, cellValue) => {
-          const cellDate = new Date(cellValue).setHours(0, 0, 0, 0);
-          const filterDateOnly = new Date(filterDate).setHours(0, 0, 0, 0);
+        const cellDate = new Date(cellValue).setHours(0, 0, 0, 0)
+        const filterDateOnly = new Date(filterDate).setHours(0, 0, 0, 0)
 
-          if (cellDate < filterDateOnly) {
-              return -1; // Cell date is before the filter date
-          } else if (cellDate > filterDateOnly) {
-              return 1; // Cell date is after the filter date
-          } else {
-              return 0; // Dates are the same (ignoring time)
-          }
+        if (cellDate < filterDateOnly) {
+          return -1 // Cell date is before the filter date
+        } else if (cellDate > filterDateOnly) {
+          return 1 // Cell date is after the filter date
+        } else {
+          return 0 // Dates are the same (ignoring time)
+        }
       },
       browserDatePicker: true, // Uses the browser's date picker if available
-      buttons:["clear"],
-  }
+      buttons: ['clear']
+    }
   }
 ]
 

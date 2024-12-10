@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { isEqual } from '@/utils/grid/eventHandlers'
@@ -33,6 +34,7 @@ import { BCAlert2 } from '@/components/BCAlert'
 export const BCGridEditor = ({
   gridRef,
   alertRef,
+  enablePaste = true,
   handlePaste,
   onCellEditingStopped,
   onCellValueChanged,
@@ -97,9 +99,13 @@ export const BCGridEditor = ({
       const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
         delimiter: '\t',
         header: true,
+        transform: (value) => {
+          const num = Number(value) // Attempt to convert to a number if possible
+          return isNaN(num) ? value : num // Return the number if valid, otherwise keep as string
+        },
         skipEmptyLines: true
       })
-      if (parsedData.data.length < 1 || parsedData.data[1].length < 2) {
+      if (parsedData.data.length < 0 || parsedData.data[1].length < 2) {
         return
       }
       parsedData.data.forEach((row) => {
@@ -107,17 +113,38 @@ export const BCGridEditor = ({
         newRow.id = uuid()
         newData.push(newRow)
       })
-      ref.current.api.applyTransaction({ add: newData })
+      const transactions = ref.current.api.applyTransaction({ add: newData })
+      // Trigger onCellEditingStopped event to update the row in backend.
+      transactions.add.forEach((node) => {
+        onCellEditingStopped({
+          node,
+          oldValue: '',
+          newvalue: node.data[findFirstEditableColumn()],
+          ...props
+        })
+      })
     },
-    [ref]
+    [findFirstEditableColumn, onCellEditingStopped, props, ref]
   )
 
   useEffect(() => {
-    window.addEventListener('paste', handlePaste || handleExcelPaste)
-    return () => {
-      window.removeEventListener('paste', handlePaste || handleExcelPaste)
+    const pasteHandler = (event) => {
+      const gridApi = ref.current?.api
+      const columnApi = ref.current?.columnApi
+
+      if (handlePaste) {
+        handlePaste(event, { api: gridApi, columnApi })
+      } else {
+        handleExcelPaste(event) // Fallback to the default paste function
+      }
     }
-  }, [handleExcelPaste, handlePaste])
+    if (enablePaste) {
+      window.addEventListener('paste', pasteHandler)
+      return () => {
+        window.removeEventListener('paste', pasteHandler)
+      }
+    }
+  }, [handleExcelPaste, handlePaste, ref, enablePaste])
 
   const handleOnCellEditingStopped = useCallback(
     async (params) => {

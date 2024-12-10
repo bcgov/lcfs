@@ -31,13 +31,24 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'fuelSuffix',
     headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
-    cellRenderer: TextRenderer
+    cellRenderer: TextRenderer,
+    type: 'numericColumn',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'carbonIntensity',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellRenderer: TextRenderer,
-    type: 'numericColumn'
+    type: 'numericColumn',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'edrms',
@@ -65,45 +76,25 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
