@@ -1,16 +1,7 @@
 from typing import List
 
 import structlog
-from fastapi import (
-    APIRouter,
-    Body,
-    status,
-    Request,
-    Response,
-    Depends,
-    Query,
-    HTTPException,
-)
+from fastapi import APIRouter, Body, status, Request, Response, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from lcfs.db import dependencies
@@ -23,7 +14,7 @@ from lcfs.web.api.user.schema import (
     UserLoginHistoryResponseSchema,
     UsersSchema,
     UserActivitiesResponseSchema,
-    UpdateNotificationsEmailSchema,
+    UpdateEmailSchema,
 )
 from lcfs.web.api.user.services import UserServices
 from lcfs.web.core.decorators import view_handler
@@ -255,18 +246,18 @@ async def get_all_user_login_history(
 
 
 @router.post(
-    "/update-notifications-email",
-    response_model=UpdateNotificationsEmailSchema,
+    "/update-email",
+    response_model=UpdateEmailSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-async def update_notifications_email(
+async def update_email(
     request: Request,
-    email_data: UpdateNotificationsEmailSchema = Body(...),
+    email_data: UpdateEmailSchema = Body(...),
     service: UserServices = Depends(),
 ):
     user_id = request.user.user_profile_id
-    email = email_data.notifications_email
+    email = email_data.email
 
-    user = await service.update_notifications_email(user_id, email)
-    return user
+    user = await service.update_email(user_id, email)
+    return UpdateEmailSchema(email=user.email)
