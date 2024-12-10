@@ -38,7 +38,6 @@ export const UserProfileActions = () => {
     refetchInterval: 60000 // Automatically refetch every 1 minute (60000ms)
   })
   const notificationsCount = notificationsData?.count || 0
-  console.log(notificationsData)
 
   // Call refetch whenever the route changes
   useEffect(() => {

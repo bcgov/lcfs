@@ -18,7 +18,7 @@ describe('Accessibility Tests for LCFS', () => {
     it('Should have no accessibility violations in the navigation bar', () => {
       cy.visit('/')
       cy.injectAxe()
-      cy.login(
+      cy.loginWith(
         'idir',
         Cypress.env('IDIR_TEST_USER'),
         Cypress.env('IDIR_TEST_PASS')

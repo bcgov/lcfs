@@ -18,7 +18,7 @@ export const ValidationRenderer2 = ({ data }) => {
       )
     case 'error':
       return (
-        <Tooltip title="validation error">
+        <Tooltip title={data.validationMsg || 'validation error'}>
           <Icon
             aria-label="shows sign for validation"
             data-testid="validation-sign"
