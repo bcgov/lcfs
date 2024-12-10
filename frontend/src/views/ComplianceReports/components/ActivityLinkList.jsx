@@ -83,7 +83,11 @@ export const ActivityLinksList = () => {
   }, [t, navigate, compliancePeriod, complianceReportId])
 
   return (
-    <List component="div" sx={{ maxWidth: '100%', listStyleType: 'disc' }}>
+    <List
+      data-test="schedule-list"
+      component="div"
+      sx={{ maxWidth: '100%', listStyleType: 'disc' }}
+    >
       {activityList.map((activity, index) => (
         <StyledListItem
           sx={{ cursor: 'pointer' }}
