@@ -6,8 +6,8 @@ import theme from '@/themes'
 import './i18n'
 import { KeycloakProvider } from '@/components/KeycloakProvider'
 import { getKeycloak } from '@/utils/keycloak'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()
@@ -19,7 +19,7 @@ if (root) {
       <KeycloakProvider authClient={keycloak}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider theme={theme}>
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
               <CssBaseline />
               <App />
             </LocalizationProvider>
