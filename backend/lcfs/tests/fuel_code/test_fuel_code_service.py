@@ -210,7 +210,7 @@ async def test_approve_fuel_code_not_found():
     repo_mock.get_fuel_code.return_value = None
 
     # Act & Assert
-    with pytest.raises(ServiceException):
+    with pytest.raises(ValueError, match="Fuel code not found"):
         await service.approve_fuel_code(fuel_code_id)
     repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
 
@@ -229,7 +229,7 @@ async def test_approve_fuel_code_invalid_status():
     repo_mock.get_fuel_code.return_value = mock_fuel_code
 
     # Act & Assert
-    with pytest.raises(ServiceException):
+    with pytest.raises(ValueError, match="Fuel code is not in Draft"):
         await service.approve_fuel_code(fuel_code_id)
 
     repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
