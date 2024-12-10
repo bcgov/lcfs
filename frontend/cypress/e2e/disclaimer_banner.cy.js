@@ -5,7 +5,7 @@
 describe('Disclaimer Banner Visibility Test Suite', () => {
   context('BCeID User', () => {
     beforeEach(() => {
-      cy.login(
+      cy.loginWith(
         'bceid',
         Cypress.env('BCEID_TEST_USER'),
         Cypress.env('BCEID_TEST_PASS')
@@ -29,7 +29,7 @@ describe('Disclaimer Banner Visibility Test Suite', () => {
 
   context('IDIR User', () => {
     beforeEach(() => {
-      cy.login(
+      cy.loginWith(
         'idir',
         Cypress.env('IDIR_TEST_USER'),
         Cypress.env('IDIR_TEST_PASS')

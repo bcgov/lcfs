@@ -6,7 +6,7 @@
 
 describe('Add Organization Test Suite', () => {
   beforeEach(() => {
-    cy.login(
+    cy.loginWith(
       'idir',
       Cypress.env('IDIR_TEST_USER'),
       Cypress.env('IDIR_TEST_PASS')
