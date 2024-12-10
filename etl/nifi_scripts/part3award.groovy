@@ -167,16 +167,15 @@ try {
         def internalCommentsJson = internalComments ? jsonSlurper.parseText(internalComments) : []
         def creditTradeHistoryJson = creditTradeHistory ? jsonSlurper.parseText(creditTradeHistory) : []
 
-        def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
-                resultSet,
-                statements.transactionStmt)
+        def toTransactionId = processTransactions(resultSet.getString('current_status'),
+                resultSet, statements.transactionStmt)
 
-        def initiativeAgreementId = insertTransfer(resultSet, statements.transferStmt,
-                fromTransactionId, toTransactionId, preparedData, destinationConn)
+        def initiativeAgreementId = insertInitiativeAgreement(resultSet, statements.initiativeAgreementStmt,
+                toTransactionId, preparedData, destinationConn)
 
         if (initiativeAgreementId) {
-            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
-            processInternalComments(transferId, internalCommentsJson, statements.internalCommentStmt,
+            processHistory(initiativeAgreementId, creditTradeHistoryJson, statements.historyStmt, preparedData)
+            processInternalComments(initiativeAgreementId, internalCommentsJson, statements.internalCommentStmt,
                     statements.transferInternalCommentStmt)
         } else {
             log.warn("Transfer not inserted for record: ${resultSet.getInt('transfer_id')}")
@@ -271,7 +270,7 @@ def prepareStatements(Connection conn) {
           RETURNING transfer_id
       '''
     def INSERT_TRANSFER_HISTORY_SQL = '''
-          INSERT INTO transfer_history (
+          INSERT INTO initiative_agreement_history (
               transfer_history_id, transfer_id, transfer_status_id, user_profile_id, create_date, effective_status
           ) VALUES (DEFAULT, ?, ?, ?, ?, true)
       '''
@@ -311,7 +310,6 @@ def toSqlTimestamp(String timestampString) {
 }
 
 def processTransactions(String currentStatus, ResultSet rs, PreparedStatement stmt) {
-    def fromTransactionId = null
     def toTransactionId = null
 
     switch (currentStatus) {
@@ -322,7 +320,7 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
             break
     }
 
-    return [fromTransactionId, toTransactionId]
+    return toTransactionId
 }
 
 def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int orgId) {
@@ -337,7 +335,7 @@ def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int o
     return result.next() ? result.getInt('transaction_id') : null
 }
 
-def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
+def processHistory(Integer initiativeAgreementId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
     if (!creditTradeHistory) return
 
     // Use a Set to track unique combinations of transfer_id and transfer_status
