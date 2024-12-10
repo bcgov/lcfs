@@ -215,7 +215,7 @@ def service_handler(func):
             return await func(*args, **kwargs)
 
         # raise the error to the view layer
-        except (DatabaseException, HTTPException, DataNotFoundException):
+        except (DatabaseException, HTTPException, DataNotFoundException, ValueError):
             raise
         # all other errors that occur in the service layer will log an error
         except Exception as e:
