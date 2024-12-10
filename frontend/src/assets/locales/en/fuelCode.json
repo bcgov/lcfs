@@ -36,6 +36,7 @@
     "approvalDate": "Approval date",
     "effectiveDate": "Effective date",
     "expirationDate": "Expiry date",
+    "fuelTypeId": "Fuel type id",
     "fuelType": "Fuel",
     "feedstock": "Feedstock",
     "feedstockLocation": "Feedstock location",

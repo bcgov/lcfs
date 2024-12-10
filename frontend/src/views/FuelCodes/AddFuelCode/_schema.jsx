@@ -84,15 +84,22 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         )
         return selectedOption.prefix
       }
+      const selectedOption = optionsData?.fuelCodePrefixes?.find(
+        (obj) => obj.prefix === params.data.prefix
+      )
+      if (selectedOption) {
+        params.data.prefixId = selectedOption.fuelCodePrefixId
+      }
+      return params.data.prefix
     },
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
         const selectedPrefix = optionsData?.fuelCodePrefixes?.find(
           (obj) => obj.prefix === params.newValue
         )
-        params.data.fuelTypeId = selectedPrefix.fuelCodePrefixId
+        params.data.fuelCodePrefixId = selectedPrefix.fuelCodePrefixId
 
-        params.data.fuelCode = optionsData?.fuelCodePrefixes?.find(
+        params.data.fuelSuffix = optionsData?.fuelCodePrefixes?.find(
           (obj) => obj.prefix === params.newValue
         )?.nextFuelCode
         params.data.company = undefined
@@ -319,6 +326,13 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         )
         return selectedOption.fuelType
       }
+      const selectedOption = optionsData?.fuelTypes?.find(
+        (obj) => obj.fuelType === params.data.fuelType
+      )
+      if (selectedOption) {
+        params.data.fuelTypeId = selectedOption.fuelTypeId
+      }
+      return params.data.fuelType
     },
     valueSetter: (params) => {
       if (params.newValue) {
@@ -327,6 +341,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         )
         params.data.fuelTypeId = selectedFuelType.fuelTypeId
       }
+      return params.data.fuelType
     },
     cellEditorParams: {
       options: optionsData?.fuelTypes

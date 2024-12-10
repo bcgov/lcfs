@@ -72,7 +72,7 @@ export const useDeleteFuelCode = (options) => {
     ...options,
     mutationFn: async (fuelCodeID) => {
       return await client.delete(
-        apiRoutes.updateFuelCode.replace(':fuelCodeId', fuelCodeID)
+        apiRoutes.deleteFuelCode.replace(':fuelCodeId', fuelCodeID)
       )
     }
   })

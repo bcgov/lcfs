@@ -37,7 +37,9 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onPaste
   } = props
 
-  const [selectedValues, setSelectedValues] = useState(value || [])
+  const [selectedValues, setSelectedValues] = useState(
+    (Array.isArray(value) ? value : value.split(',').map((v) => v.trim())) || []
+  )
   const inputRef = useRef()
 
   useImperativeHandle(ref, () => ({

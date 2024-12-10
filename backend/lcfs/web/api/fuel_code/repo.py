@@ -396,19 +396,8 @@ class FuelCodeRepository:
         """
         self.db.add(fuel_code)
         await self.db.flush()
-        await self.db.refresh(
-            fuel_code,
-            [
-                "fuel_code_status",
-                "fuel_code_prefix",
-                "fuel_type",
-                "feedstock_fuel_transport_modes",
-                "finished_fuel_transport_modes",
-            ],
-        )
-        # Manually load nested relationships
-        await self.db.refresh(fuel_code.fuel_type, ["provision_1", "provision_2"])
-        return fuel_code
+        result = await self.get_fuel_code(fuel_code.fuel_code_id)
+        return result
 
     @repo_handler
     async def get_fuel_code(self, fuel_code_id: int) -> FuelCode:
@@ -593,9 +582,14 @@ class FuelCodeRepository:
         result = (await self.db.execute(query)).scalar_one_or_none()
         if result:
             fuel_code_main_version = suffix.split(".")[0]
-            return await self.get_next_available_sub_version_fuel_code_by_prefix(
+            suffix = await self.get_next_available_sub_version_fuel_code_by_prefix(
                 fuel_code_main_version, prefix_id
             )
+            if int(suffix.split(".")[1]) > 9:
+                return await self.get_next_available_fuel_code_by_prefix(
+                    result.fuel_code_prefix.prefix
+                )
+            return suffix
         else:
             return suffix
 
