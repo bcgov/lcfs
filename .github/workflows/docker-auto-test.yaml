@@ -29,29 +29,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
-      # - name: Cache Poetry dependencies
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.cache/pypoetry
-      #     key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-poetry-
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
 
-      # - name: Cache npm dependencies
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.npm
-      #     key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-node-
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      # - name: Cache Docker images
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: /var/lib/docker
-      #     key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-docker-
+      - name: Cache Docker images
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/docker
+          key: ${{ runner.os }}-docker-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
 
       # Commented out mochawesome installation as it's only needed for Cypress
       # - name: Install mochawesome and marge
@@ -102,6 +102,12 @@ jobs:
           LCFS_REDIS_PORT: 6379
           LCFS_REDIS_PASSWORD: development_only
           APP_ENVIRONMENT: dev
+          LCFS_CHES_CLIENT_ID: ${LCFS_CHES_CLIENT_ID}
+          LCFS_CHES_CLIENT_SECRET: ${LCFS_CHES_CLIENT_SECRET}
+          LCFS_CHES_AUTH_URL: ${LCFS_CHES_AUTH_URL}
+          LCFS_CHES_SENDER_EMAIL: ${LCFS_CHES_SENDER_EMAIL}
+          LCFS_CHES_SENDER_NAME: ${LCFS_CHES_SENDER_NAME}
+          LCFS_CHES_EMAIL_URL: ${LCFS_CHES_EMAIL_URL}
 
       - name: Upload pytest results
         if: always()
