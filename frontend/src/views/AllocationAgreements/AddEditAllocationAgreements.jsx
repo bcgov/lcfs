@@ -71,7 +71,21 @@ export const AddEditAllocationAgreements = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      setRowData([...(data.allocationAgreements || { id: uuid() })])
+
+      if (
+        Array.isArray(data.allocationAgreements) &&
+        data.allocationAgreements.length > 0
+      ) {
+        const updatedRowData = data.allocationAgreements.map((item) => ({
+          ...item,
+          id: item.id || uuid() // Ensure every item has a unique ID
+        }))
+        setRowData(updatedRowData)
+      } else {
+        // If allocationAgreements is not available or empty, initialize with a single row
+        setRowData([{ id: uuid() }])
+      }
+
       params.api.sizeColumnsToFit()
     },
     [data]
