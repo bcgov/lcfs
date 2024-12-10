@@ -212,7 +212,9 @@ const AddEditFuelCodeBase = () => {
         })
       } catch (error) {
         setErrors({
-          [params.node.data.id]: error.response.data?.errors && error.response.data?.errors[0]?.fields
+          [params.node.data.id]:
+            error.response.data?.errors &&
+            error.response.data?.errors[0]?.fields
         })
 
         updatedData = {
@@ -258,7 +260,15 @@ const AddEditFuelCodeBase = () => {
       const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
         delimiter: '\t',
         header: true,
-        transform: (value) => {
+        transform: (value, field) => {
+          // Check for date fields and format them
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/ // Matches YYYY-MM-DD format
+          if (field.toLowerCase().includes('date') && !dateRegex.test(value)) {
+            const parsedDate = new Date(value)
+            if (!isNaN(parsedDate)) {
+              return parsedDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
+            }
+          }
           const num = Number(value) // Attempt to convert to a number if possible
           return isNaN(num) ? value : num // Return the number if valid, otherwise keep as string
         },
@@ -270,11 +280,19 @@ const AddEditFuelCodeBase = () => {
       parsedData.data.forEach((row) => {
         const newRow = { ...row }
         newRow.id = uuid()
-        newRow.prefixId = optionsData?.fuelCodePrefixes?.find(o => o.prefix === row.prefix)?.fuelCodePrefixId
-        newRow.fuelTypeId = optionsData?.fuelTypes?.find(o => o.fuelType === row.fuelType)?.fuelTypeId
+        newRow.prefixId = optionsData?.fuelCodePrefixes?.find(
+          (o) => o.prefix === row.prefix
+        )?.fuelCodePrefixId
+        newRow.fuelTypeId = optionsData?.fuelTypes?.find(
+          (o) => o.fuelType === row.fuelType
+        )?.fuelTypeId
         newRow.fuelSuffix = newRow.fuelSuffix.toString()
-        newRow.feedstockFuelTransportMode = row.feedstockFuelTransportMode.split(',').map(item => item.trim())
-        newRow.finishedFuelTransportMode = row.finishedFuelTransportMode.split(',').map(item => item.trim())
+        newRow.feedstockFuelTransportMode = row.feedstockFuelTransportMode
+          .split(',')
+          .map((item) => item.trim())
+        newRow.finishedFuelTransportMode = row.finishedFuelTransportMode
+          .split(',')
+          .map((item) => item.trim())
         newRow.modified = true
         newData.push(newRow)
       })
