@@ -1,4 +1,4 @@
-"""User API."""
+"""Fuel code API."""
 
 from lcfs.web.api.fuel_code.views import router
 
