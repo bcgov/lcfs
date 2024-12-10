@@ -2,7 +2,7 @@ import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
 const currentYear = new Date().getFullYear().toString()
 
-Given('the supplier is on the login page', () => {
+Given('the user is on the login page', () => {
   cy.clearAllCookies()
   cy.clearAllLocalStorage()
   cy.clearAllSessionStorage()
@@ -20,7 +20,7 @@ When('the supplier logs in with valid credentials', () => {
   cy.getByDataTest('dashboard-container').should('exist')
 })
 
-When('the supplier navigates to the compliance reports page', () => {
+When('they navigate to the compliance reports page', () => {
   cy.get('a[href="/compliance-reporting"]').click()
 })
 
@@ -139,4 +139,44 @@ Then('the compliance report summary includes the quantity', () => {
   )
     .should('be.visible')
     .and('have.text', '500')
+})
+
+When('the supplier fills out line 6', () => {
+  cy.get(
+    '[data-test="renewable-summary"] > .MuiTable-root > .MuiTableBody-root > :nth-child(6) > :nth-child(3)'
+  )
+    .find('input')
+    .type('50{enter}')
+    .blur()
+})
+
+Then('it should round the amount to 25', () => {
+  cy.get(
+    '[data-test="renewable-summary"] > .MuiTable-root > .MuiTableBody-root > :nth-child(6) > :nth-child(3)'
+  )
+    .find('input')
+    .should('be.visible')
+    .and('have.value', '25')
+})
+
+When('the supplier accepts the agreement', () => {
+  cy.get('#signing-authority-declaration').click()
+})
+
+When('the supplier submits the report', () => {
+  cy.contains('button', 'Submit report').click()
+  cy.get('#modal-btn-submit-report').click()
+  cy.wait(2000)
+})
+
+Then('the status should change to Submitted', () => {
+  cy.get('[data-test="compliance-report-status"]')
+    .should('be.visible')
+    .and('have.text', 'Status: Submitted')
+})
+
+Then('they see the previously submitted report', () => {
+  cy.get('.ag-column-first > a > .MuiBox-root')
+    .should('be.visible')
+    .and('have.text', currentYear)
 })
