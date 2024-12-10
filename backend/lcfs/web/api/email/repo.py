@@ -26,9 +26,7 @@ class CHESEmailRepository:
         Ignores In-Application notification types.
         """
         query = (
-            select(
-                func.coalesce(UserProfile.notifications_email, UserProfile.email).label("email")
-            )
+            select(UserProfile.email)
             .join(NotificationChannelSubscription)
             .join(NotificationChannelSubscription.notification_channel)
             .filter(
