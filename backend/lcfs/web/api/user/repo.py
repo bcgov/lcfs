@@ -669,7 +669,7 @@ class UserRepository:
         self.db.add(login_history)
 
     @repo_handler
-    async def update_notifications_email(
+    async def update_email(
         self, user_profile_id: int, email: str
     ) -> UserProfile:
         # Fetch the user profile
@@ -679,8 +679,7 @@ class UserRepository:
         result = await self.db.execute(query)
         user_profile = result.scalar_one_or_none()
 
-        # Update the notifications_email field
-        user_profile.notifications_email = email
+        user_profile.email = email
 
         # Flush and refresh without committing
         await self.db.flush()
