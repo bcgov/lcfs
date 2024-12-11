@@ -734,10 +734,6 @@ class ComplianceReportSummaryService:
             await self.repo.aggregate_other_uses(compliance_report_id, fossil_derived)
         )
 
-        # if not fossil_derived:
-        #     fuel_quantities.update(
-        #         await self.repo.aggregate_allocation_agreements(compliance_report_id)
-        #     )
         return dict(fuel_quantities)
 
     @service_handler
