@@ -1,5 +1,5 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
@@ -73,7 +73,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
       multiple: false,
@@ -150,7 +150,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -223,7 +223,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -260,7 +260,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: (params) => ({
       values: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -369,7 +369,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     }),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) =>

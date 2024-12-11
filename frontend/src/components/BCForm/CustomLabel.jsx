@@ -1,10 +1,10 @@
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import PropType from 'prop-types'
 
 export const CustomLabel = ({ header, text }) => (
-  <Typography variant="body4" component="span">
+  <BCTypography variant="body4" component="span">
     <strong>{header}</strong> —&nbsp;{text}
-  </Typography>
+  </BCTypography>
 )
 
 CustomLabel.propTypes = {

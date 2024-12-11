@@ -1,7 +1,6 @@
 import BCBox from '@/components/BCBox'
 import PropTypes from 'prop-types'
 import {
-  Typography,
   List,
   ListItem,
   ListItemAvatar,
@@ -9,12 +8,13 @@ import {
   Avatar,
   Divider
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 
 export const CommentList = ({ comments = [] }) => (
   <BCBox mt={2} data-test="comment-list">
-    <Typography variant="h6" color="primary">
+    <BCTypography variant="h6" color="primary">
       Comments
-    </Typography>
+    </BCTypography>
     <List
       aria-label="comments section"
       sx={{
@@ -33,7 +33,7 @@ export const CommentList = ({ comments = [] }) => (
             <ListItemText
               primary={
                 <>
-                  <Typography
+                  <BCTypography
                     sx={{ display: 'inline' }}
                     component="span"
                     variant="subtitle1"
@@ -41,19 +41,19 @@ export const CommentList = ({ comments = [] }) => (
                   >
                     {comment.name}
                     {':'}
-                  </Typography>
+                  </BCTypography>
                 </>
               }
               secondary={
                 <>
-                  <Typography
+                  <BCTypography
                     sx={{ display: 'inline' }}
                     component="span"
                     variant="body4"
                     color="text.primary"
                   >
                     {comment.comment}
-                  </Typography>
+                  </BCTypography>
                 </>
               }
             />

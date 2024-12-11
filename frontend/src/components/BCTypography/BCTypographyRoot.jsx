@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography'
 import { styled } from '@mui/material/styles'
 
 const BCTypographyRoot = styled(Typography)(({ theme, ownerState }) => {
-  const { palette, typography, functions } = theme
+  const { palette, typography, functions = {} } = theme
   const {
     color,
     textTransform,

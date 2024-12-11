@@ -4,7 +4,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Typography,
   Stack
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -93,14 +92,14 @@ const ComplianceReportSummary = ({
   }
 
   if (isError) {
-    return <Typography color="error">{t('report:errorRetrieving')}</Typography>
+    return <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
   }
 
   return (
     <>
-      <Typography color="primary" variant="h5" mb={2} component="div">
+      <BCTypography color="primary" variant="h5" mb={2} component="div">
         {t('report:summaryAndDeclaration')}
-      </Typography>
+      </BCTypography>
       <Accordion defaultExpanded>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}

@@ -1,7 +1,8 @@
 import BCBox from '@/components/BCBox'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useTransfer } from '@/hooks/useTransfer'
-import { FormControlLabel, Radio, RadioGroup, Typography } from '@mui/material'
+import { FormControlLabel, Radio, RadioGroup } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -18,9 +19,9 @@ export const Recommendation = ({ currentStatus }) => {
 
   return (
     <BCBox my={2}>
-      <Typography variant="h6" color="primary" mb={2}>
+      <BCTypography variant="h6" color="primary" mb={2}>
         {t('transfer:analystRecommend')}
-      </Typography>
+      </BCTypography>
       {transferData.currentStatus.status === TRANSFER_STATUSES.SUBMITTED ? (
         <Controller
           control={control}
@@ -50,10 +51,10 @@ export const Recommendation = ({ currentStatus }) => {
           )}
         />
       ) : (
-        <Typography>
+        <BCTypography>
           The analyst has recommended that you to{' '}
           <strong>{transferData.recommendation}</strong> this transfer.
-        </Typography>
+        </BCTypography>
       )}
     </BCBox>
   )
