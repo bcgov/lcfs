@@ -31,7 +31,9 @@ async def init_org_balance_cache(app: FastAPI):
             transaction_repo = TransactionRepository(db=session)
 
             # Get the oldest transaction year
-            oldest_year = await transaction_repo.get_transaction_start_year()
+            oldest_year = await transaction_repo.get_transaction_start_year() or int(
+                2019
+            )
 
             # Get the current year
             current_year = datetime.now().year
