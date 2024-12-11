@@ -19,6 +19,7 @@ export const apiRoutes = {
   getFuelCode: '/fuel-codes/:fuelCodeId',
   saveFuelCode: '/fuel-codes',
   approveFuelCode: '/fuel-codes/:fuelCodeId/approve',
+  deleteFuelCode: '/fuel-codes/:fuelCodeId',
   fuelCodeOptions: '/fuel-codes/table-options',
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',
@@ -75,5 +76,5 @@ export const apiRoutes = {
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
-  updateNotificationsEmail: '/users/update-notifications-email'
+  updateNotificationsEmail: '/users/update-email'
 }

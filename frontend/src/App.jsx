@@ -32,7 +32,7 @@ import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
-import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddAllocationAgreements'
+import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddEditAllocationAgreements'
 import { logout } from '@/utils/keycloak.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 
