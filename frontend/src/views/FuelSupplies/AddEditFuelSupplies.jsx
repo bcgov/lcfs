@@ -8,7 +8,7 @@ import {
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
 import { isArrayEmpty } from '@/utils/formatters'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -267,17 +267,17 @@ export const AddEditFuelSupplies = () => {
     !fuelSuppliesLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
         <div className="header">
-          <Typography variant="h5" color="primary">
+          <BCTypography variant="h5" color="primary">
             {t('fuelSupply:addFuelSupplyRowsTitle')}
-          </Typography>
-          <Typography
+          </BCTypography>
+          <BCTypography
             variant="body4"
             color="primary"
             sx={{ marginY: '2rem' }}
             component="div"
           >
             {t('fuelSupply:fuelSupplySubtitle')}
-          </Typography>
+          </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor

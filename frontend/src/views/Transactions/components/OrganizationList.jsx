@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Box, Stack, Typography, Autocomplete, TextField } from '@mui/material'
+import { Box, Stack, Autocomplete, TextField } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { numberFormatter } from '@/utils/formatters'
@@ -47,9 +48,9 @@ const OrganizationList = ({ onOrgChange }) => {
 
   return (
     <Box component="div" mb={2}>
-      <Typography variant="body2" color="primary">
+      <BCTypography variant="body2" color="primary">
         {org}
-      </Typography>
+      </BCTypography>
       <Stack
         component="div"
         direction={{ md: 'coloumn', lg: 'row' }}
@@ -58,9 +59,9 @@ const OrganizationList = ({ onOrgChange }) => {
         useFlexGap
         flexWrap="wrap"
       >
-        <Typography variant="body2" color="primary" mt={1}>
+        <BCTypography variant="body2" color="primary" mt={1}>
           {t('txn:showTransactionsInvolve')}:&nbsp;
-        </Typography>
+        </BCTypography>
         <Autocomplete
           disablePortal
           id="organizations"

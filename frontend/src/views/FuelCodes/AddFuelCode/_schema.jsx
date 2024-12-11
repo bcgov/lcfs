@@ -9,7 +9,7 @@ import {
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { numberFormatter } from '@/utils/formatters'
 
@@ -30,7 +30,7 @@ const createCellRenderer = (field, customRenderer = null) => {
     const content = customRenderer
       ? customRenderer(params)
       : params.value ||
-        (!params.value && <Typography variant="body4">Select</Typography>)
+        (!params.value && <BCTypography variant="body4">Select</BCTypography>)
     return <div style={{ color: hasError ? 'red' : 'inherit' }}>{content}</div>
   }
 
@@ -257,9 +257,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     maxWidth: 220,
     minWidth: 200,
     cellRenderer: createCellRenderer('applicationDate', (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     )),
     suppressKeyboardEvent,
     cellEditor: DateEditor
@@ -272,9 +272,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: createCellRenderer('approvalDate', (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     )),
 
     suppressKeyboardEvent,
@@ -288,9 +288,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: createCellRenderer('effectiveDate', (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     )),
     suppressKeyboardEvent,
     cellEditor: DateEditor
@@ -303,9 +303,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     maxWidth: 220,
     minWidth: 220,
     cellRenderer: createCellRenderer('expirationDate', (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     )),
     suppressKeyboardEvent,
     cellEditor: DateEditor
@@ -561,7 +561,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
       ) : (
-        <Typography variant="body4">Select</Typography>
+        <BCTypography variant="body4">Select</BCTypography>
       )
     ),
     cellRendererParams: {
@@ -586,7 +586,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       params.value && params.value.length > 0 ? (
         <CommonArrayRenderer {...params} />
       ) : (
-        <Typography variant="body4">Select</Typography>
+        <BCTypography variant="body4">Select</BCTypography>
       )
     ),
     cellRendererParams: {

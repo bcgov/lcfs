@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types'
-import { useTheme, Box, Typography, Paper } from '@mui/material'
+import { useTheme, Box, Paper } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 
 // MUI Icons
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
@@ -32,8 +33,7 @@ export const TransferGraphic = () => {
     )?.name || ''
 
   const pricePerUnit = parseFloat(watch('pricePerUnit'))
-  const totalValue =
-    quantity && pricePerUnit ? quantity * pricePerUnit : 0
+  const totalValue = quantity && pricePerUnit ? quantity * pricePerUnit : 0
 
   const isNumberOfCreditsValid = (number) => !isNaN(number) && number > 0
   const isTotalValueValid = (value) => typeof value === 'number' && value > 0
@@ -99,7 +99,7 @@ export const TransferGraphic = () => {
           overflow: 'hidden'
         }}
       >
-        <Typography variant="subtitle1">{creditsFrom}</Typography>
+        <BCTypography variant="subtitle1">{creditsFrom}</BCTypography>
       </Paper>
 
       <Box
@@ -115,18 +115,18 @@ export const TransferGraphic = () => {
         }}
       >
         {isNumberOfCreditsValid(quantity) && (
-          <Typography variant="body2" sx={{ mb: 1 }}>
+          <BCTypography variant="body2" sx={{ mb: 1 }}>
             {`${formattedNumberOfCredits} compliance units`}
-          </Typography>
+          </BCTypography>
         )}
 
         {renderIcon()}
 
         {isTotalValueValid(totalValue) && (
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2">
+            <BCTypography variant="body2">
               {formatCurrency(totalValue)}
-            </Typography>
+            </BCTypography>
           </Box>
         )}
       </Box>
@@ -145,7 +145,7 @@ export const TransferGraphic = () => {
           justifyContent: 'center'
         }}
       >
-        <Typography variant="subtitle1">{creditsTo || ''}</Typography>
+        <BCTypography variant="subtitle1">{creditsTo || ''}</BCTypography>
       </Paper>
     </Box>
   )

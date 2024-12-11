@@ -1,4 +1,5 @@
-import { Typography, Box } from '@mui/material'
+import { Box } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { BCFormCheckbox, BCFormRadio } from '@/components/BCForm'
 import { govRoles } from '@/constants/roles'
 import { idirRoleOptions } from '../_schema'
@@ -7,9 +8,9 @@ export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
   const { control } = form
   return (
     <Box>
-      <Typography variant="label" component="span">
+      <BCTypography variant="label" component="span">
         {t('admin:Roles')}
-      </Typography>
+      </BCTypography>
       <BCFormCheckbox
         name={'adminRole'}
         form={form}

@@ -1,5 +1,5 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import {
   AutocompleteCellEditor,
   RequiredHeader,
@@ -49,11 +49,11 @@ export const finalSupplyEquipmentColDefs = (
     headerComponent: RequiredHeader,
     minWidth: 330,
     cellRenderer: (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value[0]
           ? `${params.value[0]} to ${params.value[1]}`
           : 'YYYY-MM-DD to YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     ),
     suppressKeyboardEvent,
     cellStyle: (params) => StandardCellErrors(params, errors),
@@ -162,7 +162,7 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>)
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
   },
   {
     field: 'ports',
@@ -183,7 +183,7 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>)
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
   },
   {
     field: 'fuelMeasurementType',
@@ -204,7 +204,7 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>)
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
   },
   {
     field: 'intendedUses',
@@ -224,7 +224,7 @@ export const finalSupplyEquipmentColDefs = (
       (params.value && params.value !== '' && (
         <CommonArrayRenderer disableLink {...params} />
       )) ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     suppressKeyboardEvent,
     minWidth: 560
   },
@@ -246,7 +246,7 @@ export const finalSupplyEquipmentColDefs = (
       (params.value && params.value !== '' && (
         <CommonArrayRenderer disableLink {...params} />
       )) ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     suppressKeyboardEvent,
     minWidth: 315
   },
