@@ -233,9 +233,14 @@ async def test_get_other_use_version_by_user(other_uses_repo, mock_db_session):
     mock_other_use.version = version
     mock_other_use.user_type = user_type
 
-    mock_db_session.execute.return_value.scalars.return_value.first.return_value = (
-        mock_other_use
-    )
+    # Set up mock result chain
+    mock_result = AsyncMock()
+    mock_result.scalars = MagicMock(return_value=mock_result)
+    mock_result.first = MagicMock(return_value=mock_other_use)
+
+    # Configure mock db session
+    mock_db_session.execute = AsyncMock(return_value=mock_result)
+    other_uses_repo.db = mock_db_session
 
     result = await other_uses_repo.get_other_use_version_by_user(
         group_uuid, version, user_type

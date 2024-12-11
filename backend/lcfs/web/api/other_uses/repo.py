@@ -302,7 +302,7 @@ class OtherUsesRepository:
         )
 
         result = await self.db.execute(query)
-        return await result.scalars().first()
+        return result.scalars().first()
 
     @repo_handler
     async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
