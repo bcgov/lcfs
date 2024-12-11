@@ -5,7 +5,7 @@ import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
-import { IconButton, Typography } from '@mui/material'
+import { IconButton } from '@mui/material'
 // icons
 import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -175,10 +175,10 @@ export const ViewOrganization = () => {
               <BCTypography variant="label">
                 {t('org:complianceUnitBalance')}:
               </BCTypography>
-              <Typography variant="body4">
+              <BCTypography variant="body4">
                 {orgBalaceInfo?.totalBalance.toLocaleString()} (
                 {Math.abs(orgBalaceInfo?.reservedBalance).toLocaleString()})
-              </Typography>
+              </BCTypography>
             </Role>
           </BCBox>
           <BCBox

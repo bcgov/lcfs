@@ -23,10 +23,10 @@ import {
   Step,
   StepLabel,
   Stepper,
-  Typography,
   useMediaQuery,
   useTheme
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -365,18 +365,18 @@ export const AddEditViewTransfer = () => {
       />
       <BCBox>
         {/* Header section */}
-        <Typography variant="h5" color="primary">
+        <BCTypography variant="h5" color="primary">
           {title}
-        </Typography>
+        </BCTypography>
         {transferStatus !== TRANSFER_STATUSES.RECORDED && (
           <Role roles={[roles.supplier]}>
-            <Typography variant="body4">
+            <BCTypography variant="body4">
               {t('transfer:effectiveText')}
-            </Typography>
+            </BCTypography>
             <br />
-            <Typography variant="body4">
+            <BCTypography variant="body4">
               {t('transfer:considerationText')}
-            </Typography>
+            </BCTypography>
           </Role>
         )}
         {/* Progress bar */}
@@ -470,12 +470,12 @@ export const AddEditViewTransfer = () => {
                 onClick={() => navigate(ROUTES.TRANSACTIONS)}
               >
                 <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
-                <Typography
+                <BCTypography
                   variant="body4"
                   sx={{ textTransform: 'capitalize' }}
                 >
                   {t('backBtn')}
-                </Typography>
+                </BCTypography>
               </BCButton>
               {buttonClusterConfig[transferId ? currentStatus : 'New']?.map(
                 (config) =>

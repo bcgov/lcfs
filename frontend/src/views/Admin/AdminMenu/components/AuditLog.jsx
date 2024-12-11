@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
 import { apiRoutes, ROUTES } from '@/constants/routes'
@@ -38,9 +38,9 @@ export const AuditLog = () => {
 
   return (
     <BCBox>
-      <Typography variant="h5" color="primary" mb={2}>
+      <BCTypography variant="h5" color="primary" mb={2}>
         {t('admin:AuditLog')}
-      </Typography>
+      </BCTypography>
 
       <BCDataGridServer
         gridRef={gridRef}

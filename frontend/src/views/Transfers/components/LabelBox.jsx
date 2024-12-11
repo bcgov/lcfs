@@ -28,9 +28,9 @@ export const LabelBox = ({
       >
         <BCBox className="labelBoxContent">
           {description && (
-            <Typography variant={descriptionVariant || 'body2'} mb={1}>
+            <BCTypography variant={descriptionVariant || 'body2'} mb={1}>
               {description}
-            </Typography>
+            </BCTypography>
           )}
           {children}
         </BCBox>

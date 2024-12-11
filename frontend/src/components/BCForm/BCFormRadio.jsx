@@ -3,9 +3,9 @@ import {
   FormControlLabel,
   FormLabel,
   Radio,
-  RadioGroup,
-  Typography
+  RadioGroup
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
 import PropTypes from 'prop-types'
 import { CustomLabel } from './CustomLabel'
@@ -34,9 +34,9 @@ export const BCFormRadio = ({ name, control, label, options, disabled }) => {
   return (
     <FormControl component="fieldset">
       <FormLabel component="legend" sx={{ marginBottom: 1 }}>
-        <Typography variant="label" component="span">
+        <BCTypography variant="label" component="span">
           {label}
-        </Typography>
+        </BCTypography>
       </FormLabel>
       <Controller
         name={name}

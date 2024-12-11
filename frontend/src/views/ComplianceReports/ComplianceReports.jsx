@@ -1,5 +1,5 @@
 // mui components
-import { Typography, Stack } from '@mui/material'
+import { Stack } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
@@ -19,6 +19,7 @@ import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
 import { reportsColDefs, defaultSortModel } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
+import BCTypography from '@/components/BCTypography'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -39,7 +40,10 @@ export const ComplianceReports = () => {
     }),
     [t]
   )
-  const getRowId = useCallback((params) => params.data.complianceReportId.toString(), [])
+  const getRowId = useCallback(
+    (params) => params.data.complianceReportId.toString(),
+    []
+  )
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(
     ({ data }) => {
@@ -114,9 +118,9 @@ export const ComplianceReports = () => {
           </BCAlert>
         )}
       </div>
-      <Typography variant="h5" color="primary">
+      <BCTypography variant="h5" color="primary">
         {t('report:title')}
-      </Typography>
+      </BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}

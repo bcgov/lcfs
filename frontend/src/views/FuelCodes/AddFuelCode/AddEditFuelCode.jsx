@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Stack, Typography } from '@mui/material'
+import { Stack } from '@mui/material'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
@@ -376,13 +376,13 @@ const AddEditFuelCodeBase = () => {
       <>
         <Grid2 className="add-edit-fuel-code-container" mx={-1}>
           <div className="header">
-            <Typography variant="h5" color="primary">
+            <BCTypography variant="h5" color="primary">
               {!existingFuelCode && t('fuelCode:newFuelCodeTitle')}
               {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.DRAFT && t('fuelCode:editFuelCodeTitle')}
               {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.APPROVED && t('fuelCode:viewFuelCodeTitle')}
-            </Typography>
+            </BCTypography>
           </div>
           <BCGridEditor
             gridRef={gridRef}
@@ -415,9 +415,9 @@ const AddEditFuelCodeBase = () => {
                 }
                 onClick={handleOpenApprovalModal}
               >
-                <Typography variant="subtitle2">
+                <BCTypography variant="subtitle2">
                   {t('fuelCode:approveFuelCodeBtn')}
-                </Typography>
+                </BCTypography>
               </BCButton>
             </Stack>
           )}
