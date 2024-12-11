@@ -515,7 +515,7 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_code_by_code_prefix(
         self, fuel_suffix: str, prefix: str
-    ) -> List[str]:
+    ) -> list[FuelCodeCloneSchema]:
         query = (
             select(FuelCode)
             .options(
@@ -751,7 +751,7 @@ class FuelCodeRepository:
             .options(
                 contains_eager(FuelCode.fuel_code_prefix),
                 joinedload(FuelCode.fuel_code_status),
-                joinedload(FuelCode.fuel_code_type),
+                joinedload(FuelCode.fuel_type),
             )
             .where(
                 and_(
@@ -776,18 +776,35 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_energy_effectiveness_ratio(
-        self, fuel_type_id: int, fuel_category_id: int, end_use_type_id: int
+        self, fuel_type_id: int, fuel_category_id: int, end_use_type_id: Optional[int]
     ) -> EnergyEffectivenessRatio:
+        """
+        Retrieves the Energy Effectiveness Ratio based on fuel type, fuel category,
+        and optionally the end use type.
 
-        stmt = select(EnergyEffectivenessRatio).where(
+        Args:
+            fuel_type_id (int): The ID of the fuel type.
+            fuel_category_id (int): The ID of the fuel category.
+            end_use_type_id (Optional[int]): The ID of the end use type (optional).
+
+        Returns:
+            Optional[EnergyEffectivenessRatio]: The matching EnergyEffectivenessRatio record or None.
+        """
+        conditions = [
             EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
             EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
-            EnergyEffectivenessRatio.end_use_type_id == end_use_type_id,
-        )
-        result = await self.db.execute(stmt)
-        energy_density = result.scalars().first()
+        ]
 
-        return energy_density
+        if end_use_type_id is not None:
+            conditions.append(
+                EnergyEffectivenessRatio.end_use_type_id == end_use_type_id
+            )
+
+        stmt = select(EnergyEffectivenessRatio).where(*conditions)
+        result = await self.db.execute(stmt)
+        energy_effectiveness_ratio = result.scalars().first()
+
+        return energy_effectiveness_ratio
 
     @repo_handler
     async def get_target_carbon_intensities(
@@ -848,12 +865,10 @@ class FuelCodeRepository:
             effective_carbon_intensity = fuel_type.default_carbon_intensity
 
         # Get energy effectiveness ratio (EER)
-        eer = None
-        if fuel_type_id and fuel_category_id and end_use_id:
-            energy_effectiveness = await self.get_energy_effectiveness_ratio(
-                fuel_type_id, fuel_category_id, end_use_id
-            )
-            eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
+        energy_effectiveness = await self.get_energy_effectiveness_ratio(
+            fuel_type_id, fuel_category_id, end_use_id
+        )
+        eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
 
         # Fetch target carbon intensity (TCI)
         target_ci = None
