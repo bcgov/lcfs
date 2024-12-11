@@ -1,11 +1,10 @@
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
 from lcfs.db.models import UserProfile, UserLoginHistory
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.tests.user.user_payloads import user_orm_model
-from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 @pytest.fixture
@@ -50,14 +49,13 @@ async def test_create_login_history(dbsession, user_repo):
 
 
 @pytest.mark.anyio
-async def test_update_notifications_email_success(dbsession, user_repo):
+async def test_update_email_success(dbsession, user_repo):
     # Arrange: Create a user in the database
     user = UserProfile(
         keycloak_user_id="user_id_1",
         keycloak_email="user1@domain.com",
         keycloak_username="username1",
         email="user1@domain.com",
-        notifications_email=None,
         title="Developer",
         phone="1234567890",
         mobile_phone="0987654321",
@@ -70,10 +68,10 @@ async def test_update_notifications_email_success(dbsession, user_repo):
     await dbsession.commit()
     await dbsession.refresh(user)
 
-    # Act: Update the notifications email
-    updated_user = await user_repo.update_notifications_email(
+    # Act: Update the email
+    updated_user = await user_repo.update_email(
         user_profile_id=1, email="new_email@domain.com"
     )
 
-    # Assert: Check if the notifications email was updated
-    assert updated_user.notifications_email == "new_email@domain.com"
+    # Assert: Check if the email was updated
+    assert updated_user.email == "new_email@domain.com"
