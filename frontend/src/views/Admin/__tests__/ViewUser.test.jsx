@@ -153,8 +153,8 @@ describe('ViewUser Component', () => {
           wrapper({ children, initialEntries: ['/admin/users/1'] })
       }
     )
-
-    const editButton = screen.getByLabelText('edit')
+    
+    const editButton = screen.getByRole('button', { name: /admin:editBtn/i })
     fireEvent.click(editButton)
 
     await waitFor(() => {

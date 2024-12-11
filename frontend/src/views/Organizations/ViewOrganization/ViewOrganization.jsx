@@ -1,17 +1,13 @@
-// components
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
-import { IconButton, Typography } from '@mui/material'
-// icons
+import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import EditIcon from '@mui/icons-material/Edit'
-// hooks
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ROUTES, apiRoutes } from '@/constants/routes'
@@ -42,7 +38,9 @@ export const ViewOrganization = () => {
     isLoading: isCurrentUserLoading,
     hasRoles
   } = useCurrentUser()
-  const { data: orgData, isLoading } = useOrganization(orgID ?? currentUser?.organization?.organizationId)
+  const { data: orgData, isLoading } = useOrganization(
+    orgID ?? currentUser?.organization?.organizationId
+  )
 
   let orgBalance = {}
   if (hasRoles(roles.government)) {
@@ -51,20 +49,13 @@ export const ViewOrganization = () => {
   }
   const { data: orgBalaceInfo } = orgBalance
 
-  const handleEditClick = () => {
-    navigate(
-      ROUTES.ORGANIZATIONS_EDIT.replace(
+  const canEdit = hasRoles(roles.administrator)
+  const editButtonRoute = canEdit
+    ? ROUTES.ORGANIZATIONS_EDIT.replace(
         ':orgID',
         orgID || currentUser?.organization?.organizationId
-      ),
-      {
-        state: {
-          orgID: orgID || currentUser?.organization?.organizationId,
-          isEditMode: true
-        }
-      }
-    )
-  }
+      )
+    : null
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
   const handleGridKey = useCallback(() => {
@@ -73,29 +64,34 @@ export const ViewOrganization = () => {
     } else {
       setGridKey(`users-grid-${orgID}-inactive`)
     }
-  }, [])
+  }, [showActive, orgID])
 
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found',
     includeHiddenColumnsInQuickFilter: true
   }
-  const handleRowClicked = useCallback((params) =>
-    // Based on the user Type (BCeID or IDIR) navigate to specific view
-    hasRoles(roles.supplier)
-      ? navigate(
-          ROUTES.ORGANIZATION_VIEWUSER.replace(
-            ':userID',
-            params.data.userProfileId
+
+  const handleRowClicked = useCallback(
+    (params) =>
+      // Based on the user Type (BCeID or IDIR) navigate to specific view
+      hasRoles(roles.supplier)
+        ? navigate(
+            ROUTES.ORGANIZATION_VIEWUSER.replace(
+              ':userID',
+              params.data.userProfileId
+            )
           )
-        )
-      : navigate(
-          ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
-            ':userID',
-            params.data.userProfileId
-          )
-        )
+        : navigate(
+            ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
+              ':userID',
+              params.data.userProfileId
+            )
+          ),
+    [hasRoles, navigate, orgID]
   )
-  const getRowId = useCallback((params) => params.data.userProfileId)
+
+  const getRowId = useCallback((params) => params.data.userProfileId, [])
+
   const gridRef = useRef()
 
   useEffect(() => {
@@ -111,7 +107,7 @@ export const ViewOrganization = () => {
       }
       gridRef?.current?.api?.onFilterChanged()
     }
-  }, [showActive])
+  }, [showActive, gridKey])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -131,95 +127,99 @@ export const ViewOrganization = () => {
           {alertMessage}
         </BCAlert>
       )}
-      <BCTypography variant="h5" color="primary" py={1}>
-        {orgData?.name}{' '}
-        <Role roles={[roles.administrator]}>
-          <IconButton
-            aria-label="edit"
-            color="primary"
-            onClick={handleEditClick}
-          >
-            <EditIcon />
-          </IconButton>
-        </Role>
-      </BCTypography>
-      <BCBox p={3} bgColor={colors.grey[300]}>
-        <BCBox display="flex" rowGap={2} columnGap={10} flexWrap="wrap">
-          <BCBox
-            display="grid"
-            gridTemplateColumns="auto auto"
-            gap={1}
-            alignItems="end"
-          >
-            <BCTypography variant="label">
-              {t('org:legalNameLabel')}:
-            </BCTypography>
-            <BCTypography variant="body4">{orgData?.name}</BCTypography>
-            <BCTypography variant="label">
-              {t('org:operatingNameLabel')}:
-            </BCTypography>
-            <BCTypography variant="body4">
-              {orgData?.operatingName || orgData?.name}
-            </BCTypography>
-            <BCTypography variant="label">
-              {t('org:phoneNbrLabel')}:
-            </BCTypography>
-            <BCTypography variant="body4">
-              {phoneNumberFormatter({ value: orgData?.phone })}
-            </BCTypography>
-            <BCTypography variant="label">
-              {t('org:emailAddrLabel')}:
-            </BCTypography>
-            <BCTypography variant="body4">{orgData?.email}</BCTypography>
-            <Role roles={[roles.government]}>
-              <BCTypography variant="label">
-                {t('org:complianceUnitBalance')}:
-              </BCTypography>
-              <Typography variant="body4">
-                {orgBalaceInfo?.totalBalance.toLocaleString()} (
-                {Math.abs(orgBalaceInfo?.reservedBalance).toLocaleString()})
-              </Typography>
-            </Role>
-          </BCBox>
-          <BCBox
-            display="grid"
-            gridTemplateColumns="auto auto"
-            columnGap={1}
-            rowGap={2}
-            alignItems="start"
-          >
-            <BCTypography variant="label">
-              {t('org:serviceAddrLabel')}:
-            </BCTypography>
-            <BCTypography variant="body4">
-              {orgData && constructAddress(orgData?.orgAddress)}
-            </BCTypography>
-            <BCTypography variant="label">{t('org:bcAddrLabel')}:</BCTypography>
-            <BCTypography variant="body4">
-              {orgData && constructAddress(orgData?.orgAttorneyAddress)}
-            </BCTypography>
-            <BCTypography variant="label">{t('org:regTrnLabel')}:</BCTypography>
-            <BCTypography variant="body4">
-              {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED
-                ? 'Yes — A registered organization is able to transfer compliance units.'
-                : 'No — An organization must be registered to transfer compliance units.'}
-            </BCTypography>
-          </BCBox>
-        </BCBox>
-        {!isCurrentUserLoading && !hasRoles(roles.government) && (
-          <BCBox mt={2}>
-            <BCTypography variant="body4">
-              Email <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>
-              {t('org:toUpdateMsg')}
-            </BCTypography>
-          </BCBox>
-        )}
+      <BCBox
+        sx={{
+          width: {
+            md: '100%',
+            lg: '75%'
+          }
+        }}
+      >
+        <BCWidgetCard
+          title={t('org:orgDetails')}
+          color="nav"
+          editButtonText={canEdit ? t('org:editBtn') : null}
+          editButtonRoute={editButtonRoute}
+          content={
+            <BCBox p={1}>
+              <BCBox
+                display="grid"
+                gridTemplateColumns="1fr 1fr"
+                columnGap={10}
+                rowGap={2}
+              >
+                {/* Left Column */}
+                <BCBox display="flex" flexDirection="column" gap={2}>
+                  <BCTypography variant="body4">
+                    <strong>{t('org:legalNameLabel')}:</strong> {orgData?.name}
+                  </BCTypography>
+
+                  <BCTypography variant="body4">
+                    <strong>{t('org:operatingNameLabel')}:</strong>{' '}
+                    {orgData?.operatingName || orgData?.name}
+                  </BCTypography>
+
+                  <BCTypography variant="body4">
+                    <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
+                    {phoneNumberFormatter({ value: orgData?.phone })}
+                  </BCTypography>
+
+                  <BCTypography variant="body4">
+                    <strong>{t('org:emailAddrLabel')}:</strong> {orgData?.email}
+                  </BCTypography>
+
+                  <Role roles={[roles.government]}>
+                    <BCTypography variant="body4">
+                      <strong>{t('org:complianceUnitBalance')}:</strong>{' '}
+                      {orgBalaceInfo?.totalBalance.toLocaleString()} (
+                      {Math.abs(
+                        orgBalaceInfo?.reservedBalance
+                      ).toLocaleString()}
+                      )
+                    </BCTypography>
+                  </Role>
+                </BCBox>
+
+                {/* Right Column */}
+                <BCBox display="flex" flexDirection="column" gap={2}>
+                  <BCTypography variant="body4">
+                    <strong>{t('org:serviceAddrLabel')}:</strong>{' '}
+                    {orgData && constructAddress(orgData?.orgAddress)}
+                  </BCTypography>
+
+                  <BCTypography variant="body4">
+                    <strong>{t('org:bcAddrLabel')}:</strong>{' '}
+                    {orgData && constructAddress(orgData?.orgAttorneyAddress)}
+                  </BCTypography>
+
+                  <BCTypography variant="body4">
+                    <strong>{t('org:regTrnLabel')}:</strong>{' '}
+                    {orgData?.orgStatus.status ===
+                    ORGANIZATION_STATUSES.REGISTERED
+                      ? 'Yes — A registered organization is able to transfer compliance units.'
+                      : 'No — An organization must be registered to transfer compliance units.'}
+                  </BCTypography>
+                </BCBox>
+              </BCBox>
+
+              {!isCurrentUserLoading && !hasRoles(roles.government) && (
+                <BCBox mt={2}>
+                  <BCTypography variant="body4">
+                    Email{' '}
+                    <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>{' '}
+                    {t('org:toUpdateMsg')}
+                  </BCTypography>
+                </BCBox>
+              )}
+            </BCBox>
+          }
+        />
       </BCBox>
       <BCBox
         sx={{
           display: 'flex',
-          flexDirection: 'column', // default layout is row
-          flexWrap: 'wrap', // allow items to wrap to the next row
+          flexDirection: 'column',
+          flexWrap: 'wrap',
           justifyContent: 'flex-start',
           alignItems: 'flex-start',
           textTransform: 'none'
@@ -339,3 +339,5 @@ export const ViewOrganization = () => {
     </>
   )
 }
+
+export default ViewOrganization
