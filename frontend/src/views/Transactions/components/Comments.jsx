@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Box, Typography, Collapse, IconButton, TextField } from '@mui/material'
+import { Box, Collapse, IconButton, TextField } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useFormContext } from 'react-hook-form'
@@ -37,7 +38,7 @@ export const Comments = ({ commentField, isEditable }) => {
             onClick={handleToggle}
             sx={{ cursor: 'pointer' }}
           >
-            <Typography variant="body2">{t('txn:commentsDescText')}</Typography>
+            <BCTypography variant="body2">{t('txn:commentsDescText')}</BCTypography>
             <IconButton>
               {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </IconButton>
