@@ -118,9 +118,11 @@ class ComplianceReportSummaryService:
                                 "description"
                             ]
                         ),
-                        field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(line)]["field"],
+                        field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[str(
+                            line)]["field"],
                     )
-                    summary.renewable_fuel_target_summary.append(existing_element)
+                    summary.renewable_fuel_target_summary.append(
+                        existing_element)
                 value = int(getattr(summary_obj, column.key) or 0)
                 if column.key.endswith("_gasoline"):
                     existing_element.gasoline = value
@@ -150,7 +152,8 @@ class ComplianceReportSummaryService:
                                 "description"
                             ]
                         ),
-                        field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(line)]["field"],
+                        field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[str(
+                            line)]["field"],
                         value=int(getattr(summary_obj, column.key) or 0),
                     )
                 )
@@ -188,7 +191,8 @@ class ComplianceReportSummaryService:
                             "field"
                         ],
                     )
-                    summary.non_compliance_penalty_summary.append(existing_element)
+                    summary.non_compliance_penalty_summary.append(
+                        existing_element)
                 value = int(getattr(summary_obj, column.key) or 0)
                 if column.key.endswith("_gasoline"):
                     existing_element.gasoline = value
@@ -307,7 +311,8 @@ class ComplianceReportSummaryService:
 
         for transfer in notional_transfers.notional_transfers:
             # Normalize the fuel category key
-            normalized_category = transfer.fuel_category.replace(" ", "_").lower()
+            normalized_category = transfer.fuel_category.replace(
+                " ", "_").lower()
 
             # Update the corresponding category sum
             if transfer.received_or_transferred.lower() == "received":
@@ -324,12 +329,12 @@ class ComplianceReportSummaryService:
         fossil_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             effective_fuel_supplies,
-            fossil_derived=True,
+            fossil_derived=True
         )
         renewable_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             effective_fuel_supplies,
-            fossil_derived=False,
+            fossil_derived=False
         )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
@@ -450,18 +455,21 @@ class ComplianceReportSummaryService:
         deferred_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            required_renewable_quantity = eligible_renewable_fuel_required.get(category)
+            required_renewable_quantity = eligible_renewable_fuel_required.get(
+                category)
             previous_required_renewable_quantity = getattr(
-                prev_summary, f"line_4_eligible_renewable_fuel_required_{category}"
+                prev_summary, f"""line_4_eligible_renewable_fuel_required_{
+                    category}"""
             )
 
             # only carry over line 6,8 if required quantities have not changed
             if previous_required_renewable_quantity == required_renewable_quantity:
                 retained_renewables[category] = getattr(
-                    prev_summary, f"line_6_renewable_fuel_retained_{category}"
+                    prev_summary, f"""line_6_renewable_fuel_retained_{
+                        category}"""
                 )
                 deferred_renewables[category] = getattr(
-                    prev_summary, f"line_8_obligation_deferred_{category}"
+                    prev_summary, f"""line_8_obligation_deferred_{category}"""
                 )
 
         # line 10
@@ -557,9 +565,12 @@ class ComplianceReportSummaryService:
                 line=line,
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(int(summary_lines["4"]["gasoline"] * 0.05)),
-                        "{:,}".format(int(summary_lines["4"]["diesel"] * 0.05)),
-                        "{:,}".format(int(summary_lines["4"]["jet_fuel"] * 0.05)),
+                        "{:,}".format(
+                            int(summary_lines["4"]["gasoline"] * 0.05)),
+                        "{:,}".format(
+                            int(summary_lines["4"]["diesel"] * 0.05)),
+                        "{:,}".format(
+                            int(summary_lines["4"]["jet_fuel"] * 0.05)),
                     )
                     if (line in ["6", "8"])
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
@@ -571,7 +582,8 @@ class ComplianceReportSummaryService:
                 total_value=values.get("gasoline", 0)
                 + values.get("diesel", 0)
                 + values.get("jet_fuel", 0),
-                format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
+                format=(FORMATS.CURRENCY if (
+                    str(line) == "11") else FORMATS.NUMBER),
             )
             for line, values in summary_lines.items()
         ]
@@ -660,7 +672,8 @@ class ComplianceReportSummaryService:
                 ),
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=values.get("value", 0),
-                format=(FORMATS.CURRENCY if (str(line) == "21") else FORMATS.NUMBER),
+                format=(FORMATS.CURRENCY if (
+                    str(line) == "21") else FORMATS.NUMBER),
             )
             for line, values in low_carbon_summary_lines.items()
         ]
@@ -675,7 +688,8 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable = int(
             (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
         )
-        line_11 = next(row for row in renewable_fuel_target_summary if row.line == "11")
+        line_11 = next(
+            row for row in renewable_fuel_target_summary if row.line == "11")
 
         non_compliance_summary_lines = {
             "11": {"total_value": line_11.total_value},
@@ -720,11 +734,10 @@ class ComplianceReportSummaryService:
             await self.repo.aggregate_other_uses(compliance_report_id, fossil_derived)
         )
 
-        if not fossil_derived:
-            fuel_quantities.update(
-                await self.repo.aggregate_allocation_agreements(compliance_report_id)
-            )
-
+        # if not fossil_derived:
+        #     fuel_quantities.update(
+        #         await self.repo.aggregate_allocation_agreements(compliance_report_id)
+        #     )
         return dict(fuel_quantities)
 
     @service_handler
@@ -752,7 +765,8 @@ class ComplianceReportSummaryService:
             ED = fuel_supply.energy_density or 0  # Energy Density
 
             # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            compliance_units = calculate_compliance_units(
+                TCI, EER, RCI, UCI, Q, ED)
             compliance_units_sum += compliance_units
 
         return int(compliance_units_sum)
@@ -781,9 +795,11 @@ class ComplianceReportSummaryService:
             ED = fuel_export.energy_density or 0  # Energy Density
 
             # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            compliance_units = calculate_compliance_units(
+                TCI, EER, RCI, UCI, Q, ED)
             compliance_units = -compliance_units
-            compliance_units = round(compliance_units) if compliance_units < 0 else 0
+            compliance_units = round(
+                compliance_units) if compliance_units < 0 else 0
 
             compliance_units_sum += compliance_units
 
