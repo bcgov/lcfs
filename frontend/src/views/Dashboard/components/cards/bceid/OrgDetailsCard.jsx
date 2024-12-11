@@ -15,6 +15,12 @@ const OrgDetailsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const { data: orgData, isLoading: orgLoading } = useOrganization()
   const navigate = useNavigate()
+
+  function openExternalLink(event, url) {
+    event.preventDefault()
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   return (
     <BCWidgetCard
       component="div"
@@ -47,12 +53,14 @@ const OrgDetailsCard = () => {
               <BCTypography variant="body4" color="primary">
                 {orgData?.email}
               </BCTypography>
-              <List component="div" sx={{ maxWidth: '100%' }}>
+              <List
+                component="div"
+                sx={{ maxWidth: '100%', padding: '10px 0' }}
+              >
                 <ListItemButton
                   component="a"
-                  key="organization-users"
-                  alignItems="flex-start"
                   onClick={() => navigate(ROUTES.ORGANIZATION)}
+                  sx={{ padding: '4px 0' }}
                 >
                   <BCTypography
                     variant="subtitle2"
@@ -67,9 +75,8 @@ const OrgDetailsCard = () => {
                 </ListItemButton>
                 <ListItemButton
                   component="a"
-                  key="create-organization-users"
-                  alignItems="flex-start"
-                  onClick={() => navigate(ROUTES.ORGANIZATION_ADDUSER)}
+                  onClick={(e) => openExternalLink(e, 'https://www.bceid.ca/')}
+                  sx={{ padding: '4px 0' }}
                 >
                   <BCTypography
                     variant="subtitle2"
@@ -78,6 +85,7 @@ const OrgDetailsCard = () => {
                       textDecoration: 'underline',
                       '&:hover': { color: 'info.main' }
                     }}
+                    title={t('dashboard:orgDetails.linkTooltip')}
                   >
                     {t('dashboard:orgDetails.createNewUsrLabel')}
                     <FontAwesomeIcon
