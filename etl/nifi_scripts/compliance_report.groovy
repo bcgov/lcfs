@@ -29,7 +29,7 @@ Process:
 // Fetch compliance reports with workflow states
 SOURCE_REPORTS_QUERY = """
     WITH cr_chain AS (
-        SELECT
+        SELECT DISTINCT
             cr.id AS compliance_report_id,
             cr.type_id,
             cr.organization_id,
