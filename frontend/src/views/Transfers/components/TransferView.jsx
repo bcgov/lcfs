@@ -1,14 +1,14 @@
 import BCBox from '@/components/BCBox'
 import InternalComments from '@/components/InternalComments'
 import { Role } from '@/components/Role'
-import { govRoles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
 import {
   TRANSFER_STATUSES,
   getAllTerminalTransferStatuses
 } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { decimalFormatter } from '@/utils/formatters'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import TransferHistory from './TransferHistory'
@@ -18,8 +18,9 @@ import { CommentList } from '@/views/Transfers/components/CommentList'
 
 export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])
-  const { data: currentUser, sameOrganization } = useCurrentUser()
+  const { data: currentUser, sameOrganization, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
+  const isAnalyst = hasAnyRole(roles.analyst)
   const {
     currentStatus: { status: transferStatus } = {},
     toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
@@ -55,7 +56,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
           backgroundColor: 'transparent.main'
         }}
       >
-        <Typography variant="body4">
+        <BCTypography variant="body4">
           <b>{fromOrganization}</b>
           {t('transfer:transfers')}
           <b>{quantity}</b>
@@ -64,7 +65,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
           <b>${decimalFormatter({ value: pricePerUnit })}</b>
           {t('transfer:complianceUnitsPerTvo')}
           <b>${decimalFormatter(totalValue)}</b> CAD.
-        </Typography>
+        </BCTypography>
       </BCBox>
       {/* Comments */}
       {transferData?.comments.length > 0 && (
@@ -84,6 +85,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
               sameOrganization(toOrgId) &&
               'toOrgComment')
           }
+          isDefaultExpanded={isAnalyst}
         />
       )}
 

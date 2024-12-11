@@ -6,9 +6,14 @@ import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 
-export const Comments = ({ editorMode, isGovernmentUser, commentField }) => {
+export const Comments = ({
+  editorMode,
+  isGovernmentUser,
+  commentField,
+  isDefaultExpanded = false
+}) => {
   const { t } = useTranslation(['transfer'])
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(!isDefaultExpanded)
 
   const {
     register,
