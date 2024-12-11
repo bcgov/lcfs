@@ -5,7 +5,7 @@
 describe('Organization Test Suite', () => {
   beforeEach(() => {
     // Login and visit the page
-    cy.login(
+    cy.loginWith(
       'idir',
       Cypress.env('IDIR_TEST_USER'),
       Cypress.env('IDIR_TEST_PASS')
