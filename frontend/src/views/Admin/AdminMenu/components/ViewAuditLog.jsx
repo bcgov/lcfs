@@ -10,8 +10,8 @@ import {
   TableRow,
   Paper,
   Box,
-  Typography
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import colors from '@/themes/base/colors'
 
@@ -59,29 +59,29 @@ export const ViewAuditLog = () => {
 
   return (
     <Box>
-      <Typography variant="h5" color="primary" mb={2}>
+      <BCTypography variant="h5" color="primary" mb={2}>
         {t('AuditLogDetails', { id })}
-      </Typography>
+      </BCTypography>
 
       {/* Display the additional information */}
       <Box mb={2}>
-        <Typography variant="body2">
+        <BCTypography variant="body2">
           <strong>{t('auditLogColLabels.tableName')}:</strong> {tableName}
-        </Typography>
-        <Typography variant="body2">
+        </BCTypography>
+        <BCTypography variant="body2">
           <strong>{t('auditLogColLabels.operation')}:</strong> {operation}
-        </Typography>
-        <Typography variant="body2">
+        </BCTypography>
+        <BCTypography variant="body2">
           <strong>{t('auditLogColLabels.rowId')}:</strong> {rowId}
-        </Typography>
-        <Typography variant="body2">
+        </BCTypography>
+        <BCTypography variant="body2">
           <strong>{t('auditLogColLabels.createDate')}:</strong>{' '}
           {new Date(createDate).toLocaleString()}
-        </Typography>
-        <Typography variant="body2">
+        </BCTypography>
+        <BCTypography variant="body2">
           <strong>{t('auditLogColLabels.userId')}:</strong>{' '}
           {createUser || t('System')}
-        </Typography>
+        </BCTypography>
       </Box>
 
       <TableContainer component={Paper}>

@@ -11,7 +11,8 @@ import { useApiService } from '@/services/useApiService'
 import withRole from '@/utils/withRole'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack, Typography } from '@mui/material'
+import { Stack } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -68,9 +69,9 @@ const FuelCodesBase = () => {
           </BCAlert>
         )}
       </div>
-      <Typography variant="h5" color="primary" data-test="title">
+      <BCTypography variant="h5" color="primary" data-test="title">
         {t('FuelCodes')}
-      </Typography>
+      </BCTypography>
       <Stack
         direction={{ md: 'coloumn', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}
@@ -90,9 +91,9 @@ const FuelCodesBase = () => {
             data-test="new-fuel-code-btn"
             onClick={() => navigate(ROUTES.FUELCODES_ADD)}
           >
-            <Typography variant="subtitle2">
+            <BCTypography variant="subtitle2">
               {t('fuelCode:newFuelCodeBtn')}
-            </Typography>
+            </BCTypography>
           </BCButton>
         </Role>
         <DownloadButton

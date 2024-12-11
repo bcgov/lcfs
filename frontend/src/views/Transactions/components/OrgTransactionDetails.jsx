@@ -1,5 +1,6 @@
 import React from 'react'
-import { Box, Grid, Typography } from '@mui/material'
+import { Box, Grid } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -33,32 +34,32 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   // Construct the content based on the transaction type
   const content = (
     <Box component="div" display="flex" flexDirection="column" gap={1}>
-      <Typography variant="body2">
+      <BCTypography variant="body2">
         <strong>
           {transactionType === ADMIN_ADJUSTMENT
             ? t('txn:administrativeAdjustment')
             : t('txn:initiativeAgreement')}{' '}
           {t('txn:for')} {transactionData.toOrganization.name}
         </strong>
-      </Typography>
-      <Typography variant="body2">
+      </BCTypography>
+      <BCTypography variant="body2">
         <strong>{t('txn:complianceUnitsLabel')}</strong>{' '}
         {numberFormatter({ value: transactionData.complianceUnits })}
-      </Typography>
-      <Typography variant="body2">
+      </BCTypography>
+      <BCTypography variant="body2">
         <strong>{t('txn:effectiveDateLabel')}</strong>{' '}
         {dateFormatter({ value: effectiveDate })}
-      </Typography>
+      </BCTypography>
       {transactionData.govComment && (
-        <Typography variant="body2">
+        <BCTypography variant="body2">
           <strong>{t('txn:commentsTextLabel')}</strong>{' '}
           {transactionData.govComment}
-        </Typography>
+        </BCTypography>
       )}
-      <Typography variant="body2">
+      <BCTypography variant="body2">
         <strong>{t('txn:approvedLabel')}</strong>{' '}
         {dateFormatter({ value: approvedDate })} {t('txn:approvedByDirector')}
-      </Typography>
+      </BCTypography>
     </Box>
   )
 

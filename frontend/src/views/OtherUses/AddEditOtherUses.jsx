@@ -10,7 +10,8 @@ import {
 import { cleanEmptyStringValues } from '@/utils/formatters'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack, Typography } from '@mui/material'
+import { Stack } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -233,9 +234,9 @@ export const AddEditOtherUses = () => {
     isFetched && (
       <Grid2 className="add-edit-other-uses-container" mx={-1}>
         <div className="header">
-          <Typography variant="h5" color="primary">
+          <BCTypography variant="h5" color="primary">
             {t('otherUses:newOtherUsesTitle')}
-          </Typography>
+          </BCTypography>
         </div>
 
         <BCGridEditor

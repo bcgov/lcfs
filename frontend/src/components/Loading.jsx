@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 import CircularProgress from '@mui/material/CircularProgress'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
+import BCTypography from '@/components/BCTypography'
 import colors from '@/themes/base/colors'
 import borders from '@/themes/base/borders'
 
@@ -36,9 +36,9 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
         }}
       >
         <CircularProgress aria-labelledby="loading" />
-        <Typography variant="subtitle1" sx={{ mt: 2 }} data-test="message">
+        <BCTypography variant="subtitle1" sx={{ mt: 2 }} data-test="message">
           {message}
-        </Typography>
+        </BCTypography>
       </Box>
     </Box>
   )

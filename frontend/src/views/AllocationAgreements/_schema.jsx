@@ -1,5 +1,5 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import {
   AutocompleteCellEditor,
   RequiredHeader,
@@ -63,7 +63,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     },
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 120,
@@ -95,7 +95,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && (
-        <Typography variant="body4">Enter or search a name</Typography>
+        <BCTypography variant="body4">Enter or search a name</BCTypography>
       )),
     cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
@@ -177,7 +177,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     },
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 200,
@@ -276,7 +276,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     },
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 300,
