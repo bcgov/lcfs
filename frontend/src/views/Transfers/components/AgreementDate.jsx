@@ -1,4 +1,5 @@
-import { Box, TextField, Typography } from '@mui/material'
+import { Box, TextField } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
@@ -25,7 +26,9 @@ export const AgreementDate = () => {
         justifyContent="flex-start"
         gap="10px"
       >
-        <Typography variant="body2">{t('transfer:agrDateHeader')}</Typography>
+        <BCTypography variant="body2">
+          {t('transfer:agrDateHeader')}
+        </BCTypography>
         <TextField
           data-test="transfer-agreement-date"
           {...register('agreementDate')}

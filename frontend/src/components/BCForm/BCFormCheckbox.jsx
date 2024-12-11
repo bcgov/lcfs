@@ -2,9 +2,9 @@ import {
   Checkbox,
   FormControl,
   FormControlLabel,
-  FormLabel,
-  Typography
+  FormLabel
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { Controller } from 'react-hook-form'
 import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
@@ -22,9 +22,9 @@ export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
   return (
     <FormControl size={'small'} variant={'outlined'}>
       <FormLabel component="legend">
-        <Typography variant="label" component="span">
+        <BCTypography variant="label" component="span">
           {label}
-        </Typography>
+        </BCTypography>
       </FormLabel>
 
       <div>
