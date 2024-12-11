@@ -207,21 +207,20 @@ async def test_get_latest_other_uses_by_group_uuid(other_uses_repo, mock_db_sess
     mock_other_use_gov.user_type = UserTypeEnum.GOVERNMENT
     mock_other_use_gov.version = 2
 
-    mock_other_use_supplier = MagicMock(spec=OtherUses)
-    mock_other_use_supplier.user_type = UserTypeEnum.SUPPLIER
-    mock_other_use_supplier.version = 3
+    # Setup mock result chain
+    mock_result = AsyncMock()
+    mock_result.unique = MagicMock(return_value=mock_result)
+    mock_result.scalars = MagicMock(return_value=mock_result)
+    mock_result.first = MagicMock(return_value=mock_other_use_gov)
 
-    # Mock response with both government and supplier versions
-    mock_db_session.execute.return_value.scalars.return_value.first.side_effect = [
-        mock_other_use_gov,
-        mock_other_use_supplier,
-    ]
+    # Configure mock db session
+    mock_db_session.execute = AsyncMock(return_value=mock_result)
+    other_uses_repo.db = mock_db_session
 
     result = await other_uses_repo.get_latest_other_uses_by_group_uuid(group_uuid)
 
     assert result.user_type == UserTypeEnum.GOVERNMENT
     assert result.version == 2
-
 
 @pytest.mark.anyio
 async def test_get_other_use_version_by_user(other_uses_repo, mock_db_session):

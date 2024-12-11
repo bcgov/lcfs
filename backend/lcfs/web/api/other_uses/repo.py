@@ -76,7 +76,7 @@ class OtherUsesRepository:
         )
 
         result = await self.db.execute(query)
-        return await result.unique().scalars().first()
+        return result.unique().scalars().first()
 
     @repo_handler
     async def get_other_uses(self, compliance_report_id: int) -> List[OtherUsesSchema]:
@@ -310,8 +310,13 @@ class OtherUsesRepository:
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = (
-            or_(FuelCode.effective_date == None, FuelCode.effective_date <= current_date)
-            & or_(FuelCode.expiration_date == None, FuelCode.expiration_date > current_date)
+            or_(
+                FuelCode.effective_date == None, FuelCode.effective_date <= current_date
+            )
+            & or_(
+                FuelCode.expiration_date == None,
+                FuelCode.expiration_date > current_date,
+            )
             & (FuelType.other_uses_fossil_derived == True)
         )
 
@@ -333,7 +338,7 @@ class OtherUsesRepository:
         )
 
         result = await self.db.execute(query)
-        fuel_types = await result.unique().scalars().all()
+        fuel_types = result.unique().scalars().all()
 
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
