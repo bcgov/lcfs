@@ -21,7 +21,8 @@ import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
-import { Box, Stack, Typography } from '@mui/material'
+import { Box, Stack } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
@@ -232,10 +233,10 @@ export const AddEditUser = ({ userType }) => {
           {t('common:submitError')}
         </BCAlert>
       )}
-      <Typography variant="h5" color={colors.primary.main} mb={2}>
+      <BCTypography variant="h5" color={colors.primary.main} mb={2}>
         {userID ? 'Edit' : 'Add'} user&nbsp;
         {userType === 'bceid' && `to ${orgName}`}
-      </Typography>
+      </BCTypography>
       <form onSubmit={handleSubmit(onSubmit, onErrors)} id={'user-form'}>
         <FormProvider {...{ control, setValue }}>
           <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
@@ -310,9 +311,9 @@ export const AddEditUser = ({ userType }) => {
                         )
                   }
                 >
-                  <Typography variant="subtitle2" textTransform="none">
+                  <BCTypography variant="subtitle2" textTransform="none">
                     {t('backBtn')}
-                  </Typography>
+                  </BCTypography>
                 </BCButton>
                 <BCButton
                   type="submit"
@@ -328,7 +329,7 @@ export const AddEditUser = ({ userType }) => {
                     />
                   }
                 >
-                  <Typography variant="button">{t('saveBtn')}</Typography>
+                  <BCTypography variant="button">{t('saveBtn')}</BCTypography>
                 </BCButton>
               </Box>
             </Grid2>

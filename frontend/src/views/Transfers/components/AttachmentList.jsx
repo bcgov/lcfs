@@ -1,14 +1,15 @@
 import PropTypes from 'prop-types'
 import BCBox from '@/components/BCBox'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
-import { Typography, List, ListItemButton, ListItemText } from '@mui/material'
+import { List, ListItemButton, ListItemText } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 
 export const AttachmentList = ({ attachments = [] }) => {
   return (
     <BCBox mt={2}>
-      <Typography variant="h6" color="primary">
+      <BCTypography variant="h6" color="primary">
         Attachments
-      </Typography>
+      </BCTypography>
       <List sx={{ maxWidth: '30%' }}>
         {attachments.map((attachment) => (
           <ListItemButton
@@ -16,7 +17,10 @@ export const AttachmentList = ({ attachments = [] }) => {
             key={attachment.attachmentID}
             alignItems="flex-start"
           >
-            <AttachFileIcon data-test="AttachFileIcon" sx={{ marginTop: '8px' }} />
+            <AttachFileIcon
+              data-test="AttachFileIcon"
+              sx={{ marginTop: '8px' }}
+            />
             <ListItemText
               secondary={attachment.fileName}
               sx={({ palette: { info } }) => ({

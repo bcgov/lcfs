@@ -11,14 +11,19 @@ from lcfs.tests.other_uses.conftest import create_mock_entity
 
 
 @pytest.fixture
-def mock_db_session():
+def mock_query_result():
+    # Setup mock for database query result chain
+    mock_result = AsyncMock()
+    mock_result.unique = MagicMock(return_value=mock_result)
+    mock_result.scalars = MagicMock(return_value=mock_result)
+    mock_result.all = MagicMock(return_value=[MagicMock(spec=OtherUses)])
+    return mock_result
+
+
+@pytest.fixture
+def mock_db_session(mock_query_result):
     session = MagicMock(spec=AsyncSession)
-    execute_result = AsyncMock()
-    execute_result.unique = MagicMock(return_value=execute_result)
-    execute_result.scalars = MagicMock(return_value=execute_result)
-    execute_result.all = MagicMock(return_value=[MagicMock(spec=OtherUses)])
-    execute_result.first = MagicMock(return_value=MagicMock(spec=OtherUses))
-    session.execute.return_value = execute_result
+    session.execute = AsyncMock(return_value=mock_query_result)
     return session
 
 
@@ -29,6 +34,14 @@ def other_uses_repo(mock_db_session):
     repo.fuel_code_repo.get_fuel_categories = AsyncMock(return_value=[])
     repo.fuel_code_repo.get_fuel_types = AsyncMock(return_value=[])
     repo.fuel_code_repo.get_expected_use_types = AsyncMock(return_value=[])
+
+    # Mock for local get_formatted_fuel_types method
+    async def mock_get_formatted_fuel_types():
+        mock_result = await mock_db_session.execute(AsyncMock())
+        return mock_result.unique().scalars().all()
+
+    repo.get_formatted_fuel_types = AsyncMock(side_effect=mock_get_formatted_fuel_types)
+
     return repo
 
 
@@ -194,21 +207,20 @@ async def test_get_latest_other_uses_by_group_uuid(other_uses_repo, mock_db_sess
     mock_other_use_gov.user_type = UserTypeEnum.GOVERNMENT
     mock_other_use_gov.version = 2
 
-    mock_other_use_supplier = MagicMock(spec=OtherUses)
-    mock_other_use_supplier.user_type = UserTypeEnum.SUPPLIER
-    mock_other_use_supplier.version = 3
+    # Setup mock result chain
+    mock_result = AsyncMock()
+    mock_result.unique = MagicMock(return_value=mock_result)
+    mock_result.scalars = MagicMock(return_value=mock_result)
+    mock_result.first = MagicMock(return_value=mock_other_use_gov)
 
-    # Mock response with both government and supplier versions
-    mock_db_session.execute.return_value.scalars.return_value.first.side_effect = [
-        mock_other_use_gov,
-        mock_other_use_supplier,
-    ]
+    # Configure mock db session
+    mock_db_session.execute = AsyncMock(return_value=mock_result)
+    other_uses_repo.db = mock_db_session
 
     result = await other_uses_repo.get_latest_other_uses_by_group_uuid(group_uuid)
 
     assert result.user_type == UserTypeEnum.GOVERNMENT
     assert result.version == 2
-
 
 @pytest.mark.anyio
 async def test_get_other_use_version_by_user(other_uses_repo, mock_db_session):
@@ -221,9 +233,14 @@ async def test_get_other_use_version_by_user(other_uses_repo, mock_db_session):
     mock_other_use.version = version
     mock_other_use.user_type = user_type
 
-    mock_db_session.execute.return_value.scalars.return_value.first.return_value = (
-        mock_other_use
-    )
+    # Set up mock result chain
+    mock_result = AsyncMock()
+    mock_result.scalars = MagicMock(return_value=mock_result)
+    mock_result.first = MagicMock(return_value=mock_other_use)
+
+    # Configure mock db session
+    mock_db_session.execute = AsyncMock(return_value=mock_result)
+    other_uses_repo.db = mock_db_session
 
     result = await other_uses_repo.get_other_use_version_by_user(
         group_uuid, version, user_type

@@ -8,7 +8,7 @@ import {
 } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { decimalFormatter } from '@/utils/formatters'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
 import TransferHistory from './TransferHistory'
@@ -55,7 +55,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
           backgroundColor: 'transparent.main'
         }}
       >
-        <Typography variant="body4">
+        <BCTypography variant="body4">
           <b>{fromOrganization}</b>
           {t('transfer:transfers')}
           <b>{quantity}</b>
@@ -64,7 +64,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
           <b>${decimalFormatter({ value: pricePerUnit })}</b>
           {t('transfer:complianceUnitsPerTvo')}
           <b>${decimalFormatter(totalValue)}</b> CAD.
-        </Typography>
+        </BCTypography>
       </BCBox>
       {/* Comments */}
       {transferData?.comments.length > 0 && (

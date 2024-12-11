@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Breadcrumbs, Typography, Box, useMediaQuery } from '@mui/material'
+import { Breadcrumbs, Box, useMediaQuery } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 
 /**
  * ProgressBreadcrumb Component
@@ -62,19 +63,19 @@ const ProgressBreadcrumb = ({ steps, currentStep }) => {
             mb: 1
           }}
         >
-          <Typography
+          <BCTypography
             variant="caption"
             color={isCurrent || isPast ? 'primary.contrastText' : 'inherit'}
           >
             {index + 1}
-          </Typography>
+          </BCTypography>
         </Box>
-        <Typography
+        <BCTypography
           color={isCurrent || isPast ? 'primary.main' : 'inherit'}
           variant="body3"
         >
           {step}
-        </Typography>
+        </BCTypography>
       </Box>
     )
   }
