@@ -1,7 +1,6 @@
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { useTranslation } from 'react-i18next'
 import { ActivityLinksList } from './ActivityLinkList'
-import { Typography } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
@@ -30,7 +29,7 @@ export const ActivityListCard = ({ name, period, reportID }) => {
             gap: 2
           }}
         >
-          <Typography
+          <BCTypography
             variant="body4"
             color="text"
             component="div"
@@ -39,20 +38,20 @@ export const ActivityListCard = ({ name, period, reportID }) => {
             }}
           />
           <Box>
-            <Typography variant="body4" color="text" component="div">
+            <BCTypography variant="body4" color="text" component="div">
               {t('report:activityLinksList')}:
-            </Typography>
+            </BCTypography>
             <ActivityLinksList />
           </Box>
           <Box>
-            <Typography
+            <BCTypography
               variant="body4"
               color="text"
               component="div"
               sx={{ paddingBottom: '8px' }}
             >
               {t('report:uploadLabel')}
-            </Typography>
+            </BCTypography>
             <Box>
               <BCButton
                 sx={{ marginLeft: '24px' }}

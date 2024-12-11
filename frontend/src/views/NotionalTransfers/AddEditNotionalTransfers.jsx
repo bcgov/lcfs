@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -201,9 +201,9 @@ export const AddEditNotionalTransfers = () => {
     !transfersLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
         <div className="header">
-          <Typography variant="h5" color="primary">
+          <BCTypography variant="h5" color="primary">
             {t('notionalTransfer:newNotionalTransferTitle')}
-          </Typography>
+          </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor

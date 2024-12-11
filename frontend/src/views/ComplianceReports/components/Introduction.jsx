@@ -3,22 +3,22 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  Typography
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { GlobalStyles } from '@mui/system'
 import { useTranslation } from 'react-i18next'
 
 // Reusable Section Component
 const Section = ({ header, content }) => (
   <>
-    <Typography
+    <BCTypography
       variant="h6"
       color="primary"
       sx={{ marginY: '16px' }}
       dangerouslySetInnerHTML={{ __html: header }}
-    ></Typography>
+    ></BCTypography>
     {content.map((paragraph, index) => (
-      <Typography
+      <BCTypography
         key={index}
         variant="body4"
         sx={{
@@ -30,7 +30,7 @@ const Section = ({ header, content }) => (
           }
         }}
         dangerouslySetInnerHTML={{ __html: paragraph }}
-      ></Typography>
+      ></BCTypography>
     ))}
   </>
 )
@@ -58,9 +58,9 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
           id="compliance-report-intro"
           data-test="compliance-report-intro"
         >
-          <Typography color="primary" variant="h5" component="div">
+          <BCTypography color="primary" variant="h5" component="div">
             {t('report:introduction')}
-          </Typography>
+          </BCTypography>
         </AccordionSummary>
         <AccordionDetails>
           {/* Render each section using map */}
@@ -69,10 +69,10 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
           ))}
         </AccordionDetails>
       </Accordion>
-      <Typography variant="h6" color="primary" sx={{ marginY: '16px' }}>
+      <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
         {t('report:questions')}
-      </Typography>
-      <Typography
+      </BCTypography>
+      <BCTypography
         variant="body4"
         sx={{
           '& p': {
@@ -83,7 +83,7 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
           }
         }}
         dangerouslySetInnerHTML={{ __html: t('report:contact') }}
-      ></Typography>
+      ></BCTypography>
     </>
   )
 }

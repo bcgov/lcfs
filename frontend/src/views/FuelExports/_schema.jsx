@@ -1,5 +1,5 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import {
   AutocompleteCellEditor,
   NumberEditor,
@@ -97,9 +97,9 @@ export const fuelExportColDefs = (optionsData, errors) => [
     maxWidth: 220,
     minWidth: 200,
     cellRenderer: (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value ? params.value : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     ),
     suppressKeyboardEvent,
     cellEditor: DateEditor,
@@ -112,7 +112,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
       multiple: false,
@@ -181,7 +181,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -255,7 +255,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
     valueGetter: (params) => {
@@ -288,7 +288,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     cellEditor: 'agSelectCellEditor',
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: (params) => ({
       values: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -370,7 +370,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
     }),
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) => {

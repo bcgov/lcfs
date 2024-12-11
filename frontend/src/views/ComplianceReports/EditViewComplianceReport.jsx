@@ -7,7 +7,8 @@ import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { Fab, Stack, Tooltip, Typography } from '@mui/material'
+import { Fab, Stack, Tooltip } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
@@ -165,7 +166,7 @@ export const EditViewComplianceReport = () => {
     return (
       <>
         <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
-        <Typography color="error">{t('report:errorRetrieving')}</Typography>
+        <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
       </>
     )
   }
@@ -180,22 +181,22 @@ export const EditViewComplianceReport = () => {
           data={modalData}
         />
         <BCBox pb={2}>
-          <Typography
+          <BCTypography
             data-test="compliance-report-header"
             variant="h5"
             color="primary"
           >
             {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
             {reportData?.report.nickname}
-          </Typography>
-          <Typography
+          </BCTypography>
+          <BCTypography
             variant="h6"
             color="primary"
             style={{ marginLeft: '0.25rem' }}
             data-test="compliance-report-status"
           >
             Status: {currentStatus}
-          </Typography>
+          </BCTypography>
         </BCBox>
         <Stack direction="column" mt={2}>
           <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
@@ -242,9 +243,9 @@ export const EditViewComplianceReport = () => {
           {/* Internal Comments */}
           {isGovernmentUser && (
             <BCBox mt={4}>
-              <Typography variant="h6" color="primary">
+              <BCTypography variant="h6" color="primary">
                 {t(`report:internalComments`)}
-              </Typography>
+              </BCTypography>
               <BCBox>
                 <Role roles={govRoles}>
                   <InternalComments

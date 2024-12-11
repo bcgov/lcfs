@@ -1,5 +1,5 @@
 import BCBox from '@/components/BCBox'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import dayjs from 'dayjs'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
 import { useTranslation } from 'react-i18next'
@@ -31,14 +31,14 @@ export const TransactionHistory = ({ transactionHistory }) => {
 
   return (
     <BCBox mt={2}>
-      <Typography variant="h6" color="primary">
+      <BCTypography variant="h6" color="primary">
         {t('txn:txnHistoryLabel')}
-      </Typography>
+      </BCTypography>
       <BCBox m={2}>
         <ul>
           {transactionHistory?.map((item, index) => (
             <li key={index} style={{ marginLeft: 10 }}>
-              <Typography variant="body2" component="div">
+              <BCTypography variant="body2" component="div">
                 <strong>
                   {getTransactionStatusLabel(getStatusObject(item))}
                 </strong>
@@ -50,7 +50,7 @@ export const TransactionHistory = ({ transactionHistory }) => {
                 </strong>
                 <span> of </span>
                 <strong>{t('govOrg')}</strong>
-              </Typography>
+              </BCTypography>
             </li>
           ))}
         </ul>

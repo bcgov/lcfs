@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types'
-import { Box, Typography } from '@mui/material'
+import { Box } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import colors from '@/themes/base/colors'
 
 const DisclaimerBanner = ({ messages }) => {
@@ -16,9 +17,9 @@ const DisclaimerBanner = ({ messages }) => {
       }}
     >
       {messages.map((message, index) => (
-        <Typography key={index} variant="body2" sx={{ fontSize: '14px' }}>
+        <BCTypography key={index} sx={{ fontSize: '14px' }}>
           {message}
-        </Typography>
+        </BCTypography>
       ))}
     </Box>
   )

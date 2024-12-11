@@ -1,6 +1,7 @@
 import { PropTypes } from 'prop-types'
 import BCBadge from '@/components/BCBadge'
-import { Stack, Typography } from '@mui/material'
+import { Stack } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
@@ -23,16 +24,16 @@ export const OrganizationBadge = ({
       badgeContent={
         <>
           <Stack direction="column">
-            <Typography variant="body4">{organizationName}</Typography>
+            <BCTypography variant="body4">{organizationName}</BCTypography>
             {['Submitted', 'Recommended'].includes(transferStatus) && (
               <Role roles={[roles.government]}>
-                <Typography variant="body4">
+                <BCTypography variant="body4">
                   Balance: {orgInfo?.totalBalance.toLocaleString()} (
                   {Math.abs(orgInfo?.reservedBalance).toLocaleString()})
-                </Typography>
-                <Typography variant="body4">
+                </BCTypography>
+                <BCTypography variant="body4">
                   Registered: {orgInfo?.registered ? 'Yes' : 'No'}
-                </Typography>
+                </BCTypography>
               </Role>
             )}
           </Stack>

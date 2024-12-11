@@ -5,11 +5,11 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Typography,
   Link,
   CircularProgress,
   IconButton
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { faPen } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
@@ -185,7 +185,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
 
   return (
     <>
-      <Typography color="primary" variant="h5" mb={2} component="div">
+      <BCTypography color="primary" variant="h5" mb={2} component="div">
         {t('report:reportDetails')}
         <Link
           component="button"
@@ -204,7 +204,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         >
           {t('report:collapseAll')}
         </Link>
-      </Typography>
+      </BCTypography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
@@ -223,7 +223,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
                 id={`panel${index}-header`}
                 data-test={`panel${index}-summary`}
               >
-                <Typography
+                <BCTypography
                   style={{ display: 'flex', alignItems: 'center' }}
                   variant="h6"
                   color="primary"
@@ -253,17 +253,17 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
                       </Role>
                     </>
                   )}
-                </Typography>
+                </BCTypography>
               </AccordionSummary>
               <AccordionDetails>
                 {isLoading ? (
                   <CircularProgress />
                 ) : error ? (
-                  <Typography color="error">Error loading data</Typography>
+                  <BCTypography color="error">Error loading data</BCTypography>
                 ) : activity.component ? (
                   activity.component(data)
                 ) : (
-                  <Typography>{JSON.stringify(data)}</Typography>
+                  <BCTypography>{JSON.stringify(data)}</BCTypography>
                 )}
               </AccordionDetails>
             </Accordion>
