@@ -40,10 +40,6 @@ class CompliancePeriodSchema(BaseSchema):
     display_order: Optional[int] = None
 
 
-class ComplianceReportOrganizationSchema(BaseSchema):
-    organization_id: int
-    name: str
-
 
 class SummarySchema(BaseSchema):
     summary_id: int
@@ -118,6 +114,7 @@ class FSEOptionsSchema(BaseSchema):
 class FinalSupplyEquipmentSchema(BaseSchema):
     final_supply_equipment_id: int
     compliance_report_id: int
+    organization_name: str
     supply_from_date: date
     supply_to_date: date
     registration_nbr: str

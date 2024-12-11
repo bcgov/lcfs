@@ -189,7 +189,7 @@ async def test_update_other_use_not_found(other_uses_service):
 
     mock_repo.get_other_use_version_by_user = AsyncMock(return_value=None)
 
-    with pytest.raises(ServiceException):
+    with pytest.raises(ValueError, match="Other use not found"):
         await service.update_other_use(other_use_data, UserTypeEnum.SUPPLIER)
 
 
