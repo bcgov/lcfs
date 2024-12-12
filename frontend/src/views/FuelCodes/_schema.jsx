@@ -4,7 +4,7 @@ import {
   TextRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 
@@ -201,11 +201,11 @@ export const fuelCodeColDefs = (t) => [
     filter: false,
     headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
     cellRenderer: (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value
           ? timezoneFormatter({ value: params.value })
           : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     ),
     minWidth: 300
   },
