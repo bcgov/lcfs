@@ -126,12 +126,12 @@ export const AddEditFuelSupplies = () => {
           const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
             (item) => item.fuelCategory
           )
-          if (selectedFuelType.fuelType !== 'Other') {
-            params.node.setDataValue(
-              'fuelCategory',
-              fuelCategoryOptions[0] ?? null
-            )
-          }
+
+          params.node.setDataValue(
+            'fuelCategory',
+            fuelCategoryOptions[0] ?? null
+          )
+
           const fuelCodeOptions = selectedFuelType.fuelCodes.map(
             (code) => code.fuelCode
           )
