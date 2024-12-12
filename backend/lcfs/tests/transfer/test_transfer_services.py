@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from lcfs.web.api.transfer.schema import TransferSchema
 from datetime import date
 from lcfs.db.models.transfer import Transfer
@@ -63,22 +63,26 @@ async def test_get_transfer_success(transfer_service, mock_transfer_repo):
 @pytest.mark.anyio
 async def test_create_transfer_success(transfer_service, mock_transfer_repo):
     mock_transfer_repo.get_transfer_status_by_name.return_value = TransferStatus(
-        transfer_status_id=1, status="status"
+        transfer_status_id=1, status="Sent"
     )
     mock_transfer_repo.add_transfer_history.return_value = True
+
     transfer_id = 1
-    transfer = TransferCreateSchema(
+    transfer_data = TransferCreateSchema(
         transfer_id=transfer_id,
         from_organization_id=1,
         to_organization_id=2,
         price_per_unit=5.75,
     )
-    mock_transfer_repo.create_transfer.return_value = transfer
+    mock_transfer_repo.create_transfer.return_value = transfer_data
 
-    result = await transfer_service.create_transfer(transfer)
+    # Patch the _perform_notificaiton_call method
+    with patch.object(transfer_service, "_perform_notificaiton_call", AsyncMock()):
+        result = await transfer_service.create_transfer(transfer_data)
 
-    assert result.transfer_id == transfer_id
-    assert isinstance(result, TransferCreateSchema)
+        assert result.transfer_id == transfer_id
+        assert isinstance(result, TransferCreateSchema)
+        transfer_service._perform_notificaiton_call.assert_called_once()
 
 
 @pytest.mark.anyio
