@@ -32,8 +32,9 @@ import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
-const ReportDetails = ({ currentStatus = 'Draft' }) => {
+const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
@@ -214,6 +215,39 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           {t('report:collapseAll')}
         </Link>
       </BCTypography>
+      {/* Supporting Documents */}
+      {isGovernmentUser && (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (
+        <Accordion>
+          <AccordionSummary
+            expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+            aria-controls="panel1-content"
+          >
+            <BCTypography color="primary" variant="h6" component="div">
+              {t('report:supportingDocs')}
+            </BCTypography>
+            <IconButton
+              color="primary"
+              size="small"
+              aria-label="edit"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFileDialogOpen(true);
+              }}
+            >
+              <FontAwesomeIcon className="small-icon" icon={faPen} />
+            </IconButton>
+          </AccordionSummary>
+          <AccordionDetails>
+            <DocumentUploadDialog
+              parentID={complianceReportId}
+              parentType="compliance_report"
+              open={isFileDialogOpen}
+              close={() => setFileDialogOpen(false)}
+            />
+          </AccordionDetails>
+        </Accordion>
+      )}
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (

@@ -40,7 +40,7 @@ async def get_all_documents(
     response_model=FileResponseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
 async def upload_file(
     request: Request,
     parent_id: int,
