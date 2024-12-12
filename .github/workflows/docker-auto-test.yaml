@@ -61,7 +61,7 @@ jobs:
         continue-on-error: true
         run: |
           cd backend
-          poetry run pytest -n auto --junitxml=pytest-results.xml
+          poetry run pytest --junitxml=pytest-results.xml
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
