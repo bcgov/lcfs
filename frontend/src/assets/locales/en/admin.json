@@ -22,6 +22,8 @@
   "usersNotFound": "No users found",
   "activitiesNotFound": "No user activities found",
   "newUserBtn": "New user",
+  "userDetails": "User details",
+  "editBtn": "Edit",
   "userColLabels": {
     "userName": "User name",
     "role": "Role(s)",

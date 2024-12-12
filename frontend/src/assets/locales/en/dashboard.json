@@ -12,8 +12,9 @@
     "title": "Transactions",
     "orgHas": "{{name}} has:",
     "transfersInProgress": "Transfer(s) in progress",
-    "organizationsRegistered": "Organizations registered for transfers",
+    "organizationsRegistered": "Organizations registered for transfers (see bulletin RLCF-013)",
     "startNewTransfer": "Start a new transfer",
+    "linkTooltip": "Link opens in a new browser tab",
     "loadingMessage": "Loading transactions card..."
   },
   "transactions": {
@@ -31,7 +32,9 @@
   },
   "website": {
     "title": "Low Carbon Fuel Standard",
-    "link": "Visit our website at:<br /><a href=\"http://gov.bc.ca/lowcarbonfuels\" aria-label=\"Visit the LCFS Website\">gov.bc.ca/lowcarbonfuels</a>"
+    "linkText": "Visit our website at:",
+    "linkUrl": "gov.bc.ca/lowcarbonfuels",
+    "linkTooltip": "Link opens in a new browser tab"
   },
   "orgBalance": {
     "loading": "Loading balance details...",
@@ -52,7 +55,8 @@
     "orgDetailsLabel": "Organization Details",
     "orgDetailsLoadingMsg": "Loading organization details...",
     "users": "Users",
-    "createNewUsrLabel": "Create new BCeID account"
+    "createNewUsrLabel": "Create new BCeID account",
+    "linkTooltip": "Link opens in a new browser tab"
   },
   "orgComplianceReports": {
     "title": "Compliance reports",

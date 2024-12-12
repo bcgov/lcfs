@@ -1,11 +1,10 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Stack, List, ListItemButton } from '@mui/material'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFilePdf, faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
+import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
@@ -19,16 +18,18 @@ const CountDisplay = ({ count }) => (
     variant="h3"
     sx={{
       color: 'success.main',
-      marginX: 3
+      marginX: 3,
+      visibility: count != null ? 'visible' : 'hidden'
     }}
   >
-    {count}
+    {count ?? 0}
   </BCTypography>
 )
 
 const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
+
   const { data: orgData, isLoading: orgLoading } = useOrganization()
   const { data: counts, isLoading } = useOrgTransactionCounts()
 
@@ -45,23 +46,31 @@ const OrgTransactionsCard = () => {
     navigate(route, { state: { filters } })
   }
 
-  function handleExternalNavigate(event, route) {
+  function openExternalLink(event, url) {
     event.preventDefault()
-    window.open(route, '_blank', 'noopener,noreferrer')
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
-  const renderLinkWithCount = (text, count, onClick, icons = []) => {
+  const renderLinkWithCount = (
+    text,
+    count,
+    onClick,
+    icons = [],
+    title = ''
+  ) => {
     return (
       <>
-        {count != null && <CountDisplay count={count} />}
+        <CountDisplay count={count} />
         <BCTypography
           variant="body2"
           color="link"
           sx={{
             textDecoration: 'underline',
-            '&:hover': { color: 'info.main' }
+            '&:hover': { color: 'info.main' },
+            cursor: 'pointer'
           }}
           onClick={onClick}
+          title={title}
         >
           {text}
           {icons.map((icon, index) => (
@@ -79,7 +88,6 @@ const OrgTransactionsCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       title={t('dashboard:orgTransactions.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={
@@ -96,7 +104,7 @@ const OrgTransactionsCard = () => {
                 maxWidth: '100%',
                 padding: 0,
                 '& .MuiListItemButton-root': {
-                  padding: '2px 0'
+                  padding: '1px 0'
                 }
               }}
             >
@@ -121,10 +129,11 @@ const OrgTransactionsCard = () => {
                     ])
                 )}
               </ListItemButton>
+
               <ListItemButton
                 component="a"
                 onClick={(e) =>
-                  handleExternalNavigate(
+                  openExternalLink(
                     e,
                     'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf'
                   )
@@ -134,13 +143,15 @@ const OrgTransactionsCard = () => {
                   t('dashboard:orgTransactions.organizationsRegistered'),
                   null,
                   (e) =>
-                    handleExternalNavigate(
+                    openExternalLink(
                       e,
-                      'https://www2.gov.bc.ca/assets/gov/farming-natural-resources-and-industry/electricity-alternative-energy/transportation/renewable-low-carbon-fuels/rlcf-013.pdf'
+                      'https://www2.gov.bc.ca/gov/content?id=4B2DC59D77F64C8491C5CDFCF8732F10'
                     ),
-                  [faFilePdf, faShareFromSquare]
+                  [faShareFromSquare],
+                  t('dashboard:orgTransactions.linkTooltip')
                 )}
               </ListItemButton>
+
               <ListItemButton
                 component="a"
                 onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
