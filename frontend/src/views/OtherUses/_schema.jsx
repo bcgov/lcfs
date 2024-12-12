@@ -180,10 +180,9 @@ export const otherUsesColDefs = (optionsData, errors) => [
   },
   {
     field: 'units',
-    headerName: i18n.t('otherUses:units'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.units'),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: (params) => {
-      console.log('cellEditorParams: ', params);
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       );
