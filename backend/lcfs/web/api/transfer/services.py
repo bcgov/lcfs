@@ -1,3 +1,9 @@
+from lcfs.web.api.notification.schema import (
+    TRANSFER_STATUS_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 import structlog
 from typing import List, Optional
 from fastapi import Depends, Request, HTTPException
@@ -44,6 +50,7 @@ class TransferServices:
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
+        notfn_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.validate = validate
         self.repo = repo
@@ -51,6 +58,7 @@ class TransferServices:
         self.org_repo = org_repo
         self.org_service = org_service
         self.transaction_repo = transaction_repo
+        self.notfn_service = notfn_service
 
     @service_handler
     async def get_all_transfers(self) -> List[TransferSchema]:
@@ -147,6 +155,7 @@ class TransferServices:
         # transfer.transfer_category_id = 1
 
         transfer.current_status = current_status
+        notifications = TRANSFER_STATUS_NOTIFICATION_MAPPER.get(current_status.status)
         if current_status.status == TransferStatusEnum.Sent:
             await self.sign_and_send_from_supplier(transfer)
 
@@ -157,6 +166,7 @@ class TransferServices:
             current_status.transfer_status_id,
             self.request.user.user_profile_id,
         )
+        await self._perform_notificaiton_call(notifications, transfer)
         return transfer
 
     @service_handler
@@ -253,7 +263,44 @@ class TransferServices:
 
         # Finally, update the transfer's status and save the changes
         transfer.current_status = new_status
-        return await self.repo.update_transfer(transfer)
+        transfer_result = await self.repo.update_transfer(transfer)
+        await self._perform_notificaiton_call(transfer_result)
+        return transfer_result
+
+    async def _perform_notificaiton_call(self, transfer):
+        """Send notifications based on the current status of the transfer."""
+        notifications = TRANSFER_STATUS_NOTIFICATION_MAPPER.get(
+            transfer.current_status.status
+        )
+        notification_data = NotificationMessageSchema(
+            message=f"Transfer {transfer.transfer_id} has been updated",
+            origin_user_profile_id=self.request.user.user_profile_id,
+        )
+        if notifications and isinstance(notifications, list):
+            notification_data.related_organization_id = (
+                transfer.from_organization_id
+                if transfer.current_status.status == TransferStatusEnum.Declined
+                else transfer.to_organization_id
+            )
+            await self.notfn_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notifications,
+                    notification_data=notification_data,
+                )
+            )
+            if transfer.current_status.status in [
+                TransferStatusEnum.Refused,
+                TransferStatusEnum.Recorded,
+            ]:
+                notification_data.related_organization_id = (
+                    transfer.from_organization_id
+                )
+                await self.notfn_service.send_notification(
+                    NotificationRequestSchema(
+                        notification_types=notifications,
+                        notification_data=notification_data,
+                    )
+                )
 
     async def sign_and_send_from_supplier(self, transfer):
         """Create reserved transaction to reserve compliance units for sending organization."""

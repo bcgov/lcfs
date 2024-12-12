@@ -150,6 +150,18 @@ export const AddEditOtherUses = () => {
       ) {
         const ciOfFuel = findCiOfFuel(params.data, optionsData)
         params.node.setDataValue('ciOfFuel', ciOfFuel)
+
+        // Auto-populate the "Unit" field based on the selected fuel type
+      if (params.colDef.field === 'fuelType') {
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        );
+        if (fuelType && fuelType.units) {
+          params.node.setDataValue('units', fuelType.units);
+        } else {
+          params.node.setDataValue('units', '');
+        }
+      }
       }
     },
     [optionsData]

@@ -1,3 +1,11 @@
+from typing import Optional
+from lcfs.web.api.base import NotificationTypeEnum
+from pydantic import BaseModel, Field
+
+class EmailNotificationRequest(BaseModel):
+    notification_type: NotificationTypeEnum = Field(..., description="Type of notification")
+    organization_id: Optional[int] = Field(None, description="Organization ID associated with the notification")
+
 TEMPLATE_MAPPING = {
     "BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT": "bceid__compliance_report__director_assessment.html",
     "BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL": "bceid__initiative_agreement__director_approval.html",
