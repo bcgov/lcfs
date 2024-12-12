@@ -6,7 +6,7 @@ import {
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
 
@@ -41,7 +41,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>
-      params.value || <Typography variant="body4">Select</Typography>,
+      params.value || <BCTypography variant="body4">Select</BCTypography>,
     cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
@@ -58,7 +58,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>
-      params.value || <Typography variant="body4">Select</Typography>,
+      params.value || <BCTypography variant="body4">Select</BCTypography>,
     cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 200
   },
@@ -84,7 +84,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     },
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) => StandardCellErrors(params, errors),
     suppressKeyboardEvent,
     valueSetter: (params) => {
@@ -121,7 +121,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
         fuelType?.fuelCodes?.length > 0
       ) {
-        return params.value || <Typography variant="body4">Select</Typography>;
+        return params.value || <BCTypography variant="body4">Select</BCTypography>;
       }
       return null;
     },
@@ -193,7 +193,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>
-      params.value || <Typography variant="body4">Select</Typography>,
+      params.value || <BCTypography variant="body4">Select</BCTypography>,
     cellStyle: (params) => StandardCellErrors(params, errors)
   },
   {
@@ -246,7 +246,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>
-      params.value || <Typography variant="body4">Select</Typography>,
+      params.value || <BCTypography variant="body4">Select</BCTypography>,
     cellStyle: (params) => StandardCellErrors(params, errors),
     minWidth: 200
   },

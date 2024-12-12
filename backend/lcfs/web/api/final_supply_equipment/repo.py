@@ -1,6 +1,6 @@
 import structlog
 from typing import List, Tuple
-from lcfs.db.models.compliance import EndUserType, FinalSupplyEquipment
+from lcfs.db.models.compliance import EndUserType, FinalSupplyEquipment, ComplianceReport
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
 )
@@ -27,8 +27,14 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def get_fse_options(
-        self,
-    ) -> Tuple[List[EndUseType], List[LevelOfEquipment], List[FuelMeasurementType], List[PortsEnum]]:
+        self, organization
+    ) -> Tuple[
+        List[EndUseType],
+        List[LevelOfEquipment],
+        List[FuelMeasurementType],
+        List[PortsEnum],
+        List[str],
+    ]:
         """
         Retrieve all FSE options in a single database transaction
         """
@@ -37,13 +43,15 @@ class FinalSupplyEquipmentRepository:
             levels_of_equipment = await self.get_levels_of_equipment()
             fuel_measurement_types = await self.get_fuel_measurement_types()
             intended_user_types = await self.get_intended_user_types()
+            organization_names = await self.get_organization_names(organization)
         ports = list(PortsEnum)
         return (
             intended_use_types,
             levels_of_equipment,
             fuel_measurement_types,
             intended_user_types,
-            ports
+            ports,
+            organization_names,
         )
 
     async def get_intended_use_types(self) -> List[EndUseType]:
@@ -93,6 +101,29 @@ class FinalSupplyEquipmentRepository:
             .scalars()
             .all()
         )
+
+    async def get_organization_names(self, organization) -> List[str]:
+        """
+        Retrieve unique organization names for Final Supply Equipment records
+        associated with the given organization_id via ComplianceReport.
+
+        Args:
+            organization_id (int): The ID of the organization.
+
+        Returns:
+            List[str]: A list of unique organization names.
+        """
+        organization_names = (
+            await self.db.execute(
+                select(distinct(FinalSupplyEquipment.organization_name))
+                .join(ComplianceReport, FinalSupplyEquipment.compliance_report_id == ComplianceReport.compliance_report_id)
+                .filter(ComplianceReport.organization_id == organization.organization_id)
+                .filter(FinalSupplyEquipment.organization_name.isnot(None))
+            )
+        ).all()
+
+        # Extract strings from the list of tuples
+        return [name[0] for name in organization_names]
 
     @repo_handler
     async def get_intended_user_by_name(self, intended_user: str) -> EndUseType:

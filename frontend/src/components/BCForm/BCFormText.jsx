@@ -1,5 +1,6 @@
 import { Controller } from 'react-hook-form'
-import { TextField, InputLabel, Typography } from '@mui/material'
+import { TextField, InputLabel } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 
 export const BCFormText = ({ name, control, label, optional }) => {
@@ -14,14 +15,14 @@ export const BCFormText = ({ name, control, label, optional }) => {
       }) => (
         <>
           <InputLabel htmlFor={name} component="label" className="form-label">
-            <Typography variant="label" component="span">
+            <BCTypography variant="label" component="span">
               {label}&nbsp;
               {optional && (
                 <span className="optional" style={{ fontWeight: 'normal' }}>
                   (optional)
                 </span>
               )}
-            </Typography>
+            </BCTypography>
           </InputLabel>
           <TextField
             id={name}

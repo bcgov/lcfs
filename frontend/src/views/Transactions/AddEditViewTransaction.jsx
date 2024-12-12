@@ -23,12 +23,12 @@ import {
 import {
   useTheme,
   Stack,
-  Typography,
   useMediaQuery,
   Step,
   StepLabel,
   Stepper
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import BCBox from '@/components/BCBox'
@@ -345,9 +345,9 @@ export const AddEditViewTransaction = () => {
       />
       <BCBox>
         {/* Header section */}
-        <Typography variant="h5" color="primary">
+        <BCTypography variant="h5" color="primary">
           {title}
-        </Typography>
+        </BCTypography>
 
         {/* Progress bar */}
         <BCBox
@@ -400,9 +400,9 @@ export const AddEditViewTransaction = () => {
 
         {/* Internal Comments */}
         <BCBox mt={4}>
-          <Typography variant="h6" color="primary">
+          <BCTypography variant="h6" color="primary">
             {t(`txn:internalCommentsOptional`)}
-          </Typography>
+          </BCTypography>
           <BCBox>
             <Role roles={govRoles}>
               <InternalComments
@@ -435,9 +435,9 @@ export const AddEditViewTransaction = () => {
             onClick={() => navigate(ROUTES.TRANSACTIONS)}
           >
             <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
-            <Typography variant="body4" sx={{ textTransform: 'capitalize' }}>
+            <BCTypography variant="body4" sx={{ textTransform: 'capitalize' }}>
               {t('backBtn')}
-            </Typography>
+            </BCTypography>
           </BCButton>
           {buttonClusterConfig[
             transactionId ? currentStatus : TRANSACTION_STATUSES.NEW

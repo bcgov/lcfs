@@ -4,7 +4,7 @@ import {
   TRANSFER_RECOMMENDATION
 } from '@/constants/statuses'
 import { useTransfer } from '@/hooks/useTransfer'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import dayjs from 'dayjs'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
 import duration from 'dayjs/plugin/duration'
@@ -65,9 +65,9 @@ function TransferHistory({ transferHistory }) {
 
   return (
     <BCBox mt={2} data-test="transfer-history">
-      <Typography variant="h6" color="primary">
+      <BCTypography variant="h6" color="primary">
         {t('transfer:txnHistory')}
-      </Typography>
+      </BCTypography>
       <BCBox m={2}>
         <ul>
           {[
@@ -78,7 +78,7 @@ function TransferHistory({ transferHistory }) {
           ].includes(currentStatus) &&
             agreementDate && (
               <li>
-                <Typography variant="body2" component="div">
+                <BCTypography variant="body2" component="div">
                   <span>
                     Date of written agreement reached between the two
                     organizations: {agreementDate.format('LL')} (proposal falls
@@ -101,12 +101,12 @@ function TransferHistory({ transferHistory }) {
                       )}
                     )
                   </span>
-                </Typography>
+                </BCTypography>
               </li>
             )}
           {transferHistory?.map((item, index) => (
             <li key={(item.transferStatus?.transferStatusId || index) + index}>
-              <Typography variant="body2" component="div">
+              <BCTypography variant="body2" component="div">
                 <b>{getTransferStatusLabel(item.transferStatus?.status)}</b>{' '}
                 <span> on </span>
                 {dayjs(item.createDate).format('LL')}
@@ -122,7 +122,7 @@ function TransferHistory({ transferHistory }) {
                     ? item.userProfile.organization.name
                     : t('govOrg')}{' '}
                 </strong>
-              </Typography>
+              </BCTypography>
             </li>
           ))}
         </ul>
