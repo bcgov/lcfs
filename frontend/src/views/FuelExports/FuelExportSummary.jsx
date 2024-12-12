@@ -6,17 +6,19 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import i18n from '@/i18n'
+import { ROUTES } from '@/constants/routes'
 
 export const FuelExportSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { complianceReportId } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'fuelExport'])
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -122,6 +124,15 @@ export const FuelExportSummary = ({ data }) => {
     return params.data.fuelExportId.toString()
   }
 
+  const handleRowClicked = (params) => {
+    navigate(
+      ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }
+
   return (
     <Grid2 className="fuel-export-container" mx={-1}>
       <div>
@@ -144,6 +155,7 @@ export const FuelExportSummary = ({ data }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.fuelExports.length <= 10}
+          onRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>
