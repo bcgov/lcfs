@@ -1,5 +1,7 @@
 from fastapi import HTTPException
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
+from lcfs.web.api.notification.services import NotificationService
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
@@ -24,6 +26,27 @@ def mock_user_has_roles():
         yield mock
 
 
+@pytest.fixture
+def mock_notification_service():
+    mock_service = AsyncMock(spec=NotificationService)
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.Depends", 
+        return_value=mock_service
+    ):
+        yield mock_service
+
+
+@pytest.fixture
+def mock_environment_vars():
+    with patch("lcfs.web.api.email.services.settings") as mock_settings:
+        mock_settings.ches_auth_url = "http://mock_auth_url"
+        mock_settings.ches_email_url = "http://mock_email_url"
+        mock_settings.ches_client_id = "mock_client_id"
+        mock_settings.ches_client_secret = "mock_client_secret"
+        mock_settings.ches_sender_email = "noreply@gov.bc.ca"
+        mock_settings.ches_sender_name = "Mock Notification System"
+        yield mock_settings
+
 # Mock for adjust_balance method within the OrganizationsService
 @pytest.fixture
 def mock_org_service():
@@ -35,7 +58,7 @@ def mock_org_service():
 # update_compliance_report
 @pytest.mark.anyio
 async def test_update_compliance_report_status_change(
-    compliance_report_update_service, mock_repo
+    compliance_report_update_service, mock_repo, mock_notification_service
 ):
     # Mock data
     report_id = 1
@@ -55,6 +78,7 @@ async def test_update_compliance_report_status_change(
     mock_repo.get_compliance_report_by_id.return_value = mock_report
     mock_repo.get_compliance_report_status_by_desc.return_value = new_status
     compliance_report_update_service.handle_status_change = AsyncMock()
+    compliance_report_update_service.notfn_service = mock_notification_service
     mock_repo.update_compliance_report.return_value = mock_report
 
     # Call the method
@@ -80,6 +104,7 @@ async def test_update_compliance_report_status_change(
 
     assert mock_report.current_status == new_status
     assert mock_report.supplemental_note == report_data.supplemental_note
+    mock_notification_service.send_notification.assert_called_once()
 
 
 @pytest.mark.anyio

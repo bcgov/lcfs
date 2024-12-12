@@ -1,5 +1,10 @@
 from fastapi import Depends, HTTPException, Request
-from sqlalchemy.exc import InvalidRequestError
+from lcfs.web.api.notification.schema import (
+    COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -24,12 +29,14 @@ class ComplianceReportUpdateService:
         summary_service: ComplianceReportSummaryService = Depends(),
         org_service: OrganizationsService = Depends(OrganizationsService),
         trx_service: TransactionsService = Depends(TransactionsService),
+        notfn_service: NotificationService = Depends(NotificationService),
     ):
         self.repo = repo
         self.request = request
         self.summary_service = summary_service
         self.org_service = org_service
         self.trx_service = trx_service
+        self.notfn_service = notfn_service
 
     async def update_compliance_report(
         self, report_id: int, report_data: ComplianceReportUpdateSchema
@@ -42,15 +49,34 @@ class ComplianceReportUpdateService:
                 f"Compliance report with ID {report_id} not found"
             )
 
+        notifications = None
+        notification_data: NotificationMessageSchema = NotificationMessageSchema(
+            message=f"Compliance report {report.compliance_report_id} has been updated",
+            related_organization_id=report.organization_id,
+            origin_user_profile_id=self.request.user.user_profile_id,
+        )
         # if we're just returning the compliance report back to either compliance manager or analyst,
         # then neither history nor any updates to summary is required.
         if report_data.status in RETURN_STATUSES:
             status_has_changed = False
-            report_data.status = (
-                "Submitted"
-                if report_data.status == "Return to analyst"
-                else ComplianceReportStatusEnum.Recommended_by_analyst.value
+            notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
+                report_data.status
             )
+            if report_data.status == "Return to analyst":
+                report_data.status = ComplianceReportStatusEnum.Submitted.value
+                notification_data.message = f"Compliance report {report.compliance_report_id} has been returned to analyst"
+            else:
+                report_data.status = (
+                    ComplianceReportStatusEnum.Recommended_by_analyst.value
+                )
+
+                notification_data.message = f"Compliance report {report.compliance_report_id} has been returned by director"
+                notification_data.related_user_profile_id = [
+                    h.user_profile.user_profile_id
+                    for h in report.history
+                    if h.status.status
+                    == ComplianceReportStatusEnum.Recommended_by_analyst
+                ][0]
         else:
             status_has_changed = report.current_status.status != getattr(
                 ComplianceReportStatusEnum, report_data.status.replace(" ", "_")
@@ -65,10 +91,21 @@ class ComplianceReportUpdateService:
         updated_report = await self.repo.update_compliance_report(report)
         if status_has_changed:
             await self.handle_status_change(report, new_status.status)
-
+            notification_data.message = (
+                f"Compliance report {report.compliance_report_id} has been updated"
+            )
+            notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
+                new_status.status
+            )
             # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
-
+        if notifications and isinstance(notifications, list):
+            await self.notfn_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notifications,
+                    notification_data=notification_data,
+                )
+            )
         return updated_report
 
     async def handle_status_change(
@@ -181,7 +218,6 @@ class ComplianceReportUpdateService:
             )
             # Update the report with the new summary
             report.summary = new_summary
-
 
         if report.summary.line_20_surplus_deficit_units != 0:
             # Create a new reserved transaction for receiving organization

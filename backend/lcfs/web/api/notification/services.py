@@ -1,10 +1,13 @@
-from typing import Optional
+from typing import List, Optional, Union
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
     ChannelEnum,
 )
+from lcfs.web.api.base import NotificationTypeEnum
+from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.notification.schema import (
+    NotificationRequestSchema,
     SubscriptionSchema,
     NotificationMessageSchema,
 )
@@ -18,10 +21,14 @@ logger = structlog.get_logger(__name__)
 
 
 class NotificationService:
+
     def __init__(
-        self, repo: NotificationRepository = Depends(NotificationRepository)
+        self,
+        repo: NotificationRepository = Depends(NotificationRepository),
+        email_service: CHESEmailService = Depends(CHESEmailService),
     ) -> None:
         self.repo = repo
+        self.email_service = email_service
 
     @service_handler
     async def get_notification_messages_by_user_id(
@@ -189,3 +196,40 @@ class NotificationService:
 
         await self.repo.delete_notification_channel_subscription(subscription_id)
         logger.info(f"Deleted notification channel subscription {subscription_id}.")
+
+    @service_handler
+    async def send_notification(self, notification: NotificationRequestSchema):
+        """
+        Send subscribed notifications to users.
+        """
+        # Prepare context once, outside the loop
+        notification.notification_context.update(
+            {"organization_id": notification.notification_data.related_organization_id}
+        )
+
+        for notification_type in notification.notification_types:
+            in_app_subscribed_users = await self.repo.get_subscribed_users_by_channel(
+                notification_type,
+                ChannelEnum.IN_APP,
+                notification.notification_data.related_organization_id,
+            )
+
+            # Batch create in-app notifications
+            in_app_notifications = [
+                NotificationMessage(
+                    **notification.notification_data.model_dump(
+                        exclude_unset=True, exclude={"deleted"}
+                    ),
+                    notification_type_id=subscription.notification_type_id,
+                    related_user_profile_id=subscription.user_profile_id,
+                )
+                for subscription in in_app_subscribed_users
+            ]
+            if in_app_notifications:
+                await self.repo.create_notification_messages(in_app_notifications)
+
+            await self.email_service.send_notification_email(
+                notification_type,
+                notification.notification_context,
+                notification.notification_data.related_organization_id,
+            )
