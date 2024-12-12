@@ -1,4 +1,5 @@
 import os
+from lcfs.web.api.base import NotificationTypeEnum
 import requests
 import structlog
 from fastapi import Depends
@@ -9,7 +10,7 @@ from datetime import datetime
 from lcfs.settings import settings
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.api.email.template_mapping import TEMPLATE_MAPPING
+from lcfs.web.api.email.schema import TEMPLATE_MAPPING
 
 logger = structlog.get_logger(__name__)
 
@@ -54,7 +55,7 @@ class CHESEmailService:
     @service_handler
     async def send_notification_email(
         self,
-        notification_type: str,
+        notification_type: NotificationTypeEnum,
         notification_context: Dict[str, Any],
         organization_id: int,
     ) -> bool:
@@ -63,16 +64,16 @@ class CHESEmailService:
         """
         # Retrieve subscribed user emails
         recipient_emails = await self.repo.get_subscribed_user_emails(
-            notification_type, organization_id
+            notification_type.value, organization_id
         )
         if not recipient_emails:
             logger.info(f"""No subscribers for notification type: {
-                        notification_type}""")
+                        notification_type.value}""")
             return False
 
         # Render the email content
         email_body = self._render_email_template(
-            notification_type, notification_context
+            notification_type.value, notification_context
         )
 
         # Build email payload

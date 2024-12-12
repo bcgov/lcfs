@@ -1,12 +1,15 @@
+from lcfs.web.api.base import NotificationTypeEnum
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.api.email.services import CHESEmailService
 import os
 
+
 @pytest.fixture
 def mock_email_repo():
     return AsyncMock(spec=CHESEmailRepository)
+
 
 @pytest.fixture
 def mock_environment_vars():
@@ -19,14 +22,15 @@ def mock_environment_vars():
         mock_settings.ches_sender_name = "Mock Notification System"
         yield mock_settings
 
+
 @pytest.mark.anyio
 async def test_send_notification_email_success(mock_email_repo, mock_environment_vars):
     # Arrange
-    notification_type = "INITIATIVE_APPROVED"
+    notification_type = NotificationTypeEnum.BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT
     notification_context = {
         "subject": "Test Notification",
         "user_name": "John Doe",
-        "message_body": "Test message content"
+        "message_body": "Test message content",
     }
     organization_id = 1
 
@@ -46,21 +50,24 @@ async def test_send_notification_email_success(mock_email_repo, mock_environment
     # Assert
     assert result is True
     mock_email_repo.get_subscribed_user_emails.assert_called_once_with(
-        notification_type, organization_id
+        notification_type.value, organization_id  # Ensure value is passed
     )
     service._render_email_template.assert_called_once_with(
-        notification_type, notification_context
+        notification_type.value, notification_context
     )
     service.send_email.assert_called_once()
 
+
 @pytest.mark.anyio
-async def test_send_notification_email_no_recipients(mock_email_repo, mock_environment_vars):
+async def test_send_notification_email_no_recipients(
+    mock_email_repo, mock_environment_vars
+):
     # Arrange
-    notification_type = "INITIATIVE_APPROVED"
+    notification_type = NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS
     notification_context = {
         "subject": "Test Notification",
         "user_name": "John Doe",
-        "message_body": "Test message content"
+        "message_body": "Test message content",
     }
     organization_id = 1
 
@@ -76,18 +83,19 @@ async def test_send_notification_email_no_recipients(mock_email_repo, mock_envir
     # Assert
     assert result is False
     mock_email_repo.get_subscribed_user_emails.assert_called_once_with(
-        notification_type, organization_id
+        notification_type.value, organization_id  # Ensure value is passed
     )
+
 
 @pytest.mark.anyio
 async def test_get_ches_token_success(mock_environment_vars):
     # Arrange
     mock_token = "mock_access_token"
-    with patch('requests.post') as mock_post:
+    with patch("requests.post") as mock_post:
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "access_token": mock_token, 
-            "expires_in": 3600
+            "access_token": mock_token,
+            "expires_in": 3600,
         }
         mock_post.return_value = mock_response
 
@@ -100,14 +108,15 @@ async def test_get_ches_token_success(mock_environment_vars):
         assert token == mock_token
         mock_post.assert_called_once()
 
+
 @pytest.mark.anyio
 async def test_get_ches_token_cached(mock_environment_vars):
     # Arrange
-    with patch('requests.post') as mock_post:
+    with patch("requests.post") as mock_post:
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "access_token": "initial_token", 
-            "expires_in": 3600
+            "access_token": "initial_token",
+            "expires_in": 3600,
         }
         mock_post.return_value = mock_response
 

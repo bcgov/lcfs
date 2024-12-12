@@ -1,17 +1,28 @@
 import PropTypes from 'prop-types'
-
-// @mui material components
 import { Card, CardContent, Divider } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
+import { useNavigate } from 'react-router-dom'
+import EditIcon from '@mui/icons-material/Edit'
+import BCButton from '@/components/BCButton'
 
 function BCWidgetCard({
   color = 'nav',
   title = 'Title',
   content,
   style,
-  disableHover = false
+  disableHover = false,
+  editButtonText = null,
+  editButtonRoute = null
 }) {
+  const navigate = useNavigate()
+
+  const handleButtonClick = () => {
+    if (editButtonRoute) {
+      navigate(editButtonRoute)
+    }
+  }
+
   return (
     <Card
       sx={{
@@ -28,7 +39,7 @@ function BCWidgetCard({
           coloredShadow={color}
           borderRadius="md"
           display="flex"
-          justifyContent="left"
+          justifyContent="space-between"
           alignItems="center"
           px={2}
           py={1}
@@ -39,6 +50,22 @@ function BCWidgetCard({
           <BCTypography variant="subtitle2" fontWeight="light" color="inherit">
             {title}
           </BCTypography>
+          {editButtonRoute && (
+            <BCButton
+              variant="outlined"
+              size="small"
+              color="primay"
+              onClick={handleButtonClick}
+              startIcon={<EditIcon sx={{ width: '17px', height: '17px' }} />}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              {editButtonText}
+            </BCButton>
+          )}
         </BCBox>
       </BCBox>
       <Divider
@@ -67,7 +94,9 @@ BCWidgetCard.propTypes = {
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
   disableHover: PropTypes.bool,
-  subHeader: PropTypes.node
+  subHeader: PropTypes.node,
+  editButtonText: PropTypes.string,
+  editButtonRoute: PropTypes.string
 }
 
 export default BCWidgetCard
