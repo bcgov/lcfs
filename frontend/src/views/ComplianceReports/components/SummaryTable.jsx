@@ -90,6 +90,7 @@ const SummaryTable = ({
   }
   return (
     <TableContainer
+      {...props}
       component={Paper}
       sx={{ margin: '20px 0', border: '1px solid #495057', width }}
     >

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import Dict
+from lcfs.web.api.email.schema import EmailNotificationRequest
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.core.decorators import view_handler
 
@@ -15,6 +16,7 @@ router = APIRouter()
 @view_handler(["*"])
 async def test_email_notification(
     request: Request,
+    payload: EmailNotificationRequest,
     service: CHESEmailService = Depends(),
 ):
     """
@@ -28,9 +30,9 @@ async def test_email_notification(
         "message_body": "This is a test notification email from LCFS Notification System.",
     }
 
-    # Notification type and organization for testing
-    notification_type = "INITIATIVE_APPROVED"
-    organization_id = None  # Replace with a valid organization ID for testing
+    # Extract notification type and organization ID from the request payload
+    notification_type = payload.notification_type
+    organization_id = payload.organization_id
 
     # Trigger the email sending process
     success = await service.send_notification_email(
@@ -42,4 +44,7 @@ async def test_email_notification(
     if success:
         return {"status": "success", "message": "Test email sent successfully."}
     else:
-        return {"status": "failure", "message": "Failed to send test email."}
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send test email."
+        )

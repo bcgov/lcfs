@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -71,7 +71,21 @@ export const AddEditAllocationAgreements = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      setRowData([...(data.allocationAgreements || { id: uuid() })])
+
+      if (
+        Array.isArray(data.allocationAgreements) &&
+        data.allocationAgreements.length > 0
+      ) {
+        const updatedRowData = data.allocationAgreements.map((item) => ({
+          ...item,
+          id: item.id || uuid() // Ensure every item has a unique ID
+        }))
+        setRowData(updatedRowData)
+      } else {
+        // If allocationAgreements is not available or empty, initialize with a single row
+        setRowData([{ id: uuid() }])
+      }
+
       params.api.sizeColumnsToFit()
     },
     [data]
@@ -239,17 +253,17 @@ export const AddEditAllocationAgreements = () => {
     !allocationAgreementsLoading && (
       <Grid2 className="add-edit-allocation-agreement-container" mx={-1}>
         <div className="header">
-          <Typography variant="h5" color="primary">
+          <BCTypography variant="h5" color="primary">
             {t('allocationAgreement:addAllocationAgreementRowsTitle')}
-          </Typography>
-          <Typography
+          </BCTypography>
+          <BCTypography
             variant="body4"
             color="primary"
             sx={{ marginY: '2rem' }}
             component="div"
           >
             {t('allocationAgreement:allocationAgreementSubtitle')}
-          </Typography>
+          </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor

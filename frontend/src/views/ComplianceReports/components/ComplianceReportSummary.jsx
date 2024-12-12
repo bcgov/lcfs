@@ -4,7 +4,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Typography,
   Stack
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -93,14 +92,14 @@ const ComplianceReportSummary = ({
   }
 
   if (isError) {
-    return <Typography color="error">{t('report:errorRetrieving')}</Typography>
+    return <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
   }
 
   return (
     <>
-      <Typography color="primary" variant="h5" mb={2} component="div">
+      <BCTypography color="primary" variant="h5" mb={2} component="div">
         {t('report:summaryAndDeclaration')}
-      </Typography>
+      </BCTypography>
       <Accordion defaultExpanded>
         <AccordionSummary
           expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
@@ -112,6 +111,7 @@ const ComplianceReportSummary = ({
         </AccordionSummary>
         <AccordionDetails>
           <SummaryTable
+            data-test="renewable-summary"
             title={t('report:renewableFuelTargetSummary')}
             columns={
               summaryData
@@ -128,12 +128,14 @@ const ComplianceReportSummary = ({
             useParenthesis={true}
           />
           <SummaryTable
+            data-test="low-carbon-summary"
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
             width={'80.65%'}
           />
           <SummaryTable
+            data-test="non-compliance-summary"
             title={t('report:nonCompliancePenaltySummary')}
             columns={nonComplianceColumns(t)}
             data={summaryData?.nonCompliancePenaltySummary}

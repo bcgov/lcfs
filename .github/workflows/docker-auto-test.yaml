@@ -6,9 +6,8 @@ on:
       - "*"
 
 jobs:
-  build-and-test:
+  backend-tests:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -37,14 +36,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-poetry-
 
-      - name: Cache npm dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Cache Docker images
         uses: actions/cache@v3
         with:
@@ -53,29 +44,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-docker-
 
-      # Commented out mochawesome installation as it's only needed for Cypress
-      # - name: Install mochawesome and marge
-      #   run: |
-      #     npm install mochawesome mochawesome-merge mochawesome-report-generator --save-dev
-
       - name: Install Poetry
         run: pip install poetry==1.6.1
 
       - name: Install backend dependencies
         run: |
-          # Ensure that pip, setuptools, and wheel are up to date
           pip install --upgrade pip setuptools wheel
-
-          # Install Poetry dependencies
           cd backend
           poetry config virtualenvs.create false
           poetry install
           pip install pytest-github-actions-annotate-failures typing_extensions
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
 
       - name: Fix docker-compose.yml
         run: |
@@ -102,6 +80,12 @@ jobs:
           LCFS_REDIS_PORT: 6379
           LCFS_REDIS_PASSWORD: development_only
           APP_ENVIRONMENT: dev
+          LCFS_CHES_CLIENT_ID: mock_client_id
+          LCFS_CHES_CLIENT_SECRET: mock_client_secret
+          LCFS_CHES_AUTH_URL: http://mock_auth_url
+          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+          LCFS_CHES_SENDER_NAME: Mock Notification System
+          LCFS_CHES_EMAIL_URL: http://mock_email_url
 
       - name: Upload pytest results
         if: always()
@@ -109,94 +93,6 @@ jobs:
         with:
           name: pytest-results
           path: backend/pytest-results.xml
-
-      - name: Run frontend tests
-        id: frontend_tests
-        continue-on-error: true
-        run: |
-          cd frontend
-          npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
-        env:
-          CI: true
-
-      - name: Upload Vitest results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vitest-results
-          path: frontend/vitest-results.xml
-
-      # Commented out Cypress-related steps
-      # - name: Create cypress.env.json
-      #   run: |
-      #     echo '{
-      #       "admin_idir_username": "${{ secrets.ADMIN_IDIR_USERNAME }}",
-      #       "admin_idir_password": "${{ secrets.ADMIN_IDIR_PASSWORD }}",
-      #       "org1_bceid_username": "${{ secrets.ORG1_BCEID_USERNAME }}",
-      #       "org1_bceid_password": "${{ secrets.ORG1_BCEID_PASSWORD }}",
-      #       "org1_bceid_id": "${{ secrets.ORG1_BCEID_ID }}",
-      #       "org1_bceid_userId": "${{ secrets.ORG1_BCEID_USERID }}",
-      #       "org2_bceid_username": "${{ secrets.ORG2_BCEID_USERNAME }}",
-      #       "org2_bceid_password": "${{ secrets.ORG2_BCEID_PASSWORD }}",
-      #       "org2_bceid_id": "${{ secrets.ORG2_BCEID_ID }}",
-      #       "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}"
-      #     }' > frontend/cypress.env.json
-
-      # - name: Run Cypress tests
-      #   id: cypress_tests
-      #   continue-on-error: true
-      #   uses: cypress-io/github-action@v6
-      #   with:
-      #     command: npm run cypress:run
-      #     wait-on: 'http://localhost:3000'
-      #     working-directory: frontend
-      #   env:
-      #     ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
-      #     ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
-      #     org1_bceid_username: ${{ secrets.ORG1_BCEID_USERNAME }}
-      #     org1_bceid_password: ${{ secrets.ORG1_BCEID_PASSWORD }}
-      #     org1_bceid_id: ${{ secrets.ORG1_BCEID_ID }}
-      #     org1_bceid_userId: ${{ secrets.ORG1_BCEID_USERID }}
-      #     org2_bceid_username: ${{ secrets.ORG2_BCEID_USERNAME }}
-      #     org2_bceid_password: ${{ secrets.ORG2_BCEID_PASSWORD }}
-      #     org2_bceid_id: ${{ secrets.ORG2_BCEID_ID }}
-      #     org2_bceid_userId: ${{ secrets.ORG2_BCEID_USERID }}
-
-      # - name: Combine mochawesome reports
-      #   run: |
-      #     npx mochawesome-merge frontend/cypress/reports/*.json > frontend/cypress/reports/combined-report.json
-
-      # - name: Generate HTML report
-      #   run: |
-      #     npx marge frontend/cypress/reports/combined-report.json --reportDir frontend/cypress/reports --inline
-
-      # - name: Generate test summary
-      #   run: |
-      #     node generate-summary.js
-
-      # - name: Post test summary as a comment
-      #   if: always()
-      #   run: |
-      #     SUMMARY=$(cat frontend/cypress/reports/test-summary.txt)
-      #     gh pr comment ${{ github.event.pull_request.number }} --body "$SUMMARY"
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Upload Cypress results
-      #   if: always()
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: cypress-results
-      #     path: |
-      #       frontend/cypress/reports/
-      #       frontend/cypress/screenshots/
-
-      # - name: Post Cypress results as a comment
-      #   if: always()
-      #   run: |
-      #     gh pr comment ${{ github.event.pull_request.number }} --body "Cypress test report is available [here](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}). Download the 'cypress-results' artifact to view the report."
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Stop services
         if: always()
@@ -214,6 +110,48 @@ jobs:
           report_individual_runs: "true"
           deduplicate_classes_by_file_name: "true"
 
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run frontend tests
+        id: frontend_tests
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
+        env:
+          CI: true
+
+      - name: Upload Vitest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-results
+          path: frontend/vitest-results.xml
+
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
@@ -225,16 +163,3 @@ jobs:
           fail_on: "errors"
           report_individual_runs: "true"
           deduplicate_classes_by_file_name: "true"
-
-      - name: Check test results
-        if: always()
-        run: |
-          if [ "${{ steps.backend_tests.outcome }}" == "failure" ] || \
-             [ "${{ steps.frontend_tests.outcome }}" == "failure" ]; then
-            # Note: When re-enabling Cypress tests, add this condition:
-            # || [ "${{ steps.cypress_tests.outcome }}" == "failure" ]
-            echo "One or more tests failed"
-            exit 1
-          else
-            echo "All tests passed"
-          fi

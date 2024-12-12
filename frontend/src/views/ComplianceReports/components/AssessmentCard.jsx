@@ -11,7 +11,7 @@ import { constructAddress } from '@/utils/constructAddress'
 import { timezoneFormatter } from '@/utils/formatters'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { List, ListItemText, Stack, Typography, styled } from '@mui/material'
+import { List, ListItemText, Stack, styled } from '@mui/material'
 import MuiAccordion from '@mui/material/Accordion'
 import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
@@ -171,9 +171,9 @@ export const AssessmentCard = ({
       content={
         <>
           <Stack direction="column" spacing={0.5}>
-            <Typography variant="h6" color="primary">
+            <BCTypography variant="h6" color="primary">
               {orgData?.name}
-            </Typography>
+            </BCTypography>
             <List sx={{ padding: 0 }}>
               <StyledListItem>
                 <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
@@ -190,7 +190,7 @@ export const AssessmentCard = ({
             </List>
 
             {!isGovernmentUser && (
-              <Typography
+              <BCTypography
                 component="div"
                 variant="body4"
                 dangerouslySetInnerHTML={{
@@ -202,13 +202,13 @@ export const AssessmentCard = ({
               hasSupplemental ||
               currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (
               <>
-                <Typography
+                <BCTypography
                   sx={{ paddingTop: '16px' }}
                   variant="h6"
                   color="primary"
                 >
                   {t('report:renewableFuelTarget')}
-                </Typography>
+                </BCTypography>
                 <List sx={{ padding: 0 }}>
                   <StyledListItem>
                     <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
@@ -223,13 +223,13 @@ export const AssessmentCard = ({
                     </ListItemText>
                   </StyledListItem>
                 </List>
-                <Typography
+                <BCTypography
                   sx={{ paddingTop: '16px' }}
                   variant="h6"
                   color="primary"
                 >
                   {t('report:lowCarbonFuelTargetSummary')}
-                </Typography>
+                </BCTypography>
                 <List sx={{ padding: 0 }}>
                   <StyledListItem>
                     <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
@@ -248,14 +248,14 @@ export const AssessmentCard = ({
             )}
             {!!chain.length && (
               <>
-                <Typography
+                <BCTypography
                   sx={{ paddingTop: '16px' }}
                   component="div"
                   variant="h6"
                   color="primary"
                 >
                   {t('report:reportHistory')}
-                </Typography>
+                </BCTypography>
                 {chain.map((report) => (
                   <HistoryCard key={report.version} report={report} />
                 ))}
@@ -266,13 +266,13 @@ export const AssessmentCard = ({
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
                   <>
-                    <Typography
+                    <BCTypography
                       sx={{ paddingTop: '16px' }}
                       component="div"
                       variant="body4"
                     >
                       {t('report:supplementalWarning')}
-                    </Typography>
+                    </BCTypography>
                     <Box>
                       <BCButton
                         data-test="create-supplemental"

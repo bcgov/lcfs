@@ -334,15 +334,12 @@ class UserServices:
         await self.repo.create_login_history(user)
 
     @service_handler
-    async def update_notifications_email(self, user_id: int, email: str):
+    async def update_email(self, user_id: int, email: str):
         try:
-            # Update the notifications_email field of the user
-            return await self.repo.update_notifications_email(user_id, email)
-            # Return the updated user
-            return UserBaseSchema.model_validate(user)
+            return await self.repo.update_email(user_id, email)
         except DataNotFoundException as e:
             logger.error(f"User not found: {e}")
             raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
-            logger.error(f"Error updating notifications email: {e}")
+            logger.error(f"Error updating email: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")

@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types'
 import SyncAltIcon from '@mui/icons-material/SyncAlt'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
-import { Stack, Typography, useMediaQuery, useTheme } from '@mui/material'
+import { Stack, useMediaQuery, useTheme } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import { OrganizationBadge } from '@/views/Transfers/components'
 import { useTranslation } from 'react-i18next'
@@ -42,11 +43,11 @@ export const TransferDetailsCard = ({
           transferStatus={transferStatus}
         />
         <Stack spacing={1} direction="column" justifyContent="center" pl={2}>
-          <Typography variant="caption1" textAlign="center">
+          <BCTypography variant="caption1" textAlign="center">
             {isMobileSize
               ? `$${decimalFormatter(totalValue)}`
               : `${quantity} ${t('transfer:complianceUnits')}`}
-          </Typography>
+          </BCTypography>
           <BCBox
             display="flex"
             alignContent="center"
@@ -68,11 +69,11 @@ export const TransferDetailsCard = ({
               />
             )}
           </BCBox>
-          <Typography variant="caption1" textAlign="center">
+          <BCTypography variant="caption1" textAlign="center">
             {!isMobileSize
               ? `$${decimalFormatter(totalValue)}`
               : `${quantity} ${t('transfer:complianceUnits')}`}
-          </Typography>
+          </BCTypography>
         </Stack>
         <OrganizationBadge
           organizationId={toOrgId}

@@ -4,7 +4,7 @@ import {
   TextRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
-import { Typography } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 
@@ -31,13 +31,24 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'fuelSuffix',
     headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
-    cellRenderer: TextRenderer
+    cellRenderer: TextRenderer,
+    type: 'numericColumn',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'carbonIntensity',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellRenderer: TextRenderer,
-    type: 'numericColumn'
+    type: 'numericColumn',
+    filter: 'agNumberColumnFilter',
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
   },
   {
     field: 'edrms',
@@ -65,45 +76,25 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
-    filter: 'agDateColumnFilter',
-    filterParams: {
-      filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
-      suppressAndOrCondition: true,
-      maxValidYear: 2400
-    },
+    filter: false,
     cellRenderer: TextRenderer
   },
   {
@@ -210,11 +201,11 @@ export const fuelCodeColDefs = (t) => [
     filter: false,
     headerName: t('fuelCode:fuelCodeColLabels.lastUpdated'),
     cellRenderer: (params) => (
-      <Typography variant="body4">
+      <BCTypography variant="body4">
         {params.value
           ? timezoneFormatter({ value: params.value })
           : 'YYYY-MM-DD'}
-      </Typography>
+      </BCTypography>
     ),
     minWidth: 300
   },

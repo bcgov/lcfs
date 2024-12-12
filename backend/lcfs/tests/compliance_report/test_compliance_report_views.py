@@ -1,7 +1,8 @@
 import json
+from lcfs.web.api.email.repo import CHESEmailRepository
 import pytest
 
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 from httpx import AsyncClient
 from fastapi import FastAPI
 
@@ -16,6 +17,20 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.services.s3.client import DocumentService
 
+@pytest.fixture
+def mock_email_repo():
+    return AsyncMock(spec=CHESEmailRepository)
+
+@pytest.fixture
+def mock_environment_vars():
+    with patch("lcfs.web.api.email.services.settings") as mock_settings:
+        mock_settings.ches_auth_url = "http://mock_auth_url"
+        mock_settings.ches_email_url = "http://mock_email_url"
+        mock_settings.ches_client_id = "mock_client_id"
+        mock_settings.ches_client_secret = "mock_client_secret"
+        mock_settings.ches_sender_email = "noreply@gov.bc.ca"
+        mock_settings.ches_sender_name = "Mock Notification System"
+        yield mock_settings
 
 # get_compliance_periods
 @pytest.mark.anyio

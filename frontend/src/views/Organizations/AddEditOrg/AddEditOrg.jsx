@@ -13,9 +13,9 @@ import {
   Paper,
   Radio,
   RadioGroup,
-  TextField,
-  Typography
+  TextField
 } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
@@ -136,9 +136,9 @@ export const AddEditOrg = () => {
     }
     return (
       errors[fieldName] && (
-        <Typography role="alert" color="error" variant="caption">
+        <BCTypography role="alert" color="error" variant="caption">
           {errors[fieldName].message}
-        </Typography>
+        </BCTypography>
       )
     )
   }
@@ -301,9 +301,9 @@ export const AddEditOrg = () => {
         <BCAlert severity="error">{t('common:submitError')}</BCAlert>
       )}
 
-      <Typography variant="h5" px={3}>
+      <BCTypography variant="h5" px={3}>
         {orgID ? t('org:editOrgTitle') : t('org:addOrgTitle')}
-      </Typography>
+      </BCTypography>
       <Box
         component="form"
         onSubmit={handleSubmit(onSubmit)}
@@ -355,9 +355,9 @@ export const AddEditOrg = () => {
                               />
                             }
                             label={
-                              <Typography variant="body3">
+                              <BCTypography variant="body3">
                                 {t('org:sameAsLegalNameLabel')}
-                              </Typography>
+                              </BCTypography>
                             }
                           />
                         </Grid>
@@ -413,9 +413,9 @@ export const AddEditOrg = () => {
                         <Grid container>
                           <Grid item xs={4}>
                             <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
-                              <Typography variant="body3">
+                              <BCTypography variant="body3">
                                 {t('org:supplierTypLabel')}:
-                              </Typography>
+                              </BCTypography>
                             </FormLabel>
                           </Grid>
                           <Grid item xs={8}>
@@ -435,9 +435,9 @@ export const AddEditOrg = () => {
                                   />
                                 }
                                 label={
-                                  <Typography variant="body3">
+                                  <BCTypography variant="body3">
                                     {t('supplier')}
-                                  </Typography>
+                                  </BCTypography>
                                 }
                               />
                             </RadioGroup>
@@ -451,9 +451,9 @@ export const AddEditOrg = () => {
                         <Grid container>
                           <Grid item xs={4}>
                             <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
-                              <Typography variant="body3">
+                              <BCTypography variant="body3">
                                 {t('org:regTrnLabel')}:
-                              </Typography>
+                              </BCTypography>
                             </FormLabel>
                           </Grid>
                           <Grid item xs={8}>
@@ -474,9 +474,9 @@ export const AddEditOrg = () => {
                                       <Radio data-test="orgRegForTransfers2" />
                                     }
                                     label={
-                                      <Typography variant="body3">
+                                      <BCTypography variant="body3">
                                         {t('yes')}
-                                      </Typography>
+                                      </BCTypography>
                                     }
                                   />
                                   <FormControlLabel
@@ -485,9 +485,9 @@ export const AddEditOrg = () => {
                                       <Radio data-test="orgRegForTransfers1" />
                                     }
                                     label={
-                                      <Typography variant="body3">
+                                      <BCTypography variant="body3">
                                         {t('no')}
-                                      </Typography>
+                                      </BCTypography>
                                     }
                                   />
                                 </RadioGroup>
@@ -522,9 +522,9 @@ export const AddEditOrg = () => {
           </Grid>
           <Grid item xs={12} md={6} data-test="service-address-section">
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Typography variant="h6" sx={{ pb: 7 }}>
+              <BCTypography variant="h6" sx={{ pb: 7 }}>
                 {t('org:serviceAddrLabel')}
-              </Typography>
+              </BCTypography>
               <Box mb={2}>
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}:
@@ -612,9 +612,9 @@ export const AddEditOrg = () => {
           </Grid>
           <Grid item xs={12} md={6} data-test="attorney-address-section">
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Typography variant="h6" sx={{ pb: 2 }}>
+              <BCTypography variant="h6" sx={{ pb: 2 }}>
                 {t('org:bcAddrLabel')}
-              </Typography>
+              </BCTypography>
               <Box mb={2}>
                 <FormControlLabel
                   control={
@@ -626,9 +626,9 @@ export const AddEditOrg = () => {
                     />
                   }
                   label={
-                    <Typography variant="body3">
+                    <BCTypography variant="body3">
                       {t('org:sameAddrLabel')}
-                    </Typography>
+                    </BCTypography>
                   }
                 />
               </Box>
@@ -762,9 +762,9 @@ export const AddEditOrg = () => {
                 }
                 onClick={() => navigate(ROUTES.ORGANIZATIONS)}
               >
-                <Typography variant="subtitle2" textTransform="none">
+                <BCTypography variant="subtitle2" textTransform="none">
                   {t('backBtn')}
-                </Typography>
+                </BCTypography>
               </BCButton>
               <BCButton
                 type="submit"
@@ -777,7 +777,7 @@ export const AddEditOrg = () => {
                   <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
                 }
               >
-                <Typography variant="button">{t('saveBtn')}</Typography>
+                <BCTypography variant="button">{t('saveBtn')}</BCTypography>
               </BCButton>
             </Box>
           </Grid>

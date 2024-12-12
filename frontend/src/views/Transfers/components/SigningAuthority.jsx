@@ -1,4 +1,4 @@
-import { Box, FormControlLabel, Checkbox, Typography } from '@mui/material'
+import { Box, FormControlLabel, Checkbox } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
 import { useFormContext } from 'react-hook-form'
@@ -34,15 +34,15 @@ export const SigningAuthority = () => {
             />
           }
           label={
-            <Typography variant="body2">
+            <BCTypography variant="body2">
               {t('transfer:saConfirmation')}
-            </Typography>
+            </BCTypography>
           }
         />
         {errors.signingAuthorityDeclaration && (
-          <Typography color="error" variant="caption">
+          <BCTypography color="error" variant="caption">
             {errors.signingAuthorityDeclaration.message}
-          </Typography>
+          </BCTypography>
         )}
       </Box>
     </>
