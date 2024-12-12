@@ -45,5 +45,7 @@
   "editOrgTitle": "Edit organization",
   "toUpdateMsg": " to update address information.",
   "selectOrgLabel": "Select an Organization",
-  "complianceUnitBalance": "Compliance Unit Balance"
+  "complianceUnitBalance": "Compliance Unit Balance",
+  "editBtn": "Edit",
+  "orgDetails": "Organization details"
 }

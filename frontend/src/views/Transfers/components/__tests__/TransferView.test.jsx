@@ -62,7 +62,8 @@ describe('TransferView Component', () => {
       sameOrganization: vi.fn(() => true),
       data: {
         isGovernmentUser: false
-      }
+      },
+      hasAnyRole: vi.fn(() => false)
     })
   })
 
