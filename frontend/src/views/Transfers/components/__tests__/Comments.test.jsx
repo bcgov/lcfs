@@ -110,4 +110,30 @@ describe('Comments Component', () => {
     const textField = getByRole('textbox')
     expect(textField).toHaveAttribute('id', 'external-comments')
   })
+
+  it('is initially expanded by default when isDefaultExpanded is false', () => {
+    render(
+      <MockFormProvider>
+        <Comments commentField="comments" isDefaultExpanded={false} />
+      </MockFormProvider>,
+      { wrapper }
+    )
+    // With isDefaultExpanded=false, the component should start expanded
+    expect(screen.getByTestId('external-comments')).toBeVisible()
+  })
+
+  it('is initially collapsed when isDefaultExpanded is true', async () => {
+    render(
+      <MockFormProvider>
+        <Comments commentField="comments" isDefaultExpanded={true} />
+      </MockFormProvider>,
+      { wrapper }
+    )
+    // With isDefaultExpanded=true, we useState(!true)=false, so it should start collapsed
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('external-comments').parentElement
+      ).not.toBeVisible()
+    )
+  })
 })

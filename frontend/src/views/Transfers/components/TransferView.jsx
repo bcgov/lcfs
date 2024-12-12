@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import InternalComments from '@/components/InternalComments'
 import { Role } from '@/components/Role'
-import { govRoles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
 import {
   TRANSFER_STATUSES,
   getAllTerminalTransferStatuses
@@ -18,8 +18,9 @@ import { CommentList } from '@/views/Transfers/components/CommentList'
 
 export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { t } = useTranslation(['common', 'transfer'])
-  const { data: currentUser, sameOrganization } = useCurrentUser()
+  const { data: currentUser, sameOrganization, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
+  const isAnalyst = hasAnyRole(roles.analyst)
   const {
     currentStatus: { status: transferStatus } = {},
     toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
@@ -84,6 +85,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
               sameOrganization(toOrgId) &&
               'toOrgComment')
           }
+          isDefaultExpanded={isAnalyst}
         />
       )}
 
