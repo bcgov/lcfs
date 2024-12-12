@@ -18,11 +18,6 @@ jobs:
         with:
           python-version: "3.10.13"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "20"
-
       - name: Install Docker Compose
         run: |
           sudo apt-get update
@@ -47,14 +42,9 @@ jobs:
           poetry install
           pip install pytest-github-actions-annotate-failures typing_extensions
 
-      - name: Modify docker-compose.yml
+      - name: Fix docker-compose.yml
         run: |
           sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
-          sed -i '/minio:/,/depends_on:/d' docker-compose.yml
-          sed -i '/create_bucket:/,/depends_on:/d' docker-compose.yml
-          sed -i '/frontend:/,/networks:/d' docker-compose.yml
-          sed -i 's/create_bucket,//g'
-          sed -i 's/frontend,//g'
 
       - name: Build and start services
         run: |
