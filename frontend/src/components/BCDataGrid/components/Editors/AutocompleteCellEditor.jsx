@@ -37,9 +37,16 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onPaste
   } = props
 
-  const [selectedValues, setSelectedValues] = useState(
-    (Array.isArray(value) ? value : value.split(',').map((v) => v.trim())) || []
-  )
+  const [selectedValues, setSelectedValues] = useState(() => {
+    if (!value) {
+      return []
+    } else if (Array.isArray(value)) {
+      return value
+    } else {
+      return value.split(',').map((v) => v.trim)
+    }
+  })
+
   const inputRef = useRef()
 
   useImperativeHandle(ref, () => ({
@@ -77,7 +84,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
         if (focusedCell) {
           api.startEditingCell({
             rowIndex: focusedCell.rowIndex,
-            colKey: focusedCell.column.getId(),
+            colKey: focusedCell.column.getId()
           })
         }
       }
@@ -93,7 +100,6 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
       }
     }
   }
-
 
   const handleBlur = (event) => {
     if (onBlur) {
