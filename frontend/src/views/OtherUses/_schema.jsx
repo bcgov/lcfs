@@ -181,20 +181,22 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'units',
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
-    headerComponent: RequiredHeader,
-    cellEditor: AutocompleteCellEditor,
-    minWidth: '155',
-    cellEditorParams: {
-      options: optionsData.unitsOfMeasure.map((obj) => obj),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
+    cellEditor: 'agSelectCellEditor',
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      );
+      const values = fuelType ? [fuelType.units] : [];
+      return {
+        values: values
+      };
     },
-    suppressKeyboardEvent,
-    cellRenderer: (params) =>
-      params.value || <BCTypography variant="body4">Select</BCTypography>,
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellRenderer: (params) => {
+      return params.value ? params.value : <BCTypography variant="body4">Select</BCTypography>;
+    },
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    editable: true,
+    minWidth: 100
   },
   {
     field: 'ciOfFuel',
