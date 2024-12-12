@@ -50,7 +50,7 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
-      (!params.value && <Typography variant="body4">Select</Typography>),
+      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: {
       options: optionsData?.organizationNames?.sort() || [],
       multiple: false,
