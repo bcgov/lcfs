@@ -119,9 +119,7 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     fuel_category_id: int
     end_use_id: Optional[int] = None
     provision_of_the_act_id: int
-    quantity: int = Field(
-        ..., gt=0, description="Quantity supplied must be greater than 0"
-    )
+    quantity: int
     units: str
     fuel_type_other: Optional[str] = None
     fuel_code_id: Optional[int] = None

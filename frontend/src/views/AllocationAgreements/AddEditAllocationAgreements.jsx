@@ -67,27 +67,22 @@ export const AddEditAllocationAgreements = () => {
     }
   }, [location.state?.message, location.state?.severity])
 
-  const validateField = (
-    params,
-    field,
-    validationFn,
-    errorMessage,
-    alertRef
-  ) => {
-    const newValue = params.newValue
+  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
+    const value = field ? params.node?.data[field] : params;
 
-    if (params.colDef.field === field) {
-      if (!validationFn(newValue)) {
-        alertRef.current?.triggerAlert({
-          message: errorMessage,
-          severity: 'error'
-        })
-        return false
-      }
+    if (field && params.colDef.field !== field) {
+      return true;
     }
 
-    return true // Proceed with the update
-  }
+    if (!validationFn(value)) {
+      alertRef.current?.triggerAlert({
+        message: errorMessage,
+        severity: 'error',
+      });
+      return false;
+    }
+    return true; // Proceed with the update
+  };
 
   const onGridReady = useCallback(
     async (params) => {
@@ -176,17 +171,23 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellEditingStopped = useCallback(
     async (params) => {
-      const isValid = validateField(
+      if (params.oldValue === params.newValue) return
+
+      const isValid = validate(
         params,
+        (value) => {
+          return value !== null && !isNaN(value) && value > 0;
+        },
+        'Quantity supplied must be greater than 0.',
+        alertRef,
         'quantity',
-        (value) => value !== null && !isNaN(value) && value > 0,
-        'Quantity must be greater than 0.',
-        alertRef
-      )
+      );
+
+      if (!isValid) {
+        return
+      }
 
       if (!isValid) return
-
-      if (params.oldValue === params.newValue) return
 
       params.node.updateData({
         ...params.node.data,

@@ -71,9 +71,7 @@ class TransactionViewSchema(BaseSchema):
     transaction_type: str
     from_organization: Optional[str] = None
     to_organization: str
-    quantity: int = Field(
-        ..., gt=0, description="Quantity supplied must be greater than 0"
-    )
+    quantity: int
     price_per_unit: Optional[float] = None
     status: str
     create_date: datetime

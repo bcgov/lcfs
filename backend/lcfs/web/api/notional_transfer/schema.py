@@ -20,9 +20,7 @@ class NotionalTransferCreateSchema(BaseSchema):
     address_for_service: str
     fuel_category: str
     received_or_transferred: ReceivedOrTransferredEnumSchema
-    quantity: int = Field(
-        ..., gt=0, description="Quantity supplied must be greater than 0"
-    )
+    quantity: int
     notional_transfer_id: Optional[int] = None
     compliance_report_id: int
     deleted: Optional[bool] = None

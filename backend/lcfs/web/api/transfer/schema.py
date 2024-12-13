@@ -48,9 +48,7 @@ class TransferSchema(BaseSchema):
     from_organization: TransferOrganizationSchema
     to_organization: TransferOrganizationSchema
     agreement_date: date
-    quantity: int = Field(
-        ..., gt=0, description="Quantity supplied must be greater than 0"
-    )
+    quantity: int
     price_per_unit: float
     comments: Optional[List[TransferCommentSchema]] = None
     from_org_comment: Optional[str] = None
