@@ -260,6 +260,7 @@ class FuelExportRepository:
                 "fuel_type",
                 "provision_of_the_act",
                 "end_use_type",
+                "fuel_code",
             ],
         )
         return fuel_export

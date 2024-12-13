@@ -1,5 +1,4 @@
-import { BCAlert2 } from '@/components/BCAlert'
-import BCButton from '@/components/BCButton'
+
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
 import {
@@ -8,16 +7,17 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, otherUsesColDefs, PROVISION_APPROVED_FUEL_CODE} from './_schema'
+import {
+  defaultColDef,
+  otherUsesColDefs,
+  PROVISION_APPROVED_FUEL_CODE
+} from './_schema'
 import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditOtherUses = () => {
@@ -55,31 +55,31 @@ export const AddEditOtherUses = () => {
         rows.map((row) => ({
           ...row,
           id: row.id || uuid(),
-          isValid: true,
-        }));
+          isValid: true
+        }))
 
-      setRowData(ensureRowIds(otherUses));
+      setRowData(ensureRowIds(otherUses))
     }
-  }, [otherUses]);
+  }, [otherUses])
 
   const findCiOfFuel = useCallback((data, optionsData) => {
-    let ciOfFuel = 0;
+    let ciOfFuel = 0
     if (data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => data.fuelType === obj.fuelType
-      );
+      )
       const fuelCode = fuelType?.fuelCodes?.find(
         (item) => item.fuelCode === data.fuelCode
-      );
-      ciOfFuel = fuelCode?.carbonIntensity || 0;
+      )
+      ciOfFuel = fuelCode?.carbonIntensity || 0
     } else {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => data.fuelType === obj.fuelType
-      );
-      ciOfFuel = fuelType?.defaultCarbonIntensity || 0;
+      )
+      ciOfFuel = fuelType?.defaultCarbonIntensity || 0
     }
-    return ciOfFuel;
-  }, []);
+    return ciOfFuel
+  }, [])
 
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
@@ -168,6 +168,29 @@ export const AddEditOtherUses = () => {
 
       // clean up any null or empty string values
       let updatedData = cleanEmptyStringValues(params.data)
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      if (isFuelCodeScenario && !updatedData.fuelCode) {
+        // Fuel code is required but not provided
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [params.node.data.id]: ['fuelCode']
+        }))
+
+        alertRef.current?.triggerAlert({
+          message: t('otherUses:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+
+        params.node.updateData(updatedData)
+        return // Stop execution, do not proceed to save
+      }
 
       try {
         setErrors({})
