@@ -1,23 +1,24 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
 export const AllocationAgreementSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`allocation-agreements-grid`)
-  const { complianceReportId } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'allocationAgreement'])
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -135,6 +136,15 @@ export const AllocationAgreementSummary = ({ data }) => {
     setGridKey(`allocation-agreements-grid-${uuid()}`)
   }
 
+  const handleRowClicked = (params) => {
+    navigate(
+      ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }
+
   return (
     <Grid2 className="allocation-agreement-container" mx={-1}>
       <div>
@@ -159,6 +169,7 @@ export const AllocationAgreementSummary = ({ data }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.allocationAgreements.length <= 10}
+          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>
