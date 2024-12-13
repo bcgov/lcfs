@@ -157,19 +157,20 @@ export const TransferDetails = () => {
             size="small"
             error={!!errors.pricePerUnit}
             helperText={errors.pricePerUnit?.message}
-            inputProps={{
-              maxLength: 13,
-              step: '10',
-              style: { textAlign: 'right' },
-              'data-test': 'price-per-unit',
-              startadornment: (
-                <InputAdornment position="start">$</InputAdornment>
-              )
-            }}
             sx={{
-              minWidth: '24rem',
+              minWidth: '25rem',
               marginInline: '0.2rem',
               bottom: '0.2rem'
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">$</InputAdornment>
+              ),
+              style: { textAlign: 'right' }
+            }}
+            inputProps={{
+              maxLength: 13,
+              'data-test': 'price-per-unit'
             }}
           />
           {t('transfer:totalValueText')}
