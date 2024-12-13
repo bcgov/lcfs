@@ -188,7 +188,7 @@
       "fossil_derived": true,
       "other_uses_fossil_derived": true,
       "provision_1_id": 1,
-      "default_carbon_intensity": 94.38,
+      "default_carbon_intensity": 100.21,
       "units": "L",
       "unrecognized": false
     }
