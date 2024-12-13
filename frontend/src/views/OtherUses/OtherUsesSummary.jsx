@@ -4,18 +4,23 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useGetOtherUses } from '@/hooks/useOtherUses'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
-import { formatNumberWithCommas as valueFormatter, decimalFormatter } from '@/utils/formatters'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
+import {
+  formatNumberWithCommas as valueFormatter,
+  decimalFormatter
+} from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
+import { ROUTES } from '@/constants/routes'
 
 export const OtherUsesSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { t } = useTranslation(['common', 'otherUses'])
 
-  const { complianceReportId } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -81,6 +86,15 @@ export const OtherUsesSummary = ({ data }) => {
 
   const getRowId = (params) => params.data.otherUsesId
 
+  const handleRowClicked = (params) => {
+    navigate(
+      ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }
+
   return (
     <Grid2 className="other-uses-container" data-test="container" mx={-1}>
       <div>
@@ -106,6 +120,7 @@ export const OtherUsesSummary = ({ data }) => {
           }}
           enableCellTextSelection
           ensureDomOrder
+          onRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

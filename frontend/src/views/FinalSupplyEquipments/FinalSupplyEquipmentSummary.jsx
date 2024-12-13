@@ -1,23 +1,24 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
 export const FinalSupplyEquipmentSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`final-supply-equipments-grid`)
-  const { complianceReportId } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipments'])
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -67,9 +68,12 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
         field: 'supplyToDate'
       },
       {
-        headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'),
+        headerName: t(
+          'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
+        ),
         field: 'kwhUsage',
-        valueFormatter: (params) => params.value ? params.value.toFixed(2) : '0.00'
+        valueFormatter: (params) =>
+          params.value ? params.value.toFixed(2) : '0.00'
       },
       {
         headerName: t(
@@ -106,7 +110,7 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
         headerName: t(
           'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
         ),
-        field: 'ports',
+        field: 'ports'
       },
       {
         headerName: t(
@@ -183,6 +187,15 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
     setGridKey(`final-supply-equipments-grid-${uuid()}`)
   }
 
+  const handleRowClicked = (params) => {
+    navigate(
+      ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }
+
   return (
     <Grid2 className="final-supply-equipment-container" mx={-1}>
       <div>
@@ -207,6 +220,7 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.finalSupplyEquipments.length <= 10}
+          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>
