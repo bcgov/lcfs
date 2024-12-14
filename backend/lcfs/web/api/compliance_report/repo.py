@@ -3,6 +3,7 @@ from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
 from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
@@ -381,9 +382,9 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.status
                 ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
+                joinedload(ComplianceReport.history)
+                .joinedload(ComplianceReportHistory.user_profile)
+                .joinedload(UserProfile.organization),
             )
         )
 

@@ -2,104 +2,100 @@ import groovy.json.JsonSlurper
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.time.OffsetDateTime
 import java.sql.Timestamp
 import java.util.UUID
+import java.nio.charset.StandardCharsets
+import java.time.OffsetDateTime
+import java.time.Instant
 
 /*
-This script migrates compliance reports and their supplemental versions from TFRS
-to LCFS, including compliance report history and associated transactions.
+Simplified and revised script for migrating compliance reports from Source DB to Destination DB.
 
-Process:
-1. Extract compliance reports from TFRS.
-2. Identify chains of reports (root and supplements), assign a compliance_report_group_uuid, and version the chain.
-3. Map TFRS workflow states to LCFS compliance_report_status.
-4. Insert LCFS compliance_report records.
-5. Migrate compliance_report_history records and map their statuses.
-6. For each compliance report that reaches a "Submitted" or above state, create a corresponding "In reserve" transaction in LCFS.
-7. If a TFRS compliance report references a credit_transaction that is one of "Credit Validation", "Part 3 Award",
-   "Credit Reduction", or "Administrative Adjustment" and "Approved", insert a corresponding LCFS transaction.
-8. Update the compliance_report.transaction_id column in LCFS if a transaction is created for that report.
+Key Features:
+1. Processes each compliance report individually using a single comprehensive query.
+2. Assigns a deterministic group_uuid based on root_report_id.
+3. Excludes "Deleted" reports and includes "Rejected" reports.
+4. Maps create_user and update_user to user.display_name.
+5. Inserts compliance reports, their histories, and associated transactions.
+6. Ensures sequence integrity for compliance_report_id.
+7. Facilitates efficient testing by allowing deletion of inserted records based on display_name.
+8. Adds handling for 'in reserve' transactions based on snapshot data.
 */
 
 // =========================================
 // Queries
 // =========================================
 
-// Fetch compliance reports with workflow states
-SOURCE_REPORTS_QUERY = """
-    WITH cr_chain AS (
-        SELECT DISTINCT
-            cr.id AS compliance_report_id,
-            cr.type_id,
-            cr.organization_id,
-            cr.compliance_period_id,
-            cr.supplements_id,
-            cr.root_report_id,
-            cr.latest_report_id,
-            cr.traversal,
-            cr.nickname,
-            cr.supplemental_note,
-            cws.fuel_supplier_status_id,
-            cws.analyst_status_id,
-            cws.manager_status_id,
-            cws.director_status_id,
-            cr.create_user_id,
-            cr.create_timestamp,
-            cr.update_user_id,
-            cr.update_timestamp,
-            crt.the_type AS report_type,
-            cp.description AS compliance_period_desc,
-            CASE WHEN cr.supplements_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_supplemental,
-            cr.credit_transaction_id
-        FROM compliance_report cr
-        JOIN compliance_report_type crt ON cr.type_id = crt.id
-        JOIN compliance_period cp ON cp.id = cr.compliance_period_id
-        JOIN compliance_report_workflow_state cws ON cr.status_id = cws.id
+// Consolidated source query that gathers all relevant information for each compliance report
+def SOURCE_CONSOLIDATED_QUERY = """
+WITH
+    compliance_history AS (
+        SELECT
+            crh.compliance_report_id,
+            json_agg(
+                json_build_object(
+                    'history_id', crh.id,
+                    'create_user_id', crh.create_user_id,
+                    'create_timestamp', crh.create_timestamp,
+                    'fuel_supplier_status_id', cws.fuel_supplier_status_id,
+                    'analyst_status_id', cws.analyst_status_id,
+                    'manager_status_id', cws.manager_status_id,
+                    'director_status_id', cws.director_status_id
+                )
+            ) AS history_json
+        FROM compliance_report_history crh
+        JOIN compliance_report_workflow_state cws ON crh.status_id = cws.id
+        GROUP BY crh.compliance_report_id
     )
-    SELECT * FROM cr_chain
-    ORDER BY root_report_id NULLS FIRST, traversal, compliance_report_id;
-"""
-
-// Fetch compliance report history
-SOURCE_HISTORY_QUERY = """
-    SELECT
-        crh.id AS history_id,
-        crh.compliance_report_id,
-        crh.create_user_id,
-        crh.create_timestamp,
-        hws.fuel_supplier_status_id,
-        hws.analyst_status_id,
-        hws.manager_status_id,
-        hws.director_status_id
-    FROM compliance_report_history crh
-    JOIN compliance_report_workflow_state hws ON crh.status_id = hws.id
-    ORDER BY crh.compliance_report_id, crh.create_timestamp;
-"""
-
-// Fetch associated credit trades (validations/reductions/etc.)
-SOURCE_CREDIT_TRADE_QUERY = """
-    SELECT
-        ct.id AS transaction_id,
-        ct.initiator_id AS initiator_id,
-        ct.respondent_id AS respondent_id,
-        ct.date_of_written_agreement AS agreement_date,
-        ct.trade_effective_date AS transaction_effective_date,
-        ct.number_of_credits AS quantity,
-        ct.create_user_id AS create_user,
-        ct.create_timestamp AS create_date,
-        ct.update_user_id AS update_user,
-        ct.update_timestamp AS update_date,
-        ctt.the_type AS transaction_type,
-        ct.fair_market_value_per_credit AS price_per_unit,
-        ct.id AS credit_trade_id
-    FROM
-        credit_trade ct
-        JOIN credit_trade_type ctt ON ct.type_id = ctt.id
-        JOIN credit_trade_status cts ON ct.status_id = cts.id
-    WHERE
-        ctt.the_type IN ('Credit Validation', 'Part 3 Award', 'Credit Reduction', 'Administrative Adjustment')
-        AND cts.status = 'Approved';
+SELECT
+    cr.id AS compliance_report_id,
+    cr.type_id,
+    cr.organization_id,
+    cr.compliance_period_id,
+    cr.supplements_id,
+    cr.root_report_id,
+    cr.latest_report_id,
+    cr.traversal,
+    cr.nickname,
+    cr.supplemental_note,
+    cws.fuel_supplier_status_id,
+    cws.analyst_status_id,
+    cws.manager_status_id,
+    cws.director_status_id,
+    cr.create_user_id,
+    cr.create_timestamp,
+    cr.update_user_id,
+    cr.update_timestamp,
+    crt.the_type AS report_type,
+    cp.description AS compliance_period_desc,
+    CASE WHEN cr.supplements_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_supplemental,
+    cr.credit_transaction_id,
+    ch.history_json,
+    crs.snapshot AS compliance_report_snapshot, -- Added snapshot
+    -- CreditTrade Fields (One-to-One Relationship)
+    ct.id AS credit_trade_id,
+    ct.initiator_id,
+    ct.respondent_id,
+    ct.date_of_written_agreement,
+    ct.trade_effective_date,
+    ct.number_of_credits,
+    ct.create_user_id AS ct_create_user_id,
+    ct.create_timestamp AS ct_create_timestamp,
+    ct.update_user_id AS ct_update_user_id,
+    ct.update_timestamp AS ct_update_timestamp,
+    ctt.the_type AS credit_trade_type,
+    ct.fair_market_value_per_credit
+FROM compliance_report cr
+JOIN compliance_report_type crt ON cr.type_id = crt.id
+JOIN compliance_period cp ON cp.id = cr.compliance_period_id
+JOIN compliance_report_workflow_state cws ON cr.status_id = cws.id
+LEFT JOIN compliance_history ch ON cr.id = ch.compliance_report_id
+LEFT JOIN compliance_report_snapshot crs ON cr.id = crs.compliance_report_id -- Added join
+LEFT JOIN credit_trade ct ON cr.credit_transaction_id = ct.id
+LEFT JOIN credit_trade_type ctt ON ct.type_id = ctt.id
+LEFT JOIN credit_trade_status cts ON ct.status_id = cts.id
+WHERE cr.type_id = 1
+ORDER BY cr.root_report_id NULLS FIRST, cr.traversal, cr.id;
 """
 
 // =========================================
@@ -120,9 +116,10 @@ try {
     destinationConn = destinationDbcpService.getConnection()
     destinationConn.setAutoCommit(false)
 
-    // Disable refresh of the materialized view
-    destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_transaction_aggregate() CASCADE;')
-    destinationConn.createStatement().execute("""
+    // Disable refresh of the materialized views
+    def stmt = destinationConn.createStatement()
+    stmt.execute('DROP FUNCTION IF EXISTS refresh_transaction_aggregate() CASCADE;')
+    stmt.execute("""
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
         RETURNS void AS \$\$
         BEGIN
@@ -131,136 +128,231 @@ try {
         \$\$ LANGUAGE plpgsql;
     """)
 
-    // Disable the refresh function
-  destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_mv_director_review_transaction_count() CASCADE;')
-  destinationConn.createStatement().execute("""
-      CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
-      RETURNS void AS \$\$
-      BEGIN
-          -- Temporarily disable the materialized view refresh
-      END;
-      \$\$ LANGUAGE plpgsql;
-  """)
+    stmt.execute('DROP FUNCTION IF EXISTS refresh_mv_director_review_transaction_count() CASCADE;')
+    stmt.execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    stmt.close()
 
+    // Load reference data for status mapping
     def referenceData = loadReferenceData(destinationConn)
 
-    // Fetch compliance reports and chains
-    def chains = fetchComplianceReports(sourceConn)
+    // Fetch user profiles to map user IDs to display names
+    def userProfiles = fetchUserProfiles(sourceConn)
 
-    // Fetch compliance report history
-    def historyMap = fetchComplianceReportHistory(sourceConn)
-
-    // Fetch associated credit trades
-    def creditTradesMap = fetchApprovedCreditTrades(sourceConn)
-
-    // Prepare statements
+    // Prepare database statements
     def statements = prepareStatements(destinationConn)
 
+    // Initialize counters
     int totalInserted = 0
     int totalHistoryInserted = 0
     int totalTransactionsInserted = 0
 
-    chains.each { rootId, chainReports ->
-        chainReports.sort { a, b ->
-            a.traversal <=> b.traversal ?: a.compliance_report_id <=> b.compliance_report_id
+    // Execute the consolidated compliance reports query
+    PreparedStatement consolidatedStmt = sourceConn.prepareStatement(SOURCE_CONSOLIDATED_QUERY)
+    ResultSet rs = consolidatedStmt.executeQuery()
+
+    log.warn("Creating Compliance Report Objects")
+
+    while (rs.next()) {
+        def record = [
+            compliance_report_id    : rs.getInt('compliance_report_id'),
+            type_id                 : rs.getInt('type_id'),
+            organization_id         : rs.getInt('organization_id'),
+            compliance_period_id    : rs.getInt('compliance_period_id'),
+            supplements_id          : rs.getObject('supplements_id'),
+            root_report_id          : rs.getObject('root_report_id'),
+            latest_report_id        : rs.getObject('latest_report_id'),
+            traversal               : rs.getInt('traversal'),
+            nickname                : rs.getString('nickname'),
+            supplemental_note       : rs.getString('supplemental_note'),
+            fuel_supplier_status_id : rs.getString('fuel_supplier_status_id'), // Now String
+            analyst_status_id       : rs.getString('analyst_status_id'),
+            manager_status_id       : rs.getString('manager_status_id'),
+            director_status_id      : rs.getString('director_status_id'),
+            create_user_id          : rs.getInt('create_user_id'),
+            create_timestamp        : rs.getTimestamp('create_timestamp'),
+            update_user_id          : rs.getInt('update_user_id'),
+            update_timestamp        : rs.getTimestamp('update_timestamp'),
+            report_type             : rs.getString('report_type'),
+            compliance_period_desc  : rs.getString('compliance_period_desc'),
+            is_supplemental         : rs.getBoolean('is_supplemental'),
+            credit_transaction_id   : rs.getObject('credit_transaction_id'),
+            history_json            : rs.getString('history_json'),
+            compliance_report_snapshot : rs.getString('compliance_report_snapshot'), // Added snapshot
+            // CreditTrade Fields
+            credit_trade_id         : rs.getObject('credit_trade_id'),
+            initiator_id            : rs.getObject('initiator_id'),
+            respondent_id           : rs.getObject('respondent_id'),
+            date_of_written_agreement : rs.getDate('date_of_written_agreement'),
+            trade_effective_date    : rs.getDate('trade_effective_date'),
+            number_of_credits       : rs.getInt('number_of_credits'),
+            ct_create_user_id       : rs.getObject('ct_create_user_id'),
+            ct_create_timestamp     : rs.getTimestamp('ct_create_timestamp'),
+            ct_update_user_id       : rs.getObject('ct_update_user_id'),
+            ct_update_timestamp     : rs.getTimestamp('ct_update_timestamp'),
+            credit_trade_type       : rs.getString('credit_trade_type'),
+            fair_market_value_per_credit : rs.getBigDecimal('fair_market_value_per_credit')
+        ]
+                
+        // Insert Compliance Report History from JSON
+        def historyJson = record.history_json
+        def historyRecords = historyJson ? new JsonSlurper().parseText(historyJson).sort { a, b ->
+            def aTime = a.create_timestamp ? OffsetDateTime.parse(a.create_timestamp).toInstant() : Instant.EPOCH
+            def bTime = b.create_timestamp ? OffsetDateTime.parse(b.create_timestamp).toInstant() : Instant.EPOCH
+            aTime <=> bTime
+        } : []
+
+        // Parse the snapshot JSON to extract in reserve quantity and convert it to an Integer
+        def snapshotJson = record.compliance_report_snapshot
+        def inReserveQuantity = null
+        if (snapshotJson) {
+            try {
+                def snapshot = new JsonSlurper().parseText(snapshotJson)
+                def quantityStr = snapshot?.summary?.lines?.get('25')
+                if (quantityStr != null) {
+                    inReserveQuantity = safeConvertToInt(quantityStr)
+                    if (inReserveQuantity == null) {
+                        log.error("Invalid in reserve quantity format for compliance_report_id: ${record.compliance_report_id}")
+                    }
+                } else {
+                    log.warn("In reserve quantity not found in snapshot for compliance_report_id: ${record.compliance_report_id}")
+                }
+            } catch (Exception e) {
+                log.error("Error parsing snapshot JSON for compliance_report_id: ${record.compliance_report_id}", e)
+            }
+        } else {
+            log.warn("No snapshot found for compliance_report_id: ${record.compliance_report_id}")
         }
 
-        // Assign a single UUID for the chain
-        def groupUuid = UUID.randomUUID().toString()
+        // Determine the root ID for UUID generation
+        def rootId = record.root_report_id ?: record.compliance_report_id
 
-        def version = 0
-        chainReports.each { report ->
-            def currentStatusId = mapCurrentStatus(
-                report.fuel_supplier_status_id,
-                report.analyst_status_id,
-                report.manager_status_id,
-                report.director_status_id,
-                referenceData
-            )
+        // Generate a deterministic UUID based on rootId
+        def groupUuid = UUID.nameUUIDFromBytes(rootId.toString().getBytes(StandardCharsets.UTF_8))
 
-            def supplementalInitiator = report.is_supplemental ? "SUPPLIER_SUPPLEMENTAL" : null
-            def reportingFrequency = "ANNUAL"
+        def version = (record.compliance_report_id == record.root_report_id) ? 0 : (record.traversal ?: 0)
 
-            // create_user and update_user are always strings
-            def reportCreateUser = "imported_user"
-            def reportUpdateUser = "imported_user"
+        // Determine the current status ID based on workflow states and history
+        def currentStatusId = mapCurrentStatus(
+            record.fuel_supplier_status_id,
+            record.analyst_status_id,
+            record.manager_status_id,
+            record.director_status_id,
+            referenceData,
+            historyRecords
+        )
 
-            // Insert Compliance Report
-            def lcfsReportId = insertComplianceReport(
-                statements.insertComplianceReportStmt,
-                report,
-                groupUuid,
-                version,
-                supplementalInitiator,
-                reportingFrequency,
-                currentStatusId,
-                reportCreateUser,
-                reportUpdateUser
-            )
+        // Exclude reports with non-matching statuses like deleted
+        if (currentStatusId == null) {
+            continue
+        }
 
-            // Insert history
-            def reportHistory = historyMap[report.compliance_report_id] ?: []
-            totalHistoryInserted += insertComplianceReportHistory(
-                lcfsReportId,
-                reportHistory,
-                statements.insertComplianceReportHistoryStmt,
-                referenceData
-            )
+        // Map create_user and update_user to display_name
+        def reportCreateUser = userProfiles[record.create_user_id] ?: "imported_user"
+        def reportUpdateUser = userProfiles[record.update_user_id] ?: reportCreateUser
 
-            def currentStatusName = currentStatusId ? referenceData.statusIdToName[currentStatusId] : null
-            def shouldReserve = ["Submitted", "Recommended by analyst", "Recommended by manager", "Assessed", "ReAssessed"].contains(currentStatusName)
-            def createdTransactionId = null
+        def supplementalInitiator = record.is_supplemental ? "SUPPLIER_SUPPLEMENTAL" : null
+        def reportingFrequency = "ANNUAL"
 
-            if (shouldReserve) {
-                createdTransactionId = insertTransactionForReport(
-                    statements.insertTransactionStmt,
-                    report.organization_id,
-                    0,
-                    "Reserved",
-                    "imported_user", // create_user as a string
-                    report.create_timestamp
-                )
-                totalTransactionsInserted++
-            }
+        // Insert Compliance Report into LCFS
+        def lcfsReportId = insertComplianceReport(
+            statements.insertComplianceReportStmt,
+            record,
+            groupUuid.toString(),
+            version,
+            supplementalInitiator,
+            reportingFrequency,
+            currentStatusId,
+            reportCreateUser,
+            reportUpdateUser
+        )
+        totalInserted++
 
-            if (report.credit_transaction_id && creditTradesMap.containsKey(report.credit_transaction_id)) {
-                def ct = creditTradesMap[report.credit_transaction_id]
+        def insertedHistoryCount = insertComplianceReportHistory(
+            lcfsReportId,
+            historyRecords,
+            statements.insertComplianceReportHistoryStmt,
+            referenceData,
+            userProfiles
+        )
+        totalHistoryInserted += insertedHistoryCount
 
-                // create_user as a string
-                def ctCreateUser = "imported_user"
+        // Determine organization ID
+        def orgId = record.organization_id
 
-                def quantity = ct.quantity
-                if (ct.transaction_type == "Credit Reduction") {
+        if (orgId == null) {
+            log.error("No organization_id found for compliance_report_id: ${record.compliance_report_id}. Skipping transaction creation.")
+        } else {
+            if (record.credit_trade_id) {
+                // **Accepted Report:** Create only an Adjustment transaction
+                def ctCreateUser = userProfiles[record.ct_create_user_id] ?: "imported_user"
+                def quantity = record.number_of_credits
+                if (record.credit_trade_type == "Credit Reduction") {
                     quantity = -quantity
                 }
 
                 def associatedTransactionId = insertTransactionForReport(
                     statements.insertTransactionStmt,
-                    ct.respondent_id ?: ct.initiator_id,
+                    record.organization_id,
                     quantity,
                     "Adjustment",
                     ctCreateUser,
-                    ct.create_date,
-                    ct.transaction_effective_date
+                    record.ct_create_timestamp,
+                    record.trade_effective_date ? Timestamp.valueOf(record.trade_effective_date.toLocalDate().atStartOfDay()) : null
                 )
                 totalTransactionsInserted++
 
-                createdTransactionId = associatedTransactionId
-            }
+                if (associatedTransactionId != null) {
+                    updateComplianceReportWithTransaction(destinationConn, lcfsReportId, associatedTransactionId)
+                }
+            } else {
+                // **Non-Accepted Report:** Determine if an In Reserve transaction is needed
+                def currentStatusName = referenceData.statusIdToName[currentStatusId]?.toLowerCase()
 
-            if (createdTransactionId != null) {
-                updateComplianceReportWithTransaction(destinationConn, lcfsReportId, createdTransactionId)
-            }
+                if (["submitted", "recommended by analyst", "recommended by manager", "not recommended"].contains(currentStatusName)) {
+                    // Create an In Reserve transaction
+                    if (inReserveQuantity != null) {
+                        def inReserveTransactionId = insertTransactionForReport(
+                            statements.insertTransactionStmt,
+                            orgId,
+                            inReserveQuantity,
+                            "Reserved",
+                            reportCreateUser,
+                            record.create_timestamp,
+                            null
+                        )
+                        totalTransactionsInserted++
 
-            version++
-            totalInserted++
+                        if (inReserveTransactionId != null) {
+                            updateComplianceReportWithTransaction(destinationConn, lcfsReportId, inReserveTransactionId)
+                        }
+                    }
+                } else if (currentStatusName == "rejected") {
+                    // **Rejected Report:** Do nothing
+                    log.debug("Compliance report_id: ${record.compliance_report_id} is rejected. No transaction created.")
+                } else {
+                    // **Unhandled Status:** Log or handle as needed
+                    log.warn("Compliance report_id: ${record.compliance_report_id} has an unhandled status: ${currentStatusName}. No transaction created.")
+                }
+            }
         }
     }
 
+    rs.close()
+    consolidatedStmt.close()
+
+    // Commit all changes
     destinationConn.commit()
 
-    // Re-enable and refresh the materialized view
-    destinationConn.createStatement().execute("""
+    // Re-enable and refresh the materialized views
+    stmt = destinationConn.createStatement()
+    stmt.execute("""
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
         RETURNS void AS \$\$
         BEGIN
@@ -268,10 +360,9 @@ try {
         END;
         \$\$ LANGUAGE plpgsql;
     """)
-    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate')
+    stmt.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate')
 
-    // Re-enable and refresh the materialized view
-    destinationConn.createStatement().execute("""
+    stmt.execute("""
         CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
         RETURNS void AS \$\$
         BEGIN
@@ -279,9 +370,10 @@ try {
         END;
         \$\$ LANGUAGE plpgsql;
     """)
-    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count')
+    stmt.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count')
+    stmt.close()
 
-    log.info("Inserted ${totalInserted} compliance reports, ${totalHistoryInserted} history records, and ${totalTransactionsInserted} transactions into LCFS.")
+    log.warn("Inserted ${totalInserted} compliance reports, ${totalHistoryInserted} history records, and ${totalTransactionsInserted} transactions into LCFS.")
 } catch (Exception e) {
     log.error('Error occurred while processing compliance reports', e)
     destinationConn?.rollback()
@@ -295,161 +387,207 @@ try {
 // Helper Functions
 // =========================================
 
+/**
+ * Safely converts a value to Integer.
+ * @param value The value to convert.
+ * @return The Integer value or null if conversion fails.
+ */
+def safeConvertToInt(def value) {
+    if (value instanceof Number) {
+        return value.intValue()
+    } else if (value instanceof String) {
+        try {
+            return Integer.parseInt(value)
+        } catch (NumberFormatException e) {
+            log.error("Failed to convert value to Integer: ${value}", e)
+            return null
+        }
+    }
+    return null
+}
+
+/**
+ * Fetches user profiles and maps id to display_name.
+ * @param conn Source database connection.
+ * @return A map of id to display_name.
+ */
+def fetchUserProfiles(Connection conn) {
+    def stmt = conn.createStatement()
+    def rs = stmt.executeQuery("SELECT id, display_name FROM public.user")
+    def userMap = [:]
+    while (rs.next()) {
+        userMap[rs.getInt("id")] = rs.getString("display_name")
+    }
+    rs.close()
+    stmt.close()
+    return userMap
+}
+
+/**
+ * Loads reference data for status mapping.
+ * @param conn Destination database connection.
+ * @return A map containing status mappings.
+ */
 def loadReferenceData(Connection conn) {
     def statusMap = [:]
     def idToName = [:]
     def stmt = conn.createStatement()
     def rs = stmt.executeQuery("SELECT compliance_report_status_id, status FROM compliance_report_status")
     while (rs.next()) {
-        statusMap[rs.getString('status')] = rs.getInt('compliance_report_status_id')
-        idToName[rs.getInt('compliance_report_status_id')] = rs.getString('status')
+        statusMap[rs.getString('status').toLowerCase()] = rs.getInt('compliance_report_status_id')
+        idToName[rs.getInt('compliance_report_status_id')] = rs.getString('status').toLowerCase()
     }
     rs.close()
     stmt.close()
 
     return [
-        statusMap: statusMap,
-        statusIdToName: idToName
+        statusMap      : statusMap,
+        statusIdToName : idToName
     ]
 }
 
-def fetchComplianceReports(Connection conn) {
-    PreparedStatement stmt = conn.prepareStatement(SOURCE_REPORTS_QUERY)
-    ResultSet rs = stmt.executeQuery()
+/**
+ * Maps workflow statuses to LCFS compliance_report_status_id.
+ * Handles 'requested supplemental' and 'not recommended' by referencing the history.
+ * @param fuelStatusName Fuel supplier status name.
+ * @param analystStatusName Analyst status name.
+ * @param managerStatusName Manager status name.
+ * @param directorStatusName Director status name.
+ * @param referenceData Reference data for status mapping.
+ * @param historyRecords List of history records for the compliance report.
+ * @return Mapped compliance_report_status_id or null if excluded.
+ */
+def mapCurrentStatus(fuelStatusName, analystStatusName, managerStatusName, directorStatusName, referenceData, List historyRecords) {
+    // Normalize to lowercase for consistent comparison
+    fuelStatusName = fuelStatusName?.toLowerCase()
+    analystStatusName = analystStatusName?.toLowerCase()
+    managerStatusName = managerStatusName?.toLowerCase()
+    directorStatusName = directorStatusName?.toLowerCase()
 
-    def chains = [:].withDefault { [] }
+    // Flags to determine special conditions
+    def isRequestedSupplemental = [
+        fuelStatusName,
+        analystStatusName,
+        managerStatusName,
+        directorStatusName
+    ].any { it?.contains("requested supplemental") }
 
-    while (rs.next()) {
-        def rootId = rs.getObject('root_report_id') ?: rs.getInt('compliance_report_id')
-        def record = [
-            compliance_report_id   : rs.getInt('compliance_report_id'),
-            type_id                : rs.getInt('type_id'),
-            organization_id        : rs.getInt('organization_id'),
-            compliance_period_id   : rs.getInt('compliance_period_id'),
-            supplements_id         : rs.getObject('supplements_id'),
-            root_report_id         : rs.getObject('root_report_id'),
-            latest_report_id       : rs.getObject('latest_report_id'),
-            traversal              : rs.getInt('traversal'),
-            nickname               : rs.getString('nickname'),
-            supplemental_note      : rs.getString('supplemental_note'),
-            fuel_supplier_status_id: rs.getObject('fuel_supplier_status_id'),
-            analyst_status_id      : rs.getObject('analyst_status_id'),
-            manager_status_id      : rs.getObject('manager_status_id'),
-            director_status_id     : rs.getObject('director_status_id'),
-            create_user_id         : rs.getInt('create_user_id'),
-            create_timestamp       : rs.getTimestamp('create_timestamp'),
-            update_user_id         : rs.getInt('update_user_id'),
-            update_timestamp       : rs.getTimestamp('update_timestamp'),
-            report_type            : rs.getString('report_type'),
-            compliance_period_desc : rs.getString('compliance_period_desc'),
-            is_supplemental        : rs.getBoolean('is_supplemental'),
-            credit_transaction_id  : rs.getObject('credit_transaction_id')
-        ]
-        chains[rootId] << record
-    }
-    rs.close()
-    stmt.close()
+    def isNotRecommended = [
+        fuelStatusName,
+        analystStatusName,
+        managerStatusName,
+        directorStatusName
+    ].any { it == "not recommended" }
 
-    return chains
-}
+    // Handle 'requested supplemental'
+    if (isRequestedSupplemental) {
+        log.debug("Status contains 'requested supplemental'. Processing history to determine previous status.")
+        if (historyRecords) {
+            // Iterate through history records in reverse (most recent first)
+            for (int i = historyRecords.size() - 1; i >= 0; i--) {
+                def previousRecord = historyRecords[i]
+                def prevFuelStatus = previousRecord.fuel_supplier_status_id ? previousRecord.fuel_supplier_status_id.toLowerCase() : null
+                def prevAnalystStatus = previousRecord.analyst_status_id ? previousRecord.analyst_status_id.toLowerCase() : null
+                def prevManagerStatus = previousRecord.manager_status_id ? previousRecord.manager_status_id.toLowerCase() : null
+                def prevDirectorStatus = previousRecord.director_status_id ? previousRecord.director_status_id.toLowerCase() : null
 
-def fetchComplianceReportHistory(Connection conn) {
-    PreparedStatement stmt = conn.prepareStatement(SOURCE_HISTORY_QUERY)
-    ResultSet rs = stmt.executeQuery()
+                // Check if the previous record does not have 'requested supplemental'
+                def wasRequestedSupplemental = [
+                    prevFuelStatus,
+                    prevAnalystStatus,
+                    prevManagerStatus,
+                    prevDirectorStatus
+                ].any { it?.contains("requested supplemental") }
 
-    def historyMap = [:].withDefault { [] }
+                if (!wasRequestedSupplemental) {
+                    // Determine the previous status based on priority: Director > Manager > Analyst > Supplier
+                    def previousStatusName = null
+                    if (prevDirectorStatus) {
+                        previousStatusName = prevDirectorStatus
+                    } else if (prevManagerStatus) {
+                        previousStatusName = prevManagerStatus
+                    } else if (prevAnalystStatus) {
+                        previousStatusName = prevAnalystStatus
+                    } else if (prevFuelStatus) {
+                        previousStatusName = prevFuelStatus
+                    }
 
-    while (rs.next()) {
-        def reportId = rs.getInt('compliance_report_id')
-        def histRecord = [
-            history_id              : rs.getInt('history_id'),
-            compliance_report_id    : reportId,
-            create_user_id          : rs.getInt('create_user_id'),
-            create_timestamp        : rs.getTimestamp('create_timestamp'),
-            fuel_supplier_status_id : rs.getObject('fuel_supplier_status_id'),
-            analyst_status_id       : rs.getObject('analyst_status_id'),
-            manager_status_id       : rs.getObject('manager_status_id'),
-            director_status_id      : rs.getObject('director_status_id')
-        ]
-        historyMap[reportId] << histRecord
-    }
-    rs.close()
-    stmt.close()
-
-    return historyMap
-}
-
-def fetchApprovedCreditTrades(Connection conn) {
-    PreparedStatement stmt = conn.prepareStatement(SOURCE_CREDIT_TRADE_QUERY)
-    ResultSet rs = stmt.executeQuery()
-
-    def trades = [:]
-
-    while (rs.next()) {
-        def t = [
-            transaction_id           : rs.getInt('transaction_id'),
-            initiator_id             : rs.getInt('initiator_id'),
-            respondent_id            : rs.getInt('respondent_id'),
-            agreement_date           : rs.getTimestamp('agreement_date'),
-            transaction_effective_date: rs.getTimestamp('transaction_effective_date'),
-            quantity                 : rs.getInt('quantity'),
-            create_user              : rs.getInt('create_user'),
-            create_date              : rs.getTimestamp('create_date'),
-            update_user              : rs.getInt('update_user'),
-            update_date              : rs.getTimestamp('update_date'),
-            transaction_type         : rs.getString('transaction_type'),
-            price_per_unit           : rs.getBigDecimal('price_per_unit')
-        ]
-        trades[rs.getInt('credit_trade_id')] = t
+                    if (previousStatusName) {
+                        if (previousStatusName == "accepted") {
+                            log.debug("Previous status was 'accepted'. Mapping to 'assessed'.")
+                            return referenceData.statusMap["assessed"]
+                        } else if (previousStatusName == "recommended" || previousStatusName == "submitted") {
+                            log.debug("Previous status was '${previousStatusName}'. Mapping back to 'submitted'.")
+                            return referenceData.statusMap["submitted"]
+                        }
+                        // Add additional mappings if necessary
+                    }
+                }
+            }
+        }
+        // If no valid previous status is found, exclude the report
+        log.debug("No valid previous status found for 'requested supplemental'. Excluding report.")
+        return null
     }
 
-    rs.close()
-    stmt.close()
-    return trades
-}
+    // Handle 'not recommended'
+    if (isNotRecommended) {
+        log.debug("Status contains 'not recommended'. Mapping back to 'submitted'.")
+        return referenceData.statusMap["submitted"]
+    }
 
-def mapCurrentStatus(fuelSupplierStatus, analystStatus, managerStatus, directorStatus, referenceData) {
-    def fuel = fuelSupplierStatus?.toString()?.toLowerCase() ?: ""
-    def analyst = analystStatus?.toString()?.toLowerCase() ?: ""
-    def manager = managerStatus?.toString()?.toLowerCase() ?: ""
-    def director = directorStatus?.toString()?.toLowerCase() ?: ""
-
+    // Determine the current status based on all status fields
     // Priority: Director > Manager > Analyst > Supplier
+    // Adjust mappings based on your specific business rules
 
-    // Director logic
-    if (director == "accepted") {
-        return referenceData.statusMap["Assessed"]
-    } else if (director == "rejected" || director.contains("requested supplemental")) {
-        return null // exclude
+    // Check Director Status
+    if (directorStatusName) {
+        if (directorStatusName == "accepted") {
+            return referenceData.statusMap["assessed"]
+        } else if (directorStatusName == "rejected") {
+            return referenceData.statusMap["rejected"]
+        }
+        // Handle other director statuses if necessary
     }
 
-    // Manager logic
-    if (manager == "recommended") {
-        return referenceData.statusMap["Recommended by manager"]
-    } else if (manager == "not recommended" || manager.contains("requested supplemental")) {
-        return null // exclude
+    // Check Manager Status
+    if (managerStatusName) {
+        if (managerStatusName == "recommended") {
+            return referenceData.statusMap["recommended by manager"]
+        }
+        // Handle other manager statuses if necessary
     }
 
-    // Analyst logic
-    if (analyst == "recommended") {
-        return referenceData.statusMap["Recommended by analyst"]
-    } else if (analyst == "not recommended" || analyst.contains("requested supplemental")) {
-        return null // exclude
+    // Check Analyst Status
+    if (analystStatusName) {
+        if (analystStatusName == "recommended") {
+            return referenceData.statusMap["recommended by analyst"]
+        }
+        // Handle other analyst statuses if necessary
     }
 
-    // Supplier logic
-    if (fuel == "deleted") {
-        return null // exclude
-    } else if (fuel == "submitted") {
-        return referenceData.statusMap["Submitted"]
-    } else if (fuel == "draft") {
-        return referenceData.statusMap["Draft"]
+    // Check Fuel Supplier Status
+    if (fuelStatusName) {
+        if (fuelStatusName == "submitted") {
+            return referenceData.statusMap["submitted"]
+        } else if (fuelStatusName == "draft") {
+            return referenceData.statusMap["draft"]
+        } else if (fuelStatusName == "deleted") {
+            // Exclude deleted reports
+            return null
+        }
+        // Handle other fuel supplier statuses if necessary
     }
 
-    // If nothing matches, exclude
+    // Default case
     return null
 }
 
+/**
+ * Prepares SQL statements for insertion and updates.
+ * @param conn Destination database connection.
+ * @return A map of prepared statements.
+ */
 def prepareStatements(Connection conn) {
     def INSERT_COMPLIANCE_REPORT_SQL = """
         INSERT INTO compliance_report (
@@ -497,13 +635,26 @@ def prepareStatements(Connection conn) {
     '''
 
     return [
-        insertComplianceReportStmt: conn.prepareStatement(INSERT_COMPLIANCE_REPORT_SQL),
-        insertComplianceReportHistoryStmt: conn.prepareStatement(INSERT_COMPLIANCE_REPORT_HISTORY_SQL),
-        insertTransactionStmt: conn.prepareStatement(INSERT_TRANSACTION_SQL),
+        insertComplianceReportStmt           : conn.prepareStatement(INSERT_COMPLIANCE_REPORT_SQL),
+        insertComplianceReportHistoryStmt    : conn.prepareStatement(INSERT_COMPLIANCE_REPORT_HISTORY_SQL),
+        insertTransactionStmt                : conn.prepareStatement(INSERT_TRANSACTION_SQL),
         updateComplianceReportTransactionStmt: conn.prepareStatement(UPDATE_COMPLIANCE_REPORT_TRANSACTION_SQL)
     ]
 }
 
+/**
+ * Inserts a compliance report into LCFS.
+ * @param stmt PreparedStatement for inserting compliance_report.
+ * @param report Compliance report data.
+ * @param groupUuid Group UUID as string.
+ * @param version Version number.
+ * @param supplementalInitiator Supplemental initiator type.
+ * @param reportingFrequency Reporting frequency.
+ * @param currentStatusId Mapped status ID.
+ * @param createUser Display name of the creator.
+ * @param updateUser Display name of the updater.
+ * @return Inserted compliance_report_id.
+ */
 def insertComplianceReport(PreparedStatement stmt, Map report, String groupUuid, int version, String supplementalInitiator, String reportingFrequency, Integer currentStatusId, String createUser, String updateUser) {
     stmt.setInt(1, report.compliance_period_id)
     stmt.setInt(2, report.organization_id)
@@ -525,18 +676,34 @@ def insertComplianceReport(PreparedStatement stmt, Map report, String groupUuid,
     stmt.setString(12, updateUser)
     stmt.setTimestamp(13, report.update_timestamp ?: report.create_timestamp ?: Timestamp.valueOf("1970-01-01 00:00:00"))
 
-    def rs = stmt.executeQuery()
-    def insertedId = null
-    if (rs.next()) {
-        insertedId = rs.getInt('compliance_report_id')
+    def rs = null
+    try {
+        rs = stmt.executeQuery()
+        if (rs.next()) {
+            def insertedId = rs.getInt('compliance_report_id')
+            return insertedId
+        }
+    } catch (Exception e) {
+        log.error("Failed to insert compliance report for compliance_report_id: ${report.compliance_report_id}", e)
+    } finally {
+        if (rs != null) rs.close()
     }
-    rs.close()
-    return insertedId
+    return null
 }
 
+/**
+ * Inserts compliance report history records into LCFS.
+ * @param lcfsReportId Inserted compliance_report_id in LCFS.
+ * @param historyRecords List of history records.
+ * @param historyStmt PreparedStatement for inserting compliance_report_history.
+ * @param referenceData Reference data for status mapping.
+ * @param userProfiles Map of user_id to display_name.
+ * @return Number of history records inserted.
+ */
 def insertComplianceReportHistory(Integer lcfsReportId, List historyRecords,
                                   PreparedStatement historyStmt,
-                                  Map referenceData) {
+                                  Map referenceData,
+                                  Map userProfiles) {
     int count = 0
     if (!historyRecords) return count
 
@@ -546,54 +713,32 @@ def insertComplianceReportHistory(Integer lcfsReportId, List historyRecords,
             h.analyst_status_id,
             h.manager_status_id,
             h.director_status_id,
-            referenceData
+            referenceData,
+            [] // Pass an empty list to prevent recursive history processing
         )
 
-        // We'll just use a placeholder "imported_user" string for create_user and update_user
-        def createUser = "imported_user"
-        def timestamp = h.create_timestamp ?: Timestamp.valueOf("1970-01-01 00:00:00")
-
-        // For user_profile_id, we can still set it if we have it, or null otherwise
-        def userProfileId = h.create_user_id
-
-        log.warn("Processing history record:")
-        log.warn("lcfsReportId: ${lcfsReportId}, statusId: ${statusId}, userProfileId: ${userProfileId}, create_user: ${createUser}, timestamp: ${timestamp}")
-        log.warn("fuel_supplier_status_id: ${h.fuel_supplier_status_id}, analyst_status_id: ${h.analyst_status_id}, manager_status_id: ${h.manager_status_id}, director_status_id: ${h.director_status_id}")
-
         if (statusId == null) {
-            // Skip this history record because we didn't match a status
-            log.warn("Skipping history record for lcfsReportId: ${lcfsReportId} due to null statusId.")
+            // Skip history with no mapped status
             return
         }
+
+        // Convert create_timestamp from String to Timestamp
+        def timestamp = h.create_timestamp ? Timestamp.from(OffsetDateTime.parse(h.create_timestamp).toInstant()) : Timestamp.valueOf("1970-01-01 00:00:00")
+
+        def userProfileId = h.create_user_id
+
+        def reportCreateUser = userProfiles[h.create_user_id] ?: "imported_user"
+        def reportUpdateUser = userProfiles[h.update_user_id] ?: reportCreateUser
 
         try {
             historyStmt.setInt(1, lcfsReportId)
             historyStmt.setInt(2, statusId)
 
-            if (userProfileId == null) {
-                historyStmt.setNull(3, java.sql.Types.INTEGER)
-            } else {
-                historyStmt.setInt(3, userProfileId)
-            }
+            historyStmt.setInt(3, userProfileId)
 
-            // create_user (String)
-            if (createUser == null) {
-                historyStmt.setNull(4, java.sql.Types.VARCHAR)
-            } else {
-                historyStmt.setString(4, createUser)
-            }
-
-            // create_date (timestamp)
+            historyStmt.setString(4, reportCreateUser)
             historyStmt.setTimestamp(5, timestamp)
-
-            // update_user (String) - same as create_user for simplicity
-            if (createUser == null) {
-                historyStmt.setNull(6, java.sql.Types.VARCHAR)
-            } else {
-                historyStmt.setString(6, createUser)
-            }
-
-            // update_date (timestamp)
+            historyStmt.setString(6, reportUpdateUser)
             historyStmt.setTimestamp(7, timestamp)
 
             historyStmt.addBatch()
@@ -613,35 +758,65 @@ def insertComplianceReportHistory(Integer lcfsReportId, List historyRecords,
     return count
 }
 
-def insertTransactionForReport(PreparedStatement stmt, int orgId, int quantity, String action, String createUser, Timestamp createDate, Timestamp effectiveDate = null) {
+/**
+ * Inserts a transaction into LCFS.
+ * @param stmt PreparedStatement for inserting transaction.
+ * @param orgId Organization ID.
+ * @param quantity Number of compliance units.
+ * @param action Transaction action type.
+ * @param createUser Display name of the creator.
+ * @param createDate Creation timestamp.
+ * @param effectiveDate Effective date of the transaction.
+ * @return Inserted transaction_id or null.
+ */
+def insertTransactionForReport(PreparedStatement stmt, Integer orgId, int quantity, String action, String createUser, Timestamp createDate, Timestamp effectiveDate = null) {
+    if (orgId == null) {
+        log.error("Organization ID is null. Cannot insert transaction.")
+        return null
+    }
+
     def effDate = effectiveDate ?: createDate ?: Timestamp.valueOf("1970-01-01 00:00:00")
 
     stmt.setInt(1, quantity)
     stmt.setInt(2, orgId)
     stmt.setString(3, action)
     stmt.setTimestamp(4, effDate)
-
-    if (createUser == null) {
-        stmt.setNull(5, java.sql.Types.VARCHAR)
-    } else {
-        stmt.setString(5, createUser)
-    }
-
+    stmt.setString(5, createUser)
     stmt.setTimestamp(6, createDate ?: Timestamp.valueOf("1970-01-01 00:00:00"))
 
-    def rs = stmt.executeQuery()
-    def transactionId = null
-    if (rs.next()) {
-        transactionId = rs.getInt('transaction_id')
+    def rs = null
+    try {
+        rs = stmt.executeQuery()
+        if (rs.next()) {
+            return rs.getInt('transaction_id')
+        }
+    } catch (Exception e) {
+        log.error("Failed to insert transaction for compliance_report_id", e)
+    } finally {
+        if (rs != null) rs.close()
     }
-    rs.close()
-    return transactionId
+    return null
 }
 
+/**
+ * Updates a compliance report with the associated transaction ID.
+ * @param conn Destination database connection.
+ * @param lcfsReportId Compliance report ID in LCFS.
+ * @param transactionId Transaction ID to associate.
+ */
 def updateComplianceReportWithTransaction(Connection conn, int lcfsReportId, int transactionId) {
     def updateStmt = conn.prepareStatement("UPDATE compliance_report SET transaction_id = ? WHERE compliance_report_id = ?")
-    updateStmt.setInt(1, transactionId)
-    updateStmt.setInt(2, lcfsReportId)
-    updateStmt.executeUpdate()
-    updateStmt.close()
+    try {
+        updateStmt.setInt(1, transactionId)
+        updateStmt.setInt(2, lcfsReportId)
+        updateStmt.executeUpdate()
+    } catch (Exception e) {
+        log.error("Failed to update compliance_report with transaction_id: ${transactionId} for lcfsReportId: ${lcfsReportId}", e)
+    } finally {
+        updateStmt.close()
+    }
 }
+
+// =========================================
+// Script Termination
+// =========================================
