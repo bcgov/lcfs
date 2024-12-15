@@ -212,12 +212,13 @@ class InitiativeAgreementServices:
 
     async def _perform_notificaiton_call(self, ia, re_recommended=False):
         """Send notifications based on the current status of the transfer."""
-        notifications = INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER.get(
-            ia.current_status.status if not re_recommended else "Return to analyst",
-            None,
-        )
+        status = ia.current_status.status if not re_recommended else "Return to analyst"
+        status_val = (status.value if isinstance(status, InitiativeAgreementStatusEnum) else status).lower()
+        notifications = INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER.get(status, None)
         notification_data = NotificationMessageSchema(
-            message=f"Initiative Agreement {ia.initiative_agreement_id} has been {ia.current_status.status}",
+            type=f"Initiative agreement {status_val}",
+            transaction_id=ia.transaction_id,
+            message=f"Initiative Agreement {ia.initiative_agreement_id} has been {status_val}",
             related_organization_id=ia.to_organization_id,
             origin_user_profile_id=self.request.user.user_profile_id,
         )

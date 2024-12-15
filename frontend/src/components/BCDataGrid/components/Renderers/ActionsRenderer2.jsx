@@ -7,7 +7,7 @@ export const ActionsRenderer2 = (props) => {
     .some((cell) => cell.rowIndex === props.node.rowIndex)
 
   return (
-    <Stack direction="row" spacing={0.1} m={0}>
+    <Stack direction="row" spacing={0.1} m={0} mt={0.2}>
       {props.enableDuplicate && (
         <Tooltip title="duplicate">
           <span>

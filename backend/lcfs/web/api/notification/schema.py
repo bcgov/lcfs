@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -5,7 +6,31 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
-from lcfs.web.api.base import BaseSchema, NotificationTypeEnum
+from lcfs.web.api.base import BaseSchema, NotificationTypeEnum, PaginationResponseSchema
+from pydantic import computed_field, field_validator
+
+
+class OrganizationSchema(BaseSchema):
+    organization_id: int
+    name: str
+
+
+class UserProfileSchema(BaseSchema):
+    first_name: str
+    last_name: str
+    organization_id: Optional[int] = None
+    is_government: bool = False
+
+    @field_validator("is_government", mode="after")
+    def update_gov_profile(cls, value, info):
+        if info.data.get("is_government", True):
+            info.data.update({"first_name": "Government of B.C.", "last_name": ""})
+        return value
+    
+    @computed_field
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
 
 
 class NotificationMessageSchema(BaseSchema):
@@ -14,9 +39,14 @@ class NotificationMessageSchema(BaseSchema):
     is_archived: Optional[bool] = False
     is_warning: Optional[bool] = False
     is_error: Optional[bool] = False
+    type: Optional[str] = None
     message: Optional[str] = None
     related_organization_id: Optional[int] = None
+    related_organization: Optional[OrganizationSchema] = None
+    transaction_id: Optional[int] = None
+    create_date: Optional[datetime] = None
     origin_user_profile_id: Optional[int] = None
+    origin_user_profile: Optional[UserProfileSchema] = None
     related_user_profile_id: Optional[int] = None
     notification_type_id: Optional[int] = None
     deleted: Optional[bool] = None
@@ -52,6 +82,9 @@ class DeleteSubscriptionSchema(BaseSchema):
 class DeleteNotificationChannelSubscriptionResponseSchema(BaseSchema):
     message: str
 
+class NotificationsSchema(BaseSchema):
+    notifications: List[NotificationMessageSchema] = []
+    pagination: PaginationResponseSchema = None
 
 class NotificationRequestSchema(BaseSchema):
     notification_types: List[NotificationTypeEnum]

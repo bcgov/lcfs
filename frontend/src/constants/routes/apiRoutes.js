@@ -73,6 +73,8 @@ export const apiRoutes = {
   getUserLoginHistories: '/users/login-history',
   getAuditLogs: '/audit-log/list',
   getAuditLog: '/audit-log/:auditLogId',
+  notifications: '/notifications/',
+  getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',

@@ -31,7 +31,6 @@ export const UserLoginHistory = () => {
             defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}
-          rowSelection={{ isRowSelectable: false }}
         />
       </BCBox>
     </BCBox>

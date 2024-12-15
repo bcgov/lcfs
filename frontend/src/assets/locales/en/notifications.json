@@ -90,5 +90,24 @@
         "managerRecommendation": "Compliance manager recommendation"
       }
     }
-  }
+  },
+  "buttonStack": {
+    "selectAll": "Select all",
+    "unselectAll": "Unselect all",
+    "markAsRead": "Mark as read",
+    "deleteSelected": "Delete selected"
+  },
+  "notificationColLabels": {
+    "type": "Type",
+    "date": "Date",
+    "user": "User",
+    "transactionId": "Transaction ID",
+    "organization": "Organization"
+  },
+  "noNotificationsFound": "No notification messages found.",
+  "noNotificationsSelectedText": "No messages selected.",
+  "deleteSuccessText": "Successfully deleted selected message(s).",
+  "deleteErrorText": "An error occurred while deleting the selected message(s).",
+  "markAsReadSuccessText": "Successfully updated message(s) as read.",
+  "markAsReadErrorText": "An error occurred while updating the message(s) as read."
 }

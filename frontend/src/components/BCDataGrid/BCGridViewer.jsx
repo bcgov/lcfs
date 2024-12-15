@@ -1,4 +1,4 @@
-import BCAlert from '@/components/BCAlert'
+import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridBase } from '@/components/BCDataGrid/BCGridBase'
 import { BCPagination } from '@/components/BCDataGrid/components'
@@ -9,6 +9,7 @@ import BCButton from '../BCButton'
 
 export const BCGridViewer = ({
   gridRef,
+  alertRef,
   loading,
   defaultColDef,
   columnDefs,
@@ -202,6 +203,7 @@ export const BCGridViewer = ({
       className="bc-grid-container"
       data-test="bc-grid-container"
     >
+      <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
       <BCGridBase
         ref={ref}
         className={'ag-theme-material'}
