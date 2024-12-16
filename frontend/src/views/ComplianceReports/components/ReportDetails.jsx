@@ -40,7 +40,7 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
   const navigate = useNavigate()
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const showSupportingDocs = useMemo(() => {
+  const editSupportingDocs = useMemo(() => {
     return isAnalystRole && (
       currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
       currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED
@@ -86,7 +86,7 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
             />
           </>
         ),
-        condition: showSupportingDocs
+        condition: true
       },
       {
         name: t('report:activityLists.supplyOfFuel'),
@@ -239,7 +239,7 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          ((activity.name === t('report:supportingDocs') ? showSupportingDocs : (data && !isArrayEmpty(data)))) && (
+          (data && !isArrayEmpty(data) || activity.name === t('report:supportingDocs')) && (
             <Accordion
               key={index}
               expanded={activity.name === t('report:supportingDocs') ? expanded.includes(`panel${index}`) && !isArrayEmpty(data) : expanded.includes(`panel${index}`)}
@@ -260,7 +260,9 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  <Role
+                  {editSupportingDocs && (
+                    <>
+                      <Role
                         roles={[
                           roles.supplier,
                           roles.compliance_reporting,
@@ -280,6 +282,8 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
                           />
                         </IconButton>
                       </Role>
+                    </>
+                  )}
                 </BCTypography>
               </AccordionSummary>
               <AccordionDetails>
