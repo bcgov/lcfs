@@ -34,12 +34,18 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
-const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
+const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
+  const showSupportingDocs = useMemo(() => {
+    return isAnalystRole && (
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+      currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    ) || currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT;
+  }, [isAnalystRole, currentStatus]);
 
   const isArrayEmpty = useCallback((data) => {
     if (Array.isArray(data)) {
@@ -65,11 +71,22 @@ const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
         },
         useFetch: useComplianceReportDocuments,
         component: (data) => (
-          <SupportingDocumentSummary
-            data={data}
-            reportID={complianceReportId}
-          />
-        )
+          <>
+            <SupportingDocumentSummary
+              data={data}
+              reportID={complianceReportId}
+            />
+            <DocumentUploadDialog
+              parentID={complianceReportId}
+              parentType="compliance_report"
+              open={isFileDialogOpen}
+              close={() => {
+                setFileDialogOpen(false)
+              }}
+            />
+          </>
+        ),
+        condition: showSupportingDocs
       },
       {
         name: t('report:activityLists.supplyOfFuel'),
@@ -172,9 +189,13 @@ const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
     ]
   )
 
-  const [expanded, setExpanded] = useState(() =>
-    activityList.map((_, index) => `panel${index}`)
-  )
+  const [expanded, setExpanded] = useState(activityList.map((activity, index) => {
+    if (activity.name === t('report:supportingDocs')) {
+      return isArrayEmpty(activity.useFetch(complianceReportId).data) ? '' : `panel${index}`
+    }
+    return `panel${index}`
+  }).filter(Boolean)) // Initialize with panels that should be open by default
+
   const [allExpanded, setAllExpanded] = useState(true)
 
   const handleChange = (panel) => (event, isExpanded) => {
@@ -215,47 +236,13 @@ const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
           {t('report:collapseAll')}
         </Link>
       </BCTypography>
-      {/* Supporting Documents */}
-      {isGovernmentUser && (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
-        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (
-        <Accordion>
-          <AccordionSummary
-            expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
-            aria-controls="panel1-content"
-          >
-            <BCTypography color="primary" variant="h6" component="div">
-              {t('report:supportingDocs')}
-            </BCTypography>
-            <IconButton
-              color="primary"
-              size="small"
-              aria-label="edit"
-              onClick={(e) => {
-                e.stopPropagation();
-                setFileDialogOpen(true);
-              }}
-            >
-              <FontAwesomeIcon className="small-icon" icon={faPen} />
-            </IconButton>
-          </AccordionSummary>
-          <AccordionDetails>
-            <DocumentUploadDialog
-              parentID={complianceReportId}
-              parentType="compliance_report"
-              open={isFileDialogOpen}
-              close={() => setFileDialogOpen(false)}
-            />
-          </AccordionDetails>
-        </Accordion>
-      )}
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          data &&
-          !isArrayEmpty(data) && (
+          ((activity.name === t('report:supportingDocs') ? showSupportingDocs : (data && !isArrayEmpty(data)))) && (
             <Accordion
               key={index}
-              expanded={expanded.includes(`panel${index}`)}
+              expanded={activity.name === t('report:supportingDocs') ? expanded.includes(`panel${index}`) && !isArrayEmpty(data) : expanded.includes(`panel${index}`)}
               onChange={handleChange(`panel${index}`)}
             >
               <AccordionSummary
@@ -273,13 +260,12 @@ const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  {currentStatus === 'Draft' && (
-                    <>
-                      <Role
+                  <Role
                         roles={[
                           roles.supplier,
                           roles.compliance_reporting,
-                          roles.compliance_reporting
+                          roles.compliance_reporting,
+                          roles.analyst
                         ]}
                       >
                         <IconButton
@@ -294,8 +280,6 @@ const ReportDetails = ({ currentStatus = 'Draft', isGovernmentUser}) => {
                           />
                         </IconButton>
                       </Role>
-                    </>
-                  )}
                 </BCTypography>
               </AccordionSummary>
               <AccordionDetails>

@@ -7,6 +7,7 @@ import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
+import { roles } from '@/constants/roles'
 import { Fab, Stack, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -80,7 +81,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     hasRoles
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-
+  const isAnalystRole = currentUser?.roles?.some(role => role.name === roles.analyst) || false;
+  
   const currentStatus = reportData?.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
@@ -209,7 +211,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           </Stack>
           {!location.state?.newReport && (
             <>
-              <ReportDetails currentStatus={currentStatus} isGovernmentUser={isGovernmentUser}/>
+              <ReportDetails currentStatus={currentStatus} isAnalystRole={isAnalystRole}/>
               <ComplianceReportSummary
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
