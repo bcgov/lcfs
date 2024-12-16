@@ -88,7 +88,7 @@ const globals = {
     '--ag-header-column-resize-handle-height': '30%',
     '--ag-header-column-resize-handle-width': '2px',
     '--ag-header-column-resize-handle-color': '#dde2eb',
-    '--ag-material-accent-color': '#003366',
+    '--ag-material-accent-color': grey[700],
     '--ag-borders': `1px solid ${grey[700]}`,
     '--ag-border-color': grey[700],
     '--ag-odd-row-background-color': rgba(light.main, 0.6),

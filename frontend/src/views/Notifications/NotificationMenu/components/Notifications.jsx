@@ -18,6 +18,7 @@ export const Notifications = () => {
   const gridRef = useRef(null)
   const alertRef = useRef(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
+  const [selectedRowCount, setSelectedRowCount] = useState(0)
 
   // react query hooks
   const { refetch } = useGetNotificationMessages()
@@ -31,6 +32,14 @@ export const Notifications = () => {
     }),
     []
   )
+  const selectionColumnDef = useMemo(() => {
+    return {
+      sortable: false,
+      resizable: false,
+      suppressHeaderMenuButton: true,
+      headerTooltip: 'Checkboxes indicate selection'
+    }
+  }, [])
 
   // Consolidated mutation handler
   const handleMutation = useCallback(
@@ -121,28 +130,18 @@ export const Notifications = () => {
     [handleMutation, deleteMutation]
   )
 
-  // toggling selections effect
-  useEffect(() => {
+  const onSelectionChanged = useCallback(() => {
     const gridApi = gridRef.current?.api
-    if (gridApi) {
-      const selectionChangedHandler = () => {
-        const visibleRows = []
-        gridApi.forEachNodeAfterFilterAndSort((node) => {
-          visibleRows.push(node)
-        })
-        const selectedRows = visibleRows.filter((node) => node.isSelected())
-        setIsAllSelected(
-          visibleRows.length > 0 && visibleRows.length === selectedRows.length
-        )
-      }
-
-      gridApi.addEventListener('selectionChanged', selectionChangedHandler)
-
-      return () => {
-        gridApi.removeEventListener('selectionChanged', selectionChangedHandler)
-      }
-    }
-  }, [])
+    const visibleRows = []
+    gridApi.forEachNodeAfterFilterAndSort((node) => {
+      visibleRows.push(node)
+    })
+    const selectedRows = visibleRows.filter((node) => node.isSelected())
+    setSelectedRowCount(selectedRows.length)
+    setIsAllSelected(
+      visibleRows.length > 0 && visibleRows.length === selectedRows.length
+    )
+  },[])
 
   return (
     <Grid>
@@ -168,6 +167,7 @@ export const Notifications = () => {
           variant="contained"
           color="primary"
           onClick={handleMarkAsRead}
+          disabled={selectedRowCount === 0}
         >
           {t('notifications:buttonStack.markAsRead')}
         </BCButton>
@@ -176,6 +176,7 @@ export const Notifications = () => {
           variant="outlined"
           color="error"
           onClick={handleDelete}
+          disabled={selectedRowCount === 0}
         >
           {t('notifications:buttonStack.deleteSelected')}
         </BCButton>
@@ -196,6 +197,8 @@ export const Notifications = () => {
         rowSelection={{ mode: 'multiRow' }}
         rowClassRules={rowClassRules}
         onCellClicked={onCellClicked}
+        selectionColumnDef={selectionColumnDef}
+        onSelectionChanged={onSelectionChanged}
       />
     </Grid>
   )
