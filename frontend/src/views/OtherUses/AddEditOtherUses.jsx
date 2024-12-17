@@ -81,6 +81,23 @@ export const AddEditOtherUses = () => {
     return ciOfFuel
   }, [])
 
+  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
+    const value = field ? params.node?.data[field] : params;
+
+    if (field && params.colDef.field !== field) {
+      return true;
+    }
+
+    if (!validationFn(value)) {
+      alertRef.current?.triggerAlert({
+        message: errorMessage,
+        severity: 'error',
+      });
+      return false;
+    }
+    return true; // Proceed with the update
+  };
+
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
       return rows.map((row) => {
@@ -201,6 +218,21 @@ export const AddEditOtherUses = () => {
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
+
+      const isValid = validate(
+        params,
+        (value) => {
+          return value !== null && !isNaN(value) && value > 0;
+        },
+        'Quantity supplied must be greater than 0.',
+        alertRef,
+        'quantitySupplied',
+      );
+
+      if (!isValid) {
+        return
+      }
+
       params.data.complianceReportId = complianceReportId
       params.data.validationStatus = 'pending'
 

@@ -140,7 +140,7 @@ export const notionalTransferColDefs = (optionsData, errors) => [
       min: 0,
       showStepperButtons: false
     },
-    valueFormatter,
+    valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellStyle: (params) => StandardCellErrors(params, errors)
   }
 ]

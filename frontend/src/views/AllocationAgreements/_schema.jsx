@@ -435,7 +435,8 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.quantity'
     ),
-    valueFormatter,
+    editor: NumberEditor,
+    valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
