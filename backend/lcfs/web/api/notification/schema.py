@@ -7,7 +7,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 )
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.web.api.base import BaseSchema, NotificationTypeEnum, PaginationResponseSchema
-from pydantic import computed_field, field_validator
+from pydantic import computed_field, model_validator
 
 
 class OrganizationSchema(BaseSchema):
@@ -21,15 +21,18 @@ class UserProfileSchema(BaseSchema):
     organization_id: Optional[int] = None
     is_government: bool = False
 
-    @field_validator("is_government", mode="after")
-    def update_gov_profile(cls, value, info):
-        if info.data.get("is_government", True):
-            info.data.update({"first_name": "Government of B.C.", "last_name": ""})
-        return value
-    
+    @model_validator(mode="before")
+    def update_government_profile(cls, data):
+        if data.is_government:
+            data.first_name = "Government of B.C."
+            data.last_name = ""
+        return data
+
     @computed_field
     @property
     def full_name(self) -> str:
+        if self.is_government:
+            return "Government of B.C."
         return f"{self.first_name} {self.last_name}"
 
 
@@ -82,9 +85,11 @@ class DeleteSubscriptionSchema(BaseSchema):
 class DeleteNotificationChannelSubscriptionResponseSchema(BaseSchema):
     message: str
 
+
 class NotificationsSchema(BaseSchema):
     notifications: List[NotificationMessageSchema] = []
     pagination: PaginationResponseSchema = None
+
 
 class NotificationRequestSchema(BaseSchema):
     notification_types: List[NotificationTypeEnum]
@@ -134,7 +139,7 @@ TRANSFER_STATUS_NOTIFICATION_MAPPER = {
     ],
     TransferStatusEnum.Submitted: [
         NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
-        NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW
+        NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW,
     ],
     TransferStatusEnum.Recommended: [
         NotificationTypeEnum.IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION
@@ -149,7 +154,7 @@ TRANSFER_STATUS_NOTIFICATION_MAPPER = {
     ],
     "Return to analyst": [
         NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW
-    ]
+    ],
 }
 
 INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {

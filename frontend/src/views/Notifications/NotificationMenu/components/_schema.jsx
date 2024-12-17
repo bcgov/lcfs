@@ -76,7 +76,5 @@ export const routesMapping = (currentUser) => ({
   InitiativeAgreement: currentUser.isGovernmentUser
     ? ROUTES.INITIATIVE_AGREEMENT_VIEW
     : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
-  ComplianceReport: currentUser.isGovernmentUser
-    ? ROUTES.REPORTS_VIEW
-    : ROUTES.ORG_COMPLIANCE_REPORT_VIEW
+  ComplianceReport: ROUTES.REPORTS_VIEW
 })
