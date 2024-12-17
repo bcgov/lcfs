@@ -318,7 +318,7 @@ class TransactionRepository:
         transaction_action: TransactionActionEnum,
         compliance_units: int,
         organization_id: int,
-    ):
+    ) -> Transaction:
         """
         Creates and saves a new transaction to the database.
 
