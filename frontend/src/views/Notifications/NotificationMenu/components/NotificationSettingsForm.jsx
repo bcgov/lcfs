@@ -34,8 +34,8 @@ import BCTypography from '@/components/BCTypography'
 
 const NotificationSettingsForm = ({
   categories,
-  showEmailField,
-  initialEmail
+  showEmailField = false,
+  initialEmail = ''
 }) => {
   const { t } = useTranslation(['notifications'])
   const [isFormLoading, setIsFormLoading] = useState(false)
@@ -466,11 +466,6 @@ NotificationSettingsForm.propTypes = {
   categories: PropTypes.object.isRequired,
   showEmailField: PropTypes.bool,
   initialEmail: PropTypes.string
-}
-
-NotificationSettingsForm.defaultProps = {
-  showEmailField: false,
-  initialEmail: ''
 }
 
 export default NotificationSettingsForm

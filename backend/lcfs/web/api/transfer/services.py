@@ -1,3 +1,4 @@
+import json
 from lcfs.web.api.notification.schema import (
     TRANSFER_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -155,7 +156,6 @@ class TransferServices:
         # transfer.transfer_category_id = 1
 
         transfer.current_status = current_status
-        notifications = TRANSFER_STATUS_NOTIFICATION_MAPPER.get(current_status.status)
         if current_status.status == TransferStatusEnum.Sent:
             await self.sign_and_send_from_supplier(transfer)
 
@@ -166,7 +166,7 @@ class TransferServices:
             current_status.transfer_status_id,
             self.request.user.user_profile_id,
         )
-        await self._perform_notificaiton_call(notifications, transfer)
+        await self._perform_notificaiton_call(transfer, current_status.status)
         return transfer
 
     @service_handler
@@ -264,37 +264,67 @@ class TransferServices:
         # Finally, update the transfer's status and save the changes
         transfer.current_status = new_status
         transfer_result = await self.repo.update_transfer(transfer)
-        await self._perform_notificaiton_call(transfer_result)
+        await self._perform_notificaiton_call(
+            transfer,
+            status=(
+                new_status.status
+                if status_has_changed or re_recommended
+                else "Return to analyst"
+            ),
+        )
         return transfer_result
 
-    async def _perform_notificaiton_call(self, transfer):
+    async def _perform_notificaiton_call(
+        self, transfer: TransferSchema, status: TransferStatusEnum
+    ):
         """Send notifications based on the current status of the transfer."""
-        notifications = TRANSFER_STATUS_NOTIFICATION_MAPPER.get(
-            transfer.current_status.status
-        )
-        notification_data = NotificationMessageSchema(
-            message=f"Transfer {transfer.transfer_id} has been updated",
-            origin_user_profile_id=self.request.user.user_profile_id,
-        )
-        if notifications and isinstance(notifications, list):
-            notification_data.related_organization_id = (
-                transfer.from_organization_id
-                if transfer.current_status.status == TransferStatusEnum.Declined
-                else transfer.to_organization_id
+        notifications = TRANSFER_STATUS_NOTIFICATION_MAPPER.get(status)
+        status_val = (
+            status.value if isinstance(status, TransferStatusEnum) else status
+        ).lower()
+        organization_ids = []
+        if status in [
+            TransferStatusEnum.Submitted,
+            TransferStatusEnum.Recommended,
+            TransferStatusEnum.Declined,
+        ]:
+            organization_ids = [transfer.from_organization.organization_id]
+        elif status in [
+            TransferStatusEnum.Sent,
+            TransferStatusEnum.Rescinded,
+        ]:
+            organization_ids = [transfer.to_organization.organization_id]
+        elif status in [
+            TransferStatusEnum.Recorded,
+            TransferStatusEnum.Refused,
+        ]:
+            organization_ids = [
+                transfer.to_organization.organization_id,
+                transfer.from_organization.organization_id,
+            ]
+        message_data = {
+            "service": "Transfer",
+            "id": transfer.transfer_id,
+            "status": status_val,
+            "fromOrganizationId": transfer.from_organization.organization_id,
+            "fromOrganization": transfer.from_organization.name,
+            "toOrganizationId": transfer.to_organization.organization_id,
+            "toOrganization": transfer.to_organization.name,
+        }
+        type = f"Transfer {status_val}"
+        if status_val == "sent":
+            type = "Transfer received"
+        elif status_val == "return to analyst":
+            type = "Transfer returned"
+        for org_id in organization_ids:
+            notification_data = NotificationMessageSchema(
+                type=type,
+                transaction_id=transfer.from_transaction.transaction_id if getattr(transfer, 'from_transaction', None) else None,
+                message=json.dumps(message_data),
+                related_organization_id=org_id,
+                origin_user_profile_id=self.request.user.user_profile_id,
             )
-            await self.notfn_service.send_notification(
-                NotificationRequestSchema(
-                    notification_types=notifications,
-                    notification_data=notification_data,
-                )
-            )
-            if transfer.current_status.status in [
-                TransferStatusEnum.Refused,
-                TransferStatusEnum.Recorded,
-            ]:
-                notification_data.related_organization_id = (
-                    transfer.from_organization_id
-                )
+            if notifications and isinstance(notifications, list):
                 await self.notfn_service.send_notification(
                     NotificationRequestSchema(
                         notification_types=notifications,

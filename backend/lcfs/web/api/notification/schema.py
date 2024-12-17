@@ -126,10 +126,14 @@ TRANSFER_STATUS_NOTIFICATION_MAPPER = {
     TransferStatusEnum.Sent: [
         NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
     ],
+    TransferStatusEnum.Rescinded: [
+        NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
+    ],
     TransferStatusEnum.Declined: [
         NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
     ],
     TransferStatusEnum.Submitted: [
+        NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
         NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW
     ],
     TransferStatusEnum.Recommended: [
@@ -143,6 +147,9 @@ TRANSFER_STATUS_NOTIFICATION_MAPPER = {
         NotificationTypeEnum.BCEID__TRANSFER__DIRECTOR_DECISION,
         NotificationTypeEnum.IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED,
     ],
+    "Return to analyst": [
+        NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW
+    ]
 }
 
 INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {

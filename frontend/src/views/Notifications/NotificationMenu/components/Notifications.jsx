@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Stack, Grid } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -6,20 +7,23 @@ import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { columnDefs } from './_schema'
+import { columnDefs, routesMapping } from './_schema'
 import {
   useGetNotificationMessages,
   useMarkNotificationAsRead,
   useDeleteNotificationMessages
 } from '@/hooks/useNotifications'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const Notifications = () => {
-  const { t } = useTranslation(['notifications'])
   const gridRef = useRef(null)
   const alertRef = useRef(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
 
+  const { t } = useTranslation(['notifications'])
+  const navigate = useNavigate()
+  const { data: currentUser } = useCurrentUser()
   // react query hooks
   const { refetch } = useGetNotificationMessages()
   const markAsReadMutation = useMarkNotificationAsRead()
@@ -28,7 +32,7 @@ export const Notifications = () => {
   // row class rules for unread messages
   const rowClassRules = useMemo(
     () => ({
-      'row-not-read': (params) => !params.data.isRead
+      'unread-row': (params) => !params.data.isRead
     }),
     []
   )
@@ -54,10 +58,12 @@ export const Notifications = () => {
 
       mutation.mutate(selectedNotifications, {
         onSuccess: () => {
-          alertRef.current?.triggerAlert({
-            message: t(successMessage),
-            severity: 'success'
-          })
+          // eslint-disable-next-line chai-friendly/no-unused-expressions
+          successMessage &&
+            alertRef.current?.triggerAlert({
+              message: t(successMessage),
+              severity: 'success'
+            })
           refetch()
         },
         onError: (error) => {
@@ -113,6 +119,27 @@ export const Notifications = () => {
     }
   }, [handleMutation, deleteMutation])
 
+  const handleRowClicked = useCallback(
+    (params) => {
+      const { id, service, compliancePeriod } = JSON.parse(params.data.message)
+      // Select the appropriate route based on the notification type
+      const routeTemplate = routesMapping(currentUser)[service]
+
+      if (routeTemplate && params.event.target.dataset.action !== 'delete') {
+        navigate(
+          // replace any matching query params by chaining these replace methods
+          routeTemplate
+            .replace(':transactionId', id)
+            .replace(':transferId', id)
+            .replace(':compliancePeriod', compliancePeriod)
+            .replace(':complianceReportId', id)
+        )
+        handleMutation(markAsReadMutation, [params.data.notificationMessageId])
+      }
+    },
+    [currentUser, navigate]
+  )
+
   const onCellClicked = useCallback(
     (params) => {
       if (
@@ -141,7 +168,7 @@ export const Notifications = () => {
     setIsAllSelected(
       visibleRows.length > 0 && visibleRows.length === selectedRows.length
     )
-  },[])
+  }, [])
 
   return (
     <Grid>
@@ -185,7 +212,7 @@ export const Notifications = () => {
         gridKey="notifications-grid"
         gridRef={gridRef}
         alertRef={alertRef}
-        columnDefs={columnDefs(t)}
+        columnDefs={columnDefs(t, currentUser)}
         query={useGetNotificationMessages}
         dataKey="notifications"
         overlayNoRowsTemplate={t('notifications:noNotificationsFound')}
@@ -199,6 +226,7 @@ export const Notifications = () => {
         onCellClicked={onCellClicked}
         selectionColumnDef={selectionColumnDef}
         onSelectionChanged={onSelectionChanged}
+        onRowClicked={handleRowClicked}
       />
     </Grid>
   )

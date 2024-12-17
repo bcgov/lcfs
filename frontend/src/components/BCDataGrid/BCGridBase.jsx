@@ -34,7 +34,7 @@ export const BCGridBase = forwardRef(({ autoSizeStrategy, ...props }, ref) => {
         suppressMovableColumns
         suppressColumnMoveAnimation={false}
         reactiveCustomComponents
-        rowSelection="multiple"
+        rowSelection='multiple'
         suppressCsvExport={false}
         suppressPaginationPanel
         suppressScrollOnNewData

@@ -110,7 +110,7 @@ const globals = {
     border: 'none',
     borderBottom: '2px solid #495057'
   },
-  '.row-not-read': {
+  '.unread-row': {
     fontWeight: 700,
     color: grey[700]
   },
