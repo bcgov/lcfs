@@ -76,13 +76,13 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
     )
     mock_transfer_repo.create_transfer.return_value = transfer_data
 
-    # Patch the _perform_notificaiton_call method
-    with patch.object(transfer_service, "_perform_notificaiton_call", AsyncMock()):
+    # Patch the _perform_notification_call method
+    with patch.object(transfer_service, "_perform_notification_call", AsyncMock()):
         result = await transfer_service.create_transfer(transfer_data)
 
         assert result.transfer_id == transfer_id
         assert isinstance(result, TransferCreateSchema)
-        transfer_service._perform_notificaiton_call.assert_called_once()
+        transfer_service._perform_notification_call.assert_called_once()
 
 
 @pytest.mark.anyio
@@ -121,8 +121,8 @@ async def test_update_transfer_success(
     mock_transfer_repo.get_transfer_by_id.return_value = transfer
     mock_transfer_repo.update_transfer.return_value = transfer
 
-    # Replace _perform_notificaiton_call with an AsyncMock
-    transfer_service._perform_notificaiton_call = AsyncMock()
+    # Replace _perform_notification_call with an AsyncMock
+    transfer_service._perform_notification_call = AsyncMock()
 
     result = await transfer_service.update_transfer(transfer)
 
@@ -133,7 +133,7 @@ async def test_update_transfer_success(
     # Verify mocks
     mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
     mock_transfer_repo.update_transfer.assert_called_once_with(transfer)
-    transfer_service._perform_notificaiton_call.assert_awaited_once_with(
+    transfer_service._perform_notification_call.assert_awaited_once_with(
         transfer, status="Return to analyst"
     )
 
