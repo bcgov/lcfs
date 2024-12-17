@@ -7,7 +7,7 @@ import {
   useNavigate,
   useParams
 } from 'react-router-dom'
-import { roles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { TRANSACTIONS } from '@/constants/routes/routes'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
@@ -47,6 +47,7 @@ import { buttonClusterConfigFn } from './buttonConfigs'
 import { CategoryCheckbox } from './components/CategoryCheckbox'
 import { Recommendation } from './components/Recommendation'
 import SigningAuthority from './components/SigningAuthority'
+import InternalComments from '@/components/InternalComments'
 
 export const AddEditViewTransfer = () => {
   const queryClient = useQueryClient()
@@ -443,6 +444,22 @@ export const AddEditViewTransfer = () => {
                   <CategoryCheckbox />
                 </>
               )}
+
+            {/* Internal Comments */}
+            {!editorMode && (
+              <>
+                <Role roles={govRoles}>
+                  {transferId && (
+                    <BCBox py={2}>
+                      <InternalComments
+                        entityType="Transfer"
+                        entityId={transferId}
+                      />
+                    </BCBox>
+                  )}
+                </Role>
+              </>
+            )}
 
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
             {(!currentStatus ||
