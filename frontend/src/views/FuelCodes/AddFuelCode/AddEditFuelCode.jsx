@@ -97,7 +97,32 @@ const AddEditFuelCodeBase = () => {
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData, existingFuelCode, hasRoles])
+  }, [errors, optionsData, existingFuelCode])
+
+  useEffect(() => {
+    if (existingFuelCode) {
+      const transformedData = {
+        ...existingFuelCode,
+        feedstockFuelTransportMode: existingFuelCode.feedstockFuelTransportModes.map(
+          (mode) => mode.feedstockFuelTransportMode.transportMode
+        ),
+        finishedFuelTransportMode: existingFuelCode.finishedFuelTransportModes.map(
+          (mode) => mode.finishedFuelTransportMode.transportMode
+        )
+      }
+      setRowData([transformedData])
+    } else {
+      setRowData([
+        {
+          id: uuid(),
+          prefixId: 1,
+          fuelSuffix: optionsData?.fuelCodePrefixes?.find(
+            (item) => item.prefix === 'BCLCF'
+          ).nextFuelCode
+        }
+      ])
+    }
+  }, [optionsData, existingFuelCode, isGridReady])
 
   const onGridReady = (params) => {
     setGridReady(true)
