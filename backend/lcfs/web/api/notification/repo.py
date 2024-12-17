@@ -10,6 +10,8 @@ from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
     NotificationTypeEnum,
     PaginationRequestSchema,
+    apply_filter_conditions,
+    get_field_for_filter,
     validate_pagination,
 )
 import structlog
@@ -100,14 +102,18 @@ class NotificationRepository:
             filter_type = filter.filter_type
 
             # Handle date filters
-            if filter.filter_type == "date":
-                filter_value = []
-                if filter.date_from:
-                    filter_value.append(filter.date_from)
-                if filter.date_to:
-                    filter_value.append(filter.date_to)
-                if not filter_value:
-                    continue  # Skip if no valid date is provided
+            if filter.field == "date":
+                filter_value = filter.date_from
+                field = get_field_for_filter(NotificationMessage, 'create_date')
+            elif filter.field == 'user':
+                field = get_field_for_filter(NotificationMessage, 'related_user_profile.first_name')
+            else:
+                field = get_field_for_filter(NotificationMessage, filter.field)
+            conditions.append(
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type
+                )
+            )
 
         return conditions
 

@@ -16,6 +16,7 @@ export const columnDefs = (t, currentUser) => [
   {
     colId: 'date',
     field: 'date',
+    cellDataType: 'date',
     headerName: t('notifications:notificationColLabels.date'),
     valueGetter: (params) => params.data.createDate,
     valueFormatter: dateFormatter
