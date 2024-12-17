@@ -97,12 +97,13 @@ class ComplianceReportUpdateService:
         message_data = {
             "service": "ComplianceReport",
             "id": report.compliance_report_id,
+            "transactionId": report.transaction_id,
             "compliancePeriod": report.compliance_period.description,
             "status": status.lower(),
         }
         notification_data = NotificationMessageSchema(
             type=f"Compliance report {status.lower()}",
-            transaction_id=report.transaction_id,
+            related_transaction_id=f"CR{report.compliance_report_id}",
             message=json.dumps(message_data),
             related_organization_id=report.organization_id,
             origin_user_profile_id=self.request.user.user_profile_id,

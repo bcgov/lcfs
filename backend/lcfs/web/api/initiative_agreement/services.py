@@ -224,11 +224,12 @@ class InitiativeAgreementServices:
         message_data = {
             "service": "InitiativeAgreement",
             "id": ia.initiative_agreement_id,
+            "transactionId": ia.transaction_id,
             "status": status_val,
         }
         notification_data = NotificationMessageSchema(
             type=f"Initiative agreement {status_val}",
-            transaction_id=ia.transaction_id,
+            related_transaction_id=f"IA{ia.initiative_agreement_id}",
             message=json.dumps(message_data),
             related_organization_id=ia.to_organization_id,
             origin_user_profile_id=self.request.user.user_profile_id,

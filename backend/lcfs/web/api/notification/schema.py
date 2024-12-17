@@ -46,7 +46,7 @@ class NotificationMessageSchema(BaseSchema):
     message: Optional[str] = None
     related_organization_id: Optional[int] = None
     related_organization: Optional[NotificationOrganizationSchema] = None
-    transaction_id: Optional[int] = None
+    related_transaction_id: Optional[str] = None
     create_date: Optional[datetime] = None
     origin_user_profile_id: Optional[int] = None
     origin_user_profile: Optional[NotificationUserProfileSchema] = None
@@ -163,6 +163,7 @@ INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {
     ],
     InitiativeAgreementStatusEnum.Approved: [
         NotificationTypeEnum.BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL,
+        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST
     ],
     "Return to analyst": [
         NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST

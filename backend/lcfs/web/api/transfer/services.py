@@ -305,6 +305,7 @@ class TransferServices:
         message_data = {
             "service": "Transfer",
             "id": transfer.transfer_id,
+            "transactionId": transfer.from_transaction.transaction_id if getattr(transfer, 'from_transaction', None) else None,
             "status": status_val,
             "fromOrganizationId": transfer.from_organization.organization_id,
             "fromOrganization": transfer.from_organization.name,
@@ -319,7 +320,7 @@ class TransferServices:
         for org_id in organization_ids:
             notification_data = NotificationMessageSchema(
                 type=type,
-                transaction_id=transfer.from_transaction.transaction_id if getattr(transfer, 'from_transaction', None) else None,
+                related_transaction_id=f"CT{transfer.transfer_id}",
                 message=json.dumps(message_data),
                 related_organization_id=org_id,
                 origin_user_profile_id=self.request.user.user_profile_id,

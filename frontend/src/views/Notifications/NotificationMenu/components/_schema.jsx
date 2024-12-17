@@ -31,18 +31,7 @@ export const columnDefs = (t, currentUser) => [
     colId: 'transactionId',
     field: 'transactionId',
     headerName: t('notifications:notificationColLabels.transactionId'),
-    valueGetter: (params) => {
-      const { service, id } = JSON.parse(params.data.message)
-      if (service === 'Transfer') {
-        return `CT${id}`
-      } else if (service === 'InitiativeAgreement') {
-        return `IA${id}`
-      } else if (service === 'ComplianceReport') {
-        return `CR${id}`
-      } else {
-        return id
-      }
-    }
+    valueGetter: (params) => params.data.relatedTransactionId
   },
   {
     colId: 'organization',

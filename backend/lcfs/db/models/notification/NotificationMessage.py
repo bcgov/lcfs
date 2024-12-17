@@ -33,10 +33,9 @@ class NotificationMessage(BaseModel, Auditable):
     notification_type_id = Column(
         Integer, ForeignKey("notification_type.notification_type_id")
     )
-    transaction_id = Column(Integer, ForeignKey("transaction.transaction_id"), nullable=True)
+    related_transaction_id = Column(Text, nullable=False)
 
     # Relationships
-    related_transaction = relationship("Transaction")
     related_organization = relationship(
         "Organization", back_populates="notification_messages"
     )

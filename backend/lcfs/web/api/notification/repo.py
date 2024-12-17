@@ -5,6 +5,7 @@ from lcfs.db.models.notification import (
     NotificationType,
     ChannelEnum,
 )
+from lcfs.db.models.organization import Organization
 from lcfs.db.models.user import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
@@ -21,7 +22,7 @@ from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-from sqlalchemy import delete, or_, select, func, update
+from sqlalchemy import asc, delete, desc, or_, select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
@@ -104,16 +105,38 @@ class NotificationRepository:
             # Handle date filters
             if filter.field == "date":
                 filter_value = filter.date_from
-                field = get_field_for_filter(NotificationMessage, 'create_date')
-            elif filter.field == 'user':
-                field = get_field_for_filter(NotificationMessage, 'related_user_profile.first_name')
+                field = get_field_for_filter(NotificationMessage, "create_date")
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
+            elif filter.field == "user":
+                conditions.append(
+                    NotificationMessage.origin_user_profile.has(
+                        UserProfile.first_name.like(f"%{filter_value}%")
+                    )
+                )
+            elif filter.field == "organization":
+                conditions.append(
+                    NotificationMessage.related_organization.has(
+                        Organization.name.like(f"%{filter_value}%")
+                    )
+                )
+            elif filter.field == "transaction_id":
+                field = get_field_for_filter(NotificationMessage, 'related_transaction_id')
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
             else:
                 field = get_field_for_filter(NotificationMessage, filter.field)
-            conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
                 )
-            )
 
         return conditions
 
@@ -151,17 +174,25 @@ class NotificationRepository:
         )
 
         # Apply sorting
+        order_clauses = []
         if not pagination.sort_orders:
-            query = query.order_by(NotificationMessage.create_date.desc())
-        # for order in pagination.sort_orders:
-        #     direction = asc if order.direction == "asc" else desc
-        #     if order.field == "status":
-        #         field = getattr(FuelCodeStatus, "status")
-        #     elif order.field == "prefix":
-        #         field = getattr(FuelCodePrefix, "prefix")
-        #     else:
-        #         field = getattr(FuelCode, order.field)
-        #     query = query.order_by(direction(field))
+            order_clauses.append(desc(NotificationMessage.create_date))
+        else:
+            for order in pagination.sort_orders:
+                direction = asc if order.direction == "asc" else desc
+                if order.field == "date":
+                    field = NotificationMessage.create_date
+                elif order.field == "user":
+                    field = UserProfile.first_name
+                elif order.field == "organization":
+                    field = Organization.name
+                elif order.field == "transaction_id":
+                    field = NotificationMessage.related_transaction_id
+                else:
+                    field = getattr(NotificationMessage, order.field)
+                if field is not None:
+                    order_clauses.append(direction(field))
+        query = query.order_by(*order_clauses)
 
         # Execute the count query to get the total count
         count_query = query.with_only_columns(func.count()).order_by(None)
