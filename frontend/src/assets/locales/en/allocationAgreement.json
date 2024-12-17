@@ -3,6 +3,7 @@
   "noAllocationAgreementsFound": "No allocation agreements found",
   "addAllocationAgreementRowsTitle": "Allocation agreements (e.g., allocating responsibility for fuel)",
   "allocationAgreementSubtitle": "Enter allocation agreement details below",
+  "fuelCodeFieldRequiredError": "Error updating row: Fuel code field required",
   "allocationAgreementColLabels": {
     "transaction": "Responsibility",
     "transactionPartner": "Legal name of transaction partner",

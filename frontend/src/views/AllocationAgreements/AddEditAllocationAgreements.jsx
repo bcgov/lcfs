@@ -3,7 +3,6 @@ import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import {
@@ -176,6 +175,29 @@ export const AddEditAllocationAgreements = () => {
 
       if (updatedData.fuelType === 'Other') {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
+      }
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      if (isFuelCodeScenario && !updatedData.fuelCode) {
+        // Fuel code is required but not provided
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [params.node.data.id]: ['fuelCode']
+        }))
+
+        alertRef.current?.triggerAlert({
+          message: t('allocationAgreement:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+
+        params.node.updateData(updatedData)
+        return // Stop execution, do not proceed to save
       }
 
       try {

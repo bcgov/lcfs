@@ -14,7 +14,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import {
+  defaultColDef,
+  fuelSupplyColDefs,
+  PROVISION_APPROVED_FUEL_CODE
+} from './_schema'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -138,15 +142,6 @@ export const AddEditFuelSupplies = () => {
             'fuelCategory',
             fuelCategoryOptions[0] ?? null
           )
-
-          const fuelCodeOptions = selectedFuelType.fuelCodes.map(
-            (code) => code.fuelCode
-          )
-          params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
-          params.node.setDataValue(
-            'fuelCodeId',
-            selectedFuelType.fuelCodes[0]?.fuelCodeId ?? null
-          )
         }
       }
     },
@@ -171,6 +166,28 @@ export const AddEditFuelSupplies = () => {
       if (updatedData.fuelType === 'Other') {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
       }
+
+      const isFuelCodeScenario =
+        params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      if (isFuelCodeScenario && !params.node.data.fuelCode) {
+        // Set error on the row
+        setErrors({
+          [params.node.data.id]: ['fuelCode']
+        })
+
+        alertRef.current?.triggerAlert({
+          message: t('fuelSupply:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        // Update node data to reflect error state
+        params.node.updateData({
+          ...params.node.data,
+          validationStatus: 'error'
+        })
+        return // Stop saving further
+      }
+
       try {
         setErrors({})
         await saveRow(updatedData)

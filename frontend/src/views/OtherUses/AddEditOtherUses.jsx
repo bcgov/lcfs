@@ -1,5 +1,4 @@
-import { BCAlert2 } from '@/components/BCAlert'
-import BCButton from '@/components/BCButton'
+
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
 import {
@@ -8,12 +7,9 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
@@ -167,20 +163,39 @@ export const AddEditOtherUses = () => {
         const ciOfFuel = findCiOfFuel(params.data, optionsData)
         params.node.setDataValue('ciOfFuel', ciOfFuel)
 
-        // Auto-populate the "Unit" field based on the selected fuel type
-      if (params.colDef.field === 'fuelType') {
-        const fuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        );
-        if (fuelType && fuelType.units) {
-          params.node.setDataValue('units', fuelType.units);
-        } else {
-          params.node.setDataValue('units', '');
+        // Auto-populate fields based on the selected fuel type
+        if (params.colDef.field === 'fuelType') {
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          );
+          if (fuelType) {
+            // Auto-populate the "units" field
+            if (fuelType.units) {
+              params.node.setDataValue('units', fuelType.units);
+            } else {
+              params.node.setDataValue('units', '');
+            }
+
+            // Auto-populate the "fuelCategory" field
+            const fuelCategoryOptions = fuelType.fuelCategories.map(
+              (item) => item.category
+            );
+            params.node.setDataValue('fuelCategory', fuelCategoryOptions[0] ?? null);
+
+            // Auto-populate the "fuelCode" field
+            const fuelCodeOptions = fuelType.fuelCodes.map(
+              (code) => code.fuelCode
+            );
+            params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null);
+            params.node.setDataValue(
+              'fuelCodeId',
+              fuelType.fuelCodes[0]?.fuelCodeId ?? null
+            );
+          }
         }
       }
-      }
     },
-    [optionsData]
+    [optionsData, findCiOfFuel]
   )
 
   const onCellEditingStopped = useCallback(
@@ -196,6 +211,29 @@ export const AddEditOtherUses = () => {
 
       // clean up any null or empty string values
       let updatedData = cleanEmptyStringValues(params.data)
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      if (isFuelCodeScenario && !updatedData.fuelCode) {
+        // Fuel code is required but not provided
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [params.node.data.id]: ['fuelCode']
+        }))
+
+        alertRef.current?.triggerAlert({
+          message: t('otherUses:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+
+        params.node.updateData(updatedData)
+        return // Stop execution, do not proceed to save
+      }
 
       try {
         setErrors({})

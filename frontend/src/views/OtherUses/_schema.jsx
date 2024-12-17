@@ -23,7 +23,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     hide: true
   },
   {
-    field:'otherUsesId',
+    field: 'otherUsesId',
     hide: true
   },
   {
@@ -42,19 +42,32 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <BCTypography variant="body4">Select</BCTypography>,
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) => StandardCellErrors(params, errors),
+    valueSetter: (params) => {
+      if (params.newValue) {
+        // TODO: Evaluate if additional fields need to be reset when fuel type changes
+        params.data.fuelType = params.newValue
+        params.data.fuelCode = undefined
+      }
+      return true
+    }
   },
   {
     field: 'fuelCategory',
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: {
-      options: optionsData.fuelCategories.map((obj) => obj.category),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      );
+      return {
+        options: fuelType ? fuelType.fuelCategories.map((item) => item.category) : [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      };
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>
@@ -65,9 +78,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'provisionOfTheAct',
     headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'otherUses:otherUsesColLabels.provisionOfTheAct'
-    ),
+    headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
     cellEditor: 'agSelectCellEditor',
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
@@ -89,11 +100,11 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
-        params.data.provisionOfTheAct = params.newValue;
-        params.data.fuelCode = ''; // Reset fuelCode when provisionOfTheAct changes
-        return true;
+        params.data.provisionOfTheAct = params.newValue
+        params.data.fuelCode = '' // Reset fuelCode when provisionOfTheAct changes
+        return true
       }
-      return false;
+      return false
     },
     minWidth: 300,
     editable: true,
@@ -105,61 +116,91 @@ export const otherUsesColDefs = (optionsData, errors) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => {
-        const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
 
-        return {
-            options: fuelType?.fuelCodes?.map((item) => item.fuelCode) || [], // Safely access fuelCodes
-            multiple: false,
-            disableCloseOnSelect: false,
-            freeSolo: false,
-            openOnFocus: true
-        };
+      return {
+        options: fuelType?.fuelCodes?.map((item) => item.fuelCode) || [], // Safely access fuelCodes
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      }
     },
     cellRenderer: (params) => {
-      const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
       if (
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
         fuelType?.fuelCodes?.length > 0
       ) {
-        return params.value || <BCTypography variant="body4">Select</BCTypography>;
+        return (
+          params.value || <BCTypography variant="body4">Select</BCTypography>
+        )
       }
-      return null;
+      return null
     },
     cellStyle: (params) => {
-        const style = StandardCellErrors(params, errors);
-        const conditionalStyle =
-            params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
-            optionsData?.fuelTypes
-                ?.find((obj) => params.data.fuelType === obj.fuelType)
-                ?.fuelCodes?.length > 0
-                ? { backgroundColor: '#fff', borderColor: 'unset' }
-                : { backgroundColor: '#f2f2f2' };
-        return { ...style, ...conditionalStyle };
+      const style = StandardCellErrors(params, errors)
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const fuelCodes = fuelType?.fuelCodes || []
+      const fuelCodeRequiredAndMissing =
+        isFuelCodeScenario && !params.data.fuelCode
+
+      // If required and missing, show red border
+      if (fuelCodeRequiredAndMissing) {
+        style.borderColor = 'red'
+      }
+
+      const conditionalStyle =
+        isFuelCodeScenario &&
+        fuelCodes.length > 0 &&
+        !fuelCodeRequiredAndMissing
+          ? {
+              backgroundColor: '#fff',
+              borderColor: style.borderColor || 'unset'
+            }
+          : { backgroundColor: '#f2f2f2' }
+
+      return { ...style, ...conditionalStyle }
     },
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) => {
-      const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
       return (
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
         fuelType?.fuelCodes?.length > 0
-      );
+      )
     },
-    valueSetter: (params) => {
-        if (params.newValue) {
-            params.data.fuelCode = params.newValue;
+    valueGetter: (params) => {
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const fuelCodes = fuelType?.fuelCodes || []
 
-            const fuelType = optionsData?.fuelTypes?.find((obj) => params.data.fuelType === obj.fuelType);
-            if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-                const matchingFuelCode = fuelType?.fuelCodes?.find(
-                    (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
-                );
-                if (matchingFuelCode) {
-                    params.data.fuelCodeId = matchingFuelCode.fuelCodeId;
-                }
-            }
-        }
-        return true;
+      if (
+        isFuelCodeScenario &&
+        !params.data.fuelCode &&
+        fuelCodes.length === 1
+      ) {
+        // Autopopulate if only one fuel code is available
+        const singleFuelCode = fuelCodes[0]
+        params.data.fuelCode = singleFuelCode.fuelCode
+        params.data.fuelCodeId = singleFuelCode.fuelCodeId
+      }
+
+      return params.data.fuelCode
     },
     tooltipValueGetter: (p) => 'Select the approved fuel code'
   },
@@ -207,31 +248,31 @@ export const otherUsesColDefs = (optionsData, errors) => [
     valueGetter: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      );
+      )
 
       if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
         return (
           fuelType?.fuelCodes?.find(
             (item) => item.fuelCode === params.data.fuelCode
           )?.carbonIntensity || 0
-        );
+        )
       }
       if (fuelType) {
         if (params.data.fuelType === 'Other' && params.data.fuelCategory) {
-          const categories = fuelType.fuelCategories;
+          const categories = fuelType.fuelCategories
           const defaultCI = categories?.find(
             (cat) => cat.category === params.data.fuelCategory
-          )?.defaultAndPrescribedCi;
+          )?.defaultAndPrescribedCi
 
-          return defaultCI || 0;
+          return defaultCI || 0
         }
 
-        return fuelType.defaultCarbonIntensity || 0;
+        return fuelType.defaultCarbonIntensity || 0
       }
 
-      return 0;
+      return 0
     },
-    minWidth: 150,
+    minWidth: 150
   },
   {
     field: 'expectedUse',

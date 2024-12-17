@@ -32,5 +32,6 @@
   },
   "validateMsg": {
     "isRequired": "{{field}} is required"
-  }
+  },
+  "fuelCodeFieldRequiredError": "Error updating row: Fuel code field required"
 }
