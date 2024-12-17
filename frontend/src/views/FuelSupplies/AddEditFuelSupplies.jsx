@@ -83,10 +83,17 @@ export const AddEditFuelSupplies = () => {
           endUse: item.endUse?.type || 'Any',
           id: uuid()
         }))
-        setRowData(updatedRowData)
+        setRowData([...updatedRowData, { id: uuid() }])
       } else {
         setRowData([{ id: uuid() }])
       }
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'fuelType'
+        })
+      }, 100)
     },
     [data, complianceReportId, compliancePeriod]
   )

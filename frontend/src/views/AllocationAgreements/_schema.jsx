@@ -57,9 +57,13 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transaction'
     ),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
-      values: ['Allocated from', 'Allocated to']
+      options: ['Allocated from', 'Allocated to'],
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
     },
     cellRenderer: (params) =>
       params.value ||
@@ -431,7 +435,6 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.quantity'
     ),
-    editor: NumberEditor,
     valueFormatter,
     cellEditor: NumberEditor,
     cellEditorParams: {

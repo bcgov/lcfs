@@ -2,11 +2,23 @@ import { DatePicker } from '@mui/x-date-pickers'
 import { format, parseISO } from 'date-fns'
 import { useEffect, useRef, useState } from 'react'
 
-export const DateEditor = ({ value, onValueChange, minDate, maxDate }) => {
+export const DateEditor = ({
+  value,
+  onValueChange,
+  minDate,
+  maxDate,
+  rowIndex,
+  api,
+  autoOpenLastRow
+}) => {
   const [selectedDate, setSelectedDate] = useState(
     value ? parseISO(value) : null
   )
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(() => {
+    if (!autoOpenLastRow) return false
+    const lastRowIndex = api.getLastDisplayedRowIndex()
+    return rowIndex === lastRowIndex
+  })
   const containerRef = useRef(null)
 
   useEffect(() => {

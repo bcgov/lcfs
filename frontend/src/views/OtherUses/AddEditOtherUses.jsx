@@ -98,7 +98,10 @@ export const AddEditOtherUses = () => {
 
     if (otherUses && otherUses.length > 0) {
       try {
-        setRowData(ensureRowIds(otherUses))
+        setRowData([
+          ...ensureRowIds(otherUses),
+          { id: uuid(), complianceReportId }
+        ])
       } catch (error) {
         alertRef.triggerAlert({
           message: t('otherUses:otherUsesLoadFailMsg'),
@@ -112,6 +115,15 @@ export const AddEditOtherUses = () => {
     }
 
     params.api.sizeColumnsToFit()
+
+    setTimeout(() => {
+      const lastRowIndex = params.api.getLastDisplayedRowIndex()
+
+      params.api.startEditingCell({
+        rowIndex: lastRowIndex,
+        colKey: 'fuelType'
+      })
+    }, 100)
   }
 
   const onAction = async (action, params) => {

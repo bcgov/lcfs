@@ -64,7 +64,13 @@ export const AddEditNotionalTransfers = () => {
 
     if (notionalTransfers && notionalTransfers.length > 0) {
       try {
-        setRowData(ensureRowIds(notionalTransfers))
+        setRowData([
+          ...ensureRowIds(notionalTransfers),
+          {
+            id: uuid(),
+            complianceReportId
+          }
+        ])
       } catch (error) {
         alertRef.triggerAlert({
           message: t('notionalTransfer:LoadFailMsg'),
@@ -78,6 +84,14 @@ export const AddEditNotionalTransfers = () => {
     }
 
     params.api.sizeColumnsToFit()
+
+    setTimeout(() => {
+      const lastRowIndex = params.api.getLastDisplayedRowIndex()
+      params.api.startEditingCell({
+        rowIndex: lastRowIndex,
+        colKey: 'legalName'
+      })
+    }, 100)
   }
 
   const onCellEditingStopped = useCallback(
