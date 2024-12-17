@@ -447,18 +447,16 @@ export const AddEditViewTransfer = () => {
 
             {/* Internal Comments */}
             {!editorMode && (
-              <>
-                <Role roles={govRoles}>
-                  {transferId && (
-                    <BCBox py={2}>
-                      <InternalComments
-                        entityType="Transfer"
-                        entityId={transferId}
-                      />
-                    </BCBox>
-                  )}
-                </Role>
-              </>
+              <Role roles={govRoles}>
+                {transferId && (
+                  <BCBox py={2}>
+                    <InternalComments
+                      entityType="Transfer"
+                      entityId={transferId}
+                    />
+                  </BCBox>
+                )}
+              </Role>
             )}
 
             {/* Signing Authority Confirmation show it to FromOrg user when in draft and ToOrg when in Sent status */}
