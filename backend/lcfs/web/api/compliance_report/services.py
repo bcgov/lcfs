@@ -27,10 +27,7 @@ logger = structlog.get_logger(__name__)
 
 
 class ComplianceReportServices:
-    def __init__(
-        self, request: Request = None, repo: ComplianceReportRepository = Depends()
-    ) -> None:
-        self.request = request
+    def __init__(self, repo: ComplianceReportRepository = Depends()) -> None:
         self.repo = repo
 
     @service_handler
@@ -41,7 +38,10 @@ class ComplianceReportServices:
 
     @service_handler
     async def create_compliance_report(
-        self, organization_id: int, report_data: ComplianceReportCreateSchema
+        self,
+        organization_id: int,
+        report_data: ComplianceReportCreateSchema,
+        user: UserProfile,
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
         period = await self.repo.get_compliance_period(report_data.compliance_period)
@@ -52,8 +52,7 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(
-                f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -65,15 +64,17 @@ class ComplianceReportServices:
             reporting_frequency=ReportingFrequency.ANNUAL,
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
             version=0,  # Start with version 0
-            nickname="Original Report",
+            nickname=report_data.nickname or "Original Report",
             summary=ComplianceReportSummary(),  # Create an empty summary object
+            legacy_id=report_data.legacy_id,
+            create_user=user.keycloak_username,
         )
 
         # Add the new compliance report
-        report = await self.repo.add_compliance_report(report)
+        report = await self.repo.create_compliance_report(report)
 
         # Create the history record
-        await self.repo.add_compliance_report_history(report, self.request.user)
+        await self.repo.add_compliance_report_history(report, user)
 
         return ComplianceReportBaseSchema.model_validate(report)
 
@@ -137,7 +138,7 @@ class ComplianceReportServices:
         )
 
         # Add the new supplemental report
-        new_report = await self.repo.add_compliance_report(new_report)
+        new_report = await self.repo.create_compliance_report(new_report)
 
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
@@ -228,8 +229,7 @@ class ComplianceReportServices:
 
             if apply_masking:
                 # Apply masking to each report in the chain
-                masked_chain = self._mask_report_status(
-                    compliance_report_chain)
+                masked_chain = self._mask_report_status(compliance_report_chain)
                 # Apply history masking to each report in the chain
                 masked_chain = [
                     self._mask_report_status_for_history(report, apply_masking)
