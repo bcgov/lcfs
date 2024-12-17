@@ -5,16 +5,18 @@ import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { ROUTES } from '@/constants/routes'
 
 export const NotionalTransferSummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { complianceReportId } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   const { t } = useTranslation(['common', 'notionalTransfers'])
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -31,6 +33,16 @@ export const NotionalTransferSummary = ({ data }) => {
     }),
     []
   )
+
+  const handleRowClicked = (params) => {
+    console.log('Row clicked', params)
+    navigate(
+      ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }
 
   const columns = [
     {
@@ -90,6 +102,8 @@ export const NotionalTransferSummary = ({ data }) => {
           }}
           enableCellTextSelection
           ensureDomOrder
+          handleRo
+          onRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>
