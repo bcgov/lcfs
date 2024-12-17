@@ -193,6 +193,15 @@ try {
         def internalCommentsJson = internalComments ? jsonSlurper.parseText(internalComments) : []
         def creditTradeHistoryJson = creditTradeHistory ? jsonSlurper.parseText(creditTradeHistory) : []
 
+        // First, determine if the transfer already exists
+        def transferIdFromSource = resultSet.getInt('transfer_id')
+        if (transferExists(destinationConn, transferIdFromSource)) {
+            log.warn("Duplicate transfer detected with transfer_id: ${transferIdFromSource}, skipping insertion.")
+            // Since this transfer already exists, do not insert transactions or history again.
+            continue
+        }
+
+        // Only if transfer does not exist, proceed to create transactions and then insert the transfer.
         def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
                 resultSet,
                 statements.transactionStmt)
@@ -205,7 +214,7 @@ try {
             processInternalComments(transferId, internalCommentsJson, statements.internalCommentStmt,
                     statements.transferInternalCommentStmt)
         } else {
-            log.warn("Transfer not inserted for record: ${resultSet.getInt('transfer_id')}")
+            log.warn("Transfer not inserted for record: ${transferIdFromSource}")
         }
     }
     resultSet.close()
@@ -344,19 +353,24 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
         case ['Draft', 'Deleted', 'Refused', 'Declined', 'Rescinded']:
             break
         case ['Sent', 'Submitted', 'Recommended']:
-            fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'))
+            fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true)
             break
         case 'Recorded':
-            fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'))
-            toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'))
+            fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true)
+            toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false)
             break
     }
 
     return [fromTransactionId, toTransactionId]
 }
 
-def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int orgId) {
-    stmt.setInt(1, rs.getInt('quantity'))
+def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int orgId, boolean isDebit) {
+    def quantity = rs.getInt('quantity')
+    if (isDebit) {
+        quantity *= -1 // Make the transaction negative for the sender
+    }
+
+    stmt.setInt(1, quantity)
     stmt.setInt(2, orgId)
     stmt.setString(3, action)
     stmt.setDate(4, rs.getDate('transaction_effective_date') ?: rs.getDate('agreement_date'))
@@ -365,6 +379,18 @@ def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int o
 
     def result = stmt.executeQuery()
     return result.next() ? result.getInt('transaction_id') : null
+}
+
+def transferExists(Connection conn, int transferId) {
+    def duplicateCheckStmt = conn.prepareStatement('SELECT COUNT(*) FROM transfer WHERE transfer_id = ?')
+    duplicateCheckStmt.setInt(1, transferId)
+    def duplicateResult = duplicateCheckStmt.executeQuery()
+    duplicateResult.next()
+    def count = duplicateResult.getInt(1)
+    duplicateResult.close()
+    duplicateCheckStmt.close()
+
+    return count > 0
 }
 
 def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
