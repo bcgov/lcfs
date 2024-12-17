@@ -13,7 +13,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelExportColDefs } from './_schema'
+import {
+  defaultColDef,
+  fuelExportColDefs,
+  PROVISION_APPROVED_FUEL_CODE
+} from './_schema'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -143,7 +147,33 @@ export const AddEditFuelExports = () => {
           acc[key] = value
           return acc
         }, {})
+
       updatedData.compliancePeriod = compliancePeriod
+
+      // Local validation before saving
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+
+      if (isFuelCodeScenario && !updatedData.fuelCode) {
+        // Fuel code is required but not provided
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [params.node.data.id]: ['fuelCode']
+        }))
+
+        alertRef.current?.triggerAlert({
+          message: t('fuelExport:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+        params.node.updateData(updatedData)
+        return // Don't proceed with save
+      }
+
       try {
         setErrors({})
         await saveRow(updatedData)
@@ -189,7 +219,7 @@ export const AddEditFuelExports = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, compliancePeriod]
   )
 
   const onAction = async (action, params) => {
