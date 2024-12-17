@@ -196,6 +196,7 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         params.data.units = fuelType?.units
         params.data.unrecognized = fuelType?.unrecognized
         params.data.provisionOfTheAct = null
+        params.data.fuelCode = undefined
       }
       return true
     },
@@ -302,16 +303,85 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
     }),
     cellStyle: (params) => {
       const style = StandardCellErrors(params, errors)
-      const conditionalStyle =
+      const isFuelCodeScenario =
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-          ? { backgroundColor: '#fff', borderColor: 'unset' }
-          : { backgroundColor: '#f2f2f2' }
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const fuelCodes = fuelType?.fuelCodes || []
+      const fuelCodeRequiredAndMissing =
+        isFuelCodeScenario && !params.data.fuelCode
+
+      let conditionalStyle = {}
+
+      // If required and missing, show red border and white background
+      if (fuelCodeRequiredAndMissing) {
+        style.borderColor = 'red'
+        style.backgroundColor = '#fff'
+      } else {
+        // Apply conditional styling if not missing
+        conditionalStyle =
+          isFuelCodeScenario && fuelCodes.length > 0
+            ? {
+                backgroundColor: '#fff',
+                borderColor: style.borderColor || 'unset'
+              }
+            : { backgroundColor: '#f2f2f2' }
+      }
+
       return { ...style, ...conditionalStyle }
     },
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) =>
-      params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE,
+      params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+      optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )?.fuelCodes?.length > 0,
+    valueGetter: (params) => {
+      const fuelTypeObj = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      if (!fuelTypeObj) return params.data.fuelCode
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const fuelCodes =
+        fuelTypeObj.fuelCodes?.map((item) => item.fuelCode) || []
+
+      if (isFuelCodeScenario && !params.data.fuelCode) {
+        // Autopopulate if only one fuel code is available
+        if (fuelCodes.length === 1) {
+          const singleFuelCode = fuelTypeObj.fuelCodes[0]
+          params.data.fuelCode = singleFuelCode.fuelCode
+          params.data.fuelCodeId = singleFuelCode.fuelCodeId
+        }
+      }
+
+      return params.data.fuelCode
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.fuelCode = params.newValue
+
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          const matchingFuelCode = fuelType?.fuelCodes?.find(
+            (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
+          )
+          if (matchingFuelCode) {
+            params.data.fuelCodeId = matchingFuelCode.fuelCodeId
+          }
+        }
+      } else {
+        // If user clears the value
+        params.data.fuelCode = undefined
+        params.data.fuelCodeId = undefined
+      }
+      return true
+    },
     tooltipValueGetter: (p) => 'Select the approved fuel code'
   },
   {
