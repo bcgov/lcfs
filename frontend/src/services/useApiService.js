@@ -6,7 +6,7 @@ import { useSnackbar } from 'notistack'
 
 export const useApiService = (opts = {}) => {
   const { keycloak } = useKeycloak()
-  const { enqueueSnackbar, closeSnackbar } = useSnackbar()
+  const { enqueueSnackbar } = useSnackbar()
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
