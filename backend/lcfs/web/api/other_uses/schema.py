@@ -40,12 +40,19 @@ class ExpectedUseTypeSchema(BaseSchema):
     description: Optional[str] = None
 
 
+class FuelCategorySchema(BaseSchema):
+    fuel_category_id: int
+    category: str
+    description: Optional[str] = None
+
+
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: Optional[bool] = None
     provision_1_id: Optional[int] = None
     provision_2_id: Optional[int] = None
+    fuel_categories: List[FuelCategorySchema]
     default_carbon_intensity: Optional[float] = None
     fuel_codes: Optional[List[FuelCodeSchema]] = []
     provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = []

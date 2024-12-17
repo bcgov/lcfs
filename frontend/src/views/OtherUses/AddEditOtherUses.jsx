@@ -151,20 +151,39 @@ export const AddEditOtherUses = () => {
         const ciOfFuel = findCiOfFuel(params.data, optionsData)
         params.node.setDataValue('ciOfFuel', ciOfFuel)
 
-        // Auto-populate the "Unit" field based on the selected fuel type
-      if (params.colDef.field === 'fuelType') {
-        const fuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        );
-        if (fuelType && fuelType.units) {
-          params.node.setDataValue('units', fuelType.units);
-        } else {
-          params.node.setDataValue('units', '');
+        // Auto-populate fields based on the selected fuel type
+        if (params.colDef.field === 'fuelType') {
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          );
+          if (fuelType) {
+            // Auto-populate the "units" field
+            if (fuelType.units) {
+              params.node.setDataValue('units', fuelType.units);
+            } else {
+              params.node.setDataValue('units', '');
+            }
+
+            // Auto-populate the "fuelCategory" field
+            const fuelCategoryOptions = fuelType.fuelCategories.map(
+              (item) => item.category
+            );
+            params.node.setDataValue('fuelCategory', fuelCategoryOptions[0] ?? null);
+
+            // Auto-populate the "fuelCode" field
+            const fuelCodeOptions = fuelType.fuelCodes.map(
+              (code) => code.fuelCode
+            );
+            params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null);
+            params.node.setDataValue(
+              'fuelCodeId',
+              fuelType.fuelCodes[0]?.fuelCodeId ?? null
+            );
+          }
         }
       }
-      }
     },
-    [optionsData]
+    [optionsData, findCiOfFuel]
   )
 
   const onCellEditingStopped = useCallback(
