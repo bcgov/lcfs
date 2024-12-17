@@ -79,13 +79,22 @@ export const AddEditAllocationAgreements = () => {
           ...item,
           id: item.id || uuid() // Ensure every item has a unique ID
         }))
-        setRowData(updatedRowData)
+        setRowData([...updatedRowData, { id: uuid() }])
       } else {
         // If allocationAgreements is not available or empty, initialize with a single row
         setRowData([{ id: uuid() }])
       }
 
       params.api.sizeColumnsToFit()
+
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.setFocusedCell(lastRowIndex, 'allocationTransactionType')
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'allocationTransactionType'
+        })
+      }, 100)
     },
     [data]
   )
