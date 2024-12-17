@@ -44,6 +44,11 @@ export const Notifications = () => {
       headerTooltip: 'Checkboxes indicate selection'
     }
   }, [])
+  const rowSelection = useMemo(() => {
+    return {
+      mode: 'multiRow'
+    }
+  }, [])
 
   // Consolidated mutation handler
   const handleMutation = useCallback(
@@ -221,7 +226,7 @@ export const Notifications = () => {
           defaultMinWidth: 50,
           defaultMaxWidth: 600
         }}
-        rowSelection={{ mode: 'multiRow' }}
+        rowSelection={rowSelection}
         rowClassRules={rowClassRules}
         onCellClicked={onCellClicked}
         selectionColumnDef={selectionColumnDef}
