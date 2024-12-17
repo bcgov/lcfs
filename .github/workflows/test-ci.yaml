@@ -26,7 +26,7 @@ jobs:
         id: cache
         uses: actions/cache@v4.2.0
         with:
-          path: /usr/local/bin/oc  # Path where the `oc` binary will be installed
+          path: /usr/local/bin/oc # Path where the `oc` binary will be installed
           key: oc-cli-${{ runner.os }}
 
       - name: Install OpenShift CLI (if not cached)
@@ -122,6 +122,12 @@ jobs:
           LCFS_REDIS_PORT: 6379
           LCFS_REDIS_PASSWORD: development_only
           APP_ENVIRONMENT: dev
+          LCFS_CHES_CLIENT_ID: mock_client_id
+          LCFS_CHES_CLIENT_SECRET: mock_client_secret
+          LCFS_CHES_AUTH_URL: http://mock_auth_url
+          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+          LCFS_CHES_SENDER_NAME: Mock Notification System
+          LCFS_CHES_EMAIL_URL: http://mock_email_url
 
       - name: Run frontend tests
         id: frontend_tests
