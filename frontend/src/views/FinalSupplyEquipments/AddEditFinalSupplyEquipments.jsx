@@ -282,10 +282,18 @@ export const AddEditFinalSupplyEquipments = () => {
           <BCTypography
             variant="body4"
             color="primary"
-            sx={{ marginY: '2rem' }}
+            sx={{ marginTop: '2rem' }}
             component="div"
           >
             {t('finalSupplyEquipment:fseSubtitle')}
+          </BCTypography>
+          <BCTypography
+            variant="body4"
+            color="primary"
+            sx={{ marginBottom: '2rem', marginTop: '1rem' }}
+            component="div"
+          >
+            {t('finalSupplyEquipment:reportingResponsibilityInfo')}
           </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
