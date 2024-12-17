@@ -49,12 +49,17 @@ export const otherUsesColDefs = (optionsData, errors) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
     headerComponent: RequiredHeader,
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: {
-      options: optionsData.fuelCategories.map((obj) => obj.category),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      );
+      return {
+        options: fuelType ? fuelType.fuelCategories.map((item) => item.category) : [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      };
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>

@@ -24,6 +24,7 @@ export const actions = (props) => ({
   cellRendererParams: props,
   pinned: 'left',
   maxWidth: 110,
+  minWidth: 90,
   editable: false,
   suppressKeyboardEvent,
   filter: false,
