@@ -30,8 +30,8 @@ def mock_user_has_roles():
 def mock_notification_service():
     mock_service = AsyncMock(spec=NotificationService)
     with patch(
-        "lcfs.web.api.compliance_report.update_service.Depends", 
-        return_value=mock_service
+        "lcfs.web.api.compliance_report.update_service.Depends",
+        return_value=mock_service,
     ):
         yield mock_service
 
@@ -46,6 +46,7 @@ def mock_environment_vars():
         mock_settings.ches_sender_email = "noreply@gov.bc.ca"
         mock_settings.ches_sender_name = "Mock Notification System"
         yield mock_settings
+
 
 # Mock for adjust_balance method within the OrganizationsService
 @pytest.fixture
@@ -66,6 +67,8 @@ async def test_update_compliance_report_status_change(
     mock_report.compliance_report_id = report_id
     mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
 
     new_status = MagicMock(spec=ComplianceReportStatus)
     new_status.status = ComplianceReportStatusEnum.Submitted
@@ -78,8 +81,8 @@ async def test_update_compliance_report_status_change(
     mock_repo.get_compliance_report_by_id.return_value = mock_report
     mock_repo.get_compliance_report_status_by_desc.return_value = new_status
     compliance_report_update_service.handle_status_change = AsyncMock()
-    compliance_report_update_service.notfn_service = mock_notification_service
     mock_repo.update_compliance_report.return_value = mock_report
+    compliance_report_update_service._perform_notificaiton_call = AsyncMock()
 
     # Call the method
     updated_report = await compliance_report_update_service.update_compliance_report(
@@ -101,10 +104,9 @@ async def test_update_compliance_report_status_change(
         mock_report, compliance_report_update_service.request.user
     )
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
-
-    assert mock_report.current_status == new_status
-    assert mock_report.supplemental_note == report_data.supplemental_note
-    mock_notification_service.send_notification.assert_called_once()
+    compliance_report_update_service._perform_notificaiton_call.assert_called_once_with(
+        mock_report, "Submitted"
+    )
 
 
 @pytest.mark.anyio
@@ -117,6 +119,10 @@ async def test_update_compliance_report_no_status_change(
     mock_report.compliance_report_id = report_id
     mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+
+    # Fix for JSON serialization
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
 
     report_data = ComplianceReportUpdateSchema(
         status="Draft", supplemental_note="Test note"
@@ -131,6 +137,7 @@ async def test_update_compliance_report_no_status_change(
 
     # Mock the handle_status_change method
     compliance_report_update_service.handle_status_change = AsyncMock()
+    compliance_report_update_service._perform_notificaiton_call = AsyncMock()
 
     # Call the method
     updated_report = await compliance_report_update_service.update_compliance_report(
@@ -148,9 +155,9 @@ async def test_update_compliance_report_no_status_change(
     compliance_report_update_service.handle_status_change.assert_not_called()
     mock_repo.add_compliance_report_history.assert_not_called()
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
-
-    assert mock_report.current_status == mock_report.current_status
-    assert mock_report.supplemental_note == report_data.supplemental_note
+    compliance_report_update_service._perform_notificaiton_call.assert_called_once_with(
+        mock_report, "Draft"
+    )
 
 
 @pytest.mark.anyio

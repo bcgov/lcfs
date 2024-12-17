@@ -88,13 +88,22 @@ async def test_get_initiative_agreement(service, mock_repo):
 
 
 @pytest.mark.anyio
+@pytest.mark.anyio
 async def test_create_initiative_agreement(service, mock_repo, mock_request):
+    # Mock status for the initiative agreement
     mock_status = MagicMock(status=InitiativeAgreementStatusEnum.Recommended)
     mock_repo.get_initiative_agreement_status_by_name.return_value = mock_status
-    mock_repo.create_initiative_agreement.return_value = MagicMock(
-        spec=InitiativeAgreement
-    )
 
+    # Create a mock initiative agreement with serializable fields
+    mock_initiative_agreement = MagicMock(spec=InitiativeAgreement)
+    mock_initiative_agreement.initiative_agreement_id = 1
+    mock_initiative_agreement.current_status.status = "Recommended"
+    mock_initiative_agreement.to_organization_id = 3
+
+    # Mock return value of create_initiative_agreement
+    mock_repo.create_initiative_agreement.return_value = mock_initiative_agreement
+
+    # Create input data
     create_data = InitiativeAgreementCreateSchema(
         compliance_units=150,
         current_status="Recommended",
@@ -104,10 +113,18 @@ async def test_create_initiative_agreement(service, mock_repo, mock_request):
         internal_comment=None,
     )
 
+    # Mock _perform_notificaiton_call to isolate it
+    service._perform_notificaiton_call = AsyncMock()
+
+    # Call the service method
     result = await service.create_initiative_agreement(create_data)
 
-    assert isinstance(result, InitiativeAgreement)
+    # Assertions
+    assert result == mock_initiative_agreement
     mock_repo.create_initiative_agreement.assert_called_once()
+    service._perform_notificaiton_call.assert_called_once_with(
+        mock_initiative_agreement
+    )
 
 
 @pytest.mark.anyio
