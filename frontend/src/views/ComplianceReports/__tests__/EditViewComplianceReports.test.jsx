@@ -2,9 +2,9 @@ import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditViewComplianceReport } from '../EditViewComplianceReport'
-import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import * as useOrganizationHook from '@/hooks/useOrganization'
+import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { wrapper } from '@/tests/utils/wrapper'
 
@@ -89,17 +89,17 @@ describe('EditViewComplianceReport', () => {
         isLoading: false,
         hasRoles: mockHasRoles
       },
-      complianceReport: {
-        data: {
-          report: {
-            organizationId: '123',
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
-          },
-          chain: []
+      reportData: {
+        report: {
+          organizationId: '123',
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+          history: [],
+          nickname: 'Test Report'
         },
-        isLoading: false,
-        isError: false
+        chain: []
       },
+      isError: false,
+      error: null,
       organization: {
         data: {
           name: 'Test Org',
@@ -117,10 +117,6 @@ describe('EditViewComplianceReport', () => {
           }
         },
         isLoading: false
-      },
-      createSupplementalReport: {
-        mutate: vi.fn(),
-        isLoading: false
       }
     }
 
@@ -131,9 +127,6 @@ describe('EditViewComplianceReport', () => {
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue(
       mocks.currentUser
     )
-    vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue(
-      mocks.complianceReport
-    )
     vi.mocked(useOrganizationHook.useOrganization).mockReturnValue(
       mocks.organization
     )
@@ -142,23 +135,43 @@ describe('EditViewComplianceReport', () => {
     ).mockReturnValue({ mutate: vi.fn() })
     vi.mocked(
       useComplianceReportsHook.useCreateSupplementalReport
-    ).mockReturnValue(mocks.createSupplementalReport)
+    ).mockReturnValue({
+      mutate: vi.fn(),
+      isLoading: false
+    })
+
+    return mocks
   }
 
   beforeEach(() => {
     vi.resetAllMocks()
-    setupMocks()
   })
 
   it('renders the component', async () => {
-    render(<EditViewComplianceReport />, { wrapper })
+    const mocks = setupMocks()
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText(/2023.*complianceReport/i)).toBeInTheDocument()
     })
   })
 
   it('renders report components', async () => {
-    render(<EditViewComplianceReport />, { wrapper })
+    const mocks = setupMocks()
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText('Report Details')).toBeInTheDocument()
       expect(screen.getByText('Compliance Report Summary')).toBeInTheDocument()
@@ -167,44 +180,61 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays an alert message when location state has a message', async () => {
-    setupMocks({
+    const mocks = setupMocks({
       useLocation: { state: { message: 'Test alert', severity: 'success' } }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText('Test alert')).toBeInTheDocument()
     })
   })
 
   it('displays an error message when there is an error fetching the report', async () => {
-    setupMocks({
-      complianceReport: {
-        isError: true,
-        error: { message: 'Error fetching report' }
-      }
+    const mocks = setupMocks({
+      isError: true,
+      error: { message: 'Error fetching report' }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText('Error fetching report')).toBeInTheDocument()
     })
   })
 
   it('displays the correct buttons for Submitted status with Analyst role', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          report: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
-          },
-          chain: []
-        }
+    const mocks = setupMocks({
+      reportData: {
+        report: {
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        },
+        chain: []
       },
       currentUser: {
         data: { isGovernmentUser: true },
         hasRoles: (role) => role === 'Analyst'
       }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.recommendReportAnalystBtn')
@@ -213,23 +243,28 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays the correct buttons for Recommended by Analyst status with Compliance Manager role', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          report: {
-            currentStatus: {
-              status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
-            }
-          },
-          chain: []
-        }
+    const mocks = setupMocks({
+      reportData: {
+        report: {
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+          }
+        },
+        chain: []
       },
       currentUser: {
         data: { isGovernmentUser: true },
         hasRoles: (role) => role === 'Compliance Manager'
       }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.recommendReportManagerBtn')
@@ -241,23 +276,28 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays the correct buttons for Recommended by Manager status with Director role', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          report: {
-            currentStatus: {
-              status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
-            }
-          },
-          chain: []
-        }
+    const mocks = setupMocks({
+      reportData: {
+        report: {
+          currentStatus: {
+            status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+          }
+        },
+        chain: []
       },
       currentUser: {
         data: { isGovernmentUser: true },
         hasRoles: (role) => role === 'Director'
       }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.assessReportBtn')
@@ -269,21 +309,26 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays the correct buttons for Assessed status with Analyst role', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          report: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-          },
-          chain: []
-        }
+    const mocks = setupMocks({
+      reportData: {
+        report: {
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+        },
+        chain: []
       },
       currentUser: {
         data: { isGovernmentUser: true },
         hasRoles: (role) => role === 'Analyst'
       }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.reAssessReportBtn')
@@ -292,18 +337,23 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('does not display action buttons for non-government users on submitted reports', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          report: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
-          },
-          chain: []
-        }
+    const mocks = setupMocks({
+      reportData: {
+        report: {
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        },
+        chain: []
       },
       currentUser: { data: { isGovernmentUser: false }, hasRoles: () => false }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(
         screen.queryByText('report:actionBtns.recommendReportAnalystBtn')
@@ -321,20 +371,34 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays internal comments section for government users', async () => {
-    setupMocks({
+    const mocks = setupMocks({
       currentUser: { data: { isGovernmentUser: true }, hasRoles: () => true }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText('report:internalComments')).toBeInTheDocument()
     })
   })
 
   it('does not display internal comments section for non-government users', async () => {
-    setupMocks({
+    const mocks = setupMocks({
       currentUser: { data: { isGovernmentUser: false }, hasRoles: () => false }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(
         screen.queryByText('report:internalComments')
@@ -343,17 +407,22 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays ActivityListCard for Draft status', async () => {
-    setupMocks({
-      complianceReport: {
-        data: {
-          report: {
-            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
-          },
-          chain: []
-        }
+    const mocks = setupMocks({
+      reportData: {
+        report: {
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
+        },
+        chain: []
       }
     })
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText('Activity Links List')).toBeInTheDocument()
     })
@@ -373,8 +442,8 @@ describe('EditViewComplianceReport', () => {
       }
     ]
 
-    vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: {
+    const mocks = setupMocks({
+      reportData: {
         report: {
           currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
           history: historyMock
@@ -389,12 +458,17 @@ describe('EditViewComplianceReport', () => {
             currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
           }
         ]
-      },
-      isLoading: false,
-      isError: false
+      }
     })
 
-    render(<EditViewComplianceReport />, { wrapper })
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       expect(screen.getByText('report:assessment')).toBeInTheDocument()
       expect(screen.getByText('report:reportHistory')).toBeInTheDocument()
@@ -405,7 +479,15 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays scroll-to-top button when scrolling down', async () => {
-    render(<EditViewComplianceReport />, { wrapper })
+    const mocks = setupMocks()
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       fireEvent.scroll(window, { target: { pageYOffset: 100 } })
       expect(screen.getByLabelText('scroll to bottom')).toBeInTheDocument()
@@ -413,7 +495,15 @@ describe('EditViewComplianceReport', () => {
   })
 
   it('displays scroll-to-bottom button when at the top of the page', async () => {
-    render(<EditViewComplianceReport />, { wrapper })
+    const mocks = setupMocks()
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
     await waitFor(() => {
       fireEvent.scroll(window, { target: { pageYOffset: 0 } })
       expect(screen.getByLabelText('scroll to top')).toBeInTheDocument()

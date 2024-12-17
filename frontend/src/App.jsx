@@ -35,6 +35,8 @@ import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
 import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddEditAllocationAgreements'
 import { logout } from '@/utils/keycloak.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
+import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
+import { ViewComplianceReportBrancher } from '@/views/ComplianceReports/ViewComplianceReportBrancher.jsx'
 
 const router = createBrowserRouter([
   {
@@ -196,7 +198,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <EditViewComplianceReport />,
+        element: <ViewComplianceReportBrancher />,
         handle: { title: '' }
       },
       {
