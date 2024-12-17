@@ -20,6 +20,8 @@ Key Features:
 6. Ensures sequence integrity for compliance_report_id.
 7. Facilitates efficient testing by allowing deletion of inserted records based on display_name.
 8. Adds handling for 'in reserve' transactions based on snapshot data.
+9. After all existing compliance reports are processed, queries for unassociated credit trades of type 3 or 4
+   and creates new transactions for them.
 */
 
 // =========================================
@@ -417,9 +419,86 @@ try {
 
     rs.close()
     consolidatedStmt.close()
-
-    // Commit all changes
+    // Commit all changes from the original compliance report processing
     destinationConn.commit()
+
+    // =========================================
+    // Process Unassociated Credit Trades
+    // =========================================
+    // This section identifies credit trades of type 3 or 4 (Credit Validation or Credit Reduction)
+    // that are not currently associated with any compliance_report. Instead of creating new 
+    // compliance reports, it only creates corresponding transactions. (to be reviewed at a later date)
+    //
+    // For each unassociated credit trade:
+    // 1. Determines if it's a credit validation or a credit reduction.
+    // 2. Creates a transaction (positive units for validations, negative units for reductions).
+    // 3. Does not associate the transaction with any compliance report, leaving them as standalone transactions.
+    //
+    // This ensures that all known credit trades have corresponding transactions, 
+    // even if they do not currently relate to a compliance report.
+
+    log.warn("Processing Unassociated Credit Trades of Type 3 or 4 to Create Transactions Only")
+
+    // Query for unassociated credit trades of type 3 or 4 and approved status
+    // These trades exist in the credit_trade table but are not linked to a compliance_report.
+    def UNASSOCIATED_CREDIT_TRADES_QUERY = """
+    SELECT ct.id AS credit_trade_id,
+          ct.respondent_id AS organization_id,
+          ct.compliance_period_id AS period_id,
+          ct.type_id AS credit_trade_type_id,
+          ct.trade_effective_date,
+          ct.number_of_credits,
+          ct.status_id,
+          ct.create_user_id AS ct_create_user_id,
+          ct.create_timestamp AS ct_create_timestamp
+    FROM credit_trade ct
+    LEFT JOIN compliance_report cr ON cr.credit_transaction_id = ct.id
+    WHERE ct.type_id IN (3,4)
+      AND ct.status_id = 7
+      AND cr.id IS NULL;
+    """
+
+    PreparedStatement unassociatedTradesStmt = sourceConn.prepareStatement(UNASSOCIATED_CREDIT_TRADES_QUERY)
+    ResultSet unassocRs = unassociatedTradesStmt.executeQuery()
+
+    while (unassocRs.next()) {
+        def credit_trade_id = unassocRs.getInt("credit_trade_id")
+        def organization_id = unassocRs.getInt("organization_id")
+        def credit_trade_type_id = unassocRs.getInt("credit_trade_type_id")
+        def trade_effective_date = unassocRs.getTimestamp("trade_effective_date")
+        def number_of_credits = unassocRs.getInt("number_of_credits")
+        def ct_create_user_id = unassocRs.getInt("ct_create_user_id")
+        def ct_create_timestamp = unassocRs.getTimestamp("ct_create_timestamp")
+
+        def createUser = userProfiles[ct_create_user_id] ?: "imported_user"
+
+        // Determine transaction direction based on trade type
+        // type_id = 3 (Credit Validation) => positive credits
+        // type_id = 4 (Credit Reduction) => negative credits
+        def adjustedCredits = (credit_trade_type_id == 4) ? -number_of_credits : number_of_credits
+
+        // Create a standalone transaction for this credit trade
+        def transactionId = insertTransactionForReport(
+            statements.insertTransactionStmt,
+            organization_id,
+            adjustedCredits,
+            "Adjustment",
+            createUser,
+            ct_create_timestamp,
+            trade_effective_date
+        )
+        totalTransactionsInserted++
+
+        log.warn("Created standalone transaction ${transactionId} for credit_trade_id ${credit_trade_id} (no associated compliance report)")
+    }
+
+    unassocRs.close()
+    unassociatedTradesStmt.close()
+
+    // Commit changes for the newly created transactions
+    destinationConn.commit()
+
+    log.warn("Inserted ${totalInserted} compliance reports (from earlier processing), ${totalHistoryInserted} history records, and ${totalTransactionsInserted} transactions into LCFS, including standalone transactions for unassociated credit trades.")
 
     // Re-enable and refresh the materialized views
     stmt = destinationConn.createStatement()
