@@ -30,11 +30,11 @@
     ]
   },
   "dependencies": {
-    "@ag-grid-community/client-side-row-model": "^32.0.2",
-    "@ag-grid-community/core": "^32.0.2",
-    "@ag-grid-community/csv-export": "^32.0.2",
-    "@ag-grid-community/react": "^32.0.2",
-    "@ag-grid-community/styles": "^32.0.2",
+    "@ag-grid-community/client-side-row-model": "^32.3.0",
+    "@ag-grid-community/core": "^32.3.0",
+    "@ag-grid-community/csv-export": "^32.3.0",
+    "@ag-grid-community/react": "^32.3.0",
+    "@ag-grid-community/styles": "^32.3.0",
     "@bcgov/bc-sans": "^2.1.0",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
