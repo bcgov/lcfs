@@ -1,8 +1,8 @@
 """Add legacy id to compliance reports
 
 Revision ID: 5b374dd97469
-Revises: 5d729face5ab
-Create Date: 2024-12-13 19:25:32.076684
+Revises: f93546eaec61
+Create Date: 2024-17-13 12:25:32.076684
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "5b374dd97469"
-down_revision = "5d729face5ab"
+down_revision = "f93546eaec61"
 branch_labels = None
 depends_on = None
 
