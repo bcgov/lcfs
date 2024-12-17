@@ -17,6 +17,54 @@ export const useNotificationsCount = (options) => {
   })
 }
 
+export const useGetNotificationMessages = (
+  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['notification-messages', page, size, sortOrders, filters],
+    queryFn: async () => {
+      const response = await client.post(apiRoutes.getNotifications, {
+        page,
+        size,
+        sortOrders,
+        filters
+      })
+      return response.data
+    },
+    ...options
+  })
+}
+
+export const useMarkNotificationAsRead = (options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (_ids) =>
+      client.put(apiRoutes.notifications, _ids),
+    onSettled: () => {
+      queryClient.invalidateQueries(['notifications-count'])
+      queryClient.invalidateQueries(['notifications-messages'])
+    },
+    ...options
+  })
+}
+
+export const useDeleteNotificationMessages = (options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (_ids) =>
+      client.delete(apiRoutes.notifications, { data: _ids }),
+    onSettled: () => {
+      queryClient.invalidateQueries(['notifications-count'])
+      queryClient.invalidateQueries(['notifications-messages'])
+    },
+    ...options
+  })
+}
+
 export const useNotificationSubscriptions = (options) => {
   const client = useApiService()
   return useQuery({

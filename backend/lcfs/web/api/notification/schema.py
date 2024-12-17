@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -5,7 +6,34 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
-from lcfs.web.api.base import BaseSchema, NotificationTypeEnum
+from lcfs.web.api.base import BaseSchema, NotificationTypeEnum, PaginationResponseSchema
+from pydantic import computed_field, model_validator
+
+
+class NotificationOrganizationSchema(BaseSchema):
+    organization_id: int
+    name: str
+
+
+class NotificationUserProfileSchema(BaseSchema):
+    first_name: str
+    last_name: str
+    organization_id: Optional[int] = None
+    is_government: bool = False
+
+    @model_validator(mode="before")
+    def update_government_profile(cls, data):
+        if data.is_government:
+            data.first_name = "Government of B.C."
+            data.last_name = ""
+        return data
+
+    @computed_field
+    @property
+    def full_name(self) -> str:
+        if self.is_government:
+            return "Government of B.C."
+        return f"{self.first_name} {self.last_name}"
 
 
 class NotificationMessageSchema(BaseSchema):
@@ -14,9 +42,14 @@ class NotificationMessageSchema(BaseSchema):
     is_archived: Optional[bool] = False
     is_warning: Optional[bool] = False
     is_error: Optional[bool] = False
+    type: Optional[str] = None
     message: Optional[str] = None
     related_organization_id: Optional[int] = None
+    related_organization: Optional[NotificationOrganizationSchema] = None
+    related_transaction_id: Optional[str] = None
+    create_date: Optional[datetime] = None
     origin_user_profile_id: Optional[int] = None
+    origin_user_profile: Optional[NotificationUserProfileSchema] = None
     related_user_profile_id: Optional[int] = None
     notification_type_id: Optional[int] = None
     deleted: Optional[bool] = None
@@ -51,6 +84,11 @@ class DeleteSubscriptionSchema(BaseSchema):
 
 class DeleteNotificationChannelSubscriptionResponseSchema(BaseSchema):
     message: str
+
+
+class NotificationsSchema(BaseSchema):
+    notifications: List[NotificationMessageSchema] = []
+    pagination: PaginationResponseSchema = None
 
 
 class NotificationRequestSchema(BaseSchema):
@@ -93,11 +131,15 @@ TRANSFER_STATUS_NOTIFICATION_MAPPER = {
     TransferStatusEnum.Sent: [
         NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
     ],
+    TransferStatusEnum.Rescinded: [
+        NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
+    ],
     TransferStatusEnum.Declined: [
         NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
     ],
     TransferStatusEnum.Submitted: [
-        NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW
+        NotificationTypeEnum.BCEID__TRANSFER__PARTNER_ACTIONS,
+        NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW,
     ],
     TransferStatusEnum.Recommended: [
         NotificationTypeEnum.IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION
@@ -110,6 +152,9 @@ TRANSFER_STATUS_NOTIFICATION_MAPPER = {
         NotificationTypeEnum.BCEID__TRANSFER__DIRECTOR_DECISION,
         NotificationTypeEnum.IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED,
     ],
+    "Return to analyst": [
+        NotificationTypeEnum.IDIR_ANALYST__TRANSFER__SUBMITTED_FOR_REVIEW
+    ],
 }
 
 INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {
@@ -118,6 +163,7 @@ INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {
     ],
     InitiativeAgreementStatusEnum.Approved: [
         NotificationTypeEnum.BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL,
+        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST
     ],
     "Return to analyst": [
         NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST

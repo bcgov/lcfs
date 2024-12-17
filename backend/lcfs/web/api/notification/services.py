@@ -1,13 +1,18 @@
-from typing import List, Optional, Union
+import math
+from typing import List, Optional
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
     ChannelEnum,
 )
-from lcfs.web.api.base import NotificationTypeEnum
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+    PaginationResponseSchema,
+)
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.notification.schema import (
     NotificationRequestSchema,
+    NotificationsSchema,
     SubscriptionSchema,
     NotificationMessageSchema,
 )
@@ -46,6 +51,51 @@ class NotificationService:
             NotificationMessageSchema.model_validate(message)
             for message in notification_models
         ]
+
+    @service_handler
+    async def get_paginated_notification_messages(
+        self, user_id: int, pagination: PaginationRequestSchema
+    ) -> NotificationsSchema:
+        """
+        Retrieve all notifications for a given user with pagination, filtering and sorting.
+        """
+        notifications, total_count = (
+            await self.repo.get_paginated_notification_messages(user_id, pagination)
+        )
+        return NotificationsSchema(
+            pagination=PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(total_count / pagination.size),
+            ),
+            notifications=[
+                NotificationMessageSchema.model_validate(notification)
+                for notification in notifications
+            ],
+        )
+
+    @service_handler
+    async def update_notification_messages(
+        self, user_id: int, notification_ids: List[int]
+    ):
+        """
+        Update multiple notifications (mark as read).
+        """
+        await self.repo.mark_notifications_as_read(user_id, notification_ids)
+
+        return notification_ids
+
+    @service_handler
+    async def delete_notification_messages(
+        self, user_id: int, notification_ids: List[int]
+    ):
+        """
+        Delete multiple notifications.
+        """
+        await self.repo.delete_notification_messages(user_id, notification_ids)
+
+        return notification_ids
 
     @service_handler
     async def get_notification_message_by_id(self, notification_id: int):

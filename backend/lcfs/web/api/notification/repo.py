@@ -5,20 +5,29 @@ from lcfs.db.models.notification import (
     NotificationType,
     ChannelEnum,
 )
+from lcfs.db.models.organization import Organization
 from lcfs.db.models.user import UserProfile
-from lcfs.web.api.base import NotificationTypeEnum
+from lcfs.db.models.user.UserRole import UserRole
+from lcfs.web.api.base import (
+    NotificationTypeEnum,
+    PaginationRequestSchema,
+    apply_filter_conditions,
+    get_field_for_filter,
+    validate_pagination,
+)
 import structlog
 
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.exception.exceptions import DataNotFoundException
 
-from sqlalchemy import delete, or_, select, func
+from sqlalchemy import asc, delete, desc, or_, select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from lcfs.web.core.decorators import repo_handler
+from sqlalchemy import and_
 
 logger = structlog.get_logger(__name__)
 
@@ -66,8 +75,15 @@ class NotificationRepository:
         Retrieve all notification messages for a user
         """
         # Start building the query
-        query = select(NotificationMessage).where(
-            NotificationMessage.related_user_profile_id == user_profile_id
+        query = (
+            select(NotificationMessage)
+            .options(
+                joinedload(NotificationMessage.related_organization),
+                joinedload(NotificationMessage.origin_user_profile)
+                .joinedload(UserProfile.user_roles)
+                .joinedload(UserRole.role),
+            )
+            .where(NotificationMessage.related_user_profile_id == user_profile_id)
         )
 
         # Apply additional filter for `is_read` if provided
@@ -76,7 +92,116 @@ class NotificationRepository:
 
         # Execute the query and retrieve the results
         result = await self.db.execute(query)
-        return result.scalars().all()
+        return result.unique().scalars().all()
+
+    def _apply_notification_filters(
+        self, pagination: PaginationRequestSchema, conditions: List
+    ):
+        for filter in pagination.filters:
+            filter_value = filter.filter
+            filter_option = filter.type
+            filter_type = filter.filter_type
+
+            # Handle date filters
+            if filter.field == "date":
+                filter_value = filter.date_from
+                field = get_field_for_filter(NotificationMessage, "create_date")
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
+            elif filter.field == "user":
+                conditions.append(
+                    NotificationMessage.origin_user_profile.has(
+                        UserProfile.first_name.like(f"%{filter_value}%")
+                    )
+                )
+            elif filter.field == "organization":
+                conditions.append(
+                    NotificationMessage.related_organization.has(
+                        Organization.name.like(f"%{filter_value}%")
+                    )
+                )
+            elif filter.field == "transaction_id":
+                field = get_field_for_filter(NotificationMessage, 'related_transaction_id')
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
+            else:
+                field = get_field_for_filter(NotificationMessage, filter.field)
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
+
+        return conditions
+
+    @repo_handler
+    async def get_paginated_notification_messages(
+        self, user_id, pagination: PaginationRequestSchema
+    ) -> tuple[Sequence[NotificationMessage], int]:
+        """
+        Queries notification messages from the database with optional filters. Supports pagination and sorting.
+
+        Args:
+            pagination (dict): Pagination and sorting parameters.
+
+        Returns:
+            List[NotificationSchema]: A list of notification messages matching the query.
+        """
+        conditions = [NotificationMessage.related_user_profile_id == user_id]
+        pagination = validate_pagination(pagination)
+
+        if pagination.filters:
+            self._apply_notification_filters(pagination, conditions)
+
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        limit = pagination.size
+        # Start building the query
+        query = (
+            select(NotificationMessage)
+            .options(
+                joinedload(NotificationMessage.related_organization),
+                joinedload(NotificationMessage.origin_user_profile)
+                .joinedload(UserProfile.user_roles)
+                .joinedload(UserRole.role),
+            )
+            .where(and_(*conditions))
+        )
+
+        # Apply sorting
+        order_clauses = []
+        if not pagination.sort_orders:
+            order_clauses.append(desc(NotificationMessage.create_date))
+        else:
+            for order in pagination.sort_orders:
+                direction = asc if order.direction == "asc" else desc
+                if order.field == "date":
+                    field = NotificationMessage.create_date
+                elif order.field == "user":
+                    field = UserProfile.first_name
+                elif order.field == "organization":
+                    field = Organization.name
+                elif order.field == "transaction_id":
+                    field = NotificationMessage.related_transaction_id
+                else:
+                    field = getattr(NotificationMessage, order.field)
+                if field is not None:
+                    order_clauses.append(direction(field))
+        query = query.order_by(*order_clauses)
+
+        # Execute the count query to get the total count
+        count_query = query.with_only_columns(func.count()).order_by(None)
+        total_count = (await self.db.execute(count_query)).scalar()
+
+        # Execute the main query to retrieve all notification_messages
+        result = await self.db.execute(query.offset(offset).limit(limit))
+        notification_messages = result.unique().scalars().all()
+        return notification_messages, total_count
 
     @repo_handler
     async def get_notification_message_by_id(
@@ -137,6 +262,20 @@ class NotificationRepository:
         await self.db.flush()
 
     @repo_handler
+    async def delete_notification_messages(self, user_id, notification_ids: List[int]):
+        """
+        Delete a notification_message by id
+        """
+        query = delete(NotificationMessage).where(
+            and_(
+                NotificationMessage.notification_message_id.in_(notification_ids),
+                NotificationMessage.related_user_profile_id == user_id,
+            )
+        )
+        await self.db.execute(query)
+        await self.db.flush()
+
+    @repo_handler
     async def mark_notification_as_read(
         self, notification_id
     ) -> Optional[NotificationMessage]:
@@ -155,6 +294,31 @@ class NotificationRepository:
             await self.db.refresh(notification)
 
         return notification
+
+    @repo_handler
+    async def mark_notifications_as_read(
+        self, user_id: int, notification_ids: List[int]
+    ):
+        """
+        Mark notification messages as read for a user
+        """
+        if not notification_ids:
+            return []
+
+        stmt = (
+            update(NotificationMessage)
+            .where(
+                and_(
+                    NotificationMessage.notification_message_id.in_(notification_ids),
+                    NotificationMessage.related_user_profile_id == user_id,
+                )
+            )
+            .values(is_read=True)
+        )
+        await self.db.execute(stmt)
+        await self.db.flush()
+
+        return notification_ids
 
     @repo_handler
     async def create_notification_channel_subscription(
@@ -291,7 +455,7 @@ class NotificationRepository:
                 NotificationChannel.channel_name == channel.value,
                 or_(
                     UserProfile.organization_id == organization_id,
-                    UserProfile.organization_id.is_(None), 
+                    UserProfile.organization_id.is_(None),
                 ),
             )
         )
