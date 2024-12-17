@@ -104,7 +104,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.provisionOfTheAct = null
         params.data.fuelCode = null
         params.data.fuelCodeId = null
-        params.data.quantity = 0
         params.data.units = fuelType?.unit
         params.data.unrecognized = fuelType?.unrecognized
       }
@@ -178,7 +177,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.eer = null
         params.data.provisionOfTheAct = null
         params.data.fuelCode = null
-        params.data.quantity = 0
       }
       return true
     },
@@ -382,7 +380,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'quantity',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-    valueFormatter,
+    valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
