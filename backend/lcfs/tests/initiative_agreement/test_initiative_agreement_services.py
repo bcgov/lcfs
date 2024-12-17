@@ -113,8 +113,8 @@ async def test_create_initiative_agreement(service, mock_repo, mock_request):
         internal_comment=None,
     )
 
-    # Mock _perform_notificaiton_call to isolate it
-    service._perform_notificaiton_call = AsyncMock()
+    # Mock _perform_notification_call to isolate it
+    service._perform_notification_call = AsyncMock()
 
     # Call the service method
     result = await service.create_initiative_agreement(create_data)
@@ -122,7 +122,7 @@ async def test_create_initiative_agreement(service, mock_repo, mock_request):
     # Assertions
     assert result == mock_initiative_agreement
     mock_repo.create_initiative_agreement.assert_called_once()
-    service._perform_notificaiton_call.assert_called_once_with(
+    service._perform_notification_call.assert_called_once_with(
         mock_initiative_agreement
     )
 

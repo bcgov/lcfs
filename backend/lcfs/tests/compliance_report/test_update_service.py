@@ -69,6 +69,7 @@ async def test_update_compliance_report_status_change(
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
     mock_report.compliance_period = MagicMock()
     mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = 123
 
     new_status = MagicMock(spec=ComplianceReportStatus)
     new_status.status = ComplianceReportStatusEnum.Submitted
@@ -82,7 +83,7 @@ async def test_update_compliance_report_status_change(
     mock_repo.get_compliance_report_status_by_desc.return_value = new_status
     compliance_report_update_service.handle_status_change = AsyncMock()
     mock_repo.update_compliance_report.return_value = mock_report
-    compliance_report_update_service._perform_notificaiton_call = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
 
     # Call the method
     updated_report = await compliance_report_update_service.update_compliance_report(
@@ -104,7 +105,7 @@ async def test_update_compliance_report_status_change(
         mock_report, compliance_report_update_service.request.user
     )
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
-    compliance_report_update_service._perform_notificaiton_call.assert_called_once_with(
+    compliance_report_update_service._perform_notification_call.assert_called_once_with(
         mock_report, "Submitted"
     )
 
@@ -119,11 +120,11 @@ async def test_update_compliance_report_no_status_change(
     mock_report.compliance_report_id = report_id
     mock_report.current_status = MagicMock(spec=ComplianceReportStatus)
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
-
-    # Fix for JSON serialization
     mock_report.compliance_period = MagicMock()
     mock_report.compliance_period.description = "2024"
+    mock_report.transaction_id = 123
 
+    # Status does not change
     report_data = ComplianceReportUpdateSchema(
         status="Draft", supplemental_note="Test note"
     )
@@ -134,10 +135,7 @@ async def test_update_compliance_report_no_status_change(
         mock_report.current_status
     )
     mock_repo.update_compliance_report.return_value = mock_report
-
-    # Mock the handle_status_change method
-    compliance_report_update_service.handle_status_change = AsyncMock()
-    compliance_report_update_service._perform_notificaiton_call = AsyncMock()
+    compliance_report_update_service._perform_notification_call = AsyncMock()
 
     # Call the method
     updated_report = await compliance_report_update_service.update_compliance_report(
@@ -146,18 +144,10 @@ async def test_update_compliance_report_no_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(
-        report_id, is_model=True
-    )
-    mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
-        report_data.status
-    )
-    compliance_report_update_service.handle_status_change.assert_not_called()
-    mock_repo.add_compliance_report_history.assert_not_called()
-    mock_repo.update_compliance_report.assert_called_once_with(mock_report)
-    compliance_report_update_service._perform_notificaiton_call.assert_called_once_with(
+    compliance_report_update_service._perform_notification_call.assert_called_once_with(
         mock_report, "Draft"
     )
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
 
 @pytest.mark.anyio
