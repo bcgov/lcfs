@@ -9,6 +9,7 @@
   "LoadFailMsg": "Failed to load supply of fuel rows",
   "addRow": "Add row",
   "rows": "rows",
+  "fuelCodeFieldRequiredError": "Error updating row: Fuel code field required",
   "fuelSupplyColLabels": {
     "complianceReportId": "Compliance Report ID",
     "fuelSupplyId": "Fuel supply ID",
