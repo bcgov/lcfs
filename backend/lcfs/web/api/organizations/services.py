@@ -16,6 +16,7 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
     OrgStatusEnum,
 )
+from lcfs.db.models.transaction import Transaction
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.services.tfrs.redis_balance import (
     RedisBalanceService,
@@ -43,6 +44,7 @@ from .schema import (
 
 
 logger = structlog.get_logger(__name__)
+
 
 class OrganizationsService:
     def __init__(
@@ -197,7 +199,6 @@ class OrganizationsService:
 
         updated_organization = await self.repo.update_organization(organization)
         return updated_organization
-
 
     @service_handler
     async def get_organization(self, organization_id: int):
@@ -400,7 +401,7 @@ class OrganizationsService:
         transaction_action: TransactionActionEnum,
         compliance_units: int,
         organization_id: int,
-    ):
+    ) -> Transaction:
         """
         Adjusts an organization's balance based on the transaction action.
 
