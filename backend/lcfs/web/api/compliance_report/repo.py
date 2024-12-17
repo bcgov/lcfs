@@ -706,9 +706,9 @@ class ComplianceReportRepository:
 
     def aggregate_fuel_supplies(
         self, fuel_supplies: List[FuelSupply], fossil_derived: bool
-    ) -> Dict[str, float]:
+    ) -> Dict[str, int]:
         """Aggregate quantities from fuel supplies based on fossil_derived flag."""
-        fuel_quantities = defaultdict(float)
+        fuel_quantities = defaultdict(int)
 
         # Use a list comprehension to filter and iterate in one step
         for fs in (
@@ -722,7 +722,7 @@ class ComplianceReportRepository:
     @repo_handler
     async def aggregate_other_uses(
         self, compliance_report_id: int, fossil_derived: bool
-    ) -> Dict[str, float]:
+    ) -> Dict[str, int]:
         """Aggregate quantities from other uses."""
         query = (
             select(
@@ -751,7 +751,7 @@ class ComplianceReportRepository:
     @repo_handler
     async def aggregate_allocation_agreements(
         self, compliance_report_id: int
-    ) -> Dict[str, float]:
+    ) -> Dict[str, int]:
         """Aggregate quantities from allocation agreements for renewable fuels."""
         query = (
             select(

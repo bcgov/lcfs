@@ -408,7 +408,6 @@ class ComplianceReportSummaryService:
             compliance_report_id=compliance_report.compliance_report_id,
             is_locked=summary_model.is_locked,
             quarter=summary_model.quarter,
-            total_non_compliance_penalty_payable=summary_model.total_non_compliance_penalty_payable,
             renewable_fuel_target_summary=renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary,
@@ -444,9 +443,9 @@ class ComplianceReportSummaryService:
             jet_fuel_percentage = 3 / 100
 
         eligible_renewable_fuel_required = {
-            "gasoline": tracked_totals["gasoline"] * 0.05,
-            "diesel": tracked_totals["diesel"] * 0.04,
-            "jet_fuel": tracked_totals["jet_fuel"] * jet_fuel_percentage,
+            "gasoline": round(tracked_totals["gasoline"] * 0.05),
+            "diesel": round(tracked_totals["diesel"] * 0.04),
+            "jet_fuel": round(tracked_totals["jet_fuel"] * jet_fuel_percentage),
         }
 
         # line 6
