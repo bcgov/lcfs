@@ -80,10 +80,10 @@ class ComplianceReportUpdateService:
             # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
 
-        await self._perform_notificaiton_call(report, current_status)
+        await self._perform_notification_call(report, current_status)
         return updated_report
 
-    async def _perform_notificaiton_call(self, cr, status):
+    async def _perform_notification_call(self, report, status):
         """Send notifications based on the current status of the transfer."""
         status_mapper = status.replace(" ", "_")
         notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
@@ -96,15 +96,15 @@ class ComplianceReportUpdateService:
         )
         message_data = {
             "service": "ComplianceReport",
-            "id": cr.compliance_report_id,
-            "compliancePeriod": cr.compliance_period.description,
+            "id": report.compliance_report_id,
+            "compliancePeriod": report.compliance_period.description,
             "status": status.lower(),
         }
         notification_data = NotificationMessageSchema(
             type=f"Compliance report {status.lower()}",
-            transaction_id=cr.transaction_id,
+            transaction_id=report.transaction_id,
             message=json.dumps(message_data),
-            related_organization_id=cr.organization_id,
+            related_organization_id=report.organization_id,
             origin_user_profile_id=self.request.user.user_profile_id,
         )
         if notifications and isinstance(notifications, list):

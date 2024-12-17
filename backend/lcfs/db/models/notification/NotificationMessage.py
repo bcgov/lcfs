@@ -35,11 +35,6 @@ class NotificationMessage(BaseModel, Auditable):
     )
     transaction_id = Column(Integer, ForeignKey("transaction.transaction_id"), nullable=True)
 
-    # Models not created yet
-    # related_transaction_id = Column(Integer,ForeignKey(''))
-    # related_document_id = Column(Integer, ForeignKey('document.id'))
-    # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
-
     # Relationships
     related_transaction = relationship("Transaction")
     related_organization = relationship(

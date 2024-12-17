@@ -130,7 +130,7 @@ class InitiativeAgreementServices:
         # Return the updated initiative agreement schema with the returned status flag
         ia_schema = InitiativeAgreementSchema.from_orm(updated_initiative_agreement)
         ia_schema.returned = returned
-        await self._perform_notificaiton_call(updated_initiative_agreement, returned)
+        await self._perform_notification_call(updated_initiative_agreement, returned)
         return ia_schema
 
     @service_handler
@@ -175,7 +175,7 @@ class InitiativeAgreementServices:
             await self.internal_comment_service.create_internal_comment(
                 internal_comment_data
             )
-        await self._perform_notificaiton_call(initiative_agreement)
+        await self._perform_notification_call(initiative_agreement)
         return initiative_agreement
 
     async def director_approve_initiative_agreement(
@@ -210,7 +210,7 @@ class InitiativeAgreementServices:
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
 
-    async def _perform_notificaiton_call(self, ia, returned=False):
+    async def _perform_notification_call(self, ia, returned=False):
         """Send notifications based on the current status of the transfer."""
         status = ia.current_status.status if not returned else "Return to analyst"
         status_val = (

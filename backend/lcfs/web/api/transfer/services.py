@@ -166,7 +166,7 @@ class TransferServices:
             current_status.transfer_status_id,
             self.request.user.user_profile_id,
         )
-        await self._perform_notificaiton_call(transfer, current_status.status)
+        await self._perform_notification_call(transfer, current_status.status)
         return transfer
 
     @service_handler
@@ -264,7 +264,7 @@ class TransferServices:
         # Finally, update the transfer's status and save the changes
         transfer.current_status = new_status
         transfer_result = await self.repo.update_transfer(transfer)
-        await self._perform_notificaiton_call(
+        await self._perform_notification_call(
             transfer,
             status=(
                 new_status.status
@@ -274,7 +274,7 @@ class TransferServices:
         )
         return transfer_result
 
-    async def _perform_notificaiton_call(
+    async def _perform_notification_call(
         self, transfer: TransferSchema, status: TransferStatusEnum
     ):
         """Send notifications based on the current status of the transfer."""

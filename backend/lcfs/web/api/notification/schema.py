@@ -10,12 +10,12 @@ from lcfs.web.api.base import BaseSchema, NotificationTypeEnum, PaginationRespon
 from pydantic import computed_field, model_validator
 
 
-class OrganizationSchema(BaseSchema):
+class NotificationOrganizationSchema(BaseSchema):
     organization_id: int
     name: str
 
 
-class UserProfileSchema(BaseSchema):
+class NotificationUserProfileSchema(BaseSchema):
     first_name: str
     last_name: str
     organization_id: Optional[int] = None
@@ -45,11 +45,11 @@ class NotificationMessageSchema(BaseSchema):
     type: Optional[str] = None
     message: Optional[str] = None
     related_organization_id: Optional[int] = None
-    related_organization: Optional[OrganizationSchema] = None
+    related_organization: Optional[NotificationOrganizationSchema] = None
     transaction_id: Optional[int] = None
     create_date: Optional[datetime] = None
     origin_user_profile_id: Optional[int] = None
-    origin_user_profile: Optional[UserProfileSchema] = None
+    origin_user_profile: Optional[NotificationUserProfileSchema] = None
     related_user_profile_id: Optional[int] = None
     notification_type_id: Optional[int] = None
     deleted: Optional[bool] = None
