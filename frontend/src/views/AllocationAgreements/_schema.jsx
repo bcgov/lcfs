@@ -21,7 +21,7 @@ import {
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const allocationAgreementColDefs = (optionsData, errors) => [
+export const allocationAgreementColDefs = (optionsData, errors, currentUser) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -89,8 +89,11 @@ export const allocationAgreementColDefs = (optionsData, errors) => [
         let path = apiRoutes.organizationSearch
         path += 'org_name=' + queryKey[1]
         const response = await client.get(path)
-        params.node.data.apiDataCache = response.data
-        return response.data
+        const filteredData = response.data.filter(
+          (org) => org.name !== currentUser.organization.name
+        )
+        params.node.data.apiDataCache = filteredData
+        return filteredData
       },
       title: 'transactionPartner',
       api: params.api,
