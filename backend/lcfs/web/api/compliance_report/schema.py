@@ -148,7 +148,6 @@ class ComplianceReportBaseSchema(BaseSchema):
     current_status_id: int
     current_status: ComplianceReportStatusSchema
     transaction_id: Optional[int] = None
-    # transaction: Optional[TransactionBaseSchema] = None
     nickname: Optional[str] = None
     supplemental_note: Optional[str] = None
     reporting_frequency: Optional[ReportingFrequency] = None
@@ -166,6 +165,8 @@ class ComplianceReportCreateSchema(BaseSchema):
     compliance_period: str
     organization_id: int
     status: str
+    legacy_id: Optional[int] = None
+    nickname: Optional[str] = None
 
 
 class ComplianceReportListSchema(BaseSchema):
