@@ -44,7 +44,7 @@ const cellErrorStyle = (params, errors) => {
   return style
 }
 
-export const fuelExportColDefs = (optionsData, errors) => [
+export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -103,7 +103,10 @@ export const fuelExportColDefs = (optionsData, errors) => [
     ),
     suppressKeyboardEvent,
     cellEditor: DateEditor,
-    cellEditorPopup: true
+    cellEditorPopup: true,
+    cellEditorParams: {
+      autoOpenLastRow: !gridReady
+    }
   },
   {
     field: 'fuelType',

@@ -18,9 +18,10 @@ import { defaultColDef, fuelExportColDefs } from './_schema'
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState()
+  const [, setGridApi] = useState()
   const [errors, setErrors] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
+  const [gridReady, setGridReady] = useState(false)
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelExport'])
@@ -74,21 +75,34 @@ export const AddEditFuelExports = () => {
           endUse: item.endUse?.type || 'Any',
           id: uuid()
         }))
-        setRowData(updatedRowData)
+        setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
       } else {
         setRowData([{ id: uuid(), compliancePeriod }])
       }
       params.api.sizeColumnsToFit()
+
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'exportDate'
+        })
+        setGridReady(true)
+      }, 500)
     },
     [compliancePeriod, data]
   )
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelExportColDefs(optionsData, errors)
+      const updatedColumnDefs = fuelExportColDefs(
+        optionsData,
+        errors,
+        gridReady
+      )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData])
+  }, [errors, gridReady, optionsData])
 
   useEffect(() => {
     if (!fuelExportsLoading && !isArrayEmpty(data)) {
