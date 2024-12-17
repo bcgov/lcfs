@@ -88,6 +88,7 @@ const globals = {
     '--ag-header-column-resize-handle-height': '30%',
     '--ag-header-column-resize-handle-width': '2px',
     '--ag-header-column-resize-handle-color': '#dde2eb',
+    '--ag-material-accent-color': grey[700],
     '--ag-borders': `1px solid ${grey[700]}`,
     '--ag-border-color': grey[700],
     '--ag-odd-row-background-color': rgba(light.main, 0.6),
@@ -108,6 +109,10 @@ const globals = {
   '.ag-theme-material .bc-column-set-filter .MuiOutlinedInput-notchedOutline': {
     border: 'none',
     borderBottom: '2px solid #495057'
+  },
+  '.unread-row': {
+    fontWeight: 700,
+    color: grey[700]
   },
   // editor theme for ag-grid quertz theme
   '.ag-theme-quartz': {
@@ -197,10 +202,10 @@ const globals = {
     color: grey[600],
     textTransform: 'none',
     fontSize: pxToRem(14),
-    padding: '6px 12px',
+    padding: '6px 12px'
   },
   '.ag-filter-apply-panel-button[data-ref="clearFilterButton"]:hover': {
-    color: grey[900],
+    color: grey[900]
   },
 
   '.MuiPaper-elevation': {

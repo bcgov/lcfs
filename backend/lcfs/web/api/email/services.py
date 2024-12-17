@@ -23,19 +23,8 @@ class CHESEmailService:
 
     def __init__(self, repo: CHESEmailRepository = Depends()):
         self.repo = repo
-
-        # CHES configuration
-        self.config = {
-            "AUTH_URL": settings.ches_auth_url,
-            "EMAIL_URL": settings.ches_email_url,
-            "CLIENT_ID": settings.ches_client_id,
-            "CLIENT_SECRET": settings.ches_client_secret,
-            "SENDER_EMAIL": settings.ches_sender_email,
-            "SENDER_NAME": settings.ches_sender_name,
-        }
         self._access_token = None
         self._token_expiry = None
-        self._validate_configuration()
 
         # Update template directory path to the root templates directory
         template_dir = os.path.join(os.path.dirname(__file__), "templates")
@@ -48,9 +37,24 @@ class CHESEmailService:
         """
         Validate the CHES configuration to ensure all necessary environment variables are set.
         """
-        missing = [key for key, value in self.config.items() if not value]
-        if missing:
-            raise ValueError(f"Missing configuration: {', '.join(missing)}")
+        missing_configs = []
+        
+        # Check each required CHES configuration setting
+        if not settings.ches_auth_url:
+            missing_configs.append("ches_auth_url")
+        if not settings.ches_email_url:
+            missing_configs.append("ches_email_url")
+        if not settings.ches_client_id:
+            missing_configs.append("ches_client_id")
+        if not settings.ches_client_secret:
+            missing_configs.append("ches_client_secret")
+        if not settings.ches_sender_email:
+            missing_configs.append("ches_sender_email")
+        if not settings.ches_sender_name:
+            missing_configs.append("ches_sender_name")
+
+        if missing_configs:
+            raise ValueError(f"Missing CHES configuration: {', '.join(missing_configs)}")
 
     @service_handler
     async def send_notification_email(
@@ -62,6 +66,9 @@ class CHESEmailService:
         """
         Send an email notification to users subscribed to the specified notification type.
         """
+        # Validate configuration before performing any operations
+        self._validate_configuration()
+
         # Retrieve subscribed user emails
         recipient_emails = await self.repo.get_subscribed_user_emails(
             notification_type.value, organization_id
@@ -109,7 +116,7 @@ class CHESEmailService:
         return {
             "bcc": recipients,
             "to": ["Undisclosed recipients<donotreply@gov.bc.ca>"],
-            "from": f"{self.config['SENDER_NAME']} <{self.config['SENDER_EMAIL']}>",
+            "from": f"{settings.ches_sender_name} <{settings.ches_sender_email}>",
             "delayTS": 0,
             "encoding": "utf-8",
             "priority": "normal",
@@ -124,9 +131,12 @@ class CHESEmailService:
         """
         Send an email using CHES.
         """
+        # Validate configuration before performing any operations
+        self._validate_configuration()
+
         token = await self.get_ches_token()
         response = requests.post(
-            self.config["EMAIL_URL"],
+            settings.ches_email_url,
             json=payload,
             headers={
                 "Authorization": f"Bearer {token}",
@@ -142,12 +152,15 @@ class CHESEmailService:
         """
         Retrieve and cache the CHES access token.
         """
+        # Validate configuration before performing any operations
+        self._validate_configuration()
+
         if self._access_token and datetime.now().timestamp() < self._token_expiry:
             return self._access_token
         response = requests.post(
-            self.config["AUTH_URL"],
+            settings.ches_auth_url,
             data={"grant_type": "client_credentials"},
-            auth=(self.config["CLIENT_ID"], self.config["CLIENT_SECRET"]),
+            auth=(settings.ches_client_id, settings.ches_client_secret),
             timeout=10,
         )
         response.raise_for_status()

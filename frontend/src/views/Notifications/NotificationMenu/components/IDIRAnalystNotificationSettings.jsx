@@ -9,8 +9,10 @@ const IDIRAnalystNotificationSettings = () => {
         'idirAnalyst.categories.transfers.submittedForReview',
       IDIR_ANALYST__TRANSFER__RESCINDED_ACTION:
         'idirAnalyst.categories.transfers.rescindedAction',
-      IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDEDIDIR_A__TR__DIRECTOR_RECORDED:
-        'idirAnalyst.categories.transfers.directorRecorded'
+      IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED:
+        'idirAnalyst.categories.transfers.directorRecorded',
+      IDIR_ANALYST__TRANSFER__RETURNED_TO_ANALYST:
+        'idirAnalyst.categories.initiativeAgreements.returnedToAnalyst'
     },
     'idirAnalyst.categories.initiativeAgreements': {
       title: 'idirAnalyst.categories.initiativeAgreements.title',
