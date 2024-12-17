@@ -2,9 +2,11 @@ import { useMemo } from 'react'
 import axios from 'axios'
 import { useKeycloak } from '@react-keycloak/web'
 import { CONFIG } from '@/constants/config'
+import { useSnackbar } from 'notistack'
 
 export const useApiService = (opts = {}) => {
   const { keycloak } = useKeycloak()
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar()
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
@@ -22,6 +24,24 @@ export const useApiService = (opts = {}) => {
       },
       (error) => {
         return Promise.reject(error)
+      }
+    )
+
+    // Add response interceptor
+    instance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status >= 400) {
+          console.error(
+            'API Error:',
+            error.response.status,
+            error.response.data
+          )
+          enqueueSnackbar(`${error.response.status} error`, {
+            autoHideDuration: 5000,
+            variant: 'error'
+          })
+        }
       }
     )
 
