@@ -73,7 +73,10 @@ class InternalCommentService:
             List[InternalCommentResponseSchema]: A list of internal comments as data transfer objects.
         """
         comments = await self.repo.get_internal_comments(entity_type, entity_id)
-        return [InternalCommentResponseSchema.from_orm(comment) for comment in comments]
+        return [
+            InternalCommentResponseSchema.model_validate(comment)
+            for comment in comments
+        ]
 
     @service_handler
     async def get_internal_comment_by_id(

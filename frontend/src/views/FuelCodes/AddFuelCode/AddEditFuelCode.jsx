@@ -38,9 +38,15 @@ const AddEditFuelCodeBase = () => {
   const [columnDefs, setColumnDefs] = useState([])
   const [isGridReady, setGridReady] = useState(false)
   const [modalData, setModalData] = useState(null)
+  const [initialized, setInitialized] = useState(false)
 
   const { hasRoles } = useCurrentUser()
-  const { data: optionsData, isLoading, isFetched } = useFuelCodeOptions()
+  const {
+    data: optionsData,
+    isLoading,
+    isFetched,
+    refetch: refetchOptions
+  } = useFuelCodeOptions()
   const { mutateAsync: updateFuelCode } = useUpdateFuelCode(fuelCodeID)
   const { mutateAsync: createFuelCode } = useCreateFuelCode()
   const { mutateAsync: deleteFuelCode } = useDeleteFuelCode()
@@ -50,6 +56,35 @@ const AddEditFuelCodeBase = () => {
     isLoading: isLoadingExistingCode,
     refetch
   } = useGetFuelCode(fuelCodeID)
+
+  useEffect(() => {
+    // Only initialize rowData once when all data is available and the grid is ready
+    if (!initialized && isFetched && !isLoadingExistingCode && isGridReady) {
+      if (existingFuelCode) {
+        setRowData([existingFuelCode])
+      } else {
+        const defaultPrefix = optionsData?.fuelCodePrefixes?.find(
+          (item) => item.prefix === 'BCLCF'
+        )
+        setRowData([
+          {
+            id: uuid(),
+            prefixId: defaultPrefix?.fuelCodePrefixId || 1,
+            prefix: defaultPrefix?.prefix || 'BCLCF',
+            fuelSuffix: defaultPrefix?.nextFuelCode
+          }
+        ])
+      }
+      setInitialized(true)
+    }
+  }, [
+    initialized,
+    isFetched,
+    isLoadingExistingCode,
+    isGridReady,
+    existingFuelCode,
+    optionsData
+  ])
 
   useEffect(() => {
     if (optionsData) {
@@ -66,7 +101,16 @@ const AddEditFuelCodeBase = () => {
 
   useEffect(() => {
     if (existingFuelCode) {
-      setRowData([existingFuelCode])
+      const transformedData = {
+        ...existingFuelCode,
+        feedstockFuelTransportMode: existingFuelCode.feedstockFuelTransportModes.map(
+          (mode) => mode.feedstockFuelTransportMode.transportMode
+        ),
+        finishedFuelTransportMode: existingFuelCode.finishedFuelTransportModes.map(
+          (mode) => mode.finishedFuelTransportMode.transportMode
+        )
+      }
+      setRowData([transformedData])
     } else {
       setRowData([
         {
@@ -100,7 +144,7 @@ const AddEditFuelCodeBase = () => {
       if (params.colDef.field === 'prefix') {
         updatedData.fuelSuffix = optionsData?.fuelCodePrefixes?.find(
           (item) => item.prefix === params.newValue
-        ).nextFuelCode
+        )?.nextFuelCode
       }
 
       params.api.applyTransaction({ update: [updatedData] })
@@ -213,8 +257,8 @@ const AddEditFuelCodeBase = () => {
       } catch (error) {
         setErrors({
           [params.node.data.id]:
-            error.response.data?.errors &&
-            error.response.data?.errors[0]?.fields
+            error.response?.data?.errors &&
+            error.response.data.errors[0]?.fields
         })
 
         updatedData = {
@@ -244,7 +288,7 @@ const AddEditFuelCodeBase = () => {
 
       params.node.updateData(updatedData)
     },
-    [updateFuelCode, t]
+    [updateFuelCode, t, createFuelCode]
   )
 
   const handlePaste = useCallback(
@@ -311,8 +355,16 @@ const AddEditFuelCodeBase = () => {
   )
 
   const duplicateFuelCode = async (params) => {
-    const rowData = {
-      ...params.data,
+    const originalData = params.data
+    const originalPrefix = originalData.prefix || 'BCLCF'
+
+    const updatedOptions = await refetchOptions()
+    const selectedPrefix = updatedOptions.data.fuelCodePrefixes?.find(
+      (p) => p.prefix === originalPrefix
+    )
+
+    const newRow = {
+      ...originalData,
       id: uuid(),
       fuelCodeId: null,
       modified: true,
@@ -320,10 +372,18 @@ const AddEditFuelCodeBase = () => {
       validationStatus: 'error',
       validationMsg: 'Fill in the missing fields'
     }
+
+    if (selectedPrefix) {
+      newRow.prefixId = selectedPrefix.fuelCodePrefixId
+      newRow.prefix = selectedPrefix.prefix
+      newRow.fuelSuffix = selectedPrefix.nextFuelCode
+    }
+
     if (params.api) {
-      if (params.data.fuelCodeId) {
+      if (originalData.fuelCodeId) {
         try {
-          const response = await updateFuelCode(rowData)
+          // If the original was a saved row, create a new code in the backend
+          const response = await createFuelCode(newRow)
           const updatedData = {
             ...response.data,
             id: uuid(),
@@ -331,23 +391,13 @@ const AddEditFuelCodeBase = () => {
             isValid: false,
             validationStatus: 'error'
           }
-          params.api.applyTransaction({
-            add: [updatedData],
-            addIndex: params.node?.rowIndex + 1
-          })
-          params.api.refreshCells()
-          alertRef.current?.triggerAlert({
-            message: 'Row duplicated successfully.',
-            severity: 'success'
-          })
+          return { add: [updatedData] }
         } catch (error) {
           handleError(error, `Error duplicating row: ${error.message}`)
         }
       } else {
-        params.api.applyTransaction({
-          add: [rowData],
-          addIndex: params.node?.rowIndex + 1
-        })
+        // If the original row wasn’t saved, just return the transaction
+        return { add: [newRow] }
       }
     }
   }
@@ -359,12 +409,31 @@ const AddEditFuelCodeBase = () => {
   const onAction = useCallback(
     async (action, params) => {
       if (action === 'duplicate') {
-        await duplicateFuelCode(params)
+        return await duplicateFuelCode(params)
       } else if (action === 'delete') {
         await openDeleteModal(params.data.fuelCodeId, params)
+      } else if (action === 'add') {
+        // Refetch options to get updated nextFuelCode
+        const updatedOptions = await refetchOptions()
+        const defaultPrefix = updatedOptions.data.fuelCodePrefixes.find(
+          (item) => item.prefix === 'BCLCF'
+        )
+
+        const newRow = {
+          id: uuid(),
+          prefixId: defaultPrefix.fuelCodePrefixId,
+          prefix: defaultPrefix.prefix,
+          fuelSuffix: defaultPrefix.nextFuelCode,
+          modified: true,
+          validationStatus: 'error',
+          validationMsg: 'Fill in missing fields'
+        }
+
+        // Return a transaction (no resetting rowData)
+        return { add: [newRow] }
       }
     },
-    [updateFuelCode, deleteFuelCode]
+    [duplicateFuelCode, refetchOptions]
   )
 
   if (isLoading || isLoadingExistingCode) {
@@ -390,7 +459,7 @@ const AddEditFuelCodeBase = () => {
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onGridReady={onGridReady}
-            rowData={rowData}
+            rowData={rowData} // Only set once, do not update again
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
