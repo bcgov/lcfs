@@ -254,13 +254,18 @@ jobs:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
 
     steps:
+      - id: get-current-time
+        run: |
+          TZ="America/Vancouver"
+          echo "CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+
       - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
         uses: trstringer/manual-approval@v1.6.0
         with:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin,kevin-hashimoto
           minimum-approvals: 1
-          issue-title: "LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test Deployment"
+          issue-title: "LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test Deployment at ${{ steps.get-current-time.outputs.CURRENT_TIME }}"
 
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0
