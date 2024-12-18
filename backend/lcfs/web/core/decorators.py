@@ -9,6 +9,7 @@ import contextvars
 import os
 
 from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 
 from lcfs.services.clamav.client import VirusScanException
 from lcfs.web.exception.exceptions import (
@@ -191,6 +192,8 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                     status_code=422,
                     detail="Viruses detected in file, please upload another",
                 )
+            except RequestValidationError as e:
+                raise e
             except Exception as e:
                 context = extract_context()
                 log_unhandled_exception(logger, e, context, "view", func=func)

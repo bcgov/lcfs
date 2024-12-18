@@ -4,6 +4,7 @@ from fastapi import FastAPI, status
 from httpx import AsyncClient
 from datetime import datetime
 
+from lcfs.db.models import UserProfile
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
@@ -333,6 +334,13 @@ async def test_get_internal_comments_multiple_comments(
         effective_status=True,
     )
     await add_models([transfer])
+
+    user = UserProfile(
+        keycloak_username="IDIRUSER",
+        first_name="Test",
+        last_name="User",
+    )
+    await add_models([user])
 
     comments = []
     for i in range(3):
