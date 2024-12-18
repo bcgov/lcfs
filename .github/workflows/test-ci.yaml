@@ -19,14 +19,11 @@ jobs:
     outputs:
       cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4.1.1
-
       - name: Set up cache for OpenShift CLI
         id: cache
         uses: actions/cache@v4.2.0
         with:
-          path: /usr/local/bin/oc  # Path where the `oc` binary will be installed
+          path: /usr/local/bin/oc # Path where the `oc` binary will be installed
           key: oc-cli-${{ runner.os }}
 
       - name: Install OpenShift CLI (if not cached)
@@ -122,6 +119,12 @@ jobs:
           LCFS_REDIS_PORT: 6379
           LCFS_REDIS_PASSWORD: development_only
           APP_ENVIRONMENT: dev
+          LCFS_CHES_CLIENT_ID: mock_client_id
+          LCFS_CHES_CLIENT_SECRET: mock_client_secret
+          LCFS_CHES_AUTH_URL: http://mock_auth_url
+          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+          LCFS_CHES_SENDER_NAME: Mock Notification System
+          LCFS_CHES_EMAIL_URL: http://mock_email_url
 
       - name: Run frontend tests
         id: frontend_tests
@@ -189,6 +192,12 @@ jobs:
       output1: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
+      - name: Restore oc command from Cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
         with:
@@ -248,13 +257,17 @@ jobs:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
 
     steps:
+      - id: get-current-time
+        run: |
+          echo "CURRENT_TIME=$(TZ='America/Vancouver' date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+
       - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
         uses: trstringer/manual-approval@v1.6.0
         with:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin,kevin-hashimoto
           minimum-approvals: 1
-          issue-title: "LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test Deployment"
+          issue-title: "LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test Deployment at ${{ steps.get-current-time.outputs.CURRENT_TIME }}"
 
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0
