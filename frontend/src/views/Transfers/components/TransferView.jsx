@@ -1,7 +1,6 @@
 import BCBox from '@/components/BCBox'
-import InternalComments from '@/components/InternalComments'
-import { Role } from '@/components/Role'
-import { roles, govRoles } from '@/constants/roles'
+
+import { roles } from '@/constants/roles'
 import {
   TRANSFER_STATUSES,
   getAllTerminalTransferStatuses
@@ -88,13 +87,6 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
           isDefaultExpanded={isAnalyst}
         />
       )}
-
-      {/* Internal Comments */}
-      <Role roles={govRoles}>
-        {transferId && (
-          <InternalComments entityType="Transfer" entityId={transferId} />
-        )}
-      </Role>
 
       {/* List of attachments */}
       {/* <AttachmentList attachments={demoData.attachments} /> */}

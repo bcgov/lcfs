@@ -21,13 +21,6 @@ class NotificationUserProfileSchema(BaseSchema):
     organization_id: Optional[int] = None
     is_government: bool = False
 
-    @model_validator(mode="before")
-    def update_government_profile(cls, data):
-        if data.is_government:
-            data.first_name = "Government of B.C."
-            data.last_name = ""
-        return data
-
     @computed_field
     @property
     def full_name(self) -> str:

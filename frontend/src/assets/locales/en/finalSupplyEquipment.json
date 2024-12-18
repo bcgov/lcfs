@@ -2,6 +2,7 @@
   "fseTitle": "Final supply equipment (FSE)",
   "addFSErowsTitle": "Add new final supply equipment(s) (FSE)",
   "fseSubtitle": "Report dates of supply for your FSE. If your billing location is different from your equipment location provided below use the Notes field. Use the Notes field if you use any Other options.",
+  "reportingResponsibilityInfo": "If you are reporting on behalf of an FSE for which you hold allocated reporting responsibility, please list the utility account holder's organization name associated with the specific station, rather than your own organization's name.",
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
   "finalSupplyEquipmentDownloadBtn": "Download as Excel",

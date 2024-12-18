@@ -125,7 +125,7 @@ async def test_get_user_activities_as_manage_users_same_org(
     add_models,
 ):
     # Mock the current user as a user with MANAGE_USERS
-    set_mock_user(fastapi_app, [RoleEnum.MANAGE_USERS])
+    set_mock_user(fastapi_app, [RoleEnum.ADMINISTRATOR, RoleEnum.MANAGE_USERS])
 
     # Assuming target user with user_profile_id=3 exists and is in organization_id=1
     target_user_id = 1
