@@ -113,7 +113,7 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   {
     field: 'fuelType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -182,7 +182,7 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   {
     field: 'fuelCategory',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||

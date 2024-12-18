@@ -27,6 +27,7 @@ import { BCAlert2 } from '@/components/BCAlert'
  * @property {React.Ref<any>} gridRef
  * @property {Function} handlePaste
  * @property {Function} onAction
+ * @property {Function} onAddRows
  *
  * @param {BCGridEditorProps & GridOptions} props
  * @returns {JSX.Element}
@@ -44,6 +45,7 @@ export const BCGridEditor = ({
   saveButtonProps = {
     enabled: false
   },
+  onAddRows,
   ...props
 }) => {
   const localRef = useRef(null)
@@ -59,32 +61,36 @@ export const BCGridEditor = ({
 
     if (!firstEditableColumnRef.current) {
       const columns = ref.current.api.getAllDisplayedColumns()
-      firstEditableColumnRef.current = columns.find(col =>
-        col.colDef.editable !== false &&
-        !['action', 'checkbox'].includes(col.colDef.field)
+      firstEditableColumnRef.current = columns.find(
+        (col) =>
+          col.colDef.editable !== false &&
+          !['action', 'checkbox'].includes(col.colDef.field)
       )
     }
     return firstEditableColumnRef.current
   }, [])
 
   // Helper function to start editing first editable cell in a row
-  const startEditingFirstEditableCell = useCallback((rowIndex) => {
-    if (!ref.current?.api) return
+  const startEditingFirstEditableCell = useCallback(
+    (rowIndex) => {
+      if (!ref.current?.api) return
 
-    // Ensure we have the first editable column
-    const firstEditableColumn = findFirstEditableColumn()
-    if (!firstEditableColumn) return
+      // Ensure we have the first editable column
+      const firstEditableColumn = findFirstEditableColumn()
+      if (!firstEditableColumn) return
 
-    // Use setTimeout to ensure the grid is ready
-    setTimeout(() => {
-      ref.current.api.ensureIndexVisible(rowIndex)
-      ref.current.api.setFocusedCell(rowIndex, firstEditableColumn.getColId())
-      ref.current.api.startEditingCell({
-        rowIndex,
-        colKey: firstEditableColumn.getColId()
-      })
-    }, 100)
-  }, [findFirstEditableColumn])
+      // Use setTimeout to ensure the grid is ready
+      setTimeout(() => {
+        ref.current.api.ensureIndexVisible(rowIndex)
+        ref.current.api.setFocusedCell(rowIndex, firstEditableColumn.getColId())
+        ref.current.api.startEditingCell({
+          rowIndex,
+          colKey: firstEditableColumn.getColId()
+        })
+      }, 100)
+    },
+    [findFirstEditableColumn]
+  )
 
   const handleExcelPaste = useCallback(
     (params) => {
@@ -175,11 +181,18 @@ export const BCGridEditor = ({
       params.event.target.dataset.action &&
       onAction
     ) {
-      const transaction = await onAction(params.event.target.dataset.action, params)
-      // Focus and edit the first editable column of the duplicated row
-      if (transaction?.add.length > 0) {
-        const duplicatedRowNode = transaction.add[0]
-        startEditingFirstEditableCell(duplicatedRowNode.rowIndex)
+      const action = params.event.target.dataset.action
+      const transaction = await onAction(action, params)
+
+      // Apply the transaction if it exists
+      if (transaction?.add?.length > 0) {
+        const res = ref.current.api.applyTransaction(transaction)
+
+        // Focus and edit the first editable column of the added rows
+        if (res.add && res.add.length > 0) {
+          const firstNewRow = res.add[0]
+          startEditingFirstEditableCell(firstNewRow.rowIndex)
+        }
       }
     }
   }
@@ -192,28 +205,45 @@ export const BCGridEditor = ({
     setAnchorEl(null)
   }
 
-  const handleAddRows = useCallback((numRows) => {
-    let newRows = []
-    if (props.onAddRows) {
-      newRows = props.onAddRows(numRows)
-    } else {
-      newRows = Array(numRows)
-        .fill()
-        .map(() => ({ id: uuid() }))
-    }
+  const handleAddRowsInternal = useCallback(
+    async (numRows) => {
+      let newRows = []
 
-    // Add the new rows
-    ref.current.api.applyTransaction({
-      add: newRows,
-      addIndex: ref.current.api.getDisplayedRowCount()
-    })
+      if (onAction) {
+        try {
+          for (let i = 0; i < numRows; i++) {
+            const transaction = await onAction('add')
+            if (transaction?.add?.length > 0) {
+              newRows = [...newRows, ...transaction.add]
+            }
+          }
+        } catch (error) {
+          console.error('Error during onAction add:', error)
+        }
+      }
 
-    // Focus and start editing the first new row
-    const firstNewRowIndex = ref.current.api.getDisplayedRowCount() - numRows
-    startEditingFirstEditableCell(firstNewRowIndex)
+      // Default logic if onAction doesn't return rows
+      if (newRows.length === 0) {
+        newRows = Array(numRows)
+          .fill()
+          .map(() => ({ id: uuid() }))
+      }
 
-    setAnchorEl(null)
-  }, [props.onAddRows, startEditingFirstEditableCell])
+      // Apply the new rows to the grid
+      const result = ref.current.api.applyTransaction({
+        add: newRows,
+        addIndex: ref.current.api.getDisplayedRowCount()
+      })
+
+      // Focus the first editable cell in the first new row
+      if (result.add && result.add.length > 0) {
+        startEditingFirstEditableCell(result.add[0].rowIndex)
+      }
+
+      setAnchorEl(null)
+    },
+    [onAction, startEditingFirstEditableCell]
+  )
 
   const isGridValid = () => {
     let isValid = true
@@ -238,24 +268,25 @@ export const BCGridEditor = ({
     setShowCloseModal(true)
   }
   const hasRequiredHeaderComponent = useCallback(() => {
-    const columnDefs = ref.current?.api?.getColumnDefs() || [];
+    const columnDefs = ref.current?.api?.getColumnDefs() || []
     // Check if any column has `headerComponent` matching "RequiredHeader"
-    return columnDefs.some(
-      colDef => colDef.headerComponent?.name === 'RequiredHeader'
-    ) || columnDefs.some(colDef => !!colDef.headerComponent)
+    return (
+      columnDefs.some(
+        (colDef) => colDef.headerComponent?.name === 'RequiredHeader'
+      ) || columnDefs.some((colDef) => !!colDef.headerComponent)
+    )
   }, [ref])
-
 
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-      {hasRequiredHeaderComponent() &&
+      {hasRequiredHeaderComponent() && (
         <BCTypography
           variant="body4"
           color="text"
           component="div"
           dangerouslySetInnerHTML={{ __html: t('asterisk') }}
         />
-      }
+      )}
       <BCGridBase
         ref={ref}
         className="ag-theme-quartz"
@@ -284,7 +315,9 @@ export const BCGridEditor = ({
                 <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
               )
             }
-            onClick={addMultiRow ? handleAddRowsClick : () => handleAddRows(1)}
+            onClick={
+              addMultiRow ? handleAddRowsClick : () => handleAddRowsInternal(1)
+            }
           >
             Add row
           </BCButton>
@@ -301,9 +334,15 @@ export const BCGridEditor = ({
                 }
               }}
             >
-              <MenuItem onClick={() => handleAddRows(1)}>1 row</MenuItem>
-              <MenuItem onClick={() => handleAddRows(5)}>5 rows</MenuItem>
-              <MenuItem onClick={() => handleAddRows(10)}>10 rows</MenuItem>
+              <MenuItem onClick={() => handleAddRowsInternal(1)}>
+                1 row
+              </MenuItem>
+              <MenuItem onClick={() => handleAddRowsInternal(5)}>
+                5 rows
+              </MenuItem>
+              <MenuItem onClick={() => handleAddRowsInternal(10)}>
+                10 rows
+              </MenuItem>
             </Menu>
           )}
         </BCBox>
@@ -345,8 +384,16 @@ BCGridEditor.propTypes = {
   alertRef: PropTypes.shape({ current: PropTypes.any }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,
+  onAddRows: PropTypes.func,
   onRowEditingStopped: PropTypes.func,
   onCellValueChanged: PropTypes.func,
   showAddRowsButton: PropTypes.bool,
-  onAddRows: PropTypes.func
+  addMultiRow: PropTypes.bool,
+  saveButtonProps: PropTypes.shape({
+    enabled: PropTypes.bool,
+    text: PropTypes.string,
+    onSave: PropTypes.func,
+    confirmText: PropTypes.string,
+    confirmLabel: PropTypes.string
+  })
 }
