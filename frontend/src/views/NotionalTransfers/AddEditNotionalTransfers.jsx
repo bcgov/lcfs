@@ -12,6 +12,7 @@ import {
   useGetAllNotionalTransfers,
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { useApiService } from '@/services/useApiService'
@@ -37,6 +38,7 @@ export const AddEditNotionalTransfers = () => {
     useGetAllNotionalTransfers(complianceReportId)
   const { mutateAsync: saveRow } = useSaveNotionalTransfer()
   const navigate = useNavigate()
+  const { data: currentUser } = useCurrentUser()
 
   useEffect(() => {
     if (location?.state?.message) {
@@ -114,6 +116,18 @@ export const AddEditNotionalTransfers = () => {
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
+
+      // User cannot select their own organization as the transaction partner
+      if (params.colDef.field === 'legalName') {
+        if (params.newValue === currentUser.organization.name) {
+          alertRef.current?.triggerAlert({
+            message: 'You cannot select your own organization as the transaction partner.',
+            severity: 'error'
+          })
+          params.node.setDataValue('legalName', '')
+          return
+        }
+      }
 
       const isValid = validate(
         params,
@@ -223,10 +237,10 @@ export const AddEditNotionalTransfers = () => {
 
   useEffect(() => {
     if (!optionsLoading) {
-      const updatedColumnDefs = notionalTransferColDefs(optionsData, errors)
+      const updatedColumnDefs = notionalTransferColDefs(optionsData, errors, currentUser)
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData, optionsLoading])
+  }, [errors, optionsData, optionsLoading, currentUser])
 
   const handleNavigateBack = useCallback(() => {
     navigate(
