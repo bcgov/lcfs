@@ -48,8 +48,12 @@ async def expected_uses(dbsession):
 @pytest.fixture
 async def fuel_categories(dbsession):
     fuel_categories = [
-        FuelCategory(fuel_category_id=998, category="Gasoline"),
-        FuelCategory(fuel_category_id=999, category="Diesel"),
+        FuelCategory(
+            fuel_category_id=998, category="Gasoline", default_carbon_intensity=0
+        ),
+        FuelCategory(
+            fuel_category_id=999, category="Diesel", default_carbon_intensity=0
+        ),
     ]
 
     dbsession.add_all(fuel_categories)
