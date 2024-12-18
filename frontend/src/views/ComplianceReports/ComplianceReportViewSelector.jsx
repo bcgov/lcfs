@@ -5,7 +5,7 @@ import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacy
 import { useParams } from 'react-router-dom'
 import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 
-export const ViewComplianceReportBrancher = () => {
+export const ComplianceReportViewSelector = () => {
   const { complianceReportId } = useParams()
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     useCurrentUser()

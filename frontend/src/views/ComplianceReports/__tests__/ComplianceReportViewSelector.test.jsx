@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ViewComplianceReportBrancher } from '../ViewComplianceReportBrancher'
+import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector.jsx'
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -71,7 +71,7 @@ describe('ViewComplianceReportBrancher', () => {
 
   it('renders loading when user is loading', async () => {
     setupMocks({ isCurrentUserLoading: true })
-    render(<ViewComplianceReportBrancher />, { wrapper })
+    render(<ComplianceReportViewSelector />, { wrapper })
 
     await waitFor(() => {
       expect(screen.getByText('Loading...')).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('ViewComplianceReportBrancher', () => {
 
   it('renders loading when report is loading', async () => {
     setupMocks({ isReportLoading: true })
-    render(<ViewComplianceReportBrancher />, { wrapper })
+    render(<ComplianceReportViewSelector />, { wrapper })
 
     await waitFor(() => {
       expect(screen.getByText('Loading...')).toBeInTheDocument()
@@ -97,7 +97,7 @@ describe('ViewComplianceReportBrancher', () => {
       }
     })
 
-    render(<ViewComplianceReportBrancher />, { wrapper })
+    render(<ComplianceReportViewSelector />, { wrapper })
 
     await waitFor(() => {
       expect(screen.getByText('Legacy Report View')).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('ViewComplianceReportBrancher', () => {
       }
     })
 
-    render(<ViewComplianceReportBrancher />, { wrapper })
+    render(<ComplianceReportViewSelector />, { wrapper })
 
     await waitFor(() => {
       expect(screen.getByText('Edit Compliance Report')).toBeInTheDocument()
@@ -137,7 +137,7 @@ describe('ViewComplianceReportBrancher', () => {
       }
     })
 
-    render(<ViewComplianceReportBrancher />, { wrapper })
+    render(<ComplianceReportViewSelector />, { wrapper })
 
     await waitFor(() => {
       expect(screen.getByText('Edit Compliance Report')).toBeInTheDocument()

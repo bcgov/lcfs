@@ -36,7 +36,7 @@ import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddEdi
 import { logout } from '@/utils/keycloak.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
-import { ViewComplianceReportBrancher } from '@/views/ComplianceReports/ViewComplianceReportBrancher.jsx'
+import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector.jsx'
 
 const router = createBrowserRouter([
   {
@@ -198,7 +198,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_VIEW,
-        element: <ViewComplianceReportBrancher />,
+        element: <ComplianceReportViewSelector />,
         handle: { title: '' }
       },
       {
