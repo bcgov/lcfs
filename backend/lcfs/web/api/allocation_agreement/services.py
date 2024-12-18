@@ -49,8 +49,8 @@ class AllocationAgreementServices:
                 allocation_agreement.allocation_transaction_type
             )
         )
-        fuel_category = await self.fuel_repo.get_fuel_category_by_name(
-            allocation_agreement.fuel_category
+        fuel_category = await self.fuel_repo.get_fuel_category_by(
+            category=allocation_agreement.fuel_category
         )
         fuel_type = await self.fuel_repo.get_fuel_type_by_name(
             allocation_agreement.fuel_type
@@ -226,8 +226,8 @@ class AllocationAgreementServices:
             != allocation_agreement_data.fuel_category
         ):
             existing_allocation_agreement.fuel_category = (
-                await self.fuel_repo.get_fuel_category_by_name(
-                    allocation_agreement_data.fuel_category
+                await self.fuel_repo.get_fuel_category_by(
+                    category=allocation_agreement_data.fuel_category
                 )
             )
 

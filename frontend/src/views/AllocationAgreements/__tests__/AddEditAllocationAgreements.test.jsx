@@ -1,7 +1,7 @@
 // src/views/AllocationAgreements/__tests__/AddEditAllocationAgreements.test.jsx
 
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
@@ -11,6 +11,19 @@ import { wrapper } from '@/tests/utils/wrapper'
 const mockUseLocation = vi.fn()
 const mockUseNavigate = vi.fn()
 const mockUseParams = vi.fn()
+
+vi.mock('@react-keycloak/web', () => ({
+  ReactKeycloakProvider: ({ children }) => children,
+  useKeycloak: () => ({
+    keycloak: {
+      authenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+      register: vi.fn()
+    },
+    initialized: true
+  })
+}))
 
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
