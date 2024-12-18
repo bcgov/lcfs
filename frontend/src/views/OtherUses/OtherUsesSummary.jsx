@@ -109,6 +109,7 @@ export const OtherUsesSummary = ({ data }) => {
           gridKey={'other-uses'}
           getRowId={getRowId}
           columnDefs={columns}
+          defaultColDef={{ filter: false, floatingFilter: false }}
           query={useGetOtherUses}
           queryParams={{ complianceReportId }}
           dataKey={'otherUses'}
